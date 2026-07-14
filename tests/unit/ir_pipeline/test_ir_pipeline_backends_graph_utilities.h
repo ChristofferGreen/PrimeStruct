@@ -1,17 +1,19 @@
 TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
-  std::filesystem::path paritySourcePath = cwd / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.cpp";
+  std::filesystem::path paritySourcePath =
+      cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_type_resolution_parity.cpp";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
-    paritySourcePath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.cpp";
+    paritySourcePath =
+        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_type_resolution_parity.cpp";
   }
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(paritySourcePath));
 
   const std::string cmake = readTextFile(cmakePath);
   const std::string paritySource = readTextFile(paritySourcePath);
-  CHECK(cmake.find("tests/unit/test_ir_pipeline_type_resolution_parity.cpp") != std::string::npos);
+  CHECK(cmake.find("tests/unit/ir_pipeline/test_ir_pipeline_type_resolution_parity.cpp") != std::string::npos);
   CHECK(paritySource.find("struct TypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(paritySource.find("runTypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(paritySource.find("snapshotDiagnosticReport") == std::string::npos);

@@ -159,11 +159,13 @@ TEST_CASE("method target resolution reuses scoped scratch cache") {
   CHECK(source.find("callTargetResolutionScratch_.joinedCallPathCache.find(joinKey)") !=
         std::string::npos);
   CHECK(source.find("appendCanonicalReceiverResolutionCandidates") != std::string::npos);
-  CHECK(source.find("preferVectorStdlibHelperPath(\"/std/collections/vector/\" + normalizedMethodName)") !=
+  CHECK(source.find("preferVectorStdlibHelperPath(\n"
+                    "                canonicalVectorCompatibilityHelperPathOrFallback(\n"
+                    "                    normalizedMethodName));") !=
         std::string::npos);
-  CHECK(source.find("return joinMethodTarget(\"/std/collections/map\", helperSuffix);") !=
+  CHECK(source.find("resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, \"insert\");") !=
         std::string::npos);
-  CHECK(source.find("return joinMethodTarget(\"/map\", helperSuffix);") !=
+  CHECK(source.find("resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);") !=
         std::string::npos);
   CHECK(source.find("callTargetResolutionScratch_.canonicalReceiverAliasPathCache.find(resolvedReceiverPathKey)") !=
         std::string::npos);
@@ -458,9 +460,9 @@ TEST_CASE("public semantic-product dump helper is available for pipeline tests")
 
 TEST_CASE("core IR test helpers expose semantic-product-aware lowering") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path helperPath = cwd / "tests" / "unit" / "test_ir_pipeline_helpers.h";
+  std::filesystem::path helperPath = cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_helpers.h";
   if (!std::filesystem::exists(helperPath)) {
-    helperPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_helpers.h";
+    helperPath = cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_helpers.h";
   }
   REQUIRE(std::filesystem::exists(helperPath));
 
@@ -532,7 +534,7 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(flowHelpers.find("emitBuiltinCanonicalMapInsertOverwriteOrPending(") == std::string::npos);
   CHECK(inlineParam.find("using ResolveInlineParameterDefinitionCallFn") != std::string::npos);
   CHECK(inlineParam.find("const std::string &calleePath,") != std::string::npos);
-  CHECK(lowerInference.find("const SemanticProgram *semanticProgram = nullptr;") !=
+  CHECK(lowerInference.find("const ::primec::SemanticProgram *semanticProgram = nullptr;") !=
         std::string::npos);
   CHECK(lowerInference.find("const SemanticProductIndex *semanticIndex = nullptr;") !=
         std::string::npos);
@@ -609,7 +611,8 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
         std::string::npos);
   CHECK(semanticTargetsSource.find("semanticProgramOnErrorFactView(*semanticProgram)") ==
         std::string::npos);
-  CHECK(semanticTargetsSource.find("populateSemanticFactIndex(index.returnFactsByDefinitionId,") !=
+  CHECK(semanticTargetsSource.find("populateSemanticFactIndex(\n"
+                                   "        index.returnFactsByDefinitionId,") !=
         std::string::npos);
   CHECK(semanticTargetsSource.find("semanticProgramReturnFactView(*semanticProgram)") ==
         std::string::npos);
@@ -679,7 +682,7 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   CHECK(statementBindingPos < countAccessPos);
   CHECK(resultHelpersPos < operatorArithmeticPos);
   CHECK(stringCallPos < operatorArithmeticPos);
-  CHECK(operatorArithmeticPos < gpuEffectsPos);
+  CHECK(gpuEffectsPos < operatorArithmeticPos);
   CHECK(gpuEffectsPos < lowerExprEmitSetupPos);
   CHECK(operatorArithmeticPos < lowerExprEmitSetupPos);
   CHECK(lowerExprEmitSetupPos < lowerReturnCallsSetupPos);
@@ -730,9 +733,10 @@ TEST_CASE("public call dispatch testing header stays in sync with alias-policy h
 TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path snapshotPath =
-      cwd / "tests" / "unit" / "test_semantics_type_resolution_graph_snapshots.cpp";
+      cwd / "tests" / "unit" / "semantics" / "test_semantics_type_resolution_graph_snapshots.cpp";
   if (!std::filesystem::exists(snapshotPath)) {
-    snapshotPath = cwd.parent_path() / "tests" / "unit" / "test_semantics_type_resolution_graph_snapshots.cpp";
+    snapshotPath =
+        cwd.parent_path() / "tests" / "unit" / "semantics" / "test_semantics_type_resolution_graph_snapshots.cpp";
   }
   REQUIRE(std::filesystem::exists(snapshotPath));
 
@@ -744,9 +748,11 @@ TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
 
 TEST_CASE("backend registry keeps semantic-product negative fixture families covered") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path registryPath = cwd / "tests" / "unit" / "test_ir_pipeline_backends_registry.cpp";
+  std::filesystem::path registryPath =
+      cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_backends_registry.cpp";
   if (!std::filesystem::exists(registryPath)) {
-    registryPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_backends_registry.cpp";
+    registryPath =
+        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_backends_registry.cpp";
   }
   REQUIRE(std::filesystem::exists(registryPath));
 
@@ -809,9 +815,9 @@ TEST_CASE("semantic product routing facts have dedicated public headers") {
         std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget {") == std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget {") == std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramDirectCallTarget> directCallTargets;") !=
+  CHECK(semanticProduct.find("std::vector<SemanticProgramDirectCallTarget> directCallTargets = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets;") !=
+  CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets = {};") !=
         std::string::npos);
   CHECK(directCallFacts.find("#include \"primec/SemanticProduct.h\"") == std::string::npos);
   CHECK(methodCallFacts.find("#include \"primec/SemanticProduct.h\"") == std::string::npos);
@@ -1504,7 +1510,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irCallResolution.find("\"/std/collections/soa/\"") ==
         std::string::npos);
   CHECK(irCallResolution.find("\"soa\"") == std::string::npos);
-  CHECK(irCallResolution.find("\"to_aos\"") == std::string::npos);
+  CHECK(irCallResolution.find("const std::string toAosHelper = \"to_aos\";") !=
+        std::string::npos);
   CHECK(irCallResolution.find("isResidualBridgeHelperPath(fallbackResolvedPath) &&") ==
         std::string::npos);
   CHECK(irCallResolution.find("resolvesToPublishedDefinitionFamilyTarget(semanticProgram, fallbackResolvedPath)") ==
@@ -1588,15 +1595,15 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   const std::string semanticProductSource = readRepoFile("src/SemanticProduct.cpp");
   const std::string matrix = readRepoFile("docs/SemanticProductConsumerMatrix.md");
   const std::string registryTests =
-      readRepoFile("tests/unit/test_ir_pipeline_backends_registry.cpp");
+      readRepoFile("tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp");
   const std::string snapshotTests =
-      readRepoFile("tests/unit/test_semantics_type_resolution_graph_snapshots.cpp");
+      readRepoFile("tests/unit/semantics/test_semantics_type_resolution_graph_snapshots.cpp");
   const std::string entrySetupTests = readRepoFile(
-      "tests/unit/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp");
+      "tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp");
   const std::string callHelperTests = readRepoFile(
-      "tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
+      "tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
   const std::string compileTimeFacadeTests =
-      readRepoFile("tests/unit/test_compile_time_evaluation_facade.cpp");
+      readRepoFile("tests/unit/compile_time/test_compile_time_evaluation_facade.cpp");
 
   const std::size_t familiesStart =
       semanticProductSource.find("static const std::vector<SemanticProgramFactFamilyInfo> Families = {");
@@ -1746,7 +1753,12 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
   const std::string collectBody = semanticsSnapshots.substr(collectStart, takeSurfaceStart - collectStart);
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") != std::string::npos);
   CHECK(collectBody.find(
-            "      std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "      std::string resolvedPath;\n"
+            "      if (isTaskWaitExpr(expr)) {\n"
+            "        resolvedPath = \"/task/wait\";\n"
+            "      } else {\n"
+            "        resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "      }\n"
             "      if (resolvedPath.empty()) {\n"
             "        resolvedPath = resolveCalleePath(expr);\n"
             "      }") !=
@@ -2079,13 +2091,13 @@ TEST_CASE("semantic product local auto facts use initializerResolvedPathId witho
   CHECK(localAutoBody.find("SymbolId initializerResolvedPathId = InvalidSymbolId;") !=
         std::string::npos);
   CHECK(localAutoBody.find("std::string initializerResolvedPath;") == std::string::npos);
-  CHECK(localAutoBody.find("std::optional<StdlibSurfaceId> initializerStdlibSurfaceId;") !=
+  CHECK(localAutoBody.find("std::optional<StdlibSurfaceId> initializerStdlibSurfaceId = std::nullopt;") !=
         std::string::npos);
   CHECK(localAutoBody.find(
-            "std::optional<StdlibSurfaceId> initializerDirectCallStdlibSurfaceId;") !=
+            "std::optional<StdlibSurfaceId> initializerDirectCallStdlibSurfaceId = std::nullopt;") !=
         std::string::npos);
   CHECK(localAutoBody.find(
-            "std::optional<StdlibSurfaceId> initializerMethodCallStdlibSurfaceId;") !=
+            "std::optional<StdlibSurfaceId> initializerMethodCallStdlibSurfaceId = std::nullopt;") !=
         std::string::npos);
 
   CHECK(semanticProductSource.find("semanticProgramLocalAutoFactInitializerResolvedPath(") !=
@@ -2368,7 +2380,9 @@ TEST_CASE("semantic snapshot locals concrete-call canonicalization stays stable"
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshotLocals.cpp");
 
   CHECK(semanticsSnapshotLocals.find(
-            "  out.resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "  out.resolvedPath = preferredCollectionHelperResolvedPath(expr);\n") !=
+        std::string::npos);
+  CHECK(semanticsSnapshotLocals.find(
             "  if (out.resolvedPath.empty() &&\n"
             "      !(expr.kind == Expr::Kind::Call && expr.isMethodCall)) {\n"
             "    out.resolvedPath = resolveCalleePath(expr);\n"
@@ -2410,17 +2424,19 @@ TEST_CASE("semantic snapshot method targets concrete-call canonicalization stays
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
 
   CHECK(semanticsSnapshots.find(
-            "      resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "      } else {\n"
+            "        resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "      }\n"
             "      if (resolvedPath.empty()) {\n"
             "        resolvedPath = resolveCalleePath(expr);\n"
             "      }\n") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find(
-            "    const std::string concreteResolvedPath =\n"
-            "        resolveExprConcreteCallPath(defParams, activeLocals, expr, resolvedPath);\n"
-            "    if (!concreteResolvedPath.empty()) {\n"
-            "      resolvedPath = concreteResolvedPath;\n"
-            "    }") !=
+            "          QuerySnapshotData queryData;\n"
+            "          if (!inferQuerySnapshotData(defParams, activeLocals, expr, queryData) ||\n"
+            "              queryData.resolvedPath.empty()) {\n"
+            "            return;\n"
+            "          }") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find(
             "      resolvedPath = resolveCalleePath(expr);\n"

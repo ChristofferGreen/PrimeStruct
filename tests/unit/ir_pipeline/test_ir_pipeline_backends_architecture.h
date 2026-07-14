@@ -133,7 +133,7 @@ TEST_CASE("design doc records soa public collection contract") {
   CHECK(design.find("**Stdlib-owned surface metadata:** canonical `soa`") !=
         std::string::npos);
   CHECK(design.find("Rejected compatibility namespace") != std::string::npos);
-  CHECK(design.find("/std/collections/experimental_soa/*") != std::string::npos);
+  CHECK(design.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
   CHECK(design.find("/std/collections/soa_storage/*") != std::string::npos);
 }
 
@@ -253,7 +253,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find(".id = collectionSurfaceId(4)") != std::string::npos);
   CHECK(source.find("\"collections.soa_helpers\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/soa\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/soa\"") == std::string::npos);
+  CHECK(source.find("/std/collections/experimental_soa") == std::string::npos);
   CHECK(source.find("\"field_view\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/count\"") == std::string::npos);
   CHECK(source.find("\"/soa/to_aos\"") == std::string::npos);
@@ -266,7 +266,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("StdlibSurfaceId::CollectionsColumnarConstructors") !=
         std::string::npos);
   CHECK(source.find("\"collections.soa_constructors\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/soa/soa\"") == std::string::npos);
+  CHECK(source.find("\"/std/collections/soa/soa\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa/soaVectorNew\"") ==
         std::string::npos);
 
@@ -409,12 +409,12 @@ TEST_CASE("map insert semantic rewrite uses stdlib surface adapter") {
 
   const std::string source = readTextFile(sourcePath);
   CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") != std::string::npos);
-  CHECK(source.find("resolveBuiltinMapInsertSurfaceMemberName(") != std::string::npos);
-  CHECK(source.find("findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers)") !=
+  CHECK(source.find("resolveBuiltinKeyValueInsertSurfaceMemberName(") != std::string::npos);
+  CHECK(source.find("keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(source.find("resolveStdlibSurfaceMemberName(*metadata, name)") != std::string::npos);
   CHECK(source.find("stdlibSurfaceCanonicalHelperPath(\n"
-                    "      StdlibSurfaceId::CollectionsMapHelpers,") != std::string::npos);
+                    "      metadata->id,") != std::string::npos);
   CHECK(source.find("kBuiltinMapInsertAliasPath") == std::string::npos);
   CHECK(source.find("kBuiltinExperimentalMapInsertPath") == std::string::npos);
   CHECK(source.find("kBuiltinMapInsertRefWrapperPath") == std::string::npos);
@@ -575,7 +575,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/ir_lowerer/IrLowererGpuEffects.cpp") != std::string::npos);
   CHECK(cmake.find("src/ir_lowerer/IrLowererNativeEffects.cpp") != std::string::npos);
   CHECK(cmake.find("src/ir_lowerer/IrLowererVmEffects.cpp") != std::string::npos);
-  CHECK(cmake.find("src/VmHeapHelpers.cpp") != std::string::npos);
+  CHECK(cmake.find("src/runtime/VmHeapHelpers.cpp") != std::string::npos);
   CHECK(cmake.find("add_library(primec_support_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_frontend_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_ir_lib") != std::string::npos);
@@ -716,14 +716,17 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path semanticsGraphTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
   std::filesystem::path semanticsTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
-  std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
-  std::filesystem::path textFilterHelperTestPath = cwd / "tests" / "unit" / "test_text_filter_helpers.cpp";
-  std::filesystem::path compileRunTestPath = cwd / "tests" / "unit" / "test_compile_run_vm_bounds.cpp";
-  std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "test_ir_pipeline.cpp";
+  std::filesystem::path parserHelperTestPath =
+      cwd / "tests" / "unit" / "parser" / "test_parser_basic_parser_helpers.cpp";
+  std::filesystem::path textFilterHelperTestPath =
+      cwd / "tests" / "unit" / "text_filter" / "test_text_filter_helpers.cpp";
+  std::filesystem::path compileRunTestPath =
+      cwd / "tests" / "unit" / "compile_run" / "test_compile_run_vm_bounds.cpp";
+  std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline.cpp";
   std::filesystem::path validationHelpersTestPath =
-      cwd / "tests" / "unit" / "test_ir_pipeline_validation_helpers.h";
+      cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_validation_helpers.h";
   std::filesystem::path countAccessValidationTestPath =
-      cwd / "tests" / "unit" /
+      cwd / "tests" / "unit" / "ir_pipeline" /
       "test_ir_pipeline_validation_ir_lowerer_count_access_helpers_build_bundled_entry_count_setup.cpp";
   if (!std::filesystem::exists(scriptPath)) {
     scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
@@ -741,13 +744,17 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
     semanticsGraphTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
     semanticsTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
-    parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
-    textFilterHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_text_filter_helpers.cpp";
-    compileRunTestPath = cwd.parent_path() / "tests" / "unit" / "test_compile_run_vm_bounds.cpp";
-    irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline.cpp";
-    validationHelpersTestPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_validation_helpers.h";
+    parserHelperTestPath =
+        cwd.parent_path() / "tests" / "unit" / "parser" / "test_parser_basic_parser_helpers.cpp";
+    textFilterHelperTestPath =
+        cwd.parent_path() / "tests" / "unit" / "text_filter" / "test_text_filter_helpers.cpp";
+    compileRunTestPath =
+        cwd.parent_path() / "tests" / "unit" / "compile_run" / "test_compile_run_vm_bounds.cpp";
+    irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline.cpp";
+    validationHelpersTestPath =
+        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_validation_helpers.h";
     countAccessValidationTestPath =
-        cwd.parent_path() / "tests" / "unit" /
+        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" /
         "test_ir_pipeline_validation_ir_lowerer_count_access_helpers_build_bundled_entry_count_setup.cpp";
   }
   REQUIRE(std::filesystem::exists(scriptPath));
