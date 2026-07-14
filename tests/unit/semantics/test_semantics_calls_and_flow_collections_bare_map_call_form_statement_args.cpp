@@ -771,7 +771,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit vector import keeps duplicate same-path ctor diagnostics") {
+TEST_CASE("explicit vector import accepts type-differentiated same-path ctor overload") {
+  // The concrete [i32] helper and the templated stdlib ctor have distinct
+  // parameter-type signatures, so they coexist as an overload family instead
+  // of colliding as duplicate definitions.
   const std::string source = R"(
 import /std/collections/vector
 
@@ -790,8 +793,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("duplicate definition: /std/collections/vector/vector") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("wildcard vector import supports concise vector binding example") {

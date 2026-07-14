@@ -4518,7 +4518,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("method-like canonical soa helper shadows reject duplicate definitions") {
+TEST_CASE("method-like canonical soa helper shadows coexist as type-differentiated overloads") {
+  // Each concrete SoaVector<Particle> shadow has a parameter-type signature
+  // distinct from the templated stdlib helper at the same path, so the family
+  // is accepted as overloads instead of rejected as duplicate definitions.
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4632,9 +4635,8 @@ main() {
 )";
   std::string error;
   INFO(error);
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("duplicate definition: /std/collections/soa/reserve") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("push and reserve bare and method forms reject internal metadata validation on experimental soa bindings") {
