@@ -2976,7 +2976,10 @@ bool rewriteExpr(Expr &expr,
       return false;
       }
     }
-    auto defIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
+    const std::string finalDirectCallResolvedPath =
+        resolveCalleePath(expr, namespacePrefix, ctx);
+    expr.resolvedCallPath = finalDirectCallResolvedPath;
+    auto defIt = ctx.sourceDefs.find(finalDirectCallResolvedPath);
     if (defIt != ctx.sourceDefs.end()) {
       if (!rewriteExperimentalConstructorArgsForTarget(
               expr,
@@ -3357,9 +3360,13 @@ bool rewriteExpr(Expr &expr,
       }
       std::string rewrittenMethodPath =
           expr.isMethodCall ? methodPath : resolveCalleePath(expr, namespacePrefix, ctx);
+      expr.resolvedCallPath = rewrittenMethodPath;
       auto methodDefIt = ctx.sourceDefs.find(rewrittenMethodPath);
       if (methodDefIt == ctx.sourceDefs.end()) {
-        methodDefIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
+        const std::string fallbackMethodResolvedCallPath =
+            resolveCalleePath(expr, namespacePrefix, ctx);
+        expr.resolvedCallPath = fallbackMethodResolvedCallPath;
+        methodDefIt = ctx.sourceDefs.find(fallbackMethodResolvedCallPath);
       }
       if (methodDefIt != ctx.sourceDefs.end()) {
         if (!rewriteExperimentalConstructorArgsForTarget(

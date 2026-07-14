@@ -140,6 +140,15 @@ struct Expr {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  // Fully-resolved internal definition path for this call, as decided once
+  // by template monomorphization's resolveCalleePath/selectHelperOverloadPath.
+  // Populated unconditionally for both direct and method calls, independent
+  // of whether the call landed in a registered overload family. Downstream
+  // consumers (validator, semantic-product publication, IR lowering) should
+  // read this instead of re-deriving resolution from `name`/`__ov` string
+  // conventions. Empty when this expression is not a resolvable call (e.g.
+  // literals, bindings, compile-time predicate forms).
+  std::string resolvedCallPath;
 };
 
 struct SumVariant {
