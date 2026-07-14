@@ -599,15 +599,14 @@ main() {
 }
 
 TEST_CASE("stdlib namespaced vector count method local same-path overload set rejects duplicate definitions") {
+  // Re-scoped for type-based overloading (docs/OverloadResolutionPrototype.md
+  // Phase 1): same-arity definitions with DIFFERING parameter types now
+  // coexist as an overload set, so this duplicate-rejection test pins the
+  // still-rejected case - same path, same arity, SAME parameter type.
   const std::string source = R"(
 [return<int>]
-/std/collections/vector/count([map<i32, i32>] values) {
+/std/collections/vector/count([string] values) {
   return(31i32)
-}
-
-[return<int>]
-/std/collections/vector/count([array<i32>] values) {
-  return(32i32)
 }
 
 [return<int>]
@@ -617,12 +616,8 @@ TEST_CASE("stdlib namespaced vector count method local same-path overload set re
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
   [string] text{"abc"raw_utf8}
-  return(plus(plus(values./std/collections/vector/count(),
-                    items./std/collections/vector/count()),
-              text./std/collections/vector/count()))
+  return(text./std/collections/vector/count())
 }
 )";
   std::string error;
@@ -1025,15 +1020,14 @@ main() {
 }
 
 TEST_CASE("stdlib namespaced vector capacity method local same-path overload set rejects duplicate definitions") {
+  // Re-scoped for type-based overloading (docs/OverloadResolutionPrototype.md
+  // Phase 1): same-arity definitions with DIFFERING parameter types now
+  // coexist as an overload set, so this duplicate-rejection test pins the
+  // still-rejected case - same path, same arity, SAME parameter type.
   const std::string source = R"(
 [return<int>]
-/std/collections/vector/capacity([map<i32, i32>] values) {
+/std/collections/vector/capacity([string] values) {
   return(41i32)
-}
-
-[return<int>]
-/std/collections/vector/capacity([array<i32>] values) {
-  return(42i32)
 }
 
 [return<int>]
@@ -1043,12 +1037,8 @@ TEST_CASE("stdlib namespaced vector capacity method local same-path overload set
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
   [string] text{"abc"raw_utf8}
-  return(plus(plus(values./std/collections/vector/capacity(),
-                    items./std/collections/vector/capacity()),
-              text./std/collections/vector/capacity()))
+  return(text./std/collections/vector/capacity())
 }
 )";
   std::string error;

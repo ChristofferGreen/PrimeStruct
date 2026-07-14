@@ -788,6 +788,111 @@ main() {
   CHECK(error.find("duplicate definition: /helper/value") != std::string::npos);
 }
 
+TEST_CASE("same-arity helper overloads resolve by parameter type") {
+  const std::string source = R"(
+[struct]
+PathKey() {
+  [i32] value{0i32}
+}
+
+[return<i32>]
+/helper/insert([string] path) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/insert([PathKey] key) {
+  return(2i32)
+}
+
+[return<void>]
+main() {
+  [PathKey] key{PathKey{}}
+  [i32] byString{/helper/insert("abc"raw_utf8)}
+  [i32] byKey{/helper/insert(key)}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("same-arity overload specificity prefers concrete over generic") {
+  const std::string source = R"(
+[return<i32>]
+/helper/pick<T>([T] value) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/pick([string] value) {
+  return(2i32)
+}
+
+[return<void>]
+main() {
+  [i32] concreteWin{/helper/pick("abc"raw_utf8)}
+  [i32] genericOnly{/helper/pick(7i32)}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("same-arity overload incomparable specificity stays ambiguous") {
+  const std::string source = R"(
+[return<i32>]
+/helper/mix<A>([A] first, [string] second) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/mix<B>([string] first, [B] second) {
+  return(2i32)
+}
+
+[return<void>]
+main() {
+  [i32] value{/helper/mix("a"raw_utf8, "b"raw_utf8)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ambiguous call to /helper/mix") != std::string::npos);
+}
+
+TEST_CASE("same-arity overload with no type match reports no viable overload") {
+  const std::string source = R"(
+[struct]
+PathKey() {
+  [i32] value{0i32}
+}
+
+[return<i32>]
+/helper/only([string] path) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/only([PathKey] key) {
+  return(2i32)
+}
+
+[return<void>]
+main() {
+  [i32] value{/helper/only(7i32)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no viable overload for /helper/only") != std::string::npos);
+}
+
 TEST_CASE("Result.map infers auto Result binding from lambda body") {
   const std::string source = R"(
 [return<void>]

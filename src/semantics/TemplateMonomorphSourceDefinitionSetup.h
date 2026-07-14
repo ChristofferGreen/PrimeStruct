@@ -138,6 +138,28 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
       }
       ++parameterCountFrequencies[def->parameters.size()];
     }
+    auto helperOverloadParameterTypeSignature = [](const Definition &def) {
+      const std::unordered_set<std::string> templateParams(
+          def.templateArgs.begin(), def.templateArgs.end());
+      std::string signature;
+      for (const Expr &param : def.parameters) {
+        BindingInfo info;
+        std::string typeText = "?";
+        if (extractExplicitBindingType(param, info) && !info.typeName.empty()) {
+          if (templateParams.count(info.typeName) > 0) {
+            typeText = "$generic";
+          } else {
+            typeText = info.typeName;
+            if (!info.typeTemplateArg.empty()) {
+              typeText += "<" + info.typeTemplateArg + ">";
+            }
+          }
+        }
+        signature += typeText;
+        signature += ",";
+      }
+      return signature;
+    };
     for (const auto &[parameterCount, frequency] : parameterCountFrequencies) {
       if (frequency <= 1) {
         continue;
@@ -150,7 +172,25 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
           break;
         }
       }
-      if (!hasRequirementConstrainedCandidate) {
+      if (hasRequirementConstrainedCandidate) {
+        continue;
+      }
+      // Phase 1 (docs/OverloadResolutionPrototype.md): same-arity
+      // definitions may also coexist when their parameter-type signatures
+      // are pairwise distinct; call sites then select by argument type.
+      // Same-signature same-arity remains a duplicate definition.
+      std::unordered_set<std::string> signatures;
+      bool signaturesDistinct = true;
+      for (const Definition *def : family) {
+        if (def->parameters.size() != parameterCount) {
+          continue;
+        }
+        if (!signatures.insert(helperOverloadParameterTypeSignature(*def)).second) {
+          signaturesDistinct = false;
+          break;
+        }
+      }
+      if (!signaturesDistinct) {
         allowHelperOverloadFamily = false;
         break;
       }

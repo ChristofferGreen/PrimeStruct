@@ -420,7 +420,8 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
     const Expr &expr,
     const Context &ctx,
     const LocalTypeMap *locals,
-    const std::vector<ParameterInfo> *params) {
+    const std::vector<ParameterInfo> *params,
+    bool exactConcreteTypeMatch = false) {
   RequirementOverloadViability result;
   const bool hasRequireTransform = definitionHasRequireTransform(def);
   RequirementPredicateDefinitionContext requirementContext;
@@ -467,17 +468,34 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
         const std::string expectedType =
             normalizeBindingTypeName(param.binding.typeName);
         const std::string actualType = normalizeBindingTypeName(*argType);
-        const ReturnKind expectedKind = returnKindForTypeName(expectedType);
-        const ReturnKind actualKind = returnKindForTypeName(actualType);
-        if (expectedKind != ReturnKind::Unknown &&
-            actualKind != ReturnKind::Unknown &&
-            expectedKind != actualKind) {
-          result.viable = false;
-          result.decisive = true;
-          result.diagnostics.push_back(
-              "argument type mismatch for " + def.fullPath +
-              " parameter " + param.name + ": expected " +
-              expectedType + " got " + actualType);
+        if (exactConcreteTypeMatch) {
+          // Phase 1 type-differentiated overload selection: a concrete
+          // parameter is viable only when the argument's normalized type
+          // name matches exactly. ReturnKind-level comparison is too
+          // coarse here - user struct types all map to
+          // ReturnKind::Unknown, so string vs PathKey style overloads
+          // would never be distinguished by it.
+          if (expectedType != actualType) {
+            result.viable = false;
+            result.decisive = true;
+            result.diagnostics.push_back(
+                "argument type mismatch for " + def.fullPath +
+                " parameter " + param.name + ": expected " +
+                expectedType + " got " + actualType);
+          }
+        } else {
+          const ReturnKind expectedKind = returnKindForTypeName(expectedType);
+          const ReturnKind actualKind = returnKindForTypeName(actualType);
+          if (expectedKind != ReturnKind::Unknown &&
+              actualKind != ReturnKind::Unknown &&
+              expectedKind != actualKind) {
+            result.viable = false;
+            result.decisive = true;
+            result.diagnostics.push_back(
+                "argument type mismatch for " + def.fullPath +
+                " parameter " + param.name + ": expected " +
+                expectedType + " got " + actualType);
+          }
         }
       }
     }
@@ -575,9 +593,12 @@ std::string selectRequirementAwareHelperOverloadPath(
       break;
     }
   }
-  if (!hasRequirementCandidate) {
-    return candidates.front()->internalPath;
-  }
+  // Phase 1 (docs/OverloadResolutionPrototype.md): a same-arity group
+  // with no require-guarded member is type-differentiated (the grouping
+  // gate enforces pairwise-distinct parameter-type signatures), so it is
+  // selected by exact argument-type viability plus the specificity
+  // tie-break, instead of the previous blind first-candidate pick.
+  const bool typeDifferentiatedGroup = !hasRequirementCandidate;
 
   std::vector<const HelperOverloadEntry *> viable;
   std::vector<std::string> rejected;
@@ -601,7 +622,8 @@ std::string selectRequirementAwareHelperOverloadPath(
                                              expr,
                                              ctx,
                                              locals,
-                                             params);
+                                             params,
+                                             typeDifferentiatedGroup);
     if (viability.viable) {
       viable.push_back(entry);
       viableSummaries.push_back(formatRequirementOverloadCandidateSummary(
@@ -615,12 +637,89 @@ std::string selectRequirementAwareHelperOverloadPath(
   if (viable.size() == 1) {
     return viable.front()->internalPath;
   }
+  if (viable.size() > 1 && typeDifferentiatedGroup) {
+    // Specificity partial ordering: a concrete parameter type is more
+    // specific than an unbound template parameter in the same position;
+    // a candidate wins only if at least as specific in every position
+    // and strictly more specific in at least one, against every other
+    // viable candidate. Incomparable candidates stay ambiguous.
+    auto candidateGenericMask =
+        [&](const HelperOverloadEntry *entry,
+            std::vector<bool> &maskOut) -> bool {
+      auto defIt = ctx.sourceDefs.find(entry->internalPath);
+      if (defIt == ctx.sourceDefs.end()) {
+        return false;
+      }
+      const Definition &def = defIt->second;
+      maskOut.clear();
+      maskOut.reserve(def.parameters.size());
+      for (const Expr &param : def.parameters) {
+        BindingInfo info;
+        extractExplicitBindingType(param, info);
+        maskOut.push_back(std::find(def.templateArgs.begin(),
+                                    def.templateArgs.end(),
+                                    info.typeName) != def.templateArgs.end());
+      }
+      return true;
+    };
+    auto strictlyMoreSpecific = [](const std::vector<bool> &left,
+                                   const std::vector<bool> &right) {
+      if (left.size() != right.size()) {
+        return false;
+      }
+      bool strictlyBetterSomewhere = false;
+      for (std::size_t i = 0; i < left.size(); ++i) {
+        const bool leftGeneric = left[i];
+        const bool rightGeneric = right[i];
+        if (leftGeneric && !rightGeneric) {
+          return false;
+        }
+        if (!leftGeneric && rightGeneric) {
+          strictlyBetterSomewhere = true;
+        }
+      }
+      return strictlyBetterSomewhere;
+    };
+    const HelperOverloadEntry *winner = nullptr;
+    for (const auto *candidate : viable) {
+      std::vector<bool> candidateMask;
+      if (!candidateGenericMask(candidate, candidateMask)) {
+        winner = nullptr;
+        break;
+      }
+      bool beatsAllOthers = true;
+      for (const auto *other : viable) {
+        if (other == candidate) {
+          continue;
+        }
+        std::vector<bool> otherMask;
+        if (!candidateGenericMask(other, otherMask) ||
+            !strictlyMoreSpecific(candidateMask, otherMask)) {
+          beatsAllOthers = false;
+          break;
+        }
+      }
+      if (beatsAllOthers) {
+        winner = candidate;
+        break;
+      }
+    }
+    if (winner != nullptr) {
+      return winner->internalPath;
+    }
+  }
   std::sort(rejected.begin(), rejected.end());
   std::sort(viableSummaries.begin(), viableSummaries.end());
   std::ostringstream error;
   error << formatRequirementOverloadCallSite(expr, resolvedPath) << '\n';
   if (viable.empty()) {
-    error << "no viable requirement overload for " << resolvedPath << '\n';
+    // Wording is deliberately distinct between require-guarded families
+    // (pinned verbatim by existing tests) and Phase 1 type-differentiated
+    // families.
+    error << (typeDifferentiatedGroup
+                  ? "no viable overload for "
+                  : "no viable requirement overload for ")
+          << resolvedPath << '\n';
     if (!rejected.empty()) {
       error << "rejected candidates:";
       for (const std::string &candidate : rejected) {
@@ -630,10 +729,17 @@ std::string selectRequirementAwareHelperOverloadPath(
     }
     error << formatRequirementOverloadArgumentFacts(expr, locals, params)
           << '\n';
-    error << "hint: pass values or types that satisfy exactly one "
-             "constrained overload, or call a more specific helper name.";
+    if (typeDifferentiatedGroup) {
+      error << "hint: pass argument types matching exactly one overload's "
+               "parameter types.";
+    } else {
+      error << "hint: pass values or types that satisfy exactly one "
+               "constrained overload, or call a more specific helper name.";
+    }
   } else {
-    error << "ambiguous requirement overload for " << resolvedPath << '\n';
+    error << (typeDifferentiatedGroup ? "ambiguous call to "
+                                      : "ambiguous requirement overload for ")
+          << resolvedPath << '\n';
     error << "viable candidates:";
     for (const std::string &candidate : viableSummaries) {
       error << "\n- " << candidate;
@@ -641,8 +747,14 @@ std::string selectRequirementAwareHelperOverloadPath(
     error << '\n'
           << formatRequirementOverloadArgumentFacts(expr, locals, params)
           << '\n';
-    error << "hint: make the overload requirements mutually exclusive, or "
-             "call a clearer helper name.";
+    if (typeDifferentiatedGroup) {
+      error << "hint: no overload is strictly more specific for these "
+               "argument types; adjust the argument types or the overload "
+               "signatures.";
+    } else {
+      error << "hint: make the overload requirements mutually exclusive, or "
+               "call a clearer helper name.";
+    }
   }
   ctx.requirementOverloadSelectionError = error.str();
   return resolvedPath;
