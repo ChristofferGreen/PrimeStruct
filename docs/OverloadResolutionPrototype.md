@@ -166,6 +166,43 @@ remaining validator sites, the publication step, and `ir_lowerer` can all
 migrate safely. That is new resolver work, not a read-instead-of-rederive
 substitution, and is unstarted.
 
+**Attempted and reverted:** a first attempt added a narrow canonicalization
+step to monomorphization's `resolveCalleePath`
+(`TemplateMonomorphTypeResolution.h`) that mapped bare public-surface SOA
+spellings (`/soa/get`, `/soa/ref`, ...) to their stdlib target, gated on no
+literal definition already existing at the bare path (to preserve
+user-defined same-path shadows, e.g. a user's own `/soa/ref` overriding the
+stdlib helper — the first version of this attempt broke exactly that case
+before the gate was added). Even with the gate, differential testing found
+further regressions: several tests expect bare `/soa/push`, `/soa/reserve`,
+and similar retired/removed compat spellings to be explicitly rejected with
+"unknown method" diagnostics in certain method-call contexts
+(`isRemovedVectorCompatibilityHelper`/`isRemovedBorrowedSoaCompatibilityHelper`,
+`TemplateMonomorphCollectionCompatibilityPaths.h:4-13`) — the new
+canonicalization step resolved them successfully instead, since it ran
+without checking removed-helper status first. A full-suite verification run
+also stalled for an extended period on this build without producing new
+output, which was not conclusively diagnosed as a hang before the change
+was reverted; it remains an open question whether that was a genuine
+pathological case introduced by this change or environmental slowness (this
+session saw multiple full-suite runs take 2-3x longer than earlier runs
+with no code changes in between). The change was reverted in full
+(`TemplateMonomorphTypeResolution.h` restored to its pre-attempt state,
+confirmed via empty `git diff`) rather than layering more special-case
+guards onto it reactively.
+
+**Conclusion:** `preferredCollectionHelperResolvedPath`'s SOA branch
+encodes more than a simple compat-to-canonical rename — it interacts with
+removed-helper rejection and possibly other rules not yet enumerated.
+Replicating it correctly in monomorphization needs the same rule set
+mapped out deliberately (what counts as removed, in which call shapes,
+interacting with which other checks) before another attempt, not another
+incremental patch. Until then, Phase 0 stays at the state verified safe by
+exact test-name diff: the `resolvedCallPath` field, the `convert<T>` fix,
+and the 5 plain-`resolveCalleePath` validator sites from earlier in this
+document. The remaining validator sites, the publication step, and all 10
+`ir_lowerer` files remain unmigrated.
+
 ## Design Goals
 
 - allow two or more definitions at the same public path with the same
