@@ -106,39 +106,46 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
 
 std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
     const Expr &initializerCall) const {
-  std::string legacy = preferredCollectionHelperResolvedPathLegacy(initializerCall);
-  // Differential audit harness (docs/CompatPathResolutionConsolidation.md
-  // Step 1): when PRIMESTRUCT_RESOLUTION_DIFF_AUDIT is set, compare the
-  // legacy composed resolver against the shared spelling classifier on
-  // every call and report divergence, so the whole test corpus doubles as
-  // a differential corpus. No behavior change when the variable is unset.
+  // Step 2b (docs/CompatPathResolutionConsolidation.md): the shared
+  // spelling classifier is now the primary answer. The legacy composed
+  // resolver is retained only for the PRIMESTRUCT_RESOLUTION_DIFF_AUDIT
+  // comparison until Step 2c retires it. The one intended behavior change
+  // is decision D5: explicit /std/collections/soa_vector/* spellings no
+  // longer canonicalize to the dead family (the classifier passes them
+  // through, and callers' resolveCalleePath fallback preserves the
+  // spelled path for emergent unknown-target handling).
+  if (initializerCall.kind != Expr::Kind::Call ||
+      initializerCall.isMethodCall || initializerCall.name.empty()) {
+    return {};
+  }
+  std::string rooted = initializerCall.name;
+  if (rooted.front() != '/') {
+    std::string prefix = initializerCall.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    rooted = prefix.empty() ? "/" + rooted : prefix + "/" + rooted;
+  }
+  const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
+      rooted,
+      CollectionCallShape::DirectCall,
+      CollectionReceiverFamily::None,
+      [this](std::string_view path) {
+        // Family-aware: stdlib collection helpers are templates, so the
+        // bare canonical key is often absent from defMap_ while the
+        // definition family (path<...>, path__t..., path__ov...) exists.
+        return defMap_.count(std::string(path)) > 0 ||
+               hasDefinitionFamilyPath(path);
+      });
+  const std::string classifierPath =
+      decision.disposition == CompatSpellingDisposition::Canonicalize
+          ? decision.canonicalPath
+          : std::string{};
   static const bool auditEnabled =
       std::getenv("PRIMESTRUCT_RESOLUTION_DIFF_AUDIT") != nullptr;
-  if (auditEnabled && initializerCall.kind == Expr::Kind::Call &&
-      !initializerCall.isMethodCall && !initializerCall.name.empty()) {
-    std::string rooted = initializerCall.name;
-    if (rooted.front() != '/') {
-      std::string prefix = initializerCall.namespacePrefix;
-      if (!prefix.empty() && prefix.front() != '/') {
-        prefix.insert(prefix.begin(), '/');
-      }
-      rooted = prefix.empty() ? "/" + rooted : prefix + "/" + rooted;
-    }
-    const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
-        rooted,
-        CollectionCallShape::DirectCall,
-        CollectionReceiverFamily::None,
-        [this](std::string_view path) {
-          // Family-aware: stdlib collection helpers are templates, so the
-          // bare canonical key is often absent from defMap_ while the
-          // definition family (path<...>, path__t..., path__ov...) exists.
-          return defMap_.count(std::string(path)) > 0 ||
-                 hasDefinitionFamilyPath(path);
-        });
-    const std::string classifierPath =
-        decision.disposition == CompatSpellingDisposition::Canonicalize
-            ? decision.canonicalPath
-            : std::string{};
+  if (auditEnabled) {
+    const std::string legacy =
+        preferredCollectionHelperResolvedPathLegacy(initializerCall);
     if (classifierPath != legacy) {
       std::cerr << "RESOLUTION_DIFF_AUDIT preferredCollectionHelperResolvedPath"
                 << " legacy='" << legacy << "' classifier='" << classifierPath
@@ -146,7 +153,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
                 << initializerCall.namespacePrefix << "'\n";
     }
   }
-  return legacy;
+  return classifierPath;
 }
 
 std::string SemanticsValidator::preferredCollectionHelperResolvedPathLegacy(

@@ -105,7 +105,27 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
                            : "/" + std::string(path);
 
   // Rule order (docs/CompatPathResolutionConsolidation.md, Goal):
-  // shadow precedence first, rejection second, canonicalization last.
+  // shadow precedence first, rejection second, canonicalization last -
+  // with one pinned exception below.
+
+  const std::string_view leaf = leafName(rooted);
+
+  // Exception: bare public-surface SOA spellings canonicalize
+  // shadow-blind in non-method shapes. The binding-initializer inference
+  // consumer's reference behavior canonicalizes even when a same-path
+  // shadow definition exists - the shadow's divergent signature is then
+  // surfaced by ordinary type checking rather than silently preferred
+  // (pinned by container_error_and_result_helpers.cpp:4093, "ref method
+  // fallback ignores retired same-path helper shadow for auto
+  // inference"). Method-shape shadow handling stays shadow-first: that is
+  // Mechanism B's visible-same-path escape (pinned by :4059).
+  if (shape != CollectionCallShape::MethodCall &&
+      startsWith(rooted, kBareSoaPrefix) &&
+      classifierPublicSoaSurfaceHelperName(leaf)) {
+    decision.disposition = CompatSpellingDisposition::Canonicalize;
+    decision.canonicalPath = canonicalSoaHelperPath(leaf);
+    return decision;
+  }
 
   // 1. Shadow precedence: a real definition at the spelled path always
   //    wins (rule-table rows 5, 13, 17; pinned by container_error_and_
@@ -113,8 +133,6 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
   if (definitionExists && definitionExists(rooted)) {
     return decision;
   }
-
-  const std::string_view leaf = leafName(rooted);
 
   // 2. Rejection, checked before canonicalization so a retired spelling
   //    can never be rescued by the rename path.
@@ -166,22 +184,6 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
       decision.disposition = CompatSpellingDisposition::Canonicalize;
       decision.canonicalPath = canonical;
     }
-    return decision;
-  }
-
-  if (startsWith(rooted, kBareSoaPrefix) &&
-      classifierPublicSoaSurfaceHelperName(leaf)) {
-    // Rule-table row 1, decision D1 (refined by the Step 1 differential
-    // audit): bare public-surface SOA spellings canonicalize
-    // unconditionally, matching the reference validator behavior that
-    // downstream wrapper-return routing depends on. The canonical target
-    // is a real stdlib surface (/std/collections/soa/*); whether it is
-    // visible in the current stage's definition map is an import concern
-    // handled downstream, not a reason to withhold the rename. Decision
-    // D5 ("never emit a path without a backing definition") is scoped to
-    // families that exist nowhere, such as soa_vector below.
-    decision.disposition = CompatSpellingDisposition::Canonicalize;
-    decision.canonicalPath = canonicalSoaHelperPath(leaf);
     return decision;
   }
 

@@ -87,9 +87,14 @@ TEST_CASE("registry manifest surfaces agree with the removed-helper name lists")
   }
 }
 
-// Rule-table row 5 / decision D3: a definition at the spelled path always
-// wins, before any rejection or canonicalization.
-TEST_CASE("shadow definition at the spelled path forces pass-through") {
+// Rule-table row 5 / decision D3: in method shape a definition at the
+// spelled path wins before rejection (Mechanism B's visible-same-path
+// escape, pinned upstream by container_error_and_result_helpers.cpp:4059).
+// In non-method shapes bare public-SOA spellings canonicalize
+// shadow-blind: the binding-inference consumer's reference behavior
+// surfaces a divergent shadow signature through ordinary type checking
+// instead of silently preferring it (pinned upstream by :4093).
+TEST_CASE("shadow definition wins in method shape but not for bare soa direct shape") {
   const auto defs = definitionSet({"/soa/ref", "/std/collections/soa/ref"});
 
   const CompatSpellingDecision method = classifyCollectionHelperSpelling(
@@ -100,7 +105,15 @@ TEST_CASE("shadow definition at the spelled path forces pass-through") {
   const CompatSpellingDecision direct = classifyCollectionHelperSpelling(
       "/soa/ref", CollectionCallShape::DirectCall,
       CollectionReceiverFamily::None, defs);
-  CHECK(direct.disposition == CompatSpellingDisposition::PassThrough);
+  CHECK(direct.disposition == CompatSpellingDisposition::Canonicalize);
+  CHECK(direct.canonicalPath == "/std/collections/soa/ref");
+
+  // Non-SOA families keep shadow-first in every shape.
+  const auto arrayDefs = definitionSet({"/array/get"});
+  const CompatSpellingDecision arrayShadow = classifyCollectionHelperSpelling(
+      "/array/get", CollectionCallShape::DirectCall,
+      CollectionReceiverFamily::None, arrayDefs);
+  CHECK(arrayShadow.disposition == CompatSpellingDisposition::PassThrough);
 }
 
 // Rule-table rows 2-3 (Mechanism B): retired SOA receiver methods reject,
