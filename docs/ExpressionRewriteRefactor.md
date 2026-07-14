@@ -165,13 +165,22 @@ tests (`--test-case="*overload*,same-arity*"`), the classifier suite
 (`primestruct.semantics.collection_spelling_classifier`), the five-test
 SOA gauntlet, and the two pin-holder golden tests named above.
 
-Per-milestone (hours; end of Step 1, end of Step 2, end of Step 3): full
-semantics + ir_pipeline corpora with name-level failing-set diffs against
-the branch baseline, expecting identity.
+Per-milestone (hours; end of Step 1, end of Step 2, end of Step 3): the
+sharded CTest gate (`ctest --test-dir <build> --output-on-failure
+--parallel N`), which is the repository's authoritative green signal. Do
+NOT gate on running a whole doctest binary unsharded in one process:
+`docs/failing_tests.md` documents deterministic cross-test-case state
+pollution in that mode (100+ phantom failures in
+`semantics.calls_flow.collections` alone, byte-identical on unmodified
+baselines). If an unsharded corpus run is used for a quick comparison
+anyway, only name-level failing-set diffs against a same-command baseline
+run are meaningful — never the raw failure count.
 
-Any surprising failure gets the clean-rebuild triage (fresh build tree)
-before code-level debugging — stale-object artifacts have produced
-convincing phantom failures in this repo before.
+Any surprising failure gets two triage steps before code-level debugging:
+re-run the failing case in isolation (`--test-case=...`, which matches the
+sharding the real gate uses), and the clean-rebuild triage (fresh build
+tree) — both cross-case pollution and stale-object artifacts have
+produced convincing phantom failures in this repo before.
 
 ## Execution Checklist
 
