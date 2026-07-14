@@ -149,15 +149,69 @@ as-is — partition further by parameter type signature:
   diagnostic, now scoped to `(path, arity, type signature)` instead of just
   `(path, arity)`
 - if more than one candidate survives with *different* viable type
-  signatures, the call is a compile-time diagnostic: ambiguous call
+  signatures, apply the specificity rule below before diagnosing ambiguity
 
-Open question, not resolved here: an unbound generic parameter (`<T>`)
-structurally matches any concrete argument type, so a generic candidate in
-an arity group can always survive alongside a concrete-typed candidate,
-making every such pair ambiguous unless a preference rule breaks the tie
-(e.g. "an exact concrete-type match wins over a generic match in the same
-slot"). This needs to be settled before implementation; it is the main
-semantic risk in this proposal, not the mechanical plumbing.
+### Specificity Rule (Partial Ordering, C++-Style)
+
+An unbound generic parameter (`<T>`) structurally matches any argument
+type, so a generic candidate in an arity group is always viable alongside
+a concrete-typed candidate. Left unresolved, every such pair would be
+"ambiguous," which defeats the point (a generic fallback next to a
+type-specific override is a normal, expected pattern — it's how the
+existing `/helper/value<T>` example in `docs/PrimeStruct.md` already
+reads, just currently separated by arity instead of type).
+
+Resolve it the way C++ does, taking only the two rules that apply here and
+explicitly leaving out conversion-sequence ranking (already excluded under
+Non-Goals — viability itself stays exact-type-only, this rule only breaks
+ties among already-viable candidates):
+
+1. **Concrete beats generic.** A candidate with no unbound generic
+   parameters beats any viable candidate that has one or more unbound
+   generic parameters.
+2. **Partial ordering among generic candidates.** When two viable
+   candidates both have unbound generic parameters, compare them
+   parameter-by-parameter. In a given position: a concrete type is more
+   specific than an unbound generic parameter; two concrete types are
+   equally specific (and, since viability already required an exact
+   match, they are the same type); two unbound generic parameters are
+   equally specific. Candidate `F` is more specific than candidate `G` if
+   `F` is at least as specific as `G` in every position and strictly more
+   specific in at least one. If exactly one viable candidate is more
+   specific than every other viable candidate, it wins.
+3. **Incomparable stays ambiguous.** If no viable candidate is more
+   specific than every other — two candidates are each more specific than
+   the other in different parameter positions — the call is a compile-time
+   diagnostic: ambiguous call. This is a real, intended outcome, not a gap
+   to patch over with an arbitrary tie-break; PrimeStruct does not invent
+   an ordering beyond specificity.
+
+Example, rule 1 (concrete beats generic):
+
+```prime
+[T] insert([string] path, [T] value) { ... }
+[A, T] insert([A] path, [T] value) { ... }
+```
+
+```prime
+space.insert("/sys/data", 5)   // resolves to the [string] candidate
+```
+
+Example, rule 3 (genuinely ambiguous — neither dominates):
+
+```prime
+[A] handle([A] first, [string] second) { ... }
+[A] handle([string] first, [A] second) { ... }
+```
+
+```prime
+handle("x", "y")
+```
+
+```text
+ambiguous call to `handle`: candidates (A, string) and (string, A) are
+each more specific than the other in one parameter for (string, string)
+```
 
 ## Example
 
@@ -187,6 +241,7 @@ Expected diagnostic shapes:
 ```text
 no viable overload for `insert`: no candidate accepts (bool, i32)
 ambiguous call to `insert`: candidates (string, T) and (PathKey, T) both viable for (string, i32)
+ambiguous call to `handle`: candidates (A, string) and (string, A) are incomparable for (string, string)
 duplicate definition: insert(string, T) already declared with this exact signature
 ```
 
@@ -276,8 +331,9 @@ Phase 0 — consolidate before extending:
 
 Phase 1 — add type-based matching on top of the consolidated source:
 
-- [ ] settle the generic-vs-concrete overlap/preference rule (open question
-  above) before writing any code
+- [ ] implement the specificity/partial-ordering tie-break rule (see
+  "Specificity Rule (Partial Ordering, C++-Style)" above), including the
+  incomparable-stays-ambiguous diagnostic
 - [ ] extend the single canonical resolution function's grouping key from
   `(path, arity)` to `(path, arity, parameter-type-signature)`
 - [ ] extend the internal path/key scheme beyond `__ov<N>` to also encode a
