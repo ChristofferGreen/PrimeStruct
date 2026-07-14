@@ -199,7 +199,58 @@ mapped out deliberately (what counts as removed, in which call shapes,
 interacting with which other checks) before another attempt, not another
 incremental patch. That mapping-and-consolidation work is now planned
 separately in `docs/CompatPathResolutionConsolidation.md`; the remainder
-of Phase 0 resumes once it lands. Until then, Phase 0 stays at the state verified safe by
+of Phase 0 resumes once it lands.
+
+### Phase 0 Final Verdict (post-consolidation)
+
+The consolidation plan landed in full (see
+`docs/CompatPathResolutionConsolidation.md`, Steps 0-2c complete). With
+it in place, the remaining Phase 0 substitution — replace the validator's
+`resolveCalleePath` re-derivations and the 10 `ir_lowerer` `__ov`-scan
+fallbacks with reads of the monomorphization-captured
+`Expr::resolvedCallPath` — was put to a final differential audit: an
+observe-only hook in `SemanticsValidator::resolveCalleePath` compared its
+answer against `expr.resolvedCallPath` on every call across the
+ir_pipeline corpus.
+
+**Result: 87,194 divergences in ~22 distinct classes — the substitution
+is empirically disproven.** The classes are structural, not edge cases:
+builtin classification (`dereference` resolves as the builtin
+`/dereference` in the validator but was captured namespace-composed),
+receiver-typed method targets (bare `why` vs `/std/file/FileError/why`),
+specialization-context path composition (calls captured inside
+`__t`-specialized definitions), and import-visibility-dependent aliasing.
+Resolution in this compiler is legitimately stage- and context-dependent;
+a single AST-attached string cannot represent it. `Expr::resolvedCallPath`
+remains valid exactly where it was verified by name-level test diffs: the
+five plain-`resolveCalleePath`-fallback sites migrated earlier, plus
+monomorphization's own internal uses.
+
+**The consolidation Phase 0 actually needed was achieved by different
+means:**
+
+- The *rule layer* (compat spellings, removed-helper rejection, shadow
+  precedence) has one implementation: `CollectionSpellingClassifier`,
+  consulted by all three stages, with the rule set spelled out and pinned
+  by tests (the consolidation doc's Steps 0-2c).
+- The *fact layer* for downstream stages already had its single source:
+  the published semantic-product call targets
+  (`SemanticProgramDirectCallTarget`/`MethodCallTarget.resolvedPathId`,
+  keyed by `semanticNodeId`), which encode the validator's
+  context-correct answers and which `ir_lowerer`'s resolution fast path
+  already prefers. The remaining `__ov` scans in `ir_lowerer` are
+  fallbacks behind that fast path, exercised only where publication
+  coverage lapses.
+
+**Remaining future work (the viable route, not resumed here):** make
+semantic-product call-target publication universal-by-construction
+(today it is collector-gated and verified by a consistency check), then
+delete the `ir_lowerer` fallback scans outright. That is the original
+"option C" triaged at the start of Phase 0, now confirmed as the only
+sound completion path. Phase 1 (type-based matching) does not depend on
+it: the arity-selection engine it must extend
+(`selectHelperOverloadPath` and the monomorphization overload grouping)
+is already a single decision point. Until then, Phase 0 stays at the state verified safe by
 exact test-name diff: the `resolvedCallPath` field, the `convert<T>` fix,
 and the 5 plain-`resolveCalleePath` validator sites from earlier in this
 document. The remaining validator sites, the publication step, and all 10
