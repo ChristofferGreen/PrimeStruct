@@ -2,8 +2,11 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/CollectionSpellingClassifier.h"
 
 #include <algorithm>
+#include <cstdlib>
+#include <iostream>
 #include <limits>
 
 namespace primec::semantics {
@@ -102,6 +105,47 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
 }
 
 std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
+    const Expr &initializerCall) const {
+  std::string legacy = preferredCollectionHelperResolvedPathLegacy(initializerCall);
+  // Differential audit harness (docs/CompatPathResolutionConsolidation.md
+  // Step 1): when PRIMESTRUCT_RESOLUTION_DIFF_AUDIT is set, compare the
+  // legacy composed resolver against the shared spelling classifier on
+  // every call and report divergence, so the whole test corpus doubles as
+  // a differential corpus. No behavior change when the variable is unset.
+  static const bool auditEnabled =
+      std::getenv("PRIMESTRUCT_RESOLUTION_DIFF_AUDIT") != nullptr;
+  if (auditEnabled && initializerCall.kind == Expr::Kind::Call &&
+      !initializerCall.isMethodCall && !initializerCall.name.empty()) {
+    std::string rooted = initializerCall.name;
+    if (rooted.front() != '/') {
+      std::string prefix = initializerCall.namespacePrefix;
+      if (!prefix.empty() && prefix.front() != '/') {
+        prefix.insert(prefix.begin(), '/');
+      }
+      rooted = prefix.empty() ? "/" + rooted : prefix + "/" + rooted;
+    }
+    const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
+        rooted,
+        CollectionCallShape::DirectCall,
+        CollectionReceiverFamily::None,
+        [this](std::string_view path) {
+          return defMap_.count(std::string(path)) > 0;
+        });
+    const std::string classifierPath =
+        decision.disposition == CompatSpellingDisposition::Canonicalize
+            ? decision.canonicalPath
+            : std::string{};
+    if (classifierPath != legacy) {
+      std::cerr << "RESOLUTION_DIFF_AUDIT preferredCollectionHelperResolvedPath"
+                << " legacy='" << legacy << "' classifier='" << classifierPath
+                << "' name='" << initializerCall.name << "' prefix='"
+                << initializerCall.namespacePrefix << "'\n";
+    }
+  }
+  return legacy;
+}
+
+std::string SemanticsValidator::preferredCollectionHelperResolvedPathLegacy(
     const Expr &initializerCall) const {
   if (initializerCall.kind != Expr::Kind::Call || initializerCall.isMethodCall) {
     return {};

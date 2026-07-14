@@ -246,6 +246,7 @@
                                           std::string &resolvedPathOut,
                                           ReturnKind &returnKindOut) const;
   std::string preferredCollectionHelperResolvedPath(const Expr &initializerCall) const;
+  std::string preferredCollectionHelperResolvedPathLegacy(const Expr &initializerCall) const;
   bool inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const;
   bool resolveStructFieldBinding(const Definition &structDef,
                                  const Expr &fieldStmt,

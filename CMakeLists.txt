@@ -56,6 +56,7 @@ function(primestructEnableWarnings targetName)
 endfunction()
 
 set(PRIMESTRUCT_SUPPORT_SOURCES
+  src/CollectionSpellingClassifier.cpp
   src/Diagnostics.cpp
   src/EmitKind.cpp
   src/OptionsParser.cpp
@@ -1050,6 +1051,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_result_helpers_file.cpp
     tests/unit/semantics/test_semantics_result_helpers_errors.cpp
     tests/unit/semantics/test_semantics_result_helpers_gfx.cpp
+    tests/unit/semantics/test_semantics_collection_spelling_classifier.cpp
   )
   target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_semantics_tests PRIVATE primec_ir_lib)
