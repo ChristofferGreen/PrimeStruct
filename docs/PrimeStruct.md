@@ -2649,15 +2649,26 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name
     resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
   - **Helper overloading:** non-struct definitions may reuse the same public helper path when their exact parameter
-    counts differ. Call resolution picks the exact-arity match before template specialization and method-call lowering,
-    while same-path same-arity definitions are still duplicates. Minimal example:
+    counts differ. Call resolution picks the exact-arity match before template specialization and method-call lowering.
+    Same-path same-arity definitions may also coexist when their parameter-type signatures are pairwise distinct
+    (an unbound template parameter counts as one generic marker); the call site then selects the candidate whose
+    parameter types match the argument types exactly, with a specificity tie-break when several candidates remain
+    viable: a concrete parameter type beats an unbound template parameter in the same position, and a candidate wins
+    only if it is at least as specific in every position and strictly more specific in at least one. No viable
+    candidate is a compile-time `no viable overload for ...` diagnostic; incomparable viable candidates are a
+    compile-time `ambiguous call to ...` diagnostic. Same-path same-arity definitions with the same parameter-type
+    signature are still duplicates (unless disambiguated by `require<...>` constraints, which keep their existing
+    behavior). Minimal examples:
     ```text
     [return<i32>] /helper/value<T>([T] value) { return(1i32) }
     [return<i32>] /helper/value<A, B>([A] first, [B] second) { return(2i32) }
+    [return<i32>] /helper/insert([string] path) { return(3i32) }
+    [return<i32>] /helper/insert([PathKey] key) { return(4i32) }
     [return<int> effects(io_out)]
     main() {
       print_line(/helper/value(7i32))
       print_line(/helper/value(7i32, true))
+      print_line(/helper/insert("by-path"))
       return(0i32)
     }
     ```

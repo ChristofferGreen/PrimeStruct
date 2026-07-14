@@ -1,6 +1,17 @@
 # PrimeStruct Type-Based Overload Resolution Prototype
 
-Status: prototype design note, not yet part of the canonical language spec.
+Status: Phase 1 implemented. Same-path same-arity definitions with
+pairwise-distinct parameter-type signatures now coexist and are selected
+by argument type with the C++-style specificity tie-break; the supported
+surface is folded into `docs/PrimeStruct.md`'s "Helper overloading"
+section. The earlier sections of this document are the design history:
+the Phase 0 consolidation work (see its Final Verdict section) and the
+"Phase 1 Implementation Design" section describe what was built and why.
+First-slice limits that remain by design: viability compares normalized
+type names (template-argument text does not distinguish overloads),
+nested-call arguments have best-effort/unknown type facts (unknown
+matches any candidate), and `require<...>`-guarded families keep their
+own selection semantics and diagnostics unchanged.
 
 This document proposes relaxing the current arity-only "helper overloading"
 rule so that same-path, same-arity definitions can coexist when their

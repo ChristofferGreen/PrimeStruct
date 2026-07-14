@@ -189,21 +189,18 @@ e.g. inside a hot loop):
 }
 ```
 
-These cannot be a true overload of one `insert` name today: PrimeStruct's
-current helper-overloading rule resolves by arity only, and both
-signatures are arity-2 at the same path, which is a duplicate-definition
-error under the current rule (`docs/PrimeStruct.md:2651`). This is exactly
-the gap `docs/OverloadResolutionPrototype.md` scopes fixing — that
-document's Phase 0 (consolidate resolution to one source) and Phase 1
-(match by parameter type, with the C++-style specificity rule for
-`string` vs `PathKey`) are a direct dependency of `Space` presenting one
-`insert` name instead of two.
-
-Until that substrate lands, `Space` ships with the two-name form above:
-`insert`/`try_take`/`try_read` (string) calling `insert_by_key`/
-`try_take_by_key`/`try_read_by_key` (`PathKey`) internally. This requires
-no new language capability and is a straightforward rename once
-type-based overloading exists.
+These are now a true overload set: type-based same-arity overload
+resolution (Phase 1 of `docs/OverloadResolutionPrototype.md`) is
+implemented, so `insert([string] ...)` and `insert([PathKey] ...)` coexist
+at one path and call sites select by argument type — the exact
+string-vs-`PathKey` pattern is pinned by the "same-arity helper overloads
+resolve by parameter type" semantics test. The earlier two-name fallback
+(`insert` calling `insert_by_key`) is no longer required, though note the
+first-slice limit that a nested-call argument (e.g.
+`insert(hash_path(p), v)`) has best-effort argument-type facts; when the
+callee's type cannot be inferred, the call diagnoses as ambiguous rather
+than selecting, so `Space`'s implementation should keep explicit typed
+locals in its own internals where that matters.
 
 ## Routing And Mount Points
 

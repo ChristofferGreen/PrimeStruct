@@ -2507,8 +2507,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(buildParametersSource.find("returnsExperimentalKeyValue") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find("explicitStdKeyValueHelperName") !=
+  // The composed key-value resolver was retired for the shared spelling
+  // classifier (docs/CompatPathResolutionConsolidation.md Steps 2b/2c);
+  // the pin flips to guard against the legacy helper returning.
+  CHECK(buildInitializerInferenceSource.find("explicitStdKeyValueHelperName") ==
         std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "classifyCollectionHelperSpelling(") != std::string::npos);
   CHECK(buildInitializerInferenceSource.find("explicitStdMapHelperName") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find("\"/std/collections/map/\"") ==
@@ -2563,7 +2568,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(buildInitializerInferenceSource.find(
             "isSpecializedExperimentalKeyValueBackingPath") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find("metadataBackedCanonicalKeyValueHelperPath(helperName)") !=
+  // Retired with the legacy composed resolver (Steps 2b/2c); the
+  // metadata-backed canonical mapping now lives behind the classifier.
+  CHECK(buildInitializerInferenceSource.find("metadataBackedCanonicalKeyValueHelperPath(helperName)") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "isExperimentalCollectionBackingTypeName(\"map\"") ==
