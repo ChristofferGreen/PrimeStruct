@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/CollectionSpellingClassifier.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -11,21 +12,14 @@
 namespace primec::semantics {
 namespace {
 
+// Removed-name membership delegates to the single authoritative sets in
+// primec/CollectionSpellingClassifier.h (decision D2).
 bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-         helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-         helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-         helperName == "remove_swap";
+  return classifierRemovedVectorCompatibilityHelper(helperName);
 }
 
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "size" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
+  return classifierRemovedKeyValueCompatibilityHelper(helperName);
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForBodyArguments() {

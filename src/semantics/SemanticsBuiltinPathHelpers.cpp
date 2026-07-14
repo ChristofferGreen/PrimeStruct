@@ -2,6 +2,7 @@
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/CollectionSpellingClassifier.h"
 #include "primec/SoaPathHelpers.h"
 #include "primec/StdlibCollectionPaths.h"
 #include "primec/StdlibSurfaceRegistry.h"
@@ -14,25 +15,18 @@ namespace primec::semantics {
 
 namespace {
 
+// Removed-name membership delegates to the single authoritative sets in
+// primec/CollectionSpellingClassifier.h (decision D2).
 bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
-         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
-         helperName == "remove_at" || helperName == "remove_swap";
+  return classifierRemovedVectorCompatibilityHelper(helperName);
 }
 
 bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count_ref" || helperName == "get_ref" ||
-         helperName == "ref_ref" || helperName == "to_aos_ref";
+  return classifierRemovedBorrowedSoaCompatibilityHelper(helperName);
 }
 
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "size" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
+  return classifierRemovedKeyValueCompatibilityHelper(helperName);
 }
 
 struct HelperSuffixInfo {

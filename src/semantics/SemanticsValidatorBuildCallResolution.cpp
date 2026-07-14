@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/CollectionSpellingClassifier.h"
 
 #include <cctype>
 #include <string_view>
@@ -388,20 +389,13 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   }
   if (!expr.namespacePrefix.empty()) {
     const std::string normalizedPrefix = normalizedPrefixPath(expr.namespacePrefix);
+    // Removed-name membership delegates to the single authoritative sets
+    // in primec/CollectionSpellingClassifier.h (decision D2).
     auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
-      return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-             helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-             helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-             helperName == "remove_swap";
+      return classifierRemovedVectorCompatibilityHelper(helperName);
     };
     auto isRemovedKeyValueCompatibilityHelper = [](std::string_view helperName) {
-      return helperName == "count" || helperName == "count_ref" ||
-             helperName == "size" ||
-             helperName == "contains" || helperName == "contains_ref" ||
-             helperName == "tryAt" || helperName == "tryAt_ref" ||
-             helperName == "at" || helperName == "at_ref" ||
-             helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-             helperName == "insert" || helperName == "insert_ref";
+      return classifierRemovedKeyValueCompatibilityHelper(helperName);
     };
     const size_t lastSlash = normalizedPrefix.find_last_of('/');
     const std::string_view suffix = lastSlash == std::string::npos
