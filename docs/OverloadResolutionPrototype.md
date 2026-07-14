@@ -10,6 +10,11 @@ parameter types differ. It is required substrate for the `Space` prototype's
 design here is stable enough, fold the accepted parts into
 `docs/PrimeStruct.md` alongside implementation TODOs.
 
+Before any type-based matching is added, this document now also scopes a
+prerequisite refactor: overload resolution has no single source of truth
+today, and that has to be fixed first. See "Prerequisite: Consolidate
+Resolution Into A Single Source" below.
+
 ## Current Behavior (baseline)
 
 Overload resolution today is arity-only and lives inside the
@@ -38,6 +43,68 @@ template-monomorphization pass, not a dedicated resolver:
 Parameter *types* play no role in candidate selection today. Two
 definitions with the same arity are always duplicates regardless of their
 parameter types, unless one carries a `require<...>` guard.
+
+## Prerequisite: Consolidate Resolution Into A Single Source
+
+Resolution is not implemented once today — it is independently
+reconstructed by string convention at every consumption site. The
+`path + "__ov"` prefix is rebuilt and re-parsed via ad hoc
+concatenation/`rfind` prefix-matching in at least:
+
+- `SemanticsValidatorExprCallResolution.cpp` alone, four separate times:
+  `:45` (`overloadPrefix = resolvedPath + "__ov"`), `:146-157` (a third,
+  differently cached, local helper that rebuilds `path + "__ov"`), `:194`
+  (`overloadPrefix = rawPath + "__ov"` again), and `:480`/`:489`
+  (`rfind(canonicalPath + "__ov", 0) == 0`, twice, for different path
+  variants)
+- 18 files total under `src/semantics/*`
+- 10 files under `src/ir_lowerer/*` — `IrLowererCallResolution.cpp`,
+  `IrLowererStatementCallEmission.cpp`,
+  `IrLowererStatementBindingStatementEmit.cpp`,
+  `IrLowererSetupTypeMethodCallResolution.cpp`,
+  `IrLowererLowerSumHelpers.h`, `IrLowererLowerStatementsExpr.h`,
+  `IrLowererLowerStatementsBindings.h`,
+  `IrLowererLowerEmitExprTailDispatch.h`,
+  `IrLowererLowerEmitExprCollectionHelpers.h`,
+  `IrLowererBindingTypeHelpers.cpp` — each re-parsing `__ov` for its own
+  purpose (call resolution, binding emission, collection-helper rewriting,
+  sum-helper lowering) instead of consuming an already-resolved reference
+
+No single function decides "which definition does this call resolve to"
+and publishes that answer once. Every consumer re-derives it by agreeing,
+informally, on what a magic string substring means. This contradicts
+PrimeStruct's own stated architecture: the whole language is built around
+flowing decisions through one canonical form (one IR, a semantic product
+that publishes facts for downstream stages to consume) rather than letting
+each stage re-derive the same answer independently. Extending the current
+string convention with a second dimension — a type-signature hash, as
+"Compiler Surface Impacted" below originally proposed — would only add
+that dimension to all 28+ sites instead of fixing the duplication.
+
+**Refactor shape:**
+
+- introduce one canonical resolution function/pass that, given a call
+  site, returns a single resolved definition reference (a strongly-typed
+  ID or pointer, not a path string)
+- attach that reference directly to the call's AST/semantic-product node
+  at resolution time
+- every downstream consumer — the 10 `ir_lowerer` files and every
+  `semantics` file that currently reconstructs `path + "__ov"` for its own
+  candidate search — reads the attached reference instead of re-deriving
+  it
+- the `__ov<N>` path suffix becomes a debug/display/generated-symbol
+  naming detail only, not something any consumer parses to make a decision
+- this refactor must be behavior-preserving on its own: same arity-only
+  resolution rules, same diagnostics, verified by the existing overload
+  test suite before any type-based matching is added
+
+**Sequencing:** this consolidation is step zero, ahead of everything else
+in this document.
+
+1. Consolidate arity-only resolution to one source of truth (behavior
+   preserving; existing tests must pass unchanged)
+2. Only then extend that single source to also match on parameter type
+   (the rest of this document)
 
 ## Design Goals
 
@@ -128,38 +195,35 @@ and every candidate signature considered.
 
 ## Compiler Surface Impacted
 
-The internal overload key must grow from `path + "__ov" + arity` to
-something that also encodes the parameter type signature, e.g.
-`path + "__ov" + arity + "__ty" + typeSignatureHash`. Encoding a stable
-hash of a type-name sequence into that key is the same class of problem as
-the compile-time string-hashing feature discussed for `Space` path
-segments — worth reusing that mechanism here instead of inventing a second
-one, once it exists.
+Today, the ~28 files enumerated under "Prerequisite" above are each a
+direct dependency, because each one independently re-parses the `__ov`
+convention. That is precisely the problem Phase 0 removes.
 
-That key change is cross-cutting:
+After Phase 0 lands, the internal overload key growing from
+`path + "__ov" + arity` to something that also encodes the parameter type
+signature — e.g. `path + "__ov" + arity + "__ty" + typeSignatureHash` — is
+a change confined to the one canonical resolution function, plus:
 
-- monomorphization grouping and path rewrite:
-  `TemplateMonomorphSourceDefinitionSetup.h`,
-  `TemplateMonomorphCoreUtilities.h` (path rewrite at 204-206, candidate
-  loop at 707-741), `TemplateMonomorphFinalOrchestration.h:379-410`
-  (`rewriteMonomorphizedDefinitions` /
-  `resolveHelperOverloadDefinitionIdentity` at
-  `TemplateMonomorphCoreUtilities.h:745-774`)
-- general validator candidate lookup:
-  `SemanticsValidatorExprCallResolution.cpp:178-197,513-531`,
-  `SemanticsValidatorBuildCallResolution.cpp:10-57`
+- `TemplateMonomorphSourceDefinitionSetup.h` and
+  `TemplateMonomorphFinalOrchestration.h:379-410` (definition grouping and
+  path rewrite, which still needs to run once per compilation to assign the
+  keys in the first place)
 - duplicate-definition diagnostics:
-  `SemanticsValidatorDiagnostics.cpp:189-273`, `SemanticsValidatorBuild.cpp:208-212`
-- IR lowering: 12 files under `src/ir_lowerer/*` currently parse the
-  `__ov<N>` suffix for call resolution, binding emission, collection-helper
-  rewriting, and sum-helper lowering; each needs to carry/parse the type
-  signature component too
+  `SemanticsValidatorDiagnostics.cpp:189-273`,
+  `SemanticsValidatorBuild.cpp:208-212`
 - `src/StdlibSurfaceRegistry.cpp`
+
+Encoding a stable hash of a type-name sequence into that key is the same
+class of problem as the compile-time string-hashing feature discussed for
+`Space` path segments — worth reusing that mechanism here instead of
+inventing a second one, once it exists.
 
 No `SOURCE_LOCK`-style marker gates this behavior today, and the
 `docs/PrimeStruct.md` overload example is not spec-tested, so nothing
-formally blocks the change — but the blast radius above (28 files total)
-makes this a medium-large cross-cutting change, not a local patch.
+formally blocks either phase — but Phase 0 (consolidation) is the
+medium-large cross-cutting change (~28 files, each touched once to remove
+its private `__ov` parsing); Phase 1 (type-based matching) becomes a
+small, localized change once Phase 0 is done.
 
 ## Interaction With `require`-Constrained Overloads
 
@@ -196,20 +260,30 @@ capability.
 
 ## First Implementation Checklist
 
+Phase 0 — consolidate before extending:
+
+- [ ] introduce one canonical resolution function/pass producing a single
+  resolved definition reference per call site
+- [ ] attach that reference to the call's AST/semantic-product node
+- [ ] migrate `SemanticsValidatorExprCallResolution.cpp`'s four independent
+  `path + "__ov"` reconstructions (`:45`, `:146-157`, `:194`, `:480`/`:489`)
+  and the rest of the 18 `src/semantics/*` sites to read the attached
+  reference instead of rebuilding/re-parsing the string convention
+- [ ] migrate all 10 `src/ir_lowerer/*` sites to read the attached
+  reference instead of parsing `__ov`
+- [ ] verify behavior-preserving: existing arity-only overload tests pass
+  unchanged with no diagnostic or resolution-outcome differences
+
+Phase 1 — add type-based matching on top of the consolidated source:
+
 - [ ] settle the generic-vs-concrete overlap/preference rule (open question
   above) before writing any code
-- [ ] extend monomorphization grouping key from `(path, arity)` to
-  `(path, arity, parameter-type-signature)` in
-  `TemplateMonomorphSourceDefinitionSetup.h`
+- [ ] extend the single canonical resolution function's grouping key from
+  `(path, arity)` to `(path, arity, parameter-type-signature)`
 - [ ] extend the internal path/key scheme beyond `__ov<N>` to also encode a
-  type signature, in `TemplateMonomorphCoreUtilities.h`
-- [ ] update call-site candidate selection in
-  `TemplateMonomorphCoreUtilities.h` and
-  `SemanticsValidatorExprCallResolution.cpp` /
-  `SemanticsValidatorBuildCallResolution.cpp` to filter by argument types,
-  not just count
-- [ ] propagate the new key scheme through the 12 `src/ir_lowerer/*` files
-  that parse `__ov`
+  type signature, in the one place that now owns it
+- [ ] update the canonical resolution function to filter by argument
+  types, not just count
 - [ ] update `src/StdlibSurfaceRegistry.cpp`
 - [ ] add "no viable overload" and "ambiguous call" diagnostics, distinct
   from the existing duplicate-definition diagnostic
