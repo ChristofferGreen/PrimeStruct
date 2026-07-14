@@ -164,13 +164,17 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
 
   if (startsWith(rooted, kBareSoaPrefix) &&
       classifierPublicSoaSurfaceHelperName(leaf)) {
-    // Rule-table row 1, decision D1: bare public-surface SOA spellings
-    // canonicalize when (and only when) the canonical definition exists.
-    const std::string canonical = canonicalSoaHelperPath(leaf);
-    if (definitionExists && definitionExists(canonical)) {
-      decision.disposition = CompatSpellingDisposition::Canonicalize;
-      decision.canonicalPath = canonical;
-    }
+    // Rule-table row 1, decision D1 (refined by the Step 1 differential
+    // audit): bare public-surface SOA spellings canonicalize
+    // unconditionally, matching the reference validator behavior that
+    // downstream wrapper-return routing depends on. The canonical target
+    // is a real stdlib surface (/std/collections/soa/*); whether it is
+    // visible in the current stage's definition map is an import concern
+    // handled downstream, not a reason to withhold the rename. Decision
+    // D5 ("never emit a path without a backing definition") is scoped to
+    // families that exist nowhere, such as soa_vector below.
+    decision.disposition = CompatSpellingDisposition::Canonicalize;
+    decision.canonicalPath = canonicalSoaHelperPath(leaf);
     return decision;
   }
 

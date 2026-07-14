@@ -131,26 +131,22 @@ TEST_CASE("supported soa access methods pass through in method shape") {
   CHECK(decision.disposition == CompatSpellingDisposition::PassThrough);
 }
 
-// Rule-table row 1 / decision D1: bare public-surface SOA direct calls
-// canonicalize to the stdlib target when the canonical definition exists.
-TEST_CASE("bare soa direct calls canonicalize when the canonical def exists") {
-  const auto defs = definitionSet({"/std/collections/soa/get"});
-  const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
-      "/soa/get", CollectionCallShape::DirectCall,
-      CollectionReceiverFamily::None, defs);
-  CHECK(decision.disposition == CompatSpellingDisposition::Canonicalize);
-  CHECK(decision.canonicalPath == "/std/collections/soa/get");
-}
-
-// Decision D5: no canonical definition means pass-through, never a
-// conjured path.
-TEST_CASE("bare soa direct calls pass through when no canonical def exists") {
-  const auto defs = definitionSet({});
-  const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
-      "/soa/get", CollectionCallShape::DirectCall,
-      CollectionReceiverFamily::None, defs);
-  CHECK(decision.disposition == CompatSpellingDisposition::PassThrough);
-  CHECK(decision.canonicalPath.empty());
+// Rule-table row 1 / decision D1 (as refined by the Step 1 differential
+// audit): bare public-surface SOA direct calls canonicalize to the stdlib
+// target unconditionally - the target is a real stdlib surface, and
+// wrapper-return routing tests depend on the rename even when the
+// canonical family is not in the current stage's definition map. Only a
+// same-path shadow definition suppresses it (covered by the shadow test
+// above).
+TEST_CASE("bare soa direct calls canonicalize unconditionally") {
+  for (const auto &defs :
+       {definitionSet({"/std/collections/soa/get"}), definitionSet({})}) {
+    const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
+        "/soa/get", CollectionCallShape::DirectCall,
+        CollectionReceiverFamily::None, defs);
+    CHECK(decision.disposition == CompatSpellingDisposition::Canonicalize);
+    CHECK(decision.canonicalPath == "/std/collections/soa/get");
+  }
 }
 
 // Rule-table row 7 / decision D5: the soa_vector family is dead; the
