@@ -106,6 +106,66 @@ in this document.
 2. Only then extend that single source to also match on parameter type
    (the rest of this document)
 
+### Phase 0 Progress
+
+Implemented and verified (exact test-name diff of the full semantics suite,
+2923 cases, between an unmodified baseline and the modified tree: identical
+178 pre-existing failures, zero regression):
+
+- `Expr::resolvedCallPath` (`include/primec/Ast.h`), populated once during
+  `TemplateMonomorphization` for both direct and method calls
+  (`TemplateMonomorphExpressionRewrite.h:2978-2984`, `:3360-3372`), at the
+  exact point the existing rewrite logic already trusts its own
+  `resolveCalleePath` result for its own subsequent purposes — not a new
+  resolution decision, just capturing an existing one
+  - confirmed unmutated by every later pass before IR lowering consumes it
+    (`CompileTimeSpecializedBranchPruning`, `ReflectionMetadataQueries`,
+    `OmittedStructInitializers`, `SemanticNodeIdAssignment`,
+    `SemanticProductPublication` — all either don't touch resolved call
+    nodes or are read-only by construction)
+  - one real staleness bug found and fixed: `ConvertConstructors`
+    (`SemanticsValidateConvertConstructors.cpp`) retargets `convert<T>(...)`
+    calls after monomorphization already captured the field; now kept in
+    sync at the retarget site
+- 5 validator call sites migrated to prefer the field over re-deriving via
+  plain `resolveCalleePath(expr)` with no other resolver layered in front
+  (`SemanticsValidatorStatementReturns.cpp` x2,
+  `SemanticsValidatorExprMutationBorrows.cpp` x1,
+  `SemanticsValidatorInferCollectionCallResolution.cpp` x2)
+
+**Blocked, with concrete evidence, not just caution:** a third resolver,
+`SemanticsValidator::preferredCollectionHelperResolvedPath`
+(`SemanticsValidatorBuildInitializerInference.cpp:104-216`, used at 33 call
+sites and ahead of `resolveCalleePath` in the publication step that feeds
+`ir_lowerer`'s own semantic-product-trusting fast path), is **not**
+equivalent to `resolvedCallPath`. A differential audit — instrumenting the
+function to compare its result against `expr.resolvedCallPath` on every
+call, then running the full semantics and `ir_pipeline` test corpora —
+found real divergence: legacy-spelling SOA helper calls (`/soa/get`,
+`/soa/ref`) resolve to their literal compat-spelling definition via
+`resolveCalleePath` (and therefore `resolvedCallPath`), while
+`preferredCollectionHelperResolvedPath` deliberately forces the canonical
+`/std/collections/soa/get`/`/ref` path whenever that canonical definition
+exists — regardless of whether the compat spelling also has its own literal
+definition. This is intentional canonicalization in the validator that
+monomorphization's `resolveCalleePath` does not fully replicate today.
+
+This means the remaining Phase 0 scope (the rest of the validator's
+`preferredCollectionHelperResolvedPath`-first sites, the publication step,
+and all 10 `src/ir_lowerer/*` files) cannot be safely migrated by simply
+trusting `resolvedCallPath` — the two resolvers have different
+canonicalization goals for at least the SOA compat-spelling family, and
+possibly others not exercised by the current test corpus. The actual
+follow-up is to extend monomorphization's own SOA/vector/key-value
+compat-path canonicalization (already partially present via
+`preferVectorStdlibHelperPath`/`preferVectorStdlibTemplatePath`,
+`TemplateMonomorphCollectionCompatibilityPaths.h:95-162`) to match
+`preferredCollectionHelperResolvedPath`'s canonicalization exactly, so that
+`resolvedCallPath` always holds the canonical path — at which point the
+remaining validator sites, the publication step, and `ir_lowerer` can all
+migrate safely. That is new resolver work, not a read-instead-of-rederive
+substitution, and is unstarted.
+
 ## Design Goals
 
 - allow two or more definitions at the same public path with the same
