@@ -395,6 +395,18 @@ observe-only) drove the classifier to convergence:
    These become the called-out intended divergences when Step 2b migrates
    the validator; each needs its pinning test at that point.
 
+## Step 2a Status: Complete
+
+Commits `ce08e9a`, `d03d646`, `2955eca`. Monomorphization's
+`resolveCalleePath` consults the classifier for the resolution-stage
+spelling families (`isResolutionStageCollectionSpellingPrefix`), the dead
+soa_vector aliasing branches are deleted (golden pins flipped to
+regression guards), and the gates all passed: golden source-shape test,
+the five-test SOA gauntlet, classifier and overload suites, the
+ir_pipeline corpus (baseline-identical failing set plus the intended
+18-line divergence ledger), and the full semantics corpus (178 failures,
+name-level identical to baseline).
+
 ## Step 2a Findings: Resolution vs Publication
 
 Migrating monomorphization's `resolveCalleePath` onto the classifier
