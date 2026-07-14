@@ -407,6 +407,25 @@ ir_pipeline corpus (baseline-identical failing set plus the intended
 18-line divergence ledger), and the full semantics corpus (178 failures,
 name-level identical to baseline).
 
+## Steps 2b/2c Status: Complete
+
+Step 2b (commits `86ce933`, `49cd0eb`): `preferredCollectionHelperResolvedPath`
+returns the classifier's answer. Two rule refinements were discovered by
+the gates and pinned: shadow-blind public-SOA canonicalization in
+non-method shapes (the retired-shadow auto-inference test), and identity
+canonicalization for already-canonical `/std/collections` spellings (the
+vector count auto-inference test).
+
+Step 2c (commits `05a4769`, `a0e95fa`): all six duplicate removed-helper
+predicate implementations (four hardcoded copies, two registry-membership
+variants) delegate to the classifier's single-source sets, and the legacy
+composed resolver plus its audit hook are deleted (the harness pattern —
+an env-gated legacy-vs-shared comparison at a call site — remains the
+documented method for migrating further sites). Every migration commit
+was gated on the golden source-shape suites, the five-test SOA gauntlet,
+the classifier/overload suites, and name-level-identical failing sets
+across both the ir_pipeline and full semantics corpora.
+
 ## Step 2a Findings: Resolution vs Publication
 
 Migrating monomorphization's `resolveCalleePath` onto the classifier
