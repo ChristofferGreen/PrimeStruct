@@ -214,6 +214,33 @@ TEST_CASE("array compat helpers canonicalize to vector when def exists") {
   CHECK(decision.canonicalPath == "/std/collections/vector/get");
 }
 
+// Identity canonicalization: already-canonical /std/collections member
+// spellings with an existing definition are the positive answer in
+// non-method shapes (pinned upstream by "vector stdlib namespaced count
+// helper auto inference falls back to canonical helper return"), while
+// removed canonical-namespace method spellings still reject (row 21).
+TEST_CASE("canonical spellings with existing defs canonicalize to themselves") {
+  const auto defs = definitionSet({"/std/collections/vector/count"});
+  const CompatSpellingDecision direct = classifyCollectionHelperSpelling(
+      "/std/collections/vector/count", CollectionCallShape::DirectCall,
+      CollectionReceiverFamily::None, defs);
+  CHECK(direct.disposition == CompatSpellingDisposition::Canonicalize);
+  CHECK(direct.canonicalPath == "/std/collections/vector/count");
+
+  // With the definition present, method shape resolves through it
+  // (shadow pass-through); the row-21 reject applies when no definition
+  // exists.
+  const CompatSpellingDecision methodWithDef = classifyCollectionHelperSpelling(
+      "/std/collections/vector/count", CollectionCallShape::MethodCall,
+      CollectionReceiverFamily::Vector, defs);
+  CHECK(methodWithDef.disposition == CompatSpellingDisposition::PassThrough);
+
+  const CompatSpellingDecision methodNoDef = classifyCollectionHelperSpelling(
+      "/std/collections/vector/count", CollectionCallShape::MethodCall,
+      CollectionReceiverFamily::Vector, definitionSet({}));
+  CHECK(methodNoDef.disposition == CompatSpellingDisposition::Reject);
+}
+
 // Rule-table row 15: removed key-value helpers reject in method shape
 // under the map root.
 TEST_CASE("removed key-value helpers reject in method shape") {

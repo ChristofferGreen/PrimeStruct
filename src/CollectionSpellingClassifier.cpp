@@ -127,6 +127,23 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
     return decision;
   }
 
+  // Identity canonicalization: a spelling that already names a canonical
+  // /std/collections member with an existing definition is itself the
+  // positive answer in non-method shapes. The legacy composed resolver
+  // returned canonical spellings (gated on definition presence) rather
+  // than staying silent, and auto-inference consumers depend on the
+  // positive answer (pinned by "vector stdlib namespaced count helper
+  // auto inference falls back to canonical helper return"). Method-shape
+  // handling is unaffected: removed canonical-namespace method spellings
+  // must still reject (rule-table row 21).
+  if (shape != CollectionCallShape::MethodCall &&
+      startsWith(rooted, "/std/collections/") && definitionExists &&
+      definitionExists(rooted)) {
+    decision.disposition = CompatSpellingDisposition::Canonicalize;
+    decision.canonicalPath = rooted;
+    return decision;
+  }
+
   // 1. Shadow precedence: a real definition at the spelled path always
   //    wins (rule-table rows 5, 13, 17; pinned by container_error_and_
   //    result_helpers.cpp:4059).
