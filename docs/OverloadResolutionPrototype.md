@@ -463,6 +463,64 @@ name) instead of two differently-named helpers. Until this substrate lands,
 `insert_by_key` (PathKey) internally, which requires no new language
 capability.
 
+## Phase 1 Implementation Design (investigated, ready to build)
+
+The require-constrained overload machinery (TODO-4553) already provides
+almost everything Phase 1 needs, so type-based matching is implemented as
+a generalization of it rather than as a new key scheme:
+
+- **Keying — already solved.** Same-arity family members already receive
+  distinct internal paths `path + "__ov" + arity + "_" + ordinal`
+  (`TemplateMonomorphSourceDefinitionSetup.h:162-180`,
+  `TemplateMonomorphCoreUtilities.h:204-206`) and are stored as a
+  candidate list under the public key in `ctx.helperOverloads`. The
+  `__ov` digit-suffix parsing spread across the codebase never sees a new
+  shape. Downstream stages receive the fully disambiguated internal path
+  (selection runs inside monomorphization; the validator, publication,
+  and ir_lowerer never re-run viability).
+- **Gate 1 to relax — grouping.** Coexistence of same-path same-arity
+  definitions is currently permitted only when a member carries a
+  `require` transform (`TemplateMonomorphSourceDefinitionSetup.h:145-159`,
+  else `"duplicate definition"`). New rule: also permit coexistence when
+  all members' parameter-type signatures are pairwise distinct (signature
+  = per-parameter declared type text via `extractExplicitBindingType`,
+  with unbound template parameters — membership in `def.templateArgs` —
+  normalized to a generic marker). Same-signature same-arity remains a
+  duplicate-definition diagnostic.
+- **Gate 2 to relax — selection.** `selectRequirementAwareHelperOverloadPath`
+  (`TemplateMonomorphCoreUtilities.h:561-649`) currently skips all
+  viability evaluation when no candidate carries a requirement transform
+  (`:571-580`, returns the first candidate blindly). New rule: when the
+  same-arity group is type-differentiated, run type-match viability per
+  candidate — concrete parameter type must equal the argument's inferred
+  type; unbound template parameters match anything; arguments with
+  unknown types match anything (don't spuriously reject).
+- **Argument type facts.** `requirementOverloadArgumentTypeText`
+  (`TemplateMonomorphCoreUtilities.h:288-326`) already resolves literals
+  and named locals/params. Gap: `Expr::Kind::Call` arguments return
+  nullopt. First slice extends it with a best-effort nested-call branch
+  (resolve the callee, read its declared return type), falling back to
+  unknown. This matters for the flagship `insert(hash_path(p), v)` shape:
+  without it, both `(string, T)` and `(PathKey, T)` stay viable and the
+  call diagnoses as ambiguous instead of selecting.
+- **Specificity tie-break.** Slots into the existing `>1 viable` branch
+  (`:635-646`), replacing the flat ambiguity outcome with the documented
+  partial ordering: concrete beats generic per parameter; a candidate
+  wins only if at least as specific in every position and strictly more
+  specific in one; no unique maximum stays an ambiguous-call diagnostic.
+- **Diagnostics.** New wording distinct from the require-flavored strings
+  (`"no viable requirement overload for ..."` / `"ambiguous requirement
+  overload for ..."` are pinned verbatim by
+  `test_semantics_type_resolution_graph_snapshots.cpp:1620-1675` and must
+  not change): type-differentiated groups use `"no viable overload for
+  ..."` / `"ambiguous call to ..."`, reusing the existing rejected-
+  candidates/inferred-argument-facts diagnostic assembly.
+- **Test pins to re-scope.** The "reject duplicate same-arity
+  definitions" tests keep their meaning only if their fixtures are
+  same-signature; any fixture that is genuinely type-differentiated
+  flips from negative to positive and gets re-scoped per this document's
+  Backward Compatibility section.
+
 ## First Implementation Checklist
 
 Phase 0 — consolidate before extending:
