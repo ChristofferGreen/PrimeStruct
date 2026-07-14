@@ -129,7 +129,11 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
         CollectionCallShape::DirectCall,
         CollectionReceiverFamily::None,
         [this](std::string_view path) {
-          return defMap_.count(std::string(path)) > 0;
+          // Family-aware: stdlib collection helpers are templates, so the
+          // bare canonical key is often absent from defMap_ while the
+          // definition family (path<...>, path__t..., path__ov...) exists.
+          return defMap_.count(std::string(path)) > 0 ||
+                 hasDefinitionFamilyPath(path);
         });
     const std::string classifierPath =
         decision.disposition == CompatSpellingDisposition::Canonicalize

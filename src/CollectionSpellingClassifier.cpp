@@ -176,13 +176,23 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
 
   // Registry-backed compat/lowering spellings (rule-table rows 14, 18, 20;
   // decision D6): canonicalize whenever the canonical target exists,
-  // regardless of scope.
-  if (const std::string canonical =
-          resolveCompatibilitySpellingToCanonicalPath(rooted);
-      !canonical.empty() && canonical != rooted) {
-    if (definitionExists && definitionExists(canonical)) {
-      decision.disposition = CompatSpellingDisposition::Canonicalize;
-      decision.canonicalPath = canonical;
+  // regardless of scope. Restricted to collection-domain helper surfaces:
+  // this classifier owns collection spellings only; error/gfx-family
+  // compat handling stays with its existing owners.
+  if (const StdlibSurfaceMetadata *metadata =
+          findStdlibSurfaceMetadataBySpelling(rooted);
+      metadata != nullptr &&
+      metadata->domain == StdlibSurfaceDomain::Collections &&
+      metadata->shape != StdlibSurfaceShape::ConstructorFamily) {
+    const size_t lastSlash = rooted.find_last_of('/');
+    if (lastSlash != std::string::npos && lastSlash + 1 < rooted.size()) {
+      const std::string canonical = std::string(metadata->canonicalPath) +
+                                    "/" + rooted.substr(lastSlash + 1);
+      if (canonical != rooted && definitionExists &&
+          definitionExists(canonical)) {
+        decision.disposition = CompatSpellingDisposition::Canonicalize;
+        decision.canonicalPath = canonical;
+      }
     }
     return decision;
   }

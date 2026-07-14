@@ -49,7 +49,11 @@ struct CompatSpellingDecision {
 // different definition map (monomorphization's ctx.sourceDefs +
 // ctx.helperOverloads, the validator's defMap_, ir_lowerer's defMap); the
 // shadow-precedence and canonical-target-exists rules are shared even
-// though the map is not.
+// though the map is not. Contract: the callback must be family-aware -
+// report true when a definition OR a generated family member (templated
+// `path<...>`, specialized `path__t...`, overloaded `path__ov...`) exists
+// at the path, since stdlib collection helpers are templates and the bare
+// canonical key is often absent from stage maps.
 using CollectionDefinitionExistsFn = std::function<bool(std::string_view path)>;
 
 CompatSpellingDecision classifyCollectionHelperSpelling(
