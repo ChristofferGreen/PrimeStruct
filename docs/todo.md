@@ -76,6 +76,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
+- TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
+- TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure | track: hidden-test-failures-maybe | surface: test_semantics_maybe.cpp / stdlib maybe helper target publication
 
 ### Immediate Next 10
 
@@ -88,6 +90,10 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 - TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 - TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
+- TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
+- TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
+- TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
+- TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 
 ### Priority Lanes
 
@@ -214,6 +220,27 @@ This file is the live open-work queue for PrimeStruct.
   implicate the same fragmented compat-path resolution helpers documented
   in `docs/CompatPathResolutionConsolidation.md`. Full findings log at
   `docs/TestRuntimeOptimization.md`.
+- Hidden test failure remediation: 13 of 27 `primestruct.semantics` CTest
+  suites had a stale `TOTAL_CASES` in
+  `cmake/PrimeStructManagedSemanticsSuites.cmake` that silently capped
+  `--first`/`--last` sharding below the real case count, so roughly 900
+  test cases (including all of the known SoA-cluster failures) were never
+  once executed by the CTest gate despite `docs/failing_tests.md` claiming
+  a green 1548/1548 run. The stale counts are now fixed; running the
+  corrected gate end to end surfaced 46 failing shards / 122 individual
+  failing test cases, documented in `docs/failing_tests.md`'s 2026-07-15
+  entry. TODO-4714 fixes the single worst cluster (named-argument
+  call-form receiver dispatch for vector/map mutator helpers, ~10 cases,
+  root-cause partially traced already). TODO-4715 triages the ~100
+  remaining, not-yet-diagnosed `calls_flow.collections` failures into
+  fix-sized clusters. TODO-4716 fixes 4 newly-exposed `effects` shards
+  (reflection-metadata parser failures). TODO-4717 re-investigates an
+  `imports` case whose "always passes in isolation" documented finding
+  just got contradicted by a genuine single-case CTest failure. TODO-4718
+  fixes a small, isolated `maybe.cpp` nullptr failure. TODO-4719 fixes the
+  pre-existing 10-case `type_resolution_graph` SoA-cluster (already
+  deeply investigated in an earlier session; blocked on a further
+  `/soa/push` stdlib-syntax question for at least one case).
 
 ### Execution Queue
 
@@ -271,6 +298,12 @@ This file is the live open-work queue for PrimeStruct.
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
+55. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
+56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
+57. TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
+58. TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
+59. TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure
+60. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 
 ### Task Blocks
 
@@ -1588,3 +1621,183 @@ This file is the live open-work queue for PrimeStruct.
     points there - that overlaps `docs/CompatPathResolutionConsolidation.md`
     and should be its own coordinated effort, not a side effect of a
     performance leaf.
+
+- [ ] TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-collections
+  - scope: `test_semantics_calls_and_flow_collections_vector_helper_call_form_named_receivers.cpp`
+    (CTest shard `calls_flow_collections_811_820`, newly reachable after
+    the TOTAL_CASES fix) fails on all ~10 of its cases as of 2026-07-15.
+    Representative failure: `push([values] values, [value] 3i32)` used in
+    expression context should be rejected with "push is only supported as
+    a statement" but instead produces the generic "unknown call target:
+    /std/collections/vector/push". Root cause partially traced: the
+    intended diagnostic path
+    (`SemanticsValidator::validateExprNamedArguments`,
+    `SemanticsValidatorExprNamedArgumentBuiltins.cpp:74-79`) never runs for
+    this call shape - confirmed via a temporary debug print that never
+    fired. The failure must originate earlier in
+    `SemanticsValidatorExpr.cpp`'s validation chain, most likely inside
+    `resolveExprCollectionAccessTarget`
+    (`SemanticsValidatorExprCollectionAccess.cpp`, which has 7+ separate
+    `"unknown call target: " + methodResolved` construction sites around
+    lines 379, 394, 528, 541, 863, 894, 902) returning `false` before
+    `validateExprNamedArguments` is ever reached.
+  - implementation_notes: Reproduce fast with
+    `./PrimeStruct_semantics_tests --test-suite="primestruct.semantics.calls_flow.collections" --test-case="vector helper call-form expression builtin stays statement-only with named arguments" --no-skip`
+    (sub-second). Static reading of the dispatch chain proved slow; use a
+    gdb breakpoint on `SemanticsValidator::failExprDiagnostic` (or on each
+    of the `"unknown call target: "` construction sites in
+    `SemanticsValidatorExprCollectionAccess.cpp`) with `bt` to get the real
+    call stack instead of re-deriving it statically. Once the actual branch
+    is found, check whether the fix belongs in the named-value-receiver
+    probing (`namedValuesReceiverIndex` / `tryResolveNamedValuesReceiver`
+    in `SemanticsValidatorExprVectorHelpers.cpp:852-932`) or earlier, in
+    `resolveExprCollectionAccessTarget` itself.
+  - acceptance:
+    - All cases in `test_semantics_calls_and_flow_collections_vector_helper_call_form_named_receivers.cpp`
+      pass (CTest shard `calls_flow_collections_811_820` green).
+    - Full `ctest -R calls_flow_collections` sharded run shows no new
+      failures vs. the 2026-07-15 baseline recorded in
+      `docs/failing_tests.md`.
+  - stop_rule: This exact subsystem (compat-path/collection-helper call
+    resolution) already produced one real regression this session from an
+    under-verified change - always verify via the full sharded
+    `calls_flow.collections` CTest run before committing, never just the
+    directly-touched test file.
+
+- [ ] TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-collections
+  - depends_on: TODO-4714
+  - scope: Of the 33 failing `calls_flow_collections` shards found on
+    2026-07-15 (ranges 791-800 through 1291-1300, all beyond the old
+    771-case TOTAL_CASES cutoff), only shard `811_820` (TODO-4714) has a
+    known root cause so far. The other 32 shards / ~110 cases are
+    untriaged - only individual symptom strings were sampled (see
+    `docs/failing_tests.md`'s 2026-07-15 entry). Re-run
+    `ctest -R calls_flow_collections --parallel 4 --output-on-failure`
+    (the earlier scratch log at
+    `/tmp/claude-.../scratchpad/full_semantics_gate.log` is session-scratch
+    and will not survive past the session that generated it), collect every
+    failing case's actual-vs-expected diagnostic, and group them by shared
+    root cause. Sampled symptoms so far suggest candidate clusters: (1)
+    namespaced count/capacity alias diagnostics, (2) wrapper-returned map
+    string-branch handling, (3) variadic vector-pack receiver probing -
+    but this is a guess, not a real triage.
+  - acceptance:
+    - Every currently-failing `calls_flow_collections` case outside shard
+      `811_820` is assigned to a named root-cause cluster, each with at
+      least one representative case and its actual-vs-expected diagnostic
+      recorded in `docs/failing_tests.md` or a linked doc.
+    - Each identified cluster gets its own follow-up `TODO-XXXX` leaf (or
+      is folded into an existing one) with `depends_on: TODO-4715`.
+  - stop_rule: Triage and TODO-filing only - no source fixes in this leaf;
+    that is explicitly deferred to the follow-up leaves it creates.
+
+- [ ] TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-effects
+  - scope: 4 CTest shards (`effects_31_40`, `effects_71_80`, `effects_81_90`,
+    `effects_91_100`), all beyond the old 12-case TOTAL_CASES cutoff (real
+    count is 116), fail as of 2026-07-15. Sampled failure:
+    `test_semantics_capabilities_structs_metadata.cpp` "unsupported
+    reflection metadata queries are rejected" - `parser.parse(program,
+    error)` itself returns `false` (`test_semantics_helpers.h:109`), i.e.
+    the scenario's PrimeStruct source doesn't parse under the current
+    grammar at all, before semantic validation ever runs. Root cause not
+    yet investigated beyond this one sample; the other 3 shards' failures
+    are unknown.
+  - acceptance: All 4 shards pass; full `ctest -R primestruct_semantics_effects`
+    run is green.
+  - stop_rule: none yet - investigate and fix, or split into narrower
+    leaves if the 4 shards turn out to have unrelated causes.
+
+- [ ] TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-imports
+  - scope: `docs/failing_tests.md`'s "Flaky, not a real failure" section
+    documents that "import resolves std collections experimental map
+    wildcard surface" deterministically fails when the whole
+    `primestruct.semantics.imports` suite runs as one process, but "passes
+    in isolation... and passes under every CTest shard, including the
+    narrow `--first=9 --last=9` shard CTest actually uses for it". After
+    the TOTAL_CASES fix (`imports` grew from the stale 52 to the real 87,
+    shifting file-order case indices), this exact test failed under CTest
+    shard `imports_66_66` on 2026-07-15 - a genuine single-case isolated
+    shard, directly contradicting the "always passes in isolation" claim.
+    Determine whether the earlier finding was already wrong/stale, whether
+    something regressed since it was written, or whether this is genuinely
+    non-deterministic (re-run the single shard several times back to back
+    to check for flakiness before assuming a fixed root cause).
+  - acceptance: Either the case passes reliably across repeated isolated
+    `ctest -R imports_66_66` runs (with the earlier doc note corrected/
+    removed if it was simply wrong), or the underlying bug causing the
+    failure is identified and fixed.
+  - stop_rule: none.
+
+- [ ] TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-maybe
+  - scope: CTest shard `maybe_11_15`, newly reachable after the
+    TOTAL_CASES fix (`maybe` grew from the stale 11 to the real 15), fails.
+    `tests/unit/semantics/test_semantics_maybe.cpp:432`:
+    `REQUIRE(snakeTarget != nullptr)` fails in test case "stdlib maybe
+    helper methods publish rooted semantic-product targets" - a helper
+    lookup that's expected to find a rooted semantic-product target
+    instead returns `nullptr`. Not yet investigated further.
+  - acceptance: The case passes; full `primestruct.semantics.maybe` suite
+    (15/15) is green.
+  - stop_rule: none.
+
+- [ ] TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-type-resolution-graph
+  - scope: 10 test cases in
+    `test_semantics_type_resolution_graph_snapshots.cpp` fail (CTest
+    shards `type_resolution_graph_101_110` and `_111_120`, newly reachable
+    after the TOTAL_CASES fix from the stale 18 to the real 177) - these
+    are distinct from, and not fixed by, the `to_aos`/`to_aos_ref`
+    owned-vs-borrowed-soa-receiver ordering bug already fixed this session
+    (commit "Fix owned soa receivers misrouted to borrowed to_aos/to_aos_ref
+    helper"). The 10 case names: "keeps helper-return borrowed soa read
+    targets on canonical wrappers compatibility", "keeps method-like
+    borrowed soa read targets on canonical wrappers compatibility", "keeps
+    borrowed soa ref_ref targets on same-path helpers compatibility",
+    "keeps builtin soa ref_ref targets on same-path helpers", "validates
+    direct return method-like borrowed helper-return experimental soa
+    reads", "keeps helper-return SoaVector mutator initializer facts on
+    wrappers compatibility", "keeps helper-return borrowed soa direct-call
+    targets on canonical wrappers compatibility", "keeps helper-return
+    borrowed soa field views on canonical reads compatibility", "keeps
+    borrowed local soa field views on canonical reads compatibility",
+    "keeps method-like borrowed soa field views on canonical reads
+    compatibility".
+  - implementation_notes: At least one case ("keeps helper-return borrowed
+    soa read targets on canonical wrappers compatibility") was already
+    investigated in an earlier session: routing it through the real
+    compile pipeline with genuine `SoaVector<T>`/`soaVectorNew<T>()`
+    stdlib content hits a further `unknown method: /soa/push` blocker -
+    possibly the test's `.push(...)` method-call form needs updating to
+    the modern statement-form `push(values, ...)` syntax per the stdlib
+    "surface syntax" migration referenced elsewhere in the codebase, but
+    this wasn't confirmed. The other 9 cases are not yet individually
+    investigated.
+  - acceptance: All 10 cases pass; full `primestruct.semantics.type_resolution_graph`
+    suite (177/177) is green.
+  - stop_rule: If the `/soa/push` blocker turns out to require a broader
+    stdlib mutator-syntax migration beyond fixing these test expectations,
+    split that migration into its own TODO rather than expanding this
+    leaf's scope.
