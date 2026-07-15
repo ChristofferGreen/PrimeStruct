@@ -36,7 +36,7 @@ SymbolInterner merge_snapshots_deterministic(
   struct MergeCandidate {
     std::string text;
     SymbolOriginKey firstOrigin;
-    uint32_t partitionKey = 0;
+    std::size_t snapshotRank = 0;
     uint32_t workerId = 0;
     std::size_t localIndex = 0;
   };
@@ -48,8 +48,8 @@ SymbolInterner merge_snapshots_deterministic(
     if (symbol_origin_less(right.firstOrigin, left.firstOrigin)) {
       return false;
     }
-    if (left.partitionKey != right.partitionKey) {
-      return left.partitionKey < right.partitionKey;
+    if (left.snapshotRank != right.snapshotRank) {
+      return left.snapshotRank < right.snapshotRank;
     }
     if (left.localIndex != right.localIndex) {
       return left.localIndex < right.localIndex;
@@ -61,6 +61,20 @@ SymbolInterner merge_snapshots_deterministic(
   };
 
   std::sort(snapshots.begin(), snapshots.end(), snapshot_order_less);
+
+  // snapshotRank is each snapshot's position in this deterministic,
+  // content-aware order (partitionKey, then workerId, then its own symbol
+  // list) rather than its raw partitionKey/workerId. Two distinct input
+  // snapshots can share a partitionKey and workerId (e.g. a caller reusing
+  // worker ids); their local indices aren't comparable to each other in
+  // that case, but snapshotRank still gives every snapshot a stable,
+  // content-derived place in line, so localIndex remains meaningful as a
+  // secondary key *within* one snapshot's contribution.
+  std::unordered_map<const WorkerSymbolInternerSnapshot *, std::size_t> rankBySnapshot;
+  rankBySnapshot.reserve(snapshots.size());
+  for (std::size_t rank = 0; rank < snapshots.size(); ++rank) {
+    rankBySnapshot.emplace(snapshots[rank], rank);
+  }
 
   std::unordered_map<std::string, MergeCandidate> representativeByText;
   for (const WorkerSymbolInternerSnapshot *snapshot : snapshots) {
@@ -74,7 +88,7 @@ SymbolInterner merge_snapshots_deterministic(
       MergeCandidate candidate{
           .text = symbol,
           .firstOrigin = origin,
-          .partitionKey = snapshot->partitionKey,
+          .snapshotRank = rankBySnapshot.at(snapshot),
           .workerId = snapshot->workerId,
           .localIndex = localIndex,
       };
@@ -98,8 +112,8 @@ SymbolInterner merge_snapshots_deterministic(
     if (symbol_origin_less(right.firstOrigin, left.firstOrigin)) {
       return false;
     }
-    if (left.partitionKey != right.partitionKey) {
-      return left.partitionKey < right.partitionKey;
+    if (left.snapshotRank != right.snapshotRank) {
+      return left.snapshotRank < right.snapshotRank;
     }
     if (left.localIndex != right.localIndex) {
       return left.localIndex < right.localIndex;
