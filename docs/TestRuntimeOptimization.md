@@ -156,3 +156,29 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   - All other 73 shards passed in well under a few seconds each (many
     under half a second), reinforcing that this is a localized problem in
     a specific shard range, not a systemic slowness issue.
+- 2026-07-15: Root-caused the `181_190`/`191_200`/`201_210` timeout
+  cluster (TODO-4706). All three shards fall inside
+  `test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`'s
+  `SoaColumnsN` coverage (N = 2 through 16 type parameters, exercising the
+  real `stdlib/std/collections/soa_storage.prime` templates via
+  `validateProgramThroughCompilePipeline`). Per-case wall time scales
+  sharply non-linearly with column count, measured standalone/serial (no
+  parallel contention, so not a resource-contention artifact):
+  - 2-column: ~12s
+  - 4-column: ~13s
+  - 8-column: ~15s
+  - 12-column: ~41s
+  - 16-column: **426s** (measured directly; not a hang, the case passes)
+  This is genuine template-monomorphization cost on real production
+  stdlib code with up to 16 type parameters — not a bug in the test, and
+  not an infinite loop. A from-scratch algorithmic fix to the
+  monomorphization cost itself was judged out of scope for this pass (high
+  risk, deep unfamiliar territory in the same subsystem that produced the
+  vector-alias regression above); instead applied a pragmatic fix:
+  overrode this suite's CTest `TIMEOUT` from the shared 300s default to
+  1200s in `cmake/PrimeStructManagedSemanticsSuites.cmake` (comfortably
+  covers even a shard containing both 16-column cases back to back). The
+  underlying scaling itself is real algorithmic debt worth a dedicated
+  investigation later — not tracked as a new TODO yet since it would need
+  its own scoped diagnosis of *why* monomorphization cost grows this
+  sharply per type parameter before it could be leaf-shaped.

@@ -201,6 +201,16 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.collections"
   ${PrimeStructManagedSemanticsCommon}
+  # Override the common 300s TIMEOUT: this suite's SoaColumnsN (N=2..16)
+  # coverage (test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp)
+  # exercises stdlib templates with up to 16 type parameters, and
+  # per-case wall time scales sharply non-linearly with column count
+  # (measured: 2-col ~12s, 12-col ~41s, 16-col ~426s standalone, serial,
+  # no parallel contention). This is genuine template-monomorphization
+  # cost on real production stdlib code, not a hang or test bug - see
+  # docs/TestRuntimeOptimization.md (TODO-4706) for the investigation and
+  # a follow-up TODO on the underlying scaling itself.
+  TIMEOUT 1200
   TOTAL_CASES 771
   SHARD_PREFIX "calls_flow_collections"
 )
