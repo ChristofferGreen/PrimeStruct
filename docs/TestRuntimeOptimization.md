@@ -51,6 +51,49 @@ unsharded `--test-suite=...` binary invocation left unattended. The
 unsharded form has no per-shard timeout and can silently run for hours;
 the sharded form fails fast and pinpoints the offending shard.
 
+## Test-pyramid shape: too much weight on full compile-and-execute
+
+A second, independent angle (not related to the hang above): a large
+fraction of the suite reaches for the heaviest possible test shape —
+compile the full pipeline down to a binary and execute it — for things
+that may only need semantics validation or IR-level checks.
+
+Rough counts as of this doc's creation:
+
+- **9,443** total `TEST_CASE` entries across `tests/unit/`.
+- **3,935** of those (~42%) live under `tests/unit/compile_run/`, whose
+  own helper name is `validateProgramThroughCompilePipeline` /
+  `runCompilePipeline` — i.e. real import resolution, full codegen, and
+  (for most of these) actually spawning and running the produced binary
+  to check its output, rather than a raw in-memory
+  `Semantics::validate()` call.
+- 10 test files outside `compile_run` also reach for
+  `validateProgramThroughCompilePipeline`/`runCompilePipeline` directly,
+  presumably for cases that need real import resolution (like this
+  session's fix to the qualified-Result-spelling try-fact test) without
+  needing execution.
+
+Compile-and-execute is the right tool when the thing under test is
+runtime *behavior* (does the emitted code actually produce correct
+output across VM/native/C++ backends). It's the wrong tool when the
+thing under test is a *compile-time* property (does this construct parse,
+does this call resolve to the right target, does this diagnostic fire) —
+those only need `Semantics::validate()` or a type-resolution-graph
+snapshot, both of which skip codegen and process-spawn entirely and
+should be one to two orders of magnitude cheaper per case.
+
+**This needs a real audit, not a guess**: many `compile_run` cases likely
+*do* need to be compile-and-execute (that's the suite's whole purpose —
+end-to-end backend parity). The task is finding the ones that don't:
+cases duplicating a semantics-level check that's already covered
+elsewhere, or checking something that a snapshot/AST-level assertion
+could confirm without ever emitting or running a binary. Candidate
+starting point: any `compile_run` case whose assertions only check
+`ok`/`error` (pass/fail) rather than inspecting actual program output —
+those are strong candidates for downgrading to
+`Semantics::validate()`-only, since they're not actually exercising
+runtime behavior at all.
+
 ## Open questions / next steps
 
 1. **Characterize the `181_190` shard hang**: is this the same
