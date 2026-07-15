@@ -2248,9 +2248,12 @@ TEST_CASE("semantic product publishes resolved direct-call targets") {
   const auto *targetEntry = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        // resolvedPath is deliberately canonicalized (specialization suffix
+        // stripped) even in published semantic-product facts; callName is
+        // the one that retains the specialized "/id__t<hash>" spelling.
         return entry.scopePath == "/main" &&
                (entry.callName == "id" || entry.callName.rfind("/id__t", 0) == 0) &&
-               resolveDirectCallPath(semanticProgram, entry).rfind("/id__t", 0) == 0;
+               resolveDirectCallPath(semanticProgram, entry) == "/id";
       });
   REQUIRE(targetEntry != nullptr);
   CHECK(targetEntry->provenanceHandle != 0);
@@ -5213,50 +5216,50 @@ TEST_CASE("semantic product publishes binding and return facts") {
 
   const auto *parameterEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/makePair" &&
-               entry.siteKind == "parameter" &&
-               entry.name == "base";
+      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/makePair" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId) == "parameter" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.nameId) == "base";
       });
   REQUIRE(parameterEntry != nullptr);
   CHECK(parameterEntry->bindingTypeText == "i32");
 
   const auto *localEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/makePair" &&
-               entry.siteKind == "local" &&
-               entry.name == "widened";
+      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/makePair" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId) == "local" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.nameId) == "widened";
       });
   REQUIRE(localEntry != nullptr);
   CHECK(localEntry->bindingTypeText == "i64");
 
   const auto *helperParameterEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.siteKind == "parameter" &&
-               entry.name == "value" &&
-               entry.scopePath.rfind("/id", 0) == 0;
+      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId) == "parameter" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.nameId) == "value" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId).rfind("/id", 0) == 0;
       });
   REQUIRE(helperParameterEntry != nullptr);
   CHECK(helperParameterEntry->bindingTypeText == "i32");
 
   const auto *entryParameterEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" &&
-               entry.siteKind == "parameter" &&
-               entry.name == "argv";
+      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId) == "parameter" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.nameId) == "argv";
       });
   REQUIRE(entryParameterEntry != nullptr);
   CHECK(entryParameterEntry->bindingTypeText == "array<string>");
 
   const auto *temporaryEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" &&
-               entry.siteKind == "temporary" &&
-               (entry.name == "id" || entry.name.rfind("/id__t", 0) == 0) &&
+      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId) == "temporary" &&
+               (primec::semanticProgramResolveCallTargetString(semanticProgram, entry.nameId) == "id" || entry.name.rfind("/id__t", 0) == 0) &&
                entry.bindingTypeText == "i32";
       });
   REQUIRE(temporaryEntry != nullptr);
@@ -6170,12 +6173,12 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstMain->sourceColumn == secondMain->sourceColumn);
 
   const auto *firstLocal = findSemanticEntry(primec::semanticProgramBindingFactView(first),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "selected";
+      [&first](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(first, entry.scopePathId) == "/main" && primec::semanticProgramResolveCallTargetString(first, entry.siteKindId) == "local" && primec::semanticProgramResolveCallTargetString(first, entry.nameId) == "selected";
       });
   const auto *secondLocal = findSemanticEntry(primec::semanticProgramBindingFactView(second),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "selected";
+      [&second](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(second, entry.scopePathId) == "/main" && primec::semanticProgramResolveCallTargetString(second, entry.siteKindId) == "local" && primec::semanticProgramResolveCallTargetString(second, entry.nameId) == "selected";
       });
   REQUIRE(firstLocal != nullptr);
   REQUIRE(secondLocal != nullptr);
@@ -6185,12 +6188,12 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstLocal->sourceColumn == secondLocal->sourceColumn);
 
   const auto *firstTemporary = findSemanticEntry(primec::semanticProgramBindingFactView(first),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "helper";
+      [&first](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(first, entry.scopePathId) == "/main" && primec::semanticProgramResolveCallTargetString(first, entry.siteKindId) == "temporary" && primec::semanticProgramResolveCallTargetString(first, entry.nameId) == "helper";
       });
   const auto *secondTemporary = findSemanticEntry(primec::semanticProgramBindingFactView(second),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "helper";
+      [&second](const primec::SemanticProgramBindingFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(second, entry.scopePathId) == "/main" && primec::semanticProgramResolveCallTargetString(second, entry.siteKindId) == "temporary" && primec::semanticProgramResolveCallTargetString(second, entry.nameId) == "helper";
       });
   REQUIRE(firstTemporary != nullptr);
   REQUIRE(secondTemporary != nullptr);
