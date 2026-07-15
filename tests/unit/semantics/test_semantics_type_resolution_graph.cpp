@@ -1358,9 +1358,14 @@ main() {
 
   std::string error;
   primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
-  CHECK_FALSE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
       parseProgram(source), "/main", error, snapshot));
-  CHECK_FALSE(error.empty());
+  CHECK(error.empty());
+
+  const auto &viaStd = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaStd");
+  CHECK(viaStd.bindingTypeText == "i32");
+  CHECK(viaStd.initializerDirectCallResolvedPath == "/vector/count");
+  CHECK(viaStd.initializerDirectCallReturnKindText == "i32");
 }
 
 TEST_CASE("type resolution local binding snapshot keeps canonical helper path when alias is absent") {

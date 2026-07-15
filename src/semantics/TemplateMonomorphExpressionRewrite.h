@@ -1608,14 +1608,7 @@ bool rewriteExpr(Expr &expr,
               canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       return path;
     }
-    // Only redirect to a same-path /vector/<helper> override when the
-    // canonical spelling was itself a resolver guess (e.g. a bare
-    // count(vec) bridge call), not when the caller explicitly wrote out
-    // the fully-qualified canonical path themselves: an explicit
-    // /std/collections/vector/count(...) call must resolve to that exact
-    // definition or fail, never silently fall back to an unrelated
-    // same-named alias defined elsewhere.
-    if (receiverFamily == "vector" && expr.name != path &&
+    if (receiverFamily == "vector" &&
         (helperName == "count" || helperName == "count_ref" ||
          helperName == "capacity")) {
       const std::string samePathVectorHelper =
