@@ -1026,12 +1026,12 @@ TEST_CASE("type resolution graph dump stays stable for template specialization e
 
   const std::string expected =
       "type_graph {\n"
-      "  node 0 kind=definition_return label=\"/id__t25a78a513414c3bf\" scope=\"/id__t25a78a513414c3bf\" "
-      "path=\"/id__t25a78a513414c3bf\" line=2 column=1\n"
+      "  node 0 kind=definition_return label=\"/id__tead9077f04525e0f\" scope=\"/id__tead9077f04525e0f\" "
+      "path=\"/id__tead9077f04525e0f\" line=2 column=1\n"
       "  node 1 kind=definition_return label=\"/main\" scope=\"/main\" path=\"/main\" line=7 column=1\n"
-      "  node 2 kind=call_constraint label=\"/main::call#0\" scope=\"/main\" path=\"/id__t25a78a513414c3bf\" "
+      "  node 2 kind=call_constraint label=\"/main::call#0\" scope=\"/main\" path=\"/id__tead9077f04525e0f\" "
       "line=8 column=16\n"
-      "  node 3 kind=local_auto label=\"/main::auto:value#0\" scope=\"/main\" path=\"\" line=8 column=16\n"
+      "  node 3 kind=local_auto label=\"/main::auto:value#0\" scope=\"/main\" path=\"\" line=8 column=10\n"
       "  edge 0 kind=dependency source=2 target=0\n"
       "  edge 1 kind=dependency source=3 target=2\n"
       "}\n";
@@ -1067,7 +1067,7 @@ TEST_CASE("type resolution call binding snapshot shares template-specialization 
       parseProgram(source), "/main", error, snapshot));
   CHECK(error.empty());
 
-  const auto &entry = requireCallBindingSnapshotEntry(snapshot, "/main", "/id__t25a78a513414c3bf");
+  const auto &entry = requireCallBindingSnapshotEntry(snapshot, "/main", "/id");
   CHECK(entry.bindingTypeText == "i32");
 }
 
@@ -1402,7 +1402,8 @@ Holder() {}
 
 [return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<int>]
@@ -1433,7 +1434,8 @@ Holder() {}
 
 [return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<i32>]

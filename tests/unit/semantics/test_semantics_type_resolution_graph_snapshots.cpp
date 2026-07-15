@@ -2154,7 +2154,7 @@ TEST_CASE("type resolution local call metadata stays aligned with call snapshot"
   CHECK(error.empty());
 
   const auto &localEntry = requireLocalBindingSnapshotEntry(localSnapshot, "/main", "selected");
-  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/id__t25a78a513414c3bf");
+  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/id");
   CHECK(localEntry.initializerResolvedPath == callEntry.resolvedPath);
   CHECK(localEntry.initializerBindingTypeText == callEntry.bindingTypeText);
   CHECK(localEntry.initializerReceiverBindingTypeText.empty());
@@ -2187,8 +2187,8 @@ TEST_CASE("type resolution query binding metadata stays aligned with call snapsh
   CHECK(error.empty());
 
   const auto &queryEntry =
-      requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/id__t25a78a513414c3bf");
-  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/id__t25a78a513414c3bf");
+      requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/id");
+  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/id");
   CHECK(queryEntry.resolvedPath == callEntry.resolvedPath);
   CHECK(queryEntry.bindingTypeText == callEntry.bindingTypeText);
 }
@@ -2218,8 +2218,8 @@ TEST_CASE("type resolution query call metadata stays aligned with call snapshot"
   CHECK(error.empty());
 
   const auto &queryEntry =
-      requireQueryCallSnapshotEntry(queryCallSnapshot, "/main", "/id__t25a78a513414c3bf");
-  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/id__t25a78a513414c3bf");
+      requireQueryCallSnapshotEntry(queryCallSnapshot, "/main", "/id");
+  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/id");
   CHECK(queryEntry.resolvedPath == callEntry.resolvedPath);
   CHECK(queryEntry.typeText == callEntry.bindingTypeText);
 }
@@ -2537,8 +2537,8 @@ TEST_CASE("semantic product method-call targets stay separated by receiver type"
       "\n"
       "[return<i32>]\n"
       "main() {\n"
-      "  [A] a{A([x] 1i32)}\n"
-      "  [B] b{B([y] 2i32)}\n"
+      "  [A] a{A{[x] 1i32}}\n"
+      "  [B] b{B{[y] 2i32}}\n"
       "  return(plus(a.id(), b.id()))\n"
       "}\n";
 
@@ -2580,7 +2580,8 @@ Particle() {
 
 [return<soa<Particle>>]
 cloneValues() {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<i32>]
@@ -2648,9 +2649,10 @@ main() {
       });
   REQUIRE(reserveTarget != nullptr);
 
+  const auto choseConcreteExperimentalPushTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseConcreteExperimentalPush = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseConcreteExperimentalPushTargets.begin(),
+      choseConcreteExperimentalPushTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "push" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -2670,7 +2672,8 @@ Holder() {}
 
 [return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<i32>]
@@ -2739,9 +2742,10 @@ main() {
       });
   REQUIRE(reserveTarget != nullptr);
 
+  const auto choseConcreteExperimentalPushTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseConcreteExperimentalPush = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseConcreteExperimentalPushTargets.begin(),
+      choseConcreteExperimentalPushTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "push" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -2761,7 +2765,8 @@ Holder() {}
 
 [return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<Particle>]
@@ -2881,9 +2886,10 @@ main() {
   REQUIRE(unpackedEntry != nullptr);
   CHECK(unpackedEntry->initializerMethodCallResolvedPath == "/to_aos");
 
+  const auto choseConcreteExperimentalGetTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseConcreteExperimentalGet = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseConcreteExperimentalGetTargets.begin(),
+      choseConcreteExperimentalGetTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "get" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -2901,7 +2907,8 @@ Particle() {
 
 [return<soa<Particle>>]
 cloneValues() {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<Particle>]
@@ -2996,9 +3003,10 @@ main() {
       });
   REQUIRE(toAosTarget != nullptr);
 
+  const auto choseConcreteExperimentalGetTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseConcreteExperimentalGet = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseConcreteExperimentalGetTargets.begin(),
+      choseConcreteExperimentalGetTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "get" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3084,9 +3092,10 @@ main() {
       });
   REQUIRE(countTarget != nullptr);
 
+  const auto choseReferenceGetTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseReferenceGet = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseReferenceGetTargets.begin(),
+      choseReferenceGetTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "get" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3176,9 +3185,10 @@ main() {
       });
   REQUIRE(countTarget != nullptr);
 
+  const auto choseReferenceGetTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseReferenceGet = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseReferenceGetTargets.begin(),
+      choseReferenceGetTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "get" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3271,7 +3281,8 @@ Particle() {
 
 [effects(heap_alloc), return<soa<Particle>>]
 cloneValues() {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -3341,9 +3352,10 @@ main() {
   REQUIRE(helperReturnEntry != nullptr);
   CHECK(helperReturnEntry->initializerDirectCallResolvedPath == "/soa/ref_ref");
 
+  const auto choseCanonicalRefRefTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseCanonicalRefRef = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseCanonicalRefRefTargets.begin(),
+      choseCanonicalRefRefTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "ref_ref" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3351,9 +3363,10 @@ main() {
       });
   CHECK_FALSE(choseCanonicalRefRef);
 
+  const auto choseCanonicalDirectRefRefTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const bool choseCanonicalDirectRefRef = std::any_of(
-      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      choseCanonicalDirectRefRefTargets.begin(),
+      choseCanonicalDirectRefRefTargets.end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" && entry->callName == "ref_ref" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3550,9 +3563,10 @@ main() {
   CHECK(reservedEntry->initializerMethodCallResolvedPath == "/soa/reserve");
   CHECK(reservedEntry->initializerMethodCallReturnKind == "i32");
 
+  const auto choseConcreteExperimentalPushTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
   const bool choseConcreteExperimentalPush = std::any_of(
-      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      choseConcreteExperimentalPushTargets.begin(),
+      choseConcreteExperimentalPushTargets.end(),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "push" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3680,9 +3694,10 @@ main() {
       });
   REQUIRE(countRefTarget != nullptr);
 
+  const auto choseUnborrowedGetTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const bool choseUnborrowedGet = std::any_of(
-      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      choseUnborrowedGetTargets.begin(),
+      choseUnborrowedGetTargets.end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" && entry->callName == "get" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3750,9 +3765,10 @@ main() {
         "/std/collections/soa_storage/soaFieldViewRead");
   CHECK(fieldCallEntry->initializerDirectCallReturnKind == "i32");
 
+  const auto choseExplicitFieldViewBridgeTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const bool choseExplicitFieldViewBridge = std::any_of(
-      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      choseExplicitFieldViewBridgeTargets.begin(),
+      choseExplicitFieldViewBridgeTargets.end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3816,9 +3832,10 @@ main() {
         "/std/collections/soa_storage/soaFieldViewRead");
   CHECK(fieldCallEntry->initializerDirectCallReturnKind == "i32");
 
+  const auto choseExplicitFieldViewBridgeTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const bool choseExplicitFieldViewBridge = std::any_of(
-      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      choseExplicitFieldViewBridgeTargets.begin(),
+      choseExplicitFieldViewBridgeTargets.end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3890,9 +3907,10 @@ main() {
         "/std/collections/soa_storage/soaFieldViewRead");
   CHECK(fieldCallEntry->initializerDirectCallReturnKind == "i32");
 
+  const auto choseExplicitFieldViewBridgeTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const bool choseExplicitFieldViewBridge = std::any_of(
-      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      choseExplicitFieldViewBridgeTargets.begin(),
+      choseExplicitFieldViewBridgeTargets.end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
@@ -3910,7 +3928,8 @@ Particle() {
 
 [return<soa<Particle>>]
 cloneValues() {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<Particle>]
@@ -4052,9 +4071,10 @@ main() {
   CHECK(reservedEntry->initializerDirectCallResolvedPath == "/soa/reserve");
   CHECK(reservedEntry->initializerDirectCallReturnKind == "i32");
 
+  const auto choseConcreteExperimentalPushTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const bool choseConcreteExperimentalPush = std::any_of(
-      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      choseConcreteExperimentalPushTargets.begin(),
+      choseConcreteExperimentalPushTargets.end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" &&
                resolveDirectCallPath(semanticProgram, *entry) ==
@@ -4074,7 +4094,8 @@ Holder() {}
 
 [return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa<Particle>())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
 }
 
 [return<Particle>]
@@ -4217,9 +4238,10 @@ main() {
   CHECK(reservedEntry->initializerDirectCallResolvedPath == "/soa/reserve");
   CHECK(reservedEntry->initializerDirectCallReturnKind == "i32");
 
+  const auto choseConcreteExperimentalPushTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const bool choseConcreteExperimentalPush = std::any_of(
-      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
-      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      choseConcreteExperimentalPushTargets.begin(),
+      choseConcreteExperimentalPushTargets.end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" &&
                resolveDirectCallPath(semanticProgram, *entry) ==
