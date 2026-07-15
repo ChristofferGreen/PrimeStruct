@@ -206,11 +206,15 @@ addPrimeStructManagedDoctestSuite(
   # exercises stdlib templates with up to 16 type parameters, and
   # per-case wall time scales sharply non-linearly with column count
   # (measured: 2-col ~12s, 12-col ~41s, 16-col ~426s standalone, serial,
-  # no parallel contention). This is genuine template-monomorphization
-  # cost on real production stdlib code, not a hang or test bug - see
-  # docs/TestRuntimeOptimization.md (TODO-4706) for the investigation and
-  # a follow-up TODO on the underlying scaling itself.
-  TIMEOUT 1200
+  # no parallel contention). The worst shard (calls_flow_collections_201_210,
+  # which stacks the 13-16 column cases together) measured 1762s total.
+  # This is genuine template-monomorphization cost on real production
+  # stdlib code, not a hang or test bug - see docs/TestRuntimeOptimization.md
+  # (TODO-4706, TODO-4713) for the investigation and the follow-up TODO on
+  # the underlying scaling itself. TODO-4712 (grow shard size once
+  # cross-test-case pollution is fixed) is the better long-term fix for
+  # this blanket override applying to hundreds of otherwise-fast shards.
+  TIMEOUT 2400
   TOTAL_CASES 771
   SHARD_PREFIX "calls_flow_collections"
 )
