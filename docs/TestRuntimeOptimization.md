@@ -202,3 +202,16 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   speculative fix — filed **TODO-4713** with the full profiling writeup so
   a focused follow-up pass (starting with real `callgrind` profiling
   instead of statistical sampling) doesn't have to re-derive this.
+- 2026-07-15: Measured shard `201_210`'s full 10-case run standalone with
+  a 2400s budget: **1762s total, all 1305 assertions passing** (genuinely
+  correct, just slow — not a hang). Raised the suite's CTest `TIMEOUT` to
+  2400s (comfortable margin over the measured worst case). Final
+  verification via real `ctest -R
+  "calls_flow_collections_(181_190|191_200|201_210)"`: all 3 pass —
+  `181_190` in 227s, `191_200` in 279s, `201_210` in 1709s. **TODO-4706
+  closed** (moved to `docs/todo_finished.md`). The blanket 2400s override
+  now applies to all ~78 shards of this suite even though only a handful
+  are actually slow — TODO-4712 (shrink shard count once TODO-4707's
+  pollution fix lands) is the better long-term answer to that, and
+  TODO-4713 (the real algorithmic fix) would shrink the timeout need
+  itself.

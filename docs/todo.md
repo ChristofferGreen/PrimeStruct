@@ -75,7 +75,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
-- TODO-4706: Root-cause calls_flow_collections shard 181_190 slowness | track: test-runtime-hang-triage | surface: primestruct.semantics.calls_flow.collections
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 
 ### Immediate Next 10
@@ -196,25 +195,25 @@ This file is the live open-work queue for PrimeStruct.
 - Test runtime optimization: get the test suite fast and hang-proof (no
   test should ever exceed 30s; most should run under 5s). Triggered by
   discovering an unsharded `calls_flow.collections` invocation left
-  running for 2h13m undetected. TODO-4706 root-causes the specific slow
-  shard found so far, TODO-4707 fixes the cross-test-case pollution that
-  currently forces small 10-case shards, TODO-4708 measures fixed
-  per-shard binary startup cost, TODO-4709 audits `compile_run` cases that
-  only check pass/fail (candidates for downgrading off the full
+  running for 2h13m undetected. TODO-4706 (done) root-caused the
+  `calls_flow_collections` `181_190`-family shard timeouts to `SoaColumnsN`
+  stdlib templates with up to 16 type parameters (measured at 426s for a
+  single 16-column case, 1762s for the worst full shard) and shipped a
+  CTest `TIMEOUT` override (300s -> 2400s) as the near-term fix, all 3
+  previously-timing-out shards now pass. TODO-4707 fixes the cross-test-case
+  pollution that currently forces small 10-case shards, TODO-4708 measures
+  fixed per-shard binary startup cost, TODO-4709 audits `compile_run`
+  cases that only check pass/fail (candidates for downgrading off the full
   compile-and-execute path), TODO-4710 caches redundant stdlib `.prime`
   re-parsing across compile-pipeline test helpers, TODO-4711 tightens
-  CTest `TIMEOUT` values once real per-shard costs are known, and
-  TODO-4712 grows shard size once TODO-4707 proves pollution-free, so the
-  many small per-shard fixed costs (binary launch, doctest registration)
-  stop adding up across hundreds of tiny shards. TODO-4706 root-caused one
-  concrete instance (the `calls_flow_collections` `181_190`-family shard
-  timeouts: `SoaColumnsN` stdlib templates with up to 16 type parameters,
-  measured at 426s for a single 16-column case) and shipped a pragmatic
-  CTest `TIMEOUT` override as the near-term fix; TODO-4713 tracks the
-  actual algorithmic investigation into why monomorphization cost grows
-  that sharply, profiled to implicate the same fragmented compat-path
-  resolution helpers documented in `docs/CompatPathResolutionConsolidation.md`.
-  Full findings log at `docs/TestRuntimeOptimization.md`.
+  CTest `TIMEOUT` values once real per-shard costs are known, TODO-4712
+  grows shard size once TODO-4707 proves pollution-free (so hundreds of
+  tiny shards stop each paying fixed binary-launch/registration cost), and
+  TODO-4713 tracks the actual algorithmic investigation into why
+  `SoaColumnsN` monomorphization cost grows so sharply, profiled to
+  implicate the same fragmented compat-path resolution helpers documented
+  in `docs/CompatPathResolutionConsolidation.md`. Full findings log at
+  `docs/TestRuntimeOptimization.md`.
 
 ### Execution Queue
 
@@ -265,14 +264,13 @@ This file is the live open-work queue for PrimeStruct.
 45. TODO-4703: Add diff-based zero-C++ gate script
 46. TODO-4704: Add audit-exemption-count ratchet script
 47. TODO-4705: Correct stale Collection decoupling documentation
-48. TODO-4706: Root-cause calls_flow_collections shard 181_190 slowness
-49. TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
-50. TODO-4708: Measure per-shard doctest binary startup/registration overhead
-51. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
-52. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
-53. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
-54. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
-55. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
+48. TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
+49. TODO-4708: Measure per-shard doctest binary startup/registration overhead
+50. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
+51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
+53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
+54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 
 ### Task Blocks
 
@@ -1349,38 +1347,6 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once both docs are corrected; do not re-scope any
     open TODO's acceptance criteria in this leaf.
 
-- [ ] TODO-4706: Root-cause calls_flow_collections shard 181_190 slowness
-  - owner: ai
-  - created_at: 2026-07-15
-  - phase: Test runtime optimization
-  - parallel_track: test-runtime-hang-triage
-  - depends_on: (none)
-  - scope: Isolate which specific test case(s) in the
-    `primestruct.semantics.calls_flow.collections` CTest shard range
-    181-190 cause it to consistently run far longer than sibling shards
-    (observed 3+ minutes vs. seconds for neighboring shards; an earlier,
-    unsharded, unattended invocation covering this range ran for 2h13m
-    before being killed). Use `--test-case=` bisection within
-    `--first=181 --last=190` to narrow to the specific case(s), then
-    determine whether the cost is genuine algorithmic work, a real hang, or
-    environment-driven slowness (cross-check against the
-    `/home/user/PrimeStruct-master` worktree per the methodology in
-    `docs/failing_tests.md`).
-  - implementation_notes: Use `gdb -batch` with `--no-breaks=true` (per
-    session precedent) if a real hang reproduces, to get a stack trace
-    rather than just a timeout. Record findings in
-    `docs/TestRuntimeOptimization.md`'s Log section regardless of outcome.
-  - acceptance:
-    - The specific slow/hanging test case(s) are identified by name.
-    - Root cause is documented (genuine algorithmic cost, real hang and its
-      trigger, or confirmed environment/parallelism artifact).
-    - Either the root cause is fixed and the shard completes in under 30s,
-      or a follow-up TODO leaf is filed with enough detail to fix it
-      without re-deriving the diagnosis.
-  - stop_rule: Stop once the specific case(s) and root cause are identified
-    and either fixed or handed off via a follow-up leaf; do not chase other
-    slow shards in this leaf.
-
 - [ ] TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
   - owner: ai
   - created_at: 2026-07-15
@@ -1499,7 +1465,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-07-15
   - phase: Test runtime optimization
   - parallel_track: test-runtime-timeout-tightening
-  - depends_on: TODO-4706, TODO-4707, TODO-4708, TODO-4709, TODO-4710
+  - depends_on: TODO-4707, TODO-4708, TODO-4709, TODO-4710
   - scope: Once real per-shard/per-suite runtimes are known from the
     groundwork leaves, lower the managed doctest suite `TIMEOUT` (currently
     300s via `addPrimeStructManagedDoctestSuite`, 600s via the older

@@ -24785,3 +24785,43 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     was already unblocked. Spike file removed after recording findings
     (TODO-4702 will add the permanent zero-C++ proof type instead).
 
+
+- [x] TODO-4706: Root-cause calls_flow_collections shard 181_190 slowness
+  - owner: ai
+  - created_at: 2026-07-15
+  - finished_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-hang-triage
+  - depends_on: (none)
+  - scope: Isolate which specific test case(s) in the
+    `primestruct.semantics.calls_flow.collections` CTest shard range
+    181-190 cause it to consistently run far longer than sibling shards
+    (observed 3+ minutes vs. seconds for neighboring shards; an earlier,
+    unsharded, unattended invocation covering this range ran for 2h13m
+    before being killed).
+  - evidence: Root-caused to `SoaColumnsN` (N=2..16 type parameters)
+    stdlib template coverage in
+    `test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`,
+    exercising `stdlib/std/collections/soa_storage.prime` via
+    `validateProgramThroughCompilePipeline`. Per-case wall time scales
+    sharply non-linearly with column count (measured standalone/serial, no
+    parallel contention): 2-col ~12s, 4-col ~13s, 8-col ~15s, 12-col ~41s,
+    16-col 426s. Confirmed genuine (all cases pass, not a hang) via a
+    generous-timeout standalone run. Shard `201_210` (stacks the
+    13-16-column cases together) measured 1762s total for its full
+    10-case run, all passing. Applied a CTest `TIMEOUT` override for the
+    whole suite (`cmake/PrimeStructManagedSemanticsSuites.cmake`,
+    300s -> 1200s -> 2400s after the first value proved insufficient for
+    `201_210`) rather than a live algorithmic fix, since the same
+    subsystem (`TemplateMonomorphExpressionRewrite.h`) had already
+    produced a real regression earlier the same session (see the reverted
+    vector-alias shadow-precedence guard). Live gdb-sampled the running
+    16-column case to characterize the cost (deep `rewriteExpr` recursion
+    plus a wide, diffuse set of small compat/alias-resolution helper
+    calls per expression node — matches the fragmented architecture
+    `docs/CompatPathResolutionConsolidation.md` already documents) and
+    filed the actual algorithmic-fix investigation as TODO-4713 rather
+    than attempting a speculative fix in this leaf. Final verification:
+    `ctest -R "calls_flow_collections_(181_190|191_200|201_210)"` — all
+    3 pass (227s, 279s, 1709s respectively), comfortably under the new
+    2400s timeout. Full findings log at `docs/TestRuntimeOptimization.md`.
