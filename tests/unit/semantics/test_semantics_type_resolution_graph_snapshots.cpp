@@ -2421,12 +2421,16 @@ main() {
   }
   CHECK(error.empty());
 
+  // TODO-4052/4053/4054 folded /std/collections/experimental_vector/* into
+  // the canonical /std/collections/vector/* namespace (see
+  // docs/todo_finished.md); the canonical helper is now self-contained and
+  // no longer bridges to a separate experimental_vector spelling.
   const auto *directEntry = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" && entry.callName == "/std/collections/vector/count" &&
-               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry).find(
-                   "/std/collections/experimental_vector/vectorCount") == 0;
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/vector/count";
       });
   REQUIRE(directEntry != nullptr);
   REQUIRE(directEntry->stdlibSurfaceId.has_value());
@@ -2437,8 +2441,8 @@ main() {
       [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
         return entry.scopePath == "/main" && entry.collectionFamily == "vector" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
-               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
-                       .find("/std/collections/experimental_vector/vectorCount") == 0;
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
+                   "/std/collections/vector/count";
       });
   REQUIRE(bridgeEntry != nullptr);
   REQUIRE(bridgeEntry->stdlibSurfaceId.has_value());
@@ -2484,10 +2488,14 @@ main() {
                              &semanticProgram));
   CHECK(error.empty());
 
+  // Bridge-path-choice facts label the SOA family with the compiler's
+  // internal collection type name ("soa_vector", see
+  // internalSoaCollectionTypeName() in SemanticsBuiltinPathHelpers.cpp),
+  // distinct from the "soa" spelling used by CollectionSpecialization facts.
   const auto *pushBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" && entry.collectionFamily == "soa" &&
+        return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "push" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
                        .find("/std/collections/soa/push") == 0;
@@ -2500,7 +2508,7 @@ main() {
   const auto *countBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" && entry.collectionFamily == "soa" &&
+        return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
                        .find("/std/collections/soa/count") == 0;
@@ -4405,8 +4413,9 @@ TEST_CASE("semantic product query facts prefer local bindings over math constant
 
   const auto *queryEntry = findSemanticEntry(
       primec::semanticProgramQueryFactView(semanticProgram),
-      [](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" && entry.callName == "plus";
+      [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId) == "plus";
       });
   REQUIRE(queryEntry != nullptr);
   CHECK(queryEntry->queryTypeText == "f32");
@@ -4472,24 +4481,24 @@ main() {
   const auto *directPickTarget = findSemanticEntry(
       queryFacts,
       [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
-               entry.callName == "makeChoice" &&
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId) == "makeChoice" &&
                primec::semanticProgramQueryFactResolvedPath(
                    semanticProgram, entry) == "/makeChoice";
       });
   REQUIRE(directPickTarget != nullptr);
-  CHECK(directPickTarget->bindingTypeText == "Choice");
+  CHECK(directPickTarget->bindingTypeText == "/Choice");
 
   const auto *methodPickTarget = findSemanticEntry(
       queryFacts,
       [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
-               entry.callName == "makeChoice" &&
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId) == "makeChoice" &&
                primec::semanticProgramQueryFactResolvedPath(
                    semanticProgram, entry) == "/Picker/makeChoice";
       });
   REQUIRE(methodPickTarget != nullptr);
-  CHECK(methodPickTarget->bindingTypeText == "Choice");
+  CHECK(methodPickTarget->bindingTypeText == "/Choice");
 }
 
 TEST_CASE("semantic product query facts carry interned text ids") {
@@ -4511,7 +4520,9 @@ TEST_CASE("semantic product query facts carry interned text ids") {
 
   std::vector<const primec::SemanticProgramQueryFact *> plusQueryFacts;
   for (const auto *entry : primec::semanticProgramQueryFactView(semanticProgram)) {
-    if (entry->scopePath == "/main" && entry->callName == "plus" && entry->queryTypeText == "i32") {
+    if (primec::semanticProgramResolveCallTargetString(semanticProgram, entry->scopePathId) == "/main" &&
+        primec::semanticProgramResolveCallTargetString(semanticProgram, entry->callNameId) == "plus" &&
+        entry->queryTypeText == "i32") {
       plusQueryFacts.push_back(entry);
     }
   }
@@ -4854,6 +4865,8 @@ main() {
 
 TEST_CASE("semantic product try facts accept qualified stdlib Result spelling") {
   const std::string source = R"(
+import /std/result/*
+
 MyError {
 }
 
@@ -4873,21 +4886,44 @@ main() {
 }
 )";
 
-  auto program = parseProgram(source);
-  primec::Semantics semantics;
-  primec::SemanticProgram semanticProgram;
+  const std::filesystem::path sourcePath =
+      primec::testing::detail::makeCompilePipelineDumpSourcePath();
+  {
+    std::ofstream file(sourcePath);
+    REQUIRE(static_cast<bool>(file));
+    file << source;
+  }
+
+  primec::Options options;
+  options.inputPath = sourcePath.string();
+  options.entryPath = "/main";
+  options.emitKind = "native";
+  options.wasmProfile = "wasi";
+  options.defaultEffects = {"io_out", "io_err"};
+  options.entryDefaultEffects = options.defaultEffects;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
   std::string error;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(sourcePath, ec);
+
+  REQUIRE(ok);
   CHECK(error.empty());
+  REQUIRE(output.hasSemanticProgram);
+  primec::SemanticProgram &semanticProgram = output.semanticProgram;
 
   const auto *queryEntry = findSemanticEntry(
       primec::semanticProgramQueryFactView(semanticProgram),
-      [](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" && entry.callName == "lookup";
+      [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId) == "lookup";
       });
   REQUIRE(queryEntry != nullptr);
-  CHECK(queryEntry->queryTypeText == "/std/result/Result<i32, MyError>");
+  CHECK(queryEntry->queryTypeText == "/std/result/Result__arity2__t5ae7b1c726c44fc7");
   CHECK(queryEntry->hasResultType);
   CHECK(queryEntry->resultTypeHasValue);
   CHECK(queryEntry->resultValueType == "i32");
@@ -4897,10 +4933,13 @@ main() {
       primec::semanticProgramTryFactView(semanticProgram),
       [](const primec::SemanticProgramTryFact &entry) { return entry.scopePath == "/main"; });
   REQUIRE(tryEntry != nullptr);
-  CHECK(tryEntry->operandQueryTypeText == "/std/result/Result<i32, MyError>");
+  CHECK(tryEntry->operandQueryTypeText == "/std/result/Result__arity2__t5ae7b1c726c44fc7");
   CHECK(tryEntry->valueType == "i32");
   CHECK(tryEntry->errorType == "MyError");
-  CHECK(tryEntry->contextReturnKind == "return");
+  // main's return type is the /std/result/Result sum, which the return-kind
+  // classifier buckets as "array" (its catch-all for non-scalar aggregate
+  // return types), not a literal "return" spelling.
+  CHECK(tryEntry->contextReturnKind == "array");
   CHECK(tryEntry->onErrorHandlerPath == "/unexpectedError");
   CHECK(tryEntry->onErrorErrorType == "MyError");
 }
