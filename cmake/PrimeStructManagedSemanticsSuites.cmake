@@ -38,7 +38,7 @@ set(PrimeStructManagedSemanticsCommon
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.parameters"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 30
+  TOTAL_CASES 34
   SHARD_PREFIX "parameters"
 )
 
@@ -121,21 +121,21 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.transforms"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 80
+  TOTAL_CASES 51
   SHARD_PREFIX "transforms"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.effects"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 12
+  TOTAL_CASES 116
   SHARD_PREFIX "effects"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.struct_transforms"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 152
+  TOTAL_CASES 57
   SHARD_PREFIX "struct_transforms"
 )
 
@@ -149,28 +149,28 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.core"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 53
+  TOTAL_CASES 56
   SHARD_PREFIX "bindings_core"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.pointers"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 77
+  TOTAL_CASES 86
   SHARD_PREFIX "bindings_pointers"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.assignments"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 22
+  TOTAL_CASES 28
   SHARD_PREFIX "bindings_assignments"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.control_flow"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 40
+  TOTAL_CASES 44
   SHARD_PREFIX "bindings_control_flow"
 )
 
@@ -186,7 +186,7 @@ addPrimeStructManagedDoctestSuite(
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 600
   LABEL "parallel-safe"
-  TOTAL_CASES 76
+  TOTAL_CASES 114
   CASES_PER_SHARD 2
   SHARD_PREFIX "result_helpers"
 )
@@ -215,14 +215,14 @@ addPrimeStructManagedDoctestSuite(
   # cross-test-case pollution is fixed) is the better long-term fix for
   # this blanket override applying to hundreds of otherwise-fast shards.
   TIMEOUT 2400
-  TOTAL_CASES 771
+  TOTAL_CASES 1305
   SHARD_PREFIX "calls_flow_collections"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.access"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 48
+  TOTAL_CASES 51
   SHARD_PREFIX "calls_flow_access"
 )
 
@@ -251,7 +251,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.effects"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 118
+  TOTAL_CASES 129
   SHARD_PREFIX "calls_flow_effects"
 )
 
@@ -260,7 +260,7 @@ addPrimeStructManagedDoctestSuite(
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 900
   LABEL "parallel-safe"
-  TOTAL_CASES 52
+  TOTAL_CASES 87
   CASES_PER_SHARD 1
   SHARD_PREFIX "imports"
 )
@@ -275,13 +275,13 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.maybe"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 11
+  TOTAL_CASES 15
   SHARD_PREFIX "maybe"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.type_resolution_graph"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 18
+  TOTAL_CASES 177
   SHARD_PREFIX "type_resolution_graph"
 )
