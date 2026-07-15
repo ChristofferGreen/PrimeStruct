@@ -1201,6 +1201,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.scc
     primestruct.semantics.type_resolution_graph
     primestruct.semantics.uninitialized_fields
+    primestruct.semantics
+    primestruct.semantics.definition_partitioner
+    primestruct.semantics.definition_prepass
+    primestruct.semantics.symbol_interner
+    primestruct.semantics.type_packs
+    primestruct.semantics.type_resolution_return_solver
   )
 
   set(PrimeStructTextFilterTestSuites
