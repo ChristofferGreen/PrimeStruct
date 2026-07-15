@@ -88,6 +88,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 - TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 - TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
+- TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 
 ### Priority Lanes
 
@@ -205,8 +206,15 @@ This file is the live open-work queue for PrimeStruct.
   CTest `TIMEOUT` values once real per-shard costs are known, and
   TODO-4712 grows shard size once TODO-4707 proves pollution-free, so the
   many small per-shard fixed costs (binary launch, doctest registration)
-  stop adding up across hundreds of tiny shards. Full findings log at
-  `docs/TestRuntimeOptimization.md`.
+  stop adding up across hundreds of tiny shards. TODO-4706 root-caused one
+  concrete instance (the `calls_flow_collections` `181_190`-family shard
+  timeouts: `SoaColumnsN` stdlib templates with up to 16 type parameters,
+  measured at 426s for a single 16-column case) and shipped a pragmatic
+  CTest `TIMEOUT` override as the near-term fix; TODO-4713 tracks the
+  actual algorithmic investigation into why monomorphization cost grows
+  that sharply, profiled to implicate the same fragmented compat-path
+  resolution helpers documented in `docs/CompatPathResolutionConsolidation.md`.
+  Full findings log at `docs/TestRuntimeOptimization.md`.
 
 ### Execution Queue
 
@@ -264,6 +272,7 @@ This file is the live open-work queue for PrimeStruct.
 52. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 53. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 54. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
+55. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 
 ### Task Blocks
 
@@ -1544,3 +1553,72 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once `calls_flow.collections` is re-sharded and
     verified; rolling the same change out to every other managed suite is
     follow-up work, not part of this leaf.
+
+- [ ] TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-monomorph-perf
+  - depends_on: (none)
+  - scope: TODO-4706 root-caused (and pragmatically timeout-mitigated) the
+    `calls_flow_collections` shard timeout cluster: monomorphizing
+    `stdlib/std/collections/soa_storage.prime`'s `SoaColumnsN` struct/helper
+    family (N = 2 through 16 type parameters, exercised by
+    `test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`)
+    has wall time that grows far faster than the column count itself:
+    measured standalone/serial, 2-col ~12s, 4-col ~13s, 8-col ~15s, 12-col
+    ~41s, 16-col **426s** (a 33% column-count increase from 12 to 16
+    produced a ~10x time increase). This leaf is the actual algorithmic
+    investigation and fix TODO-4706 explicitly deferred.
+  - implementation_notes: Live gdb sampling (`gdb -p <pid> -batch -ex "bt
+    12"`, repeated every few seconds against a running 16-column case) on
+    2026-07-15 found: (1) deep self-recursion through
+    `rewriteExpr` (`TemplateMonomorphExpressionRewrite.h:2099`) walking
+    chained receiver expressions in the monomorphized helper bodies —
+    `mapping`/`locals`/`params` are already passed by const-reference, not
+    copied, so the recursion depth itself isn't the direct cost; (2) a wide,
+    diffuse set of small string-heavy compat/alias-resolution helpers
+    invoked on every expression node during that walk -
+    `resolveCalleePath` (`TemplateMonomorphTypeResolution.h:643`),
+    `resolveStdlibSurfaceCompatibilityAlias`'s `findVisibleSpelling` inner
+    loop, `matchesAny`, `stdlibSurfaceMatchesSpelling`,
+    `canonicalizeLegacySoaToAosHelperPath`, `resolveStdlibSurfaceMemberName`
+    - live-inspected `ctx.sourceDefs.size() == 531`,
+    `ctx.templateDefs.size() == 432` at one sample point (roughly constant
+    across the whole shard since `import .../soa_storage/*` always pulls in
+    all N=2..16 struct/helper definitions regardless of which N the test
+    actually uses). No single dominant hot function was isolated in the
+    ~15-25 samples taken; the cost looks compounded from several sources
+    (recursion depth, per-node compat-alias-resolution fan-out, and
+    possibly cascading per-field dependency resolution) rather than one
+    fixable bug. This is the same fragmented, redundantly-composed
+    compat-path resolution architecture already documented as a
+    maintainability problem in `docs/CompatPathResolutionConsolidation.md`
+    ("at least three interacting rules... none has a single
+    implementation... scattered... 9 files") - that consolidation, if
+    completed, would plausibly also collapse much of this per-node
+    resolution fan-out as a side effect. Start with proper profiling
+    (`valgrind --tool=callgrind` on a smaller but still-slow case, e.g.
+    8-12 columns, to keep iteration time reasonable) to get real call
+    counts instead of statistical gdb sampling before attempting any fix -
+    this exact subsystem produced a real regression earlier the same
+    session from an under-verified change, so any fix here needs a full
+    suite-wide sharded ctest regression pass before being trusted, not just
+    the directly-touched test file.
+  - acceptance:
+    - A profiler-backed (not just statistically-sampled) breakdown of where
+      wall time actually goes for a representative slow case (e.g.
+      16-column) is recorded in `docs/TestRuntimeOptimization.md`.
+    - Either a verified fix lands that measurably reduces the 16-column
+      case's wall time (with a full sharded `ctest -R calls_flow_collections`
+      run confirming no regressions), or, if no safe fix is found in scope,
+      the investigation's conclusion (including why a fix wasn't safe/
+      tractable) is documented clearly enough for the next attempt to skip
+      re-deriving this leaf's findings.
+  - stop_rule: Stop once the profiler-backed diagnosis is recorded and
+    either a verified fix lands or a clear "not safely fixable in this
+    pass" conclusion is documented; do not attempt a broad rewrite of the
+    compat-path resolution helpers in this leaf even if the diagnosis
+    points there - that overlaps `docs/CompatPathResolutionConsolidation.md`
+    and should be its own coordinated effort, not a side effect of a
+    performance leaf.

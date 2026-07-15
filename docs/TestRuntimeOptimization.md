@@ -171,14 +171,34 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   - 16-column: **426s** (measured directly; not a hang, the case passes)
   This is genuine template-monomorphization cost on real production
   stdlib code with up to 16 type parameters — not a bug in the test, and
-  not an infinite loop. A from-scratch algorithmic fix to the
-  monomorphization cost itself was judged out of scope for this pass (high
-  risk, deep unfamiliar territory in the same subsystem that produced the
-  vector-alias regression above); instead applied a pragmatic fix:
-  overrode this suite's CTest `TIMEOUT` from the shared 300s default to
-  1200s in `cmake/PrimeStructManagedSemanticsSuites.cmake` (comfortably
-  covers even a shard containing both 16-column cases back to back). The
-  underlying scaling itself is real algorithmic debt worth a dedicated
-  investigation later — not tracked as a new TODO yet since it would need
-  its own scoped diagnosis of *why* monomorphization cost grows this
-  sharply per type parameter before it could be leaf-shaped.
+  not an infinite loop. Applied a pragmatic near-term fix: overrode this
+  suite's CTest `TIMEOUT` from the shared 300s default to 1200s in
+  `cmake/PrimeStructManagedSemanticsSuites.cmake`. That was enough for
+  shards `181_190` (221s) and `191_200` (275s), but **not** for
+  `201_210`, which stacks the 13-through-16-column cases together and
+  still timed out at 1200s — that shard needs re-measurement with more
+  headroom and likely either a larger override or splitting the expensive
+  tail into smaller shards (tracked as follow-up under TODO-4706).
+- 2026-07-15: Live-profiled the underlying monomorphization cost via gdb
+  statistical sampling (`gdb -p <pid> -batch -ex "bt 12"`, repeated
+  against the live, still-running 16-column case — no separate profiling
+  run needed). Findings: deep self-recursion through `rewriteExpr`
+  (`TemplateMonomorphExpressionRewrite.h:2099`) walking chained receiver
+  expressions, `mapping`/`locals`/`params` already passed by
+  const-reference (not the copy-cost trap it could have been), combined
+  with a wide, diffuse set of small string-heavy compat/alias-resolution
+  helpers invoked per expression node (`resolveCalleePath`,
+  `resolveStdlibSurfaceCompatibilityAlias`, `matchesAny`,
+  `stdlibSurfaceMatchesSpelling`, `canonicalizeLegacySoaToAosHelperPath`,
+  `resolveStdlibSurfaceMemberName`). Live-inspected `ctx.sourceDefs.size()
+  == 531`, `ctx.templateDefs.size() == 432` at one sample point. No single
+  dominant hot function isolated — cost looks compounded across several
+  sources, and the diffuse compat-helper fan-out matches the exact
+  fragmented architecture `docs/CompatPathResolutionConsolidation.md`
+  already documents as a maintainability problem, suggesting that
+  consolidation would plausibly help here too as a side effect. Given this
+  session already produced one real regression in this same subsystem
+  (the vector-alias fix, reverted above), did not attempt a live
+  speculative fix — filed **TODO-4713** with the full profiling writeup so
+  a focused follow-up pass (starting with real `callgrind` profiling
+  instead of statistical sampling) doesn't have to re-derive this.
