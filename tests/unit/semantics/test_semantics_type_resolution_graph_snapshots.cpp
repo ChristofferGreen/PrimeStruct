@@ -371,15 +371,20 @@ main() {
 }
 
 TEST_CASE("require value predicates reject non-constant operands") {
+  // i32 (and other integer) parameters are accepted as runtime-checkable
+  // contract operands (see runtimeContractOperandKind in
+  // RequirementPredicateFacts.cpp), so this uses an f32 parameter, which
+  // is not a supported runtime-checkable value type, to keep exercising
+  // genuine rejection of a non-constant operand.
   const std::string source = R"(
 [return<i32> require(value_greater<value, 0>())]
-bad([i32] value) {
-  return(value)
+bad([f32] value) {
+  return(0i32)
 }
 
 [return<i32>]
 main() {
-  return(bad(1i32))
+  return(bad(1.0f32))
 }
 )";
 
@@ -2767,6 +2772,8 @@ main() {
 
 TEST_CASE("semantic product keeps nested helper-return soa read targets on alias wrappers") {
   const std::string source = R"(
+import /std/collections/vector
+
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -2911,6 +2918,8 @@ main() {
 
 TEST_CASE("semantic product keeps helper-return soa read targets on alias wrappers") {
   const std::string source = R"(
+import /std/collections/vector
+
 [struct reflect]
 Particle() {
   [i32] x{1i32}

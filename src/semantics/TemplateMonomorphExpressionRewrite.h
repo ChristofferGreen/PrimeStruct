@@ -1461,6 +1461,16 @@ bool rewriteExpr(Expr &expr,
       }
       return false;
     };
+    // Shadow precedence: a real definition at the exact spelled path always
+    // wins over any compat/alias rewrite this function would otherwise
+    // apply below. Without this, an explicit call to a fully-qualified
+    // canonical path (e.g. /std/collections/vector/count) that has no
+    // definition of its own could still get silently redirected to an
+    // unrelated same-named alias (e.g. /vector/count) defined elsewhere,
+    // even though the two paths are not declared equivalent.
+    if (hasDefinitionFamilyPath(path)) {
+      return path;
+    }
     auto hasVisibleRootBuiltinSoaConversionHelper = [&](std::string_view helperPath) {
       auto matchesBuiltinSoaHelper = [&](const std::string &helperPath) {
         auto defIt = ctx.sourceDefs.find(helperPath);
@@ -1598,7 +1608,14 @@ bool rewriteExpr(Expr &expr,
               canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       return path;
     }
-    if (receiverFamily == "vector" &&
+    // Only redirect to a same-path /vector/<helper> override when the
+    // canonical spelling was itself a resolver guess (e.g. a bare
+    // count(vec) bridge call), not when the caller explicitly wrote out
+    // the fully-qualified canonical path themselves: an explicit
+    // /std/collections/vector/count(...) call must resolve to that exact
+    // definition or fail, never silently fall back to an unrelated
+    // same-named alias defined elsewhere.
+    if (receiverFamily == "vector" && expr.name != path &&
         (helperName == "count" || helperName == "count_ref" ||
          helperName == "capacity")) {
       const std::string samePathVectorHelper =
