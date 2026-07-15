@@ -6135,6 +6135,8 @@ bool rewriteBuiltinKeyValueInsertMethods(Program &program, std::string &error) {
 bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
   std::unordered_set<std::string> structNames;
   structNames.reserve(program.definitions.size());
+  std::unordered_set<std::string> sumNames;
+  sumNames.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
     bool hasStructTransform = false;
     bool hasReturnTransform = false;
@@ -6163,6 +6165,9 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     }
     if (hasStructTransform || fieldOnlyStruct) {
       structNames.insert(def.fullPath);
+    }
+    if (hasSumTransform) {
+      sumNames.insert(def.fullPath);
     }
   }
 
@@ -6268,7 +6273,7 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     semantics::BindingInfo info;
     std::optional<std::string> restrictType;
     std::string parseError;
-    if (!semantics::parseBindingInfo(expr, expr.namespacePrefix, structNames, importAliases, info, restrictType, parseError)) {
+    if (!semantics::parseBindingInfo(expr, expr.namespacePrefix, structNames, importAliases, info, restrictType, parseError, &sumNames)) {
       error = parseError;
       return false;
     }

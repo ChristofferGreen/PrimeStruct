@@ -432,7 +432,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   const std::string normalizedBindingType = normalizeBindingTypeName(info.typeName);
   if (explicitAutoType && initializer.kind == Expr::Kind::Call &&
-      initializer.isBraceConstructor && hasNamedArguments(initializer.argNames)) {
+      initializer.isBraceConstructor && hasNamedArguments(initializer.argNames) &&
+      normalizeBindingTypeName(initializer.name) == "auto") {
     return failBindingDiagnostic("sum construction requires target sum type");
   }
   if ((normalizedBindingType == "vector" ||

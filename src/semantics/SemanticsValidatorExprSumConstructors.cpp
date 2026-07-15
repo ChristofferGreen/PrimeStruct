@@ -737,9 +737,32 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
         argumentContext);
   };
 
-  if (hasNamedArguments(initializer.argNames)) {
+  // A named argument on the initializer selects a sum variant (e.g.
+  // Shape{[circle] Circle{1.0}}) unless the initializer's own callee name
+  // is itself a real struct type (e.g. Circle{[radius] 3.4}), in which case
+  // the named argument is that struct's own field and the initializer is a
+  // payload value to match against the sum's variants below instead.
+  const bool initializerNamesPayloadStruct =
+      !resolveStructTypePath(initializer.name, initializer.namespacePrefix, structNames_).empty();
+  const bool initializerHasEmptyBraces =
+      initializer.args.empty() ||
+      (initializer.args.size() == 1 && initializer.argNames.size() == 1 &&
+       !initializer.argNames.front().has_value() &&
+       isEmptyBraceBlockArgument(initializer.args.front()));
+  if (initializer.isBraceConstructor && !initializerNamesPayloadStruct &&
+      (hasNamedArguments(initializer.argNames) || initializerHasEmptyBraces)) {
     if (initializer.args.size() != 1 || initializer.argNames.size() != 1 ||
         !initializer.argNames.front().has_value()) {
+      if (hasNamedArguments(initializer.argNames) && initializer.argNames.size() > 1) {
+        std::unordered_set<std::string> seenVariantNames;
+        for (const auto &argName : initializer.argNames) {
+          if (argName.has_value() && !seenVariantNames.insert(*argName).second) {
+            return failInferredSumDiagnostic(
+                "duplicate sum variant in construction: " + *argName + " on " +
+                sumDef->fullPath);
+          }
+        }
+      }
       return failInferredSumDiagnostic(
           "sum construction requires exactly one explicit variant for " +
           sumDef->fullPath);
