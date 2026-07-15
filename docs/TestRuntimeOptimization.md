@@ -134,5 +134,25 @@ execution queue — keep them in sync when a TODO's scope or status changes.
 
 - 2026-07-15: Discovered and killed a 2h13m runaway unsharded
   `calls_flow.collections` run (CPU-bound, not idle/blocked). Re-ran via
-  proper CTest sharding; `calls_flow_collections_181_190` shard is the
-  current outlier under investigation. No root cause identified yet.
+  proper CTest sharding.
+- 2026-07-15: The sharded run (78 shards, `--parallel 4`, 1305 cases total)
+  finished in 1790s wall-clock and immediately paid for itself twice over:
+  - **Caught a real regression within minutes** instead of it going
+    unnoticed: an unrelated same-session fix to
+    `TemplateMonomorphExpressionRewrite.h` (a "shadow precedence" guard on
+    vector-count alias fallback) broke 4 test cases across
+    `test_semantics_calls_and_flow_collections_vector_alias_unknown_expected_forwarding.cpp`
+    and `test_semantics_calls_and_flow_collections_namespaced_collection_statement_body_args.cpp`
+    (shards `451_460` and `741_750`). Reverted the guard and fixed the
+    actual stale test that had misled the original diagnosis. This is the
+    concrete case for why suite-wide sharded runs need to be part of the
+    normal verification loop for changes to shared resolution code, not
+    just the narrow test file being edited.
+  - **Confirmed the shard-181_190-family timeout is real, not a fluke**:
+    shards `181_190`, `191_200`, and `201_210` *all three* hit the full
+    300s `TIMEOUT` and were killed by CTest. This exactly matches an
+    earlier-session historical note about this same shard range being
+    previously timeout-prone. TODO-4706 owns root-causing this.
+  - All other 73 shards passed in well under a few seconds each (many
+    under half a second), reinforcing that this is a localized problem in
+    a specific shard range, not a systemic slowness issue.
