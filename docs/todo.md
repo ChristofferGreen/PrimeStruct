@@ -75,12 +75,18 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
+- TODO-4706: Root-cause calls_flow_collections shard 181_190 slowness | track: test-runtime-hang-triage | surface: primestruct.semantics.calls_flow.collections
+- TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 
 ### Immediate Next 10
 
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
 - TODO-4637: Move `ir_pipeline` test shard into subdirectory
+- TODO-4708: Measure per-shard doctest binary startup/registration overhead
+- TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
+- TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+- TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 
 ### Priority Lanes
 
@@ -185,6 +191,18 @@ This file is the live open-work queue for PrimeStruct.
   (generic slot layout): TODO-4668 and TODO-4669 done. Remaining: TODO-4670
   (remove old alias branches when ready), TODO-4671 (cleanup dead helpers).
   Full design document at `docs/CollectionDecoupling.md`.
+- Test runtime optimization: get the test suite fast and hang-proof (no
+  test should ever exceed 30s; most should run under 5s). Triggered by
+  discovering an unsharded `calls_flow.collections` invocation left
+  running for 2h13m undetected. TODO-4706 root-causes the specific slow
+  shard found so far, TODO-4707 fixes the cross-test-case pollution that
+  currently forces small 10-case shards, TODO-4708 measures fixed
+  per-shard binary startup cost, TODO-4709 audits `compile_run` cases that
+  only check pass/fail (candidates for downgrading off the full
+  compile-and-execute path), TODO-4710 caches redundant stdlib `.prime`
+  re-parsing across compile-pipeline test helpers, and TODO-4711 tightens
+  CTest `TIMEOUT` values once real per-shard costs are known. Full
+  findings log at `docs/TestRuntimeOptimization.md`.
 
 ### Execution Queue
 
@@ -235,6 +253,12 @@ This file is the live open-work queue for PrimeStruct.
 45. TODO-4703: Add diff-based zero-C++ gate script
 46. TODO-4704: Add audit-exemption-count ratchet script
 47. TODO-4705: Correct stale Collection decoupling documentation
+48. TODO-4706: Root-cause calls_flow_collections shard 181_190 slowness
+49. TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
+50. TODO-4708: Measure per-shard doctest binary startup/registration overhead
+51. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
+52. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+53. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 
 ### Task Blocks
 
@@ -1310,3 +1334,173 @@ This file is the live open-work queue for PrimeStruct.
       source-verified completion status for TODO-4656 through TODO-4675.
   - stop_rule: Stop once both docs are corrected; do not re-scope any
     open TODO's acceptance criteria in this leaf.
+
+- [ ] TODO-4706: Root-cause calls_flow_collections shard 181_190 slowness
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-hang-triage
+  - depends_on: (none)
+  - scope: Isolate which specific test case(s) in the
+    `primestruct.semantics.calls_flow.collections` CTest shard range
+    181-190 cause it to consistently run far longer than sibling shards
+    (observed 3+ minutes vs. seconds for neighboring shards; an earlier,
+    unsharded, unattended invocation covering this range ran for 2h13m
+    before being killed). Use `--test-case=` bisection within
+    `--first=181 --last=190` to narrow to the specific case(s), then
+    determine whether the cost is genuine algorithmic work, a real hang, or
+    environment-driven slowness (cross-check against the
+    `/home/user/PrimeStruct-master` worktree per the methodology in
+    `docs/failing_tests.md`).
+  - implementation_notes: Use `gdb -batch` with `--no-breaks=true` (per
+    session precedent) if a real hang reproduces, to get a stack trace
+    rather than just a timeout. Record findings in
+    `docs/TestRuntimeOptimization.md`'s Log section regardless of outcome.
+  - acceptance:
+    - The specific slow/hanging test case(s) are identified by name.
+    - Root cause is documented (genuine algorithmic cost, real hang and its
+      trigger, or confirmed environment/parallelism artifact).
+    - Either the root cause is fixed and the shard completes in under 30s,
+      or a follow-up TODO leaf is filed with enough detail to fix it
+      without re-deriving the diagnosis.
+  - stop_rule: Stop once the specific case(s) and root cause are identified
+    and either fixed or handed off via a follow-up leaf; do not chase other
+    slow shards in this leaf.
+
+- [ ] TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-pollution-fix
+  - depends_on: (none)
+  - scope: `docs/failing_tests.md` documents two known cases of test
+    results changing based on whether a suite runs as one continuous
+    process vs. sharded into single-case processes: (1) running all of
+    `primestruct.semantics.calls_flow.collections` unsharded shows ~114
+    spurious failures not present under CTest's sharded invocation, and (2)
+    `primestruct.semantics.imports`'s "import resolves std collections
+    experimental map wildcard surface" case deterministically fails only
+    when run as part of the full unsharded suite. Find the shared state (a
+    cache, static table, or similar) that isn't reset between `TEST_CASE`
+    invocations in-process and fix it so both suites produce identical
+    results whether run as one process or sharded.
+  - implementation_notes: Likely a static/thread-local cache in the
+    semantics or stdlib-resolution layer that isn't cleared by doctest's
+    per-case teardown. Diff the exact failing test names between an
+    unsharded run and a fixed baseline (per the existing "Methodology
+    note" in `docs/failing_tests.md`) to confirm the fix closes the gap
+    without changing sharded-run results.
+  - acceptance:
+    - `primestruct.semantics.imports` run in one unsharded process produces
+      the same pass/fail set as its CTest-sharded run.
+    - `primestruct.semantics.calls_flow.collections` run in one unsharded
+      process produces the same pass/fail set as its CTest-sharded run (no
+      ~114-case spurious-failure artifact).
+  - stop_rule: Stop once these two documented cases are eliminated; do not
+    increase CTest shard sizes in this leaf even though it becomes safe to
+    do so — that's a follow-up once pollution-freedom is proven broadly,
+    not just for these two known cases.
+
+- [ ] TODO-4708: Measure per-shard doctest binary startup/registration overhead
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-startup-cost
+  - depends_on: (none)
+  - scope: Measure the fixed cost of launching `PrimeStruct_semantics_tests`
+    (or another large managed-suite binary) and reaching the point where
+    doctest has registered all `TEST_CASE`s, before any selected case
+    actually executes. Multiply by the number of CTest shards that launch
+    this binary to estimate total suite-wide fixed cost from process
+    startup and static registration alone.
+  - implementation_notes: A `--list-test-cases` invocation (or a case
+    selector matching zero cases) isolates registration/startup time from
+    execution time. Compare against a much smaller single-suite test binary
+    to see how registration cost scales with total `TEST_CASE` count in
+    the binary.
+  - acceptance:
+    - A reproducible measured number (milliseconds) for fixed
+      startup/registration cost is recorded in
+      `docs/TestRuntimeOptimization.md`, along with the shard count for
+      at least one large suite and the resulting suite-wide estimate.
+  - stop_rule: Stop once the measurement is taken and documented; do not
+    implement any startup-cost optimization in this leaf — file a
+    follow-up if the measured cost is a significant fraction of total
+    suite runtime.
+
+- [ ] TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-pyramid-audit
+  - depends_on: (none)
+  - scope: Scan `tests/unit/compile_run/` for `TEST_CASE` bodies that only
+    assert on `ok`/`error` (compile success or failure) via
+    `validateProgramThroughCompilePipeline`/`runCompilePipeline`, without
+    inspecting actual emitted/executed program output. These are candidates
+    for downgrading to a plain `Semantics::validate()` check, which skips
+    codegen and process-spawn entirely.
+  - implementation_notes: ~3,935 `TEST_CASE`s live under `compile_run`
+    (~42% of the ~9,443 total in `tests/unit/`); this leaf is the audit
+    only, not the migration. Produce a concrete `file:line` list, split into
+    "safe to downgrade" (pass/fail only, no output/behavior assertions) vs.
+    "needs the full pipeline" (checks actual runtime output, cross-backend
+    parity, or emitted-code shape).
+  - acceptance:
+    - A list of candidate `file:line` entries with a total count is
+      recorded in `docs/TestRuntimeOptimization.md`.
+  - stop_rule: Stop once the audit list exists; do not perform any of the
+    downgrades in this leaf — each migration is its own follow-up leaf so
+    correctness can be verified per-file.
+
+- [ ] TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-stdlib-cache
+  - depends_on: (none)
+  - scope: Determine whether `validateProgramThroughCompilePipeline`-style
+    test helpers (and the underlying `ImportResolver`/`runCompilePipeline`
+    machinery) re-read and re-parse the same unchanging stdlib `.prime`
+    files from disk for every single test case that imports them. If so,
+    add a process-local cache keyed on file path + mtime so repeated
+    imports of the same stdlib module within one test binary process reuse
+    already-parsed content.
+  - implementation_notes: Confirm with a read syscall count or simple
+    instrumentation before assuming this is real; don't add caching
+    speculatively. Any cache must not change behavior for tests that
+    intentionally write and import a modified stdlib file mid-run, if any
+    exist.
+  - acceptance:
+    - Before/after wall-clock timing for one representative `compile_run`
+      CTest shard is recorded in `docs/TestRuntimeOptimization.md`.
+    - No test behavior changes (full affected suite still passes
+      identically before and after).
+  - stop_rule: Stop once caching is implemented and measured for one
+    representative shard; broader rollout or cache-invalidation edge cases
+    are follow-up work if the measured win is significant.
+
+- [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-timeout-tightening
+  - depends_on: TODO-4706, TODO-4707, TODO-4708, TODO-4709, TODO-4710
+  - scope: Once real per-shard/per-suite runtimes are known from the
+    groundwork leaves, lower the managed doctest suite `TIMEOUT` (currently
+    300s via `addPrimeStructManagedDoctestSuite`, 600s via the older
+    `PrimeStructSuite_TIMEOUT` default) suite-by-suite toward the 30s hard
+    ceiling from `docs/TestRuntimeOptimization.md`, with headroom sized to
+    each suite's actual observed runtime rather than a single global cut.
+  - implementation_notes: Suites that can't yet meet 30s (because their
+    root-cause slowness leaf hasn't landed) should get an explicit,
+    commented interim timeout and a linked follow-up TODO, not be silently
+    left at the old default.
+  - acceptance:
+    - Every managed doctest suite's CTest `TIMEOUT` is at or under 60s,
+      with suites already fast enough tightened to 30s or less.
+    - Any suite still exceeding 30s has a documented interim timeout and a
+      linked open TODO explaining why.
+  - stop_rule: Stop once every managed suite has an intentional,
+    documented timeout at or below 60s; do not force every suite to exactly
+    30s in this leaf if its own root-cause fix hasn't landed yet.

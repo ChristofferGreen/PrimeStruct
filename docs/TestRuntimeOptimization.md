@@ -94,47 +94,37 @@ those are strong candidates for downgrading to
 `Semantics::validate()`-only, since they're not actually exercising
 runtime behavior at all.
 
-## Open questions / next steps
+## Tracked work
 
-1. **Characterize the `181_190` shard hang**: is this the same
-   environment-slowness explanation from the earlier session (confirmed
-   real assertion failures were absent, timeout was purely capacity-driven
-   at 1200s in that instance), or a genuine hang introduced by a recent
-   change? Needs isolating with `--test-case=` on the specific case(s) in
-   that shard range and profiling under `gdb`/`perf` if it reproduces
-   consistently.
-2. **Inventory suite-level runtimes**: get a clean timing breakdown per
-   CTest entry (`ctest --output-junit` or `-T Test` timing report) to find
-   every suite/shard that's an outlier before optimizing blindly.
-3. **Separate "slow" from "hung"**: a shard that reliably takes 45s every
-   run is a different problem (real algorithmic cost, or doctest/parse
-   overhead multiplied across 10 cases) than one that only occasionally
-   times out (flakiness, cross-test-case pollution, resource contention
-   under parallel `ctest --parallel N`).
-4. **Candidate root causes to check**, roughly in order of suspicion:
-   - Whole-process doctest suites with hundreds-to-thousands of cases
-     sharing one binary/process — per-case teardown/state reset issues
-     already documented (`docs/failing_tests.md` "Flaky, not a real
-     failure" section) suggest state leaks across cases that could also
-     manifest as slowdowns, not just wrong results.
-   - Full compile-pipeline test helpers (`validateProgramThroughCompilePipeline`
-     et al.) that write a temp file and invoke the real import resolver —
-     inherently heavier than a raw `Semantics::validate()` call; suites
-     leaning on this pattern should be checked for whether they need to.
-   - Template monomorphization cost on pathological/recursive template
-     shapes exercised by generated test fixtures.
-   - Parallel `ctest --parallel N` resource contention (CPU oversubscription
-     skewing wall-clock time under load) vs. genuinely slow single-threaded
-     work — needs a serial vs. parallel timing comparison to separate.
-5. **Enforce the ceiling in CI, not just locally**: the managed semantics
-   suite macro (`addPrimeStructManagedDoctestSuite`,
-   `cmake/PrimeStructManagedSemanticsSuites.cmake`) currently sets
-   `TIMEOUT 300` per 10-case shard by default; a separate, older macro path
-   defaults to 600s (`PrimeStructSuite_TIMEOUT` in `CMakeLists.txt`). Once
-   real per-shard timings are known, tighten these toward the 30s ceiling
-   suite-by-suite rather than lowering the global default in one shot,
-   since some suites may legitimately need more headroom until their own
-   hangs/slowness are fixed.
+All actionable next steps here are now tracked as leaf TODOs in
+`docs/todo.md` (phase "Test runtime optimization") so they get picked up
+by the normal queue rather than living only as prose in this doc:
+
+- **TODO-4706** — root-cause the `calls_flow_collections_181_190` shard
+  slowness/hang found above: isolate the specific case(s) via
+  `--test-case=` bisection, determine real-cost vs. hang vs. environment
+  artifact, fix or file the follow-up.
+- **TODO-4707** — fix the cross-test-case pollution documented in
+  `docs/failing_tests.md` (the ~114-case spurious-failure artifact in
+  `calls_flow.collections` and the `imports` wildcard-surface case) that's
+  the reason suites are sharded into small 10-case chunks at all; a
+  smaller shard count once this is proven clean is a natural follow-up,
+  not part of this leaf.
+- **TODO-4708** — measure fixed per-invocation binary
+  startup/doctest-registration cost, independent of which cases actually
+  run, and estimate its share of total suite runtime.
+- **TODO-4709** — audit `compile_run` for cases whose assertions only
+  check pass/fail rather than actual program output; these are the
+  candidates for downgrading off the full compile-and-execute path (see
+  "Test-pyramid shape" above). Audit only — no migrations in that leaf.
+- **TODO-4710** — check whether compile-pipeline test helpers redundantly
+  re-parse the same stdlib `.prime` files per test case, and cache if so.
+- **TODO-4711** — once the above land, tighten CTest `TIMEOUT` values
+  suite-by-suite toward the 30s ceiling instead of the current 300s/600s
+  defaults.
+
+This doc stays the narrative/findings log; `docs/todo.md` is the
+execution queue — keep them in sync when a TODO's scope or status changes.
 
 ## Log
 
