@@ -94,6 +94,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
 - TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
 - TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
+- TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 
 ### Priority Lanes
 
@@ -240,7 +241,9 @@ This file is the live open-work queue for PrimeStruct.
   fixes a small, isolated `maybe.cpp` nullptr failure. TODO-4719 fixes the
   pre-existing 10-case `type_resolution_graph` SoA-cluster (already
   deeply investigated in an earlier session; blocked on a further
-  `/soa/push` stdlib-syntax question for at least one case).
+  `/soa/push` stdlib-syntax question for at least one case). TODO-4720
+  audits the other (non-semantics) suite-definition files for the same
+  drift pattern, not yet checked.
 
 ### Execution Queue
 
@@ -304,6 +307,7 @@ This file is the live open-work queue for PrimeStruct.
 58. TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
 59. TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure
 60. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
+61. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 
 ### Task Blocks
 
@@ -1828,3 +1832,51 @@ This file is the live open-work queue for PrimeStruct.
     stdlib mutator-syntax migration beyond fixing these test expectations,
     split that migration into its own TODO rather than expanding this
     leaf's scope.
+
+- [ ] TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-shard-audit
+  - scope: TODO-4714 through TODO-4719 cover the drift found in
+    `cmake/PrimeStructManagedSemanticsSuites.cmake` (13 of 27
+    `primestruct.semantics.*` suites had a stale `TOTAL_CASES` silently
+    hiding ~900 real test cases from CTest). The same risk has not yet
+    been checked for the other suite-definition files:
+    `cmake/PrimeStructManagedCompileRunSmokeSuites.cmake`,
+    `PrimeStructManagedCompileRunVmSuites.cmake`,
+    `PrimeStructManagedCompileRunEmittersNativeCoreSuites.cmake`,
+    `PrimeStructManagedCompileRunNativeOtherSuites.cmake`,
+    `PrimeStructManagedCompileRunImportsTextExamplesSuites.cmake`,
+    `PrimeStructManagedParserTextMiscSuites.cmake`,
+    `PrimeStructManagedUnitBackendSuites.cmake`, and the large block of
+    hand-written `addPrimeStructDoctestSuite(...)` shard definitions
+    directly in `CMakeLists.txt` (~lines 1790-2060, using
+    `SOURCE_FILE`/`FIRST`/`LAST` rather than `TOTAL_CASES`, sharded per
+    source file rather than per suite).
+  - implementation_notes: For `TOTAL_CASES`-based suites, compare against
+    `<binary> --test-suite="<suite>" --list-test-cases` (or the tail
+    summary line's "unskipped test cases passing the current filters: N"
+    count) the same way the semantics audit did. For `SOURCE_FILE`-based
+    shards, group by `(suite, SOURCE_FILE pattern)`, find the max `LAST`
+    covered, and compare against
+    `grep -c '^TEST_CASE(' <matching files>` or
+    `--list-test-cases --source-file=<pattern>` if that doctest flag
+    supports per-file case-count listing (already confirmed the CLI accepts
+    `--source-file=` filters, per `addPrimeStructDoctestSuite`'s
+    `commandArgs` construction in `CMakeLists.txt:1268-1270`). An earlier
+    attempt in this session at a fully-automated Python cross-file audit
+    hit CMake-parsing bugs (multi-line calls, `${suite}` variable
+    references inside the shared macro definitions confusing simple
+    paren-matching) and was abandoned in favor of the manual semantics-only
+    audit - a more careful parser (or per-file manual review) is needed
+    here.
+  - acceptance: Every suite/source-file shard group across all non-semantics
+    `cmake/PrimeStructManaged*Suites.cmake` files and the `CMakeLists.txt`
+    manual shard block has a configured upper bound matching (or
+    exceeding, for the harmless over-count direction) the real case count;
+    any found drift is fixed and any newly-exposed failures are recorded
+    in `docs/failing_tests.md` and given their own follow-up TODOs.
+  - stop_rule: Audit and fix shard-range config only in this leaf; file
+    separate TODOs for any newly-exposed test failures rather than fixing
+    them inline here.
