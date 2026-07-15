@@ -15,6 +15,64 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+**Superseded 2026-07-15**: the "green, 1548/1548" claim below was never an
+honest measurement of the full test surface. `cmake/PrimeStructManagedSemanticsSuites.cmake`
+sharded suites via `TOTAL_CASES`, but 13 of 27 semantics suites had drifted
+stale as cases were added over time - CTest's `--first=N --last=M` sharding
+silently caps at the configured total with no error, so roughly 900 real
+test cases (e.g. `type_resolution_graph` 18 configured vs 177 real,
+`calls_flow.collections` 771 vs 1305 real) were never once executed by the
+CTest gate. Fixed the drift (see git log for the "Fix stale TOTAL_CASES
+drift" commit); this section now tracks the real failures that were hidden
+behind it.
+
+### Newly-exposed failures (2026-07-15, post TOTAL_CASES fix)
+
+Running the corrected `primestruct.semantics` gate end to end
+(`ctest -R primestruct_semantics --parallel 4`, 459 shards) surfaced
+**46 failing shards / 122 individual failing test cases** that the old
+config never reached:
+
+- `primestruct.semantics.calls_flow.collections`: 33 failing shards
+  (ranges 791-800 through 1291-1300, all beyond the old 771-case cutoff).
+  One file, `test_semantics_calls_and_flow_collections_vector_helper_call_form_named_receivers.cpp`,
+  fails on every one of its ~10 cases in both directions (expected-success
+  cases raise errors; expected-rejection cases silently validate) -
+  strong signal that named-receiver call-form vector-helper dispatch has
+  never been exercised by CI. The rest are scattered single-case failures
+  across many other files in the same suite (namespaced count/capacity
+  alias diagnostics, wrapper-returned map string-branch handling, variadic
+  pack receivers, etc.) - not yet triaged into root-cause clusters.
+- `primestruct.semantics.effects`: 4 failing shards (31-40, 71-80, 81-90,
+  91-100), all beyond the old 12-case cutoff. Sampled failure:
+  `test_semantics_capabilities_structs_metadata.cpp` "unsupported
+  reflection metadata queries are rejected" - `parser.parse()` itself
+  fails on the scenario source, before validation even runs.
+- `primestruct.semantics.type_resolution_graph`: 2 failing shards
+  (101-110, 111-120) covering the same 10 known SoA-cluster failures
+  already tracked below under "keeps ... soa ... compatibility" (see that
+  section - this is not new, just now visible to CTest for the first
+  time).
+- `primestruct.semantics.imports`: 1 failing shard (66-66) - "import
+  resolves std collections experimental map wildcard surface". This is
+  the exact test named in the "Flaky, not a real failure" note below,
+  previously reported as passing under every CTest shard including
+  single-case isolation; it just failed under a genuine single-case CTest
+  shard here, which contradicts that note. Needs re-investigation - either
+  the earlier finding was wrong, something regressed, or this is really
+  flaky (non-deterministic) rather than the deterministic pollution
+  described below.
+- `primestruct.semantics.maybe`: 1 failing shard (11-15) - "stdlib maybe
+  helper methods publish rooted semantic-product targets",
+  `REQUIRE(snakeTarget != nullptr)` fails. Beyond the old 11-case cutoff.
+
+Full raw log preserved for this run at
+`/tmp/claude-0/-home-user-PrimeStruct/b00ad487-4ef1-5911-b804-5fbfb59858a8/scratchpad/full_semantics_gate.log`
+(session-scratch, not durable - re-run if needed after this session ends).
+
+Prior text below, superseded by the above but kept for its still-valid
+methodology notes and historical fix writeups:
+
 As of 2026-07-13, the full `./scripts/compile.sh --release` gate is green:
 1548/1548 CTest cases passing, 0 failures. See the managed block at the
 bottom of this file for the live status from the most recent run.
