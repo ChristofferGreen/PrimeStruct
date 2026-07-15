@@ -5296,9 +5296,11 @@ TEST_CASE("semantic product publishes binding and return facts") {
   const auto *temporaryEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        const std::string_view name =
+            primec::semanticProgramResolveCallTargetString(semanticProgram, entry.nameId);
         return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId) == "temporary" &&
-               (primec::semanticProgramResolveCallTargetString(semanticProgram, entry.nameId) == "id" || entry.name.rfind("/id__t", 0) == 0) &&
+               (name == "id" || name.rfind("/id__t", 0) == 0) &&
                entry.bindingTypeText == "i32";
       });
   REQUIRE(temporaryEntry != nullptr);
@@ -5542,7 +5544,7 @@ main() {
   const auto *queryEntry = findSemanticEntry(
       primec::semanticProgramQueryFactView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
+        return primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId) == "/main" &&
                primec::semanticProgramQueryFactResolvedPath(semanticProgram, entry) == "/lookup";
       });
   REQUIRE(queryEntry != nullptr);
@@ -6030,8 +6032,8 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   primec::SemanticProgram semanticProgram;
   std::string error;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  CHECK_FALSE(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK_FALSE(error.empty());
+  CHECK(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
 }
 
 TEST_CASE("semantic product semantic ids stay deterministic across repeated validation runs") {
@@ -6106,12 +6108,12 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
 
   const auto *firstQuery = findSemanticEntry(primec::semanticProgramQueryFactView(first),
       [&first](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
+        return primec::semanticProgramResolveCallTargetString(first, entry.scopePathId) == "/main" &&
                primec::semanticProgramQueryFactResolvedPath(first, entry) == "/lookup";
       });
   const auto *secondQuery = findSemanticEntry(primec::semanticProgramQueryFactView(second),
       [&second](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
+        return primec::semanticProgramResolveCallTargetString(second, entry.scopePathId) == "/main" &&
                primec::semanticProgramQueryFactResolvedPath(second, entry) == "/lookup";
       });
   REQUIRE(firstQuery != nullptr);
@@ -6590,8 +6592,10 @@ TEST_CASE("semantic product ownership surfaces keep deterministic source order")
     if (entry == nullptr) {
       continue;
     }
-    if (entry->scopePath == "/main" && entry->siteKind == "local") {
-      localBindingOrder.push_back(entry->name);
+    if (primec::semanticProgramResolveCallTargetString(semanticProgram, entry->scopePathId) == "/main" &&
+        primec::semanticProgramResolveCallTargetString(semanticProgram, entry->siteKindId) == "local") {
+      localBindingOrder.push_back(std::string(
+          primec::semanticProgramResolveCallTargetString(semanticProgram, entry->nameId)));
     }
   }
   std::vector<std::string> sortedLocalBindingOrder = localBindingOrder;
@@ -6643,8 +6647,8 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
   primec::SemanticProgram semanticProgram;
   std::string error;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  CHECK_FALSE(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK_FALSE(error.empty());
+  CHECK(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
 }
 
 TEST_CASE("semantic product lowering keeps semantic meaning while source locations stay AST-owned") {
