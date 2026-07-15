@@ -3026,15 +3026,22 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
     }
-    if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
-            receiver, params, locals, resolveDirectReceiver, elemType)) {
-      return setCollectionMethodTarget(
-          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
-    }
+    // Direct (owned) soa receivers must be tried before the OR-combined
+    // resolveSoaVectorOrExperimentalBorrowedReceiver check below: that
+    // check's "direct" branch also matches an owned receiver (it is an OR
+    // of "direct" and "borrowed"), but its result unconditionally builds
+    // the borrowed *_ref target name, so checking it first would route an
+    // owned receiver to the borrowed helper. get/ref above already use
+    // this same ordering (direct soa check before the OR-combined check).
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(
               normalizedMethodName, internalSoaCollectionTypePath(true)));
+    }
+    if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
+      return setCollectionMethodTarget(
+          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
     }
   }
   if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(

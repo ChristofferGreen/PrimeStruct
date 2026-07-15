@@ -1033,16 +1033,23 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
       return true;
     }
-    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
-        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
-            receiver, params, locals, resolveDirectReceiver, elemType)) {
-      resolvedOut = preferredSoaToAosHelperTargetForReceiver(receiver);
-      return true;
-    }
+    // Direct (owned) soa receivers must be tried before the OR-combined
+    // resolveSoaVectorOrExperimentalBorrowedReceiver check below: that
+    // check's "direct" branch also matches an owned receiver (it is an OR
+    // of "direct" and "borrowed"), but its result unconditionally builds
+    // the borrowed to_aos target, so checking it first would route an
+    // owned receiver to the borrowed helper. get/ref above already use
+    // this same ordering (direct soa check before the OR-combined check).
     if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa");
+      return true;
+    }
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
+      resolvedOut = preferredSoaToAosHelperTargetForReceiver(receiver);
       return true;
     }
     if (resolveSoaFieldViewMethodTarget(receiver)) {
