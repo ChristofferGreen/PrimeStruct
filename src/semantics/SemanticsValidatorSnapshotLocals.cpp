@@ -168,12 +168,22 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
         canonicalResolvedPath.find('/', suffix) == std::string::npos) {
       canonicalResolvedPath.erase(suffix);
     }
-    canonicalResolvedPath =
-        canonicalizeLegacySoaGetHelperPath(canonicalResolvedPath);
-    canonicalResolvedPath =
-        canonicalizeLegacySoaRefHelperPath(canonicalResolvedPath);
-    canonicalResolvedPath =
-        canonicalizeLegacySoaToAosHelperPath(canonicalResolvedPath);
+    // Shadow precedence (docs/CompatPathResolutionConsolidation.md, D5): a
+    // same-path helper that already resolved to a real definition must not
+    // be redirected onto the dead /std/collections/soa_vector/* compat
+    // family by the legacy SOA canonicalizers below. Only apply those
+    // canonicalizers when the current answer has no backing definition.
+    const bool canonicalResolvedPathHasRealDefinition =
+        defMap_.count(canonicalResolvedPath) > 0 ||
+        hasDefinitionFamilyPath(canonicalResolvedPath);
+    if (!canonicalResolvedPathHasRealDefinition) {
+      canonicalResolvedPath =
+          canonicalizeLegacySoaGetHelperPath(canonicalResolvedPath);
+      canonicalResolvedPath =
+          canonicalizeLegacySoaRefHelperPath(canonicalResolvedPath);
+      canonicalResolvedPath =
+          canonicalizeLegacySoaToAosHelperPath(canonicalResolvedPath);
+    }
     if (!canonicalResolvedPath.empty()) {
       out.resolvedPath = std::move(canonicalResolvedPath);
     }
