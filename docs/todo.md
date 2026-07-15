@@ -1755,7 +1755,34 @@ This file is the live open-work queue for PrimeStruct.
     `REQUIRE(snakeTarget != nullptr)` fails in test case "stdlib maybe
     helper methods publish rooted semantic-product targets" - a helper
     lookup that's expected to find a rooted semantic-product target
-    instead returns `nullptr`. Not yet investigated further.
+    instead returns `nullptr`.
+  - implementation_notes: Root-caused as far as: `findMaybeMethodTarget`
+    searches `semanticProgramMethodCallTargetView(output.semanticProgram)`
+    for an entry with `scopePath == "/main"` and
+    `methodName == "is_empty"`, but a temporary debug dump (added and
+    reverted 2026-07-15) showed **zero** method-call-target entries are
+    published at all for this compile - not a name/path mismatch, a total
+    absence. Traced into `SemanticsValidatorSnapshots.cpp`: with
+    `useMergedWorkerPublicationFacts=0` and `skipLocalAwareCallRefinement_=0`
+    confirmed via debug print, the `forEachLocalAwareSnapshotCall` walker
+    (`SemanticsValidatorSnapshotLocals.cpp:245`) does run and does visit
+    nested `Expr::Kind::Call` nodes (confirmed by reading `visitExpr`'s
+    recursion into `expr.args`/`expr.bodyArguments` - `empty.is_empty()`
+    nested inside `if(not(...))` should be reached). The visitor callback
+    in `SemanticsValidatorSnapshots.cpp` (~line 1723-1741) requires
+    `inferQuerySnapshotData(defParams, activeLocals, expr, queryData)` to
+    succeed with a non-empty `resolvedPath` before pushing an entry -
+    **not yet confirmed whether this specific call is why it's failing**;
+    the debug session ran out of budget before instrumenting
+    `inferQuerySnapshotData` directly. Given the program compiles
+    successfully (the main validator resolves `is_empty()` fine for actual
+    compilation/codegen), this smells like the same "resolution logic
+    duplicated between the real validator and the separate
+    snapshot-collection inference path" pattern already documented in
+    `docs/CompatPathResolutionConsolidation.md` - next step is to
+    instrument `inferQuerySnapshotData` (or its callers) directly for this
+    one call, rather than re-deriving the walker-reaches-it conclusion
+    already established here.
   - acceptance: The case passes; full `primestruct.semantics.maybe` suite
     (15/15) is green.
   - stop_rule: none.
