@@ -87,6 +87,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
 - TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 - TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
+- TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 
 ### Priority Lanes
 
@@ -200,9 +201,12 @@ This file is the live open-work queue for PrimeStruct.
   per-shard binary startup cost, TODO-4709 audits `compile_run` cases that
   only check pass/fail (candidates for downgrading off the full
   compile-and-execute path), TODO-4710 caches redundant stdlib `.prime`
-  re-parsing across compile-pipeline test helpers, and TODO-4711 tightens
-  CTest `TIMEOUT` values once real per-shard costs are known. Full
-  findings log at `docs/TestRuntimeOptimization.md`.
+  re-parsing across compile-pipeline test helpers, TODO-4711 tightens
+  CTest `TIMEOUT` values once real per-shard costs are known, and
+  TODO-4712 grows shard size once TODO-4707 proves pollution-free, so the
+  many small per-shard fixed costs (binary launch, doctest registration)
+  stop adding up across hundreds of tiny shards. Full findings log at
+  `docs/TestRuntimeOptimization.md`.
 
 ### Execution Queue
 
@@ -259,6 +263,7 @@ This file is the live open-work queue for PrimeStruct.
 51. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
 52. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 53. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
+54. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 
 ### Task Blocks
 
@@ -1504,3 +1509,38 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once every managed suite has an intentional,
     documented timeout at or below 60s; do not force every suite to exactly
     30s in this leaf if its own root-cause fix hasn't landed yet.
+
+- [ ] TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-shard-consolidation
+  - depends_on: TODO-4707, TODO-4708
+  - scope: Managed doctest suites are currently sharded into small 10-case
+    `add_test` chunks (`addPrimeStructManagedDoctestSuite`,
+    `cmake/PrimeStructManagedSemanticsSuites.cmake`), which was necessary to
+    dodge cross-test-case pollution (see TODO-4707) but means every one of
+    the resulting hundreds of shards separately pays fixed binary-launch
+    and doctest-registration overhead (see TODO-4708's measurement). Once
+    TODO-4707 proves a suite pollution-free running as one process, raise
+    that suite's `CASES_PER_SHARD` (or equivalent) toward the largest chunk
+    size that still finishes comfortably under the 30s ceiling from
+    `docs/TestRuntimeOptimization.md`, so the fixed per-shard cost stops
+    being paid hundreds of times over for the same total case count.
+  - implementation_notes: Shard size is a tradeoff, not a monotonic win:
+    bigger shards amortize fixed overhead better but increase blast radius
+    (one bad case can no longer be isolated as easily) and reduce
+    parallelism granularity under `ctest --parallel N`. Pick a size using
+    TODO-4708's measured overhead number and real per-case runtime, not a
+    round number. Start with `calls_flow.collections` (the suite already
+    under investigation) before generalizing to other managed suites.
+  - acceptance:
+    - `calls_flow.collections`'s shard count is reduced (larger
+      `CASES_PER_SHARD`) with total wall-clock time for the full suite
+      measurably lower than the current 10-case-shard baseline, and no
+      shard exceeds the 30s ceiling.
+    - The change is proven safe by confirming pass/fail results are
+      identical to the pre-change baseline (no reintroduced pollution).
+  - stop_rule: Stop once `calls_flow.collections` is re-sharded and
+    verified; rolling the same change out to every other managed suite is
+    follow-up work, not part of this leaf.

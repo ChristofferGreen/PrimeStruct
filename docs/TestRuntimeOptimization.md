@@ -122,6 +122,10 @@ by the normal queue rather than living only as prose in this doc:
 - **TODO-4711** — once the above land, tighten CTest `TIMEOUT` values
   suite-by-suite toward the 30s ceiling instead of the current 300s/600s
   defaults.
+- **TODO-4712** — once TODO-4707 proves a suite pollution-free, grow its
+  CTest shard size (fewer, bigger shards) so the many small per-shard
+  fixed costs (binary launch, doctest registration) stop adding up across
+  hundreds of tiny shards for the same total case count.
 
 This doc stays the narrative/findings log; `docs/todo.md` is the
 execution queue — keep them in sync when a TODO's scope or status changes.
