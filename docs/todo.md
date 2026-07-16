@@ -229,9 +229,13 @@ This file is the live open-work queue for PrimeStruct.
   failing test cases, documented in `docs/failing_tests.md`'s 2026-07-15
   entry. TODO-4714 fixes the single worst cluster (named-argument
   call-form receiver dispatch for vector/map mutator helpers, ~10 cases,
-  root-cause partially traced already). TODO-4715 triages the ~100
-  remaining, not-yet-diagnosed `calls_flow.collections` failures into
-  fix-sized clusters. TODO-4716 (done) fixed 4 newly-exposed `effects`
+  root-cause partially traced already). TODO-4715 triaged the remaining
+  92-case `calls_flow.collections` cluster and confirmed two dominant
+  root causes without yet fixing them: same-path shadow precedence for
+  explicit namespaced method calls (23 cases, one file) and the same
+  generic-fallback-instead-of-specific-diagnostic pattern TODO-4714
+  already started tracing (most of the rest, across ~9 more files).
+  TODO-4716 (done) fixed 4 newly-exposed `effects`
   shards - two batches of stale test content (a rooted-path naming
   convention change, a text-transform-only `==` operator used on the raw
   no-transform parse path, and a struct-definition typo) plus a genuine
@@ -1684,24 +1688,75 @@ This file is the live open-work queue for PrimeStruct.
   - depends_on: TODO-4714
   - scope: Of the 33 failing `calls_flow_collections` shards found on
     2026-07-15 (ranges 791-800 through 1291-1300, all beyond the old
-    771-case TOTAL_CASES cutoff), only shard `811_820` (TODO-4714) has a
-    known root cause so far. The other 32 shards / ~110 cases are
-    untriaged - only individual symptom strings were sampled (see
-    `docs/failing_tests.md`'s 2026-07-15 entry). Re-run
-    `ctest -R calls_flow_collections --parallel 4 --output-on-failure`
-    (the earlier scratch log at
-    `/tmp/claude-.../scratchpad/full_semantics_gate.log` is session-scratch
-    and will not survive past the session that generated it), collect every
-    failing case's actual-vs-expected diagnostic, and group them by shared
-    root cause. Sampled symptoms so far suggest candidate clusters: (1)
-    namespaced count/capacity alias diagnostics, (2) wrapper-returned map
-    string-branch handling, (3) variadic vector-pack receiver probing -
-    but this is a guess, not a real triage.
+    771-case TOTAL_CASES cutoff), shard `811_820` (TODO-4714) has a
+    partial root cause. The other 32 shards / 92 distinct failing test
+    cases across 13 files were triaged in a second pass the same day: ran
+    `ctest -R "<pipe-joined list of the 32 shard names>" --output-on-failure --parallel 4`
+    and collected every failing case's actual-vs-expected diagnostic (full
+    log at
+    `/tmp/claude-.../scratchpad/collections_triage.log` - session-scratch,
+    re-run if needed after this session ends).
+  - implementation_notes: Two concrete root-cause patterns confirmed with
+    real repros (both distinct from TODO-4714's named-argument-dispatch
+    finding):
+    (1) **Same-path shadow precedence for explicit namespaced method
+    calls** (largest single file cluster - 23 of 92 cases, in
+    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`;
+    16 of the 92 case titles literally contain "same-path"). Repro
+    (confirmed via `primec --dump-stage semantic-product` directly, not
+    just the test binary): a user definition at
+    `/std/collections/vector/count([vector<i32>] values, [bool] marker)`
+    (same path as the builtin `count`, different signature) should shadow
+    the builtin when called via the explicit dotted form
+    `values./std/collections/vector/count(true)`, but instead the
+    validator resolves it to the builtin `count` and rejects it with
+    `argument count mismatch for builtin count` - the same-path user
+    definition is never consulted for this call shape. This is the same
+    "D5: same-path shadow precedence" rule class documented in
+    `docs/CompatPathResolutionConsolidation.md`, and the same class of bug
+    already caused one real regression this session (the reverted
+    vector-count-alias guard, see `docs/TestRuntimeOptimization.md`'s log)
+    - any fix here needs the same full-suite sharded-ctest verification
+    discipline before committing.
+    (2) **Generic-fallback-instead-of-specific-diagnostic**, matching
+    TODO-4714's pattern exactly: many cases across
+    `wrapper_temporary_access_resolution.cpp`,
+    `wrapper_temporary_templated_vector_methods.cpp`,
+    `vector_helper_reordered_expression.cpp`,
+    `vector_capacity_alias_named_args.cpp`, etc. expect a specific
+    rejection message (e.g. `"unknown method: /string/count"`,
+    `"argument type mismatch for /std/collections/vector/at parameter
+    index"`, `"template arguments are only supported on templated
+    definitions"`) but get a different, less specific error (or, in a few
+    cases, unexpectedly succeed where rejection was expected) - consistent
+    with call resolution taking an earlier/wrong branch before reaching
+    the code that would produce the expected diagnostic, same shape as the
+    `SemanticsValidatorExprCollectionAccess.cpp`/
+    `SemanticsValidatorExprNamedArgumentBuiltins.cpp` interaction TODO-4714
+    already started tracing.
+    Per-file breakdown (case count / file):
+    23 wrapper_returned_map_method_resolution.cpp, 13
+    wrapper_temporary_access_resolution.cpp, 10
+    vector_stdlib_push_auto_inference.cpp, 9
+    wrapper_temporary_templated_vector_methods.cpp, 9
+    vector_helper_reordered_expression.cpp, 8
+    vector_capacity_alias_named_args.cpp, 5
+    vector_method_alias_struct_diagnostics.cpp, 4
+    wrapper_returned_map_string_branch_paths.cpp, 4
+    vector_helper_call_form_named_receivers.cpp (already TODO-4714's
+    file - these 4 are additional cases in it beyond the ones TODO-4714
+    already covers), 3 wrapper_temporary_tryat_contains_inference.cpp, 2
+    vector_mutator_named_args.cpp, 1
+    wrapper_returned_map_count_expression.cpp, 1
+    vector_namespaced_alias_calls.cpp.
   - acceptance:
     - Every currently-failing `calls_flow_collections` case outside shard
       `811_820` is assigned to a named root-cause cluster, each with at
       least one representative case and its actual-vs-expected diagnostic
-      recorded in `docs/failing_tests.md` or a linked doc.
+      recorded in `docs/failing_tests.md` or a linked doc. (Substantially
+      done - see implementation_notes above; the exact per-case cluster
+      assignment for all 92 is not yet exhaustively recorded, only the two
+      dominant patterns and the per-file counts.)
     - Each identified cluster gets its own follow-up `TODO-XXXX` leaf (or
       is folded into an existing one) with `depends_on: TODO-4715`.
   - stop_rule: Triage and TODO-filing only - no source fixes in this leaf;
