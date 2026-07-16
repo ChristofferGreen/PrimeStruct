@@ -92,7 +92,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
 - TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 - TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
-- TODO-4721: Fix same-path shadow precedence for stdlib count/capacity builtin fallback
 - TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
 
 ### Priority Lanes
@@ -318,7 +317,6 @@ This file is the live open-work queue for PrimeStruct.
 56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
 57. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 58. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
-59. TODO-4721: Fix same-path shadow precedence for stdlib count/capacity builtin fallback
 60. TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
 
 ### Task Blocks
@@ -1855,117 +1853,6 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Audit and fix shard-range config only in this leaf; file
     separate TODOs for any newly-exposed test failures rather than fixing
     them inline here.
-
-- [ ] TODO-4721: Fix same-path shadow precedence for stdlib count/capacity builtin fallback
-  - owner: ai
-  - created_at: 2026-07-15
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-collections
-  - depends_on: TODO-4715
-  - scope: Precise root cause found (second session pass, 2026-07-15) for
-    the largest single-file cluster TODO-4715 identified (23 cases in
-    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`,
-    e.g. "stdlib namespaced vector helper alias uses same-path helper auto
-    inference"). Repro: a user definition
-    `/std/collections/vector/count([vector<i32>] values, [bool] marker)`
-    (same path as the builtin `count`, 2-arg signature) should shadow the
-    builtin when called via `values./std/collections/vector/count(true)`,
-    but instead gets rejected with `argument count mismatch for builtin
-    count` - the builtin's 1-arg-only validator runs instead of the user's
-    2-arg definition.
-  - implementation_notes: Traced to
-    `SemanticsValidatorExprCountCapacityBuiltins.cpp`'s
-    `tryValidateVectorCountBuiltinPath` lambda (~line 276-291). Its first
-    branch fires whenever
-    `resolvedMethod && isStdNamespacedVectorCompatibilityHelperPath(logicalResolvedMethod, "count")`
-    - a NAME-PATTERN match only, not a check for whether a real user
-      definition exists at that literal path - and routes into
-    `validateVectorCountBuiltinCall` (~line 240-253), which hard-requires
-    `expr.args.size() == 1` before ever considering the user's own
-    parameter list. Contrast with the sibling check just above it,
-    `isImportedResolvedStdNamespacedVectorCompatibilityDirectCall`
-    (~line 164-174), which DOES take `hasImportedDefinitionPath(...)` as
-    an explicit parameter before deferring to the real definition - but
-    only for *imported* same-path overrides; this test's override is
-    declared directly in the same file (no import), so that check's
-    `hasImportedDefinitionPath` doesn't apply and there is no equivalent
-    "hasDeclaredDefinitionPath" guard on the `tryValidateVectorCountBuiltinPath`
-    path. Likely fix shape: add a check to
-    `tryValidateVectorCountBuiltinPath`'s first branch (or to
-    `shouldValidateVectorCountBuiltinFallback`) that skips the
-    builtin-only-1-arg validation when `defMap_.find(logicalResolvedMethod)`
-    finds a real, differently-shaped definition - mirroring the existing
-    `it != defMap_.end() && !resolvedMethod` early-return at ~line 215,
-    which is currently only reachable when `resolvedMethod` is false.
-    There is likely a parallel `/capacity` version of this same bug
-    (`validateVectorCapacityBuiltinCall`-equivalent, not yet located -
-    search for the capacity sibling of `tryValidateVectorCountBuiltinPath`
-    in the same file) worth checking/fixing in the same pass.
-    **Do not fix without full verification discipline**: this exact
-    function's neighborhood (compat-path resolution for stdlib collection
-    helpers) already produced one real regression earlier this session
-    (the reverted vector-count-alias shadow-precedence guard in
-    `TemplateMonomorphExpressionRewrite.h` - see
-    `docs/TestRuntimeOptimization.md`'s log) precisely because a
-    same-path-precedence-style fix broke other, unrelated passing tests
-    that intentionally relied on the old fallback behavior. Any fix here
-    needs a full `ctest -R primestruct_semantics_calls_flow_collections`
-    sharded run (not just the directly-touched shard) before committing.
-  - acceptance:
-    - The 23 identified cases in
-      `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
-      pass.
-    - Full sharded `ctest -R primestruct_semantics_calls_flow_collections`
-      run shows no new failures vs. the 2026-07-15 baseline in
-      `docs/failing_tests.md`.
-  - stop_rule: If the minimal defMap_-existence-check fix described above
-    turns out to require touching `isStdNamespacedVectorCompatibilityHelperPath`
-    itself (shared across many other call sites per
-    `docs/CompatPathResolutionConsolidation.md`), stop and re-scope as a
-    narrower, more surgical change localized to
-    `tryValidateVectorCountBuiltinPath`/`shouldValidateVectorCountBuiltinFallback`
-    only, rather than touching the shared pattern-matching helper.
-  - progress_2026-07-16: Implemented and verified the defMap_-existence-check
-    fix in both `SemanticsValidatorExprCountCapacityBuiltins.cpp`
-    (`tryValidateVectorCountBuiltinPath` count branch +
-    the capacity branch just above `validateVectorCapacityBuiltinCall`) and
-    the sibling gate in `SemanticsValidatorExprMethodResolution.cpp`'s
-    `validateExprMethodCallTarget` (both call sites had to be fixed
-    together - gdb-confirmed the validation pipeline traverses through both
-    in sequence for the same expression, and the first one alone masked
-    whether the second would help). **Regression found and fixed during
-    verification**: the first (unrefined) version of this fix - guarding
-    only on `defMap_`-presence/arity - broke a previously-passing test,
-    "rejects stdlib canonical vector helper method-precedence forwarding in
-    method-call sugar" (full 131-shard run, shard
-    `calls_flow_collections_1061_1070`), because short-form method-call
-    sugar (`values.count(true)`, raw `expr.name == "count"`) was
-    incorrectly getting the same same-path-override precedence as the
-    explicit canonical-path spelling
-    (`values./std/collections/vector/count(true)`,
-    `expr.name == "/std/collections/vector/count"`). Fixed by adding an
-    explicit-spelling check (`expr.name == <canonical path>`) alongside the
-    existing arity/defMap_ checks in both files, so the same-path override
-    is only honored when the call spells out the canonical path explicitly.
-    Verified via proper `ctest -R` sharding (35 originally-failing shards +
-    the regressed `1061_1070` shard, 36 total): the regression is gone, 0
-    new regressions, and exactly **4 of the 23** cases in
-    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
-    are fixed (the direct count/capacity "same-path helper auto inference"
-    and "method-call inference keeps return mismatch diagnostics" cases).
-    The remaining 19 cases in that file (the "access alias" cases and the
-    "rejects ... receiver without helper" cases) do NOT go through
-    `tryValidateVectorCountBuiltinPath`/`validateExprMethodCallTarget`'s
-    count/capacity arity gate and are a different bug pattern, not covered
-    by this fix - left open for follow-up (see TODO-4722). Full
-    131-shard `ctest -R calls_flow_collections_` regression run launched to
-    confirm no other shards were affected before this was scoped as done;
-    see the follow-up TODO for its result and the remaining-19 triage.
-  - status: partially complete - the specific same-path shadow-precedence
-    bug this TODO targeted is fixed and verified with zero regressions, but
-    the acceptance criterion ("all 23 cases pass") is not met since 19 of
-    the 23 have an unrelated root cause. Splitting the remainder into
-    TODO-4722 rather than keeping this TODO open indefinitely.
 
 - [ ] TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
   - owner: ai

@@ -70,6 +70,26 @@ Full raw log preserved for this run at
 `/tmp/claude-0/-home-user-PrimeStruct/b00ad487-4ef1-5911-b804-5fbfb59858a8/scratchpad/full_semantics_gate.log`
 (session-scratch, not durable - re-run if needed after this session ends).
 
+### Progress update (2026-07-16)
+
+TODO-4721 fixed the same-path shadow precedence bug for stdlib
+count/capacity builtin fallback (see `docs/todo_finished.md`): 4 of the
+92 originally-failing `calls_flow.collections` cases now pass -
+"stdlib namespaced vector capacity alias method-call inference keeps
+return mismatch diagnostics", "stdlib namespaced vector capacity alias
+uses same-path helper auto inference", "stdlib namespaced vector helper
+alias method-call inference keeps return mismatch diagnostics", "stdlib
+namespaced vector helper alias uses same-path helper auto inference" -
+verified via `ctest -R` sharded runs (36 directly-relevant shards, then
+the full 131-shard `calls_flow_collections_` suite) with zero
+regressions at both the individual-test-case and shard levels. The
+remaining 19 cases in
+`test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
+(same file, different root causes) are tracked as TODO-4722. 88 cases
+remain failing suite-wide as of this update (92 minus these 4; the
+`type_resolution_graph`/`imports`/`effects`/`maybe` counts above are
+unaffected by this fix).
+
 Prior text below, superseded by the above but kept for its still-valid
 methodology notes and historical fix writeups:
 

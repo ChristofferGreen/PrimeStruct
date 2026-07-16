@@ -24945,3 +24945,64 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     full sharded `ctest -R primestruct_semantics_effects_` - 12/12 shards
     green (slow shard `21_30` at 605.32s, comfortably under the new 900s
     budget).
+
+- [x] TODO-4721: Fix same-path shadow precedence for stdlib count/capacity builtin fallback
+  - owner: ai
+  - created_at: 2026-07-15
+  - finished_at: 2026-07-16
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-collections
+  - depends_on: TODO-4715
+  - scope: Root cause: a user definition at the same canonical path as the
+    builtin count/capacity vector helper (e.g.
+    `/std/collections/vector/count([vector<i32>] values, [bool] marker)`,
+    2-arg signature, same path as the builtin 1-arg `count`) was rejected
+    with "argument count mismatch for builtin count/capacity" instead of
+    being honored, because `SemanticsValidatorExprCountCapacityBuiltins.cpp`'s
+    `tryValidateVectorCountBuiltinPath`/capacity-equivalent and
+    `SemanticsValidatorExprMethodResolution.cpp`'s
+    `validateExprMethodCallTarget` only pattern-matched the resolved path
+    NAME, not whether a real, differently-shaped user definition existed
+    there.
+  - evidence: Fixed both cooperating call sites (gdb-confirmed the
+    validation pipeline traverses through both in sequence for the same
+    expression - fixing only one masks whether the second helps) by
+    adding a `defMap_`/`paramsByDef_`-presence-and-arity check that skips
+    the builtin's strict single-arg validation when a real same-path
+    definition with matching arity exists. **Regression found and fixed
+    during verification**: the first (unrefined) version - guarding only
+    on `defMap_`-presence/arity - broke a previously-passing test,
+    "rejects stdlib canonical vector helper method-precedence forwarding
+    in method-call sugar" (full 131-shard run, shard
+    `calls_flow_collections_1061_1070`), because short-form method-call
+    sugar (`values.count(true)`, raw `expr.name == "count"`) incorrectly
+    got the same same-path-override precedence as the explicit
+    canonical-path spelling (`values./std/collections/vector/count(true)`,
+    `expr.name == "/std/collections/vector/count"`). Fixed by adding an
+    explicit-spelling check (`expr.name == <canonical path>`) alongside
+    the arity/defMap_ checks, so the same-path override is only honored
+    when the call spells out the canonical path explicitly - short-form
+    sugar stays strict-builtin. Verified via `ctest -R` sharded runs (not
+    raw binary invocation, which is a known false-signal source for this
+    suite per the "Methodology note" in `docs/failing_tests.md`): the
+    regressed shard now passes, and exactly 4 of the 23 originally-failing
+    cases in
+    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
+    are fixed ("stdlib namespaced vector capacity alias method-call
+    inference keeps return mismatch diagnostics", "stdlib namespaced
+    vector capacity alias uses same-path helper auto inference", "stdlib
+    namespaced vector helper alias method-call inference keeps return
+    mismatch diagnostics", "stdlib namespaced vector helper alias uses
+    same-path helper auto inference"), with zero regressions confirmed at
+    both the individual-test-case level (36 directly-relevant shards) and
+    the full-suite shard level (131-shard `calls_flow_collections_`
+    regression run - identical 36 known-failing shards before and after,
+    no new failures).
+  - re-scope note: the original acceptance criterion ("all 23 identified
+    cases pass") was not met - the other 19 cases in the same file (the
+    "access alias"/"access ... slash method uses imported helper" cases
+    and the "rejects ... receiver without helper" cases) do not go
+    through the count/capacity arity gate this fix touches and have a
+    different root cause. Split out into TODO-4722 rather than keeping
+    this TODO open indefinitely; closing this one for the specific,
+    verified same-path shadow-precedence fix it actually delivered.
