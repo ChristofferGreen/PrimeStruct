@@ -117,9 +117,15 @@ also fixed 2 "count" equivalents in the same group ("stdlib namespaced
 vector count method rejects wrapper map receiver without helper" and
 "...rejects wrapper map same-path helper") after a similar two-round
 regression-and-narrow cycle - see TODO-4723's `progress_2026-07-16b`
-entry. 6 cases remain in the "rejects ... without helper"/rooted-helper-
-fallback group, plus the imported-helper-diagnostics and nested-call
-cases, all still open under TODO-4723.
+entry. TODO-4723 then fixed 2 more ("stdlib namespaced vector
+count/capacity method on builtin vector receiver rejects rooted helper
+fallback" - a real vector receiver, a rooted `/vector/count` alias
+declared, called via the explicit std-namespaced spelling with no extra
+args; previously silently fell back to the plain builtin instead of
+rejecting) after another regression-and-narrow cycle - see TODO-4723's
+`progress_2026-07-16c` entry. 76 cases remain: 4 in the "rejects ...
+without helper"/rooted-helper-fallback group, plus the imported-helper-
+diagnostics and nested-call cases, all still open under TODO-4723.
 
 ### Non-semantics CTest suites have the same TOTAL_CASES drift bug (2026-07-16)
 

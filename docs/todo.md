@@ -2321,24 +2321,56 @@ This file is the live open-work queue for PrimeStruct.
     annotation) for what looked like one simple message-text fix is a
     strong signal this function's logic needs to be legible, not just
     correct.
-  - remaining_2026-07-16b: 6 of the original 12 "rejects ... without
-    helper"/rooted-helper-fallback cases are now fixed (4 capacity +
-    2 count); 6 remain: "stdlib namespaced vector capacity method
-    rejects local map same-path helper" (the one capacity case the
-    narrowed guard deliberately left unfixed - see progress_2026-07-16
-    above), "stdlib namespaced vector count method on builtin vector
-    receiver rejects rooted helper fallback" and "...capacity method on
-    builtin vector receiver rejects rooted helper fallback" (the
-    receiver *is* a vector but the call mixes rooted vs. namespaced
-    spellings - a different scenario, not yet traced), "vector
-    namespaced count method on builtin vector receiver requires
-    same-path helper", "...rejects local array same-path helper", and
-    "...rejects local string same-path helper" (all using the *rooted*
-    `/vector/count()` short-form spelling, not the std canonical path -
-    a third, distinct scenario from what's been fixed so far, also not
-    yet traced). Plus the 2 imported-helper-diagnostics cases and 1
-    nested-call case from earlier in this TODO, still open. 78 cases
-    remain failing suite-wide (see `docs/failing_tests.md`).
+  - remaining_2026-07-16b (superseded by progress_2026-07-16c below):
+    6 of the original 12 "rejects ... without helper"/rooted-helper-
+    fallback cases were fixed at this point (4 capacity + 2 count); the
+    "on builtin vector receiver rejects rooted helper fallback" pair
+    were traced and fixed next - see progress_2026-07-16c.
+  - progress_2026-07-16c: Fixed "stdlib namespaced vector count method
+    on builtin vector receiver rejects rooted helper fallback" and its
+    capacity sibling - both: a real, plain `[vector<i32>]` receiver, a
+    ROOTED alias definition declared (`/vector/count([vector<i32>]
+    values)`), called via the explicit `/std/collections/vector/count()`
+    spelling with no extra arguments. Expected: reject with "unknown
+    method: /std/collections/vector/count" (no definition exists at
+    that literal path - the rooted alias is a *different* path and must
+    not be silently substituted). Actual: silently succeeded, treating
+    the call as the ordinary builtin `count()`. gdb-traced (breakpoint-
+    sweep across every `isBuiltinMethod = ` assignment in
+    `validateExprMethodCallTarget`, the same technique used for
+    TODO-4723's `resolveMethodTarget` bug) to a SECOND, unconditional
+    override at ~line 662-673 of
+    `SemanticsValidatorExprMethodResolution.cpp` -
+    `if (isStdNamespacedVectorCompatibilityHelperPath(resolved,
+    "capacity")) { isBuiltinMethod = true; } else if (... "count" ...)
+    { ... isBuiltinMethod = true; }` - that unconditionally re-derives
+    `isBuiltinMethod = true` whenever the resolved path is the
+    std-namespaced count/capacity path and the receiver is a real
+    vector, with zero consideration of rooted-alias rivals. A first fix
+    attempt guarding this override (skip forcing `isBuiltinMethod` when
+    `expr.name == resolved` and a rooted alias is declared/imported)
+    fixed both target cases but regressed "stdlib canonical vector
+    helper namespace body arguments keep unknown target" (a *different*
+    call shape - extra positional arg plus block/body arguments, e.g.
+    `values./std/collections/vector/count(true) { 1i32 }` - which
+    expects "unknown call target: ..." via its own dedicated arity/
+    body-argument handling elsewhere, not this override). Narrowed the
+    guard to only fire for the plain, no-extra-argument call shape
+    (`expr.args.size() == 1 && !expr.hasBodyArguments &&
+    expr.bodyArguments.empty()`), which fixed the regression while
+    keeping both targets fixed. Verified via a third full 131-shard
+    regression run: 2 cases fixed, zero regressions.
+  - remaining_2026-07-16c: 4 cases remain in this group: "stdlib
+    namespaced vector capacity method rejects local map same-path
+    helper" (deliberately left by the narrowed capacity guard, see
+    progress_2026-07-16), "vector namespaced count method on builtin
+    vector receiver requires same-path helper", "...rejects local array
+    same-path helper", and "...rejects local string same-path helper"
+    (all use the *rooted* `/vector/count()` short-form spelling, not the
+    std canonical path - a distinct scenario, not yet traced). Plus the
+    2 imported-helper-diagnostics cases and 1 nested-call case from
+    earlier in this TODO, still open. 76 cases remain failing suite-wide
+    (see `docs/failing_tests.md`).
   - implementation_notes: Given three apparently-independent root causes
     span (at least) `SemanticsValidatorExpr.cpp`,
     `validateNumericBuiltinExpr`/`validateExprLateUnknownTargetFallbacks`,

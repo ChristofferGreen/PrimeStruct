@@ -659,8 +659,28 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)) {
     resolved = canonicalVectorCompatibilityHelperPathOrFallback(expr.name);
   }
+  // A rooted alias definition (e.g. /vector/count) shadows the implicit
+  // builtin fallback for the explicit canonical-path spelling
+  // (/std/collections/vector/count) - once the user has their own
+  // count/capacity override anywhere, an explicit namespaced call with no
+  // matching definition at that literal path must be rejected rather than
+  // silently treated as the builtin, per "...rejects rooted helper
+  // fallback".
+  auto explicitCanonicalPathHasRootedAliasRival = [&](const std::string &helperName) {
+    // Only the plain, no-extra-argument call shape (values.<canonical
+    // path>()) is covered here - extra positional/block arguments go
+    // through their own dedicated arity/body-argument handling elsewhere
+    // and must not be reinterpreted by this same-path-rival check.
+    if (expr.name != resolved || expr.args.size() != 1 ||
+        expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return false;
+    }
+    const std::string rootedAliasPath = rootedVectorHelperPath(helperName);
+    return hasDeclaredDefinitionPath(rootedAliasPath) ||
+           hasImportedDefinitionPath(rootedAliasPath);
+  };
   if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "capacity")) {
-    isBuiltinMethod = true;
+    isBuiltinMethod = !explicitCanonicalPathHasRootedAliasRival("capacity");
   } else if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
              !expr.args.empty()) {
     std::string elemType;
@@ -668,7 +688,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       resolved = "/array/count";
       isBuiltinMethod = true;
     } else if (resolveVectorTarget(expr.args.front(), elemType)) {
-      isBuiltinMethod = true;
+      isBuiltinMethod = !explicitCanonicalPathHasRootedAliasRival("count");
     }
   }
   bool keepBuiltinIndexedArgsPackKeyValueMethod = false;
