@@ -358,7 +358,7 @@ main() {
   REQUIRE(generated->statements.size() == 4);
   for (const auto &stmt : generated->statements) {
     REQUIRE(stmt.kind == primec::Expr::Kind::Call);
-    CHECK(stmt.name == "print_line");
+    CHECK(stmt.name == "/print_line");
     REQUIRE(stmt.args.size() == 1);
     CHECK(stmt.args.front().kind == primec::Expr::Kind::StringLiteral);
   }
@@ -395,7 +395,7 @@ main() {
   REQUIRE(generated != nullptr);
   REQUIRE(generated->statements.size() == 1);
   REQUIRE(generated->statements.front().kind == primec::Expr::Kind::Call);
-  CHECK(generated->statements.front().name == "print_line");
+  CHECK(generated->statements.front().name == "/print_line");
 }
 
 TEST_CASE("generate DebugPrint accepts non-printable field types") {

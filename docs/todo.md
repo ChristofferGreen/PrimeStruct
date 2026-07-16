@@ -90,7 +90,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 - TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 - TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
-- TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
 - TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 - TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 
@@ -232,8 +231,12 @@ This file is the live open-work queue for PrimeStruct.
   call-form receiver dispatch for vector/map mutator helpers, ~10 cases,
   root-cause partially traced already). TODO-4715 triages the ~100
   remaining, not-yet-diagnosed `calls_flow.collections` failures into
-  fix-sized clusters. TODO-4716 fixes 4 newly-exposed `effects` shards
-  (reflection-metadata parser failures). TODO-4717 (done) re-investigated
+  fix-sized clusters. TODO-4716 (done) fixed 4 newly-exposed `effects`
+  shards - two batches of stale test content (a rooted-path naming
+  convention change, a text-transform-only `==` operator used on the raw
+  no-transform parse path, and a struct-definition typo) plus a genuine
+  ~605s reflected-SoaSchema case needing a `TIMEOUT` bump, same pattern as
+  TODO-4706. TODO-4717 (done) re-investigated
   an `imports` case whose "always passes in isolation" documented finding
   just got contradicted by a genuine single-case CTest failure - it
   turned out to be stale test syntax (`mapPair<i32,i32>` no longer
@@ -307,9 +310,8 @@ This file is the live open-work queue for PrimeStruct.
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 55. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
 56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
-57. TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
-58. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
-59. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
+57. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
+58. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 
 ### Task Blocks
 
@@ -1704,26 +1706,6 @@ This file is the live open-work queue for PrimeStruct.
       is folded into an existing one) with `depends_on: TODO-4715`.
   - stop_rule: Triage and TODO-filing only - no source fixes in this leaf;
     that is explicitly deferred to the follow-up leaves it creates.
-
-- [ ] TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
-  - owner: ai
-  - created_at: 2026-07-15
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-effects
-  - scope: 4 CTest shards (`effects_31_40`, `effects_71_80`, `effects_81_90`,
-    `effects_91_100`), all beyond the old 12-case TOTAL_CASES cutoff (real
-    count is 116), fail as of 2026-07-15. Sampled failure:
-    `test_semantics_capabilities_structs_metadata.cpp` "unsupported
-    reflection metadata queries are rejected" - `parser.parse(program,
-    error)` itself returns `false` (`test_semantics_helpers.h:109`), i.e.
-    the scenario's PrimeStruct source doesn't parse under the current
-    grammar at all, before semantic validation ever runs. Root cause not
-    yet investigated beyond this one sample; the other 3 shards' failures
-    are unknown.
-  - acceptance: All 4 shards pass; full `ctest -R primestruct_semantics_effects`
-    run is green.
-  - stop_rule: none yet - investigate and fix, or split into narrower
-    leaves if the 4 shards turn out to have unrelated causes.
 
 - [ ] TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
   - owner: ai

@@ -270,7 +270,7 @@ Pair() {
 main() {
   [Pair] left{Pair()}
   [Pair] right{Pair()}
-  return(left == right)
+  return(equal(left, right))
 }
 )";
   std::string error;
@@ -290,7 +290,7 @@ Pair() {
 main() {
   [Pair] left{Pair()}
   [Pair] right{Pair()}
-  return(left == right)
+  return(equal(left, right))
 }
 )";
   auto program = parseProgram(source);
@@ -328,7 +328,7 @@ Pair() {
 main() {
   [Pair] left{Pair()}
   [Pair] right{Pair()}
-  return(left == right)
+  return(equal(left, right))
 }
 )";
   std::string error;

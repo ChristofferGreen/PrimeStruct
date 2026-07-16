@@ -24900,3 +24900,48 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     The old "flaky" doc note was stale (test-syntax drift, not
     non-determinism) - `docs/failing_tests.md` should be updated to
     remove/correct that note in a follow-up doc pass.
+
+- [x] TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
+  - owner: ai
+  - created_at: 2026-07-15
+  - finished_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-effects
+  - depends_on: (none)
+  - scope: 4 CTest shards (`effects_31_40`, `effects_71_80`, `effects_81_90`,
+    `effects_91_100`), all beyond the old 12-case TOTAL_CASES cutoff (real
+    count is 116), failed.
+  - evidence: Two unrelated root causes found, both stale test content
+    that had simply never been exercised by CTest before:
+    (1) `test_semantics_capabilities_structs_reflect_default.cpp`'s
+    generated-`DebugPrint` assertions expected the reflected/generated
+    call name `stmt.name == "print_line"`, but the codegen convention now
+    emits the rooted form `/print_line` (confirmed functionally correct -
+    `semantics.validate(...)` already passed; only the exact-string
+    assertion was stale). Fixed both occurrences to `"/print_line"`.
+    (2) `test_semantics_capabilities_structs_reflect_equal.cpp` (3 cases)
+    and `test_semantics_capabilities_structs_metadata.cpp` (3 cases,
+    `"unsupported reflection metadata queries are rejected"`,
+    `"runtime reflection object queries are rejected"`,
+    `"placement transforms are rejected"`) both hit genuine parse
+    failures. reflect_equal.cpp used `return(left == right)` on struct
+    values - confirmed via a standalone `primec --no-text-transforms`
+    repro that `==` is a text-transform-level rewrite to `equal(...)`,
+    not native grammar, and these tests route through `validateProgram`'s
+    raw-parse path (no `import /std/...` present, so
+    `usesStdImportPipeline` is false and text transforms never run).
+    Fixed by rewriting to `equal(left, right)` directly, matching the
+    grammar the raw path actually parses. Separately,
+    structs_metadata.cpp's 3 cases had a literal typo -
+    `"main{} {\n"`/`"Item{} {\n"` (curly braces instead of parens for the
+    parameter list) - fixed via `sed` to `"main() {\n"`/`"Item() {\n"`.
+    Also found (not a bug, matches the already-documented TODO-4713
+    non-linear reflected/template-generation cost pattern): "generate
+    SoaSchema chunk helpers split wide reflected schemas deterministically"
+    genuinely takes ~605s standalone (measured directly, not a hang, all
+    46 assertions pass) - added a `TIMEOUT 900` override for this suite in
+    `cmake/PrimeStructManagedSemanticsSuites.cmake`, same pattern as the
+    `calls_flow.collections` override from TODO-4706. Final verification:
+    full sharded `ctest -R primestruct_semantics_effects_` - 12/12 shards
+    green (slow shard `21_30` at 605.32s, comfortably under the new 900s
+    budget).

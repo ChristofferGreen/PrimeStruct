@@ -128,6 +128,14 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.effects"
   ${PrimeStructManagedSemanticsCommon}
+  # Override the common 300s TIMEOUT: "generate SoaSchema chunk helpers
+  # split wide reflected schemas deterministically"
+  # (test_semantics_capabilities_structs_metadata.cpp) exercises reflected
+  # SoaSchema generation for a wide struct and measured ~579s standalone -
+  # the same non-linear reflected/template-generation cost pattern already
+  # documented for SoaColumnsN in TODO-4706/TODO-4713
+  # (docs/TestRuntimeOptimization.md), not a hang or test bug.
+  TIMEOUT 900
   TOTAL_CASES 116
   SHARD_PREFIX "effects"
 )
