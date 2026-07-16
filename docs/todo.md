@@ -1996,17 +1996,41 @@ This file is the live open-work queue for PrimeStruct.
        "vector namespaced capacity method rejects local string/array
        receiver without helper" tests (which correctly expect "unknown
        method: /string/capacity" / "unknown method: /array/capacity" for
-       that spelling, not "capacity requires vector target"). This fixed
-       5 of the 12 cases in this group ("stdlib namespaced vector
+       that spelling, not "capacity requires vector target"). **First
+       attempt regressed 5 other tests**: this initial condition (no
+       check for whether a same-path definition already exists) fixed
+       the 5 targeted cases but broke "...rejects local/wrapper
+       array/string same-path helper" and "...rejects wrapper map
+       same-path helper" (all previously-passing, all expecting the
+       *old* "unknown method: /TYPE/capacity" message, not the new one) -
+       caught by the full 131-shard regression run before committing,
+       per this session's established discipline. gdb comparison of the
+       four "same-path helper exists" tests showed no clean single
+       distinguishing factor (receiver kind, receiver type, and
+       definition-existence all interact - e.g. a *local* `map` receiver
+       with a same-path helper still wants "capacity requires vector
+       target" while a *wrapper* (function-return) `map` receiver with
+       an identical same-path helper wants "unknown method:
+       /map/capacity", and local `string`/`array` receivers with a
+       same-path helper want "unknown method: /TYPE/capacity" like the
+       wrapper case, unlike local `map`). Rather than chase the full
+       3-way interaction, **narrowed the guard** to add
+       `!hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
+       !hasImportedDefinitionPath(explicitVectorHelperPath)` - i.e. only
+       fire the new diagnostic when no definition exists at the explicit
+       path at all, which is the clean, unambiguous sub-case. This fixes
+       4 of the 12 cases in this group ("stdlib namespaced vector
        capacity method rejects array/map/string/wrapper map receiver
-       without helper" and "...rejects local map same-path helper"),
-       verified individually plus a spot-check of 7 neighboring
-       capacity-related tests (rooted form, vector receiver, duplicate-
-       definition rejection, TODO-4721/4722's already-fixed cases) all
-       still passing; full 131-shard regression run launched to confirm
-       system-wide before committing. The remaining 7 cases (the "count"
-       equivalents at lines 739-869 and 949-980, plus the two
-       "on builtin vector receiver rejects/requires rooted helper
+       without helper"), leaves "...rejects local map same-path helper"
+       at its original (already-failing, not regressed) state for
+       follow-up, and does not touch any of the 5 previously-passing
+       "same-path helper exists" tests. Verified via a second full
+       131-shard regression run: exactly 4 cases fixed, zero
+       regressions (global sorted-unique-name diff against the
+       post-TODO-4722 baseline).
+       The remaining 8 cases (the "count" equivalents at lines 739-869
+       and 949-980, "...rejects local map same-path helper", plus the
+       two "on builtin vector receiver rejects/requires rooted helper
        fallback" cases where the receiver *is* a vector but the call
        mixes rooted vs. namespaced spellings) were NOT touched - they use
        different message conventions (e.g. "unknown call target:

@@ -3689,6 +3689,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     stampFileErrorResultFailure("pointer-like-type", typeName);
     return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
   }
+  // See the matching comment near the end of this function (before the
+  // generic resolvedType + "/" + normalizedMethodName fallback) - primitive
+  // receivers (e.g. string) return earlier via the branch just below, so
+  // this same guard needs to run here too.
+  if (normalizedMethodName == "capacity" &&
+      normalizedCollectionTypePath != "/vector" &&
+      isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
+      !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
+      !hasImportedDefinitionPath(explicitVectorHelperPath)) {
+    return failMethodTargetResolutionDiagnostic("capacity requires vector target");
+  }
   if (isPrimitiveBindingTypeName(normalizedBaseTypeName)) {
     resolvedOut = "/" + normalizedBaseTypeName + "/" + normalizedMethodName;
     return true;
@@ -3754,6 +3765,23 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return setCollectionMethodTarget(
         preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
                                                   internalSoaCollectionTypePath(true)));
+  }
+  // A call that explicitly spells out the canonical
+  // /std/collections/vector/capacity path on a non-vector receiver must be
+  // rejected with the same "capacity requires vector target" diagnostic
+  // used elsewhere for this method, even if a same-path definition happens
+  // to exist for the receiver's own (non-vector) type - that canonical path
+  // is reserved for vector receivers. Falling through to the generic
+  // resolvedType + "/" + normalizedMethodName composition below would
+  // instead silently substitute the receiver's own type, discarding the
+  // explicit path the caller wrote and producing a misleading "unknown
+  // method: /<receiver type>/capacity" diagnostic.
+  if (normalizedMethodName == "capacity" &&
+      normalizedCollectionTypePath != "/vector" &&
+      isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
+      !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
+      !hasImportedDefinitionPath(explicitVectorHelperPath)) {
+    return failMethodTargetResolutionDiagnostic("capacity requires vector target");
   }
   resolvedOut = resolvedType + "/" + normalizedMethodName;
   return true;
