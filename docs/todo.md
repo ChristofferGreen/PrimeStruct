@@ -1683,6 +1683,50 @@ This file is the live open-work queue for PrimeStruct.
     under-verified change - always verify via the full sharded
     `calls_flow.collections` CTest run before committing, never just the
     directly-touched test file.
+  - progress_2026-07-16: gdb-confirmed (breaking on `failExprDiagnostic`)
+    the root cause for the representative case
+    ("vector helper call-form expression builtin stays statement-only
+    with named arguments"): `resolveExprVectorHelperCall`
+    (`SemanticsValidatorExprVectorHelpers.cpp:597-999`) has an early
+    guard, `isStdNamespacedVectorCountCapacityNamedArgException`
+    (~line 769), that lets named-argument `count`/`capacity` calls skip
+    an early "unknown call target" bail-out (~line 814-818) and reach
+    the later receiver-probing logic where the correct "is only
+    supported as a statement" diagnostic lives (~line 877-880). Mutator
+    helpers (`push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap`)
+    have no equivalent exception, so a named-argument mutator call in
+    expression context hits the early bail-out first and never reaches
+    the statement-only check. **Tried and reverted**: broadening the
+    exception to also cover `isPublishedVectorMutatorHelperName(...)`
+    fixed the target case and several others in the same file (21 of 32
+    cases in
+    `test_semantics_calls_and_flow_collections_vector_helper_call_form_named_receivers.cpp`
+    went from failing to passing, up from ~0), but a full 131-shard
+    regression run found 4 new regressions in 3 *other* test files
+    (`test_semantics_calls_and_flow_collections_bare_vector_pop_helper_resolution.cpp`,
+    `test_semantics_calls_and_flow_collections_vector_capacity_alias_named_args.cpp`,
+    `test_semantics_calls_and_flow_collections_vector_mutator_named_args.cpp`)
+    that also exercise named-argument mutator calls but expect the
+    *original* strict rejection behavior, not deferral to the
+    statement-only check. Reverted (uncommitted) rather than chase a
+    fourth hidden distinguishing factor without a clear hypothesis yet -
+    this session already spent three separate regression-and-narrow
+    cycles on neighboring `resolveMethodTarget`/
+    `SemanticsValidatorExprMethodTargetResolution.cpp` bugs (see
+    TODO-4723's `progress_2026-07-16`/`progress_2026-07-16b`) and this
+    is the same subsystem exhibiting the same pattern - worth reading
+    the 4 newly-discovered regressed tests' exact source shapes
+    (probably another Name-vs-Call, or with-vs-without-existing-
+    definition distinction, per the pattern already seen twice) before
+    the next attempt, rather than re-broadening blind.
+  - remaining_2026-07-16: the exception needs to be scoped more
+    precisely than "any published vector mutator with named args" -
+    likely needs to also account for whichever condition the 4 newly-
+    found regressed tests share that the fixed cases don't (receiver
+    kind, presence of an explicit/imported helper definition, or
+    something else not yet identified). 11 of the 32 cases in the
+    target file remain unfixed even with the (reverted) broad version,
+    also still open.
 
 - [ ] TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
   - owner: ai
