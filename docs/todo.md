@@ -2371,6 +2371,42 @@ This file is the live open-work queue for PrimeStruct.
     2 imported-helper-diagnostics cases and 1 nested-call case from
     earlier in this TODO, still open. 76 cases remain failing suite-wide
     (see `docs/failing_tests.md`).
+  - investigated_2026-07-16d: Traced 2 of the 3 remaining rooted-spelling
+    cases without landing a fix. "...rejects local array/string
+    same-path helper": source declares `/vector/count([string] values)`
+    (or `[array<i32>]`) and calls it via `value./vector/count()` where
+    `value` genuinely has that exact declared type - the call
+    TYPE-CHECKS perfectly against the definition's own signature (no
+    mismatch at all). gdb-confirmed (breakpoint on
+    `validateExprMethodCallTarget`) `resolved` stays `/vector/count`
+    (pre-resolved by `resolveCalleePath` before this function even
+    runs) and the call is accepted, because a real definition genuinely
+    exists at that literal path with a matching param type. The
+    rejection the test wants ("unknown method: /string/count") is not
+    about a type mismatch at the call site - it's a **namespace-hygiene
+    rule on the *definition itself***: a path spelled `/vector/<name>`
+    should not be a valid call target at all unless its own first
+    parameter is actually vector-shaped, regardless of what any
+    particular caller passes. Fixing this needs a check at definition-
+    validation or path-resolution time ("does this /vector/-prefixed
+    definition's first param actually match the vector family?"), not
+    a call-site guard like the fixes above - a materially different
+    (and larger) piece of work than TODO-4723's other fixes, which have
+    all been about *whether* an existing, correctly-shaped definition
+    should be preferred, not about invalidating a definition based on
+    its own declared shape. "...on builtin vector receiver requires
+    same-path helper" (the third case) is even less understood - a
+    *matching* `/vector/count([vector<i32>] values)` definition against
+    a real vector receiver, called via the exact same rooted spelling,
+    is still expected to be REJECTED, with a MAP-family message
+    ("unknown call target: /std/collections/map/count") that has no
+    obvious connection to a vector-typed call at all - not traced
+    beyond confirming current (wrong) behavior accepts the call. Given
+    the definition-validation-time fix shape needed for the array/string
+    pair is a different class of change than anything else in TODO-4723,
+    and the third case's expected behavior isn't understood well enough
+    yet to even hypothesize a fix, stopping here for this pass rather
+    than guessing.
   - implementation_notes: Given three apparently-independent root causes
     span (at least) `SemanticsValidatorExpr.cpp`,
     `validateNumericBuiltinExpr`/`validateExprLateUnknownTargetFallbacks`,
