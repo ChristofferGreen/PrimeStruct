@@ -2043,6 +2043,62 @@ This file is the live open-work queue for PrimeStruct.
        made this one fix take far longer to localize than it should have
        - filed a follow-up to decompose the function so future bugs like
        this are traceable by reading, not by scripting 54 breakpoints.
+  - progress_2026-07-16b: Fixed 2 more cases: "stdlib namespaced vector
+    count method rejects wrapper map receiver without helper" and
+    "...rejects wrapper map same-path helper" - both
+    `wrapMap()./std/collections/vector/count()` (a wrapper function with
+    an *explicit* `[return<map<i32, i32>>]` annotation, called via the
+    explicit vector-namespaced spelling), expected to reject with
+    "unknown call target: /std/collections/map/count" regardless of
+    whether a same-path helper is declared for map. Localized in
+    `tryResolveExplicitCanonicalVectorCountMethodTarget`
+    (`SemanticsValidatorExprMethodTargetResolution.cpp:2327-2347`, a
+    lambda inside `resolveMethodTarget` already dedicated to count +
+    non-vector receivers) - it always fell through to either accepting a
+    same-path helper (wrongly, for map) or the generic "unknown method: "
+    + explicitVectorHelperPath diagnostic, never the map-specific
+    "unknown call target: ..." form the tests want. **Two regression
+    rounds before landing**, both caught by the full-regression-before-
+    commit discipline: (1) an initial fix gating only on
+    `receiverFamily == "map" && receiverExpr.kind == Expr::Kind::Call`
+    incorrectly also rejected "wrapper temporary canonical vector count
+    slash-method rejects map receiver" - a *different*, previously-
+    passing test using a wrapper function with an INFERRED (not
+    explicitly annotated) map return type (`[effects(heap_alloc)]` with
+    a bare `return(values)`, no `[return<map<...>>]`), which correctly
+    keeps the older "unknown method: /std/collections/vector/count"
+    message. (2) Narrowed further by walking the wrapper function's own
+    `transforms` list for an explicit `return` transform whose template
+    arg's base type normalizes to "map" (mirroring the existing
+    Pointer/Reference-return-type extraction pattern already used
+    elsewhere in this same function, ~line 484-497) - this precisely
+    distinguishes `wrapMap()` (explicit annotation, gets the new
+    diagnostic) from `wrapMapAuto()` (inferred, keeps the old one).
+    Verified via a third full 131-shard regression run: exactly 2 fixed,
+    zero regressions. This further confirms TODO-4724's premise - three
+    escalating rounds of hidden-distinguishing-factor discovery (map vs.
+    array/string, Name vs. Call receiver, explicit vs. inferred return
+    annotation) for what looked like one simple message-text fix is a
+    strong signal this function's logic needs to be legible, not just
+    correct.
+  - remaining_2026-07-16b: 6 of the original 12 "rejects ... without
+    helper"/rooted-helper-fallback cases are now fixed (4 capacity +
+    2 count); 6 remain: "stdlib namespaced vector capacity method
+    rejects local map same-path helper" (the one capacity case the
+    narrowed guard deliberately left unfixed - see progress_2026-07-16
+    above), "stdlib namespaced vector count method on builtin vector
+    receiver rejects rooted helper fallback" and "...capacity method on
+    builtin vector receiver rejects rooted helper fallback" (the
+    receiver *is* a vector but the call mixes rooted vs. namespaced
+    spellings - a different scenario, not yet traced), "vector
+    namespaced count method on builtin vector receiver requires
+    same-path helper", "...rejects local array same-path helper", and
+    "...rejects local string same-path helper" (all using the *rooted*
+    `/vector/count()` short-form spelling, not the std canonical path -
+    a third, distinct scenario from what's been fixed so far, also not
+    yet traced). Plus the 2 imported-helper-diagnostics cases and 1
+    nested-call case from earlier in this TODO, still open. 78 cases
+    remain failing suite-wide (see `docs/failing_tests.md`).
   - implementation_notes: Given three apparently-independent root causes
     span (at least) `SemanticsValidatorExpr.cpp`,
     `validateNumericBuiltinExpr`/`validateExprLateUnknownTargetFallbacks`,

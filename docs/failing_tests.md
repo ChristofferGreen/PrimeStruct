@@ -111,10 +111,15 @@ helper" - localized inside `resolveMethodTarget`
 function now also tracked for decomposition as TODO-4724. A first,
 broader fix attempt regressed 5 other previously-passing tests (caught
 by the full-regression-before-commit discipline) and was narrowed before
-landing; see TODO-4723 in `docs/todo.md` for the full writeup. 80 cases
-remain failing suite-wide as of this update (84 minus these 4). The
-remaining 8 cases in this group, plus the imported-helper-diagnostics and
-nested-call cases, are still open under TODO-4723.
+landing; see TODO-4723 in `docs/todo.md` for the full writeup. 78 cases
+remain failing suite-wide as of this update (80 minus 2 more). TODO-4723
+also fixed 2 "count" equivalents in the same group ("stdlib namespaced
+vector count method rejects wrapper map receiver without helper" and
+"...rejects wrapper map same-path helper") after a similar two-round
+regression-and-narrow cycle - see TODO-4723's `progress_2026-07-16b`
+entry. 6 cases remain in the "rejects ... without helper"/rooted-helper-
+fallback group, plus the imported-helper-diagnostics and nested-call
+cases, all still open under TODO-4723.
 
 Prior text below, superseded by the above but kept for its still-valid
 methodology notes and historical fix writeups:

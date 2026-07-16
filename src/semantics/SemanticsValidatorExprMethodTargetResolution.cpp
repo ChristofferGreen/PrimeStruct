@@ -2336,6 +2336,46 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         receiverFamily != "map") {
       return std::nullopt;
     }
+    // A map receiver that is a call expression to a function with an
+    // *explicit* map-typed return annotation (e.g. [return<map<i32, i32>>])
+    // always rejects the explicit vector-namespaced count spelling with the
+    // map-family "unknown call target" diagnostic, even if a same-path
+    // helper exists for map - unlike array/string wrapper receivers, which
+    // do accept a matching same-path helper (see "...keeps wrapper
+    // array/string same-path helper" tests), and unlike a map receiver
+    // whose type comes from body-inference rather than an explicit
+    // annotation (e.g. [effects(heap_alloc)] with no return<> - see
+    // "wrapper temporary canonical vector count slash-method rejects map
+    // receiver"), which keeps the older "unknown method: <explicit path>"
+    // diagnostic instead.
+    if (receiverFamily == "map" && receiverExpr.kind == Expr::Kind::Call) {
+      const std::string calleePath = resolveCalleePath(receiverExpr);
+      auto calleeDefIt = defMap_.find(calleePath);
+      bool hasExplicitMapReturnAnnotation = false;
+      if (calleeDefIt != defMap_.end() && calleeDefIt->second != nullptr) {
+        for (const auto &transform : calleeDefIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string arg;
+          const std::string normalizedBase =
+              splitTemplateTypeName(transform.templateArgs.front(), base, arg)
+                  ? normalizeBindingTypeName(base)
+                  : normalizeBindingTypeName(transform.templateArgs.front());
+          if (normalizedBase == "map") {
+            hasExplicitMapReturnAnnotation = true;
+            break;
+          }
+        }
+      }
+      if (hasExplicitMapReturnAnnotation) {
+        return failMethodTargetResolutionDiagnostic(
+            "unknown call target: " +
+            canonicalKeyValueCompatibilityPrefixOrFallback() + "/" +
+            normalizedMethodName);
+      }
+    }
     if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath,
                                                       receiverExpr)) {
       resolvedOut = explicitVectorHelperPath;
