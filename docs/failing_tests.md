@@ -128,6 +128,61 @@ regression. Prefer CTest's own sharded invocation
 check — it matches what the real gate runs and doesn't hit this
 cross-test-case pollution at all.
 
+### Methodology note (2026-07-16): CTest `--output-on-failure` log slicing
+pitfall - not a real bug
+
+Investigating an apparent regression in TODO-4722 turned up what looked
+like genuine non-determinism WITHIN a properly-sharded `ctest -R` run
+(the same shard, e.g. `calls_flow_collections_881_890`, appeared to fail
+a different *set* of test cases depending on whether it ran standalone,
+serially alongside other shards, or under `--parallel 4` - directly
+contradicting the "prefer CTest's sharded invocation, it's authoritative"
+guidance immediately above). Deep investigation (gdb was not useful here;
+the fix was purely in how the combined ctest log was being read) found
+the real cause: naive hand-written `awk`/`grep` slicing of the combined
+`--output-on-failure` log by "which lines fall between this test's
+boundary markers and the next" is easy to get wrong in two different
+ways, and both were tried and both were wrong before the third attempt
+worked:
+1. Slicing between consecutive `Start N:` announcement lines is wrong
+   under `--parallel > 1`: CTest prints a worker's `Start N:` line the
+   moment that worker picks up a new test, *before* that test finishes -
+   with multiple workers in flight, several `Start` lines for unrelated
+   concurrently-running shards print in between a given test's own
+   `Start` line and its actual completion, so lines "between two Start
+   markers" are an interleaved mix of several shards' detailed output,
+   not one shard's.
+2. Slicing between consecutive one-line progress-summary trailers
+   (` N/Total Test #ID: ... Passed/Failed  T sec`) by taking the content
+   *before* a given test's own trailer is also wrong - it's off by one:
+   the correct pairing is trailer line, THEN that same test's full
+   detailed output block, THEN the next test's trailer line. Taking the
+   content before a trailer attributes it to the *previous* test instead.
+3. The fix: slice from immediately *after* a test's own trailer line up
+   to (not including) the *next* trailer line. Verified this by (a) a
+   controlled minimal 3-shard `ctest -R` run where the trailer/content
+   pairing could be checked by eye, and (b) cross-checking the exact
+   argv CTest passes to the test binary (captured live via
+   `/proc/<pid>/cmdline` while a batched run was in flight) against a
+   manual standalone invocation of that identical command - byte-for-byte
+   identical, ruling out CTest passing different arguments/environment
+   in batch vs. standalone mode. With the corrected slicing, all of
+   standalone, serial (`--parallel 1`), and two separate `--parallel 4`
+   runs agree exactly on shard `881_890`'s 3 failing cases - fully
+   deterministic, no pollution.
+**Conclusion**: there is no cross-test-case pollution in properly-sharded
+`ctest -R` runs (parallel or serial) - the "prefer CTest's sharded
+invocation" guidance above still holds. The scare was 100% a bug in
+ad-hoc log-slicing tooling written during the investigation, not in the
+compiler or test infrastructure. **Lesson**: per-shard attribution from a
+combined multi-test `--output-on-failure` log is easy to get backwards;
+prefer comparing the *global* sorted/deduplicated set of "TEST CASE:"
+names across an entire run (attribution-independent - doesn't matter
+which shard reported which failure) rather than trying to slice
+per-shard blocks by hand, unless the trailer-then-content pairing above
+is applied carefully and cross-checked against a controlled minimal
+repro first.
+
 ### Flaky, not a real failure
 
 - **`compile.run.emitters.cpp` cases 925, 926, 930** — fail intermittently
