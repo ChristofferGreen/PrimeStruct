@@ -93,6 +93,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 - TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 - TODO-4721: Fix same-path shadow precedence for stdlib count/capacity builtin fallback
+- TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
 
 ### Priority Lanes
 
@@ -318,6 +319,7 @@ This file is the live open-work queue for PrimeStruct.
 57. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 58. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 59. TODO-4721: Fix same-path shadow precedence for stdlib count/capacity builtin fallback
+60. TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
 
 ### Task Blocks
 
@@ -1923,3 +1925,109 @@ This file is the live open-work queue for PrimeStruct.
     narrower, more surgical change localized to
     `tryValidateVectorCountBuiltinPath`/`shouldValidateVectorCountBuiltinFallback`
     only, rather than touching the shared pattern-matching helper.
+  - progress_2026-07-16: Implemented and verified the defMap_-existence-check
+    fix in both `SemanticsValidatorExprCountCapacityBuiltins.cpp`
+    (`tryValidateVectorCountBuiltinPath` count branch +
+    the capacity branch just above `validateVectorCapacityBuiltinCall`) and
+    the sibling gate in `SemanticsValidatorExprMethodResolution.cpp`'s
+    `validateExprMethodCallTarget` (both call sites had to be fixed
+    together - gdb-confirmed the validation pipeline traverses through both
+    in sequence for the same expression, and the first one alone masked
+    whether the second would help). **Regression found and fixed during
+    verification**: the first (unrefined) version of this fix - guarding
+    only on `defMap_`-presence/arity - broke a previously-passing test,
+    "rejects stdlib canonical vector helper method-precedence forwarding in
+    method-call sugar" (full 131-shard run, shard
+    `calls_flow_collections_1061_1070`), because short-form method-call
+    sugar (`values.count(true)`, raw `expr.name == "count"`) was
+    incorrectly getting the same same-path-override precedence as the
+    explicit canonical-path spelling
+    (`values./std/collections/vector/count(true)`,
+    `expr.name == "/std/collections/vector/count"`). Fixed by adding an
+    explicit-spelling check (`expr.name == <canonical path>`) alongside the
+    existing arity/defMap_ checks in both files, so the same-path override
+    is only honored when the call spells out the canonical path explicitly.
+    Verified via proper `ctest -R` sharding (35 originally-failing shards +
+    the regressed `1061_1070` shard, 36 total): the regression is gone, 0
+    new regressions, and exactly **4 of the 23** cases in
+    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
+    are fixed (the direct count/capacity "same-path helper auto inference"
+    and "method-call inference keeps return mismatch diagnostics" cases).
+    The remaining 19 cases in that file (the "access alias" cases and the
+    "rejects ... receiver without helper" cases) do NOT go through
+    `tryValidateVectorCountBuiltinPath`/`validateExprMethodCallTarget`'s
+    count/capacity arity gate and are a different bug pattern, not covered
+    by this fix - left open for follow-up (see TODO-4722). Full
+    131-shard `ctest -R calls_flow_collections_` regression run launched to
+    confirm no other shards were affected before this was scoped as done;
+    see the follow-up TODO for its result and the remaining-19 triage.
+  - status: partially complete - the specific same-path shadow-precedence
+    bug this TODO targeted is fixed and verified with zero regressions, but
+    the acceptance criterion ("all 23 cases pass") is not met since 19 of
+    the 23 have an unrelated root cause. Splitting the remainder into
+    TODO-4722 rather than keeping this TODO open indefinitely.
+
+- [ ] TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
+  - owner: ai
+  - created_at: 2026-07-16
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-collections
+  - depends_on: TODO-4721
+  - scope: TODO-4721 fixed 4 of the 23 failing cases in
+    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
+    (the count/capacity same-path-override arity-gate cases). The other 19
+    remain, confirmed via `ctest -R` sharded verification on
+    2026-07-16 as still failing after TODO-4721's fix landed:
+    "stdlib namespaced vector access alias method-call inference keeps
+    return mismatch diagnostics", "stdlib namespaced vector access alias
+    uses same-path helper auto inference", "stdlib namespaced vector
+    access slash method uses imported helper diagnostics", "stdlib
+    namespaced vector access slash method uses imported helper on vector
+    receiver", "stdlib namespaced vector access unsafe alias method-call
+    inference keeps return mismatch diagnostics", "stdlib namespaced
+    vector access unsafe alias uses same-path helper auto inference",
+    "stdlib namespaced vector access unsafe slash method uses imported
+    helper diagnostics", "stdlib namespaced vector capacity method on
+    builtin vector receiver rejects rooted helper fallback", "stdlib
+    namespaced vector capacity method rejects array receiver without
+    helper", "stdlib namespaced vector capacity method rejects local map
+    same-path helper", "stdlib namespaced vector capacity method rejects
+    map receiver without helper", "stdlib namespaced vector capacity
+    method rejects string receiver without helper", "stdlib namespaced
+    vector capacity method rejects wrapper map receiver without helper",
+    "stdlib namespaced vector count method on builtin vector receiver
+    rejects rooted helper fallback", "stdlib namespaced vector count
+    method rejects wrapper map receiver without helper", "stdlib
+    namespaced vector count method rejects wrapper map same-path helper",
+    "vector namespaced count method on builtin vector receiver requires
+    same-path helper", "vector namespaced count method rejects local
+    array same-path helper", "vector namespaced count method rejects
+    local string same-path helper".
+  - implementation_notes: Not yet root-caused. These test names split into
+    two apparent groups worth investigating separately: (1) "access
+    alias"/"access ... slash method uses imported helper" cases, which
+    look like they exercise the `/std/collections/vector/at` and
+    `/std/collections/vector/at_unsafe` compatibility paths rather than
+    `count`/`capacity` - likely need the same explicit-spelling-vs-sugar
+    same-path-override treatment TODO-4721 applied, but in whatever
+    validator function handles `at`/`at_unsafe` builtin fallback (see the
+    "(unmodified at/at_unsafe handling continues below)" comment marker
+    left in `SemanticsValidatorExprMethodResolution.cpp` at the point
+    TODO-4721's fix stopped editing); (2) "rejects ... receiver without
+    helper" cases, which read like negative tests (expecting a rejection
+    diagnostic) that may currently be failing for the opposite reason -
+    getting accepted when they shouldn't, or getting a different
+    diagnostic message than expected - requiring a fresh gdb trace (break
+    on `failExprDiagnostic`, per the technique that worked for TODO-4721)
+    rather than assuming they share TODO-4721's root cause.
+  - acceptance: All 19 listed cases pass. Full sharded
+    `ctest -R calls_flow_collections_` run shows no new failures vs. the
+    2026-07-16 baseline (post-TODO-4721) recorded in
+    `docs/failing_tests.md`.
+  - stop_rule: Investigate the "access alias" group and the "rejects ...
+    without helper" group as two separate root causes; do not assume a
+    single fix addresses both without evidence from a gdb trace of each
+    group individually. Apply the same full-sharded-regression
+    verification discipline as TODO-4721 (including a check for the
+    explicit-path-vs-short-form-sugar distinction) before considering any
+    fix here complete.

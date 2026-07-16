@@ -125,11 +125,28 @@ bool SemanticsValidator::validateExprMethodCallTarget(
          hasDefinitionPath(canonicalVectorHelperPath) ||
          hasDeclaredDefinitionPath(canonicalVectorHelperPath) ||
          hasImportedDefinitionPath(canonicalVectorHelperPath))) {
+      // A same-path user definition with a different signature (e.g. an
+      // extra marker/index parameter) must shadow the single-arg builtin
+      // arity check below, but only when the call spells out the explicit
+      // canonical path (e.g. values./std/collections/vector/count(...)) -
+      // short-form method-call sugar (values.count(...)) must NOT get
+      // automatic precedence-forwarding to a same-path override and stays
+      // strict-builtin, per
+      // "rejects stdlib canonical vector helper method-precedence
+      // forwarding in method-call sugar".
+      const auto canonicalHelperParamsIt =
+          paramsByDef_.find(canonicalVectorHelperPath);
+      const bool hasMatchingRealDefinitionArity =
+          expr.name == canonicalVectorHelperPath &&
+          canonicalHelperParamsIt != paramsByDef_.end() &&
+          canonicalHelperParamsIt->second.size() == expr.args.size();
       if (normalizedMethodName == "count" && expr.args.size() != 1 &&
+          !hasMatchingRealDefinitionArity &&
           !shouldPreferRootVectorAliasForMethodExtraArgs()) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
       }
       if (normalizedMethodName == "capacity" && expr.args.size() != 1 &&
+          !hasMatchingRealDefinitionArity &&
           !shouldPreferRootVectorAliasForMethodExtraArgs()) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin capacity");
       }

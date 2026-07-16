@@ -273,8 +273,18 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
                                                     resolveCalleePath(expr),
                                                     "count") &&
       it == defMap_.end();
+  // A same-path user definition with a different signature only shadows the
+  // builtin's single-argument arity check when the call spells out the
+  // explicit canonical path (values./std/collections/vector/count(...));
+  // short-form method-call sugar (values.count(...)) must NOT get automatic
+  // precedence-forwarding to a same-path override and stays strict-builtin,
+  // per "rejects stdlib canonical vector helper method-precedence
+  // forwarding in method-call sugar".
+  const bool countCallExplicitlyNamesCanonicalPath =
+      expr.name == logicalResolvedMethod;
   const auto tryValidateVectorCountBuiltinPath = [&]() -> std::optional<bool> {
     if (resolvedMethod &&
+        (it == defMap_.end() || !countCallExplicitlyNamesCanonicalPath) &&
         isStdNamespacedVectorCompatibilityHelperPath(logicalResolvedMethod,
                                                      "count")) {
       return validateVectorCountBuiltinPath();
@@ -389,7 +399,13 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
     return validateExpr(params, locals, expr.args.front());
   };
 
+  // Same rationale as countCallExplicitlyNamesCanonicalPath above: a
+  // same-path override only shadows the builtin arity check for the
+  // explicit canonical-path spelling, not short-form method-call sugar.
+  const bool capacityCallExplicitlyNamesCanonicalPath =
+      expr.name == canonicalVectorCapacityPath;
   if (resolvedMethod &&
+      (it == defMap_.end() || !capacityCallExplicitlyNamesCanonicalPath) &&
       matchesResolvedPath(resolved, canonicalVectorCapacityPath)) {
     return validateVectorCapacityBuiltinCall();
   }
