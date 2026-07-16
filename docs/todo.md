@@ -1899,6 +1899,112 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Audit and fix shard-range config only in this leaf; file
     separate TODOs for any newly-exposed test failures rather than fixing
     them inline here.
+  - progress_2026-07-16: Completed the audit for all 7 `Managed*` cmake
+    files feeding into `cmake/PrimeStructManagedCompileRunSuites.cmake`
+    (which chains in Smoke/Vm/EmittersNativeCore/NativeOther/
+    ImportsTextExamples via `include(... OPTIONAL)`) plus
+    `PrimeStructManagedParserTextMiscSuites.cmake` and
+    `PrimeStructManagedUnitBackendSuites.cmake` - 151
+    `addPrimeStructManagedDoctestSuite(...)` calls, 59 distinct
+    (suite, source-file) groups, parsed with a paren-depth-tracking
+    script (the earlier regex-based attempt this TODO's
+    implementation_notes describes really did fail on inline closing
+    parens like `RANGE_LAST 5)` on the same line as the last argument -
+    confirmed and fixed) and cross-checked against real counts via each
+    group's actual doctest binary (`PrimeStruct_compile_run_tests` for
+    `primestruct.compile.run.*`, `PrimeStruct_backend_runtime_tests` for
+    the suites in `PrimeStructBackendRuntimeTestSuites`,
+    `PrimeStruct_backend_ir_tests` otherwise, or whatever `TARGET` the
+    cmake call specifies) with `--test-suite=<suite>
+    [--source-file=<pattern>] --count`. **The CMakeLists.txt hand-written
+    shard block (~lines 1774-2060+) is NOT yet audited** - out of scope
+    for this pass, tracked as remaining work below.
+    Findings (full data in
+    `/tmp/claude-.../scratchpad/suite_audit_results.json` -
+    session-scratch, re-run the extraction script if needed after this
+    session ends):
+    - **16 groups undercounted (configured TOTAL_CASES/RANGE_LAST too
+      low, hiding real cases from CTest - the same bug class as the
+      semantics find)**, worst offenders:
+      `primestruct.ir.pipeline.validation` (configured 863, real 1387,
+      missing 524), `primestruct.compile.run.emitters.cpp` (192 vs 622,
+      missing 430), `primestruct.compile.run.vm.collections` (352 vs
+      682, missing 330), `primestruct.compile.run.imports`'s
+      `*_operations.cpp` shard group (81 vs 201, missing 120),
+      `primestruct.compile.run.smoke`'s `*_core_*.cpp` group (62 vs 129,
+      missing 67), `primestruct.compile.run.vm.core` (83 vs 123, missing
+      40), `primestruct.semantics.manual` (145 vs 179, missing 34),
+      `primestruct.compile.run.vm.outputs` (88 vs 121, missing 33),
+      `primestruct.compile.run.examples` (94 vs 124, missing 30), plus 7
+      smaller (1-5 case) gaps. **1690+ cases combined are configured-but-
+      hidden from CTest across these 16 groups alone** - this looks like
+      it could be comparable in scale to (or larger than) the ~900-case
+      semantics find that spawned TODO-4714 through TODO-4719.
+    - **8 groups overcounted** (configured TOTAL_CASES/RANGE_LAST higher
+      than real - harmless per this TODO's acceptance criterion, but
+      still config drift worth fixing for accuracy):
+      `primestruct.parser.basic` (307 vs 130, over by 177 - notably
+      large, worth double-checking this isn't masking a *different*
+      problem, e.g. cases moved to another suite), `...vm.math` (30 vs
+      12, over by 18), `primestruct.dumps.ast_ir` (43 vs 28, over by
+      15), `...imports`'s `*_versions.cpp` group (22 vs 14, over by 8),
+      `primestruct.ir.pipeline.serialization` (112 vs 104, over by 8),
+      plus 3 smaller (1-3 case) overcounts.
+    - **10 groups report real=0** - investigated each rather than
+      assuming all are the same cause:
+      - 5 are `primestruct.compile.run.native_backend.{argv,control,
+        pointers,imports}` plus part of `math_numeric` - their source
+        files are correctly gated behind
+        `#if defined(__APPLE__) && (defined(__arm64__) ||
+        defined(__aarch64__))`. This environment is Linux, so 0 real
+        cases here is **expected, not a bug** - these suites only run
+        on Apple Silicon CI. No action needed on Linux; worth confirming
+        the macOS CI leg (if one exists) actually gets real counts.
+      - `primestruct.compile.run.native_backend.core` is different: its
+        constituent files (`test_compile_run_native_backend_core_*.cpp`,
+        17 files, confirmed compiled into `.o` files - not a missing-
+        from-build-sources problem) are gated behind
+        `#if PRIMESTRUCT_NATIVE_CORE_ENABLED` - a macro that is
+        referenced in these files but **`grep`-confirmed to never be
+        `#define`d or passed via `-D` anywhere in the entire repo**
+        (CMakeLists.txt, any `cmake/*.cmake`, any header). This isn't
+        platform-gating - it's a permanently-dead feature flag; the
+        ~154 configured cases behind it are unconditionally excluded on
+        every build, everywhere. Needs a human decision: either the
+        macro should be defined (enabling a real, currently-dormant test
+        suite - would need investigation into whether the *code under
+        test* it exercises is even ready) or these files/shard configs
+        are vestigial and should be removed. Not something to guess at
+        and fix unilaterally.
+      - `primestruct.compile.run.native_backend.collections` (the one
+        `native_backend.*` suite that DOES report real cases, 0 drift
+        listed above because it wasn't in the undercounted list -
+        actually not double-checked against its configured 380 in this
+        pass, worth re-verifying) and
+        `primestruct.compile.run.text_filters` (both `*_core.h` and
+        `*_misc.h` shard groups show real=0) - `text_filters`' 0-count
+        not yet root-caused (didn't check for a similar `#if` guard);
+        needs the same investigation as `native_backend.core` before
+        assuming it's fine.
+      - `primestruct.ir.pipeline.conversions`'s `*_numbers.cpp` shard
+        group also shows real=0 (configured 44) - not yet root-caused,
+        needs the same investigation.
+  - remaining_2026-07-16: (1) audit the CMakeLists.txt hand-written
+    shard block (~lines 1774-2060+) - not touched in this pass, and is
+    exactly where the *actual*, active `native_backend.*` shard
+    definitions turned out to live (the `Managed` cmake file's entries
+    for those suite names may be stale/superseded duplicates - worth
+    checking for double-registration, not just drift). (2) root-cause
+    the 3 still-unexplained real=0 groups
+    (`native_backend.collections` re-check, `compile.run.text_filters`
+    x2, `ir.pipeline.conversions`'s `*_numbers.cpp`). (3) Get a human
+    decision on `PRIMESTRUCT_NATIVE_CORE_ENABLED` before touching it.
+    (4) Only once (1)-(3) are resolved: fix the confirmed TOTAL_CASES/
+    RANGE_LAST drift (both under- and over-counts), run the corrected
+    full non-semantics gate, and enumerate + triage whatever new
+    failures surface - budget for this being comparable in scope to the
+    TODO-4714 through TODO-4723 body of work, given the 1690+ hidden-
+    case scale found so far.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
