@@ -1872,25 +1872,40 @@ This file is the live open-work queue for PrimeStruct.
        (bool arg where the real imported helper takes an int index).
        Expected: rejected with "argument type mismatch for
        /std/collections/vector/at parameter index ...". Actual (gdb
-       breakpoint on `failExprDiagnostic`, confirmed 2026-07-16): still
-       hits the blunt "at requires integer index" shortcut in
-       `SemanticsValidatorExpr.cpp` (~line 651), because the guard added
-       in TODO-4722 (`hasMatchingRealDefinitionArity`) only checks
-       arity, and the imported real definition DOES have matching arity
-       (2 params) even though the actual argument type is wrong - so the
-       guard incorrectly treats it as "shadow the check" instead of
-       "defer to a proper per-parameter type-mismatch diagnostic". Fix
-       needs to distinguish "an override exists with a genuinely
-       different, incompatible index parameter type" (skip the int-only
-       check, let the real definition's own argument validation produce
-       the diagnostic) from "no override, enforce the builtin int-only
-       rule" - the current TODO-4722 guard conflates these. Likely needs
-       to actually attempt validating against the real definition's
-       parameter type (not just its arity) and fail through that path's
-       diagnostic instead of just skipping the check silently.
+       breakpoint on `failExprDiagnostic`, confirmed 2026-07-16): hits
+       the blunt "at requires integer index" shortcut in
+       `SemanticsValidatorExpr.cpp` (~line 651) AND the sibling one in
+       `SemanticsValidatorExprMethodResolution.cpp` (~line 153) - not
+       caused by an arity mismatch: `paramsByDef_.count(canonicalVectorHelperPath)`
+       is literally 0 for this test (gdb-confirmed, 2026-07-16) - imported
+       definitions are NOT registered in `paramsByDef_` at the point
+       these checks run, only `hasImportedDefinitionPath(...)` sees them.
+       **Tried and reverted**: broadening both guards to also treat
+       `hasImportedDefinitionPath(canonicalVectorHelperPath)` (regardless
+       of `paramsByDef_` arity) as "a real override exists, skip the
+       int-only check" does make both shortcuts stand down, but the call
+       then falls through to `validateExprLateUnknownTargetFallbacks`
+       and fails with "unknown call target: at" instead - i.e. normal
+       call resolution for an EXPLICIT-canonical-path `at`/`at_unsafe`
+       call against an *imported* (not locally-declared) real definition
+       doesn't actually succeed once the shortcuts are bypassed. This
+       reroutes the failure rather than fixing it, and was reverted
+       (uncommitted) rather than risking a regression elsewhere from the
+       broadened guard. **This means case 1 and case 2 below are likely
+       the SAME root cause**, not two separate bugs: explicit-canonical-
+       path `at`/`at_unsafe` calls don't resolve against imported
+       definitions via the normal method-call resolution path at all
+       (regardless of nesting inside `plus(...)`) - the real fix belongs
+       in whatever resolves `expr.name == canonicalVectorHelperPath`
+       method calls to their real imported definition (making
+       `validateExprLateUnknownTargetFallbacks` unnecessary for this
+       case), not in either int-only-index shortcut. Once that's fixed,
+       both shortcuts can likely keep their current narrow (arity-via-
+       paramsByDef_) guards from TODO-4722 unchanged.
     2. **Nested "unknown call target: at"** (1 case: "stdlib namespaced
        vector access slash method uses imported helper on vector
-       receiver" - expects success, currently fails). Source:
+       receiver" - expects success, currently fails; likely the same
+       root cause as case 1 above, see note there). Source:
        `plus(values./std/collections/vector/at(0i32),
        values./std/collections/vector/at_unsafe(1i32))` - `at`/`at_unsafe`
        calls nested as ARGUMENTS to a numeric builtin (`plus`). gdb
@@ -1925,8 +1940,42 @@ This file is the live open-work queue for PrimeStruct.
        of the same "same-path vs. name-pattern-only matching" bug class
        as TODO-4721/4722, but inverted (over-permissive fallback instead
        of over-strict rejection) and likely in yet another code path.
-       The other 11 cases in this group have not been individually
-       traced yet.
+       A second sampled case (gdb, 2026-07-16): "stdlib namespaced vector
+       capacity method rejects map receiver without helper" - calling
+       `values./std/collections/vector/capacity()` where `values` is a
+       `map<i32, i32>` (no helper defined anywhere). Expected: rejected
+       with "capacity requires vector target" - and that exact message
+       IS produced elsewhere in the codebase
+       (`SemanticsValidatorExprMethodTargetResolution.cpp:2852`, inside
+       the giant `resolveMethodTarget` function starting at line 213 of
+       that file - `receiver.isMethodCall && !isExplicitVectorFamilyReceiver
+       && isVectorCompatibilityHelperName(normalizedMethodName)` with no
+       declared/imported definition at the explicit path leads to exactly
+       this diagnostic for `capacity`, per a direct read of that code).
+       Actual: gdb-confirmed (`failExprDiagnostic` breakpoint) the real
+       failure is "unknown method: /map/capacity" from
+       `SemanticsValidatorExprMethodResolution.cpp:785`, i.e. a
+       *different, earlier* function than the one that already has the
+       right diagnostic. `resolveMethodTarget` (called from
+       `validateExprMethodCallTarget` at ~line 400/410) evidently returns
+       `resolved = "/map/capacity"` (substituting the receiver's own type
+       family for the method leaf name, discarding the explicit
+       `/std/collections/vector/capacity` path the call actually wrote)
+       WITHOUT ever reaching its own later "capacity requires vector
+       target" logic at line ~2851 - meaning some earlier branch inside
+       that 2800+-line function resolves and returns before that point.
+       Not yet localized further: `resolveMethodTarget` is too large to
+       safely hand-edit without a breakpoint trace pinpointing exactly
+       which of its many early-return branches fires for this call shape
+       (receiver is a `map`, `expr.name` is the full explicit
+       `/std/collections/vector/capacity` path, no helper defined
+       anywhere) - deliberately not attempted in this pass given this
+       session's established discipline against hasty edits to large,
+       under-traced functions. The other 10 cases in this group
+       (`array`/`string` receiver variants, `wrapper map`, and
+       `local same-path helper of the wrong receiver type` cases) look
+       likely to share one of these two root causes (or a close variant)
+       based on their test names, but have not been individually traced.
   - implementation_notes: Given three apparently-independent root causes
     span (at least) `SemanticsValidatorExpr.cpp`,
     `validateNumericBuiltinExpr`/`validateExprLateUnknownTargetFallbacks`,
