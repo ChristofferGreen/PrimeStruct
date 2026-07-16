@@ -34,6 +34,13 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.emitters.cpp"
                                   SOURCE_FILE "*test_compile_run_emitters_*.cpp"
                                   RANGE_FIRST 177
                                   RANGE_LAST 192)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.emitters.cpp"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "emitters_newly_exposed_2026_07_16"
+                                  SOURCE_FILE "*test_compile_run_emitters_*.cpp"
+                                  RANGE_FIRST 193
+                                  RANGE_LAST 622
+                                  CASES_PER_SHARD 10)
 
 list(APPEND PrimeStructManagedCompileRunSuites
   primestruct.compile.run.native_backend.core

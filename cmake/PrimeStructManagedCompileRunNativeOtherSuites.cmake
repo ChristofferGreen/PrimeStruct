@@ -109,5 +109,5 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.import
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.reflection_codegen"
                                   TIMEOUT 900
                                   SHARD_PREFIX "reflection_codegen"
-                                  TOTAL_CASES 21
+                                  TOTAL_CASES 23
                                   CASES_PER_SHARD 1)

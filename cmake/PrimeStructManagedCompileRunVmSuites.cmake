@@ -108,6 +108,14 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   RANGE_FIRST 81
                                   RANGE_LAST 83)
 
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "core_newly_exposed_2026_07_16"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
+                                  RANGE_FIRST 84
+                                  RANGE_LAST 123
+                                  CASES_PER_SHARD 10)
+
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.math"
                                   TIMEOUT 900
                                   SHARD_PREFIX "math_helpers_1_10"
@@ -117,17 +125,10 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.math"
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.math"
                                   TIMEOUT 900
-                                  SHARD_PREFIX "math_helpers_11_20"
+                                  SHARD_PREFIX "math_helpers_11_12"
                                   SOURCE_FILE "*test_compile_run_vm_math.cpp"
                                   RANGE_FIRST 11
-                                  RANGE_LAST 20
-                                  CASES_PER_SHARD 1)
-addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.math"
-                                  TIMEOUT 900
-                                  SHARD_PREFIX "math_helpers_21_30"
-                                  SOURCE_FILE "*test_compile_run_vm_math.cpp"
-                                  RANGE_FIRST 21
-                                  RANGE_LAST 30
+                                  RANGE_LAST 12
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 900
@@ -197,6 +198,13 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
                                   RANGE_FIRST 87
                                   RANGE_LAST 88)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "outputs_newly_exposed_2026_07_16"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
+                                  RANGE_FIRST 89
+                                  RANGE_LAST 121
+                                  CASES_PER_SHARD 10)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "alias_and_basics"
@@ -269,3 +277,10 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 332
                                   RANGE_LAST 352)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "collections_newly_exposed_2026_07_16"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
+                                  RANGE_FIRST 353
+                                  RANGE_LAST 682
+                                  CASES_PER_SHARD 10)

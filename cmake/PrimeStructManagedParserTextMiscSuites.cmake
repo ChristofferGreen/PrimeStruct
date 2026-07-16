@@ -9,7 +9,7 @@ list(APPEND PrimeStructManagedMiscSuites
 addPrimeStructManagedDoctestSuite("primestruct.dumps.ast_ir"
   TARGET PrimeStruct_misc_tests
   TIMEOUT 300
-  TOTAL_CASES 43
+  TOTAL_CASES 28
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.imports.errors"
@@ -21,7 +21,7 @@ addPrimeStructManagedDoctestSuite("primestruct.imports.errors"
 addPrimeStructManagedDoctestSuite("primestruct.imports.resolver"
   TARGET PrimeStruct_misc_tests
   TIMEOUT 300
-  TOTAL_CASES 38
+  TOTAL_CASES 39
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.lexer"
@@ -33,7 +33,7 @@ addPrimeStructManagedDoctestSuite("primestruct.lexer"
 addPrimeStructManagedDoctestSuite("primestruct.semantics.manual"
   TARGET PrimeStruct_misc_tests
   TIMEOUT 300
-  TOTAL_CASES 145
+  TOTAL_CASES 179
   CASES_PER_SHARD 10
 )
 
@@ -50,7 +50,7 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.basic"
   TARGET PrimeStruct_parser_tests
   TIMEOUT 300
   LABEL "parallel-safe"
-  TOTAL_CASES 307
+  TOTAL_CASES 130
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.identifiers"
@@ -71,7 +71,7 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.errors.literals"
   TARGET PrimeStruct_parser_tests
   TIMEOUT 300
   LABEL "parallel-safe"
-  TOTAL_CASES 44
+  TOTAL_CASES 43
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.named_args"
@@ -109,7 +109,7 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.rewrites"
   TARGET PrimeStruct_text_filter_tests
   TIMEOUT 300
   LABEL "parallel-safe"
-  TOTAL_CASES 44
+  TOTAL_CASES 46
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.implicit_utf8"

@@ -20,6 +20,14 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   TIMEOUT 900
+                                  SHARD_PREFIX "core_paths_newly_exposed_2026_07_16"
+                                  SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
+                                  RANGE_FIRST 63
+                                  RANGE_LAST 129
+                                  CASES_PER_SHARD 10)
+
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
+                                  TIMEOUT 900
                                   SHARD_PREFIX "collective_paths_core"
                                   SOURCE_FILE "*test_compile_run_smoke_collective.cpp"
                                   RANGE_FIRST 1
@@ -31,7 +39,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   SHARD_PREFIX "collective_paths_extended"
                                   SOURCE_FILE "*test_compile_run_smoke_collective.cpp"
                                   RANGE_FIRST 12
-                                  RANGE_LAST 22
+                                  RANGE_LAST 23
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"

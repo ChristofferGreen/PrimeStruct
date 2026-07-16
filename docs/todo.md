@@ -94,6 +94,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 - TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 - TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
+- TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
 
 ### Priority Lanes
 
@@ -320,6 +321,7 @@ This file is the live open-work queue for PrimeStruct.
 58. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 61. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 62. TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
+63. TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
 
 ### Task Blocks
 
@@ -2005,6 +2007,94 @@ This file is the live open-work queue for PrimeStruct.
     failures surface - budget for this being comparable in scope to the
     TODO-4714 through TODO-4723 body of work, given the 1690+ hidden-
     case scale found so far.
+  - progress_2026-07-16b: Fixed the 24 "safe" groups (glob pattern
+    correctly matches real files, only the count was stale) - 16
+    undercounts and 8 overcounts, across
+    `PrimeStructManagedCompileRunSmokeSuites.cmake`,
+    `...VmSuites.cmake`, `...EmittersNativeCoreSuites.cmake`,
+    `...ImportsTextExamplesSuites.cmake`, `...ParserTextMiscSuites.cmake`,
+    and `...UnitBackendSuites.cmake`. Left untouched, per the
+    `remaining_2026-07-16` list above: the 4 `real=0` groups needing
+    individual root-causing beyond the 2 already explained
+    (platform-gating, `PRIMESTRUCT_NATIVE_CORE_ENABLED`), and the
+    CMakeLists.txt hand-written shard block. Verified structurally
+    (`cmake .` reconfigure + `ctest -N` - all new/adjusted shards
+    register correctly, no CMake errors) then ran two full verification
+    gates: (1) the 233 tests in suites that already had shards
+    (`parser.basic`, `semantics.manual`, `ir.pipeline.validation`,
+    `vm.debug.session`, `dumps.ast_ir`, `imports.resolver`,
+    `text_filters.pipeline.rewrites`, `ir.pipeline.serialization`,
+    `ir.pipeline.conversions`) - 31 newly failed, **all 31 in
+    `primestruct.ir.pipeline.validation`** (the largest single drift,
+    863→1387), spanning 60+ distinct previously-hidden failing test
+    cases by name (SOA helper lowering, IR lowerer setup-type helpers,
+    struct type helpers, effects-unit helpers, and more - not a single
+    root cause). (2) the 121 brand-new "*_newly_exposed_2026_07_16"
+    shards added to extend existing suites' coverage - **73 of 121
+    failed** (many as CTest `Timeout`, not just `Failed`, mostly in
+    `vm.core`/`vm.collections`/`vm.outputs`/`emitters.cpp`/`smoke`,
+    which run the full compile+execute pipeline per case and are
+    inherently slower - some genuinely may need longer TIMEOUT budgets
+    rather than being real failures, not yet distinguished). One sampled
+    `emitters.cpp` failure ("C++ emitter rejects alias slash-method
+    vector count same-path helper on map receiver" -
+    `test_compile_run_emitters_local_vector_count_receiver_resolution.cpp`)
+    expects `"unknown call target: /std/collections/map/count"` -
+    **the same message and bug family already being tracked in
+    TODO-4723** (map receivers needing special-cased rejection
+    independent of same-path helper existence) - worth checking whether
+    fixing TODO-4723's remaining cases also fixes some of this cluster,
+    given compile_run tests exercise the same semantics validator code
+    path end-to-end. This is comparable in scale to the semantics find
+    (104+ failed shards combined, likely 300+ individual cases) - not
+    attempted to fix in this pass; tracked as TODO-4725. The cmake
+    config fixes themselves are correct and committed independently of
+    whatever real bugs they've now exposed (same "fix the measurement
+    first" discipline as the semantics TOTAL_CASES work).
+
+- [ ] TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
+  - owner: ai
+  - created_at: 2026-07-16
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: TODO-4720
+  - scope: TODO-4720's shard-config fix (see its `progress_2026-07-16b`)
+    exposed two large failure clusters CTest was never running before:
+    (1) 31 shards / 60+ distinct cases in
+    `primestruct.ir.pipeline.validation` (full names captured in
+    `/tmp/claude-.../scratchpad/corrected_shards_gate.log` -
+    session-scratch, re-run
+    `ctest -R primestruct_ir_pipeline_validation --output-on-failure`
+    after this session if needed); (2) 73 of 121 shards across
+    `primestruct.compile.run.{smoke,vm.core,vm.collections,vm.outputs,
+    emitters.cpp,examples}`'s newly-added coverage (full log at
+    `/tmp/claude-.../scratchpad/newly_exposed_gate.log`), many timing
+    out rather than cleanly failing.
+  - implementation_notes: Before triaging individual cases, first
+    determine whether the `Timeout` results in cluster (2) are genuine
+    hangs/bugs or just need a larger `TIMEOUT` (these are full
+    compile+execute-pipeline tests, inherently slower than semantics
+    unit tests - the existing shards in these suites already use
+    `TIMEOUT 900`, so a timeout at that budget is more likely a real
+    performance regression or infinite loop than an under-provisioned
+    budget, but confirm before assuming either way). Then triage into
+    root-cause clusters the same way TODO-4715 did for the semantics
+    find - do not fix cases one at a time without first grouping by
+    shared cause. Specifically check whether any of cluster (2)'s
+    failures share TODO-4723's "map receiver same-path-shadow" bug
+    family (one sample already confirmed does - see TODO-4720's
+    progress note) - if TODO-4723's remaining work fixes those, resolve
+    this TODO's overlapping subset for free rather than duplicating the
+    investigation.
+  - acceptance: All newly-exposed failures triaged into root-cause
+    clusters with their own follow-up TODOs (matching TODO-4714 through
+    TODO-4723's structure for the semantics find); genuinely-fixable
+    clusters fixed and verified via full-suite regression runs before
+    each commit, per this session's established discipline.
+  - stop_rule: This is a triage TODO, not a fix-everything TODO - once
+    the failures are clustered and each cluster has its own follow-up
+    TODO with a clear scope, this TODO is done. Do not attempt to fix
+    300+ cases inline here.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai

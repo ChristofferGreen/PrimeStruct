@@ -121,6 +121,29 @@ entry. 6 cases remain in the "rejects ... without helper"/rooted-helper-
 fallback group, plus the imported-helper-diagnostics and nested-call
 cases, all still open under TODO-4723.
 
+### Non-semantics CTest suites have the same TOTAL_CASES drift bug (2026-07-16)
+
+TODO-4720 audited the 59 suite/source-file shard groups across the 7
+non-semantics `cmake/PrimeStructManaged*.cmake` files (compile_run,
+parser, misc, unit-backend) the same way the semantics suites were
+audited, and found the identical bug class: 16 groups undercounted
+(1690+ combined hidden cases - `primestruct.ir.pipeline.validation`
+alone was missing 524), 8 overcounted, and 10 reporting zero real
+cases (mostly legitimate Apple-Silicon-only platform gating, but one
+- `PRIMESTRUCT_NATIVE_CORE_ENABLED` - is a dead feature flag never
+defined anywhere, needing a human decision before touching). Fixed the
+24 unambiguous count-drift groups and ran the corrected gate: **31
+shards / 60+ distinct cases newly failing in
+`primestruct.ir.pipeline.validation`**, and **73 of 121 newly-added
+shards failing** (many as CTest timeouts, not clean failures) across
+`compile.run.{smoke,vm.core,vm.collections,vm.outputs,emitters.cpp,
+examples}`. One sampled `emitters.cpp` failure matches the same "map
+receiver same-path-shadow" bug family already tracked in TODO-4723.
+Not triaged further in this pass - tracked as TODO-4725, matching the
+scale of the original semantics find. The cmake config fixes
+themselves are committed independently of these newly-exposed
+failures, same as the semantics TOTAL_CASES fix was.
+
 Prior text below, superseded by the above but kept for its still-valid
 methodology notes and historical fix writeups:
 

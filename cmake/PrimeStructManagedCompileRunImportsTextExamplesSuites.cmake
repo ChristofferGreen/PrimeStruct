@@ -10,7 +10,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
                                   SHARD_PREFIX "versioned_import_resolution"
                                   SOURCE_FILE "*test_compile_run_imports_versions.cpp"
-                                  TOTAL_CASES 22
+                                  TOTAL_CASES 14
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
@@ -22,7 +22,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
                                   SHARD_PREFIX "operations_and_collections"
                                   SOURCE_FILE "*test_compile_run_imports_operations.cpp"
-                                  TOTAL_CASES 81
+                                  TOTAL_CASES 201
                                   CASES_PER_SHARD 2)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
@@ -63,7 +63,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.bindings"
                                   TIMEOUT 900
                                   SHARD_PREFIX "bindings"
-                                  TOTAL_CASES 8
+                                  TOTAL_CASES 12
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
@@ -100,6 +100,13 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 72
                                   RANGE_LAST 94
+                                  CASES_PER_SHARD 1)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "examples_newly_exposed_2026_07_16"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
+                                  RANGE_FIRST 95
+                                  RANGE_LAST 124
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
