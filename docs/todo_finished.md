@@ -24825,3 +24825,40 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `ctest -R "calls_flow_collections_(181_190|191_200|201_210)"` — all
     3 pass (227s, 279s, 1709s respectively), comfortably under the new
     2400s timeout. Full findings log at `docs/TestRuntimeOptimization.md`.
+
+- [x] TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure
+  - owner: ai
+  - created_at: 2026-07-15
+  - finished_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-maybe
+  - depends_on: (none)
+  - scope: CTest shard `maybe_11_15`, newly reachable after fixing the
+    stale `TOTAL_CASES` sharding drift (`maybe` grew from the stale
+    configured 11 to the real 15 cases), failed:
+    `REQUIRE(snakeTarget != nullptr)` in test case "stdlib maybe helper
+    methods publish rooted semantic-product targets".
+  - evidence: Root-caused via targeted debug instrumentation (added and
+    reverted, never committed as production code) across
+    `SemanticsValidatorSnapshots.cpp` and `SemanticsValidatorSnapshotLocals.cpp`.
+    `Maybe<T>` is templated, so by the time
+    `runCompilePipeline`'s full native pipeline (used by this test via
+    `captureStdlibMaybeSemanticProduct`, unlike the simpler
+    `semantics.validate()` path most other snapshot tests use) reaches
+    semantic-product snapshotting, template monomorphization has already
+    rewritten `empty.is_empty()`/`value.isSome()` from method-call into
+    direct-call form (concrete `/Maybe/is_empty__t<hash>` definitions,
+    `isMethodCall` reset to `false`). This is genuine, not a bug: the
+    facts land correctly in `directCallTargets`, not `methodCallTargets`,
+    and `semanticProgramDirectCallTargetResolvedPath` already strips the
+    specialization suffix back to the clean canonical path
+    (`/Maybe/is_empty`, `/Maybe/isSome`) - confirmed by dumping every
+    direct-call-target entry for the compile. The test's helper
+    (`findMaybeMethodTarget`) was searching the wrong fact table for a
+    templated-type method call going through the full pipeline. Fixed by
+    replacing it with `findMaybeDirectCallTarget`, matching against
+    `semanticProgramDirectCallTargetView`/`semanticProgramDirectCallTargetResolvedPath`
+    instead, with an explanatory comment. All 15/15
+    `primestruct.semantics.maybe` cases pass; verified via
+    `ctest -R primestruct_semantics_maybe` (both shards green). Test-only
+    change, no production code touched, so no broader regression risk.

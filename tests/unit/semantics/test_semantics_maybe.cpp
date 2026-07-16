@@ -115,15 +115,17 @@ bool captureStdlibMaybeSemanticProduct(const std::string &source,
   return ok;
 }
 
-const primec::SemanticProgramMethodCallTarget *findMaybeMethodTarget(
+const primec::SemanticProgramDirectCallTarget *findMaybeDirectCallTarget(
     const primec::SemanticProgram &semanticProgram,
-    std::string_view methodName) {
-  const auto targets = primec::semanticProgramMethodCallTargetView(semanticProgram);
+    std::string_view resolvedPath) {
+  const auto targets = primec::semanticProgramDirectCallTargetView(semanticProgram);
   const auto it = std::find_if(
       targets.begin(),
       targets.end(),
-      [methodName](const primec::SemanticProgramMethodCallTarget *entry) {
-        return entry != nullptr && entry->scopePath == "/main" && entry->methodName == methodName;
+      [&](const primec::SemanticProgramDirectCallTarget *entry) {
+        return entry != nullptr && entry->scopePath == "/main" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
+                   resolvedPath;
       });
   return it == targets.end() ? nullptr : *it;
 }
@@ -428,14 +430,22 @@ main() {
   REQUIRE(captureStdlibMaybeSemanticProduct(source, output, error));
   CHECK(error.empty());
 
-  const auto *snakeTarget = findMaybeMethodTarget(output.semanticProgram, "is_empty");
+  // Maybe<T> is templated, so by the time the full native pipeline
+  // (runCompilePipeline) reaches semantic-product snapshotting, template
+  // monomorphization has already specialized and rewritten
+  // empty.is_empty()/value.isSome() from method-call into direct-call
+  // form (concrete /Maybe/is_empty__t<hash> definitions, isMethodCall
+  // reset to false) - so these facts land in directCallTargets, not
+  // methodCallTargets. semanticProgramDirectCallTargetResolvedPath
+  // already strips the specialization suffix back to the canonical path.
+  const auto *snakeTarget = findMaybeDirectCallTarget(output.semanticProgram, "/Maybe/is_empty");
   REQUIRE(snakeTarget != nullptr);
-  CHECK(primec::semanticProgramMethodCallTargetResolvedPath(
+  CHECK(primec::semanticProgramDirectCallTargetResolvedPath(
             output.semanticProgram, *snakeTarget) == "/Maybe/is_empty");
 
-  const auto *camelTarget = findMaybeMethodTarget(output.semanticProgram, "isSome");
+  const auto *camelTarget = findMaybeDirectCallTarget(output.semanticProgram, "/Maybe/isSome");
   REQUIRE(camelTarget != nullptr);
-  CHECK(primec::semanticProgramMethodCallTargetResolvedPath(
+  CHECK(primec::semanticProgramDirectCallTargetResolvedPath(
             output.semanticProgram, *camelTarget) == "/Maybe/isSome");
 }
 

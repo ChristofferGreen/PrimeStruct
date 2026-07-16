@@ -77,7 +77,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
-- TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure | track: hidden-test-failures-maybe | surface: test_semantics_maybe.cpp / stdlib maybe helper target publication
 
 ### Immediate Next 10
 
@@ -238,12 +237,15 @@ This file is the live open-work queue for PrimeStruct.
   (reflection-metadata parser failures). TODO-4717 re-investigates an
   `imports` case whose "always passes in isolation" documented finding
   just got contradicted by a genuine single-case CTest failure. TODO-4718
-  fixes a small, isolated `maybe.cpp` nullptr failure. TODO-4719 fixes the
-  pre-existing 10-case `type_resolution_graph` SoA-cluster (already
-  deeply investigated in an earlier session; blocked on a further
-  `/soa/push` stdlib-syntax question for at least one case). TODO-4720
-  audits the other (non-semantics) suite-definition files for the same
-  drift pattern, not yet checked.
+  (done) fixed a `maybe.cpp` nullptr failure that turned out to be a test
+  helper searching the wrong semantic-product fact table (method-call vs.
+  direct-call targets) for a templated type's monomorphized method calls
+  - not a compiler bug. TODO-4719 fixes the pre-existing 10-case
+  `type_resolution_graph` SoA-cluster (already deeply investigated in an
+  earlier session; blocked on a further `/soa/push` stdlib-syntax
+  question for at least one case). TODO-4720 audits the other
+  (non-semantics) suite-definition files for the same drift pattern, not
+  yet checked.
 
 ### Execution Queue
 
@@ -305,9 +307,8 @@ This file is the live open-work queue for PrimeStruct.
 56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
 57. TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
 58. TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
-59. TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure
-60. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
-61. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
+59. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
+60. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 
 ### Task Blocks
 
@@ -1746,49 +1747,6 @@ This file is the live open-work queue for PrimeStruct.
     `ctest -R imports_66_66` runs (with the earlier doc note corrected/
     removed if it was simply wrong), or the underlying bug causing the
     failure is identified and fixed.
-  - stop_rule: none.
-
-- [ ] TODO-4718: Fix maybe.cpp rooted semantic-product target nullptr failure
-  - owner: ai
-  - created_at: 2026-07-15
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-maybe
-  - scope: CTest shard `maybe_11_15`, newly reachable after the
-    TOTAL_CASES fix (`maybe` grew from the stale 11 to the real 15), fails.
-    `tests/unit/semantics/test_semantics_maybe.cpp:432`:
-    `REQUIRE(snakeTarget != nullptr)` fails in test case "stdlib maybe
-    helper methods publish rooted semantic-product targets" - a helper
-    lookup that's expected to find a rooted semantic-product target
-    instead returns `nullptr`.
-  - implementation_notes: Root-caused as far as: `findMaybeMethodTarget`
-    searches `semanticProgramMethodCallTargetView(output.semanticProgram)`
-    for an entry with `scopePath == "/main"` and
-    `methodName == "is_empty"`, but a temporary debug dump (added and
-    reverted 2026-07-15) showed **zero** method-call-target entries are
-    published at all for this compile - not a name/path mismatch, a total
-    absence. Traced into `SemanticsValidatorSnapshots.cpp`: with
-    `useMergedWorkerPublicationFacts=0` and `skipLocalAwareCallRefinement_=0`
-    confirmed via debug print, the `forEachLocalAwareSnapshotCall` walker
-    (`SemanticsValidatorSnapshotLocals.cpp:245`) does run and does visit
-    nested `Expr::Kind::Call` nodes (confirmed by reading `visitExpr`'s
-    recursion into `expr.args`/`expr.bodyArguments` - `empty.is_empty()`
-    nested inside `if(not(...))` should be reached). The visitor callback
-    in `SemanticsValidatorSnapshots.cpp` (~line 1723-1741) requires
-    `inferQuerySnapshotData(defParams, activeLocals, expr, queryData)` to
-    succeed with a non-empty `resolvedPath` before pushing an entry -
-    **not yet confirmed whether this specific call is why it's failing**;
-    the debug session ran out of budget before instrumenting
-    `inferQuerySnapshotData` directly. Given the program compiles
-    successfully (the main validator resolves `is_empty()` fine for actual
-    compilation/codegen), this smells like the same "resolution logic
-    duplicated between the real validator and the separate
-    snapshot-collection inference path" pattern already documented in
-    `docs/CompatPathResolutionConsolidation.md` - next step is to
-    instrument `inferQuerySnapshotData` (or its callers) directly for this
-    one call, rather than re-deriving the walker-reaches-it conclusion
-    already established here.
-  - acceptance: The case passes; full `primestruct.semantics.maybe` suite
-    (15/15) is green.
   - stop_rule: none.
 
 - [ ] TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
