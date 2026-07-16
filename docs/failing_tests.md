@@ -117,6 +117,19 @@ cross-test-case pollution at all.
   each in isolation (no parallel contention) and they pass cleanly every
   time. No code change made; consider serializing fixture-cache writes if
   this becomes a recurring CI nuisance.
+- **Superseded 2026-07-15 (see TODO-4717 in `docs/todo_finished.md`):** the
+  note below claimed `import resolves std collections experimental map
+  wildcard surface` "passes in isolation and under every CTest shard" —
+  that was true only because the stale `TOTAL_CASES` config (see the
+  "Superseded" note atop this file) meant this suite's real case count had
+  drifted past what CTest sharded, so the actual isolated single-case
+  shard covering this test had never really been run. Once the drift was
+  fixed and the real shard ran, it failed deterministically (3/3 repeated
+  isolated runs) with `unknown call target: mapPair` — stale test syntax
+  (`mapPair<i32,i32>` doesn't resolve for primitive keys; `map<i32,i32>`
+  is the current constructor), not flakiness or cross-test-case pollution.
+  Fixed; `ctest -R primestruct_semantics_imports` is 87/87 green. Original
+  note kept below for historical context only — its conclusion was wrong.
 - **Not CTest-visible, found only while verifying the fix for case 409
   above:** running the entire `primestruct.semantics.imports` doctest suite
   in one process (no `--first`/`--last` shard) deterministically fails

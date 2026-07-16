@@ -24862,3 +24862,41 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `primestruct.semantics.maybe` cases pass; verified via
     `ctest -R primestruct_semantics_maybe` (both shards green). Test-only
     change, no production code touched, so no broader regression risk.
+
+- [x] TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
+  - owner: ai
+  - created_at: 2026-07-15
+  - finished_at: 2026-07-15
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-imports
+  - depends_on: (none)
+  - scope: `docs/failing_tests.md`'s "Flaky, not a real failure" section
+    claimed "import resolves std collections experimental map wildcard
+    surface" always passes in isolation and under every CTest shard; after
+    the TOTAL_CASES fix shifted its case index to `imports_66_66`, it
+    failed there - a genuine single-case isolated shard, contradicting
+    that claim.
+  - evidence: Confirmed deterministic (3 repeated isolated
+    `ctest -R imports_66_66` runs all failed identically) - not flaky.
+    Actual error via temporary debug MESSAGE (added and reverted):
+    `unknown call target: mapPair`. Root cause: the test's source used
+    `mapPair<i32, i32>(1i32, 7i32, 2i32, 11i32)` to construct a
+    `Map<i32, i32>`, but `mapPair` has no stdlib definition for primitive
+    key types (confirmed via `grep -rn mapPair stdlib/` returning nothing,
+    and via `isRetiredPublicMapPairCall` in
+    `SemanticsValidatorExprCollectionCountCapacity.cpp` explicitly
+    rejecting the root/unqualified form) - `mapPair` only resolves for
+    custom struct key types needing explicit comparators (verified: a
+    sibling currently-passing test,
+    `test_semantics_calls_and_flow_collections_count_helpers_and_bare_map_calls.cpp`'s
+    "experimental map custom comparable struct keys keep canonical map
+    helper diagnostics", uses `mapPair<Key, i32>(...)` successfully under
+    the same `import /std/collections/map/*`). For primitive keys the
+    correct, consistently-used-elsewhere constructor is
+    `map<K, V>(...)`. Fixed by swapping `mapPair<i32, i32>` to
+    `map<i32, i32>` in `test_semantics_imports_gfx.h`. Verified: the
+    single case now passes, and the full sharded
+    `ctest -R primestruct_semantics_imports` run (87/87 shards) is green.
+    The old "flaky" doc note was stale (test-syntax drift, not
+    non-determinism) - `docs/failing_tests.md` should be updated to
+    remove/correct that note in a follow-up doc pass.

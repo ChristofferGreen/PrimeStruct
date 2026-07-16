@@ -91,7 +91,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 - TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
 - TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
-- TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
 - TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 - TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 
@@ -234,10 +233,13 @@ This file is the live open-work queue for PrimeStruct.
   root-cause partially traced already). TODO-4715 triages the ~100
   remaining, not-yet-diagnosed `calls_flow.collections` failures into
   fix-sized clusters. TODO-4716 fixes 4 newly-exposed `effects` shards
-  (reflection-metadata parser failures). TODO-4717 re-investigates an
-  `imports` case whose "always passes in isolation" documented finding
-  just got contradicted by a genuine single-case CTest failure. TODO-4718
-  (done) fixed a `maybe.cpp` nullptr failure that turned out to be a test
+  (reflection-metadata parser failures). TODO-4717 (done) re-investigated
+  an `imports` case whose "always passes in isolation" documented finding
+  just got contradicted by a genuine single-case CTest failure - it
+  turned out to be stale test syntax (`mapPair<i32,i32>` no longer
+  resolves for primitive keys; `map<i32,i32>` is the current constructor),
+  not flakiness. TODO-4718 (done) fixed a `maybe.cpp` nullptr failure that
+  turned out to be a test
   helper searching the wrong semantic-product fact table (method-call vs.
   direct-call targets) for a templated type's monomorphized method calls
   - not a compiler bug. TODO-4719 fixes the pre-existing 10-case
@@ -306,9 +308,8 @@ This file is the live open-work queue for PrimeStruct.
 55. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
 56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
 57. TODO-4716: Fix primestruct.semantics.effects reflection-metadata parser failures
-58. TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
-59. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
-60. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
+58. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
+59. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 
 ### Task Blocks
 
@@ -1723,31 +1724,6 @@ This file is the live open-work queue for PrimeStruct.
     run is green.
   - stop_rule: none yet - investigate and fix, or split into narrower
     leaves if the 4 shards turn out to have unrelated causes.
-
-- [ ] TODO-4717: Re-investigate imports experimental-map-wildcard isolation claim
-  - owner: ai
-  - created_at: 2026-07-15
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-imports
-  - scope: `docs/failing_tests.md`'s "Flaky, not a real failure" section
-    documents that "import resolves std collections experimental map
-    wildcard surface" deterministically fails when the whole
-    `primestruct.semantics.imports` suite runs as one process, but "passes
-    in isolation... and passes under every CTest shard, including the
-    narrow `--first=9 --last=9` shard CTest actually uses for it". After
-    the TOTAL_CASES fix (`imports` grew from the stale 52 to the real 87,
-    shifting file-order case indices), this exact test failed under CTest
-    shard `imports_66_66` on 2026-07-15 - a genuine single-case isolated
-    shard, directly contradicting the "always passes in isolation" claim.
-    Determine whether the earlier finding was already wrong/stale, whether
-    something regressed since it was written, or whether this is genuinely
-    non-deterministic (re-run the single shard several times back to back
-    to check for flakiness before assuming a fixed root cause).
-  - acceptance: Either the case passes reliably across repeated isolated
-    `ctest -R imports_66_66` runs (with the earlier doc note corrected/
-    removed if it was simply wrong), or the underlying bug causing the
-    failure is identified and fixed.
-  - stop_rule: none.
 
 - [ ] TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
   - owner: ai
