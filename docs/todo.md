@@ -93,6 +93,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 - TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 - TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
+- TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
 
 ### Priority Lanes
 
@@ -318,6 +319,7 @@ This file is the live open-work queue for PrimeStruct.
 57. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 58. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
 61. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
+62. TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
 
 ### Task Blocks
 
@@ -1964,18 +1966,59 @@ This file is the live open-work queue for PrimeStruct.
        WITHOUT ever reaching its own later "capacity requires vector
        target" logic at line ~2851 - meaning some earlier branch inside
        that 2800+-line function resolves and returns before that point.
-       Not yet localized further: `resolveMethodTarget` is too large to
-       safely hand-edit without a breakpoint trace pinpointing exactly
-       which of its many early-return branches fires for this call shape
-       (receiver is a `map`, `expr.name` is the full explicit
-       `/std/collections/vector/capacity` path, no helper defined
-       anywhere) - deliberately not attempted in this pass given this
-       session's established discipline against hasty edits to large,
-       under-traced functions. The other 10 cases in this group
-       (`array`/`string` receiver variants, `wrapper map`, and
-       `local same-path helper of the wrong receiver type` cases) look
-       likely to share one of these two root causes (or a close variant)
-       based on their test names, but have not been individually traced.
+       **Localized (2026-07-16)**: rather than hand-tracing 2800+ lines,
+       set a gdb breakpoint at every one of the function's 54
+       `resolvedOut = ` assignment sites in one script and ran once - the
+       actual assignment for this test fires at line 3758, the function's
+       *final* generic fallback (`resolvedOut = resolvedType + "/" +
+       normalizedMethodName`). The specific earlier check at line
+       ~2841-2853 that already has the correct "capacity requires vector
+       target" diagnostic is gated on `receiver.isMethodCall` - which
+       means "is the *receiver expression itself* a chained method call
+       (e.g. `foo().bar()`)", not "is this call a method call" as the
+       name misleadingly suggests - and is `false` for a simple local
+       variable receiver like `values`, so that block never fires for
+       this shape and falls through the other ~900 lines of the function
+       to the generic fallback at the very end. **Fixed**: added the
+       same "capacity requires vector target" guard in two places near
+       the function's tail (once before the `isPrimitiveBindingTypeName`
+       early-return, since primitive receivers like `string` return
+       before reaching the very end; once before the final generic
+       fallback, for non-primitive receivers like `map`/`array`),
+       scoped to `normalizedMethodName == "capacity" &&
+       normalizedCollectionTypePath != "/vector" &&
+       isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)` -
+       deliberately using `isCanonicalVectorCompatibilityPath` (the FULL
+       `/std/collections/vector/` prefix check) rather than the broader
+       `explicitVectorHelperPath.empty()` check, since the latter would
+       also match the *rooted* short-form spelling (`/vector/capacity`)
+       and incorrectly change the message for the already-passing
+       "vector namespaced capacity method rejects local string/array
+       receiver without helper" tests (which correctly expect "unknown
+       method: /string/capacity" / "unknown method: /array/capacity" for
+       that spelling, not "capacity requires vector target"). This fixed
+       5 of the 12 cases in this group ("stdlib namespaced vector
+       capacity method rejects array/map/string/wrapper map receiver
+       without helper" and "...rejects local map same-path helper"),
+       verified individually plus a spot-check of 7 neighboring
+       capacity-related tests (rooted form, vector receiver, duplicate-
+       definition rejection, TODO-4721/4722's already-fixed cases) all
+       still passing; full 131-shard regression run launched to confirm
+       system-wide before committing. The remaining 7 cases (the "count"
+       equivalents at lines 739-869 and 949-980, plus the two
+       "on builtin vector receiver rejects/requires rooted helper
+       fallback" cases where the receiver *is* a vector but the call
+       mixes rooted vs. namespaced spellings) were NOT touched - they use
+       different message conventions (e.g. "unknown call target:
+       /std/collections/map/count" for wrapper-map receivers,
+       "unknown method: /vector/count" for the rooted-vs-namespaced
+       mismatch) that need their own individual traces, not a blind
+       copy of the capacity fix's `if` condition.
+       **See also TODO-4724**: `resolveMethodTarget`'s sheer size (2800+
+       lines, 54 assignment sites, a misleadingly-named guard variable)
+       made this one fix take far longer to localize than it should have
+       - filed a follow-up to decompose the function so future bugs like
+       this are traceable by reading, not by scripting 54 breakpoints.
   - implementation_notes: Given three apparently-independent root causes
     span (at least) `SemanticsValidatorExpr.cpp`,
     `validateNumericBuiltinExpr`/`validateExprLateUnknownTargetFallbacks`,
@@ -1996,3 +2039,62 @@ This file is the live open-work queue for PrimeStruct.
     12-case "rejects ... without helper" group once individually traced,
     split it into its own follow-up TODO rather than force-fitting one
     fix across all 12.
+
+- [ ] TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
+  - owner: ai
+  - created_at: 2026-07-16
+  - phase: Maintainability / tech debt
+  - parallel_track: hidden-test-failures-collections
+  - depends_on: (none - can run independently of TODO-4723's remaining cases)
+  - scope: `SemanticsValidator::resolveMethodTarget`
+    (`SemanticsValidatorExprMethodTargetResolution.cpp:213-3760`, ~2800
+    lines in a single function body) resolves a method call's target
+    definition path based on the receiver's inferred type. While fixing
+    part of TODO-4723 (2026-07-16), localizing a single bug required
+    setting gdb breakpoints at all 54 of the function's `resolvedOut = `
+    assignment sites simultaneously and running once to find which one
+    fired - reading the function top-to-bottom was not a practical way
+    to find the relevant branch. The function also has at least one
+    misleadingly-named local (`receiver.isMethodCall` at ~line 2841
+    means "is the receiver expression itself a chained call", not "is
+    this call a method call"), which caused an initially-plausible-looking
+    condition to be ruled out only via gdb, not by reading. This is the
+    same class of problem `docs/CompatPathResolutionConsolidation.md`
+    already tracks for *spelling disposition* logic (compat-to-canonical
+    renaming, removed-helper rejection, same-path shadow precedence) -
+    but that document explicitly scopes *receiver-type resolution* (this
+    function's job) as staying where it is, out of scope for that
+    consolidation ("the classifier only decides spelling disposition,
+    not receiver typing"). `resolveMethodTarget`'s size/traceability
+    problem is therefore not covered by any existing plan.
+  - implementation_notes: Likely decomposition seams, based on reading
+    during TODO-4723 (not exhaustive - a fresh read-through dedicated to
+    this task should re-derive/refine): (1) sum-type method target
+    candidates (~740-800, the `candidates`/`appendCandidate` block); (2)
+    pointer/reference-returning-definition receiver resolution (~2400-
+    2470); (3) the vector-compatibility-family special cases (~2740-
+    2780, ~3726-3748); (4) the primitive/struct/sum-type generic
+    fallback (~3690-3759, where TODO-4723's capacity fix landed). Each
+    seam should become its own named private helper (or free function in
+    an anonymous namespace, matching the file's existing style for
+    smaller helpers like `explicitVectorMethodPath`) taking exactly the
+    inputs it needs, with the top-level `resolveMethodTarget` becoming a
+    much shorter dispatcher that calls each in sequence. Also worth
+    renaming `receiver.isMethodCall`'s local usage or adding a comment at
+    each check site, given how easy it was to misread during this
+    session's investigation - a short-term, near-zero-risk win
+    independent of the larger decomposition.
+  - acceptance: `resolveMethodTarget`'s own body (excluding extracted
+    helpers) is under a few hundred lines; each extracted helper has a
+    name that describes what receiver/method shape it handles; full
+    sharded `ctest -R primestruct_semantics` run is unchanged (pure
+    refactor, zero behavior change - any test delta means the extraction
+    was not behavior-preserving and must be fixed before proceeding).
+  - stop_rule: This is a pure internal refactor with no user-visible
+    behavior change as the explicit goal - if any extraction step
+    changes even one test's pass/fail outcome, stop, revert that step,
+    and re-derive the seam boundary rather than "fixing" the test to
+    match the refactored behavior. Do not combine this with fixing
+    TODO-4723's remaining cases in the same commit - land the
+    decomposition behavior-preserving first, then any subsequent
+    TODO-4723 fixes get to build on smaller, more legible functions.
