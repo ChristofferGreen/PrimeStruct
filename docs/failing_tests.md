@@ -90,6 +90,19 @@ remain failing suite-wide as of this update (92 minus these 4; the
 `type_resolution_graph`/`imports`/`effects`/`maybe` counts above are
 unaffected by this fix).
 
+TODO-4722 (see `docs/todo_finished.md`) fixed 4 more of those 19: the
+"access alias"/"access unsafe alias" same-path-override cases for
+`at`/`at_unsafe` ("stdlib namespaced vector access alias uses same-path
+helper auto inference" and its 3 siblings). Verified via a full
+131-shard `ctest -R calls_flow_collections_` run against the true
+original pre-TODO-4721 baseline: 5 cases fixed total (this batch plus
+TODO-4721's regression-test fix), zero new regressions. 84 cases remain
+failing suite-wide as of this update (88 minus these 4). The remaining
+15 cases in the same file split into three further distinct root causes
+(imported-helper diagnostics, a nested-call "unknown call target" bug,
+and a 12-case "rejects ... without helper"/rooted-helper-fallback
+group), tracked as TODO-4723.
+
 Prior text below, superseded by the above but kept for its still-valid
 methodology notes and historical fix writeups:
 

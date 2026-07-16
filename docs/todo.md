@@ -92,7 +92,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
 - TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 - TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
-- TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
+- TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 
 ### Priority Lanes
 
@@ -317,7 +317,7 @@ This file is the live open-work queue for PrimeStruct.
 56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
 57. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 58. TODO-4720: Audit non-semantics CTest suites for the same TOTAL_CASES/shard-range drift
-60. TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
+61. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 
 ### Task Blocks
 
@@ -1854,67 +1854,96 @@ This file is the live open-work queue for PrimeStruct.
     separate TODOs for any newly-exposed test failures rather than fixing
     them inline here.
 
-- [ ] TODO-4722: Fix remaining 19 wrapper_returned_map_method_resolution "access alias"/"rejects ... without helper" failures
+- [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
   - created_at: 2026-07-16
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
-  - depends_on: TODO-4721
-  - scope: TODO-4721 fixed 4 of the 23 failing cases in
+  - depends_on: TODO-4722
+  - scope: 15 cases remain in
     `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
-    (the count/capacity same-path-override arity-gate cases). The other 19
-    remain, confirmed via `ctest -R` sharded verification on
-    2026-07-16 as still failing after TODO-4721's fix landed:
-    "stdlib namespaced vector access alias method-call inference keeps
-    return mismatch diagnostics", "stdlib namespaced vector access alias
-    uses same-path helper auto inference", "stdlib namespaced vector
-    access slash method uses imported helper diagnostics", "stdlib
-    namespaced vector access slash method uses imported helper on vector
-    receiver", "stdlib namespaced vector access unsafe alias method-call
-    inference keeps return mismatch diagnostics", "stdlib namespaced
-    vector access unsafe alias uses same-path helper auto inference",
-    "stdlib namespaced vector access unsafe slash method uses imported
-    helper diagnostics", "stdlib namespaced vector capacity method on
-    builtin vector receiver rejects rooted helper fallback", "stdlib
-    namespaced vector capacity method rejects array receiver without
-    helper", "stdlib namespaced vector capacity method rejects local map
-    same-path helper", "stdlib namespaced vector capacity method rejects
-    map receiver without helper", "stdlib namespaced vector capacity
-    method rejects string receiver without helper", "stdlib namespaced
-    vector capacity method rejects wrapper map receiver without helper",
-    "stdlib namespaced vector count method on builtin vector receiver
-    rejects rooted helper fallback", "stdlib namespaced vector count
-    method rejects wrapper map receiver without helper", "stdlib
-    namespaced vector count method rejects wrapper map same-path helper",
-    "vector namespaced count method on builtin vector receiver requires
-    same-path helper", "vector namespaced count method rejects local
-    array same-path helper", "vector namespaced count method rejects
-    local string same-path helper".
-  - implementation_notes: Not yet root-caused. These test names split into
-    two apparent groups worth investigating separately: (1) "access
-    alias"/"access ... slash method uses imported helper" cases, which
-    look like they exercise the `/std/collections/vector/at` and
-    `/std/collections/vector/at_unsafe` compatibility paths rather than
-    `count`/`capacity` - likely need the same explicit-spelling-vs-sugar
-    same-path-override treatment TODO-4721 applied, but in whatever
-    validator function handles `at`/`at_unsafe` builtin fallback (see the
-    "(unmodified at/at_unsafe handling continues below)" comment marker
-    left in `SemanticsValidatorExprMethodResolution.cpp` at the point
-    TODO-4721's fix stopped editing); (2) "rejects ... receiver without
-    helper" cases, which read like negative tests (expecting a rejection
-    diagnostic) that may currently be failing for the opposite reason -
-    getting accepted when they shouldn't, or getting a different
-    diagnostic message than expected - requiring a fresh gdb trace (break
-    on `failExprDiagnostic`, per the technique that worked for TODO-4721)
-    rather than assuming they share TODO-4721's root cause.
-  - acceptance: All 19 listed cases pass. Full sharded
-    `ctest -R calls_flow_collections_` run shows no new failures vs. the
-    2026-07-16 baseline (post-TODO-4721) recorded in
-    `docs/failing_tests.md`.
-  - stop_rule: Investigate the "access alias" group and the "rejects ...
-    without helper" group as two separate root causes; do not assume a
-    single fix addresses both without evidence from a gdb trace of each
-    group individually. Apply the same full-sharded-regression
-    verification discipline as TODO-4721 (including a check for the
-    explicit-path-vs-short-form-sugar distinction) before considering any
-    fix here complete.
+    after TODO-4722's fix, splitting into (at least) three distinct
+    root causes:
+    1. **Imported-helper diagnostics** (2 cases: "stdlib namespaced
+       vector access slash method uses imported helper diagnostics",
+       "stdlib namespaced vector access unsafe slash method uses
+       imported helper diagnostics"). Source: `import
+       /std/collections/*` then `values./std/collections/vector/at(true)`
+       (bool arg where the real imported helper takes an int index).
+       Expected: rejected with "argument type mismatch for
+       /std/collections/vector/at parameter index ...". Actual (gdb
+       breakpoint on `failExprDiagnostic`, confirmed 2026-07-16): still
+       hits the blunt "at requires integer index" shortcut in
+       `SemanticsValidatorExpr.cpp` (~line 651), because the guard added
+       in TODO-4722 (`hasMatchingRealDefinitionArity`) only checks
+       arity, and the imported real definition DOES have matching arity
+       (2 params) even though the actual argument type is wrong - so the
+       guard incorrectly treats it as "shadow the check" instead of
+       "defer to a proper per-parameter type-mismatch diagnostic". Fix
+       needs to distinguish "an override exists with a genuinely
+       different, incompatible index parameter type" (skip the int-only
+       check, let the real definition's own argument validation produce
+       the diagnostic) from "no override, enforce the builtin int-only
+       rule" - the current TODO-4722 guard conflates these. Likely needs
+       to actually attempt validating against the real definition's
+       parameter type (not just its arity) and fail through that path's
+       diagnostic instead of just skipping the check silently.
+    2. **Nested "unknown call target: at"** (1 case: "stdlib namespaced
+       vector access slash method uses imported helper on vector
+       receiver" - expects success, currently fails). Source:
+       `plus(values./std/collections/vector/at(0i32),
+       values./std/collections/vector/at_unsafe(1i32))` - `at`/`at_unsafe`
+       calls nested as ARGUMENTS to a numeric builtin (`plus`). gdb
+       backtrace (2026-07-16) shows this reaches
+       `validateNumericBuiltinExpr` ->
+       `validateExprLateUnknownTargetFallbacks`, which fails with
+       "unknown call target: at" - i.e. when nested inside `plus(...)`,
+       these method calls aren't going through the normal method-call
+       dispatch path that recognizes `at`/`at_unsafe` receivers at all;
+       they fall through to a late fallback that only sees the bare
+       method name with no receiver context. Root cause not yet
+       localized beyond this backtrace - needs tracing why
+       `validateNumericBuiltinExpr`'s argument-expression validation
+       path skips the normal method-call resolution for its operands.
+    3. **"rejects ... without helper"/"rejects rooted helper fallback"
+       group** (12 cases, e.g. "stdlib namespaced vector count method on
+       builtin vector receiver rejects rooted helper fallback", "stdlib
+       namespaced vector capacity method rejects map receiver without
+       helper"). Completely uninvestigated. One sampled case (gdb,
+       2026-07-16): "stdlib namespaced vector count method on builtin
+       vector receiver rejects rooted helper fallback" - a *rooted*
+       (non-namespaced) `/vector/count([vector<i32>] values)` definition
+       exists, and the call explicitly names the *namespaced*
+       `/std/collections/vector/count()` path with only the receiver arg
+       (no extra args, so none of the arity-gate checks fire at all).
+       Expected: rejected with "unknown method:
+       /std/collections/vector/count" (no real definition at that exact
+       path). Actual: currently silently SUCCEEDS - something is letting
+       the call fall back to the unrelated rooted `/vector/count` alias
+       even though the call spelled out the different, non-existent
+       namespaced path explicitly. This looks like a *different* flavor
+       of the same "same-path vs. name-pattern-only matching" bug class
+       as TODO-4721/4722, but inverted (over-permissive fallback instead
+       of over-strict rejection) and likely in yet another code path.
+       The other 11 cases in this group have not been individually
+       traced yet.
+  - implementation_notes: Given three apparently-independent root causes
+    span (at least) `SemanticsValidatorExpr.cpp`,
+    `validateNumericBuiltinExpr`/`validateExprLateUnknownTargetFallbacks`,
+    and whatever resolves the rooted-vs-namespaced vector alias fallback,
+    investigate and fix each independently with its own gdb trace and
+    its own full-sharded-regression verification pass, rather than
+    assuming a shared fix. Use the corrected CTest log-slicing technique
+    from `docs/failing_tests.md`'s "Methodology note (2026-07-16)" (or
+    better, the attribution-independent global sorted-unique-name diff)
+    for all regression verification - do not hand-slice per-shard
+    `--output-on-failure` output.
+  - acceptance: All 15 listed cases pass. Full sharded
+    `ctest -R calls_flow_collections_` run (global name-set diff against
+    the 2026-07-16 post-TODO-4722 baseline in `docs/failing_tests.md`)
+    shows no new failures.
+  - stop_rule: Fix and verify each of the three root-cause groups
+    independently; if a fourth distinct pattern emerges within the
+    12-case "rejects ... without helper" group once individually traced,
+    split it into its own follow-up TODO rather than force-fitting one
+    fix across all 12.

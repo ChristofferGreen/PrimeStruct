@@ -25006,3 +25006,56 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     different root cause. Split out into TODO-4722 rather than keeping
     this TODO open indefinitely; closing this one for the specific,
     verified same-path shadow-precedence fix it actually delivered.
+
+- [x] TODO-4722: Fix "access alias"/"access unsafe alias" same-path override rejection for at/at_unsafe
+  - owner: ai
+  - created_at: 2026-07-16
+  - finished_at: 2026-07-16
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-collections
+  - depends_on: TODO-4721
+  - scope: Of the 19 cases TODO-4721 left unfixed in
+    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`,
+    fixed the 4 "access alias"/"access unsafe alias" same-path-override
+    cases: "stdlib namespaced vector access alias uses same-path helper
+    auto inference", "stdlib namespaced vector access alias method-call
+    inference keeps return mismatch diagnostics", and the `unsafe`
+    variants of both.
+  - evidence: gdb-confirmed (breaking on `failExprDiagnostic`) these
+    cases fail at a THIRD call site TODO-4721 didn't touch:
+    `SemanticsValidatorExpr.cpp`'s inline `at`/`at_unsafe` "requires
+    integer index" check (~line 651-661, reached directly via
+    `validateExpr`, not through
+    `validateExprMethodCallTarget`/`validateExprCountCapacityBuiltins`).
+    It unconditionally required an int/int64/uint64 index argument type
+    with no same-path-override consideration at all - so a user
+    definition like `/std/collections/vector/at([vector<i32>] values,
+    [bool] index)` (same path as the builtin `at`, but a `bool` index
+    parameter) was rejected even when called via the explicit canonical
+    path. Applied the same explicit-spelling + matching-arity guard
+    pattern as TODO-4721 (`expr.name == canonicalVectorHelperPath` plus
+    a `paramsByDef_` arity match) to skip the integer-only check under
+    those conditions. Also applied the same guard to the dormant
+    `at`/`at_unsafe` 2-arg block in
+    `SemanticsValidatorExprMethodResolution.cpp` for defense in depth.
+    Verified via a full 131-shard `ctest -R calls_flow_collections_`
+    regression run compared against the TRUE original (pre-TODO-4721)
+    full-131-shard baseline: exactly 5 cases fixed total (TODO-4721's
+    regression-test fix plus these 4), zero new regressions - confirmed
+    with the attribution-independent global sorted-unique-test-case-name
+    diff methodology (not per-shard log slicing).
+  - methodology detour: mid-investigation, a re-check of this fix
+    appeared to show wild non-determinism in shard
+    `calls_flow_collections_881_890` depending on parallel vs. serial
+    ctest execution - alarming enough to be treated as a potential
+    critical cross-test-case-pollution bug. Deep investigation (a
+    controlled minimal 3-shard repro, plus cross-checking CTest's actual
+    argv via `/proc/<pid>/cmdline` against a manual standalone
+    invocation) traced this to a bug in ad-hoc `awk`/`grep` log-slicing
+    tooling written during the investigation (two different wrong ways
+    to pair a test's CTest trailer line with its detailed doctest
+    output), not a real bug in the compiler or test infrastructure. Full
+    writeup in `docs/failing_tests.md`'s "Methodology note (2026-07-16)".
+  - re-scope note: the original TODO-4722 scope (all 19 cases) is not
+    fully delivered - the remaining 15 cases split into (at least) three
+    further distinct root causes, tracked as TODO-4723.

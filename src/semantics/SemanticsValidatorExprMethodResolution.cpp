@@ -151,7 +151,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         return failMethodResolutionDiagnostic("argument count mismatch for builtin capacity");
       }
       if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
-          expr.args.size() == 2) {
+          expr.args.size() == 2 &&
+          !hasMatchingRealDefinitionArity) {
         const ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
         if (indexKind != ReturnKind::Int &&
             indexKind != ReturnKind::Int64 &&

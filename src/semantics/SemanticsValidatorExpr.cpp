@@ -650,13 +650,29 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         if ((helperName == "at" || helperName == "at_unsafe") &&
             expr.args.size() == 2) {
-          const ReturnKind indexKind =
-              inferExprReturnKind(expr.args[1], params, locals);
-          if (indexKind != ReturnKind::Int &&
-              indexKind != ReturnKind::Int64 &&
-              indexKind != ReturnKind::UInt64) {
-            return failExprRootDiagnostic(helperName +
-                                          " requires integer index");
+          // A same-path user definition with a different index parameter
+          // type (e.g. [bool] index instead of an integer) shadows this
+          // integer-only check, but only when the call spells out the
+          // explicit canonical path - same explicit-spelling-vs-sugar
+          // distinction as the count/capacity same-path override in
+          // SemanticsValidatorExprMethodResolution.cpp (see TODO-4721).
+          const std::string canonicalVectorHelperPath =
+              canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+          const auto canonicalHelperParamsIt =
+              paramsByDef_.find(canonicalVectorHelperPath);
+          const bool hasMatchingRealDefinitionArity =
+              expr.name == canonicalVectorHelperPath &&
+              canonicalHelperParamsIt != paramsByDef_.end() &&
+              canonicalHelperParamsIt->second.size() == expr.args.size();
+          if (!hasMatchingRealDefinitionArity) {
+            const ReturnKind indexKind =
+                inferExprReturnKind(expr.args[1], params, locals);
+            if (indexKind != ReturnKind::Int &&
+                indexKind != ReturnKind::Int64 &&
+                indexKind != ReturnKind::UInt64) {
+              return failExprRootDiagnostic(helperName +
+                                            " requires integer index");
+            }
           }
         }
       }
