@@ -623,6 +623,19 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "ref" || name == "ref_ref";
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {
+    // Only a genuinely `/std/...`-namespaced spelling should fall through to
+    // this bare-tail-name match against the generic operator/control-flow
+    // name list below - a removed-alias root like `/array/count` or a rooted
+    // (non-canonical) compatibility alias like `/vector/push` must never be
+    // accepted here just because its last path segment happens to collide
+    // with one of these generic names.
+    std::string withoutLeadingSlash = candidate;
+    if (!withoutLeadingSlash.empty() && withoutLeadingSlash.front() == '/') {
+      withoutLeadingSlash.erase(withoutLeadingSlash.begin());
+    }
+    if (withoutLeadingSlash.rfind("std/", 0) != 0) {
+      return false;
+    }
     std::string alias = candidate;
     const size_t slash = alias.find_last_of('/');
     if (slash != std::string::npos) {

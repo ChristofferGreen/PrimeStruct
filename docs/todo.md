@@ -95,6 +95,9 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 - TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
 - TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
+- TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
+- TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
+- TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 
 ### Priority Lanes
 
@@ -322,6 +325,9 @@ This file is the live open-work queue for PrimeStruct.
 61. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 62. TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
 63. TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
+64. TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
+65. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
+66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 
 ### Task Blocks
 
@@ -2095,6 +2101,176 @@ This file is the live open-work queue for PrimeStruct.
     the failures are clustered and each cluster has its own follow-up
     TODO with a clear scope, this TODO is done. Do not attempt to fix
     300+ cases inline here.
+  - progress_2026-07-16: Triaged cluster (1)
+    (`primestruct.ir.pipeline.validation`, 30 failing cases, all in
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    - confirmed via a full standalone run of that file, log at
+    `/tmp/claude-.../scratchpad/ir_val_full.log`) into 4 sub-clusters by
+    root cause, matching TODO-4714..4723's granularity:
+    (a) 7 cases of namespaced/rooted builtin-helper-matching bugs in
+    small, pure-unit-test helper functions (`emitter::isSimpleCallName`,
+    `semantics::isExplicitRemovedCollectionCallAlias`/
+    `isExplicitRemovedCollectionMethodAlias`,
+    `ir_lowerer::getBuiltinArrayAccessName`,
+    `emitter::getBuiltinConvertName`, `emitter::isBuiltinNegate`,
+    `emitter::getBuiltinComparison`/`getBuiltinMutationName`) - 3 of
+    these 7 cases fixed inline this session (see below), remaining 4
+    (spanning 5 functions) filed as TODO-4726; (b) 18 cases of soa
+    canonical-path (`get`/`ref`/`reserve`/`to_aos`) method routing
+    through the full compile pipeline (`parseAndValidate` REQUIRE
+    failures and diagnostic-text mismatches) - filed as TODO-4727,
+    which also covers at least one confirmed overlapping failure in
+    cluster (2) (`primestruct.compile.run.vm.collections`'s
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`
+    "rejects vm user vector pop call expression shadow" - now fails
+    semantics with "unknown call target: /std/collections/vector/pop"
+    instead of reaching its expected VM-lowering-stage rejection,
+    because bare `pop(values)` call sugar without an import no longer
+    finds a rooted user `/vector/pop` definition - the same
+    same-path-shadow architecture gap as TODO-4723, just extended to
+    pop/reserve/clear/remove_at/remove_swap instead of only
+    count/capacity/at/at_unsafe); (c) 5 cases about
+    `ir_lowerer::validateNativeProgramEffects`/`resolveEntryMetadataMasks`
+    test fixtures producing "missing semantic-product callable summary:
+    /main" instead of their expected behavior - looks like an unrelated
+    API-shape drift in these fixtures, filed as TODO-4728.
+  - progress_2026-07-16b: Fixed 3 of cluster (1)(a)'s 7 cases inline,
+    verified regression-clean, and committed:
+    1. `emitter::isSimpleCallName`'s `matchScopedBuiltinTail` lambda
+       (`EmitterBuiltinCallPathHelpers.cpp` ~line 625) blindly tail-matched
+       ANY path's last segment against a list of generic builtin names
+       that includes collection-family names like `count`/`push`/
+       `capacity` - so a removed alias like `/array/count` incorrectly
+       matched "count". Fixed by requiring the path (minus leading `/`)
+       start with `std/` before this fallback applies - every currently-
+       passing use of this fallback already uses a `/std/...`-namespaced
+       spelling (verified by reading every call site in the test file).
+       Verified via a full standalone rerun of the test file (65->66
+       passed, 30->29 failed, no other case changed) plus the full
+       `primestruct.compile.run.emitters.cpp` 622-case compile+run
+       regression (see below).
+    2. `semantics::isExplicitRemovedCollectionCallAlias` and
+       `isExplicitRemovedCollectionMethodAlias`
+       (`SemanticsBuiltinPathHelpers.cpp` ~line 589-665) only recognized
+       the dead legacy `/soa_vector/...` alias root, never the PUBLIC
+       canonical `/soa/...` (bare) or `/std/collections/soa/...` (full)
+       roots - so `*_ref` helpers retired in method/call-alias position
+       (`count_ref`/`get_ref`/`ref_ref`/`to_aos_ref`) went unrecognized
+       when spelled via the public soa root instead of the legacy one.
+       Fixed by adding the same prefix-strip-and-check pattern for
+       `soa_paths::publicSoaFolder()` (bare and
+       `/std/collections/soa`-rooted) alongside the existing legacy-folder
+       checks. Verified via the single test case plus a full
+       `primestruct.semantics.calls_flow.collections` regression (see
+       below).
+    Both fixes committed together; full-suite regression logs and pass/
+    fail counts recorded in `docs/failing_tests.md`'s 2026-07-16 section.
+
+- [ ] TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
+  - owner: ai
+  - created_at: 2026-07-16
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: TODO-4725
+  - scope: 4 remaining failing cases in
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    ("ir lowerer access helper rejects removed rooted vector access
+    aliases", "ir lowerer access helper classifies namespaced access
+    helpers", "ir lowerer helper keeps namespaced convert builtin
+    tails", "emitter helper keeps parser-shaped rooted negate builtin",
+    "shared helper bodies keep scoped stdlib builtins normalized"),
+    spanning 5 distinct functions that each fail to recognize some
+    namespaced/rooted spelling they're now expected to accept:
+    `ir_lowerer::getBuiltinArrayAccessName` (needs to distinguish `get`/
+    `get_ref` soa access verbs from `at`/`at_unsafe`, and currently has
+    an early-return bailout at `IrLowererBuiltinNameHelpers.cpp:553-556`
+    that returns false whenever the input exactly equals the registered
+    canonical stdlib helper path - `unrootedStdlibVectorHelperPath`),
+    `emitter::getBuiltinConvertName` (fails for namespacePrefix
+    `/std/gfx/GfxError`), `emitter::isBuiltinNegate` (fails for bare `/`
+    namespacePrefix), `emitter::getBuiltinComparison`/
+    `getBuiltinMutationName` (fail for `/std/collections/soa_storage`
+    and `/std/collections/experimental_soa_conversions`-style
+    namespaces).
+  - implementation_notes: unlike the two sibling bugs already fixed
+    under TODO-4725 (which were both "too permissive"), these five are
+    all "doesn't recognize a namespace it should" - each function is
+    independent, so trace each with the gdb breakpoint-sweep technique
+    established this session rather than assuming a shared root cause.
+  - acceptance: all 4 named cases (7 CHECK failures) pass; full
+    `primestruct.ir.pipeline.validation` and
+    `primestruct.compile.run.emitters.cpp` regressions stay clean.
+  - stop_rule: scoped to these 5 functions only - do not expand into
+    TODO-4727's soa-routing-pipeline cluster from here.
+
+- [ ] TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
+  - owner: ai
+  - created_at: 2026-07-16
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: TODO-4725, TODO-4723
+  - scope: 18 cases in
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    (from "bare soa count helper lowers through wrapper return routing
+    compatibility" through "borrowed helper-return experimental wrapper
+    bare conversion alias lowers through generic wildcard import") -
+    `parseAndValidate` REQUIRE failures and diagnostic-text mismatches
+    around bare/rooted/namespaced soa `get`/`ref`/`reserve`/`to_aos`
+    method routing, wrapper-return compatibility, and imported vs. bare
+    call forms. Confirmed overlapping with at least one
+    `primestruct.compile.run.vm.collections` "newly exposed" shard
+    failure from TODO-4725's cluster (2):
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`'s
+    "rejects vm user vector pop call expression shadow" now fails
+    semantics with "unknown call target: /std/collections/vector/pop"
+    (instead of reaching its expected later VM-lowering-stage
+    rejection) because bare `pop(values)` call sugar without an import
+    no longer finds a rooted user `/vector/pop` definition - the same
+    same-path-shadow architecture gap TODO-4723 is already tracking,
+    just extended to pop/reserve/clear/remove_at/remove_swap instead of
+    only count/capacity/at/at_unsafe.
+  - implementation_notes: this is a large, cohesive feature-completion
+    cluster, not independent point bugs - triage with TODO-4715's
+    clustering approach before touching code. Check whether TODO-4723's
+    still-open "definition-level namespace-hygiene check" work resolves
+    much of this cluster for free before designing anything new here.
+  - acceptance: the 18 named cases pass; the confirmed overlapping
+    vm.collections shard (and any others found sharing the same cause)
+    verified fixed too.
+  - stop_rule: if triage finds more than 2-3 distinct root causes
+    inside this scope, split further into separately-scoped TODOs
+    rather than one giant fix.
+
+- [ ] TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
+  - owner: ai
+  - created_at: 2026-07-16
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: TODO-4725
+  - scope: 5 cases in
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    ("ir lowerer rejects non-eliminated reflection query paths", "ir
+    lowerer effects unit prefers semantic product callable summaries",
+    "ir lowerer effects unit skips semantic callable summaries for sum
+    types", "ir lowerer effects unit keeps nested expression effect
+    checks syntax owned", "ir lowerer effects unit resolves entry
+    metadata masks from semantic product"). All fail with "missing
+    semantic-product {callable summary,direct-call semantic id}: /main"
+    instead of their expected behavior/diagnostic - looks like the test
+    fixtures build a `semanticProgram`/`SemanticProduct` object that no
+    longer satisfies whatever now populates callable summaries for
+    `/main`, an API-shape drift unrelated to the collections/soa work
+    covering the rest of this file (different subsystem: effects
+    validation and reflection-query elimination).
+  - implementation_notes: determine which side is stale before fixing -
+    it's equally plausible the test fixtures need updating for a real,
+    correct production change as that production code regressed.
+  - acceptance: all 5 cases pass without weakening the effects/
+    reflection-query-elimination validation they exist to test.
+  - stop_rule: if the root cause is a legitimate production API change,
+    fix the test fixtures, not production code - do not force behavior
+    to match possibly-stale fixtures without first confirming which
+    side is wrong.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai

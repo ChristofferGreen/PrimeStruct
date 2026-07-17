@@ -594,16 +594,27 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
   std::string_view helperName;
   const bool isSoaVectorReceiver =
       receiverPath == "/" + soa_paths::legacySoaFolder() ||
-      receiverPath == compatibilitySoaHelperTargetPath("");
+      receiverPath == compatibilitySoaHelperTargetPath("") ||
+      receiverPath == "/" + soa_paths::publicSoaFolder() ||
+      receiverPath == publicSoaHelperTargetPath("");
   if (isSoaVectorReceiver) {
     const std::string aliasPrefix = soa_paths::legacySoaFolder() + "/";
     const std::string stdPrefix =
         collectionPathPrefixLocal(soa_paths::legacySoaFolder());
+    const std::string publicAliasPrefix = soa_paths::publicSoaFolder() + "/";
+    const std::string publicStdPrefix =
+        collectionPathPrefixLocal(soa_paths::publicSoaFolder());
     if (rawMethodName.rfind(aliasPrefix, 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(aliasPrefix.size());
     } else if (rawMethodName.rfind(stdPrefix, 0) == 0) {
       helperName =
           std::string_view(rawMethodName).substr(stdPrefix.size());
+    } else if (rawMethodName.rfind(publicAliasPrefix, 0) == 0) {
+      helperName =
+          std::string_view(rawMethodName).substr(publicAliasPrefix.size());
+    } else if (rawMethodName.rfind(publicStdPrefix, 0) == 0) {
+      helperName =
+          std::string_view(rawMethodName).substr(publicStdPrefix.size());
     }
     return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
   }
@@ -641,6 +652,17 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
   const std::string legacySoaPrefix = soa_paths::legacySoaFolder() + "/";
   if (rawPath.rfind(legacySoaPrefix, 0) == 0) {
     helperName = std::string_view(rawPath).substr(legacySoaPrefix.size());
+    return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
+  }
+  const std::string publicSoaPrefix = soa_paths::publicSoaFolder() + "/";
+  if (rawPath.rfind(publicSoaPrefix, 0) == 0) {
+    helperName = std::string_view(rawPath).substr(publicSoaPrefix.size());
+    return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
+  }
+  const std::string publicSoaStdPrefix =
+      collectionPathPrefixLocal(soa_paths::publicSoaFolder());
+  if (rawPath.rfind(publicSoaStdPrefix, 0) == 0) {
+    helperName = std::string_view(rawPath).substr(publicSoaStdPrefix.size());
     return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
   }
   if (rawPath.rfind("array/", 0) == 0) {

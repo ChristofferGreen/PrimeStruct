@@ -150,6 +150,71 @@ scale of the original semantics find. The cmake config fixes
 themselves are committed independently of these newly-exposed
 failures, same as the semantics TOTAL_CASES fix was.
 
+### TODO-4725 triage: ir.pipeline.validation cluster split into 4 sub-causes (2026-07-16)
+
+Ran the full `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+file standalone (95 cases, 30 failing) to get the complete, reliable
+failure list (avoids the log-slicing pitfall above entirely - single
+process, no `--parallel` interleaving). Clustered the 30 into 4
+root-cause groups:
+
+- (a) 7 cases of namespaced/rooted builtin-helper-matching bugs in small
+  pure-unit-test helper functions. **3 fixed and verified this session**:
+  1. `emitter::isSimpleCallName`'s `matchScopedBuiltinTail` lambda
+     (`EmitterBuiltinCallPathHelpers.cpp`) blindly tail-matched any
+     path's last segment against a generic-builtin-name list that
+     includes collection names (`count`/`push`/`capacity`/etc), so
+     `/array/count` (a removed alias) incorrectly matched "count".
+     Fixed by requiring the path start with `std/` before this fallback
+     applies.
+  2. `semantics::isExplicitRemovedCollectionCallAlias` and
+     `isExplicitRemovedCollectionMethodAlias`
+     (`SemanticsBuiltinPathHelpers.cpp`) only recognized the dead legacy
+     `/soa_vector/...` alias root, never the public canonical `/soa/...`
+     or `/std/collections/soa/...` roots, so retired `*_ref` helpers
+     went unrejected when spelled via the public root. Fixed by adding
+     the same prefix check for `soa_paths::publicSoaFolder()`.
+  Remaining 4 cases (5 functions: `getBuiltinArrayAccessName`,
+  `getBuiltinConvertName`, `isBuiltinNegate`, `getBuiltinComparison`/
+  `getBuiltinMutationName`) filed as TODO-4726 - each is an independent
+  "doesn't recognize a namespace it should" gap, not a shared cause.
+- (b) 18 cases of soa canonical-path (`get`/`ref`/`reserve`/`to_aos`)
+  method routing through the full compile pipeline - a large, cohesive
+  feature-completion cluster, filed as TODO-4727. Confirmed this
+  overlaps with TODO-4723's still-open same-path-shadow architecture
+  gap: `primestruct.compile.run.vm.collections`'s
+  `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`
+  ("rejects vm user vector pop call expression shadow") now fails
+  semantics with "unknown call target: /std/collections/vector/pop"
+  instead of its expected VM-lowering-stage rejection, because bare
+  `pop(values)` sugar without an import no longer finds a rooted user
+  `/vector/pop` definition - same bug family as TODO-4723, extended to
+  pop/reserve/clear/remove_at/remove_swap.
+- (c) 5 cases about `ir_lowerer` effects-unit test fixtures failing with
+  "missing semantic-product callable summary: /main" - looks like an
+  unrelated API-shape drift in the test fixtures, filed as TODO-4728.
+
+Verification for the 3 fixed cases: standalone file rerun went from
+65/95 passed to 66/95 (later 67/95 after both fixes landed); full
+`primestruct.compile.run.emitters.cpp` (622 cases) and
+`primestruct.semantics.calls_flow.collections` regressions run clean
+before commit (see commit for exact pass counts).
+
+Cluster (2) (the 73 `compile.run.*` newly-exposed shard failures) was
+only spot-checked (2 sample files: `test_compile_run_emitters_map_metadata_resolution.cpp`,
+`test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`), not
+fully triaged - the `map_metadata_resolution.cpp` sample is a real bug
+(`emitter::resolveMethodCallPath` prefers a compat alias path like
+`/map/count` over the canonical `/std/collections/map/count` when both
+have definitions, exactly backwards from the test's stated intent
+"prefers canonical map method sugar over compatibility aliases" -
+doctest's `CHECK(resolved == expectedPath)` prints `expectedPath`
+misleadingly as a raw hex pointer value in the failure output, which
+is just a doctest/const-char* stringification quirk and not itself a
+bug - the real signal is `resolved`'s value). This resolveMethodCallPath
+bug is not yet filed as its own TODO - full cluster (2) triage remains
+open work under TODO-4725.
+
 Prior text below, superseded by the above but kept for its still-valid
 methodology notes and historical fix writeups:
 
