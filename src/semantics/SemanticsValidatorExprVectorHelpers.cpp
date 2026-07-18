@@ -535,6 +535,20 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {
       return true;
     }
+    // Public soa<T> receivers have no dedicated branch above, so without
+    // this guard they fell into the generic struct-method fallback below,
+    // fabricating a "/soa/<helper>" path with no definition behind it - the
+    // IR lowerer then misread bare count(soaValues) as a struct slot-count.
+    // preferredSoaHelperTargetForCurrentImports keeps a genuine user
+    // same-path /soa/<helper> shadow first and canonicalizes to the public
+    // /std/collections/soa/<helper> surface otherwise.
+    if ((resolvedType == "/soa" || normalizedTypeName == "soa" ||
+         normalizedTypeName.rfind("soa<", 0) == 0) &&
+        isSoaReadRefHelperName(normalizedHelperName)) {
+      resolvedOut =
+          preferredSoaHelperTargetForCurrentImports(normalizedHelperName);
+      return true;
+    }
     if (sumNames_.count(resolvedType) > 0) {
       return false;
     }
@@ -574,6 +588,15 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         }
       }
       if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {
+        return true;
+      }
+      // Same public-soa gap as the Name-receiver branch above: a call
+      // returning soa<T> otherwise falls into the generic fallback and
+      // fabricates a definition-less "/soa/<helper>" path.
+      if (resolvedType == "/soa" &&
+          isSoaReadRefHelperName(normalizedHelperName)) {
+        resolvedOut =
+            preferredSoaHelperTargetForCurrentImports(normalizedHelperName);
         return true;
       }
       resolvedOut = resolvedType + "/" + normalizedHelperName;

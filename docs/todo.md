@@ -2079,6 +2079,64 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: if triage finds more than 2-3 distinct root causes
     inside this scope, split further into separately-scoped TODOs
     rather than one giant fix.
+  - progress_2026-07-18: Completed the triage of this cluster by
+    hand-compiling the failing sources through `primec` directly.
+    Findings, in increasing depth:
+    1. **The 18 test cases use retired spellings.** They import
+       `/std/collections/internal_soa/*` (a module that no longer
+       exists after the TODO-4633 merge into `soa`), declare receivers
+       as `SoaVector<Particle>` (user-facing use of the internal
+       backing type now resolves method calls to the dead legacy
+       `/std/collections/soa_vector/*` family - "unknown method"), and
+       call internal `soaVector*` helpers directly (fails with
+       `meta.field_count requires struct type argument: type:Particle`
+       - the reflection query on the template argument only resolves
+       when instantiated through the public surface, an asymmetry
+       that's part of the internal surface's retirement, since the
+       stdlib's own `soa<T>()` wrapper calling the same
+       `soaVectorNew<T>()` works fine). The MODERN public surface
+       (`soa<T>` type, `soa<T>()`/`single`/`from_aos` constructors,
+       method-call and explicit `/std/collections/soa/count<T>(...)`
+       forms) validates, lowers, and runs correctly - verified by
+       hand-compiling modernized versions of the failing sources.
+       Modernizing the 18 tests is the likely resolution, BUT see (2):
+       doing so before the bare-call dispatch bug below was fixed
+       would have turned silently-wrong runtime behavior green.
+    2. **Real product bug found under this cluster (now fixed): bare
+       `count(values)` on a public `soa<T>` receiver returned the
+       struct's slot count (a constant 5) instead of the element
+       count** - on BOTH the VM and C++-emitter backends, for any
+       element count and any struct field count, while `values.count()`
+       and `/std/collections/soa/count<T>(values)` returned correct
+       values. Root cause (traced via gdb breakpoint sweep over every
+       `resolvedOut =` site): `resolveVectorHelperMethodTarget`
+       (`SemanticsValidatorExprVectorHelpers.cpp`) had receiver
+       branches for the INTERNAL soa type paths but none for the
+       public `soa`/`soa<T>` type, so public-soa receivers fell into
+       the generic struct-method fallback, fabricating a
+       definition-less `/soa/count` direct-call target; the IR
+       lowerer's soa-count fast path only recognizes
+       `/std/collections/soa/count` spellings, so the call fell
+       through to the generic array/struct count emission - a raw
+       slot-count memory read. Fixed by adding a public-soa branch to
+       both the Name-receiver and Call-receiver paths, routing
+       `isSoaReadRefHelperName` helpers (count/count_ref/get/get_ref/
+       ref/ref_ref) through
+       `preferredSoaHelperTargetForCurrentImports`, which keeps a
+       genuine user same-path `/soa/<helper>` shadow first (verified:
+       a user `/soa/count` override still wins) and canonicalizes to
+       the public `/std/collections/soa/<helper>` surface otherwise.
+       Verified on 9 hand-built probes covering empty/1/3-element
+       soas, 1- and 2-field structs, Name and wrapper-Call receivers,
+       method/explicit/bare forms, and the user-shadow case - all
+       correct after the fix, plus the full regression gates (see the
+       commit).
+    3. The remaining work for this TODO is now purely the test-side
+       modernization of the 18 cases (per (1)) plus deciding whether
+       any of the "compatibility routing" behaviors they pinned are
+       still supposed to exist at all - which overlaps with TODO-4723's
+       open same-path-shadow architecture question and should be
+       decided together with it.
 
 - [ ] TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
   - owner: ai
