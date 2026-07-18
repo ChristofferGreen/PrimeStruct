@@ -25349,3 +25349,67 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     config fixes themselves are correct and committed independently of
     whatever real bugs they've now exposed (same "fix the measurement
     first" discipline as the semantics TOTAL_CASES work).
+
+- [x] TODO-4730: Fix 7 newly-exposed compile.run.text_filters native-compile failures
+  - owner: ai
+  - created_at: 2026-07-17
+  - finished_at: 2026-07-17
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: TODO-4720
+  - scope: TODO-4720's shard-config fix for
+    `primestruct.compile.run.text_filters` (see its
+    `progress_2026-07-17`, stale `SOURCE_FILE` globs pointing at
+    renamed-away `.h` files) made 89 shards reachable by CTest for the
+    first time; 7 fail, all with the exact same assertion pattern:
+    `CHECK(runCommand(compileNativeCmd) == 0)` gets `2` (a real C++
+    compiler error, not a crash or timeout) and the following
+    `CHECK(runCommand(nativePath) == N)` then gets `127` (shell
+    "command not found," since the native binary was never produced).
+    Failing cases: "implicit i32 suffix", "no transforms accepts
+    canonical syntax", "no transforms accepts brace constructors",
+    "increment/decrement sugar" (all in
+    `test_compile_run_text_filters_core_lists.cpp`), and "block
+    expression with outer scope capture", "with comments" (in
+    `test_compile_run_text_filters_misc.cpp`).
+  - implementation_notes: the identical failure SHAPE across all 7
+    (compile step itself fails, not a runtime assertion) is a strong
+    lead - get the actual compiler error text (rerun one case's
+    `compileNativeCmd` by hand, e.g. via the test binary's temp-file
+    scratch directory) before guessing. Given the case names span
+    several unrelated text-filter features (implicit suffixes, comment
+    handling, block scoping, increment/decrement sugar, brace
+    constructors) rather than one feature area, the shared cause is
+    more likely in something common to how these specific tests invoke
+    native compilation (a shared helper, a shared compiler flag, a
+    shared expected-output shape) than in the language features
+    themselves - check `test_compile_run_text_filters_helpers.h` first.
+  - acceptance: all 7 cases pass, or are documented as a real,
+    intentional behavior change with the test's expectations updated
+    to match.
+  - stop_rule: if the actual compiler error reveals a genuine, larger
+    C++ emitter code-generation bug (not specific to these 7 cases),
+    split that out as its own TODO rather than doing open-ended emitter
+    debugging inline here.
+  - resolution_2026-07-17: Reran one case's `compileNativeCmd` by hand
+    and got the real error immediately: `Native emit error: native
+    backend is only supported on macOS` (exit 2) - `--emit=native` is
+    intentionally macOS-only at runtime (not a compile-time `#if`),
+    exactly like the platform gating already established for the
+    dedicated `native_backend.*` suites elsewhere in this session's
+    audit. These 7 cases are the only ones in
+    `test_compile_run_text_filters_core_lists.cpp`/`..._misc.cpp` that
+    exercise a native-emit block without the
+    `#if defined(__APPLE__) && (defined(__arm64__) ||
+    defined(__aarch64__))` guard every other native-emit test in the
+    codebase uses (confirmed via `test_compile_run_math_conformance.cpp`
+    as the reference pattern for a file that mixes native and non-
+    native checks within the same TEST_CASE, rather than gating a
+    whole dedicated file). Not a real bug at all - fixed by wrapping
+    each of the 7 native-emit blocks (and their now-conditionally-used
+    `nativePath` declarations, to avoid an unused-variable warning on
+    non-Apple builds) in that same guard, leaving the `--emit=exe`/
+    `--emit=vm` checks unconditional. Verified via the full corrected
+    89-shard `primestruct.compile.run.text_filters` suite: 100% passed
+    (89/89), 0 failed.
+

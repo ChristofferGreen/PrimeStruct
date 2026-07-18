@@ -12,7 +12,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_suffix.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_suffix_exe").string();
-  const std::string nativePath = (testScratchPath("") / "primec_suffix_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default,implicit-i32";
@@ -23,11 +22,14 @@ main() {
       "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=default,implicit-i32";
   CHECK(runCommand(runVmCmd) == 8);
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath = (testScratchPath("") / "primec_suffix_native").string();
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath +
       " --entry /main --text-transforms=default,implicit-i32";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 8);
+#endif
 }
 
 TEST_CASE("increment/decrement sugar") {
@@ -42,7 +44,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_inc_dec_sugar.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_inc_dec_sugar_exe").string();
-  const std::string nativePath = (testScratchPath("") / "primec_inc_dec_sugar_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default";
@@ -52,10 +53,13 @@ main() {
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=default";
   CHECK(runCommand(runVmCmd) == 2);
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath = (testScratchPath("") / "primec_inc_dec_sugar_native").string();
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --text-transforms=default";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 2);
+#endif
 }
 
 TEST_CASE("no transforms overrides text transforms") {
@@ -85,8 +89,6 @@ main() {
   const std::string srcPath = writeTemp("compile_no_transforms_canonical.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_no_transforms_canonical_exe").string();
-  const std::string nativePath =
-      (testScratchPath("") / "primec_no_transforms_canonical_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
@@ -96,10 +98,14 @@ main() {
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --no-transforms";
   CHECK(runCommand(runVmCmd) == 3);
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath =
+      (testScratchPath("") / "primec_no_transforms_canonical_native").string();
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --no-transforms";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 3);
+#endif
 }
 
 TEST_CASE("no transforms accepts brace constructors") {
@@ -112,8 +118,6 @@ main() {
   const std::string srcPath = writeTemp("compile_no_transforms_brace_ctor.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_no_transforms_brace_ctor_exe").string();
-  const std::string nativePath =
-      (testScratchPath("") / "primec_no_transforms_brace_ctor_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
@@ -123,10 +127,14 @@ main() {
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --no-transforms";
   CHECK(runCommand(runVmCmd) == 1);
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath =
+      (testScratchPath("") / "primec_no_transforms_brace_ctor_native").string();
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --no-transforms";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 1);
+#endif
 }
 
 TEST_CASE("no transforms rejects infix operators") {
@@ -493,8 +501,6 @@ main() {
   const std::string srcPath = writeTemp("compile_text_filters_none_canonical.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_text_filters_none_canonical_exe").string();
-  const std::string nativePath =
-      (testScratchPath("") / "primec_text_filters_none_canonical_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=none";
@@ -504,10 +510,14 @@ main() {
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=none";
   CHECK(runCommand(runVmCmd) == 3);
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath =
+      (testScratchPath("") / "primec_text_filters_none_canonical_native").string();
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --text-transforms=none";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 3);
+#endif
 }
 
 TEST_CASE("legacy text-filters alias forms are rejected in primec and primevm") {

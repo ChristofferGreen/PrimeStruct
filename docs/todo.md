@@ -98,7 +98,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 - TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 - TODO-4729: Fix 7 newly-exposed status-only imported Result failures in test_ir_pipeline_conversions_numbers.cpp
-- TODO-4730: Fix 7 newly-exposed compile.run.text_filters native-compile failures
 
 ### Priority Lanes
 
@@ -329,7 +328,6 @@ This file is the live open-work queue for PrimeStruct.
 65. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 67. TODO-4729: Fix 7 newly-exposed status-only imported Result failures in test_ir_pipeline_conversions_numbers.cpp
-68. TODO-4730: Fix 7 newly-exposed compile.run.text_filters native-compile failures
 
 ### Task Blocks
 
@@ -2183,47 +2181,6 @@ This file is the live open-work queue for PrimeStruct.
     to need real feature work (not just a diagnostic/expectation fix),
     split that out as its own TODO rather than doing open-ended Result-
     sum feature design inline here.
-
-- [ ] TODO-4730: Fix 7 newly-exposed compile.run.text_filters native-compile failures
-  - owner: ai
-  - created_at: 2026-07-17
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-nonsemantics
-  - depends_on: TODO-4720
-  - scope: TODO-4720's shard-config fix for
-    `primestruct.compile.run.text_filters` (see its
-    `progress_2026-07-17`, stale `SOURCE_FILE` globs pointing at
-    renamed-away `.h` files) made 89 shards reachable by CTest for the
-    first time; 7 fail, all with the exact same assertion pattern:
-    `CHECK(runCommand(compileNativeCmd) == 0)` gets `2` (a real C++
-    compiler error, not a crash or timeout) and the following
-    `CHECK(runCommand(nativePath) == N)` then gets `127` (shell
-    "command not found," since the native binary was never produced).
-    Failing cases: "implicit i32 suffix", "no transforms accepts
-    canonical syntax", "no transforms accepts brace constructors",
-    "increment/decrement sugar" (all in
-    `test_compile_run_text_filters_core_lists.cpp`), and "block
-    expression with outer scope capture", "with comments" (in
-    `test_compile_run_text_filters_misc.cpp`).
-  - implementation_notes: the identical failure SHAPE across all 7
-    (compile step itself fails, not a runtime assertion) is a strong
-    lead - get the actual compiler error text (rerun one case's
-    `compileNativeCmd` by hand, e.g. via the test binary's temp-file
-    scratch directory) before guessing. Given the case names span
-    several unrelated text-filter features (implicit suffixes, comment
-    handling, block scoping, increment/decrement sugar, brace
-    constructors) rather than one feature area, the shared cause is
-    more likely in something common to how these specific tests invoke
-    native compilation (a shared helper, a shared compiler flag, a
-    shared expected-output shape) than in the language features
-    themselves - check `test_compile_run_text_filters_helpers.h` first.
-  - acceptance: all 7 cases pass, or are documented as a real,
-    intentional behavior change with the test's expectations updated
-    to match.
-  - stop_rule: if the actual compiler error reveals a genuine, larger
-    C++ emitter code-generation bug (not specific to these 7 cases),
-    split that out as its own TODO rather than doing open-ended emitter
-    debugging inline here.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai

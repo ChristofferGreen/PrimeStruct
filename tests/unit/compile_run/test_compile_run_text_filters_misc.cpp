@@ -13,7 +13,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_comments.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_comments_exe").string();
-  const std::string nativePath = (testScratchPath("") / "primec_comments_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCppCmd) == 0);
@@ -22,9 +21,12 @@ main() {
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 4);
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath = (testScratchPath("") / "primec_comments_native").string();
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 4);
+#endif
 }
 
 TEST_CASE("block expression with outer scope capture") {
@@ -37,8 +39,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_block_expr_capture.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_block_expr_capture_exe").string();
-  const std::string nativePath =
-      (testScratchPath("") / "primec_block_expr_capture_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCppCmd) == 0);
@@ -47,9 +47,13 @@ main() {
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 6);
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath =
+      (testScratchPath("") / "primec_block_expr_capture_native").string();
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 6);
+#endif
 }
 
 TEST_CASE("greater_than") {
