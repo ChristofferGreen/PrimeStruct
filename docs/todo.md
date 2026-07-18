@@ -97,6 +97,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
 - TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 - TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
+- TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
 
 ### Priority Lanes
 
@@ -326,6 +327,7 @@ This file is the live open-work queue for PrimeStruct.
 64. TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
 65. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
+67. TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
 
 ### Task Blocks
 
@@ -2137,6 +2139,101 @@ This file is the live open-work queue for PrimeStruct.
        still supposed to exist at all - which overlaps with TODO-4723's
        open same-path-shadow architecture question and should be
        decided together with it.
+  - progress_2026-07-18b: Attempted the test-side modernization and
+    found it BLOCKED on real gaps in the modern surface itself - this
+    crosses the stop_rule threshold, so recording the complete probe
+    matrix instead of fixing further inline. Probing every failing
+    case's shape against the current compiler (both `import
+    /std/collections/*`, which does NOT load the soa module - the
+    wildcard doesn't recurse - and the correct `import
+    /std/collections/soa/*`):
+    - WORKS today: `soa<T>()`/`single<T>`/`from_aos<T>` construction,
+      `values.count()`/`values.get(i)`/`values.ref(i)` methods on
+      Name receivers, bare `count(values)` (after this session's
+      dispatch fix), explicit `/std/collections/soa/count<T>(values)`,
+      `values.to_aos()` (semantics, with soa import).
+    - BROKEN in the modern surface (each a distinct root cause, all
+      reproduced with the correct soa import):
+      (a) bare `get(values, 0i32)` in binding/expression position:
+          "template arguments required for
+          /std/collections/soa/soaVectorGet" - the bare-get bridge
+          doesn't propagate the receiver's element type as a template
+          argument (bare `count` does since the dispatch fix; `get`
+          takes the extra index param and goes through a different
+          bridge).
+      (b) `values.reserve(2i32)`/`values.push(...)` METHOD calls:
+          "unknown call target: reserve" - the SoaVector struct's own
+          mutator methods aren't reachable through method dispatch
+          (likely intercepted by the collection-builtin machinery
+          before struct-method resolution; note the imports_operations
+          suite's passing soa tests never exercise mutator methods).
+      (c) `values./std/collections/soa/to_aos()` explicit canonical
+          slash-method: semantics resolves it but VM lowering fails
+          with "semantic-product method-call target missing lowered
+          definition: /std/collections/soa/to_aos".
+      (d) method chains on call-expression receivers
+          (`Holder{}.cloneValues().count()`): "field access requires
+          struct receiver".
+      (e) no-import diagnostics leak the dead legacy family in
+          user-facing text: bare `ref(vectorValues, 0)` with no
+          imports reports "unknown method:
+          /std/collections/soa_vector/ref" (the retired soa_vector
+          spelling), and `/soa/reserve(vectorValues, 4)` reports
+          "reserve is only supported as a statement" even in statement
+          position.
+    - Also verified: bare `ref(soaValues, 0)` with no imports now
+      correctly passes semantics and stops in lowering (the original
+      pinned contract for one form of case 8), while the method and
+      /soa/ rooted forms of the same call fail semantics with the
+      generic "binding initializer validateExpr failed" - three forms,
+      three different behaviors in one test case.
+    Conclusion: the 18 cases cannot be turned green by test edits
+    alone - (a)-(d) are real modern-surface feature gaps needing
+    compiler work, and the test contracts should be re-pinned only
+    after those land. Follow-up compiler work filed as TODO-4731;
+    this TODO stays open for the eventual test modernization pass
+    gated on it.
+
+- [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
+  - owner: ai
+  - created_at: 2026-07-18
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-soa-surface
+  - depends_on: TODO-4727
+  - scope: TODO-4727's `progress_2026-07-18b` probe matrix found five
+    distinct real gaps in the MODERN public soa surface (all
+    reproduced with the correct `import /std/collections/soa/*`):
+    (a) bare `get(values, index)` fails with "template arguments
+    required for /std/collections/soa/soaVectorGet" (the bare-get
+    bridge doesn't propagate the receiver's element type);
+    (b) `values.reserve(...)`/`values.push(...)` method calls fail
+    with "unknown call target" (the SoaVector struct's own mutator
+    methods aren't reachable through method dispatch - likely
+    intercepted by collection-builtin machinery first);
+    (c) `values./std/collections/soa/to_aos()` passes semantics but
+    fails lowering with "semantic-product method-call target missing
+    lowered definition: /std/collections/soa/to_aos";
+    (d) method chains on call-expression receivers
+    (`Holder{}.cloneValues().count()`) fail with "field access
+    requires struct receiver";
+    (e) several no-import diagnostics leak the retired
+    /std/collections/soa_vector/* family in user-facing error text.
+  - implementation_notes: each gap is independent - fix and regress
+    separately using the session's established gate discipline
+    (calls_flow.collections 131-shard gate, ir.pipeline.validation
+    module file, emitters.cpp). The probe sources for all five live
+    in this session's build-debug scratch (p5/p6/p16/p17/p18/p19
+    .prime files - reconstruct from TODO-4727's notes if gone).
+    TODO-4727's 18 test-case modernizations are gated on (a)-(d);
+    re-pin those tests only after the gaps close.
+  - acceptance: all five probe shapes behave correctly (or are
+    explicitly rejected with a canonical-path diagnostic where that's
+    the decided contract), and TODO-4727's test modernization can
+    proceed without papering over compiler gaps.
+  - stop_rule: one gap per commit with full gates; if (b)'s method
+    dispatch turns out to require the TODO-4724 resolveMethodTarget
+    decomposition first, do that refactor under its own TODO rather
+    than inline here.
 
 - [ ] TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
   - owner: ai
