@@ -695,9 +695,16 @@ bool resolveMethodCallPath(const Expr &call,
         resolvedOut = explicitMapPath;
         return true;
       }
-      if (!hasCanonicalHelperDefinition) {
-        return false;
+      if (hasCanonicalHelperDefinition) {
+        resolvedOut = canonicalPath;
+        return true;
       }
+      const std::string rootedAliasPath = resolvedType + "/" + normalizedMethodName;
+      if (hasDefinitionOrMetadata(metadataView, rootedAliasPath)) {
+        resolvedOut = rootedAliasPath;
+        return true;
+      }
+      return false;
     }
     if (isExplicitMapMethod) {
       if (explicitMapPath.empty() ||

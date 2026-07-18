@@ -203,7 +203,7 @@ before commit (see commit for exact pass counts).
 Cluster (2) (the 73 `compile.run.*` newly-exposed shard failures) was
 only spot-checked (2 sample files: `test_compile_run_emitters_map_metadata_resolution.cpp`,
 `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`), not
-fully triaged - the `map_metadata_resolution.cpp` sample is a real bug
+fully triaged - the `map_metadata_resolution.cpp` sample was a real bug
 (`emitter::resolveMethodCallPath` prefers a compat alias path like
 `/map/count` over the canonical `/std/collections/map/count` when both
 have definitions, exactly backwards from the test's stated intent
@@ -211,9 +211,36 @@ have definitions, exactly backwards from the test's stated intent
 doctest's `CHECK(resolved == expectedPath)` prints `expectedPath`
 misleadingly as a raw hex pointer value in the failure output, which
 is just a doctest/const-char* stringification quirk and not itself a
-bug - the real signal is `resolved`'s value). This resolveMethodCallPath
-bug is not yet filed as its own TODO - full cluster (2) triage remains
-open work under TODO-4725.
+bug - the real signal is `resolved`'s value).
+
+**Fixed (2026-07-18)**: `resolveMethodCallPath`
+(`EmitterBuiltinMethodResolutionHelpers.cpp`, the
+`isCollectionPairHelperMethod` branch inside its map-receiver block)
+validated `hasCanonicalHelperDefinition` but never actually assigned
+`resolvedOut` to it on success - it just fell through to the
+function's generic end-of-function fallback
+(`resolvedType + "/" + normalizedMethodName`), which happens to
+reconstruct the ALIAS spelling (`/map/count`) rather than the
+canonical one whenever `resolvedType` is the bare rooted type name
+(`/map`). Found via a gdb breakpoint sweep across every `resolvedOut =`
+assignment site in the function (the established technique from this
+session). Fixed by assigning `resolvedOut = canonicalPath; return
+true;` when the canonical definition exists. A second regression
+surfaced immediately: a sibling assertion block in the SAME test case
+deliberately erases the canonical definition to verify a fallback to
+the alias path still works when no canonical exists - the naive fix
+returned `false` in that case (no `resolvedOut` was ever assigned
+for the alias fallback), so the fix was narrowed to explicitly
+reconstruct and validate the rooted alias path
+(`resolvedType + "/" + normalizedMethodName`, checked via
+`hasDefinitionOrMetadata` before accepting it) as a second-choice
+fallback when canonical is unavailable. Verified via the full
+40-assertion test case (0 failures, was 20/40), the sibling
+"rejects fallback for explicit map slash methods" test (unaffected,
+still 4/4), and the full `primestruct.compile.run.emitters.cpp`
+622-case suite (501/622 passed, up from 500, exactly +1/-1 with no
+other case changing). Full cluster (2) triage otherwise remains open
+work under TODO-4725.
 
 Prior text below, superseded by the above but kept for its still-valid
 methodology notes and historical fix writeups:
