@@ -99,6 +99,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 - TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 - TODO-4729: Fix 7 newly-exposed status-only imported Result failures in test_ir_pipeline_conversions_numbers.cpp
+- TODO-4730: Fix 7 newly-exposed compile.run.text_filters native-compile failures
 
 ### Priority Lanes
 
@@ -330,6 +331,7 @@ This file is the live open-work queue for PrimeStruct.
 65. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 67. TODO-4729: Fix 7 newly-exposed status-only imported Result failures in test_ir_pipeline_conversions_numbers.cpp
+68. TODO-4730: Fix 7 newly-exposed compile.run.text_filters native-compile failures
 
 ### Task Blocks
 
@@ -2028,11 +2030,32 @@ This file is the live open-work queue for PrimeStruct.
     genuinely new coverage, not a regression - nothing to compare
     against since these cases never ran before). Filed the 7 failures
     as TODO-4729 rather than fixing them inline, per this TODO's own
-    stop_rule. The other 2 items from remaining_2026-07-16
-    ((1) the CMakeLists.txt hand-written block, (2) the remaining 2
-    real=0 groups: `native_backend.collections` re-check and
-    `compile.run.text_filters` x2, (3) the `PRIMESTRUCT_NATIVE_CORE_ENABLED`
-    human decision) are still open.
+    stop_rule.
+    Also root-caused and fixed both `compile.run.text_filters` real=0
+    groups: the shard config's `SOURCE_FILE` globs
+    (`*test_compile_run_text_filters_core.h` and
+    `*test_compile_run_text_filters_misc.h`) referenced files that no
+    longer exist - `.h` extensions, and a "core.h" name that doesn't
+    match any real file. The content had been split into 4 real `.cpp`
+    files (`test_compile_run_text_filters_core_lists.cpp` 27 cases,
+    `..._semantic_rules.cpp` 25, `..._text_rules.cpp` 32,
+    `..._misc.cpp` 35 - confirmed via `--count`, and the total (119)
+    matches the old configured total (84+35=119) closely enough that
+    this reads as a rename/split, not new/lost content) but the cmake
+    globs were never updated to follow the rename, silently orphaning
+    all of it from CTest. Fixed by pointing each existing
+    `SHARD_PREFIX` group (whose semantic names already matched the new
+    per-file split almost exactly) at its correct real file with the
+    correct `TOTAL_CASES`, in
+    `cmake/PrimeStructManagedCompileRunImportsTextExamplesSuites.cmake`.
+    Verified shard registration via `cmake .` reconfigure + `ctest -N`
+    (all shards register, no CMake errors), then ran the corrected
+    suite for the first time: 82 of 89 shards passed, 7 failed (7
+    distinct cases across the newly-registered shards - again entirely
+    new coverage, not a regression). Filed the 7 as TODO-4730.
+    Remaining from `remaining_2026-07-16`: (1) the CMakeLists.txt
+    hand-written shard block, (2) `native_backend.collections`
+    re-check, (3) the `PRIMESTRUCT_NATIVE_CORE_ENABLED` human decision.
   - progress_2026-07-16b: Fixed the 24 "safe" groups (glob pattern
     correctly matches real files, only the count was stale) - 16
     undercounts and 8 overcounts, across
@@ -2398,6 +2421,47 @@ This file is the live open-work queue for PrimeStruct.
     to need real feature work (not just a diagnostic/expectation fix),
     split that out as its own TODO rather than doing open-ended Result-
     sum feature design inline here.
+
+- [ ] TODO-4730: Fix 7 newly-exposed compile.run.text_filters native-compile failures
+  - owner: ai
+  - created_at: 2026-07-17
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: TODO-4720
+  - scope: TODO-4720's shard-config fix for
+    `primestruct.compile.run.text_filters` (see its
+    `progress_2026-07-17`, stale `SOURCE_FILE` globs pointing at
+    renamed-away `.h` files) made 89 shards reachable by CTest for the
+    first time; 7 fail, all with the exact same assertion pattern:
+    `CHECK(runCommand(compileNativeCmd) == 0)` gets `2` (a real C++
+    compiler error, not a crash or timeout) and the following
+    `CHECK(runCommand(nativePath) == N)` then gets `127` (shell
+    "command not found," since the native binary was never produced).
+    Failing cases: "implicit i32 suffix", "no transforms accepts
+    canonical syntax", "no transforms accepts brace constructors",
+    "increment/decrement sugar" (all in
+    `test_compile_run_text_filters_core_lists.cpp`), and "block
+    expression with outer scope capture", "with comments" (in
+    `test_compile_run_text_filters_misc.cpp`).
+  - implementation_notes: the identical failure SHAPE across all 7
+    (compile step itself fails, not a runtime assertion) is a strong
+    lead - get the actual compiler error text (rerun one case's
+    `compileNativeCmd` by hand, e.g. via the test binary's temp-file
+    scratch directory) before guessing. Given the case names span
+    several unrelated text-filter features (implicit suffixes, comment
+    handling, block scoping, increment/decrement sugar, brace
+    constructors) rather than one feature area, the shared cause is
+    more likely in something common to how these specific tests invoke
+    native compilation (a shared helper, a shared compiler flag, a
+    shared expected-output shape) than in the language features
+    themselves - check `test_compile_run_text_filters_helpers.h` first.
+  - acceptance: all 7 cases pass, or are documented as a real,
+    intentional behavior change with the test's expectations updated
+    to match.
+  - stop_rule: if the actual compiler error reveals a genuine, larger
+    C++ emitter code-generation bug (not specific to these 7 cases),
+    split that out as its own TODO rather than doing open-ended emitter
+    debugging inline here.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai

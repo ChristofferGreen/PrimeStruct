@@ -28,34 +28,31 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 900
                                   SHARD_PREFIX "flag_and_transform_basics"
-                                  SOURCE_FILE "*test_compile_run_text_filters_core.h"
-                                  RANGE_FIRST 1
-                                  RANGE_LAST 28
+                                  SOURCE_FILE "*test_compile_run_text_filters_core_lists.cpp"
+                                  TOTAL_CASES 27
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 900
                                   SHARD_PREFIX "semantic_transform_rules"
-                                  SOURCE_FILE "*test_compile_run_text_filters_core.h"
-                                  RANGE_FIRST 29
-                                  RANGE_LAST 53)
+                                  SOURCE_FILE "*test_compile_run_text_filters_semantic_rules.cpp"
+                                  TOTAL_CASES 25)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 900
                                   SHARD_PREFIX "text_transform_rules"
-                                  SOURCE_FILE "*test_compile_run_text_filters_core.h"
-                                  RANGE_FIRST 54
-                                  RANGE_LAST 84
+                                  SOURCE_FILE "*test_compile_run_text_filters_text_rules.cpp"
+                                  TOTAL_CASES 32
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 900
                                   SHARD_PREFIX "misc_language_and_diagnostics_basics"
-                                  SOURCE_FILE "*test_compile_run_text_filters_misc.h"
+                                  SOURCE_FILE "*test_compile_run_text_filters_misc.cpp"
                                   RANGE_FIRST 1
                                   RANGE_LAST 18
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 900
                                   SHARD_PREFIX "misc_language_and_diagnostics_extended"
-                                  SOURCE_FILE "*test_compile_run_text_filters_misc.h"
+                                  SOURCE_FILE "*test_compile_run_text_filters_misc.cpp"
                                   RANGE_FIRST 19
                                   RANGE_LAST 35
                                   CASES_PER_SHARD 2)
