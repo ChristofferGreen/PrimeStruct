@@ -2309,6 +2309,37 @@ This file is the live open-work queue for PrimeStruct.
     fix the test fixtures, not production code - do not force behavior
     to match possibly-stale fixtures without first confirming which
     side is wrong.
+  - progress_2026-07-17: Confirmed the root cause is stale test
+    fixtures, not a production regression, and fixed 4 of the 5 cases
+    by updating the fixtures. `findSemanticProductCallableSummary`
+    (`IrLowererSemanticProductTargetAdapters.cpp:373`) resolves through
+    `semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId`,
+    an index map that a real semantic-validation publication pass
+    populates (`SemanticPublicationBuilders.cpp`) - these 4 fixtures
+    hand-build a `SemanticProgramCallableSummary` and push it onto
+    `callableSummaries` directly, but never register it in that index
+    map, so the lookup always misses. Fixed by adding the matching
+    `callableSummaryIndicesByPathId[fullPathId] = index` registration
+    right after each `push_back` (test-only change, zero production
+    code touched). Verified via a full standalone rerun of the test
+    file: 70->74 of 95 passed, exactly +4, no other case changed.
+    Remaining 1 case ("ir lowerer rejects non-eliminated reflection
+    query paths") is NOT a simple fixture gap like the other 4 - IR
+    lowering now hard-requires a non-null, semantically-validated
+    `SemanticProgram` (rejects `nullptr` outright with "semantic
+    product is required for IR lowering", confirmed via
+    `test_ir_pipeline_backends_registry.cpp`'s own pinned test for that
+    exact behavior), but running real validation on this test's source
+    causes the reflection query to be eliminated by validation itself,
+    so IR lowering never sees an "un-eliminated" one to reject (it hits
+    an unrelated "does not support string literal statements" error
+    instead). Reproducing the test's original intent now needs a
+    semantic product that passes the required-callable-summary and
+    direct-call-coverage checks while still representing an
+    intentionally un-eliminated reflection call - not investigated
+    further this session; left as this TODO's one remaining case.
+    Reverted this specific case back to its original (still-failing)
+    form rather than landing an incomplete fix.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai

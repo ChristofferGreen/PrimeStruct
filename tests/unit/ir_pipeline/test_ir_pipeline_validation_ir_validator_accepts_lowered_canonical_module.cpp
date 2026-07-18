@@ -2921,6 +2921,15 @@ TEST_CASE("ir lowerer effects unit prefers semantic product callable summaries")
           primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
       },
   });
+  // The lookup that validateNativeProgramEffects uses
+  // (findSemanticProductCallableSummary) resolves through
+  // publishedRoutingLookups.callableSummaryIndicesByPathId rather than
+  // scanning callableSummaries directly - a real semantic-validation
+  // publication pass populates this index, so this hand-built fixture must
+  // register it too.
+  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId
+      [primec::semanticProgramInternCallTargetString(semanticProgram, "/main")] =
+      semanticProgram.callableSummaries.size() - 1;
 
   std::string error;
   CHECK(primec::ir_lowerer::validateNativeProgramEffects(program, &semanticProgram, "/main", {}, {}, error));
@@ -2969,6 +2978,9 @@ TEST_CASE("ir lowerer effects unit skips semantic callable summaries for sum typ
       .activeEffectIds = {},
       .activeCapabilityIds = {},
   });
+  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId
+      [primec::semanticProgramInternCallTargetString(semanticProgram, "/main")] =
+      semanticProgram.callableSummaries.size() - 1;
 
   std::string error;
   CHECK(primec::ir_lowerer::validateNativeProgramEffects(program, &semanticProgram, "/main", {}, {}, error));
@@ -3101,6 +3113,9 @@ TEST_CASE("ir lowerer effects unit keeps nested expression effect checks syntax 
           primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
       },
   });
+  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId
+      [primec::semanticProgramInternCallTargetString(semanticProgram, "/main")] =
+      semanticProgram.callableSummaries.size() - 1;
 
   std::string error;
   CHECK_FALSE(primec::ir_lowerer::validateNativeProgramEffects(program, &semanticProgram, "/main", {}, {}, error));
@@ -3159,6 +3174,9 @@ TEST_CASE("ir lowerer effects unit resolves entry metadata masks from semantic p
           primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
       },
   });
+  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId
+      [primec::semanticProgramInternCallTargetString(semanticProgram, "/main")] =
+      semanticProgram.callableSummaries.size() - 1;
 
   uint64_t entryEffectMask = 0;
   uint64_t entryCapabilityMask = 0;
