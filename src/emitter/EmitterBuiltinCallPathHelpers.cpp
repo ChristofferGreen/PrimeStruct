@@ -92,6 +92,25 @@ bool shouldStripBuiltinPrefix(const std::string &prefix,
   return true;
 }
 
+// A genuinely `/std/...`-namespaced spelling of a generic operator/
+// control-flow name (e.g. a GFX/file error type's compatibility "convert"
+// method, or a collection-family struct's "less_than") still counts as the
+// builtin regardless of which specific std subsystem it's nested under -
+// only a non-std-namespaced multi-segment path (a removed collection alias,
+// a rooted compatibility alias, ...) must be rejected. Mirrors
+// isSimpleCallName's matchScopedBuiltinTail restriction below.
+bool stdNamespacedBuiltinTailMatches(const std::string &pathWithoutLeadingSlash,
+                                     const std::string &target) {
+  if (pathWithoutLeadingSlash.rfind("std/", 0) != 0) {
+    return false;
+  }
+  const size_t slash = pathWithoutLeadingSlash.find_last_of('/');
+  const std::string tail = slash == std::string::npos
+                                ? pathWithoutLeadingSlash
+                                : pathWithoutLeadingSlash.substr(slash + 1);
+  return tail == target;
+}
+
 std::string experimentalCollectionMemberRootLocal(
     std::string_view collectionName,
     bool leadingSlash = false) {
@@ -542,6 +561,17 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
   }
   std::string name = normalizeInternalSoaStorageBuiltinAlias(resolveExprPath(expr));
   if (name.find('/') != std::string::npos) {
+    static const std::array<std::pair<const char *, const char *>, 9> kComparisonNames = {{
+        {"greater_than", ">"}, {"less_than", "<"}, {"equal", "=="},
+        {"not_equal", "!="}, {"greater_equal", ">="}, {"less_equal", "<="},
+        {"and", "&&"}, {"or", "||"}, {"not", "!"},
+    }};
+    for (const auto &[candidateName, symbol] : kComparisonNames) {
+      if (stdNamespacedBuiltinTailMatches(name, candidateName)) {
+        out = symbol;
+        return true;
+      }
+    }
     return false;
   }
   if (name == "greater_than") {
@@ -589,6 +619,14 @@ bool getBuiltinMutationName(const Expr &expr, std::string &out) {
   }
   std::string name = normalizeInternalSoaStorageBuiltinAlias(resolveExprPath(expr));
   if (name.find('/') != std::string::npos) {
+    if (stdNamespacedBuiltinTailMatches(name, "increment")) {
+      out = "increment";
+      return true;
+    }
+    if (stdNamespacedBuiltinTailMatches(name, "decrement")) {
+      out = "decrement";
+      return true;
+    }
     return false;
   }
   if (name == "increment" || name == "decrement") {
@@ -769,7 +807,8 @@ bool isBuiltinNegate(const Expr &expr) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = resolveExprPath(expr);
+  std::string name =
+      normalizeInternalSoaStorageBuiltinAlias(resolveExprPath(expr));
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
@@ -915,6 +954,10 @@ bool getBuiltinConvertName(const Expr &expr, std::string &out) {
     name.erase(0, 1);
   }
   if (name.find('/') != std::string::npos) {
+    if (stdNamespacedBuiltinTailMatches(name, "convert")) {
+      out = "convert";
+      return true;
+    }
     return false;
   }
   if (name == "convert") {

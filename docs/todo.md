@@ -2202,6 +2202,44 @@ This file is the live open-work queue for PrimeStruct.
     `primestruct.compile.run.emitters.cpp` regressions stay clean.
   - stop_rule: scoped to these 5 functions only - do not expand into
     TODO-4727's soa-routing-pipeline cluster from here.
+  - progress_2026-07-17: Fixed 3 of the 5 functions
+    (`emitter::isBuiltinNegate`, `emitter::getBuiltinConvertName`,
+    `emitter::getBuiltinComparison`/`getBuiltinMutationName`), landing
+    3 of the 4 named cases ("ir lowerer helper keeps namespaced convert
+    builtin tails", "emitter helper keeps parser-shaped rooted negate
+    builtin", "shared helper bodies keep scoped stdlib builtins
+    normalized"). Root causes: `isBuiltinNegate` didn't route through
+    `normalizeInternalSoaStorageBuiltinAlias` before its own leading-
+    slash strip, so a bare `/` namespacePrefix (producing a double-
+    slash-prefixed path via `resolveExprPath`) left one leading slash
+    in place and made the immediate `find('/')` check reject it -
+    fixed by adding the same `normalizeInternalSoaStorageBuiltinAlias`
+    wrapping `getBuiltinConvertName` already used (which incidentally
+    strips both slashes and was already passing its own bare-`/` case).
+    `getBuiltinConvertName`, `getBuiltinComparison`, and
+    `getBuiltinMutationName` all gave up as soon as any `/` remained
+    after `normalizeInternalSoaStorageBuiltinAlias` (which only
+    recognizes a fixed 11-prefix allowlist, missing arbitrary
+    `/std/...` subsystems like `/std/gfx/GfxError` or literal
+    `experimental_soa` spellings) - fixed by adding a shared
+    `stdNamespacedBuiltinTailMatches` helper (mirrors TODO-4725's
+    already-verified-safe `isSimpleCallName` fix: any path that starts
+    with `std/` may still tail-match its target name, but a non-std
+    multi-segment path - a removed alias, a rooted compat alias - must
+    not). Verified via a full standalone rerun of the ir.pipeline.
+    validation test file (67->70 of 95 passed, matching exactly +3, no
+    other case changed) and a full `primestruct.compile.run.emitters.cpp`
+    regression (500/622 passed both before and after - these 3 fixes
+    don't affect any case in that suite, only the synthetic-Expr unit
+    tests in the ir.pipeline.validation file). Remaining: 1 case
+    ("ir lowerer access helper rejects removed rooted vector access
+    aliases" / "ir lowerer access helper classifies namespaced access
+    helpers" - `ir_lowerer::getBuiltinArrayAccessName`) still open -
+    this one needs an actual behavior addition (recognizing `get`/
+    `get_ref` as distinct from `at`/`at_unsafe`, and revisiting the
+    `unrootedStdlibVectorHelperPath` early-return bailout), not just a
+    namespace-recognition broadening like the other 3, so it's larger
+    in scope than this progress note's fixes.
 
 - [ ] TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
   - owner: ai
