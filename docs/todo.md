@@ -2053,9 +2053,24 @@ This file is the live open-work queue for PrimeStruct.
     suite for the first time: 82 of 89 shards passed, 7 failed (7
     distinct cases across the newly-registered shards - again entirely
     new coverage, not a regression). Filed the 7 as TODO-4730.
-    Remaining from `remaining_2026-07-16`: (1) the CMakeLists.txt
-    hand-written shard block, (2) `native_backend.collections`
-    re-check, (3) the `PRIMESTRUCT_NATIVE_CORE_ENABLED` human decision.
+    Also completed the `native_backend.collections` re-check: its
+    configured `RANGE_LAST 380` is now known to be wrong in the
+    OPPOSITE direction from every other finding in this TODO - real
+    case count is just 1, not an undercount but a *massive* overcount,
+    because 19 of the 20 files feeding this suite are gated behind
+    `#if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED` (705 combined
+    `TEST_CASE`s), a second dead feature flag exactly like the already-
+    documented `PRIMESTRUCT_NATIVE_CORE_ENABLED` - `grep`-confirmed
+    never `#define`d or `-D`'d anywhere in the repo. Per the same
+    reasoning already applied to `PRIMESTRUCT_NATIVE_CORE_ENABLED`,
+    this is a human decision (enable a large dormant native-collections
+    conformance suite vs. remove the vestigial files/shard config), not
+    something to unilaterally resolve or adjust `RANGE_LAST` for -
+    left the shard config untouched. Remaining from
+    `remaining_2026-07-16`: (1) the CMakeLists.txt hand-written shard
+    block, (2) a combined human decision on BOTH
+    `PRIMESTRUCT_NATIVE_CORE_ENABLED` and
+    `PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED`.
   - progress_2026-07-16b: Fixed the 24 "safe" groups (glob pattern
     correctly matches real files, only the count was stale) - 16
     undercounts and 8 overcounts, across
