@@ -59,7 +59,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_numbers.cpp"
   SHARD_PREFIX "numbers"
-  TOTAL_CASES 44
+  TOTAL_CASES 68
   CASES_PER_SHARD 10
 )
 

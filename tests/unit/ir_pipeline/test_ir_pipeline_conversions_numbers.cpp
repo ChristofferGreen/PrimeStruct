@@ -12,6 +12,8 @@
 #include "primec/Vm.h"
 #include "test_ir_pipeline_helpers.h"
 
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
+
 TEST_CASE("ir lowerer supports string vector literals") {
   const std::string source = R"(
 import /std/collections/*
@@ -2510,3 +2512,5 @@ main([array<string>] args) {
   CHECK(error.empty());
   CHECK(result == 3);
 }
+
+TEST_SUITE_END();
