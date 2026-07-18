@@ -991,7 +991,7 @@ swallow([MyError] err) {
 forward_error() {
   [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 9i32}}}
   try(status)
-  return(Result<MyError>{})
+  return(ok<MyError>())
 }
 
 [return<int>]
@@ -1040,12 +1040,13 @@ swallow([MyError] err) {
 
 [return<Result<MyError>>]
 make_ok() {
-  return(Result<MyError>{})
+  return(ok<MyError>())
 }
 
 [return<Result<MyError>>]
 make_error() {
-  return(Result<MyError>{[error] MyError{[code] 11i32}})
+  [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 11i32}}}
+  return(status)
 }
 
 [return<int> on_error<MyError, /swallow>]
@@ -1096,13 +1097,14 @@ swallow([MyError] err) {
 
 [return<Result<MyError>>]
 make_error() {
-  return(Result<MyError>{[error] MyError{[code] 13i32}})
+  [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 13i32}}}
+  return(status)
 }
 
 [return<Result<MyError>> on_error<MyError, /swallow>]
 forward_error() {
   try(make_error())
-  return(Result<MyError>{})
+  return(ok<MyError>())
 }
 
 [return<int>]
@@ -1151,7 +1153,7 @@ swallow([MyError] err) {
 
 [return<int> on_error<MyError, /swallow>]
 read_reference_ok() {
-  [Result<MyError>] status{Result<MyError>{}}
+  [Result<MyError>] status{ok<MyError>()}
   [Reference<Result<MyError>>] ref{location(status)}
   return(try(dereference(ref)))
 }
@@ -1165,7 +1167,7 @@ read_reference_error() {
 
 [return<int> on_error<MyError, /swallow>]
 read_pointer_ok() {
-  [Result<MyError>] status{Result<MyError>{}}
+  [Result<MyError>] status{ok<MyError>()}
   [Pointer<Result<MyError>>] ptr{location(status)}
   return(try(dereference(ptr)))
 }
@@ -1219,7 +1221,7 @@ forward_reference_error() {
   [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 23i32}}}
   [Reference<Result<MyError>>] ref{location(status)}
   try(dereference(ref))
-  return(Result<MyError>{})
+  return(ok<MyError>())
 }
 
 [return<Result<MyError>> on_error<MyError, /swallow>]
@@ -1227,7 +1229,7 @@ forward_pointer_error() {
   [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 29i32}}}
   [Pointer<Result<MyError>>] ptr{location(status)}
   try(dereference(ptr))
-  return(Result<MyError>{})
+  return(ok<MyError>())
 }
 
 [return<int>]
@@ -1289,17 +1291,18 @@ namespace MyError {
 
 [return<Result<MyError>>]
 make_ok() {
-  return(Result<MyError>{})
+  return(ok<MyError>())
 }
 
 [return<Result<MyError>>]
 make_error([i32] code) {
-  return(Result<MyError>{[error] MyError{[code] code}})
+  [Result<MyError>] status{Result<MyError>{[error] MyError{[code] code}}}
+  return(status)
 }
 
 [return<int>]
 main() {
-  [Result<MyError>] localOk{Result<MyError>{}}
+  [Result<MyError>] localOk{ok<MyError>()}
   [Result<MyError>] localError{Result<MyError>{[error] MyError{[code] 7i32}}}
   [Reference<Result<MyError>>] ref{location(localError)}
   [Pointer<Result<MyError>>] ptr{location(localError)}

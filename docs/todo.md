@@ -97,7 +97,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
 - TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 - TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
-- TODO-4729: Fix 7 newly-exposed status-only imported Result failures in test_ir_pipeline_conversions_numbers.cpp
 
 ### Priority Lanes
 
@@ -327,7 +326,6 @@ This file is the live open-work queue for PrimeStruct.
 64. TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
 65. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
-67. TODO-4729: Fix 7 newly-exposed status-only imported Result failures in test_ir_pipeline_conversions_numbers.cpp
 
 ### Task Blocks
 
@@ -2143,44 +2141,15 @@ This file is the live open-work queue for PrimeStruct.
     further this session; left as this TODO's one remaining case.
     Reverted this specific case back to its original (still-failing)
     form rather than landing an incomplete fix.
-
-- [ ] TODO-4729: Fix 7 newly-exposed status-only imported Result failures in test_ir_pipeline_conversions_numbers.cpp
-  - owner: ai
-  - created_at: 2026-07-17
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-nonsemantics
-  - depends_on: TODO-4720
-  - scope: TODO-4720's fix for `test_ir_pipeline_conversions_numbers.cpp`'s
-    missing `TEST_SUITE_BEGIN` (see its `progress_2026-07-17`) made this
-    file's 68 cases reachable by CTest for the first time; 7 fail:
-    "ir lowerer propagates imported status-only Result sum errors",
-    "ir lowerer supports try on direct imported status-only Result
-    sums", "ir lowerer propagates direct imported status-only Result
-    sum errors", "ir lowerer supports try on borrowed imported
-    status-only Result sums", "ir lowerer propagates borrowed imported
-    status-only Result sum errors", "ir lowerer supports status-only
-    imported Result helper calls", "ir lowerer preserves inline-call
-    Result metadata from caller-scoped parameter defaults". The first
-    6 share a name pattern ("status-only imported Result") strongly
-    suggesting one shared root cause around imported/status-only
-    Result-sum handling; the 7th ("inline-call Result metadata from
-    caller-scoped parameter defaults") looks unrelated. 6 of 7 fail at
-    `REQUIRE(parseAndValidate(...))` (rejected during semantic
-    validation, before ever reaching IR lowering); the 7th fails at
-    `REQUIRE(lowerer.lower(...))` (passes validation, fails lowering).
-  - implementation_notes: since these cases never ran before this
-    session, there's no "was this passing last week" history to lean
-    on - start by reading the failing sources' actual current
-    `error` value (the `REQUIRE` failures only assert truthiness, not
-    message content, so the log doesn't show *why* validation/lowering
-    rejected them) to determine whether this is a real regression, a
-    stale test expectation, or a genuinely unimplemented feature area.
-  - acceptance: all 7 cases pass, or are documented as intentionally
-    still-unsupported with the test updated to expect that.
-  - stop_rule: if the 6 "status-only imported Result" cases turn out
-    to need real feature work (not just a diagnostic/expectation fix),
-    split that out as its own TODO rather than doing open-ended Result-
-    sum feature design inline here.
+  - related_2026-07-17: TODO-4729's own 7th case
+    ("preserves inline-call Result metadata from caller-scoped
+    parameter defaults" in `test_ir_pipeline_conversions_numbers.cpp`)
+    hits the identical class of failure - a hand-constructed/injected
+    `Expr` with `semanticNodeId == 0` fails lowering with "missing
+    semantic-product direct-call semantic id: /consume -> greeting".
+    Whoever resolves this TODO's remaining case should check whether
+    the fix also resolves that one, rather than solving the same
+    architectural gap twice.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
