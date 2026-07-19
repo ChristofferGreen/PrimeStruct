@@ -2311,6 +2311,29 @@ This file is the live open-work queue for PrimeStruct.
     shadow on a call-receiver argument resolves to the stdlib wrapper
     (escape diagnostic) instead of the shadow.
 
+  - progress_2026-07-19c: gap (c) FIXED. The pre-validate method
+    desugar (rewriteExperimentalSoaSamePathHelperMethodExpr) omitted
+    to_aos/to_aos_ref from its helper allowlist, so to_aos method
+    sugar - both bare values.to_aos() and the explicit
+    values./std/collections/soa/to_aos() spelling - stayed a
+    method-call target that the monomorphizer never instantiates
+    (semantic product showed the raw template path with no __t
+    suffix). Added both helpers to the allowlist and the
+    visibleSoaHelpers precompute. One guard proved necessary: when a
+    user program shadows the canonical path with type-differentiated
+    overloads, the desugared direct call cannot type its rewritten
+    call receiver for overload selection ("arg0 type=unknown" =>
+    spurious ambiguity), so the rewrite now skips such helpers
+    (overloadedCanonicalHelpers) unless a same-path /soa shadow wins
+    anyway - caught by "method-like canonical soa helper shadows
+    coexist as type-differentiated overloads" in the gate. Side
+    effect: residual gap (g) (rooted location(values) read-only
+    method chains) now validates end-to-end. Re-pinned 4 more to_aos
+    contracts to success. Verification: 16-probe matrix correct
+    (gapc1=2/gapc2=3 explicit canonical, gapc3=2 bare method);
+    re-pinned files 270/270; collections gate identical 35-shard
+    baseline; ir module identical 75/95; emitters gate identical
+    501/622.
   - progress_2026-07-19b: the 45 pinned-old-behavior contracts in
     test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp
     (44) and ..._soa_vector_builtins_named_args.cpp (1) are re-pinned:

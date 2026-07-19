@@ -2948,7 +2948,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers,
-    bool publicSoaSurfaceVisible);
+    bool publicSoaSurfaceVisible,
+    const std::unordered_set<std::string> &overloadedCanonicalHelpers);
 
 void rewriteExperimentalSoaSamePathHelperMethodStatements(
     std::vector<Expr> &statements,
@@ -2957,7 +2958,8 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers,
-    bool publicSoaSurfaceVisible) {
+    bool publicSoaSurfaceVisible,
+    const std::unordered_set<std::string> &overloadedCanonicalHelpers) {
   for (Expr &stmt : statements) {
     rewriteExperimentalSoaSamePathHelperMethodExpr(
         stmt,
@@ -2966,7 +2968,8 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
         structPaths,
         definitionNamespace,
         visibleSoaHelpers,
-        publicSoaSurfaceVisible);
+        publicSoaSurfaceVisible,
+        overloadedCanonicalHelpers);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteExperimentalSoaSamePathHelperMethodStatements(
@@ -2976,7 +2979,8 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
           structPaths,
           definitionNamespace,
           visibleSoaHelpers,
-          publicSoaSurfaceVisible);
+          publicSoaSurfaceVisible,
+          overloadedCanonicalHelpers);
     }
     if (stmt.isBinding) {
       if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
@@ -2994,7 +2998,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers,
-    bool publicSoaSurfaceVisible) {
+    bool publicSoaSurfaceVisible,
+    const std::unordered_set<std::string> &overloadedCanonicalHelpers) {
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaSamePathHelperMethodExpr(
         arg,
@@ -3003,7 +3008,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
         structPaths,
         definitionNamespace,
         visibleSoaHelpers,
-        publicSoaSurfaceVisible);
+        publicSoaSurfaceVisible,
+        overloadedCanonicalHelpers);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
@@ -3022,12 +3028,24 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   if (helperName != "count" && helperName != "count_ref" &&
       helperName != "get" && helperName != "get_ref" &&
       helperName != "ref" && helperName != "ref_ref" &&
-      helperName != "push" && helperName != "reserve") {
+      helperName != "push" && helperName != "reserve" &&
+      helperName != "to_aos" && helperName != "to_aos_ref") {
     return;
   }
   const std::string helperPath = "/soa/" + helperName;
   const bool hasVisibleSamePathHelper =
       visibleSoaHelpers.count(helperPath) > 0;
+  // When a user program shadows the canonical
+  // /std/collections/soa/<helper> path with additional concrete
+  // overloads, the desugared direct call cannot type the rewritten
+  // call receiver for overload selection ("arg0 type=unknown"), so the
+  // family reports a spurious ambiguity. Unless a same-path /soa
+  // shadow takes precedence anyway, leave those method calls to the
+  // method-target resolution machinery, which types the receiver.
+  if (!hasVisibleSamePathHelper &&
+      overloadedCanonicalHelpers.count(helperName) > 0) {
+    return;
+  }
 
   std::optional<semantics::BindingInfo> receiverBinding;
   std::optional<Expr> canonicalReceiverExpr;
@@ -3098,7 +3116,9 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
            std::string_view("ref"),
            std::string_view("ref_ref"),
            std::string_view("push"),
-           std::string_view("reserve")}) {
+           std::string_view("reserve"),
+           std::string_view("to_aos"),
+           std::string_view("to_aos_ref")}) {
     if (hasVisibleExperimentalSoaSamePathHelper(program, helperName)) {
       visibleSoaHelpers.insert("/soa/" + std::string(helperName));
     }
@@ -3122,6 +3142,34 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
       if (localImportPathCoversTarget(importPath, "/std/collections/soa/soa")) {
         publicSoaSurfaceVisible = true;
         break;
+      }
+    }
+  }
+  // Helpers whose canonical /std/collections/soa/<helper> path carries
+  // more than one definition (the stdlib template plus user
+  // type-differentiated shadows) - see the skip in
+  // rewriteExperimentalSoaSamePathHelperMethodExpr.
+  std::unordered_set<std::string> overloadedCanonicalHelpers;
+  {
+    std::unordered_map<std::string, int> canonicalDefCounts;
+    constexpr std::string_view kCanonicalPrefix = "/std/collections/soa/";
+    for (const Definition &def : program.definitions) {
+      if (def.fullPath.rfind(kCanonicalPrefix, 0) != 0) {
+        continue;
+      }
+      std::string helper = def.fullPath.substr(kCanonicalPrefix.size());
+      if (const size_t generatedSuffix = helper.find("__");
+          generatedSuffix != std::string::npos) {
+        continue;
+      }
+      if (helper.find('/') != std::string::npos) {
+        continue;
+      }
+      ++canonicalDefCounts[helper];
+    }
+    for (const auto &[helper, defCount] : canonicalDefCounts) {
+      if (defCount > 1) {
+        overloadedCanonicalHelpers.insert(helper);
       }
     }
   }
@@ -3150,7 +3198,8 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
         structPaths,
         definitionNamespace,
         visibleSoaHelpers,
-        publicSoaSurfaceVisible);
+        publicSoaSurfaceVisible,
+        overloadedCanonicalHelpers);
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
@@ -3166,7 +3215,8 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
           structPaths,
           definitionNamespace,
           visibleSoaHelpers,
-          publicSoaSurfaceVisible);
+          publicSoaSurfaceVisible,
+          overloadedCanonicalHelpers);
     }
   }
   return true;

@@ -920,8 +920,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa stdlib non-empty to-aos helper validates on wrapper state") {
@@ -962,8 +962,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa borrowed parameter read-only methods reject retired ref_ref path") {
@@ -1036,10 +1036,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  // Residual TODO-4731 gap: rooted helper paths on specialized receivers are still rejected with the specialized-type spelling.
-  CHECK(error.find("unknown method: /std/collections/soa/SoaVector__") != std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa inline location borrowed helper-return helper surfaces reject current ref_ref path") {
@@ -5111,10 +5110,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa/SoaVector__") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("to_aos helper call-form falls back to user helper") {
