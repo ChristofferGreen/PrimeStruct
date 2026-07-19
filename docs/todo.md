@@ -2421,6 +2421,29 @@ This file is the live open-work queue for PrimeStruct.
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
   - depends_on: TODO-4722
+  - progress_2026-07-19: full triage of the collections gate's stable
+    35-shard failing set (86 cases, 13 files; the surviving mass after
+    the TODO-4731 soa work landed). Three buckets by failure kind:
+    (1) 23 cases pin REJECTION but the program now validates - names
+    say "accepts/resolves/prefers", so these look like straight pin
+    flips once current acceptance is confirmed correct;
+    (2) 43 cases still reject but with drifted diagnostic text -
+    re-pin after checking the new text is canonical (no retired-family
+    leaks);
+    (3) 20 cases pin SUCCESS but the program now rejects - real
+    compiler gaps, diagnosed by running each inline source through
+    primec directly: (3a) named-argument call-form helper routing
+    (`at([index] 1i32, [values] values)` -> "unknown call target",
+    named-arg canonical vector constructors -> "unknown named
+    argument: first", labeled receivers, user-shadow named args - the
+    biggest coherent sub-cluster); (3b) map helper resolution on
+    field-bound/wrapper-returned/temporary receivers ("unknown call
+    target: /map/at", "/map/count"); (3c) variadic vector pack
+    receiver statements ("unknown call target: clear"); (3d) singles:
+    compat-alias precedence type mismatches, auto-inference alias
+    precedence return-type mismatch, builtin count arity mismatch,
+    "call site: /vector/count" ambiguity. Fix (3) sub-clusters first
+    (compiler work, gate each), then land (1)+(2) as re-pin passes.
   - scope: 15 cases remain in
     `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
     after TODO-4722's fix, splitting into (at least) three distinct
