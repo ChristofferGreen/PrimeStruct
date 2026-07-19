@@ -2311,6 +2311,16 @@ This file is the live open-work queue for PrimeStruct.
     shadow on a call-receiver argument resolves to the stdlib wrapper
     (escape diagnostic) instead of the shadow.
 
+  - progress_2026-07-19b: the 45 pinned-old-behavior contracts in
+    test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp
+    (44) and ..._soa_vector_builtins_named_args.cpp (1) are re-pinned:
+    38 flip to plain success (validateProgram + empty error), two
+    "push conflict" cases now pin the borrow checker correctly
+    rejecting push while a ref borrow is live, three pin the residual
+    (f)/(g)/(h) diagnostics, one pins the residual (i) escape
+    diagnostic, and the uppercase-SoaVector case drops its retired
+    internal_soa_vector import (previously masked by the metadata
+    failure). Both files: 270/270 green.
 - [ ] TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
   - owner: ai
   - created_at: 2026-07-16

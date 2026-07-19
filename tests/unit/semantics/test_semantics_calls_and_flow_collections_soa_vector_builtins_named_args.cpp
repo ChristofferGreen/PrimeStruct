@@ -848,9 +848,12 @@ main() {
 }
 
 TEST_CASE("uppercase SoaVector helper-return count keeps current meta diagnostic") {
+  // The retired /std/collections/internal_soa_vector module import used to
+  // be masked by an earlier metadata-inference failure; with that gap fixed
+  // the unknown-import diagnostic surfaced, so the import is dropped and the
+  // case pins the working helper-return count routing instead.
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -884,10 +887,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector-target get_ref is rejected by soa builtin routing") {
