@@ -1016,12 +1016,15 @@ bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
 
 bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
                                              std::string_view helperName) {
+  // Only a genuine user /soa/<helper> shadow counts. Treating the
+  // canonical /std/collections/soa/<helper> spelling (which every
+  // `import /std/collections/soa/*` covers) as a same-path shadow made
+  // the method-sugar rewrite below fabricate "/soa/<helper>" names with
+  // no definition behind them, so soa<T>-returning call receivers died
+  // with "unknown method: /std/collections/soa_vector/<helper>".
   const std::string samePath = "/soa/" + std::string(helperName);
-  const std::string canonicalPath =
-      "/std/collections/soa/" + std::string(helperName);
   for (const Definition &def : program.definitions) {
-    if ((def.fullPath != samePath && def.fullPath != canonicalPath) ||
-        def.parameters.empty()) {
+    if (def.fullPath != samePath || def.parameters.empty()) {
       continue;
     }
     if (extractExperimentalSoaVectorBinding(def.parameters.front()).has_value()) {
@@ -1030,8 +1033,7 @@ bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
   }
   const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
   for (const auto &importPath : importPaths) {
-    if (localImportPathCoversTarget(importPath, samePath) ||
-        localImportPathCoversTarget(importPath, canonicalPath)) {
+    if (localImportPathCoversTarget(importPath, samePath)) {
       return true;
     }
   }
@@ -2945,7 +2947,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
-    const std::unordered_set<std::string> &visibleSoaHelpers);
+    const std::unordered_set<std::string> &visibleSoaHelpers,
+    bool publicSoaSurfaceVisible);
 
 void rewriteExperimentalSoaSamePathHelperMethodStatements(
     std::vector<Expr> &statements,
@@ -2953,7 +2956,8 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
-    const std::unordered_set<std::string> &visibleSoaHelpers) {
+    const std::unordered_set<std::string> &visibleSoaHelpers,
+    bool publicSoaSurfaceVisible) {
   for (Expr &stmt : statements) {
     rewriteExperimentalSoaSamePathHelperMethodExpr(
         stmt,
@@ -2961,7 +2965,8 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
         soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
-        visibleSoaHelpers);
+        visibleSoaHelpers,
+        publicSoaSurfaceVisible);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteExperimentalSoaSamePathHelperMethodStatements(
@@ -2970,7 +2975,8 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
           soaCollectionReturnDefinitions,
           structPaths,
           definitionNamespace,
-          visibleSoaHelpers);
+          visibleSoaHelpers,
+          publicSoaSurfaceVisible);
     }
     if (stmt.isBinding) {
       if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
@@ -2987,7 +2993,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
-    const std::unordered_set<std::string> &visibleSoaHelpers) {
+    const std::unordered_set<std::string> &visibleSoaHelpers,
+    bool publicSoaSurfaceVisible) {
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaSamePathHelperMethodExpr(
         arg,
@@ -2995,7 +3002,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
         soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
-        visibleSoaHelpers);
+        visibleSoaHelpers,
+        publicSoaSurfaceVisible);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
@@ -3024,9 +3032,18 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   std::optional<semantics::BindingInfo> receiverBinding;
   std::optional<Expr> canonicalReceiverExpr;
   const Expr &receiver = expr.args.front();
+  auto isPublicSoaSurfaceBinding = [](const semantics::BindingInfo &binding) {
+    const std::string normalizedType =
+        semantics::normalizeBindingTypeName(binding.typeName);
+    return (normalizedType == "soa" || normalizedType.rfind("soa<", 0) == 0) &&
+           !binding.typeTemplateArg.empty();
+  };
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
-    if (bindingIt != bindings.end() && isExperimentalSoaVectorBinding(bindingIt->second)) {
+    if (bindingIt != bindings.end() &&
+        (isExperimentalSoaVectorBinding(bindingIt->second) ||
+         (publicSoaSurfaceVisible &&
+          isPublicSoaSurfaceBinding(bindingIt->second)))) {
       receiverBinding = bindingIt->second;
     }
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
@@ -3086,6 +3103,28 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
       visibleSoaHelpers.insert("/soa/" + std::string(helperName));
     }
   }
+  // Public soa<T> name receivers are rewritten to the canonical
+  // /std/collections/soa/<helper> spelling only when that surface is
+  // actually reachable - either the module was merged into the program or
+  // an import covers it. Without this gate the rewrite turns valid
+  // retired-binding programs (no soa import at all) into dead-path errors.
+  bool publicSoaSurfaceVisible = false;
+  for (const Definition &def : program.definitions) {
+    if (def.fullPath.rfind("/std/collections/soa/", 0) == 0) {
+      publicSoaSurfaceVisible = true;
+      break;
+    }
+  }
+  if (!publicSoaSurfaceVisible) {
+    const auto &importPaths =
+        program.sourceImports.empty() ? program.imports : program.sourceImports;
+    for (const auto &importPath : importPaths) {
+      if (localImportPathCoversTarget(importPath, "/std/collections/soa/soa")) {
+        publicSoaSurfaceVisible = true;
+        break;
+      }
+    }
+  }
   for (Definition &def : program.definitions) {
     if (def.fullPath.rfind("/soa/", 0) == 0 ||
         def.fullPath.rfind("/std/collections/soa/", 0) == 0 ||
@@ -3110,7 +3149,8 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
         soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
-        visibleSoaHelpers);
+        visibleSoaHelpers,
+        publicSoaSurfaceVisible);
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
@@ -3125,7 +3165,8 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
           soaCollectionReturnDefinitions,
           structPaths,
           definitionNamespace,
-          visibleSoaHelpers);
+          visibleSoaHelpers,
+          publicSoaSurfaceVisible);
     }
   }
   return true;

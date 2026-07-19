@@ -424,7 +424,14 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
             normalizeCollectionReceiverTypeName(base))) {
       continue;
     }
-    return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
+    if (!splitTopLevelTemplateArgs(argText, templateArgsOut) ||
+        templateArgsOut.size() != 1) {
+      return false;
+    }
+    for (std::string &arg : templateArgsOut) {
+      arg = stripMangledTemplateArgKindPrefix(std::move(arg));
+    }
+    return true;
   }
   auto defIt = ctx.sourceDefs.find(resolvedPath);
   if (defIt == ctx.sourceDefs.end()) {

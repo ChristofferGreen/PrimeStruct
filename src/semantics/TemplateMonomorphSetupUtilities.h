@@ -93,6 +93,23 @@ std::string joinMangledTemplateArgs(const std::vector<std::string> &args,
   return out.str();
 }
 
+// Reverse of the joinMangledTemplateArgs element encoding: specialization
+// cache keys spell each top-level argument with a kind prefix
+// ("type:Particle"), so any consumer recovering template arguments from a
+// cache key must strip it or the prefixed text leaks into instantiations
+// (e.g. soaSupportedFieldCount<type:Particle>).
+std::string stripMangledTemplateArgKindPrefix(std::string value) {
+  for (const std::string_view prefix :
+       {std::string_view("type:"), std::string_view("int:"),
+        std::string_view("symbol:"), std::string_view("unsupported:")}) {
+    if (value.rfind(prefix, 0) == 0) {
+      value.erase(0, prefix.size());
+      break;
+    }
+  }
+  return value;
+}
+
 std::string mangleTemplateArgs(const std::vector<std::string> &args,
                                const std::vector<TemplateArgument> *details = nullptr) {
   const std::string canonical = joinMangledTemplateArgs(args, details);

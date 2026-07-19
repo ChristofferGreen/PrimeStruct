@@ -544,7 +544,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     // /std/collections/soa/<helper> surface otherwise.
     if ((resolvedType == "/soa" || normalizedTypeName == "soa" ||
          normalizedTypeName.rfind("soa<", 0) == 0) &&
-        isSoaReadRefHelperName(normalizedHelperName)) {
+        isSupportedCompatibilitySoaHelperName(normalizedHelperName)) {
       resolvedOut =
           preferredSoaHelperTargetForCurrentImports(normalizedHelperName);
       return true;
@@ -594,7 +594,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       // returning soa<T> otherwise falls into the generic fallback and
       // fabricates a definition-less "/soa/<helper>" path.
       if (resolvedType == "/soa" &&
-          isSoaReadRefHelperName(normalizedHelperName)) {
+          isSupportedCompatibilitySoaHelperName(normalizedHelperName)) {
         resolvedOut =
             preferredSoaHelperTargetForCurrentImports(normalizedHelperName);
         return true;

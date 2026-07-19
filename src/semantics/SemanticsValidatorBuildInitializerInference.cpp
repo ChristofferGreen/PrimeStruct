@@ -705,7 +705,11 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
     return samePath;
   }
   const std::string publicPath = publicSoaHelperTargetPath(helper);
-  if (isSoaReadRefHelperName(helper) &&
+  // The public surface also ships reserve/push/to_aos/to_aos_ref wrappers,
+  // so the whole supported helper family may canonicalize to it - but only
+  // when the wrapper is actually visible; otherwise keep the historical
+  // compatibility spelling for diagnostics.
+  if (isSupportedCompatibilitySoaHelperName(helper) &&
       hasVisibleDefinitionPathForCurrentImports(publicPath)) {
     return publicPath;
   }
@@ -728,7 +732,7 @@ bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(
   return hasVisibleDefinitionPathForCurrentImports(samePath) ||
          hasDefinitionFamilyPath(samePath) ||
          hasVisibleDefinitionPathForCurrentImports(canonicalPath) ||
-         (isSoaReadRefHelperName(helper) &&
+         (isSupportedCompatibilitySoaHelperName(helper) &&
           hasVisibleDefinitionPathForCurrentImports(publicPath));
 }
 

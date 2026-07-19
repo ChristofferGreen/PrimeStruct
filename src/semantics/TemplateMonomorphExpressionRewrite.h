@@ -1128,7 +1128,14 @@ bool rewriteExpr(Expr &expr,
             if (!isTemplateMonomorphSoaReceiverType(normalizedBase)) {
               continue;
             }
-            return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
+            if (!splitTopLevelTemplateArgs(argText, templateArgsOut) ||
+                templateArgsOut.size() != 1) {
+              return false;
+            }
+            for (std::string &arg : templateArgsOut) {
+              arg = stripMangledTemplateArgKindPrefix(std::move(arg));
+            }
+            return true;
           }
           return false;
         };

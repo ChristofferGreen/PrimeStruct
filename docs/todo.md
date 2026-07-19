@@ -2252,6 +2252,64 @@ This file is the live open-work queue for PrimeStruct.
     cnt2), calls_flow.collections gate identical 35-shard failing
     set, ir.pipeline.validation module file identical 74/95,
     emitters.cpp gate identical baseline.
+  - progress_2026-07-18b: gaps (b), (c), (d) root-caused.
+    (b) values.reserve/push: the public-soa dispatch branches in
+    resolveVectorHelperMethodTarget and the publicPath preference in
+    preferredSoaHelperTargetForCurrentImports were gated on
+    isSoaReadRefHelperName, excluding reserve/push/to_aos/to_aos_ref
+    even though the public wrappers exist; widened to
+    isSupportedCompatibilitySoaHelperName (still guarded by actual
+    visibility of the public wrapper).
+    (d) soa<T>(...).count() on call receivers:
+    hasVisibleExperimentalSoaSamePathHelper (SemanticsValidate.cpp)
+    counted the canonical /std/collections/soa/<h> path - which every
+    `import /std/collections/soa/*` covers - as proof of a user
+    /soa/<h> shadow, so rewriteExperimentalSoaSamePathHelperMethodExpr
+    fabricated a definition-less "/soa/<h>" call that failed with the
+    legacy "unknown method: /std/collections/soa_vector/<h>" text
+    (also the gap (e) leak shape for this path). Tightened the check
+    to genuine /soa/<h> shadows only; a fabricated same-path rewrite
+    without a user shadow could never validate, so the change can only
+    turn errors into successes. Found via gdb hardware watchpoint on
+    the AST node's name buffer.
+    (c) values./std/collections/soa/to_aos(): semantic product
+    publishes method_call_targets[0] resolved to the RAW template path
+    /std/collections/soa/to_aos (no __t specialization suffix, unlike
+    the direct-call targets in the same product) - the monomorphizer
+    never instantiates method-call targets spelled with the explicit
+    canonical path, so lowering finds no definition. Not fixed yet.
+  - progress_2026-07-19: gaps (b) and (d) FIXED and gated. Beyond the
+    root causes above, landing them required two more fixes: (1) a
+    canonical-args encoding leak - the specialization-cache reverse
+    lookups in TemplateMonomorphExperimentalCollectionReceiverResolution.h
+    and TemplateMonomorphExpressionRewrite.h returned cache-key args
+    ("type:Particle") verbatim, instantiating
+    soaSupportedFieldCount<type:Particle> and producing the historical
+    "meta.field_count requires struct type argument: type:<T>"
+    diagnostic family; added stripMangledTemplateArgKindPrefix next to
+    the joinMangledTemplateArgs encoder and applied it at both sites;
+    (2) the gap (b) name-receiver rewrite (public soa<T> bindings in
+    rewriteExperimentalSoaSamePathHelperMethodExpr) must be gated on
+    the canonical surface actually being visible
+    (publicSoaSurfaceVisible) - ungated it turned valid no-import
+    retired-binding programs into dead-path errors ("get method
+    validates retired soa binding" regression caught by the gate).
+    Verification: 14-probe matrix all correct (incl. gapb1=1 for
+    reserve/push, gapd2=3 for soa<T>(...).count()); collections gate:
+    45 new failing cases, every one a pinned-old-behavior contract
+    (re-pinned separately, see below); ir.pipeline.validation module:
+    75/95, strictly better than the 74/95 baseline ("imported builtin
+    soa method mutators lower through canonical helper routing" and
+    both soa get/ref named-args cases now pass, zero new failures);
+    emitters.cpp gate: identical 501/622 failing set. Residual gaps
+    discovered while re-pinning (pinned with notes in the test file):
+    (f) borrowed helper-return receivers still route count_ref through
+    the retired-family diagnostic; (g) rooted helper paths on
+    specialized receivers are rejected with the specialized-type
+    spelling; (h) borrowed method-like ref_ref is not routed to the
+    canonical wrapper; (i) bare ref with a user same-path /soa/ref
+    shadow on a call-receiver argument resolves to the stdlib wrapper
+    (escape diagnostic) instead of the shadow.
 
 - [ ] TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
   - owner: ai
