@@ -1224,8 +1224,24 @@ bool inferImplicitTemplateArgs(const Definition &def,
             paramBaseType = innerBase;
           }
         }
-        if (normalizeCollectionReceiverTypeName(argBaseType) !=
-            normalizeCollectionReceiverTypeName(paramBaseType)) {
+        // Inference-local equivalence only: the public soa<T> spelling
+        // names the same receiver family as the SoaVector<T> backing type,
+        // so a soa<T>-typed argument must unify against a helper's
+        // [SoaVector<T>] parameter (otherwise bare get(soaValues, i) dies
+        // with "template arguments required for .../soaVectorGet"). Kept
+        // out of normalizeCollectionReceiverTypeName itself - widening the
+        // shared family classifier flips unrelated monomorph rewrite
+        // decisions and breaks user same-path /soa/<helper> shadows.
+        auto inferenceReceiverFamilyName = [](std::string value) {
+          value = normalizeCollectionReceiverTypeName(std::move(value));
+          if (value == "soa" ||
+              trimLeadingSlash(value) == "std/collections/soa") {
+            return templateMonomorphSoaReceiverTypeName();
+          }
+          return value;
+        };
+        if (inferenceReceiverFamilyName(argBaseType) !=
+            inferenceReceiverFamilyName(paramBaseType)) {
           if (isStdlibCollectionHelper) {
             return false;
           }

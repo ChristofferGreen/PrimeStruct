@@ -2234,6 +2234,24 @@ This file is the live open-work queue for PrimeStruct.
     dispatch turns out to require the TODO-4724 resolveMethodTarget
     decomposition first, do that refactor under its own TODO rather
     than inline here.
+  - progress_2026-07-18: gap (a) fixed. Root cause: implicit template
+    inference (TemplateMonomorphImplicitTemplateInference.h) compared
+    receiver families via normalizeCollectionReceiverTypeName, which
+    maps SoaVector-family spellings to the internal soa family but
+    left the public "soa" spelling unmapped, so a soa<T>-typed
+    argument could not unify against a helper's [SoaVector<T>]
+    parameter and bare get(values, index) died with "template
+    arguments required for /std/collections/soa/soaVectorGet". Fix is
+    an inference-local equivalence (soa / std/collections/soa also
+    map to the internal soa family name) rather than widening the
+    shared classifier - a first attempt that widened
+    normalizeCollectionReceiverTypeName itself flipped monomorph
+    rewrite decisions and broke genuine user same-path /soa/<helper>
+    shadows (shadow1 probe returned 1 instead of 42). Verified: 9
+    probes correct (pa=8, cnt3=3, cnt4=3, shadow1=42, soa_test5-9,
+    cnt2), calls_flow.collections gate identical 35-shard failing
+    set, ir.pipeline.validation module file identical 74/95,
+    emitters.cpp gate identical baseline.
 
 - [ ] TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
   - owner: ai
