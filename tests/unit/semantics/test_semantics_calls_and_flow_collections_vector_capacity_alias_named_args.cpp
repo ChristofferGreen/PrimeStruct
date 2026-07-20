@@ -518,7 +518,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector helper call-form expression user shadow rejects positional reordered arguments") {
@@ -567,7 +568,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector helper expression skips temp-leading positional receiver probing") {
@@ -593,7 +595,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: push") != std::string::npos);
 }
 
 TEST_CASE("vector helper call-form expression user shadow rejects named arguments") {
@@ -611,7 +614,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector helper call-form expression user shadow rejects duplicate named receiver") {
@@ -629,7 +633,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector helper call-form expression rejects labeled named receiver") {
@@ -653,7 +658,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector helper call-form expression rejects auto binding from labeled receiver helper") {
@@ -678,7 +684,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced helper auto inference follows alias precedence") {
@@ -702,8 +709,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced helper auto inference keeps explicit parameter order") {

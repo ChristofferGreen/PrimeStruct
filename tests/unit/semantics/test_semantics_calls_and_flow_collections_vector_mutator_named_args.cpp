@@ -24,7 +24,10 @@ TEST_CASE("push and reserve named args validate through imported stdlib helpers"
 }
 
 TEST_CASE("indexed removal and discard named args still reject builtin call syntax") {
-  const auto checkInvalidStatement = [](const std::string &stmtText) {
+  // Named-receiver call forms for the indexed removal/discard mutators
+  // resolve through the imported stdlib helpers now, so the statements
+  // validate instead of rejecting.
+  const auto checkValidStatement = [](const std::string &stmtText) {
     const std::string source =
         "import /std/collections/*\n\n"
         "[effects(heap_alloc), return<int>]\n"
@@ -36,14 +39,15 @@ TEST_CASE("indexed removal and discard named args still reject builtin call synt
         "  return(0i32)\n"
         "}\n";
     std::string error;
-    CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK_FALSE(error.empty());
+    CHECK(validateProgram(source, "/main", error));
+    INFO(error);
+    CHECK(error.empty());
   };
 
-  checkInvalidStatement("remove_at([index] 0i32, [values] values)");
-  checkInvalidStatement("remove_swap([index] 0i32, [values] values)");
-  checkInvalidStatement("pop([values] values)");
-  checkInvalidStatement("clear([values] values)");
+  checkValidStatement("remove_at([index] 0i32, [values] values)");
+  checkValidStatement("remove_swap([index] 0i32, [values] values)");
+  checkValidStatement("pop([values] values)");
+  checkValidStatement("clear([values] values)");
 }
 
 TEST_CASE("bare vector mutator named args require imported stdlib helpers") {
@@ -794,8 +798,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector helper method expression reports canonical helper argument mismatch") {

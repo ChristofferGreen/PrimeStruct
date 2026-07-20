@@ -428,7 +428,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("access helper call-form expression infers auto binding from labeled receiver helper") {

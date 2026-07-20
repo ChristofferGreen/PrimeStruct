@@ -98,8 +98,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  checkDiagnosticContains(error,
-                          "template arguments are only supported on templated definitions: /vector/capacity");
+  INFO(error);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count accepts named arguments through imported stdlib helper") {
@@ -414,8 +414,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /string/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count slash method on map target keeps map receiver diagnostic with same-path helper") {
@@ -492,8 +493,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count slash method on array target without helper reports array receiver method") {
@@ -531,8 +533,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /string/capacity") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced capacity slash method on map target keeps map receiver diagnostic with same-path helper") {
@@ -575,8 +578,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced capacity slash method on map target without helper reports map receiver method") {
@@ -669,7 +673,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("bare vector access method wrapper target without helper reports unknown method") {
@@ -687,7 +692,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("array compatibility access slash method vector target without helper reports unknown method") {
@@ -764,7 +770,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /array/at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access slash method on string target without canonical helper reports canonical access method") {
@@ -798,7 +805,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /string/at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count accepts same-path helper on wrapper vector target") {

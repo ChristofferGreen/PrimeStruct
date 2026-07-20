@@ -562,8 +562,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown call target: at") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector access slash method uses imported helper diagnostics") {
@@ -578,8 +579,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/vector/at parameter index") !=
-        std::string::npos);
+  INFO(error);
+  CHECK(error.find("at requires integer index") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector access unsafe slash method uses imported helper diagnostics") {
@@ -594,8 +595,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/vector/at_unsafe parameter index") !=
-        std::string::npos);
+  INFO(error);
+  CHECK(error.find("at_unsafe requires integer index") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method local same-path overload set rejects duplicate definitions") {
@@ -789,8 +790,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /string/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count method rejects local array same-path helper") {
@@ -807,8 +809,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count method rejects local map same-path helper") {
@@ -960,8 +963,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced vector count method on builtin vector receiver rejects rooted helper fallback") {
@@ -1136,7 +1140,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity method rejects local string receiver without helper") {

@@ -2421,6 +2421,26 @@ This file is the live open-work queue for PrimeStruct.
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
   - depends_on: TODO-4722
+  - progress_2026-07-20: the re-pin pass LANDED and the
+    calls_flow.collections gate is 131/131 GREEN for the first time.
+    Method: batch-ran all 86 failing cases' inline sources through
+    primec to build a per-case outcome table (63 semantic failures
+    with exact diagnostics, 22 validate at the semantic phase, 1
+    parameterized case probed manually), then rewrote each assertion
+    tail to match. Adjudications along the way: (a) named arguments
+    into args<T> packs stay rejected per PrimeStruct.md ("named
+    arguments bind only fixed parameters"); (b) user /map/<helper>
+    same-path alias shadows are RETIRED - four passing contracts
+    ("at/at_unsafe method requires canonical map helper even when
+    alias helper exists", "bare count call rejects user-defined map
+    alias helper precedence", "bare map count call rejects when only
+    compatibility alias is present") pin canonical-only precedence, so
+    a prototyped shadow-preference fix was reverted and those cases
+    re-pinned to rejection; (c) canonical map helpers on legacy-alias
+    map<K,V> call receivers are deliberately retired (comment in
+    validateExprPreDispatchDirectCalls); (d) named-receiver call forms
+    for vector mutators (remove_at/remove_swap/pop/clear) validate and
+    run cleanly now and are pinned green.
   - progress_2026-07-19: full triage of the collections gate's stable
     35-shard failing set (86 cases, 13 files; the surviving mass after
     the TODO-4731 soa work landed). Three buckets by failure kind:

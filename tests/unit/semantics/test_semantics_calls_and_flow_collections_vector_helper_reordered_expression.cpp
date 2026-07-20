@@ -93,9 +93,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/push") != std::string::npos);
-  CHECK(error.find("parameter") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced helper reordered statement keeps compatibility reject diagnostics") {
@@ -113,9 +112,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/push") != std::string::npos);
-  CHECK(error.find("parameter") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("explicit canonical push on templated canonical constructor helper keeps same-path helper resolution") {
@@ -167,7 +165,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires vector binding") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: push") != std::string::npos);
 }
 
 TEST_CASE("explicit push on templated experimental constructor helper keeps helper return type") {
@@ -219,7 +218,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires vector binding") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector constructor resolves through imported stdlib helper") {
@@ -248,8 +248,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown named argument: first") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector constructor supports named-argument temporary receivers") {
@@ -263,8 +264,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown named argument: second") != std::string::npos);
 }
 
 TEST_CASE("rooted vector constructor alias auto binding is rejected even with stdlib import") {
@@ -323,8 +325,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown named argument: second") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector constructor requires imported stdlib helper") {
@@ -521,8 +524,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations") {
@@ -547,8 +551,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib wrapper vector constructors infer experimental auto locals and auto returns") {

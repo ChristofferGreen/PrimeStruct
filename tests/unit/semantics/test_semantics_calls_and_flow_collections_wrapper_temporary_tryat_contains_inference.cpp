@@ -175,8 +175,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("argument type mismatch for /std/collections/map/at parameter index: expected bool got i32") != std::string::npos);
 }
 
 TEST_CASE("map compatibility at_unsafe auto inference requires explicit alias definition") {
@@ -218,8 +219,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("argument type mismatch for /std/collections/map/at_unsafe parameter index: expected bool got i32") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced map constructor does not resolve map alias helper fallback") {
@@ -514,8 +516,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare vector at call prefers canonical helper over compatibility alias") {

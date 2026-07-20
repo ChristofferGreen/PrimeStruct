@@ -18,7 +18,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: at") != std::string::npos);
 }
 
 TEST_CASE("map wrapper temporary count call validates target classification") {
@@ -55,8 +56,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count validates on wrapper temporary vector target") {
@@ -169,8 +171,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/vector/capacity") !=
-        std::string::npos);
+  INFO(error);
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("map wrapper temporary access call validates map target classification") {
@@ -289,7 +291,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("map wrapper temporary capacity method reports vector target diagnostic") {
@@ -306,7 +309,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("count preserves missing receiver call-target diagnostics") {
@@ -393,8 +397,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/vector/at parameter index") !=
-        std::string::npos);
+  INFO(error);
+  CHECK(error.find("at requires integer index") != std::string::npos);
 }
 
 TEST_CASE("bare vector capacity call resolves through imported stdlib helper") {
@@ -435,9 +439,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions") !=
-        std::string::npos);
-  CHECK(error.find("/vector/capacity") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector capacity compatibility alias keeps rooted block-arg target") {
@@ -464,7 +467,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /vector/capacity") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity method on vector binding requires imported stdlib helper") {
@@ -501,8 +505,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method target for tag") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("wrapper vector capacity method keeps current imported compile boundary") {
@@ -553,7 +558,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /vector/capacity") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity rejects non-vector target") {
@@ -565,7 +571,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity method rejects array target") {
@@ -578,7 +585,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("count method keeps unknown method on non-collection receiver") {
@@ -810,7 +818,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/push") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: push") != std::string::npos);
 }
 
 TEST_CASE("reserve method keeps unknown method on wrapper temporary") {

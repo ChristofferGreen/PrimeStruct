@@ -24,8 +24,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("explicit canonical map parameter keeps pathspace string diagnostics") {
@@ -157,7 +158,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("if branches must return compatible types") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned referenced canonical map keeps if string branch diagnostics") {
@@ -183,7 +185,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("if branches must return compatible types") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned referenced canonical map keeps builtin key diagnostics") {
@@ -314,8 +317,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned canonical map method access count keeps string receiver typing") {

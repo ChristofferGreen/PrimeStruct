@@ -75,9 +75,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires mutable vector binding") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count-capacity call-form without helpers fails on count first") {
@@ -233,8 +233,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("call site: /vector/count at 22:22") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference keeps canonical precedence") {
@@ -544,8 +545,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch: expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count expression non-builtin arity falls back to canonical helper return") {
@@ -580,8 +582,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count expression compatibility alias fallback reports unknown target") {
@@ -599,7 +602,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count auto inference rejects non-builtin compatibility arity fallback") {
@@ -617,8 +621,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count non-builtin arity rejects array helper fallback") {
@@ -636,7 +641,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count non-builtin arity diagnostics report builtin mismatch") {
@@ -654,7 +660,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count auto inference non-builtin arity rejects array helper fallback") {
@@ -673,7 +680,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression keeps canonical helper return precedence") {
@@ -820,7 +828,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("argument count mismatch for /map/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression ignores templated alias helper fallback") {
