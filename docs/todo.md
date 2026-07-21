@@ -2434,20 +2434,25 @@ This file is the live open-work queue for PrimeStruct.
     rotted contracts), so the refresh workflow must force human diff
     review, and a thin end-to-end tier that actually runs binaries
     must remain (only real runs catch miscompiles and VM/native
-    divergence). Cheap wins to take first: switch exe-mode tests
-    without native-specific assertions to --emit=vm (no clang/link),
-    build the test runner RelWithDebInfo (the Debug semantic phase
-    dominates), and share a precompiled stdlib product across cases
-    in a file.
-  - acceptance: emitters-suite wall time drops by an order of
-    magnitude without losing the end-to-end miscompile net.
+    divergence). Execution order across the test-runtime track: take
+    the independent quick wins FIRST - TODO-4734 (RelWithDebInfo
+    runner), TODO-4733 (vm-mode migration), TODO-4736 (runtime
+    preamble prebuild), TODO-4735 (shared stdlib product) - plus the
+    TODO-4737 lowering invariant and TODO-4738 duration telemetry;
+    THIS golden-comparison item comes last, scoped to whatever is
+    still slow once those land. Note the goldens also cannot see
+    lowering-stage failures (the gap (c) class) - that is TODO-4737's
+    job, not this item's.
+  - acceptance: combined with the track's other items, emitters-suite
+    wall time drops by an order of magnitude without losing the
+    end-to-end miscompile net.
 
 - [ ] TODO-4736: Prebuild the generated-C++ runtime preamble for exe-mode tests
   - owner: ai
   - created_at: 2026-07-20
   - phase: Test infrastructure
-  - depends_on: TODO-4732
-  - scope: every exe-mode case has clang compile ~850 lines of
+  - parallel_track: test-runtime
+  - scope: every exe-mode case makes clang compile ~850 lines of
     generated C++ whose stack-machine runtime preamble is identical
     across tests. Split the preamble into a precompiled header or a
     prebuilt object the generated tail links against, so clang only
@@ -2484,7 +2489,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-07-20
   - phase: Test infrastructure
-  - depends_on: TODO-4732
+  - parallel_track: test-runtime
   - scope: exe-mode cases whose assertions are exit codes / stdout
     with nothing native-specific pay clang+link (~10-20s/case) for no
     signal the VM path would not give. Sweep the compile_run suites,
@@ -2498,7 +2503,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-07-20
   - phase: Test infrastructure
-  - depends_on: TODO-4732
+  - parallel_track: test-runtime
   - scope: the Debug test runner's semantic phase dominates
     compile-run case cost (~40s/case observed). Add a CMake
     preset/cache for a RelWithDebInfo (or -O2 + assertions) runner,
@@ -2512,7 +2517,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-07-20
   - phase: Test infrastructure
-  - depends_on: TODO-4732
+  - parallel_track: test-runtime
   - scope: every case re-parses and re-validates the imported stdlib
     modules from scratch. Investigate caching the stdlib portion of
     the semantic product (or a serialized module artifact) keyed by
