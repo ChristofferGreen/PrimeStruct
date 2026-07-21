@@ -2421,6 +2421,30 @@ This file is the live open-work queue for PrimeStruct.
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
   - depends_on: TODO-4722
+  - progress_2026-07-20d: emitters_newly_exposed survey complete
+    (emitters_outcomes.json in the session scratchpad): of 114 failing
+    cases, 74 fail compilation - the dominant sub-clusters are retired
+    same-path/alias contracts already adjudicated in the collections
+    pass (unknown call target /vector/at, /map/count,
+    /std/collections/vector/count etc. -> re-pin to rejection), and a
+    12-case REAL gap: values.at(i)/values.at_unsafe(i) method sugar on
+    args<T> pack receivers publishes the definition-less /array/at
+    family and the inline dispatch fails without diagnostic ("missing
+    lowered definition: /array/at"). A carve-out at the
+    SetupTypeMethodCallResolution consumption point (mirroring the
+    existing /array/count pack carve-out) is NOT sufficient - the
+    failure originates deeper in runInlineCallDispatch, where the
+    method form never reaches the builtin pack-access path; this is
+    the same design knot as TODO-4726's
+    ir_lowerer::getBuiltinArrayAccessName case (at/at_ref vs
+    at_unsafe/at_unsafe_ref classification with the
+    unrootedStdlibVectorHelperPath early-return bailouts) and should
+    be fixed there, not papered at the consumption site. 23 cases
+    build and run (rc/stdout captured for pin comparison); 17 are
+    unit-style emitter-API assertion tests without inline sources
+    (read individually). Native-backend limitation errors observed in
+    the survey used --emit=exe and are representative (the cpp emit
+    path routes through the same IR lowering).
   - progress_2026-07-20c: full 1877-test ctest survey: 92% passing,
     155 failing shards. Remaining clusters by family: compile_run
     emitters_newly_exposed (37 shards), compile_run
