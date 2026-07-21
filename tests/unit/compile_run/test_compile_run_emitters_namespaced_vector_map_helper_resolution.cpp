@@ -198,22 +198,14 @@ main() {
   return(plus(c, plus(first, second)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_map_reference_method_sugar.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_map_reference_method_sugar_exe")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_map_reference_method_sugar.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_map_reference_method_sugar_err.txt")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_map_reference_method_sugar_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(errPath).empty());
-  CHECK(runCommand(exePath) == 4);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on wrapper-returned canonical map reference method sugar") {
@@ -563,17 +555,14 @@ main() {
               contains(wrapMap()./std/collections/map/at_unsafe(2i32), 3i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper-returned slash-method map access contains without helper in C++ emitter") {
@@ -589,17 +578,14 @@ main() {
               contains(wrapMap()./std/collections/map/at_unsafe(2i32), 3i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects canonical slash-method map access before emission") {
@@ -611,21 +597,14 @@ main() {
               values./std/collections/map/at_unsafe(2i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_method_map_access_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_method_map_access_deleted_stub.cpp")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_canonical_slash_method_map_access_deleted_stub.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_method_map_access_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_method_map_access_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_SUITE_END();

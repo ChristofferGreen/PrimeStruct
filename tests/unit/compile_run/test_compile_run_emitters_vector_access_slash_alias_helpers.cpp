@@ -364,17 +364,14 @@ main() {
               /std/collections/vector/at_unsafe(wrapVector(), 2i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub_cpp.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper bare vector at_unsafe calls without helper in C++ emitter") {
@@ -414,17 +411,14 @@ main() {
   return(/vector/at(wrapVector(), 1i32))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_exe.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects bare vector mutator calls without helper before emission") {

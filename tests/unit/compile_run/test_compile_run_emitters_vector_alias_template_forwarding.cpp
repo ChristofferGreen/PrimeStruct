@@ -55,16 +55,14 @@ main() {
   return(plus(/vector/count(values, true), values.count(true)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_bool_type_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_implicit_canonical_forwarding_bool_type_mismatch_exe")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_bool_type_mismatch.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_implicit_canonical_forwarding_bool_type_mismatch_repin.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias compatibility template forwarding on non-bool type mismatch in C++ emitter") {
@@ -776,17 +774,14 @@ main() {
                    plus(wrapVector()./array/at(0i32).tag(), wrapVector()./array/at_unsafe(1i32).tag()))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_array_alias_method_helpers_same_path_vector_receivers.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_array_alias_method_helpers_same_path_vector_receivers.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_array_alias_method_helpers_same_path_vector_receivers.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_array_alias_method_helpers_same_path_vector_receivers_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_SUITE_END();

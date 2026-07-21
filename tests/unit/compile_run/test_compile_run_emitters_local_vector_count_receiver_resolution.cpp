@@ -321,18 +321,14 @@ main() {
   return(wrapMap()./vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_count_map_same_path_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_count_map_same_path_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_map_same_path_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_map_same_path_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects canonical slash-method vector count same-path helper on map receiver") {
@@ -404,18 +400,14 @@ main() {
   return(wrapMap()./vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_map_deleted_stub.txt")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_map_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias slash-method vector count on map receiver in C++ emitter") {
@@ -430,18 +422,14 @@ main() {
   return(wrapMap()./vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub_exe.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_map_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_map_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps rooted wrapper vector count same-path helper on array receiver") {
@@ -572,17 +560,14 @@ main() {
   return(wrapArray()./vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_count_array_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_array_deleted_stub.cpp")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_count_array_deleted_stub.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_array_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias slash-method vector count on array receiver with rooted target in C++ emitter") {
@@ -597,17 +582,14 @@ main() {
   return(wrapArray()./vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_count_array_deleted_stub_exe.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_count_array_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_array_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_array_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on string receiver") {

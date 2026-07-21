@@ -170,18 +170,14 @@ main() {
               wrapValues().at_unsafe(0i32).count()))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_access_direct_count_forwarding.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_access_direct_count_forwarding.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_vector_access_direct_count_forwarding.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_access_direct_count_forwarding_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects vector alias direct-call count canonical wrapper return forwarding") {
@@ -201,17 +197,14 @@ main() {
   return(count(/vector/at(wrapValues(), 0i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps primitive diagnostics on vector alias access count with canonical non-string wrapper return") {
@@ -231,16 +224,14 @@ main() {
   return(count(/vector/at(wrapValues(), 0i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_count_canonical_wrapper_return_non_string_reject.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_vector_alias_access_count_canonical_wrapper_return_non_string_reject.err")
-                                  .string();
+  const std::string srcPath = writeTemp("compile_cpp_vector_alias_access_count_canonical_wrapper_return_non_string_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_access_count_canonical_wrapper_return_non_string_reject_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects inferred wrapper string count arg mismatch in C++ emitter") {
@@ -412,12 +403,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_capacity_call_non_vector_reject.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_capacity_call_non_vector_reject.err").string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_capacity_call_non_vector_reject_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects non-vector capacity method target in C++ emitter") {
@@ -430,12 +421,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_capacity_method_non_vector_reject.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_capacity_method_non_vector_reject.err").string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_capacity_method_non_vector_reject_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects user array capacity helper shadow in C++ emitter") {

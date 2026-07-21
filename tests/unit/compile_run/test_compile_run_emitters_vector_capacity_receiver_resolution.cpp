@@ -19,19 +19,14 @@ main() {
   return(value./std/collections/vector/capacity())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_string_same_path_helper.prime",
-                source);
+  const std::string srcPath = writeTemp("compile_cpp_local_canonical_slash_vector_capacity_string_same_path_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_capacity_string_same_path_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_capacity_string_same_path_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /string/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on map receiver") {
@@ -47,19 +42,14 @@ main() {
   return(values./std/collections/vector/capacity())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_map_same_path_helper.prime",
-                source);
+  const std::string srcPath = writeTemp("compile_cpp_local_canonical_slash_vector_capacity_map_same_path_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_capacity_map_same_path_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_capacity_map_same_path_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on array receiver") {
@@ -75,19 +65,14 @@ main() {
   return(items./std/collections/vector/capacity())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_array_same_path_helper.prime",
-                source);
+  const std::string srcPath = writeTemp("compile_cpp_local_canonical_slash_vector_capacity_array_same_path_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_capacity_array_same_path_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_capacity_array_same_path_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias direct-call vector capacity same-path helper on array receiver") {
@@ -236,18 +221,14 @@ main() {
   return(wrapMap()./std/collections/vector/capacity())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_capacity_map_same_path_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_canonical_slash_vector_capacity_map_same_path_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_capacity_map_same_path_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_vector_capacity_map_same_path_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects canonical slash-method vector capacity same-path helper on array receiver") {

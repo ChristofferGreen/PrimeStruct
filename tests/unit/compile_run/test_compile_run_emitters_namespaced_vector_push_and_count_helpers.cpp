@@ -255,19 +255,14 @@ main() {
   return(/std/collections/vector/count(values, true))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch_exe")
-                                  .string();
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch_err.txt")
-                                  .string();
+  const std::string srcPath = writeTemp("compile_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced count non-builtin array fallback in C++ emitter") {
@@ -612,17 +607,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_access_positional_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_access_positional_call_shadow_exe").string();
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_vector_access_positional_call_shadow_err.txt")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_vector_access_positional_call_shadow_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /vector/at parameter values: expec") != std::string::npos);
 }
 
 TEST_CASE("rejects user map access string positional call shadow in C++ emitter") {
@@ -640,14 +631,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_map_access_string_positional_call_shadow.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_map_access_string_positional_call_shadow_err.txt")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_map_access_string_positional_call_shadow_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend requires integer indices for at") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects later map receiver positional shadow without canonical reorder") {

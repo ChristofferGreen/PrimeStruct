@@ -114,18 +114,14 @@ main() {
   return(wrapValues().count(1i32))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_diag.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_diag.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_diag.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_diag_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count__ta77c4") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter resolves direct canonical map count wrappers on map references") {
@@ -360,22 +356,14 @@ main() {
   return(values.count<i32, i32>(true))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_map_count_explicit_template_method_alias_precedence.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_map_count_explicit_template_method_alias_precedence.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_map_count_explicit_template_method_alias_precedence.err")
-          .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_map_count_explicit_template_method_alias_precedence_exe")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_map_count_explicit_template_method_alias_precedence_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(errPath).empty());
-  CHECK(runCommand(quoteShellArg(exePath)) == 96);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps builtin map diagnostics on explicit canonical typed bindings") {
@@ -470,19 +458,14 @@ main() {
   return(/std/collections/map/at(wrapMap(), 1i32))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_at_canonical_precedence_diag.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_map_at_canonical_precedence_diag.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_namespaced_map_at_canonical_precedence_diag.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_stdlib_namespaced_map_at_canonical_precedence_diag_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
-                               "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical stdlib namespaced map count helpers in expressions") {

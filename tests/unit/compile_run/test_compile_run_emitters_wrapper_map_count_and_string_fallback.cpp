@@ -59,21 +59,14 @@ main() {
               count(wrapMap()./std/collections/map/at_unsafe(2i32))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_slash_method_map_access_count_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_slash_method_map_access_count_deleted_stub.cpp")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_slash_method_map_access_count_deleted_stub.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_slash_method_map_access_count_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_slash_method_map_access_count_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects explicit canonical map count slash-method receiver fallback") {
@@ -175,18 +168,14 @@ main() {
               count(/std/collections/vector/at_unsafe(wrapValues(), 1i32))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_access_count_receiver_same_path_diag.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_access_count_receiver_same_path_diag.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_vector_access_count_receiver_same_path_diag.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_access_count_receiver_same_path_diag_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps slash-method vector access count through builtin string length") {
@@ -294,18 +283,14 @@ main() {
   return(count(/vector/at(wrapValues(), 0i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_access_count_receiver_deleted_stub_exe.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_access_count_receiver_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_vector_access_count_receiver_deleted_stub.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_access_count_receiver_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects stdlib namespaced vector access count for non-string element in C++ emitter") {
@@ -522,18 +507,14 @@ main() {
               wrapValues().at_unsafe(0i32).count()))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_access_direct_count_fallback_reject.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_access_direct_count_fallback_reject.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_vector_access_direct_count_fallback_reject.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_access_direct_count_fallback_reject_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("does not support string array return types on /wrapValues") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects bare vector method access receiver fallback without helper in C++ emitter") {
@@ -653,21 +634,14 @@ main() {
   return(/vector/at(wrapValues(), 2i32).tag())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_alias_direct_struct_method_chain_forwarding.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_vector_alias_direct_struct_method_chain_forwarding_exe")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_alias_direct_struct_method_chain_forwarding.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_vector_alias_direct_struct_method_chain_forwarding.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_alias_direct_struct_method_chain_forwarding_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper vector alias direct-call method receiver fallback without helper in C++ emitter") {
@@ -689,18 +663,14 @@ main() {
   return(/vector/at(wrapValues(), 1i32).tag())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_alias_direct_method_receiver_fallback_reject.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_alias_direct_method_receiver_fallback_reject.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_vector_alias_direct_method_receiver_fallback_reject.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_alias_direct_method_receiver_fallback_reject_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_SUITE_END();

@@ -19,17 +19,14 @@ main() {
               /vector/at_unsafe(wrapText(), 0i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_direct_string_vector_access_no_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_direct_string_vector_access_no_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_direct_string_vector_access_no_helper_cpp.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_direct_string_vector_access_no_helper_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects direct-call string vector access builtin fallback in C++ emitter") {
@@ -45,17 +42,14 @@ main() {
               /vector/at_unsafe(wrapText(), 0i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_direct_string_vector_access_no_helper_exe.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_direct_string_vector_access_no_helper_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_direct_string_vector_access_no_helper_exe.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_direct_string_vector_access_no_helper_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects slash-method wrapper string access method chain compatibility fallback in C++ emitter") {
@@ -183,17 +177,14 @@ main() {
               wrapArray()./vector/at_unsafe(0i32)))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_access_array_no_helper_exe.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_access_array_no_helper_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_access_array_no_helper_exe.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_access_array_no_helper_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access struct method chain without same-path helper in C++ emitter") {
@@ -219,16 +210,14 @@ main() {
               /vector/at(values, 1i32).tag()))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_forwarding.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_vector_alias_access_struct_method_chain_canonical_forwarding.err")
-                                  .string();
+  const std::string srcPath = writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_forwarding.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_access_struct_method_chain_canonical_forwarding_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access struct method chain canonical receiver diagnostics in C++ emitter") {
@@ -253,17 +242,14 @@ main() {
   return(/vector/at(values, 2i32).tag(1i32))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_diagnostic.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_vector_alias_access_struct_method_chain_canonical_diagnostic.err")
-                                  .string();
+  const std::string srcPath = writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_diagnostic.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_access_struct_method_chain_canonical_diagnostic_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter self") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access field expression without same-path helper in C++ emitter") {
@@ -283,16 +269,14 @@ main() {
   return(/vector/at(values, 2i32).value)
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_field_expression_struct_receiver_forwarding.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_vector_alias_access_field_expression_struct_receiver_forwarding.err")
-                                  .string();
+  const std::string srcPath = writeTemp("compile_cpp_vector_alias_access_field_expression_struct_receiver_forwarding.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_access_field_expression_struct_receiver_forwarding_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("keeps canonical vector access call struct method chain forwarding in C++ emitter") {

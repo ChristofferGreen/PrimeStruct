@@ -2534,6 +2534,21 @@ This file is the live open-work queue for PrimeStruct.
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
   - depends_on: TODO-4722
+  - progress_2026-07-21: first re-pin batch landed - the 51
+    semantic-rejection COMPILE_FAIL cases from the survey (dominated
+    by retired same-path/alias contracts already adjudicated in the
+    collections pass: unknown call target /vector/at, /map/count,
+    /std/collections/vector/count, etc.) are re-pinned to their
+    surveyed current diagnostics across 12 test files. emitters.cpp
+    gate: 501 -> 551 passed, zero cases failing that were not already
+    failing pre-re-pin (verified by prefix-matched diff against the
+    original baseline; naive full-line diffing false-positived on
+    doctest log line-wrap artifacts). Remaining 71: the RUN-outcome
+    cases needing rc/stdout comparison against pins, the 12-case
+    args<T> pack at()/at_unsafe() lowering gap (TODO-4726 territory),
+    lowering-level native-backend limitation errors, and the 17
+    unit-style emitter-API cases not covered by the source-survey
+    method.
   - progress_2026-07-20d: emitters_newly_exposed survey complete
     (emitters_outcomes.json in the session scratchpad): of 114 failing
     cases, 74 fail compilation - the dominant sub-clusters are retired

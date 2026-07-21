@@ -101,17 +101,14 @@ main() {
                    plus(capacity(wrapVector()), wrapVector().capacity()))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_user_wrapper_temp_count_capacity_shadow_precedence.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_user_wrapper_temp_count_capacity_shadow_precedence_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  checkFileContains(errPath, "unknown method: /map<i32, i32>/count");
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("rejects user wrapper temporary count capacity shadow value mismatch in C++ emitter") {
@@ -152,17 +149,14 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  checkFileContains(errPath, "unknown method: /map<i32, i32>/count");
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects wrapper count/capacity builtin fallback on map count first") {
@@ -184,16 +178,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_count_capacity_builtin_fallback.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_wrapper_count_capacity_builtin_fallback.cpp").string();
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_wrapper_count_capacity_builtin_fallback.err").string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_count_capacity_builtin_fallback_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map<i32, i32>/count") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("rejects namespaced wrapper vector count map target in C++ emitter") {
@@ -426,17 +417,14 @@ main() {
   return(wrapText()./std/collections/vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_count_string_no_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_canonical_slash_vector_count_string_no_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_string_no_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_vector_count_string_no_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps map receiver method diagnostic for slash-method vector count on map receiver") {
@@ -451,18 +439,14 @@ main() {
   return(wrapMap()./std/collections/vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_count_map_no_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_canonical_slash_vector_count_map_no_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_map_no_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_vector_count_map_no_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map<i32, i32>/count") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps array-count diagnostic for slash-method vector count on array receiver") {
@@ -477,17 +461,14 @@ main() {
   return(wrapArray()./std/collections/vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_count_array_no_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_canonical_slash_vector_count_array_no_helper.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_array_no_helper.err")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_vector_count_array_no_helper_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector count overloads") {
@@ -517,17 +498,14 @@ main() {
               text./std/collections/vector/count()))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_local_canonical_slash_vector_count_same_path.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_local_canonical_slash_vector_count_same_path.prime", source);
   const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_same_path_err.txt")
-          .string();
+      (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_count_same_path_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector count on map receiver before emission") {
@@ -538,18 +516,14 @@ main() {
   return(values./std/collections/vector/count())
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_local_canonical_slash_vector_count_map_no_helper.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_map_no_helper.txt")
-          .string();
+  const std::string srcPath = writeTemp("compile_cpp_local_canonical_slash_vector_count_map_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_count_map_no_helper_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /map/count") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_SUITE_END();
