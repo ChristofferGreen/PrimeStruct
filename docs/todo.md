@@ -2415,6 +2415,33 @@ This file is the live open-work queue for PrimeStruct.
     the fix also resolves that one, rather than solving the same
     architectural gap twice.
 
+- [ ] TODO-4732: Cut compile-run test runtimes with semantic-product golden comparisons
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - scope: many compile-run tests pay the full primec semantics + IR
+    lowering + clang + link + run cost (~40-60s/case in Debug) only to
+    assert an exit code that is a proxy for a routing decision. Idea
+    (from the project owner): compare a stored artifact instead of
+    running the full pipeline. Design sketch agreed in-session:
+    prefer storing the SEMANTIC PRODUCT routing tables
+    (direct_call_targets / method_call_targets) over lowest-level IR
+    or generated C++ - it is tiny, stable across lowering refactors,
+    available before clang, and pins exactly the decision under test;
+    generated C++ churns cosmetically and IR goldens churn on slot or
+    ordering refactors. Guard rails: goldens enshrine
+    recording-day bugs (this session spent its bulk un-pinning ~200
+    rotted contracts), so the refresh workflow must force human diff
+    review, and a thin end-to-end tier that actually runs binaries
+    must remain (only real runs catch miscompiles and VM/native
+    divergence). Cheap wins to take first: switch exe-mode tests
+    without native-specific assertions to --emit=vm (no clang/link),
+    build the test runner RelWithDebInfo (the Debug semantic phase
+    dominates), and share a precompiled stdlib product across cases
+    in a file.
+  - acceptance: emitters-suite wall time drops by an order of
+    magnitude without losing the end-to-end miscompile net.
+
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
   - created_at: 2026-07-16
