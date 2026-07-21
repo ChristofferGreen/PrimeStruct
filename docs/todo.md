@@ -2421,6 +2421,28 @@ This file is the live open-work queue for PrimeStruct.
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
   - depends_on: TODO-4722
+  - progress_2026-07-20b: the ir.pipeline.validation module file
+    (test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp)
+    went 75/95 -> 92/95; the three remaining reds are the tracked
+    TODO-4726 getBuiltinArrayAccessName classification pair and the
+    TODO-4728 reflection-query error-precedence case. Work: retired
+    soa module imports (internal_soa, internal_soa_conversions)
+    modernized out of the failing sources with explicit
+    experimental_soa_conversions calls moved to the canonical
+    /std/collections/soa/to_aos_ref spelling; to_aos materialization
+    pins flipped to lowering success (gap (c)); five drifted
+    diagnostics re-pinned to current text (one still leaks the
+    retired soa_vector family - gap (e) evidence); and one compiler
+    fix: candidatePathsForExprCall now resolves struct-literal
+    constructor receivers (Holder{}.cloneValues()) to their member
+    definitions so chained soa helper methods on such receivers reach
+    the method desugar and materialize their canonical targets -
+    fixing the nested struct-body TODO-4727 example end-to-end.
+    Gates: collections 130/131 with the single failure a 2400s
+    timeout on shard 201_210 caused by concurrent probe load (all ten
+    cases pass individually with the change, ~1530s total, and the
+    slowness is pre-existing - case 209 takes 380s with the change
+    stashed too); emitters.cpp identical 501/622.
   - progress_2026-07-20: the re-pin pass LANDED and the
     calls_flow.collections gate is 131/131 GREEN for the first time.
     Method: batch-ran all 86 failing cases' inline sources through

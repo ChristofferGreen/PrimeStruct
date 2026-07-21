@@ -3481,6 +3481,31 @@ std::vector<std::string> candidatePathsForExprCall(
       }
     }
   }
+  if (callExpr.isMethodCall && !callExpr.args.empty() && structPaths != nullptr &&
+      callExpr.args.front().kind == Expr::Kind::Call) {
+    // Struct-literal / constructor receivers (Holder{}.cloneValues()):
+    // resolve the constructor name to a struct path so the member helper
+    // definition is a candidate - otherwise chained soa helper methods on
+    // such receivers never reach the method desugar and their canonical
+    // targets stay unmaterialized in lowering.
+    const Expr &receiver = callExpr.args.front();
+    if (!receiver.name.empty()) {
+      std::string receiverPath = receiver.name;
+      if (receiverPath.front() != '/') {
+        std::string prefix = !receiver.namespacePrefix.empty()
+                                 ? receiver.namespacePrefix
+                                 : definitionNamespace;
+        if (!prefix.empty() && prefix.front() != '/') {
+          prefix.insert(prefix.begin(), '/');
+        }
+        receiverPath = prefix.empty() ? "/" + receiverPath
+                                      : prefix + "/" + receiverPath;
+      }
+      if (structPaths->count(receiverPath) > 0) {
+        candidatePaths.push_back(receiverPath + "/" + callExpr.name);
+      }
+    }
+  }
   if (!callExpr.name.empty() && callExpr.name.front() == '/') {
     candidatePaths.push_back(callExpr.name);
     return candidatePaths;
