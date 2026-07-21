@@ -2442,6 +2442,44 @@ This file is the live open-work queue for PrimeStruct.
   - acceptance: emitters-suite wall time drops by an order of
     magnitude without losing the end-to-end miscompile net.
 
+- [ ] TODO-4736: Prebuild the generated-C++ runtime preamble for exe-mode tests
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - depends_on: TODO-4732
+  - scope: every exe-mode case has clang compile ~850 lines of
+    generated C++ whose stack-machine runtime preamble is identical
+    across tests. Split the preamble into a precompiled header or a
+    prebuilt object the generated tail links against, so clang only
+    compiles the program-specific part.
+  - acceptance: measured clang-step reduction on a fixed case set.
+
+- [ ] TODO-4737: Add a lowered-module invariant - no published method-call target without a materialized definition or builtin classification
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - scope: the TODO-4731 gap (c) class (semantic product publishes a
+    method-call target the lowerer has no definition for) is invisible
+    to semantic-product goldens and only surfaced case-by-case. A
+    single validator pass over every lowered module asserting the
+    invariant catches the whole class everywhere, replacing dozens of
+    per-shape "does this lower" cases and guarding future
+    materialization gaps by construction.
+  - acceptance: invariant runs in the lowering pipeline under a test
+    flag; deliberately re-introducing the gap (c) bug trips it.
+
+- [ ] TODO-4738: Capture per-case durations in CI and reshard hot shards
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - scope: shard 201_210 sits at ~1530s against the 2400s ctest
+    timeout; concurrent load pushed it over and produced a
+    false-alarm "regression" that cost a full investigation cycle.
+    Enable doctest --duration in CI, persist per-case timings, and
+    reshard so no shard exceeds ~50% of its timeout budget.
+  - acceptance: timing artifact per CI run; hottest shard under 50%
+    of timeout at current case costs.
+
 - [ ] TODO-4733: Migrate non-native-asserting exe-mode compile-run tests to --emit=vm
   - owner: ai
   - created_at: 2026-07-20
