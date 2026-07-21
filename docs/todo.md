@@ -2442,6 +2442,49 @@ This file is the live open-work queue for PrimeStruct.
   - acceptance: emitters-suite wall time drops by an order of
     magnitude without losing the end-to-end miscompile net.
 
+- [ ] TODO-4733: Migrate non-native-asserting exe-mode compile-run tests to --emit=vm
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - depends_on: TODO-4732
+  - scope: exe-mode cases whose assertions are exit codes / stdout
+    with nothing native-specific pay clang+link (~10-20s/case) for no
+    signal the VM path would not give. Sweep the compile_run suites,
+    classify each exe case (native-specific: keeps exe; otherwise:
+    vm), and migrate the harness call. Keep a representative
+    exe-tier per feature family as the miscompile net.
+  - acceptance: emitters/imports/smoke wall time drops materially;
+    per-family exe coverage retained; no assertion weakened.
+
+- [ ] TODO-4734: Provide and adopt a RelWithDebInfo test-runner build
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - depends_on: TODO-4732
+  - scope: the Debug test runner's semantic phase dominates
+    compile-run case cost (~40s/case observed). Add a CMake
+    preset/cache for a RelWithDebInfo (or -O2 + assertions) runner,
+    measure the per-case delta on a fixed case set, and adopt it for
+    the long compile-run suites if the win holds. Keep one Debug
+    gate lane so assertion-only bugs stay visible.
+  - acceptance: measured per-case speedup documented; suite lanes
+    switched without losing Debug assertion coverage.
+
+- [ ] TODO-4735: Share a precompiled stdlib semantic product across compile-run cases
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - depends_on: TODO-4732
+  - scope: every case re-parses and re-validates the imported stdlib
+    modules from scratch. Investigate caching the stdlib portion of
+    the semantic product (or a serialized module artifact) keyed by
+    stdlib content hash, so per-case work is only the test source.
+    Riskier than 4733/4734 (cache correctness must not mask
+    cross-case pollution - see the top-priority pollution rule), so
+    it needs an opt-out lane and a differential validation pass.
+  - acceptance: measured speedup with a cache-off lane proving
+    identical results.
+
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
   - created_at: 2026-07-16
