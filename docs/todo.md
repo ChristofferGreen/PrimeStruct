@@ -2421,6 +2421,18 @@ This file is the live open-work queue for PrimeStruct.
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
   - depends_on: TODO-4722
+  - progress_2026-07-20c: full 1877-test ctest survey: 92% passing,
+    155 failing shards. Remaining clusters by family: compile_run
+    emitters_newly_exposed (37 shards), compile_run
+    imports_operations_and_collections (35) + versioned_import_resolution
+    (10) + block_and_operator_rewrites (6), ir_pipeline
+    validation_cases (27 - a second file, distinct from the
+    canonical-module file already modernized to 92/95),
+    vm_collections_newly_exposed (25), smoke families (~51 total),
+    reflection_codegen (9), plus singles. The collections semantics
+    suite (131 shards) stays green in the full run. Continue the
+    survey -> adjudicate -> fix-or-repin -> gate loop per family,
+    largest first.
   - progress_2026-07-20b: the ir.pipeline.validation module file
     (test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp)
     went 75/95 -> 92/95; the three remaining reds are the tracked
