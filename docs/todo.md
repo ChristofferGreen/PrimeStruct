@@ -99,6 +99,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 - TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
 - TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
+- TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
 
 ### Priority Lanes
 
@@ -2393,6 +2394,75 @@ This file is the live open-work queue for PrimeStruct.
     type is a struct (not a plain scalar). Left unfixed/unre-pinned per
     this TODO's stop_rule; noted here so the eventual mapping pass has
     another concrete repro shape to check against.
+
+- [ ] TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
+  - owner: ai
+  - created_at: 2026-07-22
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp`
+    has 2 failing cases, both thin wrappers around shared conformance
+    helpers in `test_compile_run_vector_conformance_expectations.h` /
+    `test_compile_run_vector_conformance_experimental_expectations.h`:
+    "canonical vector indexed removal helpers with owned elements in
+    C++ emitter" and "supports indexed vector removals with ownership
+    semantics in C++ emitter". Both currently expect COMPILE REJECTION
+    for `emitMode == "exe"` (with diagnostic text like "vm backend only
+    supports numeric/bool/string vector literals" or a
+    `/std/collections/vector/push`-related message), but the source
+    now compiles successfully (rc=0) - this is a capability gain, not a
+    regression, consistent with several other same-session findings
+    where a previously-rejected construct now works. HOWEVER, unlike
+    those other cases, the RUNTIME RESULT is wrong, not just the
+    compile outcome: probed
+    `makeCanonicalVectorIndexedRemovalOwnershipConformanceSource()`'s
+    exact generated source directly against primec (`--emit=exe`,
+    compile rc=0, run rc=1). The SAME source's `expectVectorConformanceProgramRuns`
+    branch (used for other, currently-untested-here emit modes) expects
+    18, and manually re-deriving the arithmetic from the source's own
+    push/remove_at/remove_swap/vectorTakeSlot sequence (2-element
+    vector -> remove one -> count should be 1, survivor value read via
+    vectorTakeSlot without further mutating count) independently
+    confirms 18 is the semantically correct total
+    (`(1+9)+(1+7)=18`), not 1. This means struct-owned-element vector
+    indexed removal (`remove_at`/`remove_swap`) combined with
+    `vectorTakeSlot` produces an incorrect result specifically on the
+    "exe" emit path - a real correctness bug, not a diagnostic-text
+    drift, and NOT something to re-pin to "1" without understanding
+    the actual defect (per this session's standing discipline against
+    blind re-pinning of behavior that isn't understood). Not
+    investigated further than this due to session time budget - the
+    second failing case ("supports indexed vector removals...") uses a
+    structurally similar but distinct source generator
+    (`makeVectorIndexedRemovalOwnershipConformanceSource(mode, true)`
+    in the experimental-expectations header, parameterized over
+    `mode` in {"remove_at_drop", "remove_swap_relocation"} with
+    expected values 10 and 8) and was not yet probed at all.
+  - implementation_notes: likely starting point given the "vectorTakeSlot"
+    + `Destroy()` struct lifecycle interplay is the newest/least-tested
+    part of the source shape - trace whether `remove_at`/`remove_swap`
+    on a struct-typed vector element correctly decrements count exactly
+    once (not zero or twice) on the exe backend specifically, and
+    whether `vectorTakeSlot` reads without an additional implicit
+    removal. A result of exactly 1 (vs the correct 18) suggests most
+    terms in the final `plus(plus(...), plus(...))` evaluated to 0,
+    which could point at a `Destroy()`-triggered zeroing happening
+    earlier than intended, or a count/survivor read returning a
+    default rather than the actual relocated value.
+  - acceptance: both failing cases' existing "runs and returns N"
+    expectations for `emitMode == "exe"` are met with a runtime value
+    that's independently re-derived (not copied from what the compiler
+    currently produces) to match the source's actual push/remove/take
+    sequence, the way this TODO's own investigation did for the first
+    case (18, verified by hand from the source).
+  - stop_rule: do not re-pin either test's expected exe-mode value to
+    whatever primec currently outputs without first independently
+    re-deriving the correct expected value from the generated source's
+    own operations, the way this TODO's scope section already did for
+    the first case - a silent wrong-answer bug re-pinned to "match
+    current behavior" would permanently hide a real correctness defect
+    in vector ownership semantics.
 
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
