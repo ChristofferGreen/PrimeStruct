@@ -1750,7 +1750,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "splitTemplateTypeName(paramInfo.typeTemplateArg, innerBase, innerArgs)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "normalizeCollectionReceiverTypeName(paramBaseType)") !=
+            "inferenceReceiverFamilyName(paramBaseType)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "normalizeCollectionReceiverTypeName(paramInfo.typeName))") ==

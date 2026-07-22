@@ -1473,7 +1473,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "const std::string publicPath = publicSoaHelperTargetPath(helper);\n"
-            "  if (isSoaReadRefHelperName(helper) &&\n"
+            "  // The public surface also ships reserve/push/to_aos/to_aos_ref wrappers,\n"
+            "  // so the whole supported helper family may canonicalize to it - but only\n"
+            "  // when the wrapper is actually visible; otherwise keep the historical\n"
+            "  // compatibility spelling for diagnostics.\n"
+            "  if (isSupportedCompatibilitySoaHelperName(helper) &&\n"
             "      hasVisibleDefinitionPathForCurrentImports(publicPath)) {\n"
             "    return publicPath;\n"
             "  }") != std::string::npos);
