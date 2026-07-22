@@ -3041,6 +3041,42 @@ This file is the live open-work queue for PrimeStruct.
     gdb call chains, and the four sub-problems identified filed as
     TODO-4739 for a dedicated pass that maps all the classification
     sites before patching any one of them.
+  - progress_2026-07-22g: with the emitters cluster's easy wins
+    exhausted (remaining failures there are all TODO-4726/4739/4740
+    territory), ran a full-suite ctest survey excluding emitters and
+    the already-green calls_flow.collections gate (131/131, confirmed
+    clean in the same session): 1620 tests, 92% passed, 133 failed.
+    Largest clusters: `imports_operations_and_collections` (37 shards,
+    one file - sampled several cases, found the majority trace to the
+    capitalized experimental `Map<K,V>` type failing templated-call
+    resolution on the exe backend, filed as TODO-4741; separately
+    fixed one clean, verified, unrelated win in the same file - see
+    below), `ir_pipeline_validation_cases` (27 shards - these are
+    "golden source snapshot" tests asserting specific literal code
+    text exists in named files; sampled and fixed 2, both traced to
+    legitimate already-comment-justified refactors the test text
+    hadn't caught up to - the remaining 25 need the same one-by-one
+    diligence, not a blanket update), `vm_collections_collections_
+    newly_exposed_2026_07_16` (25 shards, not yet investigated),
+    `vm_outputs_ir_and_output_modes_*` (~15 shards across 3 sub-
+    suites, not yet investigated), `smoke_core_paths_newly_exposed_
+    2026_07` (6 shards, not yet investigated), plus about a dozen
+    singles scattered across reflection_codegen, examples,
+    type_resolution_graph, ir_pipeline_conversions_numbers,
+    imports_resolver_cases, and a handful of top-level named tests
+    (stdlib_map_ownership, vector_surface_traces,
+    map_surface_strict_audit, soa_surface_trace_zero_audit,
+    graph_budget, semantic_memory_trend/definition_worker_parity).
+    Fixed and committed in this pass: `expectCanonicalVectorNamespaceConformance`'s
+    stale "exe" rejection branch (canonical namespaced vector
+    construct/reserve/push/at/remove_at/remove_swap/pop/clear now
+    compiles and runs correctly on exe too, verified matching vm/
+    native's already-expected value of 109) and the 2
+    ir_pipeline_validation_cases golden-text re-pins above. Full
+    remaining scope (vm_collections newly_exposed, vm_outputs,
+    smoke_core_paths, and the ~25 remaining ir_pipeline shards) not
+    yet triaged - each likely needs its own investigation before any
+    fix or re-pin, per this session's established discipline.
 - progress_2026-07-21: first re-pin batch landed - the 51
     semantic-rejection COMPILE_FAIL cases from the survey (dominated
     by retired same-path/alias contracts already adjudicated in the
