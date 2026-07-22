@@ -989,7 +989,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }();
   std::string helperName;
   const std::string resolvedPath = resolveExprPath(expr);
-  if (resolvePublishedMapConstructorExprMemberName(expr, helperName) &&
+  if (resolveCanonicalMapConstructorExprMemberName(expr, helperName) &&
       helperName == "map") {
     if (hasEntryCtorArgs) {
       return false;
@@ -1027,10 +1027,10 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   const std::string keyValueAlias = keyValueConstructorAliasToken();
-  if (rawName == "array" || rawName == "vector" ||
-      (!keyValueAlias.empty() && rawName == keyValueAlias) ||
-      rawName == "soa" || rawName == "soa") {
-    out = rawName == "soa" ? "soa" : rawName;
+  if (scopedName == "array" || scopedName == "vector" ||
+      (!keyValueAlias.empty() && scopedName == keyValueAlias) ||
+      scopedName == "soa") {
+    out = scopedName == "soa" ? "soa" : scopedName;
     return true;
   }
   return false;
