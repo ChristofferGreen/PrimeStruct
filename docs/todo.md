@@ -2752,6 +2752,37 @@ This file is the live open-work queue for PrimeStruct.
     pre-fix). Left unresolved rather than guessed at; needs a fresh
     trace of where the alias markers actually get applied before
     fixing or re-pinning.
+    - progress_2026-07-22d: found and fixed the actual root cause of
+      2 of these 4 residuals (plus a 5th, previously-undiscovered case
+      in test_compile_run_emitters_vector_access_metadata_resolution.cpp,
+      "resolves direct slashless canonical map receiver metadata") -
+      `metadataPathCandidates` in
+      `EmitterBuiltinMethodResolutionMetadataHelpers.cpp` really was
+      the "still-unidentified route": it's a trivial single-candidate
+      wrapper used by `findStructTypeMetadata`/`findReturnStructMetadata`/
+      `findReturnKindMetadata`, but `resolveMethodCallPath`'s
+      Call-receiver branch always looks up a ROOTED path (via
+      `resolveExprPath`, which unconditionally prefixes a leading
+      slash), while several tests populate `structTypeMap`/
+      `returnStructs`/`returnKinds` with UNROOTED keys (no leading
+      slash) - a mismatch metadataPathCandidates never bridged. Fix:
+      added the unrooted variant as a second candidate whenever the
+      input path is rooted. Verified no regressions across the 5 files
+      most likely to be affected by touching this shared function
+      (map_metadata_resolution.cpp 16/19, up from expected 14/19;
+      vector_access_metadata_resolution.cpp 13/14; vector_receiver_
+      metadata_resolution.cpp 21/25, identical 4 failures to before -
+      confirmed by name, not just count; wrapper_map_count_sugar.cpp
+      19/19 and explicit_vector_count_capacity_helpers.cpp 28/28,
+      both unchanged). The remaining 2 of the original 4
+      (`rejects explicit map slash-method count receiver fallback`,
+      `rejects rooted map contains and tryAt direct-call return
+      metadata`) and the 1 still-broken sibling in
+      vector_access_metadata_resolution.cpp
+      (`rejects bare map access metadata-only struct forwarding`) are
+      all "should reject metadata-only forwarding" cases (the inverse
+      shape from what this fix targets) and remain open - not
+      re-pinned, not guessed at.
   - progress_2026-07-21c: re-pinned the 4-case explicit-vector-
     count-capacity duplicate/rejection cluster. One is a genuine
     behavior change worth noting: a user definition at the canonical

@@ -343,6 +343,9 @@ namespace {
 std::vector<std::string> metadataPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   appendUniqueCandidate(candidates, path);
+  if (!path.empty() && path.front() == '/') {
+    appendUniqueCandidate(candidates, path.substr(1));
+  }
   return candidates;
 }
 
