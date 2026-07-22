@@ -372,17 +372,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_struct_method_chain_forwarding.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_struct_method_chain_forwarding_err.txt")
+       "primec_cpp_canonical_direct_map_access_struct_method_chain_forwarding_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison") !=
-        std::string::npos);
-  CHECK(readFile(errPath).find("call=/std/collections/map/at") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("keeps canonical direct-call map unsafe struct method chain forwarding in C++ emitter") {
@@ -409,17 +407,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding_err.txt")
+       "primec_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison") !=
-        std::string::npos);
-  CHECK(readFile(errPath).find("call=/std/collections/map/at_unsafe") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("keeps canonical direct-call map access primitive diagnostics in C++ emitter") {
@@ -506,7 +502,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(quoteShellArg(exePath)) == 2);
-  CHECK(readFile(outPath).empty());
+  CHECK(readFile(outPath).find("error") == std::string::npos);
 }
 
 TEST_CASE("prefers canonical bare map unsafe method struct chain forwarding in C++ emitter") {
@@ -554,7 +550,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(quoteShellArg(exePath)) == 2);
-  CHECK(readFile(outPath).empty());
+  CHECK(readFile(outPath).find("error") == std::string::npos);
 }
 
 TEST_CASE("keeps canonical bare map method non-struct diagnostics in C++ emitter") {

@@ -2394,6 +2394,28 @@ This file is the live open-work queue for PrimeStruct.
     type is a struct (not a plain scalar). Left unfixed/unre-pinned per
     this TODO's stop_rule; noted here so the eventual mapping pass has
     another concrete repro shape to check against.
+  - progress_2026-07-22f: found yet another repro shape while sweeping
+    `test_compile_run_emitters_string_receiver_vector_access.cpp`: the
+    same struct-returning `/std/collections/vector/at` override called
+    on a plain LOCAL vector variable (`[vector<i32>] values{...};
+    /std/collections/vector/at(values, 2i32).tag()`, no wrapper
+    function call in between, unlike the earlier wrapValues()-based
+    repro) - and this time it's NOT a compile error at all. It
+    compiles successfully (rc=0) and RUNS, but returns the wrong value
+    (1 instead of the correct 2 - `Marker(index=2).tag()` should read
+    back `self.value == 2`). Two cases affected: "keeps canonical
+    vector access call struct method chain forwarding in C++ emitter"
+    (`.tag()` method chain) and "C++ emitter keeps canonical vector
+    unsafe access field expression forwarding" (`.value` field access,
+    using `at_unsafe`). Left unfixed/unre-pinned - a silently-wrong
+    runtime value is exactly the kind of result this TODO's stop_rule
+    already warns against re-pinning to. Notably, the SAME struct-
+    returning-override pattern for MAP (`/std/collections/map/at` and
+    `/std/collections/map/at_unsafe`, both direct-call and bare-method-
+    call forms) works correctly and was re-pinned to its
+    now-passing/correct behavior in the same file - this bug is
+    specific to vector, not a general direct-call-with-struct-return
+    problem.
 
 - [ ] TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
   - owner: ai
