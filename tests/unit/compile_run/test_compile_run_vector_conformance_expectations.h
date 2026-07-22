@@ -169,20 +169,11 @@ inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
 }
 
 inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMode) {
-  if (emitMode == "vm" || emitMode == "native") {
-    expectVectorConformanceProgramRuns(
-        makeCanonicalVectorNamespaceConformanceSource(),
-        "vector_namespace_canonical_" + emitMode,
-        emitMode,
-        109);
-    return;
-  }
-
-  expectVectorConformanceCompileReject(
+  expectVectorConformanceProgramRuns(
       makeCanonicalVectorNamespaceConformanceSource(),
       "vector_namespace_canonical_" + emitMode,
       emitMode,
-      "unknown call target: /std/collections/vector/vector");
+      109);
 }
 
 inline void expectCanonicalVectorNamespaceExplicitVectorBindingConformance(const std::string &emitMode) {
