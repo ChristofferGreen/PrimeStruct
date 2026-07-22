@@ -2860,9 +2860,10 @@ This file is the live open-work queue for PrimeStruct.
   - acceptance: emitters/imports/smoke wall time drops materially;
     per-family exe coverage retained; no assertion weakened.
 
-- [ ] TODO-4734: Provide and adopt a RelWithDebInfo test-runner build
+- [x] TODO-4734: Provide and adopt a RelWithDebInfo test-runner build
   - owner: ai
   - created_at: 2026-07-20
+  - completed_at: 2026-07-22
   - phase: Test infrastructure
   - parallel_track: test-runtime
   - scope: the Debug test runner's semantic phase dominates
@@ -2873,6 +2874,39 @@ This file is the live open-work queue for PrimeStruct.
     gate lane so assertion-only bugs stay visible.
   - acceptance: measured per-case speedup documented; suite lanes
     switched without losing Debug assertion coverage.
+  - result: added a `build-relwithdebinfo` tree
+    (`cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo`) alongside `build-debug`,
+    and a `./scripts/compile.sh --fast-tests` flag (mirrors the
+    existing `--release` flag) that builds and runs the suite there.
+    Measured per-case `primec --emit=cpp` time (isolating primec's own
+    semantic+lowering+codegen cost from the fixed downstream clang
+    step) on 3 representative sources, min-of-3 timed runs: a
+    stdlib-import-heavy case (vector+map construct/insert/count) went
+    40.143s (Debug) -> 4.048s (RelWithDebInfo), a ~10x speedup and the
+    dominant cost by far; a struct-with-method case went 0.041s ->
+    0.009s (~4.5x); a trivial case went 0.026s -> 0.008s (~3.25x). At
+    the suite level, the full 126-shard emitters ctest run (--parallel
+    4) went from ~1924s (Debug, measured earlier this session) to
+    929s (RelWithDebInfo) - roughly 2x wall-clock, the smaller multiple
+    vs. the per-case number reflecting that much of the suite's time is
+    the fixed downstream clang/link/run cost per exe-mode case, which
+    RelWithDebInfo doesn't touch (see TODO-4733/4736 for cutting that
+    part). Correctness: cross-checked the RelWithDebInfo run's failing-
+    shard list against the known Debug baseline - all differences
+    accounted for (shards this session's earlier fixes turned green,
+    plus 3 shards that failed only under `--parallel 4` contention and
+    passed cleanly in isolation on BOTH builds, i.e. pre-existing
+    parallel-execution flakiness, not a RelWithDebInfo-specific
+    correctness regression) - zero net new failures.
+  - caveat for future work: RelWithDebInfo defines NDEBUG, so primec's
+    internal `assert()` invariant checks are compiled out in this lane;
+    per the acceptance criteria, keep running the Debug build
+    (`./scripts/compile.sh`, no flag) as the actual CI gate, and treat
+    `--fast-tests` as the fast local-iteration lane. Disk is tight in
+    this container (a full RelWithDebInfo build of just `primec` +
+    `PrimeStruct_compile_run_tests` used ~3GB on top of the existing
+    ~7.5GB Debug tree) - do not build both trees' full target sets
+    simultaneously without checking `df` first.
 
 - [ ] TODO-4735: Share a precompiled stdlib semantic product across compile-run cases
   - owner: ai

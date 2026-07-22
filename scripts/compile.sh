@@ -10,7 +10,7 @@ FAILING_TESTS_START_MARKER="<!-- compile.sh:failing-tests:start -->"
 FAILING_TESTS_END_MARKER="<!-- compile.sh:failing-tests:end -->"
 
 usage() {
-  echo "Usage: ./scripts/compile.sh [--release] [--skip-tests]" >&2
+  echo "Usage: ./scripts/compile.sh [--release|--fast-tests] [--skip-tests]" >&2
 }
 
 detect_jobs() {
@@ -137,6 +137,17 @@ while [[ $# -gt 0 ]]; do
     --release)
       BUILD_DIR="$ROOT_DIR/build-release"
       BUILD_TYPE="Release"
+      shift
+      ;;
+    --fast-tests)
+      # RelWithDebInfo primec is ~2-10x faster per compile-run case than
+      # Debug (heaviest on stdlib-import-heavy cases - see TODO-4734 in
+      # docs/todo.md for measured numbers). Use for iterating on
+      # compile-run suites; keep a Debug run in the loop too since this
+      # build defines NDEBUG and drops primec's internal assert()
+      # checks.
+      BUILD_DIR="$ROOT_DIR/build-relwithdebinfo"
+      BUILD_TYPE="RelWithDebInfo"
       shift
       ;;
     --skip-tests)
