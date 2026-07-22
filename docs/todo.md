@@ -100,6 +100,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
 - TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
 - TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
+- TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
 
 ### Priority Lanes
 
@@ -2486,6 +2487,74 @@ This file is the live open-work queue for PrimeStruct.
     current behavior" would permanently hide a real correctness defect
     in vector ownership semantics.
 
+- [ ] TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
+  - owner: ai
+  - created_at: 2026-07-22
+  - phase: Hidden test failure remediation (post-emitters full-suite sweep)
+  - parallel_track: hidden-test-failures-imports-operations
+  - depends_on: (none)
+  - scope: a full-suite ctest survey (excluding the emitters cluster and
+    the already-green calls_flow.collections gate) found 133 failing
+    tests, the largest single cluster (37 failing ctest shards) all in
+    `tests/unit/compile_run/test_compile_run_imports_operations.cpp`.
+    Sampled several failing cases and found the majority share one root
+    cause: the capitalized experimental `Map<K, V>` collection type
+    (distinct from the lowercase builtin `map<K, V>`) fails templated-
+    call resolution specifically on the "exe" emit backend. Probed
+    `makeExperimentalMapInsertConformanceSource()`'s exact generated
+    source directly against primec (`--emit=exe`): fails with
+    "Semantic error: template arguments are only supported on templated
+    definitions: /Map" on a call like
+    `/std/collections/map/insert<string, i32>(values, ...)` where
+    `values` is a `[Map<string, i32> mut]` binding. Notably this exact
+    error string is what the "native" emit-mode branch of the SAME
+    shared conformance helper (`expectExperimentalMapInsertConformance`
+    in `test_compile_run_map_conformance_expectations.h`) already
+    expects and treats as correct/pinned - so "native" mode has never
+    supported `Map<K,V>` templated calls, and "exe" mode is not
+    regressing FROM working TO broken so much as it's unclear whether
+    "exe" ever worked, or whether the test's "exe succeeds" expectation
+    was aspirational/written ahead of the implementation. ~33 TEST_CASE
+    entries in the imports_operations file route through
+    `expect*ExperimentalMap*Conformance` helpers in that same shared
+    header, all likely hitting this same wall for "exe" mode, though
+    only a subset were individually confirmed before time ran out on
+    this investigation (this TODO's job is to confirm the rest, not
+    assume they're identical - see stop_rule below).
+  - implementation_notes: start by tracing why `TemplateMonomorph.cpp`'s
+    "template arguments are only supported on templated definitions"
+    check (~line 373, the exact error text's source) doesn't recognize
+    `Map` as a templated definition when called through
+    `/std/collections/map/insert<K, V>(...)` - compare against how the
+    lowercase canonical `map<K, V>` constructor path (which the
+    just-fixed `expectCanonicalVectorNamespaceConformance` sibling for
+    VECTOR confirms DOES now resolve correctly on exe) registers its
+    template parameters, since `Map`/`map` are presumably meant to be
+    either the same underlying definition under two spellings, or two
+    definitions that should both register as templated the same way.
+    Also worth checking: does ANY currently-passing exe-mode test use
+    `Map<K, V>` with explicit template args successfully, to bound
+    whether this is "always broken" or "broken only for certain call
+    shapes."
+  - acceptance: all `expect*ExperimentalMap*Conformance("exe")` call
+    sites currently failing in
+    `test_compile_run_imports_operations.cpp` either compile and run
+    successfully with their pinned expected values (if `Map<K,V>` is
+    genuinely meant to work like the now-fixed vector namespace case),
+    or are deliberately re-pinned to a clean rejection with an accurate
+    diagnostic (if `Map<K,V>` explicit-template-arg calls are
+    permanently unsupported by design, matching "native" mode) - not a
+    mix of guessed outcomes.
+  - stop_rule: do not assume all ~33 `Map`-related failing cases in
+    this file share the exact same root cause just because the first
+    few sampled did - probe a representative sample from each distinct
+    `expect*Conformance` helper family (insert, ownership, storage
+    reference, struct field, default parameter, etc. - the full list is
+    visible in the `TEST CASE:` names captured in this session's
+    `full_survey.log`) before writing a fix, the same way the emitters
+    cluster's TODO-4739 investigation found that "looks like the same
+    bug" repro shapes turned out to have different root causes on
+    closer inspection.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
