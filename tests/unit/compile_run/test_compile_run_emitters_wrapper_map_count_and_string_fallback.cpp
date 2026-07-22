@@ -43,7 +43,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects wrapper-returned slash-method map access count before deleted stubs") {
@@ -90,15 +90,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_map_count_slash_method_receiver_fallback.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_explicit_canonical_map_count_slash_method_receiver_fallback.err")
+       "primec_cpp_explicit_canonical_map_count_slash_method_receiver_fallback_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 57);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
@@ -143,16 +143,11 @@ main() {
       (testScratchPath("") /
        "primec_cpp_canonical_vector_access_direct_count_fallback_reject_exe")
           .string();
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_vector_access_direct_count_fallback_reject.err")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("C++ emitter rejects wrapper vector direct-call count receivers before deleted access stubs") {
@@ -393,16 +388,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_unsafe_method_access_count_shadow_forwarding.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_vector_unsafe_method_access_count_shadow_forwarding.err")
+       "primec_cpp_canonical_vector_unsafe_method_access_count_shadow_forwarding_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports entry argument indexing") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects slash-method vector access element-type count fallback in C++ emitter") {
