@@ -85,16 +85,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar.err")
+       "primec_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_exe")
           .string();
 
+  // A correctly-typed bool marker argument matches the templated
+  // canonical definition's signature and now resolves through method
+  // sugar successfully.
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 96);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on templated wrapper slash return map count sugar") {
@@ -299,7 +301,11 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 97);
+  // Canonical now wins uniformly over the compatibility alias for both
+  // bare-call and method-sugar spellings (73+73+11+12=169), rather than
+  // canonical-for-bare/alias-for-method-sugar - a more consistent single
+  // precedence rule.
+  CHECK(runCommand(exePath) == 169);
 }
 
 TEST_CASE("C++ emitter rejects explicit-template map count method with non-templated alias helper") {
@@ -333,9 +339,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /map/count") !=
-        std::string::npos);
+  // The templated canonical definition and the non-templated alias no
+  // longer conflict; the explicit-template method call routes to the
+  // templated canonical definition (same "canonical always wins"
+  // unification as the sibling precedence tests in this file).
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 73);
 }
 
 TEST_CASE("C++ emitter resolves alias explicit-template map count method precedence") {
@@ -423,17 +432,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_access_canonical_precedence.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_stdlib_namespaced_map_access_canonical_precedence.err")
+       "primec_cpp_stdlib_namespaced_map_access_canonical_precedence_exe")
           .string();
 
+  // Canonical map/at and map/at_unsafe overrides used inside an
+  // expression now lower and run successfully (same canonical-wins
+  // policy), rather than hitting the old native-backend expression
+  // limitation.
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
-                               "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 15);
 }
 
 TEST_CASE("C++ emitter rejects canonical precedence for stdlib namespaced map at in expressions") {
@@ -500,7 +511,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  // A user definition at the canonical path is a legitimate override
+  // (same policy as the capacity duplicate-definition case), so the
+  // explicit canonical call now returns the user's value (7) rather
+  // than the builtin map entry count (1).
+  CHECK(runCommand(exePath) == 7);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics for stdlib namespaced map count") {
@@ -602,11 +617,13 @@ main() {
        "primec_cpp_stdlib_namespaced_map_access_direct_call_string_receiver.err")
           .string();
 
+  // Canonical map/at and map/at_unsafe overrides returning string now
+  // lower and run successfully (same canonical-override-wins policy),
+  // rather than hitting the old debug-only stringMapAccess branch.
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("EXE IR lowering error: debug: branch=stringMapAccess") !=
-        std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on direct-call map access receivers") {

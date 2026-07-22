@@ -2600,7 +2600,38 @@ This file is the live open-work queue for PrimeStruct.
     actual regressions from either commit, confirmed against the
     current clean 62-case failing set. Use the XML reporter for all
     future emitters-suite diffs; never the plain-text log.
-  - progress_2026-07-21: first re-pin batch landed - the 51
+    - progress_2026-07-22: re-pinned all 6 failing cases in
+    test_compile_run_emitters_wrapper_map_count_sugar.cpp, each
+    verified individually by hand-reducing the test's inline source
+    and running it through primec directly (not guessed). All 6
+    converge on the SAME underlying policy: a user definition at a
+    canonical /std/collections/... path is a legitimate override and
+    takes precedence uniformly across bare calls, method-sugar calls,
+    explicit-template calls, and expression contexts - the previous
+    contracts assumed canonical only won for SOME of those call
+    shapes (a mixed/inconsistent precedence rule), which no longer
+    holds. File-level: 19/19 clean. This is a test-only change (no
+    src/ edits), so the full collections/ir regression gates don't
+    apply; verified via a 126-shard sharded ctest run of
+    primestruct_compile_run_emitters_cpp_* completing cleanly (no
+    process-level crashes) and the 6 re-pinned case names no longer
+    appearing in its failure output.
+  - infra-note: the monolithic 622-case
+    `PrimeStruct_compile_run_tests --test-suite=...emitters.cpp` run
+    (single process, ~15-20 min) has been getting truncated
+    mid-execution by container restarts (twice in a row this
+    session), producing incomplete/misleading XML output with no
+    closing summary. The equivalent SHARDED ctest registration
+    (`ctest -R primestruct_compile_run_emitters_cpp_`, 126
+    per-file/per-range shards run --parallel 4) is far more
+    restart-resilient - each shard reports to ctest's own log as it
+    finishes, so a restart only loses in-flight shards, not the whole
+    run's accumulated result. Prefer the sharded form for this suite
+    going forward, especially when restarts are frequent; fall back
+    to the monolithic + XML-reporter form only when a definitive
+    single-run case-level diff against a prior monolithic baseline is
+    needed.
+- progress_2026-07-21: first re-pin batch landed - the 51
     semantic-rejection COMPILE_FAIL cases from the survey (dominated
     by retired same-path/alias contracts already adjudicated in the
     collections pass: unknown call target /vector/at, /map/count,
