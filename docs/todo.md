@@ -2378,6 +2378,21 @@ This file is the live open-work queue for PrimeStruct.
     across independent classification sites) - the eventual mapping
     pass this TODO calls for should include this legacy-emitter site as
     a fourth entry alongside the three ir_lowerer ones.
+  - progress_2026-07-22e: found a further affected case while sweeping
+    the emitters cluster:
+    `test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp`'s
+    "wrapper canonical direct-call struct method chain forwarding in
+    C++ emitter" (an override of `/std/collections/vector/at` with a
+    struct return type, called via plain POSITIONAL direct-call syntax
+    `/std/collections/vector/at(wrapValues(), 2i32).tag()` - notably
+    NOT named/reordered args this time) reproduces the identical "EXE
+    IR lowering error: struct parameter type mismatch" already seen for
+    the named-arg-reordered repros. This confirms the bug is broader
+    than the named-argument-ordering angle originally suspected - it
+    affects positional direct-calls too whenever the override's return
+    type is a struct (not a plain scalar). Left unfixed/unre-pinned per
+    this TODO's stop_rule; noted here so the eventual mapping pass has
+    another concrete repro shape to check against.
 
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai

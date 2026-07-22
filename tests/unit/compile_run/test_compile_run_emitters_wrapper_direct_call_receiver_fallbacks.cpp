@@ -443,13 +443,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_array_capacity_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_user_array_capacity_shadow.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_user_array_capacity_shadow_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 14);
 }
 
 TEST_CASE("std math vector and color types") {
