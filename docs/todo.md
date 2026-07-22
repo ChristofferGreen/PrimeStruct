@@ -98,6 +98,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 - TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 - TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
+- TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
 
 ### Priority Lanes
 
@@ -2194,6 +2195,145 @@ This file is the live open-work queue for PrimeStruct.
     this TODO stays open for the eventual test modernization pass
     gated on it.
 
+- [ ] TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
+  - owner: ai
+  - created_at: 2026-07-22
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp`
+    has 3+ failing cases where a user overrides the canonical
+    `/std/collections/vector/at` path with a differently-typed
+    definition (e.g. `return<int>` instead of the generic element
+    type) and calls it via an explicit/direct (non-method) call with
+    named, reordered arguments (`/std/collections/vector/at([index]
+    2i32, [values] wrapVector())`). Per the session's established
+    "canonical override always wins" policy (confirmed repeatedly for
+    map count/capacity/at in `wrapper_map_count_sugar.cpp` and
+    `explicit_vector_count_capacity_helpers.cpp`), the override should
+    win. It currently doesn't: compilation fails with "EXE IR lowering
+    error: native backend only supports at() on numeric/bool/string
+    arrays or vectors...". The equivalent METHOD-CALL form
+    (`wrapVector().at(2i32)`) already works correctly today (verified
+    directly: returns the override's value, not the builtin's).
+  - implementation_notes: this looked like a narrow one-line asymmetry
+    at first (`IrLowererNativeTailDispatch.cpp:828`'s
+    `isExplicitVectorAccessCall && explicitHelperName == "at_unsafe"`
+    bypass excludes plain `"at"`), but a full gdb-traced investigation
+    found it is NOT a single bug:
+    1. `IrLowererNativeTailDispatch.cpp`'s classification
+       (`isExplicitVectorAccessCall`, ~line 812) computes
+       `arrayVectorTargetInfo` from `expr.args.front()` unconditionally
+       - for reordered named-arg calls where `index` is written before
+       `values`, `args.front()` is the `index` arg, not the vector, so
+       `isVectorTarget` is false and any bypass gated on it silently
+       never fires. Making the "at" bypass unconditional (dropping the
+       `isVectorTarget` gate, matching how `at_unsafe`'s
+       `isPublishedVectorAtUnsafeImplementationCall` branch already
+       behaves unconditionally in practice) still didn't fix the repro.
+    2. That's because `return(callExpr)` statements do NOT go through
+       `tryEmitNativeCallTailDispatch` at all for this shape - gdb
+       showed the actual call chain is
+       `validateArrayVectorAccessTargetInfo <-
+       emitArrayVectorIndexedAccess <- emitBuiltinArrayAccess <-`
+       a completely separate "return statement fast path" fragment in
+       `IrLowererLowerStatementsExpr.h` (included into
+       `IrLowererLowerReturnEmitStage.cpp`), around line 1198's
+       vector-helper-family `if` block. That block's own path-prefix
+       check (`rawPath.rfind(collectionMemberRoot("vector"), 0) == 0`,
+       where `collectionMemberRoot("vector")` returns the UNROOTED
+       `"std/collections/vector/"`) never matches the ROOTED canonical
+       call spelling (`"/std/collections/vector/at"`), so this whole
+       block - which already has correct-looking `directCallee`
+       (found via `resolveDefinitionCall(expr)`, confirmed via gdb to
+       correctly resolve to the override, `fullPath` correct) -
+       - is skipped entirely for this call shape.
+    3. Fixing #2's leading-slash gap (adding a rooted canonical-path
+       OR-branch, reusing the same `isCanonicalPublishedStdlibSurfaceHelperPath`
+       pattern the key-value sibling lambda already uses) gets the
+       call INTO the block, but the block's own `isDirectVectorBuiltin`
+       check (~line 1236) DELIBERATELY treats `accessName ==
+       "at"/"at_unsafe"` as "let the native path handle it, do not
+       inline the override" - this appears to be intentional (probably
+       to preserve bounds-checked indexed-access codegen for the
+       common no-override case), meaning the override precedence for
+       `at`/`at_unsafe` was ALWAYS meant to be decided later, inside
+       `emitBuiltinArrayAccess`/`tryEmitNativeCallTailDispatch` (back
+       to problem #1) - not here. So #1 and #2 aren't independent bugs
+       to fix in sequence; #2's gap has to be closed WITHOUT changing
+       the "defer to native path" outcome for `at`/`at_unsafe`, and
+       then #1's mechanism needs to correctly detect the override once
+       it gets there.
+    4. `semanticKeyValueAccessHelperKeepsBuiltinReturn` (the existing
+       override-detection heuristic already used successfully for the
+       map count/capacity/at cases and for the vector `at` METHOD-CALL
+       bypass) does NOT reliably detect the vector `at` override for
+       DIRECT calls: probing showed `findSemanticProductDirectCallTarget`
+       for the reordered-arg call resolves to the bare path string
+       `"/std/collections/vector/at"`, and looking THAT UP via
+       `semanticProgramLookupPublishedReturnFactByDefinitionPathId`
+       (keyed by `insert_or_assign` on a shared path-string ID, in
+       `SemanticPublicationBuilders.cpp::publishReturnFacts`) returns
+       `structPath == "vector"` (i.e. "keeps builtin return", override
+       NOT detected) even though a real, differently-typed override is
+       registered at that exact call site. This is suspected to be a
+       path-string collision: the builtin's own generic-template
+       return fact and the user override's return fact are both keyed
+       by the same interned path string, and whichever was
+       `push_back`'d last into `SemanticProgram::returnFacts` wins the
+       map lookup, independent of which definition actually resolved
+       for THIS call. Why the same heuristic works for map
+       count/capacity (return type is a concrete scalar, so no
+       collision in practice) and for vector `at`'s METHOD-CALL variant
+       (which reaches an entirely different, not-yet-identified
+       resolution path - it never even reaches this heuristic, per gdb/
+       debug-print evidence: `hasPublishedVectorAccessName` is
+       unconditionally false for method calls at
+       `IrLowererNativeTailDispatch.cpp:773`, and
+       `getBuiltinArrayAccessName` returns false for the literal
+       canonical path per its own exclusion at
+       `IrLowererBuiltinNameHelpers.cpp:553-556`, so method-call `.at()`
+       must resolve via a third, still-unidentified code path) but not
+       for vector `at`'s direct-call variant is not yet understood.
+    5. A probe with CORRECT (non-reordered) named-argument order
+       (`/std/collections/vector/at([values] wrapVector(), [index]
+       2i32)`, override defined) also fails, but differently: it
+       compiles successfully yet returns the WRONG runtime value (0,
+       matching neither the builtin's real element (7) nor the
+       override's (32)) - confirming named-argument handling for this
+       specific canonical direct-call shape is broken independent of
+       argument order, and independent of any of this session's edits
+       (reproduced against a clean stash of the base commit too).
+    All exploratory edits from this investigation were reverted (no
+    net diff) rather than landed partially, since neither fix attempt
+    (extending the `IrLowererNativeTailDispatch.cpp` bypass alone, or
+    closing the `IrLowererLowerStatementsExpr.h` leading-slash gap
+    alone) produced a passing repro, and landing a change that touches
+    shared, heavily-exercised native-fastpath classification code
+    without a verified-working fix risks regressing the ~550+ other
+    passing emitters cases that also flow through these same functions.
+  - acceptance: the three named-arg-reordered `.../vector/at` override
+    tests in `test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp`
+    pass with their CURRENT contracts (override wins, no re-pinning
+    needed - the tests already encode the correct "canonical override
+    wins" expectation); the correct-order-named-arg probe (item 5
+    above) also produces the override's value (32), not 0 or 7; full
+    sharded `ctest -R primestruct_compile_run_emitters_cpp_` run shows
+    zero new failures relative to the pre-fix baseline.
+  - stop_rule: do not attempt another single-function patch without
+    first re-deriving the FULL set of call sites that classify
+    `at`/`at_unsafe` calls to canonical vector paths (at minimum:
+    `IrLowererNativeTailDispatch.cpp`'s `isExplicitVectorAccessCall`
+    path, `IrLowererLowerStatementsExpr.h`'s return-statement fast
+    path, and whatever third path method-call `.at()` actually uses -
+    item 4 above) and deciding on ONE canonical place where override-
+    vs-builtin precedence gets decided, with the others deferring to
+    it - the current architecture has at least three places that each
+    partially re-implement this decision with different (and in one
+    case demonstrably wrong) logic, and patching one at a time without
+    that map produces exactly the failed-attempt cycle this session
+    went through.
+
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
@@ -2631,6 +2771,24 @@ This file is the live open-work queue for PrimeStruct.
     to the monolithic + XML-reporter form only when a definitive
     single-run case-level diff against a prior monolithic baseline is
     needed.
+  - progress_2026-07-22b: investigated the vector/at direct-call
+    override-precedence asymmetry in
+    `test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp`
+    (3 of its 6 failing cases). Found the bug is not a single
+    one-line fix - at least three separate, inconsistent classification
+    sites decide whether a call to canonical `/std/collections/vector/at`
+    takes the native fast path or defers to a user override, and two
+    attempted point-fixes (extending the `at_unsafe`-only bypass in
+    `IrLowererNativeTailDispatch.cpp` to cover `at`; closing a
+    leading-slash path-matching gap in `IrLowererLowerStatementsExpr.h`'s
+    return-statement fast path) each individually verified-correct in
+    isolation but did not fix the repro end-to-end, and a third,
+    still-unidentified code path is what makes the METHOD-CALL form of
+    the same override already work today. Both edits were reverted
+    (zero net diff) rather than landed partially. Full findings, the
+    gdb call chains, and the four sub-problems identified filed as
+    TODO-4739 for a dedicated pass that maps all the classification
+    sites before patching any one of them.
 - progress_2026-07-21: first re-pin batch landed - the 51
     semantic-rejection COMPILE_FAIL cases from the survey (dominated
     by retired same-path/alias contracts already adjudicated in the
