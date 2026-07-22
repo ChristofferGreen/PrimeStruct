@@ -232,14 +232,11 @@ main() {
   const std::string exePath =
       (testScratchPath("") / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_exe")
           .string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_err.txt")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects std namespaced count non-builtin compatibility fallback type mismatch in C++ emitter") {
@@ -361,8 +358,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+            "convert/pointer/assign/increment/decrement calls in expressions") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter mutator rewrite keeps known vector receiver leading names") {
@@ -411,7 +409,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+  CHECK(readFile(errPath).find(
+            "native backend only supports at() on numeric/bool/string arrays or vectors") !=
         std::string::npos);
 }
 
