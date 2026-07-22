@@ -190,14 +190,16 @@ main() {
 }
   )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_capacity_imported.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_capacity_imported.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_capacity_imported_exe").string();
 
+  // A user definition at the canonical /std/collections/vector/capacity
+  // path is a legitimate override, not a duplicate - it now compiles and
+  // its return value takes precedence over the builtin.
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/capacity") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("C++ emitter rejects wrapper bare vector capacity calls without helper before emission") {
@@ -404,7 +406,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/capacity") != std::string::npos);
+  // Same-path type-differentiated overloads are legal now (Phase 1
+  // overload resolution); calling .capacity() through method-call sugar
+  // on a map receiver still fails, but via the map/vector method
+  // dispatch rather than a duplicate-definition rejection.
+  CHECK(readFile(errPath).find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity on map receiver before emission") {
@@ -425,7 +431,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /map/capacity") !=
+  // Now a receiver-type diagnostic rather than an unknown-method one.
+  CHECK(readFile(outPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 
@@ -447,7 +454,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /string/capacity") !=
+  // Now a receiver-type diagnostic rather than an unknown-method one.
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 

@@ -2545,9 +2545,9 @@ This file is the live open-work queue for PrimeStruct.
     "std/collections/map/at/tag" instead of
     "/std/collections/map/at/tag"), breaking every downstream lookup
     keyed on the rooted spelling. Routed the substituted value
-    through resolveTypePath too. Fixes 6 emitters cases directly
+    through resolveTypePath too. Fixes 5 emitters cases directly
     (several via shared plumbing: vector/soa alias direct-call method
-    receivers, named call shadows). One sibling test assertion
+    receivers). One sibling test assertion
     ("pkg/Thing/tag" without a leading slash) contradicted its own
     test's stated purpose ("normalizes slashless ... targets") and is
     corrected to the rooted form. Verified: emitters.cpp gate 551 ->
@@ -2567,6 +2567,39 @@ This file is the live open-work queue for PrimeStruct.
     pre-fix). Left unresolved rather than guessed at; needs a fresh
     trace of where the alias markers actually get applied before
     fixing or re-pinning.
+  - progress_2026-07-21c: re-pinned the 4-case explicit-vector-
+    count-capacity duplicate/rejection cluster. One is a genuine
+    behavior change worth noting: a user definition at the canonical
+    /std/collections/vector/capacity path used to be rejected as a
+    "duplicate definition"; it now compiles and correctly takes
+    precedence (verified: returns the user's override value) - almost
+    certainly a side effect of this project's completed Phase 1
+    same-arity overload-resolution work (task #17, same-path
+    type-differentiated overloads are now legal), landed before this
+    session and not something this session needs to re-verify from
+    scratch. The other three are diagnostic-text drifts (receiver-type
+    rejections moved from per-type "unknown method: /map/capacity" /
+    "unknown method: /string/capacity" text to a shared "capacity
+    requires vector target" message, still correctly rejecting).
+    File-level: 30/30. Suite-level: 556 -> 560 passed.
+  - methodology-correction: the prefix-trimmed plain-text-log diffing
+    used to verify the alias-rooting and capacity re-pin commits was
+    itself unreliable - doctest's stdout log truncates/concatenates a
+    failing case's own NAME with its immediately following error text
+    when the error is long, with no separating newline, corrupting
+    entries on BOTH sides of a diff (not just producing phantom "new"
+    failures as first assumed, but also phantom "fixed" ones - one
+    case credited as fixed by the alias-rooting commit,
+    "rejects user vector access named call shadow in C++ emitter",
+    was actually still failing the whole time, pre-existing and
+    unrelated to that fix; the commit's numeric counts (551->556,
+    556->560) are still correct since those come from doctest's own
+    printed summary, only the per-case attribution prose was wrong).
+    Re-verified both commits with a `--reporters=xml` run and
+    `test_case_success="false"` parsing per <TestCase> block: zero
+    actual regressions from either commit, confirmed against the
+    current clean 62-case failing set. Use the XML reporter for all
+    future emitters-suite diffs; never the plain-text log.
   - progress_2026-07-21: first re-pin batch landed - the 51
     semantic-rejection COMPILE_FAIL cases from the survey (dominated
     by retired same-path/alias contracts already adjudicated in the
