@@ -2534,6 +2534,39 @@ This file is the live open-work queue for PrimeStruct.
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-collections
   - depends_on: TODO-4722
+  - progress_2026-07-21b: found and fixed a real bug while triaging
+    the RUN-mismatch subset: resolveMethodCallPath's typeName-based
+    map resolution substituted an import-alias VALUE verbatim when
+    the rooted candidate lookup missed, but alias values may be
+    spelled without a leading slash (e.g. importAliases["Foo"] =
+    "std/collections/map/at") - resolveTypePath is the one place that
+    roots a bare path, so unrooted substitutions silently produced an
+    unrooted resolvedOut at the generic fallback (e.g.
+    "std/collections/map/at/tag" instead of
+    "/std/collections/map/at/tag"), breaking every downstream lookup
+    keyed on the rooted spelling. Routed the substituted value
+    through resolveTypePath too. Fixes 6 emitters cases directly
+    (several via shared plumbing: vector/soa alias direct-call method
+    receivers, named call shadows). One sibling test assertion
+    ("pkg/Thing/tag" without a leading slash) contradicted its own
+    test's stated purpose ("normalizes slashless ... targets") and is
+    corrected to the rooted form. Verified: emitters.cpp gate 551 ->
+    556 passed, zero new failures (prefix-trimmed diff against the
+    repin51 baseline to filter doctest log line-wrap artifacts, same
+    false-positive class hit twice now in this file's history).
+    4 residual cases in the same file
+    (test_compile_run_emitters_map_metadata_resolution.cpp) resolve
+    return-struct metadata through a DIFFERENT path
+    (resolveConcreteSoaStructMethodPathFromReceiver's
+    findReturnStructMetadata lookup and a still-unidentified route
+    that actually applies the returnStructs marker for
+    /map/count,/map/contains,/map/tryAt-style call receivers) -
+    confirmed NOT caused by this session's earlier
+    resolveMethodCallPath commit (6255974) via bisection (stashed
+    both this session's changes, reproduced the identical failure
+    pre-fix). Left unresolved rather than guessed at; needs a fresh
+    trace of where the alias markers actually get applied before
+    fixing or re-pinning.
   - progress_2026-07-21: first re-pin batch landed - the 51
     semantic-rejection COMPILE_FAIL cases from the survey (dominated
     by retired same-path/alias contracts already adjudicated in the

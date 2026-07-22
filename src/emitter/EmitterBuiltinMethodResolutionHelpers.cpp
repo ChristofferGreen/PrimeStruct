@@ -621,7 +621,12 @@ bool resolveMethodCallPath(const Expr &call,
   if (findReturnKindMetadata(metadataView, resolvedType) == nullptr) {
     auto importIt = importAliases.find(typeName);
     if (importIt != importAliases.end()) {
-      resolvedType = importIt->second;
+      // Import alias values may be spelled without a leading slash;
+      // resolveTypePath is the single place that roots a bare path, so
+      // route the substituted value through it too rather than using it
+      // verbatim (an unrooted resolvedType here silently produced an
+      // unrooted resolvedOut at the generic fallback below).
+      resolvedType = resolveTypePath(importIt->second, "");
     }
   }
   const bool isConcreteSoaWrapperReceiver =

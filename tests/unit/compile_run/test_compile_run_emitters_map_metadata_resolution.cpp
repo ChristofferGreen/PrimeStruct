@@ -247,7 +247,11 @@ TEST_CASE("C++ emitter helper normalizes slashless map type import alias method 
   localTypes["value"] = receiverInfo;
   CHECK(primec::emitter::resolveMethodCallPath(
       call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "pkg/Thing/tag");
+  // This test's own title is "normalizes slashless ... targets": an
+  // alias substitution that is itself unrooted ("pkg/Thing") must still
+  // come out rooted, matching every other assertion in this test and
+  // every branch of resolveMethodCallPath's typeName resolution.
+  CHECK(resolved == "/pkg/Thing/tag");
 }
 
 TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibility aliases") {
