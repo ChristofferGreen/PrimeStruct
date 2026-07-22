@@ -622,7 +622,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
+  CHECK(readFile(outPath).find("unknown call target: /map/count") !=
         std::string::npos);
 }
 
