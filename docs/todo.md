@@ -2333,6 +2333,51 @@ This file is the live open-work queue for PrimeStruct.
     case demonstrably wrong) logic, and patching one at a time without
     that map produces exactly the failed-attempt cycle this session
     went through.
+  - progress_2026-07-22c: the SAME class of problem (a `/vector/...`
+    alias-spelled receiver call not being recognized as vector-access
+    for type-inference purposes) also affects the LEGACY C++ emitter,
+    not just ir_lowerer's native tail dispatch - a fourth site.
+    `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp`
+    has 3 failing unit-style cases calling
+    `primec::emitter::resolveMethodCallPath` directly with a receiver
+    `Expr` whose call name is the alias-rooted `/vector/at` (not
+    canonical `/std/collections/vector/at`) and `returnKinds` populated
+    only under the canonical key; all three expect
+    `resolveMethodCallPath` to succeed. Traced the live call path
+    (`resolveMethodCallPath` -> the `receiver.kind == Expr::Kind::Call`
+    branch at `EmitterBuiltinMethodResolutionHelpers.cpp:522` ->
+    `inferMethodResolutionPrimitiveTypeName` ->
+    `vectorHelperMemberNameFromExpr` in
+    `EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp:53`) to the
+    actual gate: `vectorHelperMemberNameFromExpr` calls
+    `resolvePublishedCollectionSurfacePathMemberName(path, metadata,
+    /*includeImportAliases=*/false, ...)` - the `false` means an
+    alias-rooted `/vector/at` spelling is never recognized as a vector
+    helper member at all, so the function bails before ever reaching
+    `collectionHelperPathCandidates` (a DIFFERENT, unrelated candidate-
+    list helper also named similarly, used by sibling inference lambdas
+    in the same file). Tried the narrow fix of adding a `/vector/`
+    cross-path-to-canonical branch to `collectionHelperPathCandidates`
+    (mirroring its existing `/array/` branch) first, since that looked
+    like the obvious gap - it was a no-op for this repro (confirmed via
+    rebuild + targeted doctest run, all 3 cases still fail identically)
+    because it's the wrong function; reverted (zero net diff, `git
+    checkout --`) once confirmed. The real fix point
+    (`includeImportAliases=true` in `vectorHelperMemberNameFromExpr`)
+    was NOT attempted - `vectorHelperMemberNameFromExpr` is a shared
+    classifier used by several other lambdas in the same function
+    (`isBareVectorAccessMethod`, `isExplicitVectorAccessSlashMethod`,
+    `isExplicitVectorCountCapacityDirectCall`, etc.) that each encode
+    their own precedence assumptions about alias-vs-canonical
+    receivers, so flipping the flag globally risks changing behavior
+    for other already-passing tests in ways that would need a full
+    collections+emitters regression gate to catch, which didn't fit in
+    this session's remaining budget. Folding this into TODO-4739 rather
+    than filing separately since it's the same underlying pattern
+    (vector `at`/`at_unsafe` alias-path recognition inconsistency
+    across independent classification sites) - the eventual mapping
+    pass this TODO calls for should include this legacy-emitter site as
+    a fourth entry alongside the three ir_lowerer ones.
 
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai

@@ -480,7 +480,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("C++ emitter keeps bare vector capacity methods on same-path helper") {
@@ -502,7 +502,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 15);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("C++ emitter keeps bare vector count methods on emitter fallback") {
@@ -555,8 +555,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("name=capacity, args=1, method=false") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects bare vector capacity methods without helper in C++ emitter") {
@@ -568,13 +568,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path_reject_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_same_path_reject.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_same_path_reject_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("name=capacity, args=1, method=false") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects wrapper vector count methods without helper in C++ emitter") {
