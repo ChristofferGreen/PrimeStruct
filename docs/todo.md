@@ -2807,6 +2807,68 @@ This file is the live open-work queue for PrimeStruct.
   - acceptance: combined with the track's other items, emitters-suite
     wall time drops by an order of magnitude without losing the
     end-to-end miscompile net.
+  - progress_2026-07-23: investigated with real measurements before
+    attempting a migration, rather than guessing at candidates. Two
+    findings, one very good and one that narrows the win:
+    1. The infrastructure this TODO envisions ALREADY EXISTS and is
+       proven at scale - it doesn't need to be built from scratch.
+       `include/primec/testing/CompilePipelineDumpHelpers.h` provides
+       `runCompilePipelineBackendConformanceForTesting`/
+       `prepareCompilePipelineIr` (drives `primec::runCompilePipeline`
+       IN-PROCESS, no subprocess, no clang) plus
+       `CompilePipelineBackendConformance::findDirectCallTarget`/
+       `findMethodCallTarget`/`resolvedDirectCallPath`/
+       `resolvedMethodCallPath` for asserting directly on the semantic
+       product's routing tables, and
+       `captureSemanticBoundaryDumpsForTesting` for in-process
+       ast-semantic/semantic-product/ir dump-stage text capture. This
+       exact pattern is already load-bearing at scale in
+       `tests/unit/semantics/test_semantics_type_resolution_graph_snapshots.cpp`
+       (8722 lines). So "combine a stored artifact" doesn't need new
+       golden-file tooling - it needs `compile_run` cases that are
+       really routing-decision checks moved onto this existing
+       in-process helper surface instead of shelling out to
+       `./primec --emit=... ` + optionally running the binary.
+    2. The "obvious" migration candidates (compile-time REJECT cases -
+       diagnostic-only, no execution) mostly don't have cost left to
+       save. Verified directly on
+       `test_compile_run_emitters_wrapper_map_count_sugar.cpp`'s
+       "C++ emitter keeps canonical map count diagnostics on wrapper
+       slash return method sugar" case: its diagnostic ("argument type
+       mismatch for /std/collections/map/count parameter marker")
+       fires at the `semantic` stage (confirmed via matching
+       `--dump-stage semantic-product` output, including exit code 2
+       and the identical diagnostic text, against the full `--emit=exe`
+       invocation) - i.e. the current subprocess already fails BEFORE
+       reaching clang/link, same as a golden-comparison version would.
+       Timed both forms directly: ~10-11ms either way, no measurable
+       win. A `grep`-based sweep for the `compileCmd`-but-no-`exePath`
+       shape (reject-only tests with no execution) found ~292 matches
+       across `tests/unit/compile_run/*.cpp` - a large candidate pool,
+       but this timing result means most of them likely have the same
+       "already short-circuits before the expensive part" property and
+       would need per-case verification (not a blanket migration) to
+       confirm which ones are worth moving.
+    - what still needs doing before a real migration: the ACCEPT-and-
+       run cases are where the real clang+link+execute cost lives, but
+       distinguishing "exit code is only a routing-decision proxy"
+       from "exit code encodes real computed program output" (e.g.
+       `bare map count through canonical helper in C++ emitter"`
+       asserts the executed binary returns exactly 92, i.e. genuine
+       runtime-behavior verification, not just routing) requires
+       exactly the audit TODO-4709 already scoped and left undone
+       ("audit only, no migrations"). That audit is the real
+       prerequisite here, not new tooling. Also flagging a fidelity
+       trap for whoever does the migration: the existing in-process
+       helpers default to `emitKind = "native"`
+       (`detail::captureCompilePipelineDumpStageFromPath`) while the
+       `compile_run/*emitters*` test files are specifically exercising
+       the C++ ("cpp"/exe) emitter by name - a migration must pass the
+       matching `emitKind` explicitly rather than accept the default,
+       or it silently tests a different backend than the original
+       case intended (the same class of regression this session hit
+       for real during TODO-4733's exe->vm migration, caught there via
+       a before/after diff rather than assumed away).
 
 - [x] TODO-4736: Prebuild the generated-C++ runtime preamble for exe-mode tests
   - owner: ai
