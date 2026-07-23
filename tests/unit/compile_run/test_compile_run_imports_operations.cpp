@@ -3455,7 +3455,7 @@ main() {
 }
 
 TEST_CASE("canonical namespaced map helpers on experimental map values in C++ emitter") {
-  expectCanonicalMapNamespaceExperimentalValueConformance("exe");
+  expectCanonicalMapNamespaceExperimentalValueConformance("vm");
 }
 
 TEST_CASE("wrapper map helpers on experimental map values in C++ emitter") {
@@ -3467,51 +3467,51 @@ TEST_CASE("ownership-sensitive experimental map value methods in C++ emitter") {
 }
 
 TEST_CASE("helper-wrapped inferred experimental map returns in C++ emitter") {
-  expectWrappedInferredExperimentalMapReturnConformance("exe");
+  expectWrappedInferredExperimentalMapReturnConformance("vm");
 }
 
 TEST_CASE("helper-wrapped experimental map parameters in C++ emitter") {
-  expectWrappedExperimentalMapParameterConformance("exe");
+  expectWrappedExperimentalMapParameterConformance("vm");
 }
 
 TEST_CASE("helper-wrapped experimental map bindings in C++ emitter") {
-  expectWrappedExperimentalMapBindingConformance("exe");
+  expectWrappedExperimentalMapBindingConformance("vm");
 }
 
 TEST_CASE("helper-wrapped experimental map assignment RHS values in C++ emitter") {
-  expectWrappedExperimentalMapAssignConformance("exe");
+  expectWrappedExperimentalMapAssignConformance("vm");
 }
 
 TEST_CASE("canonical namespaced map constructors on explicit experimental map bindings in C++ emitter") {
-  expectCanonicalMapNamespaceExperimentalConstructorConformance("exe");
+  expectCanonicalMapNamespaceExperimentalConstructorConformance("vm");
 }
 
 TEST_CASE("canonical namespaced map constructors through explicit experimental map returns in C++ emitter") {
-  expectCanonicalMapNamespaceExperimentalReturnConformance("exe");
+  expectCanonicalMapNamespaceExperimentalReturnConformance("vm");
 }
 
 TEST_CASE("canonical namespaced map constructors through explicit experimental map parameters in C++ emitter") {
-  expectCanonicalMapNamespaceExperimentalParameterConformance("exe");
+  expectCanonicalMapNamespaceExperimentalParameterConformance("vm");
 }
 
 TEST_CASE("wrapper map constructors on explicit experimental map bindings in C++ emitter") {
-  expectWrapperMapConstructorExperimentalBindingConformance("exe");
+  expectWrapperMapConstructorExperimentalBindingConformance("vm");
 }
 
 TEST_CASE("wrapper map constructors through explicit experimental map returns in C++ emitter") {
-  expectWrapperMapConstructorExperimentalReturnConformance("exe");
+  expectWrapperMapConstructorExperimentalReturnConformance("vm");
 }
 
 TEST_CASE("wrapper map constructors through explicit experimental map parameters in C++ emitter") {
-  expectWrapperMapConstructorExperimentalParameterConformance("exe");
+  expectWrapperMapConstructorExperimentalParameterConformance("vm");
 }
 
 TEST_CASE("experimental map constructor assignments in C++ emitter") {
-  expectExperimentalMapAssignConformance("exe");
+  expectExperimentalMapAssignConformance("vm");
 }
 
 TEST_CASE("implicit map auto constructor inference in C++ emitter") {
-  expectImplicitMapAutoInferenceConformance("exe");
+  expectImplicitMapAutoInferenceConformance("vm");
 }
 
 TEST_CASE("inferred experimental map returns in C++ emitter") {
@@ -3519,75 +3519,75 @@ TEST_CASE("inferred experimental map returns in C++ emitter") {
 }
 
 TEST_CASE("block inferred experimental map returns in C++ emitter") {
-  expectBlockInferredExperimentalMapReturnConformance("exe");
+  expectBlockInferredExperimentalMapReturnConformance("vm");
 }
 
 TEST_CASE("auto block inferred experimental map returns in C++ emitter") {
-  expectAutoBlockInferredExperimentalMapReturnConformance("exe");
+  expectAutoBlockInferredExperimentalMapReturnConformance("vm");
 }
 
 TEST_CASE("inferred experimental map call receivers in C++ emitter") {
-  expectInferredExperimentalMapCallReceiverConformance("exe");
+  expectInferredExperimentalMapCallReceiverConformance("vm");
 }
 
 TEST_CASE("rejects explicit experimental map struct field constructors in C++ emitter") {
-  expectExperimentalMapStructFieldConformance("exe");
+  expectExperimentalMapStructFieldConformance("vm");
 }
 
 TEST_CASE("inferred experimental map struct fields in C++ emitter") {
-  expectInferredExperimentalMapStructFieldConformance("exe");
+  expectInferredExperimentalMapStructFieldConformance("vm");
 }
 
 TEST_CASE("helper-wrapped inferred experimental map struct fields in C++ emitter") {
-  expectWrappedInferredExperimentalMapStructFieldConformance("exe");
+  expectWrappedInferredExperimentalMapStructFieldConformance("vm");
 }
 
 TEST_CASE("experimental map method parameters in C++ emitter") {
-  expectExperimentalMapMethodParameterConformance("exe");
+  expectExperimentalMapMethodParameterConformance("vm");
 }
 
 TEST_CASE("inferred experimental map parameters in C++ emitter") {
-  expectInferredExperimentalMapParameterConformance("exe");
+  expectInferredExperimentalMapParameterConformance("vm");
 }
 
 TEST_CASE("inferred experimental map default parameters in C++ emitter") {
-  expectInferredExperimentalMapDefaultParameterConformance("exe");
+  expectInferredExperimentalMapDefaultParameterConformance("vm");
 }
 
 TEST_CASE("helper-wrapped inferred experimental map default parameters in C++ emitter") {
-  expectWrappedInferredExperimentalMapDefaultParameterConformance("exe");
+  expectWrappedInferredExperimentalMapDefaultParameterConformance("vm");
 }
 
 TEST_CASE("experimental map helper receivers in C++ emitter") {
-  expectExperimentalMapHelperReceiverConformance("exe");
+  expectExperimentalMapHelperReceiverConformance("vm");
 }
 
 TEST_CASE("helper-wrapped experimental map helper receivers in C++ emitter") {
-  expectWrappedExperimentalMapHelperReceiverConformance("exe");
+  expectWrappedExperimentalMapHelperReceiverConformance("vm");
 }
 
 TEST_CASE("runs direct-constructor experimental map method receivers in C++ emitter") {
-  expectExperimentalMapMethodReceiverConformance("exe");
+  expectExperimentalMapMethodReceiverConformance("vm");
 }
 
 TEST_CASE("runs helper-wrapped experimental map method receivers in C++ emitter") {
-  expectWrappedExperimentalMapMethodReceiverConformance("exe");
+  expectWrappedExperimentalMapMethodReceiverConformance("vm");
 }
 
 TEST_CASE("experimental map field assignments through canonical helper access in C++ emitter") {
-  expectExperimentalMapFieldAssignConformance("exe");
+  expectExperimentalMapFieldAssignConformance("vm");
 }
 
 TEST_CASE("dereferenced experimental map storage references in C++ emitter") {
-  expectExperimentalMapStorageReferenceConformance("exe");
+  expectExperimentalMapStorageReferenceConformance("vm");
 }
 
 TEST_CASE("helper-wrapped Result.ok experimental map result struct fields in C++ emitter") {
-  expectWrappedExperimentalMapResultFieldAssignConformance("exe");
+  expectWrappedExperimentalMapResultFieldAssignConformance("vm");
 }
 
 TEST_CASE("helper-wrapped dereferenced Result.ok experimental map result struct fields in C++ emitter") {
-  expectWrappedExperimentalMapResultDerefFieldAssignConformance("exe");
+  expectWrappedExperimentalMapResultDerefFieldAssignConformance("vm");
 }
 
 TEST_CASE("helper-wrapped experimental map struct storage fields in C++ emitter") {
@@ -3595,19 +3595,19 @@ TEST_CASE("helper-wrapped experimental map struct storage fields in C++ emitter"
 }
 
 TEST_CASE("helper-wrapped dereferenced experimental map struct storage fields in C++ emitter") {
-  expectWrappedExperimentalMapStorageDerefFieldConformance("exe");
+  expectWrappedExperimentalMapStorageDerefFieldConformance("vm");
 }
 
 TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter") {
-  expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
+  expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }
 
 TEST_CASE("canonical namespaced map _ref helpers on borrowed experimental map values in C++ emitter") {
-  expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("exe");
+  expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("vm");
 }
 
 TEST_CASE("experimental map methods on bound map values in C++ emitter") {
-  expectExperimentalMapMethodConformance("exe");
+  expectExperimentalMapMethodConformance("vm");
 }
 
 TEST_CASE("borrowed experimental map helpers in C++ emitter") {
@@ -3623,7 +3623,7 @@ TEST_CASE("borrowed experimental map methods in C++ emitter") {
 }
 
 TEST_CASE("experimental map inserts in C++ emitter") {
-  expectExperimentalMapInsertConformance("exe");
+  expectExperimentalMapInsertConformance("vm");
 }
 
 TEST_CASE("experimental map ownership-sensitive values in C++ emitter") {
@@ -3635,121 +3635,121 @@ TEST_CASE("canonical namespaced map inserts on explicit experimental map binding
 }
 
 TEST_CASE("builtin canonical map first-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertFirstGrowthConformance("exe");
+  expectBuiltinCanonicalMapInsertFirstGrowthConformance("vm");
 }
 
 TEST_CASE("builtin canonical map repeated-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("exe");
+  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("vm");
 }
 
 TEST_CASE("builtin canonical map insert overwrites in C++ emitter") {
-  expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
+  expectBuiltinCanonicalMapInsertOverwriteConformance("vm");
 }
 
 TEST_CASE("builtin canonical map non-local growth in C++ emitter") {
-  expectBuiltinCanonicalMapInsertNonLocalGrowthConformance("exe");
+  expectBuiltinCanonicalMapInsertNonLocalGrowthConformance("vm");
 }
 
 TEST_CASE("builtin canonical map nested non-local growth in C++ emitter") {
-  expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance("exe");
+  expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance("vm");
 }
 
 TEST_CASE("builtin canonical map helper-return borrowed method inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("exe");
+  expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("vm");
 }
 
 TEST_CASE("builtin canonical map struct-field initializer in C++ emitter") {
-  expectBuiltinCanonicalMapStructFieldInitializerConformance("exe");
+  expectBuiltinCanonicalMapStructFieldInitializerConformance("vm");
 }
 
 TEST_CASE("builtin canonical map direct insert on helper-return value receivers in C++ emitter") {
-  expectBuiltinCanonicalMapInsertHelperReturnValueDirectConformance("exe");
+  expectBuiltinCanonicalMapInsertHelperReturnValueDirectConformance("vm");
 }
 
 TEST_CASE("builtin canonical map method insert on helper-return value receivers in C++ emitter") {
-  expectBuiltinCanonicalMapInsertHelperReturnValueMethodConformance("exe");
+  expectBuiltinCanonicalMapInsertHelperReturnValueMethodConformance("vm");
 }
 
 TEST_CASE("builtin canonical map direct insert on borrowed holder field receivers in C++ emitter") {
-  expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance("exe");
+  expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance("vm");
 }
 
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
-  expectCanonicalMapNamespaceOwnershipReject("exe");
+  expectCanonicalMapNamespaceOwnershipReject("vm");
 }
 
 TEST_CASE("rejects experimental map bracket access in C++ emitter") {
-  expectExperimentalMapIndexConformance("exe");
+  expectExperimentalMapIndexConformance("vm");
 }
 
 TEST_CASE("shared vector conformance harness in C++ emitter") {
-  expectSharedVectorConformanceHarness("exe");
+  expectSharedVectorConformanceHarness("vm");
 }
 
 TEST_CASE("canonical namespaced vector helpers in C++ emitter") {
-  expectCanonicalVectorNamespaceConformance("exe");
+  expectCanonicalVectorNamespaceConformance("vm");
 }
 
 TEST_CASE("canonical namespaced vector helpers on explicit Vector bindings in C++ emitter") {
-  expectCanonicalVectorNamespaceExplicitVectorBindingConformance("exe");
+  expectCanonicalVectorNamespaceExplicitVectorBindingConformance("vm");
 }
 
 TEST_CASE("stdlib wrapper vector helpers on explicit Vector bindings in C++ emitter") {
-  expectStdlibWrapperVectorHelperExplicitVectorBindingConformance("exe");
+  expectStdlibWrapperVectorHelperExplicitVectorBindingConformance("vm");
 }
 
 TEST_CASE("rejects stdlib wrapper vector helper explicit Vector mismatch in C++ emitter") {
-  expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject("exe");
+  expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject("vm");
 }
 
 TEST_CASE("stdlib wrapper vector constructors on explicit Vector bindings in C++ emitter") {
-  expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("exe");
+  expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("vm");
 }
 
 TEST_CASE("keeps stdlib wrapper vector constructor explicit Vector mismatch contract in C++ emitter") {
-  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract("exe");
+  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract("vm");
 }
 
 TEST_CASE("stdlib wrapper vector constructors on inferred auto bindings in C++ emitter") {
-  expectStdlibWrapperVectorConstructorAutoInferenceConformance("exe");
+  expectStdlibWrapperVectorConstructorAutoInferenceConformance("vm");
 }
 
 TEST_CASE("rejects stdlib wrapper vector constructor auto inference mismatch in C++ emitter") {
-  expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("exe");
+  expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("vm");
 }
 
 TEST_CASE("rejects stdlib wrapper vector constructor receivers in C++ emitter") {
-  expectStdlibWrapperVectorConstructorReceiverConformance("exe");
+  expectStdlibWrapperVectorConstructorReceiverConformance("vm");
 }
 
 TEST_CASE("rejects stdlib wrapper vector helper receiver mismatch in C++ emitter") {
-  expectStdlibWrapperVectorConstructorHelperReceiverMismatchReject("exe");
+  expectStdlibWrapperVectorConstructorHelperReceiverMismatchReject("vm");
 }
 
 TEST_CASE("rejects stdlib wrapper vector method receiver mismatch in C++ emitter") {
-  expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("exe");
+  expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("vm");
 }
 
 TEST_CASE("rejects canonical namespaced vector constructor temporaries in C++ emitter") {
-  expectCanonicalVectorNamespaceTemporaryReceiverConformance("exe");
+  expectCanonicalVectorNamespaceTemporaryReceiverConformance("vm");
 }
 
 TEST_CASE("rejects canonical namespaced vector explicit builtin bindings in C++ emitter") {
-  expectCanonicalVectorNamespaceExplicitBindingReject("exe");
+  expectCanonicalVectorNamespaceExplicitBindingReject("vm");
 }
 
 TEST_CASE("rejects canonical namespaced vector named-argument temporaries in C++ emitter") {
-  expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("exe");
+  expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("vm");
 }
 
 TEST_CASE("rejects canonical namespaced vector named-argument explicit builtin bindings in C++ emitter") {
-  expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject("exe");
+  expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject("vm");
 }
 
 TEST_CASE("rejects canonical namespaced vector mutators without imported helpers in C++ emitter") {
-  expectCanonicalVectorClearImportRequirement("exe");
-  expectCanonicalVectorRemoveAtImportRequirement("exe");
-  expectCanonicalVectorRemoveSwapImportRequirement("exe");
+  expectCanonicalVectorClearImportRequirement("vm");
+  expectCanonicalVectorRemoveAtImportRequirement("vm");
+  expectCanonicalVectorRemoveSwapImportRequirement("vm");
 }
 
 TEST_CASE("bare vector count and capacity through imported stdlib helpers in C++ emitter") {
@@ -3837,15 +3837,15 @@ TEST_CASE("bare vector mutators reject without imported helpers in C++ emitter")
 }
 
 TEST_CASE("experimental vector helper runtime contracts in C++ emitter") {
-  expectExperimentalVectorRuntimeContracts("exe");
+  expectExperimentalVectorRuntimeContracts("vm");
 }
 
 TEST_CASE("experimental vector ownership-sensitive helpers in C++ emitter") {
-  expectExperimentalVectorOwnershipContracts("exe");
+  expectExperimentalVectorOwnershipContracts("vm");
 }
 
 TEST_CASE("canonical vector helpers on experimental vector receivers in C++ emitter") {
-  expectExperimentalVectorCanonicalHelperRoutingConformance("exe");
+  expectExperimentalVectorCanonicalHelperRoutingConformance("vm");
 }
 TEST_CASE("vector pop empty runtime contract in C++ emitter") {
   SUBCASE("call") {
@@ -3868,7 +3868,7 @@ TEST_CASE("vector index runtime contract in C++ emitter") {
 }
 
 TEST_CASE("container error contract conformance in C++ emitter") {
-  expectContainerErrorConformance("exe");
+  expectContainerErrorConformance("vm");
 }
 
 TEST_CASE("checked pointer conformance harness in C++ emitter") {
