@@ -2875,6 +2875,69 @@ This file is the live open-work queue for PrimeStruct.
     materialization gaps by construction.
   - acceptance: invariant runs in the lowering pipeline under a test
     flag; deliberately re-introducing the gap (c) bug trips it.
+  - progress_2026-07-23: investigated before attempting an
+    implementation, given this touches core ir_lowerer resolution
+    logic (higher regression risk than the other test-runtime items,
+    which were all pure test-harness or build-config changes). Found
+    the "materialized definition or builtin classification" check
+    already exists, but scattered across 6 call sites in two files
+    (`IrLowererInlineNativeCallDispatch.cpp:1605,1916` and
+    `IrLowererSetupTypeMethodCallResolution.cpp:650,709,753,759`),
+    each independently reimplementing a similar-but-not-identical
+    whitelist of "this target is builtin-classified, don't require a
+    materialized definition" exemptions via hardcoded string-literal
+    comparisons. Inventoried the exemption set across both files (the
+    concrete seed list a consolidation would need to cover):
+    `/string/count`, `/std/collections/vector/count`,
+    `/std/collections/vector/capacity`, `/std/collections/soa/count`,
+    `/std/collections/vector/at` and `/at_unsafe`,
+    `/std/collections/soa/to_aos`, `/array/count`, anything matching
+    `isBuiltinFileHandleMethodName()`, and anything under the `/file/`
+    path prefix. `IrLowererSetupTypeMethodCallResolution.cpp`'s single
+    `resolveMethodCallTargetDefinition`-shaped function (this is the
+    2800+-line function TODO-4724 already tracks decomposing) also has
+    several MORE nuanced exemptions beyond simple string equality -
+    `routesExplicitVectorCountMethodThroughArgsPackCount`,
+    `directTargetKeepsSyntheticCollectionFallback`,
+    `allowsReceiverResolvedVectorMetadataFallback` - that depend on
+    receiver-type inference, not just the target path string, meaning
+    a general invariant can't just be a static path allowlist; it
+    needs to replicate (or directly reuse) the same receiver-aware
+    logic these call sites already run.
+  - why not implemented yet: a genuinely correct, general invariant
+    pass needs to either (a) fully re-derive and generalize all 6
+    call sites' accumulated special-casing (real risk of missing a
+    nuance and shipping false positives across the large compile_run
+    suite, or missing a nuance the other direction and shipping a
+    pass that doesn't actually catch anything), or (b) have each of
+    the 6 call sites call OUT to one new shared
+    `isBuiltinClassifiedMethodCallTarget(target, semanticProgram,
+    callExpr)` helper instead of their own inline exemption list, then
+    have the new invariant pass call that SAME shared helper - the
+    safer design, since it's provably consistent with existing
+    lowering behavior by construction, but is real refactoring work
+    across `IrLowererSetupTypeMethodCallResolution.cpp` (itself
+    already flagged as needing decomposition under TODO-4724) and
+    `IrLowererInlineNativeCallDispatch.cpp`, not a green-field
+    addition. Given this session's other test-runtime items were all
+    lower-risk (test harness or build config only, verified via
+    before/after diffs with zero blast radius on ir_lowerer), didn't
+    attempt (b) without dedicated budget to do the consolidation
+    properly and re-verify the full compile_run/emitters/semantics
+    surface afterward - the same discipline this session applied
+    throughout (see TODO-4739's stop_rule for the parallel case in the
+    vector at/at_unsafe classification mess).
+  - recommended next step: option (b) above, done as its own
+    dedicated pass alongside (or as a natural side effect of)
+    TODO-4724's `resolveMethodTarget` decomposition, since extracting
+    the exemption-check logic into its own named helper is exactly the
+    kind of seam that decomposition should produce anyway. Once that
+    helper exists and both files call it, the new invariant pass
+    itself is comparatively small: iterate
+    `semanticProgram->methodCallTargets`/`directCallTargets`, for each
+    published target call `resolveLoweredDefinitionPath` and the new
+    shared helper, and error if neither the definition nor the
+    builtin-classification check succeeds.
 
 - [x] TODO-4738: Capture per-case durations in CI and reshard hot shards
   - owner: ai
@@ -3047,6 +3110,23 @@ This file is the live open-work queue for PrimeStruct.
     it needs an opt-out lane and a differential validation pass.
   - acceptance: measured speedup with a cache-off lane proving
     identical results.
+  - progress_2026-07-23: not attempted this pass - correctly the
+    riskiest item in the track per its own scope note, and cross-
+    process semantic-product caching is a materially different (and
+    larger) undertaking than TODO-4734/4736, which only needed build-
+    config/harness-invocation changes with zero risk to primec's
+    actual output. Worth re-measuring the residual opportunity here
+    before investing: TODO-4734's RelWithDebInfo lane already cut the
+    stdlib-import-heavy case that motivated this TODO from 40.1s to
+    4.0s (~10x, see TODO-4734's result) purely from a build-config
+    change, with no caching at all - the ROI of ALSO building a
+    correctness-sensitive cross-process cache on top of that may be
+    smaller now in absolute terms than when this TODO was scoped,
+    even though the relative "stdlib re-parsed every time" waste is
+    unchanged. Recommend a quick before-committing-to-design
+    measurement (how much of the now-4s case is stdlib parsing
+    specifically vs. test-source-specific work) rather than assuming
+    the original motivating number still applies.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
