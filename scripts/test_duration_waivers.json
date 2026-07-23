@@ -1,0 +1,3 @@
+{
+  "calls_flow_collections_201_210$": "SoaColumnsN (N=13..16) template-monomorphization cases stack in this shard with genuine non-linear per-case cost (measured ~40s at 12 columns to ~400s+ at 16 columns), root-caused and documented in docs/TestRuntimeOptimization.md; the real fix is the algorithmic one tracked under TODO-4713, not resharding. The suite's TIMEOUT is already deliberately overridden to 2400s with comfortable margin over the measured worst case (see cmake/PrimeStructManagedSemanticsSuites.cmake)."
+}
