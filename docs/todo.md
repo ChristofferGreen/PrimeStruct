@@ -3127,6 +3127,78 @@ This file is the live open-work queue for PrimeStruct.
     measurement (how much of the now-4s case is stdlib parsing
     specifically vs. test-source-specific work) rather than assuming
     the original motivating number still applies.
+  - progress_2026-07-23b: completed a from-first-principles feasibility
+    investigation (RelWithDebInfo build throughout) and concluded a
+    lightweight cache cannot be built safely at any layer - closing
+    this out as "investigated to a definitive conclusion", not
+    "deferred for lack of time". Findings:
+    - Stage-by-stage timing on a minimal real case (`import
+      /std/collections/vector/*` + push + count, `--dump-stage`
+      against `build-relwithdebinfo/primec`): `ast` (pure parse of the
+      fully-expanded text) 0.28s; `ast-semantic` (validation) jumps to
+      2.0-2.2s, i.e. a **+1.8s validation-specific delta**; `semantic-
+      product` (routing-table/monomorphization) adds another
+      +0.4-0.6s; full `--emit=vm` run is 2.7-2.8s end to end. The
+      floor this TODO is chasing is concentrated in `ast-semantic`,
+      not parsing and not semantic-product construction.
+    - Confirmed via `src/ExpandedSourceBuilder.cpp` (`appendSegment`/
+      `source_.text.append`) that `ImportResolver` works by TEXTUALLY
+      SPLICING every transitively-imported `.prime` file's source into
+      one combined blob before a single `Lexer`/`Parser`/`Validate()`
+      pass runs over the whole thing. There is no AST-level module
+      boundary anywhere in the pipeline - "the stdlib portion of the
+      AST" is not a thing that exists independently of a specific
+      test's expanded source, so there is nothing at the AST layer to
+      cache and later re-attach.
+    - Confirmed via `--dump-stage ast` on the same minimal case that
+      `import /std/collections/vector/*` alone pulls in far more than
+      `vector.prime` (which is a single file, not a directory
+      wildcard): the expanded AST also contains
+      `buffer_checked`/`buffer_unchecked`, `soa_storage`, and
+      `/std/intrinsics/memory/*` definitions. This is `vector.prime`'s
+      own genuine transitive implementation dependencies (allocation,
+      intrinsics), not a wildcard-resolution bug - so trimming the
+      import surface isn't a safe lever either. `Validate()` eagerly
+      type-checks this entire transitive closure regardless of which
+      Vector methods the test actually calls; there is no reachability
+      pruning (e.g. "only validate what's callable from `--entry`")
+      anywhere in the pipeline today.
+    - This rules out both designs considered previously: (a) a
+      fork-based preload daemon is not viable without a much larger,
+      separately-risky change, because every `compile_run` test helper
+      (`tests/unit/compile_run/*.h`, e.g.
+      `expectMapConformanceProgramRuns`) invokes a **fresh `./primec`
+      subprocess per case** via `runCommand`/`std::system` (confirmed
+      by reading the actual helpers, not assumed) - there is no
+      existing IPC surface to fork/attach to, and building one would
+      mean rewriting the shell-invocation in every one of those
+      helpers, an enormous blast radius for a "share stdlib parsing"
+      leaf item. (b) a disk-serialized cache of the validated semantic
+      product is invalid for the reason already found in the prior
+      pass (monomorphized, test-specific symbols baked into
+      `definitions[]`), and is now ALSO invalid one layer down: even
+      `ast-semantic` validation output can't be cached "for the stdlib
+      part" and reused, because there is no stdlib-only validation
+      call to cache in the first place - it's validated together with
+      the test source in one `Validate()` invocation over the
+      spliced text.
+    - Conclusion: a real fix requires one of two compiler-architecture
+      changes, neither of which is test-harness/build-config work and
+      neither of which fits a bounded "leaf TODO" safely: (1) rebuild
+      import resolution from text-splicing to AST-level module linking
+      with a genuinely separable, cacheable "already-validated stdlib
+      module" concept, or (2) add reachability-based lazy validation
+      to `Semantics.cpp` (only validate symbols transitively reachable
+      from `--entry`, or from whatever the test source actually
+      references) - which is itself a nontrivial correctness-sensitive
+      feature (destructors, trait/operator-overload dispatch, and
+      diagnostic-focused tests that expect unused-symbol errors would
+      all need auditing against a pruning pass). Either is a multi-day
+      compiler feature in its own right. Recommend this TODO be closed
+      out of the test-runtime-optimization track and, if still wanted,
+      re-filed under a dedicated compiler-performance phase scoped to
+      one of the two designs above - continuing to carry it as a test-
+      infrastructure leaf item understates what it actually requires.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
