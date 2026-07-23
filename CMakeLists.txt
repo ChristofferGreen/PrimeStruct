@@ -525,6 +525,30 @@ add_executable(primec src/main.cpp)
 target_link_libraries(primec PRIVATE primec_backend_registry_lib primec_ir_lib)
 primestructEnableWarnings(primec)
 
+# Precompiled header for primec's own generated-C++ ("--emit=exe") output.
+# See src/GeneratedCppRuntimePreamble.h and ExternalTooling.cpp - this lets
+# the clang++ invocation that compiles each generated program skip
+# re-parsing/re-instantiating the same handful of standard-library headers
+# every time (measured ~3.5x wall-clock reduction on the clang step for a
+# trivial generated program; see TODO-4736 in docs/todo.md).
+find_program(PRIMESTRUCT_CLANGXX_FOR_PCH clang++)
+if(PRIMESTRUCT_CLANGXX_FOR_PCH)
+  set(PRIMESTRUCT_GENERATED_CPP_PCH "${CMAKE_BINARY_DIR}/generated_cpp_runtime_preamble.h.pch")
+  add_custom_command(
+    OUTPUT "${PRIMESTRUCT_GENERATED_CPP_PCH}"
+    COMMAND "${PRIMESTRUCT_CLANGXX_FOR_PCH}" -std=c++${CMAKE_CXX_STANDARD}
+            -x c++-header "${CMAKE_SOURCE_DIR}/src/GeneratedCppRuntimePreamble.h"
+            -o "${PRIMESTRUCT_GENERATED_CPP_PCH}"
+    DEPENDS "${CMAKE_SOURCE_DIR}/src/GeneratedCppRuntimePreamble.h"
+    COMMENT "Precompiling generated-C++ runtime preamble header")
+  add_custom_target(primec_generated_cpp_pch DEPENDS "${PRIMESTRUCT_GENERATED_CPP_PCH}")
+  add_dependencies(primec primec_generated_cpp_pch)
+  target_compile_definitions(primec_backend_emitters_lib PRIVATE
+    "PRIMEC_GENERATED_CPP_PCH_PATH=\"${PRIMESTRUCT_GENERATED_CPP_PCH}\"")
+else()
+  message(STATUS "clang++ not found - primec will compile generated C++ without a precompiled preamble header")
+endif()
+
 add_executable(primevm src/primevm_main.cpp)
 target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)
 primestructEnableWarnings(primevm)

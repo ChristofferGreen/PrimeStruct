@@ -2808,9 +2808,10 @@ This file is the live open-work queue for PrimeStruct.
     wall time drops by an order of magnitude without losing the
     end-to-end miscompile net.
 
-- [ ] TODO-4736: Prebuild the generated-C++ runtime preamble for exe-mode tests
+- [x] TODO-4736: Prebuild the generated-C++ runtime preamble for exe-mode tests
   - owner: ai
   - created_at: 2026-07-20
+  - completed_at: 2026-07-23
   - phase: Test infrastructure
   - parallel_track: test-runtime
   - scope: every exe-mode case makes clang compile ~850 lines of
@@ -2819,6 +2820,47 @@ This file is the live open-work queue for PrimeStruct.
     prebuilt object the generated tail links against, so clang only
     compiles the program-specific part.
   - acceptance: measured clang-step reduction on a fixed case set.
+  - result: measured first, then picked the smaller of two designs.
+    `IrToCppEmitter.cpp`'s preamble is actually two things: (a) ~8
+    fixed stdlib `#include`s (conditionally emitted per-program based
+    on which helpers it needs - `moduleUsesF32Helpers` etc.) and (b)
+    the `psXxx` runtime helper function BODIES (psEnsureStack,
+    psHeapAlloc, PsStack, ...), also conditionally emitted. Isolated
+    which part actually costs time: compiling a trivial generated
+    program with clang took 1.2s; a truly empty `int main(){return
+    0;}` took 0.12s - the helper function bodies compile fast (plain
+    code, no template-heavy STL), the STL header parsing/instantiation
+    is ~90% of the cost. That meant precompiling just the includes (a
+    clang `-include-pch` precompiled header) captures nearly all the
+    win without needing to extract the helper functions into a
+    separately-linked object with external linkage - a MUCH smaller,
+    lower-risk change since it requires ZERO changes to
+    IrToCppEmitter.cpp's code generation (the generated .cpp's own
+    redundant `#include` lines are harmless no-ops once forced via
+    `-include-pch`, confirmed by testing the original file unmodified
+    against the PCH). Implemented: `src/GeneratedCppRuntimePreamble.h`
+    (the superset of all conditionally-emitted includes across
+    IrToCppEmitter.cpp), a CMake custom command that precompiles it
+    once into `${CMAKE_BINARY_DIR}/generated_cpp_runtime_preamble.h.pch`
+    as part of building the `primec` target (new
+    `primec_generated_cpp_pch` target it depends on), and
+    `ExternalTooling.cpp::compileCppExecutable` passes
+    `-include-pch <path>` to its clang++ invocation when the PCH file
+    exists on disk (compile-time path threaded in via
+    `PRIMEC_GENERATED_CPP_PCH_PATH`, checked at runtime with
+    `std::filesystem::exists` so a missing/stale PCH falls back to a
+    normal, still-correct, just-slower compile rather than failing
+    hard). Measured end-to-end (`primec --emit=exe`, includes the
+    semantic+lowering phase too, not just clang): 708ms -> 333ms for a
+    trivial program (~2.1x), verified by moving the .pch file aside
+    and back to get a clean A/B on the same binary. Verified
+    correctness on cases using every conditionally-included group
+    (float/f64 convert, which pulls in `<cmath>`/`<cstring>`) and via
+    a full 126-shard sharded emitters ctest run: 17 failures, matching
+    - modulo two shards (1116, 1143) that flipped to/from `Timeout`
+    under `--parallel 4` contention, the same pre-existing flakiness
+    class documented under TODO-4738 - the known pre-existing failing
+    set exactly, zero new failures.
 
 - [ ] TODO-4737: Add a lowered-module invariant - no published method-call target without a materialized definition or builtin classification
   - owner: ai
