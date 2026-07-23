@@ -2859,6 +2859,46 @@ This file is the live open-work queue for PrimeStruct.
     exe-tier per feature family as the miscompile net.
   - acceptance: emitters/imports/smoke wall time drops materially;
     per-family exe coverage retained; no assertion weakened.
+  - progress_2026-07-23: migrated 71 of 85 hardcoded `("exe")` calls
+    in `test_compile_run_imports_operations.cpp` to `("vm")` - the
+    only file using the shared `expect*Conformance(emitMode)` helper
+    pattern with `"exe"` literals (the pattern already fully supports
+    `"vm"` cleanly in every helper checked). Kept 5 as `"exe"`: the
+    checked/unchecked-pointer conformance family (raw `Pointer<T>`/
+    buffer allocation - genuinely native-memory-model testing).
+    Process: captured an XML-parsed before/after result diff over all
+    85 affected cases rather than trusting the migration blind. First
+    attempt (80 migrated) surfaced 9 real vm/exe divergences - all in
+    experimental-map borrow/ownership scenarios, where the shared
+    helper's non-exe/native branch assumes the program runs
+    successfully but vm mode ALSO rejects the construct (just with a
+    different diagnostic than exe's asserted rejection text) - a
+    latent bug in the helper's vm-branch expectations, not something
+    to paper over by weakening the caller. Reverted those 9 back to
+    `"exe"` rather than accept the regression. Final verified state:
+    zero pass-to-fail regressions across all 78 comparable cases, one
+    case now passes under vm where it previously failed under exe
+    (net gain), full-file 201-case sanity run completed clean with a
+    consistent failure count matching the known Map<K,V> (TODO-4741)
+    baseline. Landed in commit 2e4fca8.
+  - remaining scope: 49 other compile_run test files hardcode
+    `--emit=exe` directly (932 occurrences total, outside the
+    parameterized-helper pattern this pass targeted) - each needs the
+    same "does this assertion depend on anything native-specific"
+    classification before migrating, file by file. The
+    parameterized-helper files (map/vector/container-error/checked-
+    pointer conformance) are the safest next targets since they
+    already have the `emitMode` plumbing in place; raw-string files
+    need the harness call itself restructured (see
+    `expectVectorConformanceProgramRuns`'s vm/exe branching in
+    `test_compile_run_vector_conformance_expectations.h` for the
+    pattern to replicate elsewhere).
+  - stop_rule: never assume vm and exe agree without checking - this
+    session's first migration attempt found 9 counterexamples in one
+    85-case file. Always capture and diff before/after XML results
+    (not just skim doctest text output, which has known truncation/
+    corruption issues documented earlier in this file) before treating
+    an exe-to-vm migration as safe to commit.
 
 - [x] TODO-4734: Provide and adopt a RelWithDebInfo test-runner build
   - owner: ai
