@@ -13,6 +13,7 @@ std::string vectorPushAllocationFailedMessage();
 std::string vectorReserveAllocationFailedMessage();
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
+bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, const Expr &callExpr);
 bool isReturnCall(const Expr &expr);
 bool isIfCall(const Expr &expr);
 bool isMatchCall(const Expr &expr);

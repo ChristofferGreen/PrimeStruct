@@ -2938,6 +2938,60 @@ This file is the live open-work queue for PrimeStruct.
     published target call `resolveLoweredDefinitionPath` and the new
     shared helper, and error if neither the definition nor the
     builtin-classification check succeeds.
+  - progress_2026-07-23c: implemented the safe, verifiable slice of
+    option (b) - deferred the unsafe slice rather than force it.
+    `IrLowererInlineNativeCallDispatch.cpp`'s two call sites
+    (originally lines 1583-1599 and 1898-1913) had a BYTE-IDENTICAL
+    5-clause exemption predicate (the `/string/count`,
+    `/std/collections/vector/count`, `/vector/capacity`, `/soa/count`,
+    `/vector/at`+`/at_unsafe`, `/soa/to_aos` set). Extracted this into
+    one shared `isBuiltinClassifiedMethodCallTarget(target, callExpr)`
+    in `IrLowererHelpers.h`/`.cpp` (also mirrored into
+    `include/primec/testing/ir_lowerer_helpers/IrLowererHelpers.h` per
+    this codebase's existing test-linkage convention for internal
+    ir_lowerer headers) and repointed both call sites at it - a pure,
+    mechanical dedup with the extracted body verbatim-identical to
+    what was inline before. Added
+    `tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_helpers_classifies_builtin_method_call_targets.cpp`,
+    a direct unit test pinning the exact classification surface (7
+    true cases covering every exemption, 6 false cases covering wrong
+    arity/wrong call name/unknown target) - this is the guard that
+    trips if the predicate is ever widened incorrectly, i.e. a scoped,
+    machine-checked version of the gap (c) invariant for this specific
+    duplication. Registered the new file in `CMakeLists.txt` and
+    bumped `primestruct.ir.pipeline.validation`'s `TOTAL_CASES` 1387 ->
+    1389 in `cmake/PrimeStructManagedUnitBackendSuites.cmake`.
+    Verified with a real before/after diff, not just a green run:
+    built and ran the full 1387/1389-case `ir.pipeline.validation`
+    suite twice (once on the pre-change tree via `git stash`, once
+    with the change restored), captured the full sorted list of
+    failing `TEST CASE:` names from both untruncated runs, and diffed
+    them - **byte-for-byte identical set of 40 pre-existing failures
+    both times** (all in unrelated areas: struct layout, binding-type
+    classification, reflection-query elimination, module-artifact
+    ordering - none touch method-call-target exemption logic), with
+    the new file's 2 cases / 14 assertions passing on top. Zero
+    regressions, zero fixed-by-accident.
+    `IrLowererSetupTypeMethodCallResolution.cpp`'s other 4 call sites
+    were deliberately NOT touched this pass: read the surrounding
+    ~250 lines in detail and confirmed the earlier assessment - its
+    silent-skip exemptions (`routesExplicitVectorCountMethodThroughArgsPackCount`,
+    `directTargetKeepsSyntheticCollectionFallback`,
+    `allowsReceiverResolvedVectorMetadataFallback`) are woven into a
+    local `resolveLoweredDefinitionPath` lambda that closes over
+    `defMap`/`explicitMethodPath`/`callExpr` and does receiver-type-
+    dependent fuzzy path matching (`buildReceiverMethodTargetPath`,
+    `normalizeCollectionHelperPath`, generated-family-path matching) -
+    genuinely not extractable into a target-string-only predicate
+    without either unsafely re-deriving that logic or waiting on
+    TODO-4724's decomposition to produce a reusable seam. A general
+    "runs in the lowering pipeline, checks every published target"
+    invariant pass therefore still isn't implemented - only the
+    duplicated flat-string half of the exemption surface is now
+    single-sourced and regression-tested. Remaining scope unchanged
+    from the "why not implemented yet" / "recommended next step" notes
+    above; this progress note narrows what's still open rather than
+    closing the item.
 
 - [x] TODO-4738: Capture per-case durations in CI and reshard hot shards
   - owner: ai

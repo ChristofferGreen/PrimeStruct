@@ -308,6 +308,38 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   return name == targetName;
 }
 
+bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, const Expr &callExpr) {
+  if (semanticTarget.empty()) {
+    return false;
+  }
+  if ((semanticTarget == "/string/count" ||
+       semanticTarget == "/std/collections/vector/count") &&
+      callExpr.args.size() == 1 &&
+      isSimpleCallName(callExpr, "count")) {
+    return true;
+  }
+  if (semanticTarget == "/std/collections/vector/capacity" &&
+      callExpr.args.size() == 1 &&
+      isSimpleCallName(callExpr, "capacity")) {
+    return true;
+  }
+  if (semanticTarget == "/std/collections/soa/count") {
+    return true;
+  }
+  if ((semanticTarget == "/std/collections/vector/at" ||
+       semanticTarget == "/std/collections/vector/at_unsafe") &&
+      callExpr.args.size() == 2 &&
+      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe"))) {
+    return true;
+  }
+  if (semanticTarget == "/std/collections/soa/to_aos" &&
+      callExpr.args.size() == 1 &&
+      isSimpleCallName(callExpr, "to_aos")) {
+    return true;
+  }
+  return false;
+}
+
 bool isFileHandleCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
       expr.name.empty()) {

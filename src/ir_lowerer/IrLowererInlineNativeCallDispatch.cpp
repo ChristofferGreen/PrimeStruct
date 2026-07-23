@@ -1581,22 +1581,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
               callee = resolveDefinitionCallFn(directCall);
             }
             if (callee == nullptr &&
-                (((semanticTarget == "/string/count" ||
-                   semanticTarget == "/std/collections/vector/count") &&
-                  methodExpr.args.size() == 1 &&
-                  isSimpleCallName(methodExpr, "count")) ||
-                 (semanticTarget == "/std/collections/vector/capacity" &&
-                  methodExpr.args.size() == 1 &&
-                  isSimpleCallName(methodExpr, "capacity")) ||
-                 semanticTarget == "/std/collections/soa/count" ||
-                 ((semanticTarget == "/std/collections/vector/at" ||
-                   semanticTarget == "/std/collections/vector/at_unsafe") &&
-                  methodExpr.args.size() == 2 &&
-                  (isSimpleCallName(methodExpr, "at") ||
-                   isSimpleCallName(methodExpr, "at_unsafe"))) ||
-                 (semanticTarget == "/std/collections/soa/to_aos" &&
-                  methodExpr.args.size() == 1 &&
-                  isSimpleCallName(methodExpr, "to_aos")))) {
+                isBuiltinClassifiedMethodCallTarget(semanticTarget, methodExpr)) {
               continue;
             }
             if (callee != nullptr) {
@@ -1895,22 +1880,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::string semanticTarget =
         findSemanticProductMethodCallTarget(semanticProgram, expr);
     if (!semanticTarget.empty()) {
-      if (((semanticTarget == "/string/count" ||
-            semanticTarget == "/std/collections/vector/count") &&
-           expr.args.size() == 1 &&
-           isSimpleCallName(expr, "count")) ||
-          (semanticTarget == "/std/collections/vector/capacity" &&
-           expr.args.size() == 1 &&
-           isSimpleCallName(expr, "capacity")) ||
-          semanticTarget == "/std/collections/soa/count" ||
-          ((semanticTarget == "/std/collections/vector/at" ||
-            semanticTarget == "/std/collections/vector/at_unsafe") &&
-           expr.args.size() == 2 &&
-           (isSimpleCallName(expr, "at") ||
-            isSimpleCallName(expr, "at_unsafe"))) ||
-          (semanticTarget == "/std/collections/soa/to_aos" &&
-           expr.args.size() == 1 &&
-           isSimpleCallName(expr, "to_aos"))) {
+      if (isBuiltinClassifiedMethodCallTarget(semanticTarget, expr)) {
         return inlineResult;
       }
       error = "semantic-product method-call target missing lowered definition: " +

@@ -24,6 +24,7 @@ std::string specializedExperimentalSoaVectorStructPathForElementType(
     const std::string &elementTypeText);
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
+bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, const Expr &callExpr);
 bool isFileHandleCall(const Expr &expr);
 bool isReturnCall(const Expr &expr);
 bool isIfCall(const Expr &expr);
