@@ -37,12 +37,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_collections_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 22);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 22);
 }
 
 TEST_CASE("query-local auto vector helpers run in C++ emitter") {
@@ -74,12 +70,8 @@ main() {
 }
 )";
   const std::string directSrcPath = writeTemp("compile_graph_query_vector_helper_call_exe.prime", directSource);
-  const std::string directExePath =
-      (testScratchPath("") / "compile_graph_query_vector_helper_call_exe").string();
-  const std::string directCmd =
-      "./primec --emit=exe " + directSrcPath + " -o " + directExePath + " --entry /main";
-  CHECK(runCommand(directCmd) == 0);
-  CHECK(runCommand(directExePath) == 17);
+  const std::string directCmd = "./primec --emit=vm " + directSrcPath + " --entry /main";
+  CHECK(runCommand(directCmd) == 17);
 
   const std::string methodSource = R"(
 /vector/count([vector<i32>] values) {
@@ -109,12 +101,8 @@ main() {
 }
 )";
   const std::string methodSrcPath = writeTemp("compile_graph_query_vector_helper_method_exe.prime", methodSource);
-  const std::string methodExePath =
-      (testScratchPath("") / "compile_graph_query_vector_helper_method_exe").string();
-  const std::string methodCmd =
-      "./primec --emit=exe " + methodSrcPath + " -o " + methodExePath + " --entry /main";
-  CHECK(runCommand(methodCmd) == 0);
-  CHECK(runCommand(methodExePath) == 17);
+  const std::string methodCmd = "./primec --emit=vm " + methodSrcPath + " --entry /main";
+  CHECK(runCommand(methodCmd) == 17);
 }
 
 TEST_CASE("exact vector import runs explicit stdlib surface in C++ emitter") {
@@ -130,12 +118,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exact_vector_import_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "compile_exact_vector_import_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 22);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 22);
 }
 
 TEST_CASE("map wildcard import rejects stdlib-owned surface in C++ emitter") {
@@ -185,12 +169,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_concise_vector_example_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "compile_concise_vector_example_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 27);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 27);
 }
 
 TEST_CASE("concise vector binding example runs in VM") {
@@ -240,7 +220,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_helpers_exe_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "direct import of retired soa compatibility modules is not supported; use /std/collections/soa/*") !=
@@ -267,7 +247,7 @@ main() {
       (testScratchPath("") / "primec_raw_soa_type_exe_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
 }
 
@@ -288,12 +268,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_count_public_wrapper_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_count_public_wrapper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("public soa get helper in C++ emitter") {
@@ -313,12 +289,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_get_public_wrapper_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_get_public_wrapper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("public soa get helper rejects template arguments on non-soa receiver in C++ emitter") {
@@ -334,7 +306,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_public_soa_get_non_soa_receiver_exe_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("get requires soa target") !=
         std::string::npos);
@@ -360,7 +332,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_public_soa_get_slash_method_exe_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "semantic-product method-call target missing lowered definition: /std/collections/soa/get") !=
@@ -390,7 +362,7 @@ main() {
       (testScratchPath("") / "primec_public_soa_to_aos_slash_method_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
@@ -414,12 +386,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_ref_public_wrapper_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_ref_public_wrapper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("public soa mutator helpers in C++ emitter") {
@@ -443,12 +411,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_mutators_public_wrapper_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_mutators_public_wrapper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
 }
 
 TEST_CASE("public soa to_aos helper lowers in C++ emitter") {
@@ -470,12 +434,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_to_aos_public_wrapper_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_to_aos_public_wrapper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("public soa to_aos temporaries route through canonical vector capacity in C++ emitter") {
@@ -496,13 +456,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_to_aos_vector_capacity_public_wrapper_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_to_aos_vector_capacity_public_wrapper_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("public soa to_aos explicit helper is a vector target in C++ emitter") {
@@ -523,14 +478,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_to_aos_vector_capacity_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_to_aos_vector_capacity_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("legacy soa compatibility helpers reject in C++ emitter") {
@@ -564,7 +513,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
@@ -590,13 +539,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_graph_direct_local_auto_vector_helper_shadows_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_graph_direct_local_auto_vector_helper_shadows_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 34);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 34);
 }
 
 TEST_CASE(
@@ -658,21 +602,21 @@ runHelperReturn() {
       (testScratchPath("") / "primec_experimental_soa_wide_pending_helper_return_err.txt").string();
 
   const std::string compileImportedCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /runImported 2> " +
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /runImported 2> " +
       importedErrPath;
   CHECK(runCommand(compileImportedCmd) == 2);
   CHECK(readFile(importedErrPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
 
   const std::string compileDirectCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /runDirectCanonical 2> " +
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /runDirectCanonical 2> " +
       directErrPath;
   CHECK(runCommand(compileDirectCmd) == 2);
   CHECK(readFile(directErrPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
 
   const std::string compileHelperReturnCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /runHelperReturn 2> " +
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /runHelperReturn 2> " +
       helperReturnErrPath;
   CHECK(runCommand(compileHelperReturnCmd) == 2);
   CHECK(readFile(helperReturnErrPath).find("direct import of retired soa compatibility modules is not supported") !=
@@ -702,7 +646,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_experimental_soa_from_aos_err.txt").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " --entry /main > " + errPath + " 2>&1";
+      "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -731,7 +675,7 @@ main() {
   CHECK(semanticErr.find("stage: semantic") != std::string::npos);
 
   const std::string emitCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + emitErrPath;
+      "./primec --emit=vm " + srcPath + " -o " + exePath + " --entry /main 2> " + emitErrPath;
   CHECK(runCommand(emitCmd) == 2);
   const std::string emitErr = readFile(emitErrPath);
   CHECK(emitErr.find("soa requires struct element type") !=
@@ -757,11 +701,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_to_aos_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_to_aos_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects experimental soa stdlib to-aos method on wrapper surface in C++ emitter") {
@@ -788,7 +729,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_experimental_soa_to_aos_method_exe.err").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -813,7 +754,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_root_soa_to_aos_forms_exe_err.txt").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /to_aos") !=
         std::string::npos);
@@ -838,7 +779,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_root_soa_to_aos_method_forms_exe_err.txt").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /to_aos") !=
         std::string::npos);
@@ -865,7 +806,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_root_soa_to_aos_ref_form_exe.err").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/soa/to_aos_ref") !=
         std::string::npos);
@@ -894,7 +835,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_experimental_soa_to_aos_ref_form_exe.err").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -940,14 +881,14 @@ runRef() {
           .string();
 
   const std::string compileDirectCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /runDirect 2> " +
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /runDirect 2> " +
       directErrPath;
   CHECK(runCommand(compileDirectCmd) != 0);
   CHECK(readFile(directErrPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
 
   const std::string compileRefCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /runRef 2> " +
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /runRef 2> " +
       refErrPath;
   CHECK(runCommand(compileRefCmd) != 0);
   CHECK(readFile(refErrPath).find("direct import of retired soa compatibility modules is not supported") !=
@@ -972,11 +913,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_to_aos_non_empty_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_to_aos_non_empty_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("rejects experimental soa stdlib non-empty to-aos method on wrapper state in C++ emitter") {
@@ -1004,7 +942,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_to_aos_non_empty_method_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1032,7 +970,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_get_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1060,7 +998,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_get_method_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1095,7 +1033,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_get_helper_return_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
@@ -1245,13 +1183,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_vector_target_old_explicit_soa_mutator_shadow_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_vector_target_old_explicit_soa_mutator_shadow_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 10);
 }
 
 TEST_CASE("vector-target method soa mutator shadows in C++ emitter") {
@@ -1274,13 +1207,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_vector_target_method_soa_mutator_shadow_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_vector_target_method_soa_mutator_shadow_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 10);
 }
 
 TEST_CASE("rejects vector-target to_aos helper shadows in C++ emitter") {
@@ -1307,7 +1235,7 @@ main() {
       (testScratchPath("") / "primec_vector_target_to_aos_shadow_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("missing semantic-product bridge-path choice: /main -> /to_aos") !=
         std::string::npos);
@@ -1343,7 +1271,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1384,7 +1312,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1460,7 +1388,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1508,7 +1436,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1535,7 +1463,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_experimental_soa_ref_exe.err").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1562,7 +1490,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_experimental_soa_ref_method_exe.err").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1600,7 +1528,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_experimental_soa_ref_passthrough_exe.err").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1631,7 +1559,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_push_helpers_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1662,7 +1590,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_push_method_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -1686,14 +1614,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_single_field_view_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_single_field_view_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("runs experimental soa reflected multi-field index syntax in C++ emitter") {
@@ -1715,12 +1637,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_field_view_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_field_view_exe").string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 12);
 }
 
 TEST_CASE("rejects experimental soa mutating indexed field writes in C++ emitter") {
@@ -1756,7 +1674,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
@@ -1791,14 +1709,8 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_richer_borrowed_mutating_indexed_field_writes_exe.prime",
       source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_experimental_soa_richer_borrowed_mutating_indexed_field_writes_exe")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 36);
 }
 
 TEST_CASE("runs method-like borrowed experimental soa mutating indexed field writes in C++ emitter") {
@@ -1840,14 +1752,8 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_method_like_borrowed_mutating_indexed_field_writes_exe.prime",
       source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_experimental_soa_method_like_borrowed_mutating_indexed_field_writes_exe")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 104);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 104);
 }
 
 TEST_CASE("runs borrowed experimental soa reflected index syntax in C++ emitter") {
@@ -1871,13 +1777,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_experimental_soa_borrowed_field_view_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_borrowed_field_view_exe")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 12);
 }
 
 TEST_CASE("runs borrowed local experimental soa reflected index syntax in C++ emitter") {
@@ -1901,13 +1802,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_experimental_soa_borrowed_local_field_view_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_borrowed_local_field_view_exe")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 12);
 }
 
 TEST_CASE("runs borrowed helper-return experimental soa reflected index syntax in C++ emitter") {
@@ -1935,13 +1831,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_experimental_soa_borrowed_return_field_view_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_borrowed_return_field_view_exe")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 12);
 }
 
 TEST_CASE("rejects experimental soa bare get and ref field access in C++ emitter") {
@@ -1970,7 +1861,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_bare_ref_field_access_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
@@ -2019,7 +1910,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_call_form_field_view_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "direct import of retired soa compatibility modules is not supported") !=
@@ -2063,7 +1954,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_inline_location_field_view_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "direct import of retired soa compatibility modules is not supported") !=
@@ -2101,7 +1992,7 @@ main() {
        "primec_experimental_soa_dereferenced_borrowed_return_field_view_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "direct import of retired soa compatibility modules is not supported") !=
@@ -2140,7 +2031,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_borrowed_return_get_ref_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2176,13 +2067,8 @@ main() {
   const std::string srcPath =
       writeTemp("compile_experimental_soa_borrowed_return_ref_ref_same_path_exe.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_experimental_soa_borrowed_return_ref_ref_same_path_exe")
-          .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 38);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 38);
 }
 
 TEST_CASE("rejects builtin helper-return soa ref_ref same-path helper in C++ emitter") {
@@ -2284,7 +2170,7 @@ main() {
        "primec_experimental_soa_helper_return_shadow_methods_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2366,7 +2252,7 @@ main() {
        "primec_experimental_soa_helper_return_shadow_canonical_fallbacks_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "direct import of retired soa compatibility modules is not supported") !=
@@ -2411,7 +2297,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_borrowed_local_methods_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2456,7 +2342,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_inline_location_methods_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2504,7 +2390,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_borrowed_return_methods_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2559,7 +2445,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_method_like_borrowed_return_helpers_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2608,7 +2494,7 @@ main() {
        "primec_experimental_soa_direct_return_borrowed_return_reads_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2661,7 +2547,7 @@ main() {
        "primec_experimental_soa_direct_return_method_like_borrowed_return_reads_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2710,7 +2596,7 @@ main() {
        "primec_experimental_soa_direct_return_inline_location_borrowed_return_reads_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2766,7 +2652,7 @@ main() {
        "primec_experimental_soa_inline_location_method_like_borrowed_return_helpers_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2819,7 +2705,7 @@ main() {
        "primec_experimental_soa_direct_return_inline_location_method_like_borrowed_return_reads_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2886,7 +2772,7 @@ main() {
        "primec_experimental_soa_inline_location_borrowed_return_helpers_exe.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
@@ -2911,12 +2797,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 14);
 }
 
 TEST_CASE("experimental soa storage borrowed ref helper in C++ emitter") {
@@ -2933,12 +2815,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_ref_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_ref_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("experimental soa storage borrowed view helper in C++ emitter") {
@@ -2956,12 +2834,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_view_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_view_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("rejects experimental soa storage reserve overflow in C++ emitter") {
@@ -2977,14 +2851,10 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_soa_storage_reserve_overflow_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_reserve_overflow_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_soa_storage_reserve_overflow_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
@@ -3009,12 +2879,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_two_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_two_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 24);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 24);
 }
 
 TEST_CASE("experimental three-column soa storage helpers in C++ emitter") {
@@ -3038,12 +2904,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_three_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_three_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 60);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 60);
 }
 
 TEST_CASE("experimental four-column soa storage helpers in C++ emitter") {
@@ -3068,12 +2930,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_four_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_four_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 105);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 105);
 }
 
 TEST_CASE("experimental five-column soa storage helpers in C++ emitter") {
@@ -3099,12 +2957,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_five_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_five_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 176);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 176);
 }
 
 TEST_CASE("experimental six-column soa storage helpers in C++ emitter") {
@@ -3131,12 +2985,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_six_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_six_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 189);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 189);
 }
 
 TEST_CASE("experimental seven-column soa storage helpers in C++ emitter") {
@@ -3164,12 +3014,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_seven_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_seven_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 212);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 212);
 }
 
 TEST_CASE("experimental eight-column soa storage helpers in C++ emitter") {
@@ -3198,12 +3044,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_eight_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_eight_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 231);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 231);
 }
 
 TEST_CASE("experimental nine-column soa storage helpers in C++ emitter") {
@@ -3228,12 +3070,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_nine_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_nine_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 45);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 45);
 }
 
 TEST_CASE("experimental ten-column soa storage helpers in C++ emitter") {
@@ -3259,12 +3097,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_soa_storage_ten_columns_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_soa_storage_ten_columns_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 74);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 74);
 }
 
 TEST_CASE("emits experimental eleven-column soa storage helpers in C++ emitter") {
@@ -3763,12 +3597,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_bare_vector_count_capacity_imported.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_bare_vector_count_capacity_imported_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("bare vector access through imported stdlib helpers in C++ emitter") {
@@ -3784,12 +3614,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_bare_vector_access_imported.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_bare_vector_access_imported_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 10);
 }
 
 TEST_CASE("rejects bare vector count without imported helper in C++ emitter") {
@@ -3804,7 +3630,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_exe_bare_vector_count_import_requirement_err.txt").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
@@ -3822,7 +3648,7 @@ main() {
       (testScratchPath("") / "primec_exe_bare_vector_capacity_import_requirement_err.txt")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
@@ -3896,11 +3722,8 @@ execute_task([i32] items, [i32] pairs) {
 execute_task([items] array<i32>(1i32, 2i32), [pairs] map<i32, i32>(1i32, 2i32))
 )";
   const std::string srcPath = writeTemp("compile_exec_collections.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exec_collections_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("compile run rejects execution body arguments") {
@@ -3922,7 +3745,7 @@ execute_repeat(2i32) {
   const std::string srcPath = writeTemp("compile_exec_body.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_exec_body_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -3935,11 +3758,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_pointer_plus_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_pointer_plus_u64_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("i64 literals") {
@@ -3950,11 +3770,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_i64_literal.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_i64_literal_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("u64 literals") {
@@ -3965,11 +3782,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_u64_literal.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_u64_literal_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 10);
 }
 
 TEST_CASE("assignment operator rewrite") {
@@ -3982,11 +3796,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_assign_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_assign_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("comparison operator rewrite") {
@@ -3997,11 +3808,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_gt_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_gt_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("less_than operator rewrite") {
@@ -4012,11 +3820,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_lt_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_lt_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("greater_equal operator rewrite") {
@@ -4027,11 +3832,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_ge_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_ge_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("less_equal operator rewrite") {
@@ -4042,11 +3844,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_le_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_le_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("and operator rewrite") {
@@ -4057,11 +3856,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_and_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_and_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("or operator rewrite") {
@@ -4072,11 +3868,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_or_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_or_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("not operator rewrite") {
@@ -4087,11 +3880,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_not_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_not_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("not operator with parentheses") {
@@ -4102,11 +3892,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_not_paren.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_not_paren_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("unary minus operator rewrite") {
@@ -4118,11 +3905,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_unary_minus.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_unary_minus_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("equality operator rewrite") {
@@ -4133,11 +3917,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_eq_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_eq_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("not_equal operator rewrite") {
@@ -4148,11 +3929,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_neq_op.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_neq_op_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_SUITE_END();

@@ -3163,6 +3163,60 @@ This file is the live open-work queue for PrimeStruct.
     (not just skim doctest text output, which has known truncation/
     corruption issues documented earlier in this file) before treating
     an exe-to-vm migration as safe to commit.
+  - progress_2026-07-23d: migrated the raw (non-parameterized-helper)
+    `--emit=exe ` occurrences in `test_compile_run_imports_operations.cpp`
+    itself (105 of the file's 113 raw occurrences; excludes 4 already-
+    correct `--emit=exe-ir` matches that a naive substring search
+    conflates with `--emit=exe`, and 4 genuinely native-specific reject
+    cases whose asserted diagnostic text literally says "native backend
+    only supports..."). Two distinct shapes needed different rewrites:
+    (a) 55 accept-and-run cases (`CHECK(runCommand(compileCmd) == 0);
+    CHECK(runCommand(exePath) == N);`) collapsed to a single `--emit=vm`
+    invocation asserting `== N` directly, since vm mode compiles and
+    runs in one step; (b) the remaining reject/diagnostic cases needed
+    only the emit-mode string swapped, since `-o <path>` is harmlessly
+    ignored by `--emit=vm` (confirmed empirically) and diagnostic
+    checks still apply to the same command. Built the rewrite as a
+    scripted, block-scoped transform (regex applied per-TEST_CASE,
+    never across a `TEST_CASE(` boundary - an early whole-file DOTALL
+    regex attempt silently swallowed 3 TEST_CASE declarations into a
+    neighboring case's match span, caught only by comparing TEST_CASE
+    name/count before vs after, not by the build) rather than a blind
+    file-wide sed, given the variety of variable-naming and formatting
+    shapes actually present. Verified via the same XML-diffed before/
+    after process as the earlier pass: found and fixed ONE real
+    regression this way - "rejects experimental soa storage reserve
+    overflow in C++ emitter" used a third shape (compile, then execute
+    the produced binary directly with its own stderr redirect,
+    checking a runtime panic's exit code AND stderr text) that a purely
+    adjacency-based sanity check missed; confirmed vm produces the
+    identical exit code (3) and identical stderr text
+    ("array index out of bounds") for this construct via direct
+    `primec --emit=vm` vs `--emit=exe`+run comparison before rewriting
+    it to a single vm command. Final verified state: full
+    `primestruct.compile.run.imports` suite (2835 cases across all
+    files sharing that suite name) run before and after, XML-parsed
+    failing-test-name sets byte-for-byte identical (70/70, all pre-
+    existing and unrelated) - zero regressions, zero cases papered
+    over. TEST_CASE count/order in the file confirmed unchanged (201).
+  - remaining scope (updated): this file's raw occurrences are done;
+    49 other files (all listed in the previous progress note's file
+    count, now cross-checked: `grep -rc -- "--emit=exe " tests/unit/compile_run/*.cpp
+    tests/unit/compile_run/*.h` - use the trailing space to avoid
+    counting `--emit=exe-ir` matches) still need the same per-file
+    classify-and-migrate treatment. Largest remaining by occurrence
+    count: `test_compile_run_emitters_canonical_map_helper_calls.cpp`
+    (40), `test_compile_run_vm_outputs.cpp` (39, but many of its
+    surrounding cases are IR-serialization-focused - check shape before
+    assuming these are exe/vm conformance cases), `test_compile_run_text_filters_text_rules.cpp`
+    (37), `test_compile_run_text_filters_misc.cpp` (35). Note from
+    investigating one emitters file this session (see TODO-4732's
+    progress note): not every "accept and run" case is actually a
+    routing-only check safe to reduce further - some genuinely assert
+    computed runtime values (real behavior coverage) and should stay
+    compile-and-run, just via vm instead of exe; that distinction is
+    orthogonal to (and doesn't block) this TODO's migration, which
+    keeps the same assertion, just on the cheaper backend.
 
 - [x] TODO-4734: Provide and adopt a RelWithDebInfo test-runner build
   - owner: ai
