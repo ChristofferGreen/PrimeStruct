@@ -34,14 +34,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_canonical_direct_struct_method_chain_forwarding_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects wrapper canonical direct-call method receiver fallback without helper in C++ emitter") {
@@ -71,7 +65,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
         std::string::npos);
@@ -104,7 +98,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
@@ -137,7 +131,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
 }
@@ -175,7 +169,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_access_direct_count_forwarding_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
@@ -202,7 +196,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
@@ -229,7 +223,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_access_count_canonical_wrapper_return_non_string_reject_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
@@ -329,7 +323,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
@@ -406,7 +400,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_capacity_call_non_vector_reject_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
@@ -424,7 +418,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_capacity_method_non_vector_reject_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
@@ -443,13 +437,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_array_capacity_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_user_array_capacity_shadow_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 14);
 }
 
 TEST_CASE("std math vector and color types") {
@@ -475,11 +464,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_vec_color.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_std_math_vec_color_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 36);
 }
 
 TEST_CASE("std math matrix types") {
@@ -506,11 +492,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_matrix.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_std_math_matrix_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 44);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 44);
 }
 
 TEST_CASE("std math quaternion type") {
@@ -527,11 +510,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_quat.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_std_math_quat_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("std math quat_to_mat3 helper") {
@@ -546,11 +526,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_quat_to_mat3.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_std_math_quat_to_mat3_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("std math quat_to_mat4 helper") {
@@ -565,11 +542,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_quat_to_mat4.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_std_math_quat_to_mat4_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 4);
 }
 
 TEST_CASE("std math mat3_to_quat helper") {
@@ -588,11 +562,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_mat3_to_quat.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_std_math_mat3_to_quat_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("C++ support-matrix math nominal helpers") {
@@ -616,12 +587,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_support_matrix_math_nominal_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_support_matrix_math_nominal_helpers_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("C++ quaternion reference multiply and rotation") {
@@ -640,12 +607,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_quaternion_reference_multiply_rotation.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_quaternion_reference_multiply_rotation_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("C++ matrix composition order references with tolerance") {
@@ -679,12 +642,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_matrix_composition_reference.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_matrix_composition_reference_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_SUITE_END();

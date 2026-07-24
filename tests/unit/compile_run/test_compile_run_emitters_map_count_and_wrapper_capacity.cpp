@@ -42,7 +42,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   checkFileContains(errPath, "unknown method: /i32/count");
 }
@@ -61,7 +61,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   checkFileContains(errPath,
                     "unknown call target: /std/collections/vector/capacity");
@@ -106,7 +106,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_user_wrapper_temp_count_capacity_shadow_precedence_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
@@ -154,7 +154,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
@@ -182,7 +182,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_count_capacity_builtin_fallback_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
@@ -287,14 +287,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_count_map_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_vector_count_map_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 41);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 41);
 }
 
 TEST_CASE("C++ emitter keeps alias direct-call vector count same-path helper on map receiver") {
@@ -316,14 +310,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_vector_count_map_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_alias_vector_count_map_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 44);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 44);
 }
 
 TEST_CASE("C++ emitter keeps vector-count diagnostic for alias direct-call vector count on map receiver") {
@@ -422,7 +410,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_vector_count_string_no_helper_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
@@ -444,7 +432,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_vector_count_map_no_helper_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
@@ -466,7 +454,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_vector_count_array_no_helper_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
@@ -503,7 +491,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_count_same_path_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
@@ -521,7 +509,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_count_map_no_helper_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }

@@ -32,7 +32,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("argument count mismatch") != std::string::npos);
 }
@@ -60,7 +60,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_vector_alias_implicit_canonical_forwarding_bool_type_mismatch_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
@@ -530,7 +530,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown named argument: marker") != std::string::npos);
 }
@@ -565,7 +565,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
         std::string::npos);
@@ -643,12 +643,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_alias_count_same_path_wrapper_vector.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_array_alias_count_same_path_wrapper_vector_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 46);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 46);
 }
 
 TEST_CASE("array alias capacity through same-path helper in C++ emitter") {
@@ -669,12 +665,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_alias_capacity_same_path_wrapper_vector.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_array_alias_capacity_same_path_wrapper_vector_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 48);
 }
 
 TEST_CASE("array alias at through same-path helper in C++ emitter") {
@@ -695,12 +687,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_alias_at_same_path_wrapper_vector.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_array_alias_at_same_path_wrapper_vector_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 48);
 }
 
 TEST_CASE("array alias at_unsafe through same-path helper in C++ emitter") {
@@ -722,12 +710,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_array_alias_at_unsafe_same_path_wrapper_vector.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_array_alias_at_unsafe_same_path_wrapper_vector_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 50);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 50);
 }
 
 TEST_CASE("rejects array alias slash-method helper chains on vector receivers in C++ emitter") {
@@ -779,7 +763,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_array_alias_method_helpers_same_path_vector_receivers_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }

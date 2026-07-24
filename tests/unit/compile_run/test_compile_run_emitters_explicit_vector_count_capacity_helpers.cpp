@@ -26,7 +26,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown call target: /vector/capacity") != std::string::npos);
@@ -57,14 +57,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_count_capacity_alias_same_path.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_explicit_vector_count_capacity_alias_same_path_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 37);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 37);
 }
 
 TEST_CASE("local explicit vector count capacity calls through same-path helpers in C++ emitter") {
@@ -88,14 +82,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_local_explicit_vector_count_capacity_same_path.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_local_explicit_vector_count_capacity_same_path_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 29);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 29);
 }
 
 TEST_CASE("C++ emitter rejects local explicit vector count capacity calls without helper before emission") {
@@ -138,7 +126,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/count") !=
         std::string::npos);
@@ -245,7 +233,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") !=
         std::string::npos);
@@ -279,13 +267,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_deleted_stub_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("rejects wrapper vector capacity methods without helper in C++ emitter") {
@@ -305,7 +288,7 @@ main() {
       (testScratchPath("") / "primec_cpp_wrapper_vector_capacity_method_deleted_stub.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown method: /vector/capacity") != std::string::npos);
@@ -404,7 +387,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   // Same-path type-differentiated overloads are legal now (Phase 1
   // overload resolution); calling .capacity() through method-call sugar
@@ -452,7 +435,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   // Now a receiver-type diagnostic rather than an unknown-method one.
   CHECK(readFile(errPath).find("capacity requires vector target") !=
@@ -475,7 +458,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /string/capacity") != std::string::npos);
 }
@@ -496,7 +479,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /array/capacity") != std::string::npos);
 }
@@ -532,15 +515,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_count_capacity_slash_methods_alias_same_path.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_count_capacity_slash_methods_alias_same_path.exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 110);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 110);
 }
 
 TEST_CASE("stdlib namespaced vector count capacity slash methods in C++ emitter") {
@@ -564,13 +540,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_count_capacity_slash_methods.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_stdlib_vector_count_capacity_slash_methods_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 110);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 110);
 }
 
 TEST_CASE("C++ emitter rejects vector namespaced count capacity slash methods without same-path helper") {
@@ -637,7 +608,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown method: /vector/count") != std::string::npos);
@@ -726,7 +697,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
@@ -752,13 +723,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_access_slash_methods.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_stdlib_vector_access_slash_methods_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 93);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 93);
 }
 
 TEST_CASE("C++ emitter rejects stdlib namespaced vector access slash methods without helper before lowering") {
@@ -800,7 +766,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }

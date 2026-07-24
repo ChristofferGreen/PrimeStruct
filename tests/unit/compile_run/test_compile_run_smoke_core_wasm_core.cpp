@@ -77,7 +77,7 @@ main([i32] value) {
   const std::string errPath =
       (testScratchPath("") / "primec_entry_bad_param_err.txt").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("entry definition must take a single array<string> parameter") != std::string::npos);
 }

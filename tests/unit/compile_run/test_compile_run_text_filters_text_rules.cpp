@@ -13,7 +13,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_single_type_to_return_disabled_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null" +
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null" +
                                  " --entry /main --no-transforms --transform-list=default,single_type_to_return 2> " +
                                  quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -48,7 +48,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_per_env_override_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
@@ -166,7 +166,7 @@ mainly() {
       (testScratchPath("") / "primec_text_rule_unrelated_wildcard_path_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /mainly --text-transforms=none --text-transform-rules=/other/*=operators 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -185,7 +185,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_unrelated_exact_path_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none --text-transform-rules=/other=operators 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -204,7 +204,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_wildcard_base_path_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none --text-transform-rules=/main/*=operators 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -223,7 +223,7 @@ mainly() {
       (testScratchPath("") / "primec_text_rule_wildcard_sibling_prefix_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /mainly --text-transforms=none --text-transform-rules=/main/*=operators 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -277,7 +277,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_none_only_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none --text-transform-rules=none 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -398,7 +398,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_missing_equals_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main 2> " +
       quoteShellArg(errPath);
@@ -418,7 +418,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_empty_list_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main= 2> " +
       quoteShellArg(errPath);
@@ -438,7 +438,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_empty_path_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules==operators 2> " +
       quoteShellArg(errPath);
@@ -458,7 +458,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_missing_slash_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=main=operators 2> " +
       quoteShellArg(errPath);
@@ -478,7 +478,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_bad_wildcard_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/ma*in=operators 2> " +
       quoteShellArg(errPath);
@@ -499,7 +499,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_bad_recurse_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main:recurse=operators 2> " +
       quoteShellArg(errPath);
@@ -519,7 +519,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_semantic_only_name_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -539,7 +539,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_unknown_name_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main=not_a_transform 2> " +
       quoteShellArg(errPath);
@@ -581,7 +581,7 @@ main() {
       (testScratchPath("") / "primec_text_rule_nested_list_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none " +
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none " +
       "--text-transform-rules=/main=operators 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);

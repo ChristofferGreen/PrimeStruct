@@ -25,14 +25,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 92);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 92);
 }
 
 TEST_CASE("C++ emitter keeps canonical map count diagnostics on wrapper slash return method sugar") {
@@ -60,7 +54,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count parameter marker") !=
         std::string::npos);
@@ -121,7 +115,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_diag_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count__ta77c4") != std::string::npos);
 }
@@ -154,14 +148,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_map_count_reference_wrapper_direct_call.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_map_count_reference_wrapper_direct_call_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 42);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 42);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on direct canonical map count reference wrappers") {
@@ -198,7 +186,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
@@ -224,7 +212,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /std/collections/map") !=
         std::string::npos);
@@ -370,7 +358,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_map_count_explicit_template_method_alias_precedence_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /std/collections/map/count") != std::string::npos);
 }
@@ -391,7 +379,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
@@ -474,7 +462,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_stdlib_namespaced_map_at_canonical_precedence_diag_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter") != std::string::npos);
 }
@@ -548,7 +536,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument count mismatch for /std/collections/map/count") !=
         std::string::npos);
@@ -570,7 +558,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("unknown call target: /std/collections/map/missing") != std::string::npos);
@@ -652,7 +640,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(errPath).empty());
 }

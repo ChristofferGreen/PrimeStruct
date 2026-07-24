@@ -18,11 +18,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_repeat_loop.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_repeat_loop_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("loop while for sugar") {
@@ -45,11 +42,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_loop_while_for.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_loop_while_for_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("for binding condition") {
@@ -64,11 +58,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_for_condition_binding.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_for_condition_binding_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("shared_scope loops") {
@@ -92,11 +83,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_shared_scope.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_shared_scope_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("shared_scope for binding condition") {
@@ -114,11 +102,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_shared_scope_for_cond.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_shared_scope_for_cond_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("shared_scope while loop") {
@@ -138,11 +123,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_shared_scope_while.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_shared_scope_while_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("increment decrement sugar") {
@@ -156,11 +138,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_increment_decrement.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_increment_decrement_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("brace constructor value") {
@@ -176,12 +155,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_brace_constructor_value.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_brace_constructor_value_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("nested definition call") {
@@ -196,12 +171,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_nested_definition_call.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_nested_definition_call_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("paired map constructor") {
@@ -215,11 +186,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_literal.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_map_literal_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 4);
 }
 
 TEST_CASE("C++ emitter runs variadic args body access and indexed method calls") {
@@ -236,12 +204,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_body_api.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_body_api_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("C++ emitter forwards variadic args packs with explicit prefix values") {
@@ -262,12 +226,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_forward.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_forward_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 20);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 20);
 }
 
 TEST_CASE("C++ emitter materializes variadic Result value packs with spread forwarding") {
@@ -321,12 +281,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_result.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_result_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 24);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 24);
 }
 
 TEST_CASE("C++ emitter materializes variadic status-only Result value packs with spread forwarding") {
@@ -378,12 +334,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_status_result.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_status_result_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 39);
 }
 
 TEST_CASE("C++ emitter materializes variadic borrowed Result value packs with indexed dereference helpers") {
@@ -454,12 +406,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_borrowed_args_result.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_borrowed_args_result_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 24);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 24);
 }
 
 TEST_CASE("C++ emitter materializes variadic borrowed status-only Result packs with indexed dereference helpers") {
@@ -528,12 +476,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_borrowed_status_result.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_borrowed_status_result_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 39);
 }
 
 TEST_CASE("C++ emitter materializes variadic FileError value packs with indexed why methods") {
@@ -570,12 +514,8 @@ TEST_CASE("C++ emitter materializes variadic FileError value packs with indexed 
       "                   forward_mixed(c0, c1))))\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_file_error.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_file_error_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 36);
 #else
   DOCTEST_INFO("FileError errno constants unavailable on this platform");
   CHECK(true);
@@ -660,12 +600,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_buffer_count.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_buffer_count_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 26);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 26);
 }
 
 TEST_CASE("C++ emitter materializes variadic File handle packs with indexed file methods") {
@@ -730,12 +666,8 @@ TEST_CASE("C++ emitter materializes variadic File handle packs with indexed file
       "  return(plus(score_files(a0, a1, a2), plus(forward(b0, b1, b2), forward_mixed(c0, c1))))\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_file_handle.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_file_handle_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 39);
   CHECK(readFile(pathA0) == "alpha\n");
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathB0) == "alpha\n");
@@ -785,12 +717,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_borrowed_file_error.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_borrowed_file_error_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 36);
 }
 
 TEST_SUITE_END();

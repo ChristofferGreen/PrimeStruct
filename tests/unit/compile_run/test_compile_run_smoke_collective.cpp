@@ -63,7 +63,7 @@ main() {
       (testScratchPath("") / "primec_import_immediate_children_err.txt").string();
 
   const std::string compileCppCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCppCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: inc") != std::string::npos);
 

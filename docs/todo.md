@@ -3199,24 +3199,97 @@ This file is the live open-work queue for PrimeStruct.
     failing-test-name sets byte-for-byte identical (70/70, all pre-
     existing and unrelated) - zero regressions, zero cases papered
     over. TEST_CASE count/order in the file confirmed unchanged (201).
-  - remaining scope (updated): this file's raw occurrences are done;
-    49 other files (all listed in the previous progress note's file
-    count, now cross-checked: `grep -rc -- "--emit=exe " tests/unit/compile_run/*.cpp
-    tests/unit/compile_run/*.h` - use the trailing space to avoid
-    counting `--emit=exe-ir` matches) still need the same per-file
-    classify-and-migrate treatment. Largest remaining by occurrence
-    count: `test_compile_run_emitters_canonical_map_helper_calls.cpp`
-    (40), `test_compile_run_vm_outputs.cpp` (39, but many of its
-    surrounding cases are IR-serialization-focused - check shape before
-    assuming these are exe/vm conformance cases), `test_compile_run_text_filters_text_rules.cpp`
-    (37), `test_compile_run_text_filters_misc.cpp` (35). Note from
-    investigating one emitters file this session (see TODO-4732's
-    progress note): not every "accept and run" case is actually a
-    routing-only check safe to reduce further - some genuinely assert
-    computed runtime values (real behavior coverage) and should stay
-    compile-and-run, just via vm instead of exe; that distinction is
-    orthogonal to (and doesn't block) this TODO's migration, which
-    keeps the same assertion, just on the cheaper backend.
+  - progress_2026-07-24: migrated the remaining 49 files as one
+    scripted batch (`scripts/`-adjacent scratch tool, not committed -
+    see below) rather than by hand, given the volume, but with the
+    SAME verify-before-commit discipline as every prior pass - and
+    good thing, because the scripted approach found real, distinct bug
+    classes on the way to a clean result, each caught by full XML-
+    diffed before/after runs rather than assumed safe:
+    1. A block-scoped (never crosses a `TEST_CASE(` boundary) regex
+       classifies each case as `native_mention` (keeps exe - the
+       asserted diagnostic names a backend-specific limitation),
+       `direct_run` (the two-step "compile then run the produced
+       binary" accept shape, collapsed to one `--emit=vm` call),
+       `simple_swap` (compile-only checks, just the emit-mode string
+       swapped), or `manual` (anything not confidently recognized,
+       left untouched).
+    2. First bug: a non-greedy regex for the exe-path variable's
+       declaration backtracked ACROSS an unrelated later declaration
+       (a same-shaped `nativePath` decl with no blank line separating
+       it from `exePath`'s) when the immediately-following text didn't
+       match, silently deleting both declarations from one case's
+       output and breaking a build. Fixed by excluding `const
+       std::string` from what the declaration pattern's inner group
+       can match through, and by adding a general safety net: if a
+       transform would remove more than exactly the one intended
+       variable, or if the removed variable's name still appears
+       anywhere else in the block afterward, bail to `manual` instead
+       of risking a dangling reference (this second check independently
+       caught the `argv count`-style case where a THIRD, later CHECK
+       reused the exe path for a second run with different argv).
+    3. Second bug, found via the filtered XML diff (not the build -
+       this one compiled fine): several `simple_swap` cases still ran
+       the compiled binary directly via `exePath` wrapped in
+       `quoteShellArg(...)`, or via a second variable built from
+       `exePath` (`runCmd = exePath + " alpha beta 2> " + errPath`) -
+       shapes a per-line "does this runCommand() call mention the exe
+       var" check didn't catch since it doesn't do data-flow tracking.
+       Resolved by making the rule maximally conservative instead of
+       chasing more shapes: ANY exe-path-shaped variable still declared
+       after the `direct_run` pass disqualifies the whole case from
+       `simple_swap`, full stop - three different usage shapes each
+       slipped past a narrower check, so precision lost to safety here
+       on purpose.
+    4. Third bug, also only visible via the XML diff: two cases assert
+       diagnostic text starting `"EXE IR lowering error: ..."` - a
+       backend-specific error-message PREFIX (vm's equivalent is
+       prefixed `"VM lowering error: ..."`) that isn't a "native
+       backend" mention and so wasn't caught by the existing
+       native-mention check. Added it as its own disqualifying pattern.
+    Final verified state (after all four fixes, re-verified fresh):
+    ran the full compile_run binary filtered to just the 49 changed
+    files' cases via `--source-file=<49 *basename.cpp patterns>`
+    (1099 non-skipped cases; the unfiltered full-binary run was tried
+    first but the true pre-migration baseline - still mostly exe mode,
+    paying full clang+link+run per case - didn't reliably finish in
+    this environment, crashing/truncating its XML output more than
+    once, apparently a resource-exhaustion issue rather than a code
+    issue; the file-filtered run is both faster and more precisely
+    scoped to what actually changed). XML-parsed failing-test-name
+    sets: 134 pre-existing failures before, 133 after - the ONE
+    difference is a genuine fix (`wrapper canonical direct-call struct
+    method chain forwarding in C++ emitter`, a bare exit-code-2 check
+    that failed under exe for an unrelated pre-existing reason and now
+    passes cleanly under vm), not a regression. Zero new failures.
+    Landed across 39 files with actual content changes (10 of the 49
+    had no safely-migratable occurrences at all - all `native_mention`/
+    `manual`/`no_exe` - and are untouched).
+  - remaining scope (updated): `grep -rc -- "--emit=exe " tests/unit/compile_run/*.cpp
+    tests/unit/compile_run/*.h` (trailing space avoids counting
+    `--emit=exe-ir`) now shows 42 files / 288 occurrences, down from
+    50 files / 939 at the start of this TODO. All remaining occurrences
+    are ones the classifier deliberately left as `manual` or
+    `native_mention` - genuinely needs a human (or a much smarter
+    per-shape classifier) to look at each, not a blanket sweep. Biggest
+    manual buckets from the last classification pass:
+    `test_compile_run_smoke_collective.cpp` (18 manual),
+    `test_compile_run_vm_outputs.cpp` (14, mostly argv/stdin-style
+    cases that run the compiled binary with extra CLI args - vm mode
+    likely needs its own argv-forwarding syntax investigated before
+    these can migrate), `test_compile_run_smoke_core_gfx_entrypoints.cpp`
+    (10, cross-backend gfx cases), `test_compile_run_imports_versions.cpp`
+    /`test_compile_run_imports_versions_archive.h` (versioned-import
+    cases with their own distinct compile+run shape), `test_compile_run_smoke_core_basic.cpp`
+    and `test_compile_run_smoke_core_demo_scripts.cpp` (11 and 13,
+    general smoke-test shape variety). Note from investigating one
+    emitters file this session (see TODO-4732's progress note): not
+    every "accept and run" case is actually a routing-only check safe
+    to reduce further - some genuinely assert computed runtime values
+    (real behavior coverage) and should stay compile-and-run, just via
+    vm instead of exe; that distinction is orthogonal to (and doesn't
+    block) this TODO's migration, which keeps the same assertion, just
+    on the cheaper backend.
 
 - [x] TODO-4734: Provide and adopt a RelWithDebInfo test-runner build
   - owner: ai

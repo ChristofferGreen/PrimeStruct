@@ -22,7 +22,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") !=
         std::string::npos);
@@ -44,15 +44,8 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_string_same_path_helper.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_string_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 81);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 81);
 }
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on map receiver") {
@@ -71,15 +64,8 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_map_same_path_helper.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_map_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 82);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 82);
 }
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on array receiver") {
@@ -98,15 +84,8 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_array_same_path_helper.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_array_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 83);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 83);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on string receiver in C++ emitter") {
@@ -125,7 +104,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -145,7 +124,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -164,15 +143,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_local_alias_slash_vector_count_string_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_local_alias_slash_vector_count_string_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 96);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 96);
 }
 
 TEST_CASE("C++ emitter rejects local alias slash-method vector count same-path helper on map receiver") {
@@ -196,7 +168,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -215,15 +187,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_local_alias_slash_vector_count_array_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_local_alias_slash_vector_count_array_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 98);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 98);
 }
 
 TEST_CASE("C++ emitter keeps rooted wrapper vector count same-path helper on string receiver") {
@@ -245,15 +210,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_string_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_string_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 96);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 96);
 }
 
 TEST_CASE("C++ emitter rejects alias slash-method vector count on string receiver before emission") {
@@ -300,7 +258,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -326,7 +284,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_map_same_path_helper_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
@@ -356,7 +314,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
         std::string::npos);
@@ -382,7 +340,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
@@ -405,7 +363,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_map_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
@@ -427,7 +385,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_map_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
@@ -451,15 +409,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_array_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_array_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 98);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 98);
 }
 
 TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on array receiver") {
@@ -481,15 +432,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_array_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_array_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 88);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 88);
 }
 
 TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on string receiver") {
@@ -511,15 +455,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_string_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_string_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 89);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 89);
 }
 
 TEST_CASE("rejects wrapper-returned canonical vector capacity slash-method on array receiver in C++ emitter") {
@@ -542,7 +479,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
@@ -565,7 +502,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_array_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
@@ -587,7 +524,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_array_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
@@ -611,14 +548,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_string_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_vector_count_string_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 92);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 92);
 }
 
 TEST_CASE("C++ emitter rejects canonical direct-call vector count on string receiver before emission") {
@@ -667,7 +598,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") !=
         std::string::npos);
@@ -692,14 +623,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_string_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_alias_direct_vector_count_string_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 95);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 95);
 }
 
 TEST_CASE("C++ emitter rejects alias direct-call vector count on string receiver before emission") {
@@ -748,7 +673,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown call target: /vector/count") != std::string::npos);
@@ -773,14 +698,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_array_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_alias_direct_vector_count_array_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 99);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 99);
 }
 
 TEST_CASE("C++ emitter rejects alias direct-call vector count on array receiver before emission") {
@@ -829,7 +748,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown call target: /vector/count") != std::string::npos);
@@ -854,14 +773,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_array_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_vector_count_array_same_path_helper_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 93);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 93);
 }
 
 TEST_CASE("C++ emitter rejects canonical direct-call vector count on array receiver before emission") {
@@ -910,7 +823,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") !=
         std::string::npos);
@@ -940,7 +853,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
@@ -974,7 +887,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }

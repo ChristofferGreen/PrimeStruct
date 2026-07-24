@@ -209,7 +209,7 @@ TEST_CASE("conformance: versioned import rejects underscore-private paths") {
   const std::string errPath =
       (testScratchPath("") / "primec_conformance_private_underscore_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --import-path " +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --import-path " +
                                  includeRoot.string() + " 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("import path refers to private folder") != std::string::npos);
@@ -242,7 +242,7 @@ TEST_CASE("conformance: wildcard import does not expose private members from imp
   const std::string errPath =
       (testScratchPath("") / "primec_conformance_wildcard_visibility_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --import-path " +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --import-path " +
                                  includeRoot.string() + " 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: hidden") != std::string::npos);

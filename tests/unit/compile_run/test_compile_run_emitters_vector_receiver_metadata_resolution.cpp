@@ -1152,7 +1152,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_stdlib_vector_method_helper_precedence_reject_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
@@ -1250,7 +1250,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_vector_namespaced_count_capacity_alias_canonical_only_reject_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
@@ -1273,7 +1273,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_vector_namespaced_templated_canonical_alias_call_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }

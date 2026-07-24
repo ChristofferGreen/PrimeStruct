@@ -52,11 +52,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_float_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("single-letter float suffix") {
@@ -67,11 +64,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_suffix_f.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_float_suffix_f_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("float comparison") {
@@ -82,11 +76,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_compare.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_float_compare_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("string comparison") {
@@ -192,11 +183,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_pointer_sugar.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_pointer_sugar_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("rejects method call on map") {
@@ -224,12 +212,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_suffix_off.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_suffix_off_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 8);
 }
 
 TEST_CASE("text filter rewrites if expression") {
@@ -245,11 +229,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_if_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("if expression") {
@@ -260,11 +241,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_expr.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_if_expr_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("runs if expression in vm") {

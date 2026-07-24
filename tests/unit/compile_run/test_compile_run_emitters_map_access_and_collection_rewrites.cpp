@@ -26,7 +26,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(errPath).empty());
 }
@@ -50,7 +50,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter values") !=
         std::string::npos);
@@ -101,12 +101,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_access_known_receiver_no_reorder.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_access_known_receiver_no_reorder_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects user vector mutator shadow arg mismatch in C++ emitter") {
@@ -167,12 +163,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_aliases.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_stdlib_namespaced_vector_aliases_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 13);
 }
 
 TEST_CASE("rejects array namespaced vector constructor alias in C++ emitter") {

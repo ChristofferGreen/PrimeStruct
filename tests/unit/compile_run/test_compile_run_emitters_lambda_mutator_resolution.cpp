@@ -118,7 +118,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(errPath).empty());
 }
@@ -360,11 +360,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_import_alias_helper_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_import_alias_helper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("array method calls in C++ emitter") {
@@ -381,11 +378,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_method.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_method_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("array index sugar") {
@@ -397,11 +391,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_index.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_index_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("argv helpers in C++ emitter") {
@@ -433,11 +424,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_index_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_index_u64_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("vector helpers in C++ emitter") {
@@ -458,11 +446,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_vector_helpers_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_vector_helpers_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("canonical vector mutators over imported user shadow helpers in C++ emitter") {
@@ -505,12 +490,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_vector_mutator_shadow_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_user_vector_mutator_shadow_precedence_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("C++ emitter statement mutator call-form rejects shadow helper") {
@@ -548,12 +529,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_mutator_named_call_shadow_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("C++ emitter statement mutator named call rejects shadow helper without import") {
@@ -573,7 +550,7 @@ main() {
       (testScratchPath("") / "primec_cpp_vector_mutator_named_values_receiver.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
 }
 

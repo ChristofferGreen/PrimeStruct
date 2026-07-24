@@ -47,12 +47,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_file_error.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_pointer_file_error_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 36);
 }
 
 TEST_CASE("C++ emitter materializes variadic borrowed File handle packs with indexed dereference file methods") {
@@ -124,12 +120,8 @@ TEST_CASE("C++ emitter materializes variadic borrowed File handle packs with ind
       "  return(plus(score_refs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_borrowed_file_handle.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_borrowed_file_handle_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 39);
   CHECK(readFile(pathA0) == "alpha\n");
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathExtra) == "alpha\n");
@@ -205,12 +197,8 @@ TEST_CASE("C++ emitter materializes variadic pointer File handle packs with inde
       "  return(plus(score_ptrs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_file_handle.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_pointer_file_handle_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 39);
   CHECK(readFile(pathA0) == "alpha\n");
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathExtra) == "alpha\n");
@@ -350,13 +338,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_borrowed_experimental_map_count.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_borrowed_experimental_map_count_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from borrowed locations") {
@@ -410,13 +393,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_scalar_pointer_borrowed_location.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_scalar_pointer_borrowed_location_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 23);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 23);
 }
 
 TEST_CASE("C++ emitter materializes variadic struct pointer packs from borrowed locations") {
@@ -480,13 +458,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_struct_pointer_borrowed_location.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_struct_pointer_borrowed_location_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 65);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 65);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from imported helper references") {
@@ -545,13 +518,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_scalar_pointer_imported_helper_ref.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_scalar_pointer_imported_helper_ref_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 23);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 23);
 }
 
 TEST_CASE("C++ emitter materializes variadic struct pointer packs from imported helper references") {
@@ -620,13 +588,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_struct_pointer_imported_helper_ref.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_struct_pointer_imported_helper_ref_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 65);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 65);
 }
 
 

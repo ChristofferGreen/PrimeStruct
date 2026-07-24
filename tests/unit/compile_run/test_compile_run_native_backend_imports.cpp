@@ -263,11 +263,8 @@ TEST_CASE("import expansion") {
   const std::string libPath = writeTemp("compile_lib.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string source = "import<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_inc_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("rejects legacy include expansion alias") {
@@ -276,7 +273,7 @@ TEST_CASE("rejects legacy include expansion alias") {
   const std::string errPath =
       (testScratchPath("") / "primec_legacy_include_alias_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
@@ -289,7 +286,7 @@ TEST_CASE("emit-diagnostics reports legacy include alias rejection payload") {
   const std::string primevmErrPath =
       (testScratchPath("") / "primevm_emit_diagnostics_legacy_include_alias_err.json").string();
 
-  const std::string primecCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+  const std::string primecCmd = "./primec --emit=vm " + quoteShellArg(srcPath) +
                                 " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(primecErrPath);
   CHECK(runCommand(primecCmd) == 2);
   const std::string primecDiagnostics = readFile(primecErrPath);
@@ -318,11 +315,8 @@ TEST_CASE("single-quoted import expansion") {
   const std::string libPath = writeTemp("compile_lib_single.prime", "[return<int>]\nhelper(){ return(6i32) }\n");
   const std::string source = "import<'" + libPath + "'>\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include_single.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_inc_single_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("with duplicate imports ignored") {
@@ -330,11 +324,8 @@ TEST_CASE("with duplicate imports ignored") {
   const std::string source = "import<\"" + libPath + "\">\nimport<\"" + libPath +
                              "\">\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include_dupe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_inc_dupe_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("rejects import path with suffix") {
@@ -342,7 +333,7 @@ TEST_CASE("rejects import path with suffix") {
       writeTemp("compile_include_suffix.prime", "import<\"/std/io\"utf8>\n[return<int>]\nmain(){ return(0i32) }\n");
   const std::string errPath = (testScratchPath("") / "primec_include_suffix_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath) == "Import error: import path cannot have suffix\n");
 }
@@ -422,7 +413,7 @@ TEST_CASE("legacy include-path alias is rejected in primec and primevm") {
   const std::string primevmErrPath =
       (testScratchPath("") / "primevm_include_path_legacy_err.txt").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null " +
+  const std::string compileCppCmd = "./primec --emit=vm " + srcPath + " -o /dev/null " +
                                     " --entry /main --include-path " + includeRoot.string();
   CHECK(runCommand(compileCppCmd + " 2> " + primecErrPath) == 2);
   const std::string primecErr = readFile(primecErrPath);

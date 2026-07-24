@@ -32,7 +32,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
         std::string::npos);
@@ -60,7 +60,7 @@ main() {
           "_alias_without_helper.err"))
             .string();
     const std::string compileCmd =
-        "./primec --emit=exe " + srcPath +
+        "./primec --emit=vm " + srcPath +
         " -o /dev/null --entry /main 2> " + errPath;
     CHECK(runCommand(compileCmd) != 0);
     const std::string errors = readFile(errPath);
@@ -171,12 +171,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_map_access_count.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_stdlib_namespaced_map_access_count_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
 }
 
 TEST_CASE("C++ emitter keeps wrapper-returned canonical map references through reference binding") {
@@ -203,7 +199,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_map_reference_method_sugar_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: count") != std::string::npos);
 }
@@ -232,7 +228,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
@@ -250,14 +246,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_canonical_map_reference_string_receiver.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_map_reference_string_receiver_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("C++ emitter keeps non-string diagnostics on canonical map reference access receivers") {
@@ -276,7 +266,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(errPath).empty());
 }
@@ -382,7 +372,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(errPath).empty());
 }
@@ -403,7 +393,7 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_map_namespaced_at_compatibility_alias_reject.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_map_namespaced_at_compatibility_alias.err").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
 }
@@ -427,7 +417,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_map_namespaced_at_unsafe_compatibility_alias.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
@@ -471,7 +461,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
@@ -537,7 +527,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
@@ -560,7 +550,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
@@ -583,7 +573,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
@@ -602,7 +592,7 @@ main() {
       (testScratchPath("") / "primec_cpp_compile_cpp_canonical_slash_method_map_access_deleted_stub_repin.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }

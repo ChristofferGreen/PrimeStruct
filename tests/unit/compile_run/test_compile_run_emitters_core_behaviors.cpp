@@ -63,11 +63,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_chain.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_method_chain_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 4);
 }
 
 TEST_CASE("C++ emitter preserves explicit Result constructor payloads") {
@@ -106,13 +103,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_explicit_result_sum_constructors.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_explicit_result_sum_constructors_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 19);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 19);
 }
 
 TEST_CASE("C++ emitter compiles Result.why on ok bridge values") {
@@ -195,11 +187,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_result_error_struct_constructor.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_result_error_struct_constructor_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 16);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 16);
 }
 
 TEST_CASE("C++ emitter packs single-field Result.ok payloads") {
@@ -228,11 +217,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_result_ok_struct_payload.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_result_ok_struct_payload_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 24);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 24);
 }
 
 TEST_CASE("C++ emitter packs single-field ok sum constructor payloads") {
@@ -262,13 +248,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_result_ok_sum_struct_payload.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_result_ok_sum_struct_payload_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 36);
 }
 
 TEST_CASE("C++ emitter packs single-field Result.map payloads") {
@@ -303,13 +284,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_result_map_struct_payload.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_result_map_struct_payload_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 14);
 }
 
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
@@ -437,11 +413,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct_return.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_struct_return_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("C++ emitter uses struct field defaults") {
@@ -459,11 +432,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct_defaults.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_struct_defaults_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
 }
 
 TEST_CASE("C++ emitter supports file io") {
@@ -498,11 +468,8 @@ TEST_CASE("C++ emitter supports file io") {
       "  print_line_error(\"file error\"utf8)\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_file_io_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_file_io_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
   CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
 }
 

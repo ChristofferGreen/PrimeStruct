@@ -152,7 +152,7 @@ main() {
       (testScratchPath("") / "primec_cpp_support_matrix_plus_mismatch_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("plus requires matching matrix/quaternion operand types") != std::string::npos);
 }
@@ -177,7 +177,7 @@ main() {
       (testScratchPath("") / "primec_cpp_support_matrix_implicit_conversion_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got "
@@ -198,7 +198,7 @@ main() {
   const std::string errPath = (testScratchPath("") / "primec_map_string_keys.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
@@ -213,11 +213,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_lerp_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_lerp_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("math-qualified clamp in C++ emitter") {
@@ -228,11 +225,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_clamp_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_math_clamp_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("math-qualified trig in C++ emitter") {
@@ -243,11 +237,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_trig_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_math_trig_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("math-qualified min/max in C++ emitter") {
@@ -258,11 +249,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_minmax_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_math_minmax_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("math-qualified constants in C++ emitter") {
@@ -273,11 +261,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_constants_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_math_constants_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
 }
 
 TEST_CASE("imported math constants in C++ emitter") {
@@ -289,11 +274,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_imported_math_constants_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_imported_math_constants_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
 }
 
 TEST_CASE("rounding builtins in C++ emitter") {
@@ -308,11 +290,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_rounding_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_rounding_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
 }
 
 TEST_CASE("convert<bool> from float in C++ emitter") {
@@ -323,11 +302,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_convert_bool_float.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_convert_bool_float_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("string comparisons in C++ emitter") {
@@ -383,11 +359,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_power_log_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_power_log_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 25);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 25);
 }
 
 TEST_CASE("integer pow negative exponent in C++ emitter") {
@@ -434,11 +407,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_trig_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_trig_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 181);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 181);
 }
 
 TEST_CASE("hyperbolic builtins in C++ emitter") {
@@ -457,11 +427,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_hyperbolic_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_hyperbolic_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("float utils in C++ emitter") {
@@ -476,11 +443,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_utils_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_float_utils_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 10);
 }
 
 TEST_CASE("float predicates in C++ emitter") {
@@ -499,11 +463,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_predicates_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_float_predicates_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("import aliases in C++ emitter") {
@@ -521,11 +482,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_import_alias_inc_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_import_alias_inc_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("math constants in C++ emitter") {
@@ -540,11 +498,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_constants_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_constants_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 12);
 }
 
 TEST_CASE("array unsafe access in C++ emitter") {
@@ -556,11 +511,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_unsafe_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_unsafe_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("array unsafe access with u64 index in C++ emitter") {
@@ -572,11 +524,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_unsafe_u64_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_unsafe_u64_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("canonical vector discard helpers with owned elements in C++ emitter") {

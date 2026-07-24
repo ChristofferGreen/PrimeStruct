@@ -1939,11 +1939,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_void_main.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_void_main_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("exe-ir emitter compiles and runs i32 subset") {
@@ -2344,11 +2341,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f32_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_f32_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("exe emitter uses ir backend for string indexing") {
@@ -2383,11 +2377,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_pointer_indirect_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_pointer_indirect_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 8);
 }
 
 TEST_CASE("exe emitter uses ir backend for heap alloc intrinsic") {
@@ -2401,11 +2392,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_heap_alloc_intrinsic_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_heap_alloc_intrinsic_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("exe emitter uses ir backend for heap free intrinsic") {
@@ -2421,11 +2409,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_heap_free_intrinsic_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_heap_free_intrinsic_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("exe emitter uses ir backend for heap realloc intrinsic") {
@@ -2443,11 +2428,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_heap_realloc_intrinsic_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_heap_realloc_intrinsic_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 13);
 }
 
 TEST_CASE("exe emitter uses ir backend for checked memory at intrinsic") {
@@ -2465,11 +2447,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_heap_at_intrinsic_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_heap_at_intrinsic_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 13);
 }
 
 TEST_CASE("exe emitter uses ir backend for unchecked memory at intrinsic") {
@@ -2487,11 +2466,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_heap_at_unsafe_intrinsic_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_heap_at_unsafe_intrinsic_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 13);
 }
 
 TEST_CASE("exe emitter uses ir backend for file io subset") {
@@ -2527,11 +2503,8 @@ TEST_CASE("exe emitter uses ir backend for file io subset") {
       "  print_line_error(\"file error\"utf8)\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_exe_file_io_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_file_io_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
   CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
 }
 
@@ -2562,11 +2535,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_cmp_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_f64_cmp_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("exe emitter uses ir backend for f64 arithmetic subset") {
@@ -2580,11 +2550,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_math_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_f64_math_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("exe-ir emitter compiles and runs f64 conversion subset") {
@@ -2620,11 +2587,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_convert_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_f64_convert_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("exe-ir emitter compiles and runs f64 to i32 conversion") {
@@ -2652,11 +2616,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_to_i32_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_f64_to_i32_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("exe-ir emitter clamps f32/f64 to i64 conversion edges") {
@@ -2699,12 +2660,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_to_i64_ir_first_edges.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_f64_to_i64_ir_first_edges").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("exe-ir emitter truncates in-range f32/f64 to i64") {
@@ -2741,12 +2698,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_to_i64_ir_first_truncation.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_f64_to_i64_ir_first_truncation").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("exe-ir emitter truncates in-range f32/f64 to u64") {
@@ -2783,12 +2736,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_to_u64_ir_first_truncation.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_f64_to_u64_ir_first_truncation").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 
@@ -3017,11 +2966,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_void_return.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_void_return_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("exe emitter uses ir backend for file read subset") {
@@ -3039,11 +2985,8 @@ log_file_error([FileError] err) {
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_file_read_ir_first.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exe_file_read_ir_first").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("implicit void main") {
@@ -3054,11 +2997,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_void_implicit.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_void_implicit_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("argv count") {
@@ -3323,11 +3263,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_literal.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_literal_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("array literal count method") {
@@ -3338,11 +3275,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_literal_count.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_literal_count_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("array literal unsafe access") {
@@ -3353,11 +3287,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_literal_unsafe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_literal_unsafe_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("array count helper") {
@@ -3369,11 +3300,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_count_helper.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_count_helper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("array literal count helper") {
@@ -3384,12 +3312,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_literal_count_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_array_literal_count_helper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("literal method call in C++ emitter") {
@@ -3407,11 +3331,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_literal.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_method_literal_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 

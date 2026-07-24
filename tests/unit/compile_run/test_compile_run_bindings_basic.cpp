@@ -9,11 +9,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_void.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_void_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("local binding") {
@@ -25,11 +22,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_binding.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_binding_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("bare zero-arg calls") {
@@ -172,11 +166,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_struct_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("assign to mutable binding") {
@@ -189,11 +180,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_assign.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_assign_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("assign to reference") {
@@ -207,11 +195,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_assign_ref.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_assign_ref_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("location on reference") {
@@ -225,11 +210,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_ref_location.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_ref_location_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 8);
 }
 
 TEST_CASE("reference arithmetic") {
@@ -243,11 +225,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_ref_arith.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_ref_arith_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("array reference helpers") {
@@ -260,11 +239,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_ref_helpers.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_array_ref_helpers_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 

@@ -289,7 +289,7 @@ TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
                                         ("primevm_borrow_checker_negative_" + path.stem().string() + ".json"))
                                            .string();
 
-    const std::string primecCmd = "./primec --emit=exe " + quoteShellArg(path.string()) +
+    const std::string primecCmd = "./primec --emit=vm " + quoteShellArg(path.string()) +
                                   " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(primecErrPath);
     CHECK(runCommand(primecCmd) == 2);
     const std::string primecDiagnostics = readFile(primecErrPath);

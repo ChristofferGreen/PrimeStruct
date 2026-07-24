@@ -101,7 +101,7 @@ TEST_CASE("rejects versioned legacy include alias expansion") {
   const std::string errPath =
       (testScratchPath("") / "primec_versioned_inc_legacy_alias_err.txt").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  const std::string compileCppCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCppCmd) == 2);
   CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
@@ -115,7 +115,7 @@ TEST_CASE("rejects version-first legacy include alias expansion") {
   const std::string errPath =
       (testScratchPath("") / "primec_versioned_inc_legacy_alias_first_err.txt").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  const std::string compileCppCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCppCmd) == 2);
   CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
@@ -486,7 +486,7 @@ TEST_CASE("rejects versioned import mismatch across roots") {
   const std::string errPath =
       (testScratchPath("") / "primec_versioned_include_mismatch_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath +
                                  " -o /dev/null --entry /main --import-path " + includeRootA.string() +
                                  " --import-path " + includeRootB.string() + " 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
@@ -514,7 +514,7 @@ TEST_CASE("rejects missing versioned import in compile") {
   const std::string errPath =
       (testScratchPath("") / "primec_versioned_include_missing_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --import-path " +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --import-path " +
                                  includeRoot.string() + " 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Import error: import version not found") != std::string::npos);

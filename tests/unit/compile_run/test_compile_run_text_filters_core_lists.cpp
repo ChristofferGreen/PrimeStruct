@@ -149,7 +149,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_infix_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
@@ -166,7 +166,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_float_suffix_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("float literal requires f32/f64 suffix") != std::string::npos);
 }
@@ -183,7 +183,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_float_f_suffix_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("float literal requires f32/f64 suffix") != std::string::npos);
 }
@@ -201,7 +201,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_inc_sugar_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
@@ -218,7 +218,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_if_sugar_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
@@ -237,7 +237,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_loop_sugar_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
@@ -256,7 +256,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_while_sugar_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
@@ -275,7 +275,7 @@ main() {
       (testScratchPath("") / "primec_no_transforms_for_sugar_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
@@ -293,7 +293,7 @@ main([array<i32>] values) {
       (testScratchPath("") / "primec_no_transforms_index_sugar_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("indexing sugar") != std::string::npos);
@@ -312,7 +312,7 @@ main() {
       (testScratchPath("") / "primec_text_filters_none_utf8_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
         std::string::npos);
@@ -331,7 +331,7 @@ main() {
       (testScratchPath("") / "primec_transform_list_none_utf8_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --transform-list=none 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --transform-list=none 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
         std::string::npos);
@@ -451,7 +451,7 @@ main() {
       (testScratchPath("") / "primec_transform_list_unknown_name_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --transform-list=not_a_transform 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown transform: not_a_transform") != std::string::npos);
@@ -469,7 +469,7 @@ main() {
       (testScratchPath("") / "primec_transform_list_none_infix_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --transform-list=none 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --transform-list=none 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
@@ -486,7 +486,7 @@ main() {
       (testScratchPath("") / "primec_text_filters_none_infix_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
@@ -534,7 +534,7 @@ main() {
       (testScratchPath("") / "primevm_text_filters_legacy_alias_err.txt").string();
 
   const std::string primecEqCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + primecErrPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + primecErrPath;
   CHECK(runCommand(primecEqCmd) == 2);
   CHECK(readFile(primecErrPath).find("Argument error: unknown option: --text-filters=none\n") != std::string::npos);
 
@@ -544,7 +544,7 @@ main() {
   CHECK(readFile(primevmErrPath).find("Argument error: unknown option: --text-filters=none\n") != std::string::npos);
 
   const std::string primecBareCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters 2> " + primecErrPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main --text-filters 2> " + primecErrPath;
   CHECK(runCommand(primecBareCmd) == 2);
   CHECK(readFile(primecErrPath).find("Argument error: unknown option: --text-filters\n") != std::string::npos);
 

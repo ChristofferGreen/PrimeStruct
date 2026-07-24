@@ -31,7 +31,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_single_type_to_return_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main --transform-list=default,single_type_to_return 2> " +
                                  quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -49,7 +49,7 @@ main() {
       (testScratchPath("") / "primec_single_type_to_return_marker_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
 }
@@ -64,7 +64,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_semantic_single_type_to_return_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main --semantic-transforms=single_type_to_return 2> " +
                                  quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -166,7 +166,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_empty_tokens_err.txt").string();
 
   const std::string ruleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none --semantic-transform-rules " +
       quoteShellArg(";;/main=single_type_to_return;;") + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(ruleCmd) == 2);
@@ -214,7 +214,7 @@ main() {
           .string();
 
   const std::string ruleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/*=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -235,7 +235,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_bad_recurse_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main:recurse=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -255,7 +255,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_empty_list_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main= 2> " +
       quoteShellArg(errPath);
@@ -275,7 +275,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_bad_wildcard_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/ma*in=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -296,7 +296,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_missing_slash_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=main=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -316,7 +316,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_missing_equals_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main 2> " +
       quoteShellArg(errPath);
@@ -336,7 +336,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_empty_path_rule_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules==single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -356,7 +356,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_text_only_name_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main=operators 2> " +
       quoteShellArg(errPath);
@@ -376,7 +376,7 @@ main() {
       (testScratchPath("") / "primec_semantic_transform_unknown_name_err.txt").string();
 
   const std::string badRuleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main=not_a_transform 2> " +
       quoteShellArg(errPath);
@@ -541,7 +541,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_semantic_single_type_to_return_text_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main --semantic-transforms=single_type_to_return 2> " +
                                  quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
