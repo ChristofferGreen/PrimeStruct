@@ -3009,12 +3009,10 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
-  CHECK(runCommand(exePath + " alpha beta") == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
+  const std::string argvCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta";
+  CHECK(runCommand(argvCmd) == 3);
 }
 
 TEST_CASE("argv count helper") {
@@ -3025,12 +3023,10 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_count_helper.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_count_helper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
-  CHECK(runCommand(exePath + " alpha beta") == 3);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
+  const std::string argvCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta";
+  CHECK(runCommand(argvCmd) == 3);
 }
 
 TEST_CASE("argv error output in C++ emitter") {
@@ -3042,12 +3038,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_error.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_error_exe").string();
   const std::string errPath = (testScratchPath("") / "primec_args_error_err.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha beta 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha\n");
 }
@@ -3061,13 +3053,9 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_error_no_newline.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_error_no_newline_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_args_error_no_newline_err.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha beta 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha");
 }
@@ -3084,13 +3072,9 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_error_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_error_u64_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_args_error_u64_err.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha");
 }
@@ -3107,13 +3091,9 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_error_unsafe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_error_unsafe_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_args_error_unsafe_err.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha");
 }
@@ -3130,14 +3110,9 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_line_error_unsafe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_args_line_error_unsafe_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_args_line_error_unsafe_err.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha\n");
 }
@@ -3155,12 +3130,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_print.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_print_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_args_print_out.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha beta > " + outPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\nbeta\n");
 }
@@ -3177,13 +3148,9 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_print_no_newline.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_print_no_newline_exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_args_print_no_newline_out.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha > " + outPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha");
 }
@@ -3200,12 +3167,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_print_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_print_u64_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_args_print_u64_out.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha > " + outPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\n");
 }
@@ -3223,12 +3186,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_unsafe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_unsafe_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_args_unsafe_out.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha beta > " + outPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\nbeta\n");
 }
@@ -3245,12 +3204,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_args_unsafe_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_args_unsafe_u64_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_args_unsafe_u64_out.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha > " + outPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\n");
 }
