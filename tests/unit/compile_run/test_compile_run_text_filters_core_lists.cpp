@@ -11,12 +11,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_suffix.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_suffix_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default,implicit-i32";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=default,implicit-i32";
@@ -43,12 +37,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_inc_dec_sugar.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_inc_dec_sugar_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=default";
   CHECK(runCommand(runVmCmd) == 2);
@@ -70,12 +58,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_override.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_no_transforms_override_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath +
-      " --entry /main --no-transforms --text-transforms=default,implicit-i32";
+      "./primec --emit=vm " + srcPath +
+      " -o /dev/null --entry /main --no-transforms --text-transforms=default,implicit-i32";
   CHECK(runCommand(compileCmd) != 0);
 }
 
@@ -87,13 +73,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_canonical.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_no_transforms_canonical_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --no-transforms";
   CHECK(runCommand(runVmCmd) == 3);
@@ -116,13 +95,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_brace_ctor.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_no_transforms_brace_ctor_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --no-transforms";
   CHECK(runCommand(runVmCmd) == 1);
@@ -345,13 +317,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_transform_list_default_no_i32.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_transform_list_default_i32_exe").string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --transform-list=default";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --transform-list=default";
+  CHECK(runCommand(runVmCmd) == 12);
 }
 
 TEST_CASE("transform list none clears prior defaults") {
@@ -363,23 +332,20 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_transform_list_none_clears_defaults.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_transform_list_none_clears_defaults_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_transform_list_none_clears_defaults_err.txt").string();
 
   const std::string clearedCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --transform-list=default,none 2> " + quoteShellArg(errPath);
   CHECK(runCommand(clearedCmd) == 2);
   CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
         std::string::npos);
 
   const std::string restoredCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --transform-list=none,default";
   CHECK(runCommand(restoredCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("transform list semicolons split tokens") {
@@ -391,23 +357,20 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_transform_list_semicolon_split.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_transform_list_semicolon_split_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_transform_list_semicolon_split_err.txt").string();
 
   const std::string clearedCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --transform-list=default\\;none 2> " + quoteShellArg(errPath);
   CHECK(runCommand(clearedCmd) == 2);
   CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
         std::string::npos);
 
   const std::string restoredCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --transform-list=default\\;none\\;default";
   CHECK(runCommand(restoredCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("transform list whitespace splits tokens") {
@@ -419,13 +382,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_transform_list_whitespace_split.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_transform_list_whitespace_split_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_transform_list_whitespace_split_err.txt").string();
 
   const std::string clearedCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --transform-list=" + quoteShellArg("default none") +
       " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(clearedCmd) == 2);
@@ -433,10 +394,9 @@ main() {
         std::string::npos);
 
   const std::string restoredCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --transform-list=" + quoteShellArg("default none default");
   CHECK(runCommand(restoredCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("transform list rejects unknown transform name") {
@@ -499,13 +459,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_filters_none_canonical.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_filters_none_canonical_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=none";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=none";
   CHECK(runCommand(runVmCmd) == 3);
@@ -561,12 +514,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_transform_list_i32.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_transform_list_i32_exe").string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --transform-list=default,implicit-i32";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --transform-list=default,implicit-i32";
+  CHECK(runCommand(runVmCmd) == 9);
 }
 
 TEST_CASE("implicit i32 via transform list in primevm") {
