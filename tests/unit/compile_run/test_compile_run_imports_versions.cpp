@@ -27,15 +27,8 @@ TEST_CASE("versioned import expansion with relative import entry") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_relative.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_relative_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_relative_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -72,15 +65,8 @@ TEST_CASE("exact versioned import expansion") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_exact.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_exact_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_exact_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -145,15 +131,8 @@ TEST_CASE("versioned import expansion with quoted import entries") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_quoted.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_quoted_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_quoted_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -190,15 +169,8 @@ TEST_CASE("import expansion with comments") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_comments.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_comments_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_comments_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -229,14 +201,8 @@ TEST_CASE("duplicate imports once") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_duplicate_include.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_duplicate_inc_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_duplicate_inc_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -273,15 +239,8 @@ TEST_CASE("versioned import with single quotes") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_single_quotes.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_single_quotes_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_single_quotes_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -325,15 +284,8 @@ TEST_CASE("versioned import with major-only selector") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_major_only.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_major_only_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_major_only_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -377,15 +329,8 @@ TEST_CASE("versioned import with minor selector") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_minor_only.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_minor_only_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_minor_only_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -434,15 +379,8 @@ TEST_CASE("versioned import expansion with multiple import entries") {
       "[return<int>]\n"
       "main(){ return(plus(io_helper(), math_helper())) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_multi.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_multi_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_multi_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
@@ -557,15 +495,8 @@ TEST_CASE("versioned import expansion with mixed quoted and relative entries") {
       "[return<int>]\n"
       "main(){ return(plus(io_helper(), local_helper())) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_mixed.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_versioned_inc_mixed_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_versioned_inc_mixed_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();

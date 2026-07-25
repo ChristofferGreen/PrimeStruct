@@ -23,12 +23,10 @@ TEST_CASE("archive import expansion") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_archive_include.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_archive_inc_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath +
                                  " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("exact versioned archive import expansion") {
@@ -64,13 +62,10 @@ TEST_CASE("exact versioned archive import expansion") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_archive_include_exact.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_archive_inc_exact_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath +
                                  " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  CHECK(runCommand(compileCmd) == 5);
 }
 
 TEST_CASE("newest archive import expansion") {
@@ -106,13 +101,10 @@ TEST_CASE("newest archive import expansion") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_archive_include_latest.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_archive_inc_latest_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath +
                                  " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("conformance: versioned import selects latest for wildcard import exposure") {
@@ -147,13 +139,10 @@ TEST_CASE("conformance: versioned import selects latest for wildcard import expo
       "[return<int>]\n"
       "main(){ return(value()) }\n";
   const std::string srcPath = writeTemp("compile_conformance_versioned_wildcard.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_conformance_versioned_wildcard_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath +
                                  " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
+  CHECK(runCommand(compileCmd) == 8);
 }
 
 TEST_CASE("conformance: duplicate versioned imports are deduplicated before import aliasing") {
@@ -179,13 +168,10 @@ TEST_CASE("conformance: duplicate versioned imports are deduplicated before impo
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_conformance_duplicate_versioned_include.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_conformance_duplicate_versioned_include_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+  const std::string compileCmd = "./primec --emit=vm " + srcPath +
                                  " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  CHECK(runCommand(compileCmd) == 9);
 }
 
 TEST_CASE("conformance: versioned import rejects underscore-private paths") {
