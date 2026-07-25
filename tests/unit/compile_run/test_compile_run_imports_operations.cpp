@@ -247,7 +247,7 @@ main() {
       (testScratchPath("") / "primec_raw_soa_type_exe_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
 }
 

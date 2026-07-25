@@ -73,18 +73,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rules.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_transform_rules_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_semantic_transform_rules_err.txt").string();
 
   const std::string okCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --semantic-transforms=none";
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none";
   CHECK(runCommand(okCmd) == 0);
 
   const std::string ruleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none --semantic-transform-rules=/main=single_type_to_return 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(ruleCmd) == 2);
@@ -111,7 +109,7 @@ main() {
   CHECK(runCommand(disableLastCmd) == 0);
 
   const std::string enableLastCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main=none\\;/main=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -127,20 +125,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rules_none_token.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_transform_rules_none_token_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_semantic_transform_rules_none_token_err.txt").string();
 
   const std::string clearedCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main=single_type_to_return\\;none";
-  CHECK(runCommand(clearedCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(clearedCmd) == 1);
 
   const std::string reappliedCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=none\\;/main=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -175,20 +170,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rule_wildcard_order.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_transform_rule_wildcard_order_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_semantic_transform_rule_wildcard_order_err.txt").string();
 
   const std::string wildcardLastCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main=single_type_to_return\\;/*=none";
-  CHECK(runCommand(wildcardLastCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(wildcardLastCmd) == 1);
 
   const std::string exactLastCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/*=none\\;/main=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -404,7 +396,7 @@ main() {
   CHECK(runCommand(nonRecursiveCmd) == 0);
 
   const std::string recursiveAliasCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main/*:recursive=single_type_to_return 2> " +
       quoteShellArg(errPath);
@@ -480,19 +472,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_root_wildcard_recurse.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_root_wildcard_recurse_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_semantic_root_wildcard_recurse_err.txt").string();
 
   const std::string noRecurseCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --semantic-transforms=none --semantic-transform-rules=/*=single_type_to_return";
   CHECK(runCommand(noRecurseCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 
   const std::string recurseCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/*:recurse=single_type_to_return 2> " +
       quoteShellArg(errPath);

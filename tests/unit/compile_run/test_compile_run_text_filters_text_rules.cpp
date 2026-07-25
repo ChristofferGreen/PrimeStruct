@@ -252,11 +252,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_order.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_text_rule_order_exe").string();
   const std::string errPath = (testScratchPath("") / "primec_text_rule_order_err.txt").string();
 
   const std::string disableLastCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main=operators\\;/main=none 2> " +
       quoteShellArg(errPath);
@@ -264,11 +263,10 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 
   const std::string enableLastCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --text-transforms=none "
       "--text-transform-rules=/main=none\\;/main=operators";
-  CHECK(runCommand(enableLastCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(enableLastCmd) == 3);
 }
 
 TEST_CASE("text transform rules prefer later wildcard match") {
@@ -279,13 +277,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_wildcard_order.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_rule_wildcard_order_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_text_rule_wildcard_order_err.txt").string();
 
   const std::string wildcardLastCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main=operators\\;/*=none 2> " +
       quoteShellArg(errPath);
@@ -293,11 +289,10 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 
   const std::string exactLastCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --text-transforms=none "
       "--text-transform-rules=/*=none\\;/main=operators";
-  CHECK(runCommand(exactLastCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exactLastCmd) == 3);
 }
 
 TEST_CASE("text transform root wildcard applies to top-level definitions") {
@@ -320,13 +315,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_none_token.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_rule_none_token_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_text_rule_none_token_err.txt").string();
 
   const std::string clearedCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/main=operators\\;none 2> " +
       quoteShellArg(errPath);
@@ -334,10 +327,9 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 
   const std::string reappliedCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --text-transforms=none --text-transform-rules=none\\;/main=operators";
-  CHECK(runCommand(reappliedCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(reappliedCmd) == 3);
 }
 
 TEST_CASE("text transform rules reject missing equals") {
@@ -554,22 +546,20 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_recurse.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_text_rule_recurse_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_text_rule_recurse_err.txt").string();
 
   const std::string noRecurseCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/std/math/*=operators 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(noRecurseCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 
   const std::string recurseCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --text-transforms=none --text-transform-rules=/std/math/*:recurse=operators";
-  CHECK(runCommand(recurseCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(recurseCmd) == 3);
 }
 
 TEST_CASE("text transform rules accept recursive suffix alias") {
@@ -606,23 +596,20 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_root_wildcard_recurse.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_rule_root_wildcard_recurse_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_text_rule_root_wildcard_recurse_err.txt").string();
 
   const std::string noRecurseCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
       "--text-transform-rules=/*=operators 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(noRecurseCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 
   const std::string recurseCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      "./primec --emit=vm " + quoteShellArg(srcPath) +
       " --entry /main --text-transforms=none --text-transform-rules=/*:recurse=operators";
-  CHECK(runCommand(recurseCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(recurseCmd) == 3);
 }
 
 TEST_SUITE_END();
