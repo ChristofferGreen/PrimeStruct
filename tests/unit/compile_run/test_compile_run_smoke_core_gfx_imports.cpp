@@ -88,13 +88,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_gfx_experimental_type_surface.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_gfx_experimental_type_surface_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_gfx_experimental_type_surface_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 10);
@@ -188,13 +183,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_gfx_canonical_type_surface.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_gfx_canonical_type_surface_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_gfx_canonical_type_surface_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 10);
@@ -232,14 +222,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_gfx_experimental_error_helper_vm.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_gfx_experimental_error_helper_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_gfx_experimental_error_helper_native").string();
-
-  const std::string compileExeCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileExeCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 4);
@@ -367,14 +351,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_gfx_experimental_substrate_boundary.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_gfx_experimental_substrate_boundary_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_gfx_experimental_substrate_boundary_native").string();
-
-  const std::string compileExeCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileExeCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 10);

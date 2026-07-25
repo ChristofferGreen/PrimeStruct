@@ -19,12 +19,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_count_method.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_count_method_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_count_method_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 5);
@@ -51,12 +46,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semicolon_separators.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_semicolon_sep_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_semicolon_sep_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 3);

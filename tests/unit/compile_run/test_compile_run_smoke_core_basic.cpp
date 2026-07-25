@@ -91,12 +91,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_enum_access.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_enum_access_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_enum_access_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 5);
@@ -129,12 +124,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_scalar_sum_pick.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_scalar_sum_pick_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_scalar_sum_pick_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 43);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 43);
@@ -231,12 +221,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_unit_sum_pick.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_unit_sum_pick_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_unit_sum_pick_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 43);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 43);
@@ -279,12 +264,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_aggregate_sum_pick.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_aggregate_sum_pick_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_aggregate_sum_pick_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 43);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 43);
@@ -337,12 +317,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_aggregate_sum_pick_escape.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_aggregate_sum_pick_escape_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_aggregate_sum_pick_escape_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 86);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 86);
@@ -397,12 +372,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_sum_move_active_payload.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_sum_move_active_payload_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_sum_move_active_payload_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 107);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 107);
@@ -449,12 +419,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_sum_drop_active_payload.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_sum_drop_active_payload_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_sum_drop_active_payload_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 0);

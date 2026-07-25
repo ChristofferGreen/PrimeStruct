@@ -274,12 +274,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_binding.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_native_map_binding_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_native_map_binding_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 0);

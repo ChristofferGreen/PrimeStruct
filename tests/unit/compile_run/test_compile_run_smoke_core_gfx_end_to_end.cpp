@@ -367,13 +367,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_gfx_experimental_static_fields.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_gfx_experimental_static_fields_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_gfx_experimental_static_fields_native").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 4);

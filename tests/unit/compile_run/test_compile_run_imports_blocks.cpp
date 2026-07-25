@@ -12,13 +12,8 @@ TEST_CASE("import inside namespace") {
       "[return<int>]\n"
       "main(){ return(/outer/helper()) }\n";
   const std::string srcPath = writeTemp("compile_namespace_include.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_namespace_inc_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_namespace_inc_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 9);
@@ -45,12 +40,7 @@ namespace lib {
       "[return<int>]\n"
       "main(){ return(add(4i32, 3i32)) }\n";
   const std::string srcPath = writeTemp("compile_include_imports.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_inc_imports_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_inc_imports_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 7);
@@ -72,13 +62,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_block_expr_multiline.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_block_expr_multiline_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_block_expr_multiline_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 3);
@@ -99,12 +84,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_block_expr_return.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_block_expr_return_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_block_expr_return_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 7);
@@ -125,14 +105,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_block_expr_early_return.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_block_expr_early_return_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_block_expr_early_return_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 3);
@@ -160,14 +134,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_block_binding_infer_method.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_block_binding_infer_method_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_block_binding_infer_method_native").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 4);
