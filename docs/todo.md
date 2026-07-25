@@ -3265,27 +3265,99 @@ This file is the live open-work queue for PrimeStruct.
     Landed across 39 files with actual content changes (10 of the 49
     had no safely-migratable occurrences at all - all `native_mention`/
     `manual`/`no_exe` - and are untouched).
+  - progress_2026-07-24b through 2026-07-24f: five more scripted
+    passes plus one hand-editing pass, each independently XML-diff
+    verified against the same 1099-case filtered baseline (134
+    pre-existing failures throughout; the lone
+    `wrapper canonical direct-call struct method chain forwarding in
+    C++ emitter` fix from the previous pass is the only persistent
+    delta). New patterns the classifier learned, each added only
+    after finding real cases it was silently mis-handling:
+    - Two argv-forwarding shapes (`argv count` style: compile once,
+      run twice - no args then with args; `argv error output` style:
+      compile once, run once with args redirecting stdout/stderr to a
+      file) - confirmed empirically first that `--emit=vm ... --
+      <args>` forwards argv identically to exe's separate-binary
+      invocation (same exit code, same captured output) before
+      trusting the pattern.
+    - "exe + vm + native checked in one case" - when the exe block is
+      immediately followed by a vm block asserting the identical
+      value on the identical source, the exe block is fully redundant
+      test surface and gets deleted outright (not converted) rather
+      than kept - vm's existing check is the surviving coverage,
+      native's is untouched. Landed across 9 files, ~40 cases.
+    - A compileCmd handed to a backend-agnostic reject helper (one
+      that only asserts nonzero-exit-and-nonempty-stderr, never exact
+      diagnostic text, confirmed by reading the helper's definition)
+      can swap emit mode freely regardless of the diagnostic wording
+      differing between backends.
+    - A `quoteShellArg(...)`-wrapped variant of the plain accept
+      pattern, with an arbitrary trailing CLI-flag tail (text/
+      semantic-transform flags) preserved verbatim through the
+      rewrite.
+    Each of these was caught missing real cases only via the XML
+    diff, not the build - e.g. the quoteShellArg-wrapped shape wasn't
+    even attempted until reading actual "manual"-bucket cases showed
+    the same accept shape recurring with different wrapping.
+  - **critical finding, hand-editing pass (2026-07-24f)**: found and
+    fixed a genuine correctness hazard the automated passes could not
+    have caught by construction. A small number of cases assert only
+    `CHECK(runCommand(compileCmd) == 0)` with NO execution ever
+    verified - under exe mode this means "did this compile"
+    (`-o <path>`, binary never run). Under vm mode the identical
+    command string actually EXECUTES the program, so `== 0` silently
+    starts asserting "compiles AND this specific program's `main`
+    returns 0" instead - a different, weaker-or-just-different check
+    than originally intended, and NOT something the XML pass/fail
+    diff can catch on its own if the program happens to genuinely
+    return 0 (confirmed one real instance in
+    `test_compile_run_imports_operations.cpp`, "validates soa type
+    spelling in C++ emitter": `vm` returns 0 for that program today,
+    so the test still passed after migration, but for a different
+    reason than the original author intended). This is a DISTINCT
+    hazard class from the "exePath referenced elsewhere" dangling-
+    reference bugs found earlier - it's a silent meaning-drift, not a
+    build break or a flip to failing. Fixed the one found instance
+    (reverted to `--emit=exe`) and audited the entire already-migrated
+    tree by script for the same shape (`--emit=vm` command, a lone
+    `CHECK(runCommand(var) == 0)`, no `readFile` anywhere in the
+    block, `-o` pointing somewhere other than `/dev/null` or a bare
+    exe-path variable never itself executed) - zero further instances
+    found. **Anyone continuing this TODO by hand (the scripted
+    patterns are unaffected, since ACCEPT_RE/ARGV_*_RE/
+    REDUNDANT_EXE_BESIDE_VM_RE all structurally require an actual
+    execution-checked value before matching) must re-run this audit
+    shape check after any manual edit that swaps emit mode on a
+    compile-only accept case** - grep for `--emit=vm` blocks whose
+    only CHECK is `== 0` with no `readFile` and no second run, then
+    verify by direct `primec --emit=vm` invocation whether the real
+    program execution also happens to return 0 (coincidentally safe)
+    or not (must stay `--emit=exe`, or be rewritten to compare against
+    a genuinely compile-only stage like `--dump-stage ast-semantic` if
+    that's a faithful substitute for what the case is actually
+    testing - it is NOT always, e.g. a case that says "in C++ emitter"
+    in its name may be validating something backend/lowering-specific
+    that pure semantic validation wouldn't reach).
   - remaining scope (updated): `grep -rc -- "--emit=exe " tests/unit/compile_run/*.cpp
     tests/unit/compile_run/*.h` (trailing space avoids counting
-    `--emit=exe-ir`) now shows 42 files / 288 occurrences, down from
+    `--emit=exe-ir`) now shows 38 files / 174 occurrences, down from
     50 files / 939 at the start of this TODO. All remaining occurrences
     are ones the classifier deliberately left as `manual` or
     `native_mention` - genuinely needs a human (or a much smarter
-    per-shape classifier) to look at each, not a blanket sweep. Biggest
-    manual buckets from the last classification pass:
-    `test_compile_run_smoke_collective.cpp` (18 manual),
-    `test_compile_run_vm_outputs.cpp` (14, mostly argv/stdin-style
-    cases that run the compiled binary with extra CLI args - vm mode
-    likely needs its own argv-forwarding syntax investigated before
-    these can migrate), `test_compile_run_smoke_core_gfx_entrypoints.cpp`
-    (10, cross-backend gfx cases), `test_compile_run_imports_versions.cpp`
-    /`test_compile_run_imports_versions_archive.h` (versioned-import
-    cases with their own distinct compile+run shape), `test_compile_run_smoke_core_basic.cpp`
-    and `test_compile_run_smoke_core_demo_scripts.cpp` (11 and 13,
-    general smoke-test shape variety). Note from investigating one
-    emitters file this session (see TODO-4732's progress note): not
-    every "accept and run" case is actually a routing-only check safe
-    to reduce further - some genuinely assert computed runtime values
+    per-shape classifier) to look at each, not a blanket sweep.
+    Reusable scratch tooling for continuation (not committed, lives
+    only in this session's scratchpad - worth recreating properly if
+    this TODO continues):  a Python script that splits each file into
+    per-`TEST_CASE`-block chunks (never crossing a `TEST_CASE(`
+    boundary - critical, see the earlier bug notes), classifies each
+    block against the pattern list above, and applies whichever
+    pattern matches with a shared safety net (a transform is only
+    accepted if every variable name it removes relative to what the
+    matched span itself declared is provably unreferenced anywhere
+    else in the resulting block). Note from investigating one emitters
+    file this session (see TODO-4732's progress note): not every
+    "accept and run" case is actually a routing-only check safe to
+    reduce further - some genuinely assert computed runtime values
     (real behavior coverage) and should stay compile-and-run, just via
     vm instead of exe; that distinction is orthogonal to (and doesn't
     block) this TODO's migration, which keeps the same assertion, just
