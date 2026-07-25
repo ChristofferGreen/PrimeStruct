@@ -11,14 +11,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_transforms_whitespace.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_transforms_whitespace_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=" + quoteShellArg("operators implicit-i32");
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=" + quoteShellArg("operators implicit-i32");
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("transform list enables single_type_to_return") {
@@ -427,15 +421,9 @@ mainly() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_wildcard_prefix.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_transform_wildcard_prefix_exe").string();
-
-  const std::string ruleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /mainly --semantic-transforms=none "
+  const std::string ruleCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /mainly --semantic-transforms=none "
       "--semantic-transform-rules=/main/*=single_type_to_return";
-  CHECK(runCommand(ruleCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(ruleCmd) == 1);
 }
 
 TEST_CASE("semantic transform wildcard does not match base path") {
@@ -446,15 +434,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_wildcard_base.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_transform_wildcard_base_exe").string();
-
-  const std::string ruleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --semantic-transforms=none "
+  const std::string ruleCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/main/*=single_type_to_return";
-  CHECK(runCommand(ruleCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(ruleCmd) == 1);
 }
 
 TEST_CASE("semantic transform rules ignore unrelated exact path") {
@@ -465,15 +447,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_unrelated_exact_path.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_transform_unrelated_exact_path_exe").string();
-
-  const std::string ruleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --semantic-transforms=none "
+  const std::string ruleCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --semantic-transforms=none "
       "--semantic-transform-rules=/other=single_type_to_return";
-  CHECK(runCommand(ruleCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(ruleCmd) == 1);
 }
 
 TEST_CASE("semantic transform rules ignore unrelated wildcard path") {
@@ -484,15 +460,9 @@ mainly() {
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_unrelated_wildcard_path.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_semantic_transform_unrelated_wildcard_path_exe").string();
-
-  const std::string ruleCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /mainly --semantic-transforms=none "
+  const std::string ruleCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /mainly --semantic-transforms=none "
       "--semantic-transform-rules=/other/*=single_type_to_return";
-  CHECK(runCommand(ruleCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(ruleCmd) == 1);
 }
 
 TEST_CASE("semantic root wildcard only recurses when requested") {

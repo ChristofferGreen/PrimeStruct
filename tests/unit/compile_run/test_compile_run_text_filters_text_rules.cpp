@@ -29,12 +29,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_per_env_collections.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_per_env_collections_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main --text-transforms=operators";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=operators";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("per-envelope text transforms override operators") {
@@ -63,12 +59,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_per_env_binding_ops.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_per_env_binding_ops_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main --text-transforms=none";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("per-envelope text transforms apply to executions in arguments") {
@@ -84,12 +76,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_per_env_exec_args.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_per_env_exec_args_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main --text-transforms=none";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none";
+  CHECK(runCommand(compileCmd) == 6);
 }
 
 TEST_CASE("text transforms can append additional transforms") {
@@ -100,14 +88,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_append_operators.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_append_operators_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=append_operators";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=append_operators";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("transform list auto-deduces append_operators") {
@@ -118,14 +100,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_append_operators_auto.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_append_operators_auto_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --transform-list=append_operators";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --transform-list=append_operators";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("text transform rules apply to namespace paths") {
@@ -145,13 +121,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_namespace.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_text_rule_namespace_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules=/std/math/*=operators";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none --text-transform-rules=/std/math/*=operators";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("text transform rules ignore unrelated wildcard path") {
@@ -237,14 +208,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_no_list.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_rule_no_list_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules=/main=operators";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none --text-transform-rules=/main=operators";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("text transform rules ignore empty rule tokens") {
@@ -255,14 +220,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_empty_tokens.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_text_rule_empty_tokens_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules " +
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none --text-transform-rules " +
       quoteShellArg(";;/main=operators;;");
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("text transform rules none token without follow-up keeps rules empty") {
@@ -348,14 +308,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_root_wildcard_top_level.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_rule_root_wildcard_top_level_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules=/*=operators";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none --text-transform-rules=/*=operators";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("text transform rules clear on none token") {
@@ -558,14 +512,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_nested_def.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_rule_nested_def_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules=/main/*=operators";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none --text-transform-rules=/main/*=operators";
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("text transform rules ignore nested transform lists") {
@@ -643,14 +591,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_recursive_alias.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_text_rule_recursive_alias_exe").string();
-
-  const std::string recursiveAliasCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules=/std/math/*:recursive=operators";
-  CHECK(runCommand(recursiveAliasCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string recursiveAliasCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --text-transforms=none --text-transform-rules=/std/math/*:recursive=operators";
+  CHECK(runCommand(recursiveAliasCmd) == 3);
 }
 
 TEST_CASE("root wildcard transform rules only recurse when requested") {
