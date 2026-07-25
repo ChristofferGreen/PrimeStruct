@@ -85,12 +85,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_non_bool_type_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_implicit_canonical_forwarding_non_bool_type_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -118,12 +113,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_struct_type_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_implicit_canonical_forwarding_struct_type_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -150,12 +140,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_constructor_struct_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_constructor_struct_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -189,12 +174,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_method_struct_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_method_struct_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -235,12 +215,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_chained_method_struct_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_chained_method_struct_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -265,12 +240,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_array_envelope_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_array_envelope_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -295,12 +265,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_map_envelope_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_map_envelope_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -329,12 +294,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_map_call_return_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_map_call_return_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -363,12 +323,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_primitive_call_return_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_primitive_call_return_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -399,12 +354,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_call_return.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_call_return_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -431,12 +381,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_binding.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_binding_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
@@ -464,12 +409,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_vector_envelope_binding.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_alias_canonical_forwarding_unknown_expected_vector_envelope_binding_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
