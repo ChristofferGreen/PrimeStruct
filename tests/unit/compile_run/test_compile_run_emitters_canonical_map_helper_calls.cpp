@@ -360,16 +360,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_contains_without_helper_reject.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_map_unnamespaced_contains_without_helper_reject_exe")
-          .string();
   const std::string errPath =
       (testScratchPath("") /
        "primec_cpp_map_unnamespaced_contains_without_helper_reject.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") !=
         std::string::npos);
@@ -559,18 +555,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_canonical_map_helper_same_path_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_direct_canonical_map_helper_same_path_precedence_exe")
-          .string();
   const std::string outPath =
       (testScratchPath("") /
        "primec_cpp_direct_canonical_map_helper_same_path_precedence.out")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 243);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 243);
   CHECK(readFile(outPath).empty());
 }
 
@@ -665,18 +655,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_map_try_at_struct_method_chain_alias_helper_reject.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_direct_map_try_at_struct_method_chain_alias_helper_reject_exe")
-          .string();
   const std::string outPath =
       (testScratchPath("") /
        "primec_cpp_direct_map_try_at_struct_method_chain_alias_helper_reject.out")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 42);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 42);
   CHECK(readFile(outPath).empty());
 }
 
@@ -718,18 +703,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_canonical_map_try_at_struct_method_chain.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_direct_canonical_map_try_at_struct_method_chain_exe")
-          .string();
   const std::string outPath =
       (testScratchPath("") /
        "primec_cpp_direct_canonical_map_try_at_struct_method_chain.out")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).empty());
 }
 
@@ -771,18 +751,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_map_at_unsafe_struct_method_chain_alias_helper_reject.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_direct_map_at_unsafe_struct_method_chain_alias_helper_reject_exe")
-          .string();
   const std::string outPath =
       (testScratchPath("") /
        "primec_cpp_direct_map_at_unsafe_struct_method_chain_alias_helper_reject.out")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).empty());
 }
 
@@ -824,18 +799,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_canonical_map_at_unsafe_struct_method_chain.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_direct_canonical_map_at_unsafe_struct_method_chain_exe")
-          .string();
   const std::string outPath =
       (testScratchPath("") /
        "primec_cpp_direct_canonical_map_at_unsafe_struct_method_chain.out")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).empty());
 }
 
