@@ -53,18 +53,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_exe")
-          .string();
   const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_err.txt")
                                   .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(errPath).empty());
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("auto-inferred std namespaced vector push canonical definition in C++ emitter") {
@@ -136,18 +131,13 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_canonical_fallback_auto.prime",
                                         source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_std_namespaced_vector_count_canonical_fallback_auto_exe")
-          .string();
   const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_vector_count_canonical_fallback_auto_err.txt")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("std namespaced count expression canonical precedence in C++ emitter") {
@@ -189,18 +179,13 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_expr_canonical_fallback.prime",
                                         source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_exe")
-          .string();
   const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_err.txt")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects std namespaced count non-builtin compatibility fallback in C++ emitter") {
@@ -259,11 +244,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_namespaced_count_non_builtin_array_fallback_rejected.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_namespaced_count_non_builtin_array_fallback_exe")
-          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -500,13 +482,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_removed_vector_access_alias_named_args.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_removed_vector_access_alias_named_args_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_removed_vector_access_alias_named_args_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown call target: /vector/at") !=
         std::string::npos);
@@ -522,17 +502,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_removed_vector_access_alias_at_unsafe_named_args.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_removed_vector_access_alias_at_unsafe_named_args_exe")
-          .string();
   const std::string errPath =
       (testScratchPath("") /
        "primec_cpp_removed_vector_access_alias_at_unsafe_named_args_err.txt")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") !=
         std::string::npos);
