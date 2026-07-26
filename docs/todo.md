@@ -3110,9 +3110,10 @@ This file is the live open-work queue for PrimeStruct.
     cover, rather than assuming calls_flow_collections_201_210 is the
     only one.
 
-- [ ] TODO-4733: Migrate non-native-asserting exe-mode compile-run tests to --emit=vm
+- [x] TODO-4733: Migrate non-native-asserting exe-mode compile-run tests to --emit=vm
   - owner: ai
   - created_at: 2026-07-20
+  - completed_at: 2026-07-26
   - phase: Test infrastructure
   - parallel_track: test-runtime
   - scope: exe-mode cases whose assertions are exit codes / stdout
@@ -3362,6 +3363,49 @@ This file is the live open-work queue for PrimeStruct.
     vm instead of exe; that distinction is orthogonal to (and doesn't
     block) this TODO's migration, which keeps the same assertion, just
     on the cheaper backend.
+  - progress_2026-07-26 (completion): migrated the remaining files one
+    by one by hand (no further scripted batches), continuing the same
+    classify-by-shape-then-verify discipline, landing 21 more commits
+    across roughly 30 files. Two verification strategies were used
+    depending on cost: the full filtered-suite XML diff (established
+    baseline: 1099 non-skipped cases, 134 pre-existing failures) for
+    most commits, and a faster targeted per-file run (build once, run
+    just the changed file's cases, cross-check the failing-name set
+    against a stash-based A/B rerun of the original file when any
+    failure appeared) once the full-suite run started intermittently
+    hanging for 80+ minutes on an unrelated pre-existing quaternion
+    test that shells out to clang - a pure environment/resource-pressure
+    issue, not a code bug, but expensive enough to work around rather
+    than repeatedly eat.
+    Two additional bug classes found this pass, both confirmed only by
+    direct empirical `primec --emit=vm` vs `--emit=exe` comparison
+    (never assumed): (a) a genuine vm/exe behavioral divergence -
+    `test_compile_run_emitters_string_receiver_vector_access.cpp`'s
+    "keeps canonical vector access call struct method chain forwarding"
+    case hits `VM error: unaligned indirect address in IR` (exit 3)
+    under vm where exe returns 2; kept on `--emit=exe`, and left a
+    second pre-existing (unedited) case in the same file on `--emit=vm`
+    since it already had this exact same latent failure before this
+    session touched the file (confirmed via stash A/B, not something to
+    "fix" under this TODO's scope); (b) the previously-documented
+    compile-only-check hazard re-appeared once more in
+    `test_compile_run_text_filters_semantic_rules.cpp` when a script
+    pass blindly re-swapped it - re-caught by the same direct-execution
+    check and reverted, no net change to that file.
+    Final state: `grep -rc -- "--emit=exe " tests/unit/compile_run/`
+    (trailing space) shows 46 occurrences across 16 files, down from
+    939/50 at the start of this TODO (95% reduction). Re-ran the full
+    per-shape classifier across every remaining file to confirm none of
+    the 46 are overlooked candidates: all are one of (i) genuine
+    cross-backend parity tests that deliberately compile+compare
+    exe/vm/native together (`smoke_core_gfx_entrypoints.cpp`,
+    `smoke_core_gfx_end_to_end.cpp`, `reflection_codegen_runtime.cpp`,
+    and two cases in `vm_outputs.cpp` - exe is the point of the test,
+    not incidental), (ii) `native_mention`-classified cases asserting
+    native-backend-specific diagnostic text, or (iii) the handful of
+    confirmed hazard/divergence/artifact-inspection cases documented
+    above. No further safe migration candidates remain; closing this
+    TODO as complete.
 
 - [x] TODO-4734: Provide and adopt a RelWithDebInfo test-runner build
   - owner: ai
