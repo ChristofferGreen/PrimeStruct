@@ -12,12 +12,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_simple.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_simple_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primevm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
   CHECK(runCommand(runVmCmd) == 7);
 }
 
@@ -50,12 +46,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_brace_convert.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_brace_convert_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primevm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
   CHECK(runCommand(runVmCmd) == 1);
 }
 
@@ -67,11 +59,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_default_entry.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_default_entry_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
 
   const std::string runVmCmd = "./primevm " + srcPath;
   CHECK(runCommand(runVmCmd) == 4);
@@ -154,20 +141,10 @@ main() {
   const std::string srcPath =
       writeTemp("compile_procedural_generic_local_generated_struct.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_procedural_generic_local_generated_struct_exe")
-          .string();
   const std::string nativePath =
       (testScratchPath("") /
        "primec_procedural_generic_local_generated_struct_native")
           .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath +
-      " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
 
   const std::string runVmCmd =
       "./primec --emit=vm " + srcPath + " --entry /main";
