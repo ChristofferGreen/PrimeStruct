@@ -343,13 +343,10 @@ log([i32] value) {
 log(1i32)
 )";
   const std::string srcPath = writeTemp("compile_exec_ignored.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_exec_ignored_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_exec_ignored_out.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " > " + outPath;
-  CHECK(runCommand(runCmd) == 1);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runVmCmd) == 1);
   CHECK(readFile(outPath).empty());
 }
 
@@ -377,14 +374,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct_lifecycle.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_struct_lifecycle_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_struct_lifecycle_out.txt").string();
   const std::string errPath = (testScratchPath("") / "primec_struct_lifecycle_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
-  CHECK(runCommand(runCmd) == 0);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runVmCmd) == 0);
   CHECK(readFile(outPath).empty());
   CHECK(readFile(errPath).empty());
 }
@@ -514,12 +508,10 @@ TEST_CASE("C++ emitter supports file read_byte with deterministic eof") {
       "  print_line_error(\"file error\"utf8)\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_file_read_byte_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_file_read_byte_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_file_read_byte_out.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runVmCmd) == 0);
   CHECK(readFile(outPath) == "65\n66\nEOF\n99\n");
 }
 
@@ -549,14 +541,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_result_why_custom.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_result_why_custom_exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_result_why_custom_out.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " > " + outPath;
-  CHECK(runCommand(runCmd) == 0);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runVmCmd) == 0);
   CHECK(readFile(outPath) == "custom error\n");
 }
 
@@ -760,21 +749,14 @@ main_fail() {
 }
 )";
   const std::string srcPath = writeTemp("compile_graphics_int_on_error_exe.prime", source);
-  const std::string okExePath =
-      (testScratchPath("") / "primec_graphics_int_on_error_exe_ok").string();
-  const std::string failExePath =
-      (testScratchPath("") / "primec_graphics_int_on_error_exe_fail").string();
   const std::string errPath =
       (testScratchPath("") / "primec_graphics_int_on_error_exe_err.txt").string();
 
-  const std::string compileOkCmd =
-      "./primec --emit=exe " + srcPath + " -o " + okExePath + " --entry /main_ok";
-  const std::string compileFailCmd =
-      "./primec --emit=exe " + srcPath + " -o " + failExePath + " --entry /main_fail";
-  CHECK(runCommand(compileOkCmd) == 0);
-  CHECK(runCommand(compileFailCmd) == 0);
-  CHECK(runCommand(okExePath) == 9);
-  CHECK(runCommand(failExePath + " 2> " + errPath) == 7);
+  const std::string runOkCmd = "./primec --emit=vm " + srcPath + " --entry /main_ok";
+  const std::string runFailCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main_fail 2> " + errPath;
+  CHECK(runCommand(runOkCmd) == 9);
+  CHECK(runCommand(runFailCmd) == 7);
   CHECK(readFile(errPath) == "frame_acquire_failed\n");
 }
 
