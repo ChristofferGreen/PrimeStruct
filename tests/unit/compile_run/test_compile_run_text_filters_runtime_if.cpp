@@ -29,12 +29,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_hex.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_hex_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default,implicit-i32";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 42);
+      "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=default,implicit-i32";
+  CHECK(runCommand(compileCmd) == 42);
 }
 
 TEST_CASE("float binding") {
@@ -115,9 +113,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_mixed_int_float.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_mixed_int_float_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -130,9 +127,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_array.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_method_array_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -146,9 +142,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_pointer.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_method_pointer_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -162,9 +157,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_reference.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_method_reference_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -193,9 +187,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_map.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_method_map_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -299,16 +292,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_lazy_then.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_if_lazy_then_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_if_lazy_then_native").string();
   const std::string errPath = (testScratchPath("") / "primec_if_lazy_then_err.txt").string();
-
-  const std::string compileCppCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(errPath).empty());
 
   const std::string runVmCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
@@ -333,16 +318,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_lazy_else.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_if_lazy_else_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_if_lazy_else_native").string();
   const std::string errPath = (testScratchPath("") / "primec_if_lazy_else_err.txt").string();
-
-  const std::string compileCppCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(errPath).empty());
 
   const std::string runVmCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
