@@ -94,37 +94,19 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
           return cacheIt->second;
         }
       }
-      bool hasPath = false;
-      if (defMap_.count(pathText) > 0) {
-        hasPath = true;
-      } else {
-        const std::string templatedPrefix = pathText + "<";
-        const std::string specializedPrefix = pathText + "__t";
-        for (const auto &def : program_.definitions) {
-          if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-              def.fullPath.rfind(specializedPrefix, 0) == 0) {
-            hasPath = true;
-            break;
-          }
-        }
-      }
+      const bool hasPath = defMap_.count(pathText) > 0 ||
+          definitionFamilyPathIndex().count(pathText) > 0 ||
+          anyDefinitionFamilyPathStartsWith(pathText + "<") ||
+          anyDefinitionFamilyPathStartsWith(pathText + "__t");
       if (pathKey != InvalidSymbolId) {
         callTargetResolutionScratch_.definitionFamilyPathCache.emplace(pathKey, hasPath);
       }
       return hasPath;
     }
-    if (defMap_.count(pathText) > 0) {
-      return true;
-    }
-    const std::string templatedPrefix = pathText + "<";
-    const std::string specializedPrefix = pathText + "__t";
-    for (const auto &def : program_.definitions) {
-      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-          def.fullPath.rfind(specializedPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
+    return defMap_.count(pathText) > 0 ||
+        definitionFamilyPathIndex().count(pathText) > 0 ||
+        anyDefinitionFamilyPathStartsWith(pathText + "<") ||
+        anyDefinitionFamilyPathStartsWith(pathText + "__t");
   };
   auto rootedPathForName = [&](std::string_view name) -> std::string {
     if (!hasScopedOwner) {

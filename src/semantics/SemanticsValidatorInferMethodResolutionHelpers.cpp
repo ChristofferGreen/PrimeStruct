@@ -262,6 +262,15 @@ bool matchesFamilyPathAgainstIndex(const std::set<std::string> &sortedPaths,
 
 }  // namespace
 
+// Shared O(log N) prefix-existence query against the same index
+// hasDefinitionFamilyPath() uses, for call sites that need to replicate its
+// scan-over-program_.definitions-or-paramsByDef_ pattern with their own
+// exact-match/prefix-set combination instead of calling
+// hasDefinitionFamilyPath() directly.
+bool SemanticsValidator::anyDefinitionFamilyPathStartsWith(const std::string &prefix) const {
+  return anyIndexedPathStartsWith(definitionFamilyPathIndex(), prefix);
+}
+
 bool SemanticsValidator::hasDefinitionFamilyPath(std::string_view path) const {
   const std::string pathText(path);
   if (defMap_.count(pathText) > 0 || paramsByDef_.count(pathText) > 0) {

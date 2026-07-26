@@ -120,15 +120,8 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     if (pathExists(pathText)) {
       return true;
     }
-    const std::string templatedPrefix = pathText + "<";
-    const std::string specializedPrefix = pathText + "__t";
-    for (const auto &def : program_.definitions) {
-      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-          def.fullPath.rfind(specializedPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
+    return anyDefinitionFamilyPathStartsWith(pathText + "<") ||
+           anyDefinitionFamilyPathStartsWith(pathText + "__t");
   };
   if (candidatePath == "/equal" || candidatePath == "equal") {
     std::string reflectedStructEqualityHelperPath;

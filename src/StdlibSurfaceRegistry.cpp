@@ -9,6 +9,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace primec {
@@ -1169,7 +1170,16 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_vie
   return it == Registry.end() ? nullptr : &*it;
 }
 
-const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string_view path) {
+namespace {
+
+// Registry is static, immutable data for the process lifetime, so caching
+// findStdlibSurfaceMetadataByResolvedPath's result per input path is always
+// safe (no invalidation needed) and turns its ~15+ call sites' repeated
+// queries for the same paths into O(1) after the first lookup.
+// thread_local avoids a data race against the opt-in parallel definition-
+// validation worker path, where multiple SemanticsValidator instances can
+// call this concurrently from different threads.
+const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPathUncached(std::string_view path) {
   if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(path); metadata != nullptr) {
     return metadata;
   }
@@ -1196,6 +1206,19 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string
                            });
       });
   return it == Registry.end() ? nullptr : &*it;
+}
+
+}  // namespace
+
+const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string_view path) {
+  static thread_local std::unordered_map<std::string, const StdlibSurfaceMetadata *> cache;
+  const std::string key(path);
+  if (const auto it = cache.find(key); it != cache.end()) {
+    return it->second;
+  }
+  const StdlibSurfaceMetadata *result = findStdlibSurfaceMetadataByResolvedPathUncached(path);
+  cache.emplace(key, result);
+  return result;
 }
 
 std::string_view resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,

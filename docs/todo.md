@@ -2816,6 +2816,79 @@ This file is the live open-work queue for PrimeStruct.
     own scope (the `hasDefinitionFamilyPath` member-function fix is
     already done) - this covers everything the second profiling round
     found still costly after that fix landed.
+  - progress_2026-07-26: implemented notes (1) and (2). (1) Added
+    `SemanticsValidator::anyDefinitionFamilyPathStartsWith(prefix)` (a
+    thin wrapper around the existing `definitionFamilyPathIndex()` +
+    `lower_bound`) and used it to replace the O(N)-scan bodies of the 4
+    duplicate `hasDefinitionFamilyPath` lambdas that scan
+    `program_.definitions`/`paramsByDef_` directly:
+    SemanticsValidatorExprMethodTargetResolution.cpp:221,
+    SemanticsValidatorBuildCallResolution.cpp:84,
+    SemanticsValidatorExprCallResolution.cpp:118, and
+    SemanticsValidatorExprPreDispatchDirectCalls.cpp:324 (the latter had
+    a redundant *double* scan - once over `program_.definitions`, once
+    over `paramsByDef_` - collapsed to one index query, since
+    `paramsByDef_`'s key set was confirmed identical to
+    `program_.definitions`'s fullPath set: `buildParameters()`
+    unconditionally assigns `paramsByDef_[def.fullPath]` for every def
+    in `program_.definitions`, so scanning either container or the
+    union index gives the same answer). The other 2 duplicates
+    (TemplateMonomorphExpressionRewrite.h:1456,
+    TemplateMonomorphMethodTargets.h:141) were left alone as noted -
+    they scan the smaller `ctx.sourceDefs`/`ctx.helperOverloads`, a
+    different container the index doesn't cover. (2) Added a
+    `thread_local std::unordered_map<std::string, const
+    StdlibSurfaceMetadata*>` memoization cache inside
+    `findStdlibSurfaceMetadataByResolvedPath`
+    (src/StdlibSurfaceRegistry.cpp) - safe unconditionally since
+    `Registry` is static, immutable data for the process lifetime, so
+    no invalidation logic is needed; `thread_local` avoids a data race
+    against the opt-in parallel definition-validation worker path.
+    Measured impact (both builds on the same machine/container, to
+    avoid the cross-container noise below): `import /std/image/*` with
+    zero calls, `--emit=vm`, went from ~34.85s avg (2 runs, TODO-4742-
+    only) to ~32.92s avg (2 runs, with (1)+(2)) - a real but modest
+    ~5.5% further improvement, not the order-of-magnitude hoped for.
+    (Note: the ~22-23s figure recorded in TODO-4742/4743's earlier
+    scope came from a different container instance with different
+    underlying hardware and is not directly comparable to these
+    ~33-35s numbers - always re-baseline on the same machine before
+    computing a before/after ratio.) A fresh 8-sample gdb round after
+    (1)+(2) found no single application function dominating anymore -
+    all 8 samples landed in generic allocator/string primitives
+    (`_int_malloc`, `operator new`, `basic_string` ctor/dtor,
+    `__memcpy_evex`, `__strlen_evex`). Walking up the stack from these
+    samples traced the largest identifiable contributor to
+    `std::unordered_map<std::string, BindingInfo>` (i.e. `locals`)
+    being deep-copied into lambda closures via `[=, this]` capture in
+    `makeBuiltinCollectionDispatchResolvers` and
+    `populateBuiltinCollectionDispatchBufferAndMapResolvers`
+    (SemanticsValidatorInferCollections.cpp - 13 lambdas capture
+    `[=, this]` or `[=]`, several stored onto a `state` struct that
+    outlives the local scope). This is item (3) from the implementation
+    plan, and per the stop_rule it is where this task stops rather than
+    being fixed here: `[=, this]` is not obviously a mistake - at least
+    one call site (SemanticsValidatorExprDispatchBootstrap.cpp:94)
+    stores the returned resolvers into an out-parameter
+    (`bootstrapOut.dispatchResolvers`) that escapes the calling
+    function's stack frame, so those particular closures need owned
+    copies of `params`/`locals` to stay valid; that file's *own*
+    lambdas already use the safer pattern (raw `paramsPtr`/`localsPtr`
+    capture) for exactly this reason. Whether the other ~17 call sites
+    of `makeBuiltinCollectionDispatchResolvers` all consume the
+    returned resolvers synchronously within the same stack frame (safe
+    to convert to pointer/reference capture) or not needs a per-call-
+    site lifetime audit before any capture-mode change - getting this
+    wrong introduces a dangling-reference bug, not a slowdown. That
+    audit, plus fixing whichever sites are safe to fix, is the
+    concrete next step; not attempted in this pass given the risk/time
+    profile. Regression check: focused subset
+    (`compile_run.*(template|overload|special|imports_operations_and_collections|collections)`)
+    run against the (1)+(2) build; see next progress note for result.
+    TODO-4743 stays open - the ~2-5s acceptance target is not met, and
+    the remaining path (the `[=, this]` lifetime audit) is exactly the
+    kind of call-site-by-call-site work the stop_rule says to report
+    rather than push through unaudited.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

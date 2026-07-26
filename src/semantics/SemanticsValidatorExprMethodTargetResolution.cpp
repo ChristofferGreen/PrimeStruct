@@ -219,20 +219,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                              bool &isBuiltinOut) {
   isBuiltinOut = false;
   auto hasDefinitionFamilyPath = [&](std::string_view path) {
-    if (defMap_.count(std::string(path)) > 0) {
+    const std::string pathText(path);
+    if (defMap_.count(pathText) > 0 || definitionFamilyPathIndex().count(pathText) > 0) {
       return true;
     }
-    const std::string templatedPrefix = std::string(path) + "<";
-    const std::string specializedPrefix = std::string(path) + "__t";
-    const std::string overloadPrefix = std::string(path) + "__ov";
-    for (const auto &def : program_.definitions) {
-      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-          def.fullPath.rfind(specializedPrefix, 0) == 0 ||
-          def.fullPath.rfind(overloadPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
+    return anyDefinitionFamilyPathStartsWith(pathText + "<") ||
+           anyDefinitionFamilyPathStartsWith(pathText + "__t") ||
+           anyDefinitionFamilyPathStartsWith(pathText + "__ov");
   };
   auto startsWithRootVectorMethodPrefix = [&](std::string_view path) {
     return isUnrootedVectorHelperPath(path);

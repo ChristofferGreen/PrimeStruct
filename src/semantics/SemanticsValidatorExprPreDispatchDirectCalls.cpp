@@ -325,25 +325,9 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
         return true;
       }
-      const std::string templatedPrefix = path + "<";
-      const std::string specializedPrefix = path + "__t";
-      const std::string overloadPrefix = path + "__ov";
-      for (const auto &def : program_.definitions) {
-        if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-            def.fullPath.rfind(specializedPrefix, 0) == 0 ||
-            def.fullPath.rfind(overloadPrefix, 0) == 0) {
-          return true;
-        }
-      }
-      for (const auto &[candidatePath, paramsForDef] : paramsByDef_) {
-        (void)paramsForDef;
-        if (candidatePath == path || candidatePath.rfind(templatedPrefix, 0) == 0 ||
-            candidatePath.rfind(specializedPrefix, 0) == 0 ||
-            candidatePath.rfind(overloadPrefix, 0) == 0) {
-          return true;
-        }
-      }
-      return false;
+      return anyDefinitionFamilyPathStartsWith(path + "<") ||
+             anyDefinitionFamilyPathStartsWith(path + "__t") ||
+             anyDefinitionFamilyPathStartsWith(path + "__ov");
     };
     const bool resolvesRemovedCompatibilityPath =
         resolvedOut == removedCompatibilityPath ||
