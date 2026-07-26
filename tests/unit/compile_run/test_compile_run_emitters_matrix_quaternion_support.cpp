@@ -317,9 +317,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_string_compare.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_cpp_string_compare_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -335,9 +334,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_string_map_values.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_string_map_values_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -372,15 +370,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_int_pow_negative_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_int_pow_negative_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_int_pow_negative_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runVmCmd) == 3);
   CHECK(readFile(errPath) == "pow exponent must be non-negative\n");
 }
 
@@ -561,12 +555,9 @@ main() {
   const std::string outPath =
       (testScratchPath("") / "primec_exe_vector_reserve_non_relocation_trivial_reject_out.txt")
           .string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_vector_reserve_non_relocation_trivial_reject_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find(
             "collection literal requires relocation-trivial collection element type until container "
@@ -599,12 +590,9 @@ main() {
   const std::string outPath =
       (testScratchPath("") / "primec_exe_vector_constructor_non_relocation_trivial_reject_out.txt")
           .string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_vector_constructor_non_relocation_trivial_reject_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find(
             "collection literal requires relocation-trivial collection element type until container "
