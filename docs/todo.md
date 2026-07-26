@@ -101,6 +101,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
 - TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
 - TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
+- TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
 
 ### Priority Lanes
 
@@ -2555,6 +2556,134 @@ This file is the live open-work queue for PrimeStruct.
     cluster's TODO-4739 investigation found that "looks like the same
     bug" repro shapes turned out to have different root causes on
     closer inspection.
+- [ ] TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
+  - owner: ai
+  - created_at: 2026-07-26
+  - phase: Compiler performance
+  - parallel_track: semantic-validation-perf
+  - depends_on: (none)
+  - scope: `SemanticsValidator::hasDefinitionFamilyPath`
+    (src/semantics/SemanticsValidatorInferMethodResolutionHelpers.cpp:228-273)
+    runs two full linear scans on every call - one over `paramsByDef_`,
+    one over `program_.definitions` - building three string
+    concatenations per candidate (`familyPath+"<"`, `+"__t"`, `+"__ov"`)
+    to test a prefix-match predicate. It is reached from deep inside
+    per-expression validation (`preferredCollectionHelperResolvedPath` ->
+    `classifyCollectionHelperSpelling`, invoked from numeric/collection
+    builtin dispatch for effectively every relevant expression in the
+    whole compiled program, test source plus every transitively-imported
+    stdlib definition). Net cost is O(expressions x definitions) -
+    quadratic in the size of whatever gets imported. Empirically measured
+    while investigating why the full `compile_run` CTest suite takes
+    ~42 minutes at `-j4`: `import /std/image/*` alone (127 defs / 2736
+    lines), with zero calls into it, costs ~41s of pure CPU before any IR
+    lowering or execution even starts; `import /std/collections/vector`
+    alone (42 defs / 361 lines) costs ~1.6s - a 25.6x slowdown for only
+    7.6x more lines/defs, which is superlinear, not a fixed per-line
+    cost. A statistical stack-sample profile (`gdb -p <pid> -batch -ex
+    bt`, 6 samples taken across one ~48s run of a minimal `import
+    /std/image/*` + one `ppm/read` call program) landed 4 of 6 samples
+    inside this exact call chain, each showing a different candidate
+    definition path (`/std/image/pngHuffmanDecodeSymbol`,
+    `/std/image/pngChunkIsIdat`, `/std/math/multiply`, `/std/math/Vec4`,
+    ...) being string-concatenated and compared - consistent with the
+    O(N)-scan-per-query theory, not a single hot definition. Ruled out as
+    NOT the cause: clang/exe-mode compile+link cost (already reduced via
+    TODO-4733, and this reproduces identically for `--emit=vm`/`--emit=cpp`/
+    `--emit=ir` with zero backend-specific work); CTest parallel
+    contention (identical timing reproduces standalone, uncontended,
+    `time ./primec --emit=vm ...` = 5m26s wall/CPU for the worst single
+    shard found this session); the existing internal definition-validation
+    worker-pool path (`--benchmark-semantic-definition-validation-workers
+    N`) - tested at N=4 and it made wall time WORSE (48.7s -> 86.8s) while
+    total CPU time went UP 3x (47.3s -> 147.6s user), proving the cost is
+    not evenly distributed per-definition-count (which sharding would
+    fix) but concentrated in a hot function whose own cost doesn't shrink
+    per shard.
+    Confirmed safe to cache/index: `program_.definitions` is never
+    mutated after program construction (`grep -rn
+    "program_\.definitions\.push_back\|\.emplace" src/` = zero matches
+    anywhere in src/); `paramsByDef_` has exactly one write site
+    (`paramsByDef_[def.fullPath] = std::move(params)` in
+    SemanticsValidatorBuildParameters.cpp:505), which runs during
+    `buildDefinitionMaps()` - a build-phase step that completes before
+    `validateDefinitionsForStableRange()` (where
+    `hasDefinitionFamilyPath` is actually called) ever runs, per
+    `SemanticsValidator::runDefinitionValidationWorkerChunk` in
+    SemanticsValidatorPassesDefinitions.cpp:510-545. So both backing
+    containers are fully built and read-only for the entire window
+    during which this function is queried - a precomputed index built
+    once has no staleness risk.
+  - implementation_notes: replace the two linear `for` loops
+    (SemanticsValidatorInferMethodResolutionHelpers.cpp:257-271) with a
+    precomputed ordered index - a `std::set<std::string>` (or sorted
+    `std::vector<std::string>`) of every path from `program_.definitions`
+    unioned with every key of `paramsByDef_` - built once (lazily on
+    first call, or eagerly right after `buildDefinitionMaps()`
+    completes), then queried via `lower_bound(familyPath)` plus a prefix
+    check on the neighboring iterator(s) for the exact/`<`/`__t`/`__ov`
+    cases. An ordered container is required (not a plain hash set)
+    because the query is a prefix-existence check, not an exact-match
+    lookup. This turns each query from O(N) into O(log N + matches) and
+    removes the current per-candidate string concatenations entirely. In
+    the parallel worker-validation path (`SemanticsValidator::
+    validateDefinitions`, SemanticsValidatorPassesDefinitions.cpp:547+)
+    each worker constructs its own `SemanticsValidator` sharing the same
+    `program_`/`paramsByDef_` - either build the index once and share it
+    (const-ref or shared_ptr into each worker), or let each worker build
+    its own copy cheaply from the already-built maps; do not let the
+    sharded path silently fall back to the current O(N) behavior. Do NOT
+    reach for either of the two architectural options TODO-4735
+    considered and correctly rejected as oversized for a leaf (AST-level
+    module linking with real module boundaries; reachability-pruned lazy
+    validation) - this fix is a local algorithmic correction inside one
+    function with an unchanged external predicate/return value, not a
+    validation-scope or caching-architecture change.
+  - acceptance:
+    - `import /std/image/*` with zero calls, `--emit=vm`, drops from
+      ~41s to within a small constant multiple of the
+      `/std/collections/vector` baseline (~2-5s) - no residual
+      superlinear blowup versus module size.
+    - Full `compile_run` CTest suite (`ctest -j4 -R compile_run`) shows
+      the identical failing-test-name set before and after (diff the
+      names, not just the pass/fail counts - `Testing/Temporary/
+      CTestCostData.txt` plus the pass/fail summary line from `ctest
+      --output-on-failure` captured before and after the change).
+    - The worst-outlier shards found this session all drop to a small
+      fraction of their current cost:
+      `smoke_core_paths_newly_exposed_2026_07_16_123_129` (735s),
+      the `vm_outputs_ir_and_output_modes_basics_*` cluster (130-360s
+      each), `imports_operations_and_collections_87-96` (55-95s each).
+    - `hasDefinitionFamilyPath`'s boolean answer is provably unchanged
+      for a representative sample of the existing compile_run corpus -
+      same predicate, faster implementation only; a small differential
+      test comparing old-vs-new implementation output across a sample of
+      real queries is the cheapest way to prove this without a full
+      behavioral audit of every call site.
+  - stop_rule: if a fresh profile taken after the fix lands shows a
+    *different* function now dominates - i.e. this was one of several
+    comparably-expensive linear scans rather than the sole bottleneck -
+    re-profile with the same gdb-sampling approach (or a real profiler,
+    if one becomes available in the build environment) before declaring
+    this done; report the residual cost and file it as a follow-up
+    rather than treating a partial win as complete.
+  - notes: supersedes TODO-4735 (closed as investigated-to-conclusion,
+    see docs/todo_finished.md) - that investigation correctly ruled out
+    both AST-module-linking and reachability-pruned-validation as safe
+    leaf-sized fixes for the general "stdlib re-parsed and re-validated
+    from scratch every process" problem, but stopped short of profiling
+    to find that most of the cost concentrates in one specific O(N)
+    function rather than being an even, unavoidable cost of validating
+    every definition. This TODO is the concrete, bounded, low-risk fix
+    that investigation's own recommendation ("re-file under a dedicated
+    compiler-performance phase") pointed toward. Distinct from TODO-4713
+    (SoaColumnsN monomorphization's non-linear cost) - a separate scaling
+    issue also visible among this session's slowest CTest shards
+    (`vm_collections_..._newly_exposed_2026_07_16_523_532` and
+    neighboring escalating-soa-column-count cases), not yet confirmed to
+    share or differ from this same root cause; do not conflate the two
+    when verifying this TODO's acceptance criteria, and do not assume
+    fixing this one automatically fixes TODO-4713's cases too.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
@@ -3454,110 +3583,6 @@ This file is the live open-work queue for PrimeStruct.
     `PrimeStruct_compile_run_tests` used ~3GB on top of the existing
     ~7.5GB Debug tree) - do not build both trees' full target sets
     simultaneously without checking `df` first.
-
-- [ ] TODO-4735: Share a precompiled stdlib semantic product across compile-run cases
-  - owner: ai
-  - created_at: 2026-07-20
-  - phase: Test infrastructure
-  - parallel_track: test-runtime
-  - scope: every case re-parses and re-validates the imported stdlib
-    modules from scratch. Investigate caching the stdlib portion of
-    the semantic product (or a serialized module artifact) keyed by
-    stdlib content hash, so per-case work is only the test source.
-    Riskier than 4733/4734 (cache correctness must not mask
-    cross-case pollution - see the top-priority pollution rule), so
-    it needs an opt-out lane and a differential validation pass.
-  - acceptance: measured speedup with a cache-off lane proving
-    identical results.
-  - progress_2026-07-23: not attempted this pass - correctly the
-    riskiest item in the track per its own scope note, and cross-
-    process semantic-product caching is a materially different (and
-    larger) undertaking than TODO-4734/4736, which only needed build-
-    config/harness-invocation changes with zero risk to primec's
-    actual output. Worth re-measuring the residual opportunity here
-    before investing: TODO-4734's RelWithDebInfo lane already cut the
-    stdlib-import-heavy case that motivated this TODO from 40.1s to
-    4.0s (~10x, see TODO-4734's result) purely from a build-config
-    change, with no caching at all - the ROI of ALSO building a
-    correctness-sensitive cross-process cache on top of that may be
-    smaller now in absolute terms than when this TODO was scoped,
-    even though the relative "stdlib re-parsed every time" waste is
-    unchanged. Recommend a quick before-committing-to-design
-    measurement (how much of the now-4s case is stdlib parsing
-    specifically vs. test-source-specific work) rather than assuming
-    the original motivating number still applies.
-  - progress_2026-07-23b: completed a from-first-principles feasibility
-    investigation (RelWithDebInfo build throughout) and concluded a
-    lightweight cache cannot be built safely at any layer - closing
-    this out as "investigated to a definitive conclusion", not
-    "deferred for lack of time". Findings:
-    - Stage-by-stage timing on a minimal real case (`import
-      /std/collections/vector/*` + push + count, `--dump-stage`
-      against `build-relwithdebinfo/primec`): `ast` (pure parse of the
-      fully-expanded text) 0.28s; `ast-semantic` (validation) jumps to
-      2.0-2.2s, i.e. a **+1.8s validation-specific delta**; `semantic-
-      product` (routing-table/monomorphization) adds another
-      +0.4-0.6s; full `--emit=vm` run is 2.7-2.8s end to end. The
-      floor this TODO is chasing is concentrated in `ast-semantic`,
-      not parsing and not semantic-product construction.
-    - Confirmed via `src/ExpandedSourceBuilder.cpp` (`appendSegment`/
-      `source_.text.append`) that `ImportResolver` works by TEXTUALLY
-      SPLICING every transitively-imported `.prime` file's source into
-      one combined blob before a single `Lexer`/`Parser`/`Validate()`
-      pass runs over the whole thing. There is no AST-level module
-      boundary anywhere in the pipeline - "the stdlib portion of the
-      AST" is not a thing that exists independently of a specific
-      test's expanded source, so there is nothing at the AST layer to
-      cache and later re-attach.
-    - Confirmed via `--dump-stage ast` on the same minimal case that
-      `import /std/collections/vector/*` alone pulls in far more than
-      `vector.prime` (which is a single file, not a directory
-      wildcard): the expanded AST also contains
-      `buffer_checked`/`buffer_unchecked`, `soa_storage`, and
-      `/std/intrinsics/memory/*` definitions. This is `vector.prime`'s
-      own genuine transitive implementation dependencies (allocation,
-      intrinsics), not a wildcard-resolution bug - so trimming the
-      import surface isn't a safe lever either. `Validate()` eagerly
-      type-checks this entire transitive closure regardless of which
-      Vector methods the test actually calls; there is no reachability
-      pruning (e.g. "only validate what's callable from `--entry`")
-      anywhere in the pipeline today.
-    - This rules out both designs considered previously: (a) a
-      fork-based preload daemon is not viable without a much larger,
-      separately-risky change, because every `compile_run` test helper
-      (`tests/unit/compile_run/*.h`, e.g.
-      `expectMapConformanceProgramRuns`) invokes a **fresh `./primec`
-      subprocess per case** via `runCommand`/`std::system` (confirmed
-      by reading the actual helpers, not assumed) - there is no
-      existing IPC surface to fork/attach to, and building one would
-      mean rewriting the shell-invocation in every one of those
-      helpers, an enormous blast radius for a "share stdlib parsing"
-      leaf item. (b) a disk-serialized cache of the validated semantic
-      product is invalid for the reason already found in the prior
-      pass (monomorphized, test-specific symbols baked into
-      `definitions[]`), and is now ALSO invalid one layer down: even
-      `ast-semantic` validation output can't be cached "for the stdlib
-      part" and reused, because there is no stdlib-only validation
-      call to cache in the first place - it's validated together with
-      the test source in one `Validate()` invocation over the
-      spliced text.
-    - Conclusion: a real fix requires one of two compiler-architecture
-      changes, neither of which is test-harness/build-config work and
-      neither of which fits a bounded "leaf TODO" safely: (1) rebuild
-      import resolution from text-splicing to AST-level module linking
-      with a genuinely separable, cacheable "already-validated stdlib
-      module" concept, or (2) add reachability-based lazy validation
-      to `Semantics.cpp` (only validate symbols transitively reachable
-      from `--entry`, or from whatever the test source actually
-      references) - which is itself a nontrivial correctness-sensitive
-      feature (destructors, trait/operator-overload dispatch, and
-      diagnostic-focused tests that expect unused-symbol errors would
-      all need auditing against a pruning pass). Either is a multi-day
-      compiler feature in its own right. Recommend this TODO be closed
-      out of the test-runtime-optimization track and, if still wanted,
-      re-filed under a dedicated compiler-performance phase scoped to
-      one of the two designs above - continuing to carry it as a test-
-      infrastructure leaf item understates what it actually requires.
 
 - [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
   - owner: ai
