@@ -225,21 +225,48 @@ std::string SemanticsValidator::resolveMethodStructTypePath(const std::string &t
   return {};
 }
 
+const std::set<std::string> &SemanticsValidator::definitionFamilyPathIndex() const {
+  if (!definitionFamilyPathIndexValid_) {
+    definitionFamilyPathIndex_.clear();
+    for (const auto &[resolvedPath, params] : paramsByDef_) {
+      (void)params;
+      definitionFamilyPathIndex_.insert(resolvedPath);
+    }
+    for (const auto &def : program_.definitions) {
+      definitionFamilyPathIndex_.insert(def.fullPath);
+    }
+    definitionFamilyPathIndexValid_ = true;
+  }
+  return definitionFamilyPathIndex_;
+}
+
+namespace {
+
+// True if `sortedPaths` contains any element starting with `prefix`. Relies
+// on lexicographic ordering: every element sharing `prefix` sorts
+// contiguously starting at lower_bound(prefix), so it suffices to check the
+// first candidate at or after `prefix`.
+bool anyIndexedPathStartsWith(const std::set<std::string> &sortedPaths,
+                              const std::string &prefix) {
+  const auto it = sortedPaths.lower_bound(prefix);
+  return it != sortedPaths.end() && it->compare(0, prefix.size(), prefix) == 0;
+}
+
+bool matchesFamilyPathAgainstIndex(const std::set<std::string> &sortedPaths,
+                                   const std::string &familyPath) {
+  return sortedPaths.count(familyPath) > 0 ||
+         anyIndexedPathStartsWith(sortedPaths, familyPath + "<") ||
+         anyIndexedPathStartsWith(sortedPaths, familyPath + "__t") ||
+         anyIndexedPathStartsWith(sortedPaths, familyPath + "__ov");
+}
+
+}  // namespace
+
 bool SemanticsValidator::hasDefinitionFamilyPath(std::string_view path) const {
   const std::string pathText(path);
   if (defMap_.count(pathText) > 0 || paramsByDef_.count(pathText) > 0) {
     return true;
   }
-  auto matchesFamilyPath = [](std::string_view candidate,
-                              const std::string &familyPath) {
-    const std::string templatedPrefix = familyPath + "<";
-    const std::string specializedPrefix = familyPath + "__t";
-    const std::string overloadPrefix = familyPath + "__ov";
-    return candidate == familyPath ||
-           candidate.rfind(templatedPrefix, 0) == 0 ||
-           candidate.rfind(specializedPrefix, 0) == 0 ||
-           candidate.rfind(overloadPrefix, 0) == 0;
-  };
   const std::string baseFamilyPath = [&]() {
     const size_t lastSlash = pathText.find_last_of('/');
     const size_t nameStart = lastSlash == std::string::npos ? 0 : lastSlash + 1;
@@ -254,20 +281,13 @@ bool SemanticsValidator::hasDefinitionFamilyPath(std::string_view path) const {
        paramsByDef_.count(baseFamilyPath) > 0)) {
     return true;
   }
-  for (const auto &[resolvedPath, params] : paramsByDef_) {
-    (void)params;
-    if (matchesFamilyPath(resolvedPath, pathText) ||
-        (baseFamilyPath != pathText &&
-         matchesFamilyPath(resolvedPath, baseFamilyPath))) {
-      return true;
-    }
+  const std::set<std::string> &index = definitionFamilyPathIndex();
+  if (matchesFamilyPathAgainstIndex(index, pathText)) {
+    return true;
   }
-  for (const auto &def : program_.definitions) {
-    if (matchesFamilyPath(def.fullPath, pathText) ||
-        (baseFamilyPath != pathText &&
-         matchesFamilyPath(def.fullPath, baseFamilyPath))) {
-      return true;
-    }
+  if (baseFamilyPath != pathText &&
+      matchesFamilyPathAgainstIndex(index, baseFamilyPath)) {
+    return true;
   }
   return false;
 }

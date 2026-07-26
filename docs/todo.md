@@ -102,6 +102,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
 - TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
 - TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
+- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 
 ### Priority Lanes
 
@@ -2667,6 +2668,49 @@ This file is the live open-work queue for PrimeStruct.
     if one becomes available in the build environment) before declaring
     this done; report the residual cost and file it as a follow-up
     rather than treating a partial win as complete.
+  - progress_2026-07-26: implemented the precomputed-index fix exactly as
+    described in implementation_notes (`definitionFamilyPathIndex()` +
+    `anyIndexedPathStartsWith`/`matchesFamilyPathAgainstIndex` in
+    SemanticsValidatorInferMethodResolutionHelpers.cpp, invalidated in
+    `buildDefinitionMaps()` alongside `paramsByDef_.clear()`). Verified:
+    `import /std/image/*` + zero calls, `--emit=vm`, dropped from ~41.4s
+    to a reproducible ~22-23s (1.87x) - real speedup, but short of the
+    ~2-5s acceptance target. Stop_rule triggered: a second gdb-sampling
+    round (8 fresh samples on the post-fix binary) found no single
+    dominant function anymore - cost is now diffuse across
+    `resolve(Direct)SoaVectorOrExperimentalBorrowedReceiver`/
+    `resolveExprCollectionAccessTarget` (soa/collection-access
+    resolution), `findStdlibSurfaceMetadataByResolvedPath`'s own linear
+    scan (StdlibSurfaceRegistry.cpp:1172-1198, but `Registry` is only 11
+    entries - cheap per call, expensive only in aggregate call volume),
+    `primec::collection_paths::moduleRoot`/`modulePrefix` string
+    concatenation (StdlibCollectionPaths.h:75/85),
+    `isStdNamespacedVectorCompatibilityHelperPath`/
+    `isStdNamespacedVectorCompatibilityDirectCall`
+    (SemanticsValidatorInferCollectionCompatibilityInternal.h:126/140),
+    `std::function` construction inside
+    `makeBuiltinCollectionDispatchResolvers`
+    (SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp:439), and
+    generic allocation/string-copy churn. Filed as TODO-4743 per the
+    stop_rule instead of chasing each site inside this leaf - reducing
+    per-call cost of half a dozen small, structurally different
+    functions is a distinct, larger investigation, not a continuation of
+    this one bounded fix. Correctness: differential-checked by running
+    `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_111_120`
+    (the one local failure hit while spot-checking template/overload/
+    specialization shards) against a pre-fix binary built from this
+    branch's parent commit (`0150f6a`) in a separate worktree
+    (`/home/user/PrimeStruct-master`) - identical failure (same 3
+    assertions, same `unknown method: /std/collections/vector/count` and
+    `/map/capacity` diagnostics) reproduces with the fix fully reverted,
+    confirming it predates this change rather than being a regression.
+    Broader `ctest -R compile_run -j4 --output-on-failure` full-suite
+    verification against the fixed binary was run to compare against the
+    prior full-suite baseline; not yet marking this `[x]` since the
+    ~2-5s acceptance target is not met - left open pending a decision on
+    whether TODO-4743's broader fix is required before this can close, or
+    whether the 1.87x win plus documented residual is accepted as the
+    final state for this leaf.
   - notes: supersedes TODO-4735 (closed as investigated-to-conclusion,
     see docs/todo_finished.md) - that investigation correctly ruled out
     both AST-module-linking and reachability-pruned-validation as safe
@@ -2684,6 +2728,94 @@ This file is the live open-work queue for PrimeStruct.
     share or differ from this same root cause; do not conflate the two
     when verifying this TODO's acceptance criteria, and do not assume
     fixing this one automatically fixes TODO-4713's cases too.
+- [ ] TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
+  - owner: ai
+  - created_at: 2026-07-26
+  - phase: Compiler performance
+  - parallel_track: semantic-validation-perf
+  - depends_on: TODO-4742
+  - scope: after TODO-4742 fixed the single dominant O(N)-scan
+    bottleneck in `hasDefinitionFamilyPath`, `import /std/image/*` with
+    zero calls dropped from ~41.4s to ~22-23s (`--emit=vm`) - a real
+    1.87x win, but still well above the ~2-5s TODO-4742 acceptance
+    target implied by comparison against `import /std/collections/vector`
+    (~1.6s). A second gdb stack-sampling round (8 samples, same
+    methodology as TODO-4742's original profiling: `gdb -p <pid> -batch
+    -ex "bt"` against a running `--emit=vm /tmp/img_import_only.prime`
+    process) found no single dominant function this time - samples
+    landed across several structurally different call sites:
+    `resolveDirectSoaVectorOrExperimentalBorrowedReceiver`/
+    `resolveSoaVectorOrExperimentalBorrowedReceiver`/
+    `resolveExprCollectionAccessTarget` (soa/collection-access receiver
+    resolution, called from `prepareExprCollectionDispatchSetup` in
+    SemanticsValidatorExprCollectionDispatchSetup.cpp:110);
+    `findStdlibSurfaceMetadataByResolvedPath`'s own `std::find_if` linear
+    scan over the static `Registry` array
+    (StdlibSurfaceRegistry.cpp:1172-1198) - `Registry` is only 11
+    entries, so this is cheap per call but is invoked from ~15+
+    call sites across semantics/ir_lowerer/emitter, so the cost is in
+    aggregate call volume, not scan size;
+    `primec::collection_paths::moduleRoot`/`modulePrefix` string
+    concatenation (include/primec/StdlibCollectionPaths.h:75,85);
+    `isStdNamespacedVectorCompatibilityHelperPath`/
+    `isStdNamespacedVectorCompatibilityDirectCall`
+    (SemanticsValidatorInferCollectionCompatibilityInternal.h:126,140);
+    `std::function` construction inside
+    `makeBuiltinCollectionDispatchResolvers`
+    (SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp:439); and
+    generic heap allocation/`std::char_traits::copy` churn. Separately
+    (not yet profiled, but confirmed to exist by direct code reading, so
+    listed here rather than re-discovered later): 6 independent local-
+    lambda reimplementations of the same O(N)-scan-over-`program_.
+    definitions`-or-`paramsByDef_` pattern that TODO-4742 fixed in the
+    member-function version, still present in
+    SemanticsValidatorExprMethodTargetResolution.cpp:221,
+    SemanticsValidatorBuildCallResolution.cpp:84 (already has a partial
+    scoped cache via `callTargetResolutionScratch_.
+    definitionFamilyPathCache`), SemanticsValidatorExprCallResolution.cpp:118,
+    SemanticsValidatorExprPreDispatchDirectCalls.cpp:324,
+    TemplateMonomorphExpressionRewrite.h:1456, and
+    TemplateMonomorphMethodTargets.h:141 (the latter two scan the
+    smaller `ctx.sourceDefs`/`ctx.helperOverloads`, not
+    `program_.definitions`, so may be lower priority).
+  - implementation_notes: this is a broader, multi-site investigation,
+    not a single bounded fix like TODO-4742 - do not treat it as one
+    leaf. Recommended split before implementing: (1) apply
+    `SemanticsValidator::definitionFamilyPathIndex()` (added by
+    TODO-4742) to the 6 duplicate lambdas above instead of leaving them
+    with their own O(N) scans, since the index and its invalidation
+    already exist; (2) evaluate whether
+    `findStdlibSurfaceMetadataByResolvedPath` benefits from a
+    `std::unordered_map<std::string, const StdlibSurfaceMetadata*>`
+    memoization cache keyed by resolved path (built lazily, since
+    `Registry` itself is static/immutable at 11 entries - the win is
+    memoizing repeated queries for the same path, not shrinking N); (3)
+    profile the soa/collection-access-resolution and `std::function`
+    per-call-site construction cost separately before deciding whether
+    either is fixable without a larger refactor. Re-run the same
+    gdb-sampling technique after each change to check whether the cost
+    keeps redistributing (diminishing returns) or a new single dominant
+    site emerges.
+  - acceptance:
+    - `import /std/image/*` with zero calls, `--emit=vm`, reaches within
+      a small constant multiple of the `import /std/collections/vector`
+      baseline (~2-5s), matching TODO-4742's original target.
+    - Full `compile_run` CTest suite shows the identical failing-test-
+      name set before and after (same diff methodology as TODO-4742).
+    - A fresh gdb-sampling round after this work shows no single
+      function taking more than a small fraction of sampled stack
+      frames, or if one does, it is documented as a further follow-up
+      rather than left unexplained.
+  - stop_rule: if after implementing notes (1)-(3) the wall time is
+    still not within the ~2-5s target, stop and report the residual as
+    an architectural limitation of the text-splicing whole-program
+    validation model (the same class of problem TODO-4735 investigated
+    and declined to fix at the leaf level) rather than continuing to
+    chase individual call sites indefinitely.
+  - notes: direct follow-up to TODO-4742; do not duplicate TODO-4742's
+    own scope (the `hasDefinitionFamilyPath` member-function fix is
+    already done) - this covers everything the second profiling round
+    found still costly after that fix landed.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

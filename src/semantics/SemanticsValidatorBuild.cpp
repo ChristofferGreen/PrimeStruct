@@ -41,6 +41,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
   structNames_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
+  definitionFamilyPathIndex_.clear();
+  definitionFamilyPathIndexValid_ = false;
   localBindingMemoRevisionByIdentity_.clear();
   inferExprReturnKindMemo_.clear();
   inferStructReturnMemo_.clear();

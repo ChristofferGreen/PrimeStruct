@@ -7,6 +7,7 @@
 #include <memory_resource>
 #include <memory>
 #include <new>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -501,6 +502,13 @@ private:
   std::unordered_set<std::string> sumNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
+  // Lazily-built, sorted union of paramsByDef_ keys and program_.definitions
+  // fullPaths, used by hasDefinitionFamilyPath() to answer prefix-existence
+  // queries in O(log N) instead of a linear scan. Safe to cache: both
+  // backing containers are fully populated by buildDefinitionMaps() and
+  // never mutated afterward for the lifetime of a validation pass.
+  mutable std::set<std::string> definitionFamilyPathIndex_;
+  mutable bool definitionFamilyPathIndexValid_ = false;
   std::unordered_set<std::string> overloadFamilyBasePaths_;
   std::unordered_map<std::string, std::string> uniqueSpecializationPathByBase_;
   std::unordered_set<std::string> ambiguousSpecializationBasePaths_;

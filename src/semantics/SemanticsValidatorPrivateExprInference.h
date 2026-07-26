@@ -40,6 +40,7 @@
   std::string resolveMethodStructTypePath(const std::string &typeName,
                                           const std::string &namespacePrefix) const;
   bool hasDefinitionFamilyPath(std::string_view path) const;
+  const std::set<std::string> &definitionFamilyPathIndex() const;
   std::string preferredFileHelperTarget(std::string_view helperName,
                                         std::string_view currentDefinitionPath) const;
   std::string preferredFileErrorHelperTarget(std::string_view helperName) const;
