@@ -408,17 +408,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_builtin_count_wrapper_canonical_map_string_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_builtin_count_wrapper_canonical_map_string_access_exe")
-          .string();
   const std::string errPath =
       (testScratchPath("") /
        "primec_cpp_builtin_count_wrapper_canonical_map_string_access.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
