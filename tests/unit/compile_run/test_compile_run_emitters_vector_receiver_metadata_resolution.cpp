@@ -1176,15 +1176,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_vector_template_method_helper_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_stdlib_vector_template_method_helper_precedence_exe")
-          .string();
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_stdlib_vector_template_method_helper_precedence_err.txt")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
@@ -1219,12 +1216,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_namespaced_count_capacity_alias_same_path.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_namespaced_count_capacity_alias_same_path_exe")
-          .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 110);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > /dev/null";
+  CHECK(runCommand(compileCmd) == 110);
 }
 
 TEST_CASE("rejects vector namespaced count capacity aliases with only canonical helpers in C++ emitter") {

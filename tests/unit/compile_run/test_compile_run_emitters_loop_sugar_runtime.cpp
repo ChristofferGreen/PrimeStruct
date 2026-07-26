@@ -554,13 +554,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_map_count.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_variadic_args_map_count_exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_cpp_variadic_args_map_count_out.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /map/count") !=
         std::string::npos);

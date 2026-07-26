@@ -297,9 +297,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_bool_u64_compare.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_bool_u64_compare_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 

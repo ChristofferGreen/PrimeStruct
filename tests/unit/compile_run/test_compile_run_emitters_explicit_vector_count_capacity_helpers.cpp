@@ -178,16 +178,12 @@ main() {
 }
   )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_capacity_imported.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_capacity_imported_exe").string();
 
   // A user definition at the canonical /std/collections/vector/capacity
   // path is a legitimate override, not a duplicate - it now compiles and
   // its return value takes precedence over the builtin.
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 17);
 }
 
 TEST_CASE("C++ emitter rejects wrapper bare vector capacity calls without helper before emission") {

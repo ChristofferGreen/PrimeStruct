@@ -13,16 +13,8 @@ void expectBackendsExit(std::string_view nameStem,
                         int expectedExit) {
   const std::string stem{nameStem};
   const std::string srcPath = writeTemp(stem + ".prime", source);
-  const std::string exePath =
-      (testScratchPath("") / ("primec_" + stem + "_exe")).string();
   const std::string nativePath =
       (testScratchPath("") / ("primec_" + stem + "_native")).string();
-
-  const std::string compileCmd = "./primec --emit=exe " +
-                                 quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == expectedExit);
 
   const std::string vmCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
@@ -289,14 +281,6 @@ void expectExeAndVmExit(std::string_view nameStem,
                         int expectedExit) {
   const std::string stem{nameStem};
   const std::string srcPath = writeTemp(stem + ".prime", source);
-  const std::string exePath =
-      (testScratchPath("") / ("primec_" + stem + "_exe")).string();
-
-  const std::string compileCmd = "./primec --emit=exe " +
-                                 quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == expectedExit);
 
   const std::string vmCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";

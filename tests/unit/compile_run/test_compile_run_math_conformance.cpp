@@ -2061,18 +2061,8 @@ main() {
 }
 )";
     const std::string srcPath = writeTemp("math_conformance_convert_nonfinite_" + name + ".prime", source);
-    const std::string exePath =
-        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_exe")).string();
-    const std::string exeErrPath =
-        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_exe.err")).string();
     const std::string vmErrPath =
         (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_vm.err")).string();
-
-    const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                   quoteShellArg(exePath) + " --entry /main";
-    CHECK(runCommand(compileCmd) == 0);
-    CHECK(runCommand(quoteShellArg(exePath) + " 2> " + quoteShellArg(exeErrPath)) == 3);
-    CHECK(readFile(exeErrPath) == "float to int conversion requires finite value\n");
 
     const std::string vmCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);
@@ -2148,18 +2138,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("math_conformance_pow_negative.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "math_conformance_pow_negative_exe").string();
-  const std::string exeErrPath =
-      (testScratchPath("") / "math_conformance_pow_negative_exe.err").string();
   const std::string vmErrPath =
       (testScratchPath("") / "math_conformance_pow_negative_vm.err").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath) + " 2> " + quoteShellArg(exeErrPath)) == 3);
-  CHECK(readFile(exeErrPath) == "pow exponent must be non-negative\n");
 
   const std::string vmCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);

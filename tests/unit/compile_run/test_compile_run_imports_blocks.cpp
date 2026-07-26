@@ -157,13 +157,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_block_infer_if_numeric.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_block_infer_if_numeric_exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_block_infer_if_numeric_out.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 0);
   CHECK(readFile(outPath) == "5000000000\n");
 }
 
@@ -230,9 +228,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_negate_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_negate_u64_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 

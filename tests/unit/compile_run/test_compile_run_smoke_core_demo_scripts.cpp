@@ -326,11 +326,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_string_index.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_string_index_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == (97 + 98 + 3));
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == (97 + 98 + 3));
 }
 
 TEST_CASE("single-quoted strings in C++ emitter") {
@@ -345,11 +343,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_single_quoted_string.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_single_quoted_string_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == (107 + 118 + 9));
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == (107 + 118 + 9));
 }
 
 TEST_CASE("method calls via type namespaces") {

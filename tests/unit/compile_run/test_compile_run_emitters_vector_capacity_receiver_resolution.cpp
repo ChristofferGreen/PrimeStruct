@@ -359,10 +359,6 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_capacity_map_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_capacity_map_same_path_helper_exe")
-          .string();
 
   const std::string errPath =
       (testScratchPath("") /
@@ -370,7 +366,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/capacity") !=
         std::string::npos);

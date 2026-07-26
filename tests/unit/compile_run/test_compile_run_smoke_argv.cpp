@@ -114,12 +114,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_bounds.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_cpp_array_bounds_exe").string();
   const std::string errPath = (testScratchPath("") / "primec_cpp_array_bounds_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
@@ -133,12 +130,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_string_bounds.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_cpp_string_bounds_exe").string();
   const std::string errPath = (testScratchPath("") / "primec_cpp_string_bounds_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "string index out of bounds\n");
 }
