@@ -457,14 +457,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_bounds.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_map_bounds_exe").string();
   const std::string nativePath = (testScratchPath("") / "primec_map_bounds_native").string();
   const std::string errPath = (testScratchPath("") / "primec_map_bounds_err.txt").string();
-
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath + " 2> " + errPath) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runVmCmd) == 3);

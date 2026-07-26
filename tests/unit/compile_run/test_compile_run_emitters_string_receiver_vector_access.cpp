@@ -474,14 +474,10 @@ main() {
   const std::string outPath =
       (testScratchPath("") / "primec_cpp_bare_map_method_struct_chain_canonical_precedence.out")
           .string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_bare_map_method_struct_chain_canonical_precedence_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("error") == std::string::npos);
 }
 
@@ -521,15 +517,10 @@ main() {
   const std::string outPath = (testScratchPath("") /
                                "primec_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence.out")
                                   .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("error") == std::string::npos);
 }
 

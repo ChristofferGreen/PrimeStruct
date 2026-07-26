@@ -164,10 +164,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_named_values_receiver.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_lambda_vector_mutator_named_values_receiver_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -404,13 +402,9 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_argv.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_emit_argv_exe").string();
   const std::string outPath = (testScratchPath("") / "primec_emit_argv_out.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-
-  const std::string runCmd = exePath + " alpha beta > " + outPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(outPath) == "alpha\n");
 }

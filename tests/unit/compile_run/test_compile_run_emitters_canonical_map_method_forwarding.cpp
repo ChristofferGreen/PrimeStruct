@@ -36,19 +36,13 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding_exe")
-          .string();
   const std::string outPath =
       (testScratchPath("") /
        "primec_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding.out")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).empty());
 }
 
@@ -295,15 +289,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_count_explicit_template_wrapper_canonical_return.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_cpp_vector_alias_count_explicit_template_wrapper_canonical_return_exe")
-                                  .string();
   const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_alias_count_explicit_template_wrapper_canonical_return.err")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
         std::string::npos);

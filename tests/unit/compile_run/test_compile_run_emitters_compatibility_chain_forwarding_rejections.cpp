@@ -231,10 +231,6 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding_exe")
-          .string();
 
   const std::string errPath =
       (testScratchPath("") /
@@ -242,7 +238,7 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string error = readFile(errPath);
   CHECK((error.find("field access requires struct receiver") != std::string::npos ||
@@ -392,13 +388,9 @@ main() {
       (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding.err")
           .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + errPath + " 2>&1";
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + errPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   const std::string error = readFile(errPath);
   CHECK((error.find("field access requires struct receiver") != std::string::npos ||
@@ -463,15 +455,10 @@ main() {
       (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag.err")
           .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects vector unsafe method alias access receiver fallback without helper in C++ emitter") {

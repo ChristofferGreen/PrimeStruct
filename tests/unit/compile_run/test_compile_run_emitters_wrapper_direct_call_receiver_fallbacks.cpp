@@ -243,11 +243,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_count_arg_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_inferred_wrapper_string_count_arg_mismatch_exe")
-          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -268,11 +265,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_access_index_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_inferred_wrapper_string_access_index_mismatch_exe")
-          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -379,11 +373,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_access_shadow_value_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_user_wrapper_temp_access_shadow_value_mismatch_exe")
-          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 

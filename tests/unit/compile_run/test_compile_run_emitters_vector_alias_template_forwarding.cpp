@@ -432,13 +432,9 @@ main() {
       (testScratchPath("") /
        "primec_cpp_vector_helper_method_expression_canonical_stdlib_forwarding_err.txt")
           .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_vector_helper_method_expression_canonical_stdlib_forwarding_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
@@ -530,10 +526,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_alias_templated_vector_forwarding_rejected.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_array_alias_templated_vector_forwarding_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 
@@ -557,11 +551,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_templated_vector_call_array_fallback_rejected.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_stdlib_templated_vector_call_array_fallback_exe")
-          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 

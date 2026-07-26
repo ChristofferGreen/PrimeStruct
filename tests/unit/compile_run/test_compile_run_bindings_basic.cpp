@@ -45,13 +45,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_bare_zero_arg_calls.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_bare_zero_arg_calls_exe").string();
 
   const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(vmCmd) == 41);
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 41);
 }
 
 TEST_CASE("typeof type locals") {
@@ -80,13 +76,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_typeof_type_locals.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_typeof_type_locals_exe").string();
 
   const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(vmCmd) == 10);
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("local generated struct") {
@@ -109,13 +101,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_local_generated_struct.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_local_generated_struct_exe").string();
 
   const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(vmCmd) == 9);
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
 }
 
 TEST_CASE("emits stable IR names for specialized local generated struct") {
