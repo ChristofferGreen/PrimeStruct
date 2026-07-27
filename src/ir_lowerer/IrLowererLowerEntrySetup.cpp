@@ -397,6 +397,11 @@ bool validateWholeProgramForLowering(const Program &program,
 
 } // namespace
 
+// Everything remaining in this function (beyond the call to
+// `validateWholeProgramForLowering`) is genuinely entry-only: rejecting
+// `require(...)` contracts on the entry, and resolving the entry's own
+// effect/capability masks. A future per-function-body lowering loop must
+// only call this once, for the program's actual entry - never per callee.
 bool runLowerEntrySetup(const Program &program,
                         const SemanticProgram *semanticProgram,
                         const std::string &entryPath,

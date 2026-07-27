@@ -326,6 +326,16 @@ bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      const SemanticProgram *semanticProgram,
                                      EntryCountCallOnErrorSetup &out,
                                      std::string &error) {
+  // buildEntryCountAccessSetup resolves argc/argv-style entry-argument
+  // binding (hasEntryArgs/entryArgsName) - meaningless for a callee, which
+  // has no command-line arguments of its own. This is the entry-only seam
+  // in this function; a future per-function-body lowering loop must only
+  // call it once, for the program's actual entry. buildEntryCallOnErrorSetup
+  // just below builds callResolutionAdapters, which despite the "Entry..."
+  // naming here is consumed generally throughout statement/expression
+  // lowering, not just for entry-specific concerns - untangling that is
+  // deferred to the fuller per-variable inventory this refactor's next step
+  // does before generalizing the lowering loop itself.
   if (!buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)) {
     return false;
   }
