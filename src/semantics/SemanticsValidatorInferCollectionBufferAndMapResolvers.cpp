@@ -43,7 +43,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     const std::function<bool(const Expr &)> &isDirectKeyValueConstructorCall) {
   const std::weak_ptr<BuiltinCollectionDispatchResolvers> weakState = state;
   auto inferKeyValueConstructorArgTypes =
-      [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+      [=, &params, &locals, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     keyTypeOut.clear();
     valueTypeOut.clear();
     if (target.kind != Expr::Kind::Call || target.args.empty() ||
@@ -99,7 +99,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     return true;
   };
-  state->resolveBufferTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+  state->resolveBufferTarget = [=, &params, &locals, this](const Expr &target, std::string &elemType) -> bool {
     const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
     if (!lockedState) {
       return false;
@@ -220,7 +220,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     return false;
   };
-  state->resolveMapTarget = [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+  state->resolveMapTarget = [=, &params, &locals, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
     if (!lockedState) {
       return false;
@@ -436,7 +436,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     return false;
   };
   state->resolveKeyValueTarget =
-      [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+      [=, &params, &locals, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     keyTypeOut.clear();
     valueTypeOut.clear();
     auto assignBindingFromTypeText = [](const std::string &typeText, BindingInfo &bindingOut) {
@@ -488,7 +488,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
            extractExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
   state->resolveDirectKeyValueTarget =
-      [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+      [=, &params, &locals, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     auto extractValueBinding = [&](const BindingInfo &binding) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {

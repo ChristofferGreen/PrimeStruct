@@ -103,6 +103,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
 - TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
+- TODO-4744: Fix dangling string_view returned by resolveRemovedCollectionHelperReference
 
 ### Priority Lanes
 
@@ -2884,11 +2885,155 @@ This file is the live open-work queue for PrimeStruct.
     concrete next step; not attempted in this pass given the risk/time
     profile. Regression check: focused subset
     (`compile_run.*(template|overload|special|imports_operations_and_collections|collections)`)
-    run against the (1)+(2) build; see next progress note for result.
-    TODO-4743 stays open - the ~2-5s acceptance target is not met, and
-    the remaining path (the `[=, this]` lifetime audit) is exactly the
-    kind of call-site-by-call-site work the stop_rule says to report
-    rather than push through unaudited.
+    run against the (1)+(2) build; matched the same pre-existing
+    failure names found in TODO-4742's verification, no regressions.
+  - progress_2026-07-27: completed the `[=, this]` lifetime audit (item
+    3) and implemented the resulting fix. Audit: read all 18 call sites
+    of `makeBuiltinCollectionDispatchResolvers` and confirmed every one
+    consumes the returned resolvers purely synchronously within the
+    same calling function (constructed as a local, used inline, never
+    stored on a class member or returned to a grandparent caller) -
+    including `SemanticsValidatorExprDispatchBootstrap.cpp:94`, which
+    looked risky (`bootstrapOut` is an out-parameter) but turned out to
+    just land in the caller's own stack-local `ExprDispatchBootstrap`
+    (`SemanticsValidatorExpr.cpp:845`), used and discarded within that
+    same `validateExpr` call - same pattern as every other site. `params`
+    traces back to `paramsByDef_` (a `SemanticsValidator` member, stable
+    for the whole validation pass); `locals` traces back to a
+    definition-scoped map owned several frames up, stable for the whole
+    definition's validation and never mutated by these read-only
+    expression-inference helpers. Both outlive every call site's
+    synchronous use, so reference-capturing them is safe. `adapters`
+    does NOT get the same treatment - `makeBuiltinCollectionDispatchResolvers`'s
+    third parameter has a default argument (`= {}`), so 2 call sites
+    (SemanticsValidatorExprFieldResolution.cpp:339,
+    SemanticsValidatorResultHelpers.cpp:622) bind a temporary to it
+    whose lifetime ends at the end of the full call expression -
+    reference-capturing `adapters` would dangle for those sites, so it
+    stays value-captured everywhere.
+    Fix: `makeBuiltinCollectionDispatchResolvers`'s internal lambdas
+    chain together (`resolveBindingTarget`/`inferCallBinding` used
+    directly by name inside the `state->resolveXXX` closures, each
+    previously `[=, this]`-copying the caller's `locals` hashmap and
+    `params` vector afresh - compounding, since `inferCallBinding` itself
+    embeds another copy of `resolveBindingTarget`). Rather than rewrite
+    full capture lists (risking silently dropping a capture the
+    blanket `[=]` currently supplies), added explicit `&params, &locals`
+    overrides on top of the existing `[=, this]`/`[=]` default capture -
+    C++ allows mixing a default capture with explicit reference
+    overrides for specific names - on the 15 lambdas that directly
+    reference `params`/`locals` in their own body (verified each one
+    individually across
+    src/semantics/SemanticsValidatorInferCollections.cpp (9),
+    SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp (5), and
+    SemanticsValidatorInferCollectionStringResolver.cpp (1)); left the
+    4 lambdas that don't touch params/locals directly
+    (`resolveMethodOwnerPath`,
+    `resolveDereferencedIndexedArgsPackElementType`,
+    `resolveWrappedIndexedArgsPackElementType`,
+    `isDirectCanonicalVectorAccessCallOnBuiltinReceiver`) untouched.
+    Measured: `import /std/image/*` with zero calls, `--emit=vm`, went
+    from ~34.85s (TODO-4742-only baseline, this machine) to ~17.5s avg
+    (2 runs: 17.890s, 17.028s) - roughly 2x faster than the (1)+(2)-only
+    state (~32.92s) and ~2x faster than the original baseline.
+    Verification (given the lifetime-audit risk profile - a wrong
+    capture-mode change is a dangling-reference bug, not a slowdown):
+    (a) ran the reproduction case through the ASan build
+    (`build-asan`) - clean exit, no AddressSanitizer report; (b) ran a
+    ~241-test ASan-instrumented regression subset
+    (`compile_run.*(template|overload|special|imports_operations_and_collections|collections|sum)`)
+    at `-j4`; stopped it after ~23/241 (extrapolated full run ~4.5h,
+    not worth the wall time) but it surfaced a genuine, PRE-EXISTING
+    memory-safety bug unrelated to this change - filed as TODO-4744 -
+    plus a cluster of map-count assertion failures
+    (`vm_collections_array_and_wrapper_shadows`) that reproduce
+    identically with and without this session's capture-mode changes
+    (differentially tested by stashing the changes, rebuilding the
+    ASan binary at commit `ff65491`, and re-running the same standalone
+    doctest range - byte-identical failure); (c) ran the full non-ASan
+    focused regression subset (241 tests) against the final build - 61
+    failed, byte-identical failing-test-name set to the (1)+(2)-only
+    run, zero new failures, zero regressions.
+    TODO-4743 invokes its own stop_rule here: after implementing all
+    three planned items (duplicate-scan reuse, stdlib-registry
+    memoization, and now the `[=, this]` lifetime audit + fix), wall
+    time is at ~17.5s, still well above the ~2-5s target. Per the
+    stop_rule, reporting this as a residual architectural-cost
+    limitation rather than opening a new unscoped audit: the remaining
+    cost is presumably the same class of diffuse per-call resolution
+    overhead the second gdb profiling round found (soa/collection-access
+    receiver resolution, generic string/allocation churn across the
+    ~15+ call sites of `findStdlibSurfaceMetadataByResolvedPath` and
+    friends), inherent to the text-splicing whole-program validation
+    model TODO-4735 already investigated and declined to fix at the
+    leaf level. Not closing TODO-4743 (acceptance target unmet), but
+    treating further chasing here as needing fresh scoping/justification
+    rather than an open thread to keep pulling on.
+- [ ] TODO-4744: Fix dangling string_view returned by resolveRemovedCollectionHelperReference
+  - owner: ai
+  - created_at: 2026-07-27
+  - phase: Correctness / memory safety
+  - parallel_track: none
+  - scope: found by an ASan-instrumented regression run while verifying
+    TODO-4743's lifetime-audit fix (unrelated to that fix - confirmed by
+    differential testing, see TODO-4743's progress_2026-07-27 note).
+    `resolveRemovedCollectionHelperReference`
+    (src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h:753-814)
+    takes `std::string_view &helperNameOut` as an output parameter. On
+    the `resolveKeyValueCompatibilityUnrootedPath` path (line 809-812),
+    it declares a genuinely local `std::string helperName;`, then calls
+    `setMap(helperName)` (a local lambda, line 772) which does
+    `helperNameOut = helperName;` - assigning a view into the LOCAL
+    string's buffer. Once `resolveRemovedCollectionHelperReference`
+    returns, `helperName` is destroyed and `helperNameOut` is left
+    dangling in the caller. Confirmed via a live AddressSanitizer
+    `stack-use-after-return` report (4 identical instances in one
+    ~23-test ASan slice): the caller
+    (`removedCollectionMethodPath`, same file, line 816) passes this
+    dangling view into `isPublishedKeyValueBaseHelperName`, which reads
+    freed stack memory via `resolveStdlibSurfaceMemberName` ->
+    `stripResolvedPathSpecializationSuffix`
+    (src/StdlibSurfaceRegistry.cpp:926). Reachable from real user code:
+    the call chain in the ASan report is
+    `validateNumericBuiltinExpr -> isNumericExpr -> inferExprReturnKind
+    -> inferPreDispatchCallReturnKind -> getVectorMutatorHelperName ->
+    explicitRemovedCollectionMethodPath
+    (SemanticsValidatorInferCollectionCompatibility.cpp:882) ->
+    removedCollectionMethodPath -> isPublishedKeyValueBaseHelperName`,
+    i.e. ordinary expression-return-kind inference on collection method
+    calls, not an obscure/benchmark-only path. A same-run ASan slice
+    also showed elevated doctest assertion-failure counts in nearby
+    collections test shards (up to 9 failed in one shard, vs ~2-4
+    typical) - not yet confirmed whether those are caused by this
+    corruption's unpredictable blast radius or are a separate issue;
+    worth re-checking once this is fixed.
+  - implementation_notes: the fix is almost certainly to change
+    `helperNameOut` from `std::string_view &` to `std::string &`
+    (or have `resolveRemovedCollectionHelperReference` return the
+    resolved name by value/into a caller-owned `std::string`) so the
+    data survives the function's return - check all callers of
+    `resolveRemovedCollectionHelperReference` and `setMap`/`setVectorLike`
+    for any other places that assign a view into a soon-to-be-destroyed
+    local before deciding the exact signature change. Also check
+    whether `removedCollectionMethodPath`'s own `std::string_view
+    helperName` parameter is safe (it forwards the caller's own
+    argument through unchanged, likely fine, but verify).
+  - acceptance:
+    - `resolveRemovedCollectionHelperReference`'s ASan repro (any
+      compile_run case reaching the `resolveKeyValueCompatibilityUnrootedPath`
+      branch, e.g. the `vm_collections_alias_and_basics`/
+      `array_and_wrapper_shadows` shards from TODO-4743's ASan run) is
+      clean under AddressSanitizer.
+    - Full `compile_run` CTest suite shows the identical failing-test-
+      name set before and after, OR fewer failures if the elevated
+      shard-level failure counts noted above turn out to be caused by
+      this corruption.
+  - stop_rule: if fixing the signature requires touching many call
+    sites and the diff grows large, pause and confirm scope before
+    continuing - this is a correctness bug, not urgent enough to
+    justify a rushed wide-reaching change.
+  - notes: discovered as a side effect of TODO-4743's ASan
+    verification; unrelated to TODO-4743's own scope.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

@@ -161,7 +161,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     return extractKeyValueCollectionTypes(binding, keyTypeOut, valueTypeOut) ||
            extractExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
-  auto resolveBindingTarget = [=, this](const Expr &target, BindingInfo &bindingOut) -> bool {
+  auto resolveBindingTarget = [=, &params, &locals, this](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
         bindingOut = *paramBinding;
@@ -213,7 +213,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     return resolvedType;
   };
-  auto inferCallBinding = [=, this](const Expr &target, BindingInfo &bindingOut) -> bool {
+  auto inferCallBinding = [=, &params, &locals, this](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (target.kind != Expr::Kind::Call) {
       return false;
     }
@@ -326,7 +326,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
   auto state = std::make_shared<BuiltinCollectionDispatchResolvers>();
   const std::weak_ptr<BuiltinCollectionDispatchResolvers> weakState = state;
 
-  state->resolveArgsPackAccessTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+  state->resolveArgsPackAccessTarget = [=, &params, &locals, this](const Expr &target, std::string &elemType) -> bool {
     elemType.clear();
     auto resolveBinding = [&](const BindingInfo &binding) { return getArgsPackElementType(binding, elemType); };
     if (target.kind == Expr::Kind::Name) {
@@ -340,7 +340,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     return false;
   };
-  state->resolveIndexedArgsPackElementType = [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
+  state->resolveIndexedArgsPackElementType = [=, &params, &locals, this](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     std::string accessName;
     if (target.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(target, accessName) || target.args.size() != 2) {
@@ -384,7 +384,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     return extractWrappedPointeeType(wrappedType, elemTypeOut);
   };
-  state->resolveArrayTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+  state->resolveArrayTarget = [=, &params, &locals, this](const Expr &target, std::string &elemType) -> bool {
     const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
     if (!lockedState) {
       return false;
@@ -431,7 +431,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     return false;
   };
-  state->resolveVectorTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+  state->resolveVectorTarget = [=, &params, &locals, this](const Expr &target, std::string &elemType) -> bool {
     const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
     if (!lockedState) {
       return false;
@@ -509,7 +509,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     return resolveVectorBinding(inferredBinding, elemType);
   };
   state->resolveCollectionVectorTarget =
-      [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
+      [=, &params, &locals, this](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
       const std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -543,7 +543,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     return extractCollectionVectorElementType(inferredBinding, elemTypeOut);
   };
   state->resolveCollectionVectorValueTarget =
-      [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
+      [=, &params, &locals, this](const Expr &target, std::string &elemTypeOut) -> bool {
     auto extractValueBinding = [&](const BindingInfo &binding) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
@@ -583,7 +583,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     extractBindingFromTypeText(inferredTypeText, inferredBinding);
     return extractValueBinding(inferredBinding);
   };
-  state->resolveSoaVectorTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+  state->resolveSoaVectorTarget = [=, &params, &locals, this](const Expr &target, std::string &elemType) -> bool {
     const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
     if (!lockedState) {
       return false;

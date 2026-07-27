@@ -14,7 +14,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
     const std::function<bool(const Expr &, size_t &)>
         &isDirectCanonicalVectorAccessCallOnBuiltinReceiver) {
   const std::weak_ptr<BuiltinCollectionDispatchResolvers> weakState = state;
-  state->resolveStringTarget = [=, this](const Expr &target) -> bool {
+  state->resolveStringTarget = [=, &params, &locals, this](const Expr &target) -> bool {
     const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
     if (!lockedState) {
       return false;
