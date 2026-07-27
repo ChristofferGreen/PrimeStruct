@@ -253,5 +253,6 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
     error = "entry definition cannot be templated: " + entryPath;
     return false;
   }
+  ctx.sourceDefsFamilyPathIndexValid = false;
   return true;
 }

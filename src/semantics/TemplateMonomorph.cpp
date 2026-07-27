@@ -17,6 +17,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <set>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
@@ -73,6 +74,18 @@ struct Context {
 
   Program &program;
   std::unordered_map<std::string, Definition> sourceDefs;
+  // Lazily-built, sorted view of sourceDefs' keys, used by
+  // hasDefinitionFamilyPath()/hasTemplatedDefinitionFamilyPath() (see
+  // TemplateMonomorphMethodTargets.h) to answer prefix-existence queries in
+  // O(log N) instead of a linear scan over sourceDefs. Must be invalidated
+  // (sourceDefsFamilyPathIndexValid = false) at every sourceDefs mutation
+  // site - see initializeTemplateMonomorphSourceDefinitions() and
+  // TemplateMonomorphTemplateSpecialization.h's clone-insertion loop.
+  // mutable so read-only query helpers taking `const Context &` can still
+  // build/cache it (several call sites, e.g. resolveMethodCallTemplateTarget,
+  // only have a const Context&).
+  mutable std::set<std::string> sourceDefsFamilyPathIndex;
+  mutable bool sourceDefsFamilyPathIndexValid = false;
   std::unordered_set<std::string> templateDefs;
   std::unordered_map<std::string, std::string> directImportAliases;
   std::unordered_map<std::string, std::string> transitiveImportAliases;
@@ -106,6 +119,27 @@ struct Context {
   const Definition *currentRewriteDefinition = nullptr;
   mutable std::string requirementOverloadSelectionError;
 };
+
+const std::set<std::string> &sourceDefsFamilyPathIndex(const Context &ctx) {
+  if (!ctx.sourceDefsFamilyPathIndexValid) {
+    ctx.sourceDefsFamilyPathIndex.clear();
+    for (const auto &[defPath, definition] : ctx.sourceDefs) {
+      (void)definition;
+      ctx.sourceDefsFamilyPathIndex.insert(defPath);
+    }
+    ctx.sourceDefsFamilyPathIndexValid = true;
+  }
+  return ctx.sourceDefsFamilyPathIndex;
+}
+
+// True if any key in sourceDefs starts with `prefix`. Relies on
+// lexicographic ordering: every element sharing `prefix` sorts
+// contiguously starting at lower_bound(prefix).
+bool anySourceDefStartsWith(const Context &ctx, const std::string &prefix) {
+  const std::set<std::string> &index = sourceDefsFamilyPathIndex(ctx);
+  const auto it = index.lower_bound(prefix);
+  return it != index.end() && it->compare(0, prefix.size(), prefix) == 0;
+}
 
 using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
 

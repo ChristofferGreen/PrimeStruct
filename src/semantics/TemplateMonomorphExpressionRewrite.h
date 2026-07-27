@@ -1458,15 +1458,8 @@ bool rewriteExpr(Expr &expr,
       if (ctx.sourceDefs.count(ownedPath) > 0 || ctx.helperOverloads.count(ownedPath) > 0) {
         return true;
       }
-      const std::string templatedPrefix = ownedPath + "<";
-      const std::string specializedPrefix = ownedPath + "__t";
-      for (const auto &[defPath, _] : ctx.sourceDefs) {
-        if (defPath == ownedPath || defPath.rfind(templatedPrefix, 0) == 0 ||
-            defPath.rfind(specializedPrefix, 0) == 0) {
-          return true;
-        }
-      }
-      return false;
+      return anySourceDefStartsWith(ctx, ownedPath + "<") ||
+             anySourceDefStartsWith(ctx, ownedPath + "__t");
     };
     // Shadow precedence: a real definition at the exact spelled path always
     // wins over any compat/alias rewrite this function would otherwise

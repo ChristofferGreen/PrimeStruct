@@ -143,30 +143,16 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     if (ctx.sourceDefs.count(pathString) > 0 || ctx.helperOverloads.count(pathString) > 0) {
       return true;
     }
-    const std::string templatedPrefix = pathString + "<";
-    const std::string specializedPrefix = pathString + "__t";
-    const std::string overloadPrefix = pathString + "__ov";
-    for (const auto &[defPath, _] : ctx.sourceDefs) {
-      if (defPath.rfind(templatedPrefix, 0) == 0 ||
-          defPath.rfind(specializedPrefix, 0) == 0 ||
-          defPath.rfind(overloadPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
+    return anySourceDefStartsWith(ctx, pathString + "<") ||
+           anySourceDefStartsWith(ctx, pathString + "__t") ||
+           anySourceDefStartsWith(ctx, pathString + "__ov");
   };
   auto hasTemplatedDefinitionFamilyPath = [&](std::string_view path) {
     const std::string pathString(path);
     if (ctx.templateDefs.count(pathString) > 0) {
       return true;
     }
-    const std::string templatedPrefix = pathString + "<";
-    for (const auto &[defPath, _] : ctx.sourceDefs) {
-      if (defPath.rfind(templatedPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
+    return anySourceDefStartsWith(ctx, pathString + "<");
   };
   auto receiverHelperFamilyLeaf = [](std::string_view resolvedType) -> std::string {
     if (resolvedType.empty()) {

@@ -25817,3 +25817,128 @@ real answer.
     (`emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`,
     ~584-598s) is a natural next target if more of this style of
     targeted optimization is wanted.
+
+**Todo Completion (July 27, 2026) — TODO-4746**
+
+- [x] TODO-4746: Fix O(N) linear scan in TemplateMonomorph's hasDefinitionFamilyPath duplicates
+  - owner: ai
+  - created_at: 2026-07-27
+  - phase: Compiler performance
+  - parallel_track: template-monomorph-perf
+  - depends_on: TODO-4745
+  - scope: direct follow-up to TODO-4745's "go after the C++ emitter
+    shard next" - `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+    (the slowest shard TODO-4745's fix didn't touch, since it goes
+    through the C++ emitter's own lowering path, not the wasm/native
+    tail-dispatch path TODO-4745 fixed) was 583.76-597.81s across
+    several runs. Reproduced the worst individual case standalone
+    (`compile_cpp_matrix_arithmetic_helpers.prime` from
+    `test_compile_run_emitters_matrix_quaternion_support.cpp`,
+    `import /std/math/*` plus Mat2/Mat3/Mat4 arithmetic) with the exact
+    test source: `--emit=exe` took 215.16s (real 3m35.163s). `gdb -p
+    <pid> -batch -ex "bt"` sampling (12 samples this time, matching
+    TODO-4742/4743/4745's methodology) found a genuinely diffuse
+    picture - NOT one dominant function like TODO-4745's ir_lowerer
+    bug - but 3 of 12 samples landed in a duplicate, unfixed
+    `hasDefinitionFamilyPath`-style O(N) linear scan already flagged
+    (but deprioritized) back in TODO-4743's original filing:
+    `TemplateMonomorphMethodTargets.h:141-157`'s `hasDefinitionFamilyPath`
+    and `:158-170`'s `hasTemplatedDefinitionFamilyPath`, both scanning
+    `ctx.sourceDefs` (a `TemplateMonomorphContext`-local
+    `unordered_map<string, Definition>`, NOT the same container as
+    `SemanticsValidator::program_.definitions`/`paramsByDef_` that
+    TODO-4742 already fixed - this is a structurally identical bug in a
+    completely separate subsystem/class). Unlike TODO-4745's
+    `semanticProgram` (fully immutable during ir_lowerer) or even
+    TODO-4742's `paramsByDef_`/`program_.definitions` (rebuilt once per
+    validation pass), `ctx.sourceDefs` is actively mutated *during* the
+    same monomorphization pass as new template specializations get
+    generated on the fly - found exactly 4 mutation sites across 2
+    files (`TemplateMonomorphSourceDefinitionSetup.h:53,118,244` inside
+    a single one-time `initializeTemplateMonomorphSourceDefinitions()`
+    setup function; `TemplateMonomorphTemplateSpecialization.h:208,210`
+    inside a single incremental clone-insertion loop) via a full-repo
+    grep for `.sourceDefs` mutation syntax (`[key]=`, `.emplace(`,
+    `.insert(`, `.erase(`, `.clear(`, `=` assignment) cross-checked
+    against every non-mutating read use to rule out any other function
+    silently mutating it via a passed-through reference.
+  - implementation: added a lazily-built, sorted `std::set<std::string>
+    sourceDefsFamilyPathIndex` (mirroring TODO-4742's
+    `SemanticsValidator::definitionFamilyPathIndex()` design exactly)
+    plus a `sourceDefsFamilyPathIndexValid` bool to the file-local
+    `Context` struct in `TemplateMonomorph.cpp`; both `mutable`, since
+    several call sites (e.g. `resolveMethodCallTemplateTarget`) only
+    have a `const Context &`. Added free-function helpers
+    `sourceDefsFamilyPathIndex(const Context&)` (builds-or-returns the
+    cached index) and `anySourceDefStartsWith(const Context&, const
+    std::string&)` (the same `lower_bound`-based O(log N) prefix check
+    as TODO-4742's `anyIndexedPathStartsWith`) right after `Context`'s
+    definition, before any of the `#include`d headers that use them
+    (all included into the same anonymous namespace in
+    `TemplateMonomorph.cpp`, confirmed by build success). Rewrote both
+    `TemplateMonomorphMethodTargets.h` lambdas to call the index
+    instead of looping over `ctx.sourceDefs`, preserving their exact
+    existing behavior (including `hasDefinitionFamilyPath`'s "__ov"
+    suffix check that `hasTemplatedDefinitionFamilyPath` doesn't have -
+    kept the two functions' checks distinct, didn't unify them). Fixed
+    the identical duplicate lambda in
+    `TemplateMonomorphExpressionRewrite.h:1456`
+    (`preferCanonicalStdlibCollectionHelperPath`'s local
+    `hasDefinitionFamilyPath`) the same way - this one lacked the
+    "__ov" check in the original too, preserved as-is rather than
+    silently adding scope. Left a third, structurally different scan
+    at `TemplateMonomorphExpressionRewrite.h:1279` alone: it matches on
+    definition *leaf name* plus a separate semantic predicate
+    (`definitionReturnsBorrowedExperimentalSoaVector`), not a path
+    prefix, so it isn't answerable by this same index without a
+    different (leaf-name-keyed) index - out of scope for this pass.
+    Added `sourceDefsFamilyPathIndexValid = false` at the end of
+    `initializeTemplateMonomorphSourceDefinitions()` and, guarded on
+    `!clones.empty()`, after the specialization clone-insertion loop.
+  - acceptance: met, with an honest partial-improvement framing (see
+    stop_rule).
+    - Re-ran the standalone repro after the fix: 215.16s -> 158.36s
+      (~26.5% faster; two fixes applied - `TemplateMonomorphMethodTargets.h`
+      alone gave 162.36s, `TemplateMonomorphExpressionRewrite.h` added
+      only a marginal further improvement on this specific test, within
+      noise, but is correctness-neutral and may help other tests that
+      exercise that call site more).
+    - A fresh 10-sample gdb round after the fix found zero samples in
+      `hasDefinitionFamilyPath`/`hasTemplatedDefinitionFamilyPath` (down
+      from 3/12) - confirms the fix eliminated that specific hot spot.
+      The remaining cost is genuinely diffuse (generic string
+      operations, `preferVectorStdlibHelperPath`,
+      `experimentalSoaVectorHelperPathForCanonicalHelper`, SOA path
+      helpers, `isRootBuiltinName`) - the same architectural-cost
+      pattern TODO-4743 already characterized and stopped chasing for
+      the semantics-validation side; not pursued further here for the
+      same reason.
+    - Ran a 242-test regression subset (the usual TODO-4743/4745
+      collections/templates/overloads/imports/sum pattern plus the
+      specific `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+      shard): 62 failures, cross-checked name-by-name against the
+      established baseline - all pre-existing, zero regressions. The
+      one test that exercises the exact repro path
+      (`emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`, which
+      contains "rejects C++ matrix arithmetic helpers with unsupported
+      divide lowering" - an expected-failure test asserting on an
+      unrelated native-backend limitation, not on timing) still fails
+      with the identical pre-existing diagnostic.
+  - stop_rule: invoked. `import /std/math/*`-heavy code is faster but
+    still slow (~158s for this test); the remaining cost is diffuse
+    across many small contributors rather than one fixable bug, matching
+    TODO-4743's stop_rule condition exactly. Not chasing further without
+    a fresh, specific justification - this task's scope (fix the known,
+    already-flagged duplicate-scan bug) is complete.
+  - notes: this is the third instance of the exact same
+    `hasDefinitionFamilyPath` O(N)-scan bug pattern fixed this session
+    across three different, unrelated containers/subsystems
+    (`SemanticsValidator::program_.definitions`/`paramsByDef_` in
+    TODO-4742; `Context::sourceDefs` here). The 6 duplicate lambdas
+    TODO-4743 originally catalogued are now down to 2 remaining unfixed
+    (`SemanticsValidatorBuildCallResolution.cpp` and similar were
+    already fixed in TODO-4743 itself; the leaf-name-keyed scan at
+    `TemplateMonomorphExpressionRewrite.h:1279` and
+    `TemplateMonomorphMethodTargets.h`'s own smaller-container scans
+    noted in TODO-4743 remain, on the smaller `ctx.helperOverloads`
+    container or requiring a different index shape).

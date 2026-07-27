@@ -221,6 +221,9 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       }
     }
   }
+  if (!clones.empty()) {
+    ctx.sourceDefsFamilyPathIndexValid = false;
+  }
 
   return true;
 }
