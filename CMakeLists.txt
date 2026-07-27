@@ -341,6 +341,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOperatorMemoryPointerHelpers.cpp
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
+  src/ir_lowerer/IrLowererRecursionAnalysis.cpp
   src/ir_lowerer/IrLowererRequirementContractHelpers.cpp
   src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp
   src/ir_lowerer/IrLowererResultMetadataHelpers.cpp
@@ -707,6 +708,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_direct_call_diagnostics.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_function_table_diagnostics.cpp
+    tests/unit/ir_pipeline/test_ir_pipeline_recursion_analysis.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_pow_helper_rejects_mixed_signed_unsigned_operands.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_conversions_helper_rejects_immutable_assign_target.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_result_helpers_try_emit_result_ok_method_calls.cpp
