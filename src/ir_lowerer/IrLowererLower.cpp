@@ -60,6 +60,50 @@
 namespace primec {
 using namespace ir_lowerer;
 
+namespace {
+
+// The mutable per-function-body lowering state that must be fully reset
+// before lowering a new IrFunction body. Previously a hand-maintained
+// lambda listing these fields individually - a new per-body field added
+// anywhere in the lowering pipeline could silently be missed there,
+// corrupting state when a body is reused (see the driver refactor notes
+// for this session). A named struct makes the field list something a
+// future change has to look at and extend, not something to remember.
+//
+// Holds references, not owned storage - the fields still live in
+// LowerSetupStageState / LowerReturnEmitStageState. `function` and
+// `locals` are deliberately NOT included here: their construction differs
+// per caller (entry lowering derives `function`'s metadata from entry
+// effect/capability masks; the existing callable-orchestration path
+// derives it from a semantic-product callable summary instead), and there
+// isn't yet a single shared "locals" mechanism between the two lowering
+// paths in this codebase - folding either in is left for the refactor
+// step that decides how a generalized per-body lowering loop reuses (or
+// doesn't reuse) that existing orchestration path.
+struct PerBodyLoweringResetState {
+  int32_t &onErrorTempCounter;
+  bool &sawReturn;
+  ir_lowerer::LowerReturnEmitInlineContext *&activeInlineContext;
+  std::unordered_set<std::string> &inlineStack;
+  std::vector<std::vector<int32_t>> &fileScopeStack;
+  std::optional<OnErrorHandler> &currentOnError;
+  std::optional<ResultReturnInfo> &currentReturnResult;
+  int32_t &nextLocal;
+
+  void reset() {
+    onErrorTempCounter = 0;
+    sawReturn = false;
+    activeInlineContext = nullptr;
+    inlineStack.clear();
+    fileScopeStack.clear();
+    currentOnError.reset();
+    currentReturnResult.reset();
+    nextLocal = 0;
+  }
+};
+
+} // namespace
+
 bool IrLowerer::lower(const Program &program,
                       const SemanticProgram *semanticProgram,
                       const std::string &entryPath,
@@ -211,6 +255,17 @@ bool IrLowerer::lower(const Program &program,
                     auto &emitInlineDefinitionCall =
                         activeReturnEmitStage.emitInlineDefinitionCall;
 
+                    PerBodyLoweringResetState perBodyResetState{
+                        onErrorTempCounter,
+                        sawReturn,
+                        activeInlineContext,
+                        inlineStack,
+                        fileScopeStack,
+                        currentOnError,
+                        currentReturnResult,
+                        nextLocal,
+                    };
+
                     return ir_lowerer::runLowerStatementsCallsStage(
                         {
                             .program = &program,
@@ -344,15 +399,8 @@ bool IrLowerer::lower(const Program &program,
                                       },
                                       callError);
                                 },
-                            .resetDefinitionLoweringState = [&]() {
-                              onErrorTempCounter = 0;
-                              sawReturn = false;
-                              activeInlineContext = nullptr;
-                              inlineStack.clear();
-                              fileScopeStack.clear();
-                              currentOnError.reset();
-                              currentReturnResult.reset();
-                            },
+                            .resetDefinitionLoweringState =
+                                [&]() { perBodyResetState.reset(); },
                         },
                         stageError);
                   },
