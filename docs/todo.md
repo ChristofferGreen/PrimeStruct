@@ -3310,6 +3310,137 @@ This file is the live open-work queue for PrimeStruct.
     silently miscompiled programs, not a failing test), this warrants a
     dedicated, reviewed effort rather than continued exploratory
     implementation in the same sitting that already covered Phase 0.
+  - progress_2026-07-27c (driver refactor toward Phase 1, steps 1-3
+    landed, step 4a inventory done, paused before 4b per plan): user
+    asked to refactor the ir_lowerer driver specifically to make
+    "this kind of change" (lowering more than one function body)
+    easier to make and reason about, as a separate scoped precursor to
+    Phase 1 itself - not Phase 1's Call/CallVoid emission. Plan
+    written and reviewed by a Plan agent before implementation (full
+    plan: 4 steps, see commits below); the review corrected two
+    assumptions and found a second instance of the "whole-program work
+    trapped behind one call site" bug pattern already known from Step
+    1's original TODO-4742-class fixes.
+    - Step 1 (commit a0ed489): `runLowerEntrySetup`
+      (`IrLowererLowerEntrySetup.cpp`) fused genuinely entry-specific
+      setup with four validations that are actually whole-program
+      scoped (11-fact-family completeness matrix +
+      validateNativeNoSoftwareNumericTypes +
+      validateNativeNoRuntimeReflectionQueries +
+      validateNativeProgramEffects). Extracted into
+      `validateWholeProgramForLowering`, same call site, same order,
+      same inputs - pure extraction.
+    - Step 2 (commit dc8e92d): investigated threading an explicit
+      `isEntryDefinition` flag through `runLowerEntrySetup`/
+      `runLowerLocalsSetup` as planned, but found both remaining
+      entry-only call paths (`resolveEntryMetadataMasks` +
+      require-contract rejection; `buildEntryCountAccessSetup`'s
+      argc/argv binding) are already unambiguously entry-only by
+      construction, not accidentally-entry-only-by-single-caller like
+      Step 1's bug - so documented the two seams in place instead of
+      threading an always-true flag through several more layers
+      speculatively.
+    - Step 3 (commit 05307ad): replaced the hand-maintained
+      `resetDefinitionLoweringState` lambda in `IrLowererLower.cpp`
+      with a named `PerBodyLoweringResetState` struct (reference
+      members: `onErrorTempCounter`, `sawReturn`,
+      `activeInlineContext`, `inlineStack`, `fileScopeStack`,
+      `currentOnError`, `currentReturnResult`, `nextLocal`) + one
+      `reset()` method, so a newly-added per-body field has to be
+      added to a typed struct instead of possibly being missed from
+      an implicit lambda-body contract. `function`/`locals`
+      deliberately excluded (see Step 3 commit message).
+      All three steps verified via the same-container stash/pop
+      methodology from Phase 0: `PrimeStruct_backend_ir_tests` and
+      `PrimeStruct_compile_run_tests` both produced identical pass/fail
+      counts (1677/45 and 2215/620) and near-identical failing-name
+      sets (only the same cosmetic per-run diffs already characterized
+      in Phase 0) at every step, plus (new for this refactor, since
+      "tests still pass" is weaker evidence than "output is
+      byte-identical" for a pure refactor) byte-for-byte identical
+      serialized `IrModule` output for a representative stdlib-importing
+      fixture, confirmed before/after each step.
+    - Step 4a (this note, no code changes - read-only inventory):
+      catalogued every variable in scope at the point
+      `runLowerReturnEmitStage` (`IrLowererLowerReturnEmitStage.cpp`)
+      splices in its 8 fragment headers
+      (`IrLowererLowerReturnInfo.h`, `IrLowererLowerSumHelpers.h`,
+      `IrLowererLowerInlineCalls.h`, `IrLowererLowerEmitExpr.h`,
+      `IrLowererLowerOperators.h`, `IrLowererLowerStatementsExpr.h`,
+      `IrLowererLowerStatementsBindings.h`,
+      `IrLowererLowerStatementsLoops.h`, ~9,900 lines total).
+      Per-compile-global (safe to keep shared across bodies):
+      `defMap`, `structNames`, `structFieldInfoByName`,
+      `loweredCallTargets`, `instructionSourceRangesByFunction`
+      (map keyed by function name, so naturally per-body-safe as a
+      shared container), `stringTable`, `onErrorByDef`,
+      `semanticProgram`, the string-interning/runtime-error-emitter
+      helpers, and the type/struct/binding-classification helper
+      closures (`valueKindFromTypeName`, `resolveStructTypeName`,
+      `applyStructArrayInfo`, `resolveStructSlotLayout`,
+      `resolveStructFieldSlot`, `resolveUninitializedTypeInfo`,
+      `resolveUninitializedStorage`, `inferStructExprPath`,
+      `applyStructValueInfo`, `combineNumericKinds`,
+      `isBindingMutable`, `setReferenceArrayInfo`, `bindingKind`,
+      `hasExplicitBindingTypeTransform`, `isStringBinding`,
+      `isFileErrorBinding`, `bindingValueKind`, `getReturnInfo`,
+      `inferExprKind`, `inferArrayElementKind`,
+      `resolveMethodCallDefinition`) - none of these depend on which
+      body is currently being lowered.
+      Per-body (already handled by Step 3's struct):
+      `function`, `sawReturn`, `nextLocal`, `onErrorTempCounter`,
+      `fileScopeStack`, `currentOnError`, `currentReturnResult`,
+      `activeInlineContext`, `inlineStack`.
+      Per-body but NOT yet handled anywhere (the real finding of this
+      inventory): `returnsVoid` (`const bool &` bound once to
+      `entryReturnConfig.returnsVoid` - directly consumed by
+      `tryEmitReturnStatement` at
+      `IrLowererLowerStatementsBindings.h:1488` to validate a body's
+      own top-level `return(...)` statements against its own
+      void-ness; a callee has its own return-void-ness, not the
+      entry's); `hasEntryArgs`/`entryArgsName`/`isEntryArgsName`/
+      `isArrayCountCall`/`isVectorCapacityCall`/`isStringCountCall`
+      (from `entryCountAccessSetup` - argc/argv-style entry-argument
+      detection, directly used at
+      `IrLowererLowerEmitExpr.h:114,1003`,
+      `IrLowererLowerStatementsExpr.h:2532-2544`,
+      `IrLowererLowerStatementsBindings.h:1153`; for a callee body
+      `hasEntryArgs` should simply be `false`, no argv parameter
+      exists); `entryCallOnErrorSetup.hasTailExecution`
+      (`IrLowererLower.cpp` ~line 150, sets
+      `function.metadata.instrumentationFlags |=
+      InstrumentationTailExecution` - needs the callee's own
+      tail-execution check, not the entry's).
+      Favorable finding: the ~20 `emit*`/`resolve*` closures actually
+      DEFINED inside the 8 fragments (`emitExpr`, `emitStatement`,
+      `emitInlineDefinitionCall`, `allocTempLocal`, etc., assigned
+      onto `stateOut.*`) all capture `function`/`nextLocal`/etc. BY
+      REFERENCE, not by value. Since Step 3 already made those
+      referenced slots resettable-in-place (same identity, reset
+      content) rather than requiring rebinding, these closures do NOT
+      need to be rebuilt or the fragment chain re-spliced per body -
+      they keep working correctly against whichever content the
+      shared slots hold after a reset. This means Step 4b does not
+      need to "extract a freestanding lowerOneFunctionBody" (confirmed
+      too large/risky, per the Plan-agent review) - it needs to (a)
+      make `returnsVoid`/`hasEntryArgs`/`entryArgsName`/the count-access
+      classifiers/`hasTailExecution` into per-body mutable slots
+      alongside Step 3's struct, computed from the TARGET definition
+      instead of always the entry, and (b) generalize
+      `emitEntryCallableExecutionWithCleanup`
+      (`IrLowererStatementCallHelpers.cpp:324-371`, currently only
+      ever called with `entryDef` - loops over a definition's
+      `.statements`, calls the already-built `emitStatement` per
+      statement, handles implicit return/cleanup) into the loop body
+      that runs once per definition needing a real `IrFunction`,
+      reusing the same once-built closures each iteration.
+    - Per the refactor plan's explicit checkpoint (closure-capture
+      correctness under looping flagged as the dominant remaining
+      risk): pausing here to confirm this narrower, now-concrete
+      picture of 4b before implementing it, rather than proceeding
+      straight through on the same broader "extract a freestanding
+      function" framing the plan started with and the inventory has
+      since replaced with something smaller and safer.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
