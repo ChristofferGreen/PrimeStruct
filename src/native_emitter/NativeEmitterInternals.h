@@ -495,7 +495,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Core.h"
 #include "NativeEmitterInternalsArm64Io.h"
 
-bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error);
+bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error);
 
 bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, std::string &error);
 

@@ -34,8 +34,9 @@ bool isTerminatorOpcode(IrOpcode op) {
   return op == IrOpcode::Jump || op == IrOpcode::JumpIfZero || isReturnOpcode(op);
 }
 
-bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
+bool stackEffectForOpcode(const IrInstruction &inst, const IrModule &module, StackEffect &out, std::string &error) {
   error.clear();
+  const IrOpcode op = inst.op;
   switch (op) {
     case IrOpcode::PushI32:
     case IrOpcode::PushI64:
@@ -47,7 +48,6 @@ bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
-    case IrOpcode::Call:
       out = {0, 1, 0};
       return true;
     case IrOpcode::FileOpenReadDynamic:
@@ -160,9 +160,21 @@ bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
     case IrOpcode::Jump:
     case IrOpcode::ReturnVoid:
     case IrOpcode::PrintString:
-    case IrOpcode::CallVoid:
       out = {0, 0, 0};
       return true;
+    case IrOpcode::Call:
+    case IrOpcode::CallVoid: {
+      uint32_t parameterCount = 0;
+      if (inst.imm < module.functions.size()) {
+        parameterCount = module.functions[static_cast<size_t>(inst.imm)].parameterCount;
+      }
+      if (parameterCount > std::numeric_limits<uint8_t>::max()) {
+        error = "virtual-register lowering does not support call targets with more than 255 parameters";
+        return false;
+      }
+      out = {static_cast<uint8_t>(parameterCount), static_cast<uint8_t>(op == IrOpcode::Call ? 1 : 0), 0};
+      return true;
+    }
     default:
       error = "unsupported opcode in virtual-register lowering";
       return false;
@@ -267,7 +279,10 @@ bool buildBlockGraph(const IrFunction &function,
   return true;
 }
 
-bool propagateReachableStackDepths(const IrFunction &function, std::vector<BlockBuildInfo> &blocks, std::string &error) {
+bool propagateReachableStackDepths(const IrFunction &function,
+                                   const IrModule &module,
+                                   std::vector<BlockBuildInfo> &blocks,
+                                   std::string &error) {
   error.clear();
   if (blocks.empty()) {
     return true;
@@ -289,7 +304,7 @@ bool propagateReachableStackDepths(const IrFunction &function, std::vector<Block
 
     for (size_t instructionIndex = block.start; instructionIndex < block.end; ++instructionIndex) {
       StackEffect effect;
-      if (!stackEffectForOpcode(function.instructions[instructionIndex].op, effect, error)) {
+      if (!stackEffectForOpcode(function.instructions[instructionIndex], module, effect, error)) {
         return false;
       }
       if (static_cast<int64_t>(effect.pops) > depth) {
@@ -320,7 +335,10 @@ bool propagateReachableStackDepths(const IrFunction &function, std::vector<Block
   return true;
 }
 
-bool lowerFunctionToVirtualRegisters(const IrFunction &function, IrVirtualRegisterFunction &out, std::string &error) {
+bool lowerFunctionToVirtualRegisters(const IrFunction &function,
+                                     const IrModule &module,
+                                     IrVirtualRegisterFunction &out,
+                                     std::string &error) {
   error.clear();
   out = {};
   out.name = function.name;
@@ -339,7 +357,7 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function, IrVirtualRegist
   if (!buildBlockGraph(function, leaders, blockInfo, error)) {
     return false;
   }
-  if (!propagateReachableStackDepths(function, blockInfo, error)) {
+  if (!propagateReachableStackDepths(function, module, blockInfo, error)) {
     return false;
   }
 
@@ -378,7 +396,7 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function, IrVirtualRegist
       }
 
       StackEffect effect;
-      if (!stackEffectForOpcode(loweredInstruction.instruction.op, effect, error)) {
+      if (!stackEffectForOpcode(loweredInstruction.instruction, module, effect, error)) {
         return false;
       }
       if (stack.size() < static_cast<size_t>(effect.pops)) {
@@ -456,7 +474,7 @@ bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module, IrVirtualRegis
   out.functions.resize(module.functions.size());
 
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
-    if (!lowerFunctionToVirtualRegisters(module.functions[functionIndex], out.functions[functionIndex], error)) {
+    if (!lowerFunctionToVirtualRegisters(module.functions[functionIndex], module, out.functions[functionIndex], error)) {
       if (!error.empty()) {
         error = "virtual-register lowering failed in function " + module.functions[functionIndex].name + ": " + error;
       }

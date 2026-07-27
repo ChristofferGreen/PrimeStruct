@@ -2366,13 +2366,16 @@ module {
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
   concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
   widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
-- **IR definition (stable, PSIR v22):**
+- **IR definition (stable, PSIR v23):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
     The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,
     `IrSchemaVersion`, and the supported-version range; serializer implementations
     must use those constants rather than private version literals.
-  - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops
-    with immediates and debug IDs.
+  - **Function:** `{ name, metadata, parameter_count, local_debug_slots, instructions }` where instructions are
+    linear, stack-based ops with immediates and debug IDs. `parameter_count` declares how many leading local slots
+    a callee expects the caller to have populated at call time; it exists for static-analysis passes (stack-depth
+    checkers, the wasm function-type signature) that need to reason about a callee without executing it. Always 0
+    today because lowering still inlines every call rather than emitting `Call`/`CallVoid` targets.
   - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
   - **Instruction:** `{ op, imm, debug_id }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning
     depends on `op`, and `debug_id` is a deterministic per-instruction identifier used for source-map linkage.
@@ -2395,9 +2398,9 @@ module {
       `u32 field_name_len` + bytes, `u32 envelope_len` + bytes, `u32 offset`, `u32 size`, `u32 alignment`,
       `u32 padding_kind`, `u32 category`, `u32 visibility`, `u32 is_static`.
     - `function_count` entries: `u32 name_len` + name bytes, `u64 effect_mask`, `u64 capability_mask`,
-      `u32 scheduling_scope`, `u32 instrumentation_flags`, `u32 local_debug_count`, then `local_debug_count` entries:
-      `u32 slot_index`, `u32 name_len` + name bytes, `u32 type_len` + type bytes, then `u32 instruction_count` and
-      `instruction_count` entries: `u8 opcode` + `u64 imm` + `u32 debug_id`.
+      `u32 scheduling_scope`, `u32 instrumentation_flags`, `u32 parameter_count`, `u32 local_debug_count`, then
+      `local_debug_count` entries: `u32 slot_index`, `u32 name_len` + name bytes, `u32 type_len` + type bytes, then
+      `u32 instruction_count` and `instruction_count` entries: `u8 opcode` + `u64 imm` + `u32 debug_id`.
     - `u32 instruction_source_map_count`, then `instruction_source_map_count` entries:
       `u32 debug_id`, `u32 line`, `u32 column`, `u8 provenance`, `u32 source_unit_len` + source-unit bytes.
   - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v22, VM/native)” section below.
@@ -2415,7 +2418,10 @@ module {
   source-map metadata entries keyed by instruction debug ID (`line`, `column`, `provenance`); v20 adds `FileReadByte`
   for deterministic single-byte file reads with explicit EOF mapping and `HeapFree` for `/std/intrinsics/memory/free`;
   v21 adds `HeapRealloc` for `/std/intrinsics/memory/realloc`; v22 adds per-instruction source-unit/file identity to
-  source-map metadata so VM debug lookup can disambiguate identical line/column positions across source units.
+  source-map metadata so VM debug lookup can disambiguate identical line/column positions across source units; v23
+  adds a per-function `parameter_count` field so static-analysis passes can reason about a callee's expected argument
+  count without executing it, in preparation for lowering to emit real `Call`/`CallVoid` targets instead of always
+  inlining (TODO-4747); it is a pure schema/no-op addition, always 0 until that lowering work lands.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support
     `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
@@ -5447,8 +5453,8 @@ bad_set() {
   opcodes yet.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v22 (adds source-unit/file identity to source-map metadata on top of
-  v21’s `HeapRealloc`, v20’s `FileReadByte` and
+- **PSIR versioning:** current portable IR is PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
+  source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
   v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`,

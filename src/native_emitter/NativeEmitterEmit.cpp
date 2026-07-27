@@ -121,9 +121,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
         layout.needsArgc = true;
       }
     }
-    if (functionIndex == entryIndex) {
+    {
       int64_t maxStack = 0;
-      if (!computeMaxStackDepth(fn, maxStack, error)) {
+      if (!computeMaxStackDepth(fn, module, maxStack, error)) {
         return false;
       }
     }

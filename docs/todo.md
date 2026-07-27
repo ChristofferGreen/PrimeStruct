@@ -103,6 +103,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
 - TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
+- TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 
 ### Priority Lanes
 
@@ -2968,6 +2969,255 @@ This file is the live open-work queue for PrimeStruct.
     leaf level. Not closing TODO-4743 (acceptance target unmet), but
     treating further chasing here as needing fresh scoping/justification
     rather than an open thread to keep pulling on.
+- [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
+  - owner: ai
+  - created_at: 2026-07-27
+  - phase: Compiler architecture / performance
+  - parallel_track: real-function-calls
+  - depends_on: none (found via TODO-4745/4746's "pick a slow test and
+    profile it" pattern, applied to `emitters_cpp_collection_access_and_alias_forwarding_90_91`)
+  - scope: discovered while investigating why
+    `emitters_cpp_collection_access_and_alias_forwarding_90_91` (315s,
+    tests "C++ emitter supports image api contract" /
+    "software renderer command serialization") is so slow. Root cause
+    is NOT a caching bug like TODO-4742/4745/4746: `primec --emit=cpp`
+    on the PNG-decode fixture emits a **15MB, 595,325-line** C++ file
+    (`--first=90 --last=91`'s `primec_cpp_emitter_image_fixture_*.cpp`).
+    Traced to: `src/ir_lowerer/` NEVER emits `IrOpcode::Call`/`CallVoid`
+    (confirmed: zero matches for `IrOpcode::Call` across the whole
+    `src/ir_lowerer/` tree). Every call to a user-defined PrimeStruct
+    function gets fully inlined at lowering time via
+    `prepareInlineDefinitionCallContext`
+    (`src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp:86-136`),
+    which explicitly REJECTS recursive calls as a compile error
+    ("native backend does not support recursive calls") since there is
+    no call-stack mechanism in the real compilation pipeline today -
+    recursion is not a supported PrimeStruct language feature at all
+    currently. Consequence: the whole compiled program becomes exactly
+    ONE `IrFunction` (only one construction site for `IrFunction` in
+    the entire codebase:
+    `src/ir_lowerer/IrLowererStatementCallHelpers.cpp:236`); for the
+    `/std/image/*` PNG/DEFLATE decoder fixture this one function has
+    ~150,000+ IR instructions (confirmed via the C++ emitter's
+    "DispatchChunkSize=1024" auto-chunking:
+    `src/IrToCppEmitter.cpp:600`, ~156 chunks observed for a single
+    `ps_fn_0`). `--emit=vm` stays fast for the same import (~17s post
+    TODO-4743/4745) because bytecode-interpreting ~150K flat
+    instructions is cheap; `--emit=cpp` (and presumably `--emit=exe`/
+    native, `--emit=wasm`) pay for both generating megabytes of text
+    AND handing it to a real downstream compiler.
+    A dedicated Explore-agent audit (full report inline in this
+    session's transcript, not reproduced here in full) found this is
+    NOT starting from zero: `docs/PrimeStruct.md:5445-5447,5456-5463`
+    already documents `Call`/`CallVoid` as existing, PSIR-v16-added
+    opcodes with genuine frame/call-stack semantics in the VM and
+    native backends, added specifically in anticipation of this work
+    but never wired up from `ir_lowerer`. Concretely, per backend:
+    - **VM** (`src/runtime/VmExecutionKernel.cpp`,
+      `VmControlFlowOpcodeShared.cpp`): real per-invocation call
+      frames with independent locals (`VmKernelFrame::locals`),
+      4096 max call depth (`VmExecution.cpp:24`), structurally
+      recursion-capable. 5 existing tests
+      (`tests/unit/vm/test_vm_debug_session*.{cpp,h}`,
+      `test_vm_execution_kernel_boundary.cpp`) hand-build real
+      2-function `IrModule`s bypassing `ir_lowerer` and verify
+      correct caller/callee/return execution end-to-end - genuine,
+      not superficial - but NONE test actual recursion (self-call or
+      mutual A->B->A cycle).
+    - **C++ emitter** (`src/IrToCppEmitter.cpp`,
+      `IrToCppEmitterInstructionEmitter.cpp:550-566`): genuinely
+      emits N separate, independently-callable C++ functions with
+      locals declared inside each (so C++'s own native recursion
+      would work); `Call`/`CallVoid` emit real
+      `ps_fn_N(stack, sp, ...)` calls sharing the operand stack and
+      heap state correctly. Not shallow.
+    - **Native (ARM64) emitter**
+      (`src/native_emitter/NativeEmitterFunctionEmit.cpp:317-348`):
+      real `BL`-style calls with link-register/frame-chain save-restore,
+      per-function stack frames, a genuine growable operand stack via
+      x28. **Confirmed bug**: `computeMaxStackDepth`
+      (`NativeEmitterHelpers.cpp:388-391`) models `Call` as net "+1,
+      consumes 0 args" and `CallVoid` as "+0, consumes 0 args" -
+      wrong for any call that actually passes arguments (never
+      triggered yet since nothing emits real calls) - and this check
+      only runs for the entry function
+      (`NativeEmitterEmit.cpp:124-129`), never for callees.
+    - **wasm emitter** (`src/wasm_emitter/WasmEmitter.cpp:394-406`):
+      emits the genuine wasm `call` opcode; each function gets real
+      per-function wasm locals (naturally fresh per invocation, so
+      recursion-capable). **Confirmed hard blocker**:
+      `inferFunctionType` (`WasmEmitterModule.cpp:44-82`) always
+      leaves `outType.params` empty (`:70`) regardless of actual
+      argument count - wasm's `call` instruction consumes exactly the
+      callee's declared param count, so every emitted wasm function
+      currently has a 0-parameter signature.
+    - **GLSL emitter** (`IrToGlslEmitterFunctionEmitter.cpp:680-697`):
+      functional multi-function support in principle, but GLSL/shader
+      runtimes fundamentally forbid recursion; no recursion
+      restriction is currently enforced for this target.
+    - **`IrFunction`** (`include/primec/Ir.h:241-246`) has NO
+      arity/parameter-count field at all - the root structural gap
+      behind the native-emitter and wasm-emitter bugs above.
+      `IrValidation.cpp:439-444` only checks the call-target function
+      index is in range; no argument-count/type checking exists
+      anywhere. `IrVirtualRegisterLowering.cpp:50-52,163` models
+      `Call`/`CallVoid`'s register-stack-effect with the same
+      hardcoded "0 args" assumption as the native emitter - a
+      codebase-wide pattern, not isolated to one backend.
+    - **Effects/on-error state**: `onErrorByDef`/`inlineStack`/
+      `loweredCallTargets` (`IrLowererInlineCallContextHelpers.cpp`)
+      thread on-error-handler state entirely via direct substitution
+      into the caller's instruction stream at inline time - there is
+      no existing mechanism for this state to cross a real,
+      non-inlined `Call` boundary. This is the one piece requiring
+      genuine new design (not just wiring existing infra), and needs
+      its own investigation into whether PrimeStruct's on-error
+      semantics are lexically tied to the definition (each function
+      bakes its own handling once) or the call site (state must
+      travel with the call).
+  - decisions (made by user 2026-07-27, do not relitigate without
+    asking): (1) recursion SHOULD become a real, supported PrimeStruct
+    language feature once real calls land (not kept rejected) - "we
+    certainly need recursion in the language so we should add that";
+    (2) Phase 1's initial call-emission threshold should be a general
+    heuristic from the start, not narrowly scoped to only the one PNG
+    fixture that surfaced this; (3) Phase 0 (see below) is approved to
+    start immediately as safe, isolated, behavior-preserving work.
+  - implementation_notes / phased plan:
+    - **Phase 0** (safe, zero behavior change - nothing emits `Call`
+      yet so none of this is exercised by any currently-passing test):
+      add `uint32_t parameterCount` to `IrFunction`
+      (`include/primec/Ir.h`); bump `IrSchemaVersion`; fix
+      `NativeEmitterHelpers.cpp`'s `computeMaxStackDepth` to consume
+      `parameterCount` operands for Call/CallVoid instead of the
+      hardcoded 0, and to run for callee functions too, not just the
+      entry function; fix `IrVirtualRegisterLowering.cpp`'s
+      Call/CallVoid stack-effect model the same way; fix
+      `WasmEmitterModule.cpp`'s `inferFunctionType` to populate
+      `outType.params` from `parameterCount`; add an `IrValidation.cpp`
+      sanity check. Verify with a broad regression subset expecting
+      byte-identical results (this phase should be a pure no-op on
+      current behavior).
+    - **Phase 1**: teach `ir_lowerer` to actually emit `Call`/`CallVoid`
+      for a definition instead of inlining it, gated behind a general
+      instruction-count/call-site-count heuristic (per the user's
+      decision, not narrowly scoped to one fixture) - most code should
+      keep inlining exactly as today (preserving current perf for
+      small/leaf functions); only large or heavily-reused definitions
+      switch to real calls. Requires: (a) generating the callee's own
+      argument-popping prologue (`StoreLocal 0..N-1` off the shared
+      operand stack, matching the VM/C++ emitter's existing "callee
+      pops its own args" model) when NOT inlining a definition; (b)
+      wiring VM + C++ emitter first (per the audit, the two most
+      complete backends) before native/wasm. Verification bar is
+      higher than TODO-4742/4745/4746's (which never changed program
+      behavior, only cached an already-correct answer faster): this
+      changes actual runtime control flow, so needs real program-OUTPUT
+      differential testing (inlined-vs-real-call same program, same
+      result), not just compile-success/failing-test-name-set
+      comparison.
+    - **Phase 2**: design and implement on-error/effect state
+      propagation across a real (non-inlined) call boundary - the
+      genuinely novel design work flagged above. Do not start
+      implementing Phase 1's call-emission for any definition that
+      uses on-error/effect handling until this is resolved, or scope
+      Phase 1's initial heuristic to exclude such definitions.
+    - **Phase 3**: recursion support. Per the user's decision, allow
+      it as a supported feature: rely on the VM's existing 4096
+      max-call-depth guard as the stack-overflow safety net; remove/
+      relax `prepareInlineDefinitionCallContext`'s recursive-call
+      rejection once a definition is eligible for real (non-inlined)
+      calling; add first-class recursion test coverage (self-call and
+      mutual A->B->A cycles) - currently zero tests exercise actual
+      recursion anywhere in the codebase.
+    - **Phase 4**: roll out to remaining backends in order: native
+      emitter (after its stack-depth bug from Phase 0 is confirmed
+      fixed and exercised) -> wasm emitter (after its params bug from
+      Phase 0 is confirmed fixed and exercised; wasm has native
+      recursion support, a nice target once ready) -> GLSL emitter
+      stays permanently inline-only / recursion-excluded (shader
+      runtimes fundamentally can't support it).
+  - acceptance: phased - each phase gets its own explicit acceptance
+    bar in its own progress note when implemented, following this
+    session's established pattern (build clean, targeted repro timing
+    improvement where applicable, broad regression subset cross-checked
+    name-by-name against the established baseline, zero regressions).
+    Phase 1 onward additionally requires differential program-OUTPUT
+    verification, not just compile-success comparison, since those
+    phases change runtime control flow.
+  - stop_rule: this is deliberately NOT meant to land in one sitting.
+    After each phase, stop and report progress/timing/verification
+    results rather than silently continuing into the next phase - the
+    phases have materially different risk profiles (Phase 0 is
+    provably safe; Phase 1+ changes runtime semantics; Phase 2 is
+    genuine new design; Phase 3 opens new language-capability surface
+    area) and each deserves its own explicit checkpoint.
+  - notes: this is the highest-leverage finding from this session's
+    "pick a slow test, profile it, fix what's there" approach
+    (TODO-4744/4745/4746) - unlike those three (each a narrow,
+    provably-safe caching fix), this one goes to the root of why the
+    C++/native/wasm backends are disproportionately slow for
+    stdlib-heavy imports (large generated output + real downstream
+    compiler invocation, not redundant computation), and separately
+    closes a real language-capability gap (no recursion) as a
+    consequence. Does not fix TODO-4742/4743/4746's semantics/
+    monomorphization-side costs (those are upstream of this
+    inlining decision - semantic validation and monomorphization must
+    process every reachable definition regardless of the eventual
+    inlining choice) - this is specifically the ir_lowering +
+    backend-emission tail of the pipeline.
+  - progress_2026-07-27 (Phase 0 complete): implemented all 5 Phase 0
+    items. (1) `uint32_t parameterCount = 0;` added to `IrFunction`
+    (`include/primec/Ir.h`) with a doc comment; `IrSchemaVersion` bumped
+    22->23; `IrSerializer.cpp`'s binary (de)serializer updated to
+    write/read the new field (right after `instrumentationFlags`,
+    before `localDebugCount`); the golden byte-fixture test
+    (`test_ir_pipeline_serialization_control_flow_metadata.h`) was
+    regenerated via a standalone throwaway serializer harness and
+    passes. (2) `NativeEmitterHelpers.cpp`'s `computeMaxStackDepth` now
+    takes `const IrModule &module` too and looks up the callee's
+    `parameterCount` via `inst.imm` for `Call`/`CallVoid` stack-delta
+    (`produced - consumed`, where `consumed = callee.parameterCount`)
+    instead of hardcoding 0 args; `NativeEmitterEmit.cpp` now calls it
+    for every function, not just the entry function. (3)
+    `IrVirtualRegisterLowering.cpp`'s `stackEffectForOpcode` threads
+    `const IrModule &` through the same way (`pops = parameterCount`,
+    capped at `uint8_t` max with an explicit error above 255 params);
+    `propagateReachableStackDepths` and `lowerFunctionToVirtualRegisters`
+    now take the module too. (4) `WasmEmitterModule.cpp`'s
+    `inferFunctionType` now sets `outType.params` from
+    `function.parameterCount` (typed i32, matching this backend's
+    existing convention that the general IR local-index space is i32 -
+    see `computeLocalLayout`'s `i32LocalCount`); note this is scoped to
+    exactly what was asked ("fix always-empty params") - the wasm local
+    *indexing* offset between params and body-declared locals is
+    intentionally left for Phase 4's wasm rollout, not Phase 0. (5)
+    `IrValidation.cpp` gained a `MaxCallParameterCount = 4096` sanity
+    bound on the resolved call target's `parameterCount` (guards against
+    corrupted/malformed IR; full call-site argument-count verification
+    needs stack simulation and is deferred to Phase 1, where it becomes
+    semantically meaningful once real calls exist).
+    Verification: full clean build of `primec` + both IR-relevant test
+    binaries. `PrimeStruct_backend_ir_tests` (1715 cases): identical
+    1670 passed / 45 failed with Phase 0 in vs. stashed out - the 3
+    failing cases (`ir lowerer access helper classifies namespaced
+    access helpers`, `...rejects removed rooted vector access aliases`,
+    `semantics validate publishes module artifacts in import order`)
+    reproduce byte-for-byte identically at baseline, confirmed
+    pre-existing and unrelated (likely tied to the in-flight
+    expression-rewrite refactor, not this epic). `PrimeStruct_compile_run_tests`
+    (2835 cases): 2215/620 with Phase 0 vs 2214/621 at baseline; a
+    name-level diff of the two failing-case lists showed zero cases
+    unique to either run - the only diffs were cosmetic (random
+    per-run `.primec_test_scratch/session_<hex>` directory names
+    embedded in file paths, and doctest stdout/stderr interleaving
+    ordering) - so this is the same pre-existing failure set (this repo
+    already tracks several unrelated in-progress "fix failing tests"
+    epics), not a regression. Phase 0 is confirmed behavior-preserving
+    as designed. Per this TODO's own stop_rule, stopping here to report
+    rather than starting Phase 1 (real call emission) in the same
+    sitting - Phase 1 has a materially different risk profile and needs
+    its own checkpoint.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

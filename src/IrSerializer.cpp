@@ -162,6 +162,7 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     appendU64(out, fn.metadata.capabilityMask);
     appendU32(out, static_cast<uint32_t>(fn.metadata.schedulingScope));
     appendU32(out, fn.metadata.instrumentationFlags);
+    appendU32(out, fn.parameterCount);
     if (fn.localDebugSlots.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
       error = "too many local debug slots for IR serialization";
       return false;
@@ -335,6 +336,11 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       error = "truncated IR function metadata";
       return false;
     }
+    uint32_t parameterCount = 0;
+    if (!readU32(data, offset, parameterCount)) {
+      error = "truncated IR function parameter count";
+      return false;
+    }
     uint32_t localDebugCount = 0;
     if (!readU32(data, offset, localDebugCount)) {
       error = "truncated IR local debug metadata count";
@@ -346,6 +352,7 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     fn.metadata.capabilityMask = capabilityMask;
     fn.metadata.schedulingScope = static_cast<IrSchedulingScope>(schedulingScope);
     fn.metadata.instrumentationFlags = instrumentationFlags;
+    fn.parameterCount = parameterCount;
     fn.localDebugSlots.reserve(localDebugCount);
     for (uint32_t localIndex = 0; localIndex < localDebugCount; ++localIndex) {
       uint32_t slotIndex = 0;

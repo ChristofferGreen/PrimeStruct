@@ -14,7 +14,7 @@
 #endif
 
 namespace primec::native_emitter {
-bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error) {
+bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error) {
   if (fn.instructions.empty()) {
     error = "native backend requires at least one instruction";
     return false;
@@ -249,7 +249,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "Unknown";
     }
   };
-  auto stackDelta = [](IrOpcode op) -> int32_t {
+  auto stackDelta = [&module](const IrInstruction &inst) -> int32_t {
+    const IrOpcode op = inst.op;
     switch (op) {
       case IrOpcode::PushI32:
       case IrOpcode::PushI64:
@@ -386,9 +387,14 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::FileWriteByte:
         return -1;
       case IrOpcode::Call:
-        return 1;
-      case IrOpcode::CallVoid:
-        return 0;
+      case IrOpcode::CallVoid: {
+        int64_t consumed = 0;
+        if (inst.imm < module.functions.size()) {
+          consumed = static_cast<int64_t>(module.functions[static_cast<size_t>(inst.imm)].parameterCount);
+        }
+        const int64_t produced = (op == IrOpcode::Call) ? 1 : 0;
+        return static_cast<int32_t>(produced - consumed);
+      }
       default:
         return 0;
     }
@@ -406,7 +412,7 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
     int64_t currentDepth = depth[index];
     maxDepth = std::max(maxDepth, currentDepth);
     const auto &inst = fn.instructions[index];
-    int64_t nextDepth = currentDepth + stackDelta(inst.op);
+    int64_t nextDepth = currentDepth + stackDelta(inst);
     if (nextDepth < 0) {
       error = "native backend detected invalid stack usage at instruction " + std::to_string(index) + " (" +
               opcodeName(inst.op) + ")";

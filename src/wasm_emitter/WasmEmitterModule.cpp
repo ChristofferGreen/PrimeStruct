@@ -69,6 +69,12 @@ bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, st
   }
   outType.params.clear();
   outType.results.clear();
+  // Leading locals populated from caller-pushed arguments become wasm params.
+  // IR locals carry no per-slot type today (see computeLocalLayout, which
+  // treats the general local-index space as i32), so parameters are typed
+  // i32 for now until real call lowering (TODO-4747) threads per-parameter
+  // types through IrFunction.
+  outType.params.assign(function.parameterCount, WasmValueTypeI32);
   if (hasReturnI32) {
     outType.results.push_back(WasmValueTypeI32);
   } else if (hasReturnI64) {

@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 22u;
+constexpr uint32_t IrSchemaVersion = 23u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -241,6 +241,12 @@ struct IrInstructionSourceMapEntry {
 struct IrFunction {
   std::string name;
   IrExecutionMetadata metadata;
+  // Number of leading local slots populated from caller-pushed arguments at
+  // call time. Static-analysis passes (native emitter stack-depth checker,
+  // the register scheduler, the wasm emitter's function-type signature)
+  // need this to reason about a callee without executing it. Always 0 today
+  // because lowering never emits real Call/CallVoid targets yet.
+  uint32_t parameterCount = 0;
   std::vector<IrLocalDebugSlot> localDebugSlots;
   std::vector<IrInstruction> instructions;
 };

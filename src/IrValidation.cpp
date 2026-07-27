@@ -11,6 +11,7 @@ namespace {
 constexpr uint8_t MinOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
 constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::FileWriteStringDynamic);
 constexpr uint64_t MaxGlslLocalIndex = 1023;
+constexpr uint32_t MaxCallParameterCount = 4096;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule |
@@ -440,6 +441,10 @@ bool validateFunction(const IrModule &module,
       case IrOpcode::CallVoid:
         if (inst.imm >= module.functions.size()) {
           return failInstruction(functionIndex, function.name, instructionIndex, "invalid call target", error);
+        }
+        if (module.functions[static_cast<size_t>(inst.imm)].parameterCount > MaxCallParameterCount) {
+          return failInstruction(
+              functionIndex, function.name, instructionIndex, "call target parameter count exceeds supported limit", error);
         }
         break;
       case IrOpcode::LoadLocal:
