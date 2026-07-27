@@ -334,6 +334,67 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
   return true;
 }
 
+// Everything this function checks is whole-program scoped (numeric-type,
+// reflection-query, semantic-product completeness, and effect-mask
+// validation over `program`/`semanticProgram` as a whole) - it only takes
+// `entryDef`/`entryPath` because one of the 11 completeness-matrix checks
+// and the effect-mask checks need them, not because the work itself is
+// entry-specific. It must only ever run once per compile; a future
+// per-function-body lowering loop must not call this (or `runLowerEntrySetup`,
+// which calls it) once per body.
+bool validateWholeProgramForLowering(const Program &program,
+                                     const Definition &entryDef,
+                                     const SemanticProgram *semanticProgram,
+                                     const std::string &entryPath,
+                                     const std::vector<std::string> &defaultEffects,
+                                     const std::vector<std::string> &entryDefaultEffects,
+                                     IrValidationTarget validationTarget,
+                                     std::string &error) {
+  const bool useNativeEffectSurface = validationTarget == IrValidationTarget::Native;
+  const bool useGpuEffectSurface = validationTarget == IrValidationTarget::Glsl;
+  if ((useNativeEffectSurface && !validateNativeNoSoftwareNumericTypes(semanticProgram, error)) ||
+      (useGpuEffectSurface && !validateGpuNoSoftwareNumericTypes(semanticProgram, error)) ||
+      (!useNativeEffectSurface && !useGpuEffectSurface &&
+       !validateNoSoftwareNumericTypesForBackendSurface(semanticProgram, "native backend", error))) {
+    return false;
+  }
+  if ((useNativeEffectSurface &&
+       !validateNativeNoRuntimeReflectionQueries(semanticProgram, error)) ||
+      (useGpuEffectSurface &&
+       !validateGpuNoRuntimeReflectionQueries(semanticProgram, error)) ||
+      (!useNativeEffectSurface && !useGpuEffectSurface &&
+       !validateNoRuntimeReflectionQueriesForBackendSurface(semanticProgram, "native backend", error))) {
+    return false;
+  }
+  if (!validateSemanticProductCompletenessMatrix(
+          program, entryDef, semanticProgram, error)) {
+    return false;
+  }
+  if ((validationTarget == IrValidationTarget::Vm &&
+       !validateVmProgramEffects(
+           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
+      (useNativeEffectSurface &&
+       !validateNativeProgramEffects(
+           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
+      (useGpuEffectSurface &&
+       !validateGpuProgramEffects(
+           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
+      (validationTarget != IrValidationTarget::Vm &&
+       !useNativeEffectSurface &&
+       !useGpuEffectSurface &&
+       !validateProgramEffectsForBackendSurface(
+           program,
+           semanticProgram,
+           entryPath,
+           defaultEffects,
+           entryDefaultEffects,
+           "native backend",
+           error))) {
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 bool runLowerEntrySetup(const Program &program,
@@ -370,46 +431,14 @@ bool runLowerEntrySetup(const Program &program,
             entryDefOut->fullPath + ": " + entryContractChecks.front().sourceText;
     return false;
   }
-  const bool useNativeEffectSurface = validationTarget == IrValidationTarget::Native;
-  const bool useGpuEffectSurface = validationTarget == IrValidationTarget::Glsl;
-  if ((useNativeEffectSurface && !validateNativeNoSoftwareNumericTypes(semanticProgram, error)) ||
-      (useGpuEffectSurface && !validateGpuNoSoftwareNumericTypes(semanticProgram, error)) ||
-      (!useNativeEffectSurface && !useGpuEffectSurface &&
-       !validateNoSoftwareNumericTypesForBackendSurface(semanticProgram, "native backend", error))) {
-    return false;
-  }
-  if ((useNativeEffectSurface &&
-       !validateNativeNoRuntimeReflectionQueries(semanticProgram, error)) ||
-      (useGpuEffectSurface &&
-       !validateGpuNoRuntimeReflectionQueries(semanticProgram, error)) ||
-      (!useNativeEffectSurface && !useGpuEffectSurface &&
-       !validateNoRuntimeReflectionQueriesForBackendSurface(semanticProgram, "native backend", error))) {
-    return false;
-  }
-  if (!validateSemanticProductCompletenessMatrix(
-          program, *entryDefOut, semanticProgram, error)) {
-    return false;
-  }
-  if ((validationTarget == IrValidationTarget::Vm &&
-       !validateVmProgramEffects(
-           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
-      (useNativeEffectSurface &&
-       !validateNativeProgramEffects(
-           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
-      (useGpuEffectSurface &&
-       !validateGpuProgramEffects(
-           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
-      (validationTarget != IrValidationTarget::Vm &&
-       !useNativeEffectSurface &&
-       !useGpuEffectSurface &&
-       !validateProgramEffectsForBackendSurface(
-           program,
-           semanticProgram,
-           entryPath,
-           defaultEffects,
-           entryDefaultEffects,
-           "native backend",
-           error))) {
+  if (!validateWholeProgramForLowering(program,
+                                       *entryDefOut,
+                                       semanticProgram,
+                                       entryPath,
+                                       defaultEffects,
+                                       entryDefaultEffects,
+                                       validationTarget,
+                                       error)) {
     return false;
   }
   if (!resolveEntryMetadataMasks(*entryDefOut,
