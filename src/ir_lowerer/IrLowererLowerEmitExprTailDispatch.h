@@ -1253,15 +1253,20 @@
                                                           localMap,
                                                           hasEntryArgs,
                                                           entryArgsName,
-                                                          semanticProgram);
+                                                          semanticProgram,
+                                                          tailDispatchSemanticIndexPtr);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return primec::ir_lowerer::isStringCountCall(callExpr,
                                                            localMap,
-                                                           semanticProgram);
+                                                           semanticProgram,
+                                                           tailDispatchSemanticIndexPtr);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return primec::ir_lowerer::isVectorCapacityCall(callExpr, localMap);
+              return primec::ir_lowerer::isVectorCapacityCall(callExpr,
+                                                              localMap,
+                                                              semanticProgram,
+                                                              tailDispatchSemanticIndexPtr);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return resolveMethodCallDefinition(callExpr, localMap);
@@ -1506,15 +1511,20 @@
                                                           localMap,
                                                           hasEntryArgs,
                                                           entryArgsName,
-                                                          semanticProgram);
+                                                          semanticProgram,
+                                                          tailDispatchSemanticIndexPtr);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return primec::ir_lowerer::isVectorCapacityCall(callExpr, localMap);
+              return primec::ir_lowerer::isVectorCapacityCall(callExpr,
+                                                              localMap,
+                                                              semanticProgram,
+                                                              tailDispatchSemanticIndexPtr);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return primec::ir_lowerer::isStringCountCall(callExpr,
                                                            localMap,
-                                                           semanticProgram);
+                                                           semanticProgram,
+                                                           tailDispatchSemanticIndexPtr);
             },
             [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
               return isEntryArgsName(targetExpr, localMap);

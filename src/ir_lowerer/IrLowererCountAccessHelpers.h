@@ -76,11 +76,30 @@ bool isArrayCountCall(const Expr &expr,
                       bool hasEntryArgs,
                       const std::string &entryArgsName,
                       const SemanticProgram *semanticProgram);
+// Takes a caller-owned, pre-built semantic index instead of rebuilding one
+// on every call - prefer this overload whenever a SemanticProductIndex is
+// already available in scope (e.g. callResolutionAdapters.semanticProductTargets.semanticIndex).
+bool isArrayCountCall(const Expr &expr,
+                      const LocalMap &localsIn,
+                      bool hasEntryArgs,
+                      const std::string &entryArgsName,
+                      const SemanticProgram *semanticProgram,
+                      const SemanticProductIndex *semanticIndex);
 bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn);
+bool isVectorCapacityCall(const Expr &expr,
+                          const LocalMap &localsIn,
+                          const SemanticProgram *semanticProgram,
+                          const SemanticProductIndex *semanticIndex);
 bool isStringCountCall(const Expr &expr, const LocalMap &localsIn);
 bool isStringCountCall(const Expr &expr,
                        const LocalMap &localsIn,
                        const SemanticProgram *semanticProgram);
+// Takes a caller-owned, pre-built semantic index instead of rebuilding one
+// on every call - see isArrayCountCall's equivalent overload above.
+bool isStringCountCall(const Expr &expr,
+                       const LocalMap &localsIn,
+                       const SemanticProgram *semanticProgram,
+                       const SemanticProductIndex *semanticIndex);
 StringCountCallEmitResult tryEmitStringCountCall(
     const Expr &expr,
     const LocalMap &localsIn,

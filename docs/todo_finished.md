@@ -25696,3 +25696,124 @@ real answer.
   - resolution: fixed. Also serves as a second, independent data point
     for TODO-4743's ASan verification methodology actually catching
     real bugs, not just theoretical risk.
+
+**Todo Completion (July 27, 2026) — TODO-4745**
+
+- [x] TODO-4745: Fix redundant per-call semantic-product index rebuild in ir_lowerer count-call classifiers
+  - owner: ai
+  - created_at: 2026-07-27
+  - phase: Compiler performance
+  - parallel_track: ir-lowering-perf
+  - scope: user asked to pick a handful of individual slow tests and
+    optimize those, rather than chasing the diffuse semantics-side cost
+    TODO-4743 already stopped on. Took the top slowest shards from a
+    full `compile_run` suite run (`Testing/Temporary/CTestCostData.txt`
+    plus the raw ctest log): 4 shards each over 550s -
+    `smoke_core_paths_newly_exposed_2026_07_16_113_122` (722.49s),
+    `_83_92` (671.54s), `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+    (583.76s), `_123_129` (558.12s). The `smoke_core_paths` family are
+    PNG/PPM wasm-wasi decode tests exercising `import /std/image/*`,
+    the same pathological import that motivated TODO-4742/4743.
+    Reproduced the single worst case standalone (`compile_emit_wasm_png_sub.prime`
+    from `test_compile_run_smoke_core_wasm_wasi_png_decode.cpp`) with a
+    tiny throwaway `main()`: `--emit=wasm --wasm-profile wasi` took
+    96.77s. Added a temporary call counter + `PRIMEC_DEBUG_INDEX_COUNT`
+    env-gated `fprintf` to `buildSemanticProductIndex`
+    (src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp) and
+    found it was called **63,627 times** in that one compile - each
+    call rebuilds 8 separate fact-type hashtable indices
+    (`SemanticProductIndexBuilder::build()`) from the semantic product's
+    fact lists. `gdb -p <pid> -batch -ex "bt"` sampling (matching
+    TODO-4742/4743's methodology) plus a scripted breakpoint
+    (`ignore 1 5000` then `continue`, `bt 15`) traced the hot caller to
+    `isArrayCountCall`'s 5-arg overload
+    (src/ir_lowerer/IrLowererCountAccessHelpers.cpp:1128, originally)
+    - called from a lambda in
+    `IrLowererLowerEmitExprTailDispatch.h`'s
+    `tryEmitInlineCallDispatchWithLocals`/
+    `tryEmitNativeCallTailDispatchWithLocals` call sites (2 occurrences)
+    - itself reached via `emitArithmeticOperatorExpr` per-expression
+    during statement/return lowering. `isStringCountCall`'s 3-arg
+    overload (same file) has the identical bug and is called from the
+    same 2 dispatch sites. A correctly-cached 6-arg/4-arg overload pair
+    already existed (taking a caller-owned `const SemanticProductIndex
+    *`) and was already used correctly by `makeIsArrayCountCall`/
+    `makeIsStringCountCall`/`makeIsVectorCapacityCall` (which build the
+    index once via a `shared_ptr`) - but these efficient overloads were
+    declared only as private forward-declarations inside the .cpp file,
+    not exposed in the header, so the two dispatch call sites couldn't
+    reach them and fell back to the always-rebuild overloads instead.
+    Correctness of caching is unconditional here (unlike TODO-4742's
+    semantics-side fix, which needed invalidation logic): `semanticProgram`
+    is a fully immutable, already-finalized semantic product for the
+    entire ir_lowerer phase, so `buildSemanticProductIndex(semanticProgram)`
+    is a pure function of unchanging state - any two calls with the
+    same `semanticProgram` produce byte-identical index content, making
+    reuse trivially safe with no cache-invalidation risk at all.
+  - implementation: added the efficient 6-arg `isArrayCountCall`,
+    4-arg `isStringCountCall`, and 4-arg `isVectorCapacityCall`
+    overload declarations to `IrLowererCountAccessHelpers.h` (previously
+    only forward-declared privately in the .cpp, now genuinely reusable
+    - they already had external linkage, just weren't exposed); removed
+    the now-redundant duplicate forward declarations from the .cpp.
+    Updated both dispatch call sites in
+    `IrLowererLowerEmitExprTailDispatch.h` (the
+    `tryEmitInlineCallDispatchWithLocals` and
+    `tryEmitNativeCallTailDispatchWithLocals` argument lambdas, 3
+    lambdas each = 6 call sites total) to pass the already-in-scope
+    `tailDispatchSemanticIndexPtr` (built once per lowering pass via
+    `callResolutionAdapters.semanticProductTargets.semanticIndex`,
+    already used elsewhere in the same file for other classifiers)
+    instead of only `semanticProgram`, routing through the cached-index
+    overloads. Removed the temporary debug instrumentation before
+    committing.
+  - acceptance: met.
+    - Re-ran the exact standalone repro
+      (`compile_emit_wasm_png_sub.prime`) with the call counter still
+      attached: `buildSemanticProductIndex` call count dropped from
+      63,627 to 17 (all 17 traced via gdb to the legitimate one-time
+      per-compile-phase setup functions, e.g.
+      `buildSemanticProductTargetAdapter`/`makeCallResolutionAdapters`
+      - not a hot loop, no further chasing needed). Wall time: 96.77s
+      -> 29.36s (~3.3x).
+    - Re-ran the 3 originally-slowest `smoke_core_paths_newly_exposed`
+      shards via ctest: `_123_129` 558.12s -> 167.00s (~3.3x), `_113_122`
+      722.49s -> 229.28s (~3.15x), both passing (unchanged from
+      baseline). `_83_92` still fails, but confirmed pre-existing and
+      unrelated - the failure is "sh: 1: ./primevm: not found" (the
+      `primevm` binary was never built in this build directory across
+      the whole session, a local environment gap, not a code
+      regression), and the same shard failed identically with the same
+      error in the pre-fix baseline run.
+    - Ran a ~319-test regression subset combining TODO-4743's usual
+      collections/templates/overloads/imports pattern plus
+      `vm_outputs_ir_and_output_modes` and the slowest
+      `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312` shard:
+      62 failures, all individually cross-checked against the pre-fix
+      full-suite baseline log and confirmed pre-existing (including the
+      1 shard - `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+      itself - not previously part of the regression subset's pattern
+      set; its `***Failed` status matches the baseline exactly). Zero
+      regressions.
+    - Timing on the broader subset's other slow shards:
+      `vm_outputs_ir_and_output_modes_basics_1_10_7_7` 280.04s -> 63.10s
+      (~4.4x); `vm_collections_collections_newly_exposed_2026_07_16_523_532`
+      281.52s -> 191.50s (~1.5x); `_533_542` 242.53s -> 198.92s (~1.2x).
+      `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312` itself
+      showed no improvement (583.76s -> 597.81s, within noise) - this
+      fix's dispatch call sites are in the wasm/native tail-dispatch
+      path, not whatever the C++ emitter's own lowering uses to reach
+      the same slow classifiers (if it does at all); noted as a
+      separate, unaddressed hot path, not chased further this session
+      per the user's "pick a handful of tests" scoping.
+  - stop_rule: n/a - fix landed and verified within the originally
+    scoped "handful of tests" effort.
+  - notes: found via the user's explicit redirection away from
+    TODO-4743's diffuse-cost chase toward picking specific slow tests
+    and optimizing those individually - a materially different, more
+    tractable bug than what TODO-4743's stop_rule described (a single,
+    fixable per-call-site cache-miss bug, not an architectural
+    limitation). The C++ emitter's still-slow lowering path
+    (`emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`,
+    ~584-598s) is a natural next target if more of this style of
+    targeted optimization is wanted.

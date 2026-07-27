@@ -1050,21 +1050,6 @@ IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entr
   };
 }
 
-bool isArrayCountCall(const Expr &expr,
-                      const LocalMap &localsIn,
-                      bool hasEntryArgs,
-                      const std::string &entryArgsName,
-                      const SemanticProgram *semanticProgram,
-                      const SemanticProductIndex *semanticIndex);
-bool isStringCountCall(const Expr &expr,
-                       const LocalMap &localsIn,
-                       const SemanticProgram *semanticProgram,
-                       const SemanticProductIndex *semanticIndex);
-bool isVectorCapacityCall(const Expr &expr,
-                          const LocalMap &localsIn,
-                          const SemanticProgram *semanticProgram,
-                          const SemanticProductIndex *semanticIndex);
-
 IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName) {
   return makeIsArrayCountCall(hasEntryArgs, entryArgsName, nullptr);
 }
