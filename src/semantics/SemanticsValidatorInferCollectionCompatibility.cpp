@@ -874,7 +874,7 @@ std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_
   }
 
   RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
-  std::string_view helperName;
+  std::string helperName;
   bool preserveArrayPath = false;
   if (!resolveRemovedCollectionHelperReference(rawMethodName, namespacePrefix, family, helperName, preserveArrayPath)) {
     return "";
@@ -893,7 +893,7 @@ std::string SemanticsValidator::methodRemovedCollectionCompatibilityPath(
   }
 
   RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
-  std::string_view helperName;
+  std::string helperName;
   bool preserveArrayPath = false;
   if (!resolveRemovedCollectionHelperReference(
           candidate.name, candidate.namespacePrefix, family, helperName, preserveArrayPath)) {
@@ -1035,7 +1035,7 @@ std::string SemanticsValidator::getRemovedRootedVectorDirectCallDiagnostic(
 
 bool SemanticsValidator::shouldPreserveRemovedCollectionHelperPath(const std::string &path) const {
   RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
-  std::string_view helperName;
+  std::string helperName;
   bool preserveArrayPath = false;
   if (!resolveRemovedCollectionHelperReference(path, "", family, helperName, preserveArrayPath)) {
     return false;

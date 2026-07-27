@@ -103,7 +103,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
 - TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
-- TODO-4744: Fix dangling string_view returned by resolveRemovedCollectionHelperReference
 
 ### Priority Lanes
 
@@ -2969,71 +2968,6 @@ This file is the live open-work queue for PrimeStruct.
     leaf level. Not closing TODO-4743 (acceptance target unmet), but
     treating further chasing here as needing fresh scoping/justification
     rather than an open thread to keep pulling on.
-- [ ] TODO-4744: Fix dangling string_view returned by resolveRemovedCollectionHelperReference
-  - owner: ai
-  - created_at: 2026-07-27
-  - phase: Correctness / memory safety
-  - parallel_track: none
-  - scope: found by an ASan-instrumented regression run while verifying
-    TODO-4743's lifetime-audit fix (unrelated to that fix - confirmed by
-    differential testing, see TODO-4743's progress_2026-07-27 note).
-    `resolveRemovedCollectionHelperReference`
-    (src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h:753-814)
-    takes `std::string_view &helperNameOut` as an output parameter. On
-    the `resolveKeyValueCompatibilityUnrootedPath` path (line 809-812),
-    it declares a genuinely local `std::string helperName;`, then calls
-    `setMap(helperName)` (a local lambda, line 772) which does
-    `helperNameOut = helperName;` - assigning a view into the LOCAL
-    string's buffer. Once `resolveRemovedCollectionHelperReference`
-    returns, `helperName` is destroyed and `helperNameOut` is left
-    dangling in the caller. Confirmed via a live AddressSanitizer
-    `stack-use-after-return` report (4 identical instances in one
-    ~23-test ASan slice): the caller
-    (`removedCollectionMethodPath`, same file, line 816) passes this
-    dangling view into `isPublishedKeyValueBaseHelperName`, which reads
-    freed stack memory via `resolveStdlibSurfaceMemberName` ->
-    `stripResolvedPathSpecializationSuffix`
-    (src/StdlibSurfaceRegistry.cpp:926). Reachable from real user code:
-    the call chain in the ASan report is
-    `validateNumericBuiltinExpr -> isNumericExpr -> inferExprReturnKind
-    -> inferPreDispatchCallReturnKind -> getVectorMutatorHelperName ->
-    explicitRemovedCollectionMethodPath
-    (SemanticsValidatorInferCollectionCompatibility.cpp:882) ->
-    removedCollectionMethodPath -> isPublishedKeyValueBaseHelperName`,
-    i.e. ordinary expression-return-kind inference on collection method
-    calls, not an obscure/benchmark-only path. A same-run ASan slice
-    also showed elevated doctest assertion-failure counts in nearby
-    collections test shards (up to 9 failed in one shard, vs ~2-4
-    typical) - not yet confirmed whether those are caused by this
-    corruption's unpredictable blast radius or are a separate issue;
-    worth re-checking once this is fixed.
-  - implementation_notes: the fix is almost certainly to change
-    `helperNameOut` from `std::string_view &` to `std::string &`
-    (or have `resolveRemovedCollectionHelperReference` return the
-    resolved name by value/into a caller-owned `std::string`) so the
-    data survives the function's return - check all callers of
-    `resolveRemovedCollectionHelperReference` and `setMap`/`setVectorLike`
-    for any other places that assign a view into a soon-to-be-destroyed
-    local before deciding the exact signature change. Also check
-    whether `removedCollectionMethodPath`'s own `std::string_view
-    helperName` parameter is safe (it forwards the caller's own
-    argument through unchanged, likely fine, but verify).
-  - acceptance:
-    - `resolveRemovedCollectionHelperReference`'s ASan repro (any
-      compile_run case reaching the `resolveKeyValueCompatibilityUnrootedPath`
-      branch, e.g. the `vm_collections_alias_and_basics`/
-      `array_and_wrapper_shadows` shards from TODO-4743's ASan run) is
-      clean under AddressSanitizer.
-    - Full `compile_run` CTest suite shows the identical failing-test-
-      name set before and after, OR fewer failures if the elevated
-      shard-level failure counts noted above turn out to be caused by
-      this corruption.
-  - stop_rule: if fixing the signature requires touching many call
-    sites and the diff grows large, pause and confirm scope before
-    continuing - this is a correctness bug, not urgent enough to
-    justify a rushed wide-reaching change.
-  - notes: discovered as a side effect of TODO-4743's ASan
-    verification; unrelated to TODO-4743's own scope.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

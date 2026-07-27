@@ -754,7 +754,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
     std::string_view rawMethodName,
     std::string_view namespacePrefix,
     RemovedCollectionHelperFamily &familyOut,
-    std::string_view &helperNameOut,
+    std::string &helperNameOut,
     bool &preserveArrayPathOut) {
   rawMethodName = trimLeadingSlash(rawMethodName);
   namespacePrefix = trimLeadingSlash(namespacePrefix);
@@ -764,7 +764,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
     if (!isPublishedVectorMutatorHelperName(helperName)) {
       return false;
     }
-    helperNameOut = helperName;
+    helperNameOut = std::string(helperName);
     familyOut = RemovedCollectionHelperFamily::VectorLike;
     preserveArrayPathOut = preserveArrayPath;
     return true;
@@ -773,7 +773,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
     if (!isPublishedKeyValueBaseHelperName(helperName)) {
       return false;
     }
-    helperNameOut = helperName;
+    helperNameOut = std::string(helperName);
     familyOut = RemovedCollectionHelperFamily::Map;
     preserveArrayPathOut = false;
     return true;

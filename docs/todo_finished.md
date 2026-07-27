@@ -25622,3 +25622,77 @@ real answer.
   - resolution: closed without implementation, superseded by TODO-4742
     (see docs/todo.md) which found a bounded, low-risk fix this
     investigation's own recommendation pointed toward but did not reach.
+
+**Todo Completion (July 27, 2026) — TODO-4744**
+
+- [x] TODO-4744: Fix dangling string_view returned by resolveRemovedCollectionHelperReference
+  - owner: ai
+  - created_at: 2026-07-27
+  - phase: Correctness / memory safety
+  - parallel_track: none
+  - scope: found by an ASan-instrumented regression run while verifying
+    TODO-4743's lifetime-audit fix (unrelated to that fix - confirmed by
+    differential testing, see TODO-4743's progress_2026-07-27 note).
+    `resolveRemovedCollectionHelperReference`
+    (src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h:753-814)
+    takes `std::string_view &helperNameOut` as an output parameter. On
+    the `resolveKeyValueCompatibilityUnrootedPath` path (line 809-812),
+    it declares a genuinely local `std::string helperName;`, then calls
+    `setMap(helperName)` (a local lambda, line 772) which does
+    `helperNameOut = helperName;` - assigning a view into the LOCAL
+    string's buffer. Once `resolveRemovedCollectionHelperReference`
+    returns, `helperName` is destroyed and `helperNameOut` is left
+    dangling in the caller. Confirmed via a live AddressSanitizer
+    `stack-use-after-return` report (4 identical instances in one
+    ~23-test ASan slice): the caller
+    (`removedCollectionMethodPath`, same file, line 816) passes this
+    dangling view into `isPublishedKeyValueBaseHelperName`, which reads
+    freed stack memory via `resolveStdlibSurfaceMemberName` ->
+    `stripResolvedPathSpecializationSuffix`
+    (src/StdlibSurfaceRegistry.cpp:926). Reachable from real user code:
+    the call chain in the ASan report is
+    `validateNumericBuiltinExpr -> isNumericExpr -> inferExprReturnKind
+    -> inferPreDispatchCallReturnKind -> getVectorMutatorHelperName ->
+    explicitRemovedCollectionMethodPath
+    (SemanticsValidatorInferCollectionCompatibility.cpp:882) ->
+    removedCollectionMethodPath -> isPublishedKeyValueBaseHelperName`,
+    i.e. ordinary expression-return-kind inference on collection method
+    calls, not an obscure/benchmark-only path.
+  - implementation: changed `resolveRemovedCollectionHelperReference`'s
+    `helperNameOut` parameter from `std::string_view &` to
+    `std::string &`; `setVectorLike`/`setMap` now assign
+    `std::string(helperName)` (an owned copy) instead of a raw view
+    into the callee's locals. Updated all 3 call sites
+    (SemanticsValidatorInferCollectionCompatibility.cpp: 
+    `shouldPreserveRemovedCollectionHelperPath`,
+    `explicitRemovedCollectionMethodPath`,
+    `methodRemovedCollectionCompatibilityPath`) to declare
+    `std::string helperName;` instead of `std::string_view helperName;`
+    - both downstream uses (`removedCollectionMethodPath(family,
+    helperName, ...)`, which takes `std::string_view` by value, and
+    `helperName == "at"` comparisons) work unchanged via implicit
+    conversion. Audited the rest of the header file for the same
+    pattern (a `std::string_view &...Out` parameter fed from a locally-
+    owned `std::string`) and confirmed no other function has it -
+    `resolveKeyValueCompatibilityMemberToken`/
+    `resolveKeyValueCompatibilityUnrootedPath` already correctly use
+    `std::string &` output parameters.
+  - acceptance: met.
+    - Re-ran the exact test file that produced the original ASan
+      report (`test_compile_run_vm_collections_array_and_wrapper_shadows.cpp`,
+      30 test cases) directly through the ASan-instrumented doctest
+      binary: 30/30 passed, 111/111 assertions passed, no
+      AddressSanitizer report of any kind - the elevated assertion-
+      failure count noted in the original filing (up to 9 failed in
+      this shard) is gone, confirming it was caused by this corruption.
+    - Ran the same ~241-test non-ASan regression subset used to verify
+      TODO-4743 against the fixed build: 61 failures, byte-identical
+      failing-test-name set to every prior run in this session's
+      history, zero regressions. (Did not re-run the full un-scoped
+      compile_run suite for this specific fix, given the change is a
+      narrowly-scoped, mechanical type change plus 3 call-site updates,
+      already covered by ASan plus a large regression subset.)
+  - finished_at: 2026-07-27
+  - resolution: fixed. Also serves as a second, independent data point
+    for TODO-4743's ASan verification methodology actually catching
+    real bugs, not just theoretical risk.
