@@ -399,6 +399,54 @@ main() {
   CHECK(result == 1);
 }
 
+TEST_CASE("native backend emits one real call for a non-recursive definition called from multiple sites") {
+  // TODO-4747 Part B: real Call/CallVoid emission is no longer limited to
+  // recursive definitions - a definition called from 2+ distinct sites now
+  // also gets one shared IrFunction instead of an inlined copy at each call
+  // site (the actual code-bloat problem this epic set out to fix - see
+  // docs/todo.md's TODO-4747 entry). A single-call-site definition is left
+  // inlined exactly as before (see "ir lowers definition call by inlining"
+  // above, which still checks for an inlined AddI32 in main's own body).
+  const std::string source = R"(
+[return<i32>]
+square([i32] x) {
+  return(multiply(x, x))
+}
+
+[return<int>]
+main() {
+  return(plus(plus(square(2i32), square(3i32)), square(4i32)))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[1].name == "/square");
+
+  int callCount = 0;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::Call) {
+      CHECK(inst.imm == 1);
+      ++callCount;
+    }
+  }
+  CHECK(callCount == 3);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 29);
+}
+
 TEST_CASE("ir lowers implicit void return") {
   const std::string source = R"(
 [return<void>]

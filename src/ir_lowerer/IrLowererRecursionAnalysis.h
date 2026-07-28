@@ -28,16 +28,20 @@ std::unordered_set<std::string> findRecursiveDefinitionPaths(const Program &prog
 std::unordered_set<std::string> findReachableDefinitionPaths(const Program &program,
                                                               const std::string &entryPath);
 
-// Returns the fullPaths of definitions that (a) are self- or
-// mutually-recursive, (b) are reachable from `entryPath`, (c) are not
-// `entryPath` itself (the entry has its own dedicated lowering path and is
-// never one of the bodies the real-call body-lowering loop iterates - a
-// self-recursive entry keeps today's rejection behavior), and (d) pass a
-// conservative, purely static shape check: every parameter and the return
-// type (if any) must resolve, via a plain explicit type transform (no
-// template args, no args-pack, no `mut`), to a scalar valueKindFromTypeName
-// result (Int32/Int64/UInt64/Float32/Float64/Bool) or void; the definition
-// must not be a struct/sum/compute definition, have an on_error handler, or
+// Returns the fullPaths of definitions that (a) are reachable from
+// `entryPath` but are not `entryPath` itself (the entry has its own
+// dedicated lowering path and is never one of the bodies the real-call
+// body-lowering loop iterates - a self-recursive entry keeps today's
+// rejection behavior), (b) are either self-/mutually-recursive OR called
+// from 2+ distinct call sites in the program (a definition inlined at only
+// one site gains nothing from a real Call - see kMinCallSitesForRealCall
+// in the .cpp - so single-call-site definitions are left inlined exactly
+// as before this analysis existed), and (c) pass a conservative, purely
+// static shape check: every parameter and the return type (if any) must
+// resolve, via a plain explicit type transform (no template args, no
+// args-pack, no `mut`), to a scalar valueKindFromTypeName result
+// (Int32/Int64/UInt64/Float32/Float64/Bool) or void; the definition must
+// not be a struct/sum/compute definition, have an on_error handler, or
 // itself use `try(...)`/the `?` postfix (both desugar to the same "try"
 // call at parse time - see ParserExpr.cpp). `mut` scalar parameters are
 // PrimeStruct's out-parameter mechanism (the inline path passes the

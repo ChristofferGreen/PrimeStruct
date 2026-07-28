@@ -1,11 +1,13 @@
 #include "IrLowererLowerStatementsCallsStage.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererLowerStatementsCallsStep.h"
 #include "IrLowererLowerStatementsEntryExecutionStep.h"
 #include "IrLowererLowerStatementsEntryStatementStep.h"
 #include "IrLowererLowerStatementsFunctionTableStep.h"
 #include "IrLowererRecursionAnalysis.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -166,22 +168,60 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
 
       input.function->name = def.fullPath;
       input.function->parameterCount = static_cast<uint32_t>(def.parameters.size());
-      const auto activeEffects =
-          resolveActiveEffects(def.transforms, false, *input.defaultEffects, *input.entryDefaultEffects);
-      if (!resolveEffectMask(def.transforms,
-                             false,
-                             *input.defaultEffects,
-                             *input.entryDefaultEffects,
-                             input.function->metadata.effectMask,
-                             errorOut)) {
-        return false;
-      }
-      if (!resolveCapabilityMask(
-              def.transforms, activeEffects, def.fullPath, input.function->metadata.capabilityMask, errorOut)) {
-        return false;
+      // Match lowerCallableDefinitionOrchestration's precedence
+      // (IrLowererStatementCallHelpers.cpp): prefer the semantic-product's
+      // transitively-computed active effects/capabilities when available -
+      // resolveEffectMask(def.transforms, ...) only sees this definition's
+      // own declared transforms, which can be a narrower mask than what the
+      // definition's body actually does (e.g. via effects an inlined callee
+      // contributes), a soundness gap for target effect-mask enforcement
+      // (see IrValidation.cpp's wasm/browser allowed-mask check).
+      if (const auto *callableSummary =
+              findSemanticProductCallableSummary(input.semanticProgram, def.fullPath);
+          callableSummary != nullptr) {
+        input.function->metadata.effectMask = 0;
+        for (const auto &effect : callableSummary->activeEffects) {
+          uint64_t bit = 0;
+          if (!effectBitForName(effect, bit)) {
+            errorOut = "unsupported effect in metadata: " + effect;
+            return false;
+          }
+          input.function->metadata.effectMask |= bit;
+        }
+        input.function->metadata.capabilityMask = 0;
+        for (const auto &capability : callableSummary->activeCapabilities) {
+          uint64_t bit = 0;
+          if (!effectBitForName(capability, bit)) {
+            errorOut = "unsupported capability in metadata: " + capability;
+            return false;
+          }
+          input.function->metadata.capabilityMask |= bit;
+        }
+      } else {
+        if (input.semanticProgram != nullptr) {
+          errorOut = "missing semantic-product callable summary: " + def.fullPath;
+          return false;
+        }
+        const auto activeEffects =
+            resolveActiveEffects(def.transforms, false, *input.defaultEffects, *input.entryDefaultEffects);
+        if (!resolveEffectMask(def.transforms,
+                               false,
+                               *input.defaultEffects,
+                               *input.entryDefaultEffects,
+                               input.function->metadata.effectMask,
+                               errorOut)) {
+          return false;
+        }
+        if (!resolveCapabilityMask(
+                def.transforms, activeEffects, def.fullPath, input.function->metadata.capabilityMask, errorOut)) {
+          return false;
+        }
       }
       input.function->metadata.schedulingScope = IrSchedulingScope::Default;
-      input.function->metadata.instrumentationFlags = 0;
+      input.function->metadata.instrumentationFlags =
+          hasTailExecutionCandidate(def.statements, returnInfo.returnsVoid, input.isTailCallCandidate)
+              ? InstrumentationTailExecution
+              : 0;
 
       // The eligibility scan already verified every parameter statically
       // resolves to a scalar type - re-derive it here with the identical

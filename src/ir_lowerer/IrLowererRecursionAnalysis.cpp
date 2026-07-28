@@ -131,6 +131,48 @@ std::unordered_map<std::string, std::vector<std::string>> buildCallEdgeMap(const
   return edges;
 }
 
+// Total number of call *sites* targeting each definition, across the whole
+// program - i.e. how many places would each get an inlined copy of the
+// callee's body today. This is a flat count of edges (not distinct
+// callers): three calls to the same helper from the same caller still
+// count as three, since inlining duplicates the body at each one. Used to
+// decide which non-recursive definitions are worth a real Call instead of
+// inlining - see computeRealCallEligibleDefinitionPaths.
+//
+// Deliberately walks only `def.statements`, not `buildCallEdgeMap`'s
+// combined statements+returnExpr traversal: the parser copies a top-level
+// `return(...)` statement's inner expression into `def.returnExpr` *in
+// addition to* leaving the full return statement in `def.statements`
+// (ParserCoreBodyStatements.cpp) - walking both double-counts every call
+// nested inside a return statement. `findRecursiveDefinitionPaths`/
+// `findReachableDefinitionPaths` are set-membership checks so that
+// duplication was harmless for them; it is not harmless for a count. Some
+// synthetically-generated definitions set `returnExpr` without a matching
+// statement, so this can under-count call sites for those specifically -
+// safe, since under-counting only keeps a definition inlined rather than
+// wrongly switching it to a real call.
+std::unordered_map<std::string, size_t> countCallSitesByDefinitionPath(const Program &program) {
+  std::unordered_map<std::string, size_t> counts;
+  for (const Definition &def : program.definitions) {
+    std::vector<std::string> calleeList;
+    for (const Expr &stmt : def.statements) {
+      collectCallEdges(stmt, calleeList);
+    }
+    for (const std::string &callee : calleeList) {
+      ++counts[callee];
+    }
+  }
+  return counts;
+}
+
+// A definition inlined at only one call site gains nothing from a real
+// Call - one inlined copy is exactly as much code as one shared function
+// plus a Call instruction, so there is no reason to take on the (small but
+// nonzero) risk of changing its lowering path. Two or more call sites is
+// where inlining starts duplicating the body, which is the actual
+// motivating problem (see docs/todo.md's TODO-4747 entry).
+constexpr size_t kMinCallSitesForRealCall = 2;
+
 bool hasOnlyScalarParameters(const Definition &def) {
   for (const Expr &param : def.parameters) {
     if (isArgsPackBinding(param)) {
@@ -276,10 +318,8 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
                                                                        const std::string &entryPath) {
   const std::unordered_set<std::string> recursive = findRecursiveDefinitionPaths(program);
-  if (recursive.empty()) {
-    return {};
-  }
   const std::unordered_set<std::string> reachable = findReachableDefinitionPaths(program, entryPath);
+  const std::unordered_map<std::string, size_t> callSiteCounts = countCallSitesByDefinitionPath(program);
 
   std::unordered_map<std::string, const Definition *> byPath;
   byPath.reserve(program.definitions.size());
@@ -288,7 +328,7 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
   }
 
   std::unordered_set<std::string> eligible;
-  for (const std::string &path : recursive) {
+  for (const std::string &path : reachable) {
     if (path == entryPath) {
       // The entry always has its own dedicated lowering path (argc/argv
       // binding, whole-program validation) and is never one of the bodies
@@ -297,8 +337,13 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       // name. Keep today's rejection behavior for entry self-recursion.
       continue;
     }
-    if (reachable.find(path) == reachable.end()) {
-      continue;
+    const bool isRecursive = recursive.find(path) != recursive.end();
+    if (!isRecursive) {
+      const auto countIt = callSiteCounts.find(path);
+      const size_t siteCount = countIt != callSiteCounts.end() ? countIt->second : 0;
+      if (siteCount < kMinCallSitesForRealCall) {
+        continue;
+      }
     }
     const auto defIt = byPath.find(path);
     if (defIt == byPath.end()) {

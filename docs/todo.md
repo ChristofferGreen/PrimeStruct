@@ -3671,6 +3671,91 @@ This file is the live open-work queue for PrimeStruct.
     narrows an already-conservative filter and no currently-passing
     test exercises a recursive `mut`-parameter or `try`-using
     definition, confirmed by grep before assuming zero risk).
+  - progress_2026-07-28d (TODO-4747 "Part B" - extended real-call
+    eligibility beyond recursion to ordinary, heavily-reused
+    definitions, the actual fix for this epic's original motivation: a
+    15MB/595K-line generated C++ file from universal inlining of a
+    stdlib-heavy import):
+    1. Design: `computeRealCallEligibleDefinitionPaths` now accepts a
+       definition if it is self-/mutually-recursive **or** called from
+       2+ distinct call sites program-wide (`kMinCallSitesForRealCall`,
+       `IrLowererRecursionAnalysis.cpp`) - a single-call-site definition
+       gains nothing from a real Call (one inlined copy is exactly as
+       much code as one shared function plus a Call instruction) so
+       those stay inlined exactly as before. Considered and rejected an
+       instruction-count threshold for this pass: it requires lowering
+       to measure, which is circular before eligibility runs; call-site
+       count is measurable purely from the existing AST-level call
+       graph and directly targets the "inlining duplicates this body N
+       times" problem.
+    2. Bug found and fixed along the way: `countCallSitesByDefinitionPath`
+       initially reused `buildCallEdgeMap`'s combined
+       statements+returnExpr traversal - the parser copies a top-level
+       `return(...)` statement's inner expression into `def.returnExpr`
+       *in addition to* leaving the full return statement in
+       `def.statements` (`ParserCoreBodyStatements.cpp`), so walking
+       both double-counts every call nested inside a return statement.
+       `findRecursiveDefinitionPaths`/`findReachableDefinitionPaths` are
+       set-membership checks so this was harmless for them (which is
+       why it was never caught before); it silently made every
+       single-call-site definition look like 2+ call sites and
+       redirected them to real calls too, caught by
+       `test_ir_pipeline_serialization_calls.h`'s pre-existing
+       "ir lowers definition call by inlining" test flipping to failing
+       (`sawAdd` false - the add had moved into a separately-lowered
+       function instead of staying inlined in `main`). Fixed by having
+       `countCallSitesByDefinitionPath` walk only `def.statements`
+       (which already contains the full return statement) rather than
+       reusing `buildCallEdgeMap`.
+    3. Also fixed two metadata gaps in the already-landed real-call
+       body-lowering loop (`IrLowererLowerStatementsCallsStage.cpp`),
+       found by the same research-agent audit that found Part A's bugs:
+       effect/capability masks were computed only from
+       `resolveEffectMask(def.transforms, ...)`, bypassing the
+       semantic-product `callableSummary` path the orchestration path
+       (`lowerCallableDefinitionOrchestration`) prefers when available -
+       a soundness gap, since declared transforms can be a narrower
+       mask than the transitively-computed active effects/capabilities
+       (relevant to wasm/browser target mask enforcement in
+       `IrValidation.cpp`). Now matches the orchestration path's
+       precedence. `instrumentationFlags` was hardcoded to 0, never
+       calling `hasTailExecutionCandidate` the way the orchestration
+       path does - now computed the same way.
+    4. A same-container A/B investigation into an apparent
+       `PrimeStruct_compile_run_tests` regression (2179 passed/659
+       failed, down from an earlier-established ~2214-2215-passed
+       baseline) turned out to be a false alarm: disk was 97% full (1.2GB
+       free) from four unused build directories left over from prior
+       sessions (`build-debug`/`build-clean`/`build-dev`/`build-asan`,
+       ~20GB total, none touched this session, safe build artifacts to
+       delete). After freeing ~22GB the count was still identical
+       (2179/659) - ruling out disk pressure too - and checking out the
+       pre-Phase-1 commit (`2555f2e`, before any of this epic's real-call
+       work) and rerunning the full suite there reproduced the same
+       2179-passed count, with failures pointing at unrelated soa/map
+       machinery ("missing semantic-product local-auto fact",
+       "unaligned indirect address in IR", canonical map method chains -
+       nothing about calls or recursion). This conclusively confirms
+       `PrimeStruct_compile_run_tests`'s current ~2179-passed count is a
+       pre-existing, unrelated baseline in this environment, not caused
+       by any of TODO-4747 Phase 1/Part A/Part B - noted here so a
+       future session doesn't re-chase it as a regression from this
+       work. (The earlier ~2214-2215-passed figures recorded in this
+       same doc were evidently measured under different container/session
+       conditions earlier in this long-running session; root-causing
+       that drift is out of scope here.) The four stale build
+       directories were deleted as routine cleanup regardless.
+    5. Verification: `PrimeStruct_backend_ir_tests` 1695/45 (1694 Part A
+       baseline + 1 new passing multi-call-site regression test, same
+       45 pre-existing failures). Differential VM/C++-emitter check on
+       a definition called from 3 distinct sites
+       (`square([i32] x) { return(multiply(x, x)) }`, called as
+       `square(2)+square(3)+square(4)`): both backends return 29,
+       confirmed by hand via the `primec` CLI, and a permanent
+       structural + VM-execution regression test added to
+       `test_ir_pipeline_serialization_calls.h` (asserts exactly one
+       shared `IrFunction` for `/square`, three `Call` instructions in
+       `main` all targeting index 1, correct VM result).
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
