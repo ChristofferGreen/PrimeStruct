@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <string>
@@ -66,6 +67,14 @@ struct LowerStatementsCallsStageInput {
   std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)>
       buildDefinitionCallContext;
   std::function<void()> resetDefinitionLoweringState;
+
+  // TODO-4747 Phase 1: definitions selected for real (non-inlined)
+  // Call/CallVoid emission, in the fixed order they were assigned
+  // reservation indices 0..N-1 - see computeRealCallEligibleDefinitionPaths
+  // and LowerSetupStageState::realCallEligibleOrder/realCallReservationIndex.
+  // Null/empty when nothing is eligible (the common case today).
+  const std::vector<std::string> *realCallEligibleOrder = nullptr;
+  const std::unordered_map<std::string, uint64_t> *realCallReservationIndex = nullptr;
 };
 
 bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,

@@ -192,16 +192,22 @@ main() {
   CHECK(sawReturn);
 }
 
-TEST_CASE("native backend rejects recursive definition calls") {
+TEST_CASE("native backend rejects recursive definition calls with a non-scalar parameter") {
+  // TODO-4747 Phase 1: self-/mutually-recursive definitions with only
+  // scalar parameters and a scalar-or-void return are now emitted as real
+  // Call/CallVoid instead of being rejected - see
+  // computeRealCallEligibleDefinitionPaths. This still exercises the
+  // fallback rejection path for a recursive definition the static
+  // eligibility scan does not accept (an args-pack parameter here).
   const std::string source = R"(
 [return<int>]
-recur([i32] x) {
-  return(recur(x))
+recur([args<i32>] values) {
+  return(recur([spread] values))
 }
 
 [return<int>]
 main() {
-  return(recur(1i32))
+  return(recur(1i32, 2i32))
 }
 )";
   primec::Program program;
@@ -214,6 +220,106 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("recursive") != std::string::npos);
+}
+
+TEST_CASE("native backend emits a real call for self-recursive scalar definitions") {
+  const std::string source = R"(
+[return<i32>]
+countdown([i32] n) {
+  if(less_than(n, 1i32)) {
+    return(0i32)
+  }
+  return(plus(1i32, countdown(minus(n, 1i32))))
+}
+
+[return<int>]
+main() {
+  return(countdown(5i32))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[1].name == "/countdown");
+  CHECK(module.functions[1].parameterCount == 1);
+
+  bool sawSelfCall = false;
+  for (const auto &inst : module.functions[1].instructions) {
+    if (inst.op == primec::IrOpcode::Call) {
+      CHECK(inst.imm == 1);
+      sawSelfCall = true;
+    }
+  }
+  CHECK(sawSelfCall);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
+TEST_CASE("native backend resolves mutually recursive forward call references") {
+  const std::string source = R"(
+[return<bool>]
+isEven([i32] n) {
+  if(equal(n, 0i32)) {
+    return(true)
+  }
+  return(isOdd(minus(n, 1i32)))
+}
+
+[return<bool>]
+isOdd([i32] n) {
+  if(equal(n, 0i32)) {
+    return(false)
+  }
+  return(isEven(minus(n, 1i32)))
+}
+
+[return<int>]
+main() {
+  if(isEven(6i32)) {
+    return(1i32)
+  }
+  return(0i32)
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 3);
+
+  // Every Call must have been fixed up to a real, in-range function index -
+  // none should still carry the placeholder's (1<<32) high bit.
+  for (const auto &fn : module.functions) {
+    for (const auto &inst : fn.instructions) {
+      if (inst.op == primec::IrOpcode::Call || inst.op == primec::IrOpcode::CallVoid) {
+        CHECK(inst.imm < module.functions.size());
+      }
+    }
+  }
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
 }
 
 TEST_CASE("ir lowers implicit void return") {

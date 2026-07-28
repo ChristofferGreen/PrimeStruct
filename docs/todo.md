@@ -3472,6 +3472,101 @@ This file is the live open-work queue for PrimeStruct.
       sequence is otherwise unchanged from what the Plan-agent-reviewed
       plan proposed, only the "pause and confirm before 4b" checkpoint
       was dropped per explicit instruction.
+  - progress_2026-07-28 (Phase 1a-1e landed: real Call/CallVoid emission
+    for a conservative recursive candidate set, self- and
+    mutually-recursive, first working recursion support in the
+    compiler): continued straight through per standing instruction.
+    - Phase 1a (commit ff4a584, prior session window):
+      `findReachableDefinitionPaths` (BFS over the same
+      `resolvedCallPath` edges `findRecursiveDefinitionPaths` uses) +
+      `computeRealCallEligibleDefinitionPaths` (recursive ∩ reachable ∩
+      a conservative static shape check: every parameter and the
+      return type must resolve via a plain explicit transform - no
+      template args, no args-pack - to a scalar
+      `valueKindFromTypeName` result or void; excludes
+      struct/sum/compute definitions and anything with an `on_error`
+      handler). Deliberately safe to under-approximate, never to
+      over-approximate.
+    - Phase 1b (function-index reservation): added
+      `realCallEligibleOrder`/`realCallReservationIndex` to
+      `LowerSetupStageState`, populated once in `runLowerSetupStage`
+      by sorting `computeRealCallEligibleDefinitionPaths`'s result for
+      determinism and assigning indices 0..N-1. Bound as a local
+      reference in `runLowerReturnEmitStage` (same pattern as the
+      other `setupStage.X` bindings there) so the spliced
+      `IrLowererLowerInlineCalls.h` fragment can read it.
+    - Phase 1c (redirect): `emitInlineDefinitionCall`
+      (`IrLowererLowerInlineCalls.h`) now checks
+      `realCallReservationIndex` before any of its existing inline
+      logic. On a hit: evaluates args in call order via the existing
+      `emitExpr` (relying on the IR being a stack machine - no new
+      arg-passing mechanism needed), then emits `Call`/`CallVoid` with
+      `imm = (1<<32) | reservationIndex` - a placeholder, since the
+      callee's final `module.functions` index isn't known yet (mutual
+      recursion: A may be lowered before B exists). `(1<<32)` is safe
+      as a tag since real function counts never approach 2^32, mirrors
+      the existing native ARM64 emitter's call-fixup pattern
+      (`NativeEmitterCallFixup`) for the same class of problem. Pops
+      the unused return value (`Pop`) when the callee returns non-void
+      but the call site doesn't need the value, matching the stack
+      discipline every other real Call/CallVoid site already assumes.
+    - Phase 1d (body lowering + fixup): extended
+      `runLowerStatementsCallsStage` - after
+      `runLowerStatementsFunctionTableStep` pushes the entry (and any
+      orchestration-lowered callables) into `outModule->functions`,
+      `input.function` (the shared scratch `IrFunction`, now
+      moved-from) is safe to reuse. For each eligible path in
+      `realCallEligibleOrder`: reset per-body state, build a LocalMap
+      of scalar params at indices 0..N-1 (re-deriving each parameter's
+      kind via `extractParameterTypeNameStatic`/
+      `isSupportedScalarTypeName` - now exposed from
+      `IrLowererRecursionAnalysis` rather than trusting the
+      eligibility scan's earlier verdict blindly, failing loudly on
+      mismatch), emit a `StoreLocal N-1..0` prologue, lower the body
+      via the same `runLowerStatementsEntryExecutionStep` the entry
+      uses, and push the built function. A fixup pass then scans every
+      instruction in every function in `outModule->functions` and
+      rewrites any placeholder `Call`/`CallVoid` imm (high bit set at
+      1<<32) to `baseFunctionIndex + reservationIndex`, where
+      `baseFunctionIndex` is `outModule->functions.size()` right
+      before this loop started appending.
+    - Phase 1e (fixtures + verification): added factorial
+      (self-recursion), fibonacci (two recursive calls), and
+      isEven/isOdd (mutual recursion, exercises the forward-reference
+      fixup) - both as ir_pipeline unit tests
+      (`test_ir_pipeline_serialization_calls.h`, checking
+      `module.functions.size()`, that a real `Call` opcode is present
+      with the right imm, and running the result through the VM) and
+      as compile_run tests
+      (`test_compile_run_generic_requirements.cpp`, via
+      `expectBackendsExit` - vm + cpp backends; native isn't available
+      in this sandbox but uses the same helper every other test in
+      that file already does). All three fixtures produce correct
+      results (120, 55, 1) on both the vm and cpp (`--emit=exe`)
+      backends, confirmed by hand via the `primec` CLI before writing
+      the test cases.
+      Updated the one existing test that encoded the *old* limitation
+      as a permanent contract
+      (`test_ir_pipeline_serialization_calls.h`'s "native backend
+      rejects recursive definition calls"): split into a still-rejects
+      case using an args-pack parameter (outside the static
+      eligibility scan) and confirmed this is the *only* newly-failing
+      assertion versus the pre-Phase-1b baseline via the same-container
+      stash/pop failing-test-*name*-set diff (not just counts) - 1687/45
+      baseline vs 1686/46 with the diff isolated to exactly this one
+      test flipping from pass (old: rejects) to fail (new: now
+      compiles), before the test was updated to match; after the
+      update, `PrimeStruct_backend_ir_tests` is 1689/45, i.e. the same
+      45 pre-existing failures plus 2 net new passing test cases (3
+      new recursion tests added, 1 old one replaced).
+      One dead end investigated along the way: an unrelated-looking
+      new failure (`getBuiltinArrayAccessName`/"at" helper-name
+      classification) briefly looked like a regression from this
+      change (same run showed 1686/46 instead of 1687/45) - turned out
+      to be a pre-existing failure already present in the unmodified
+      baseline too (confirmed via the same stash/pop diff); the actual
+      regression was the recursion-rejection test, one line away in
+      the same doctest run's tail output.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

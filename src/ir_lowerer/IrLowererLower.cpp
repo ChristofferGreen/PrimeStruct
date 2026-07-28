@@ -401,6 +401,8 @@ bool IrLowerer::lower(const Program &program,
                                 },
                             .resetDefinitionLoweringState =
                                 [&]() { perBodyResetState.reset(); },
+                            .realCallEligibleOrder = &setupStage.realCallEligibleOrder,
+                            .realCallReservationIndex = &setupStage.realCallReservationIndex,
                         },
                         stageError);
                   },

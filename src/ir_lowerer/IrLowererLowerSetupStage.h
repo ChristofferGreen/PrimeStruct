@@ -52,6 +52,17 @@ struct LowerSetupStageState {
 
   SetupLocalsOrchestration setupLocalsOrchestration{};
   LowerInferenceSetupBootstrapState inferenceSetupBootstrap{};
+
+  // Definitions selected for real (non-inlined) Call/CallVoid emission
+  // (TODO-4747 Phase 1) - see computeRealCallEligibleDefinitionPaths.
+  // realCallEligibleOrder is realCallReservationIndex's keys in the fixed
+  // order they were assigned reservation indices 0..N-1; both are computed
+  // once here and read by the inline-call redirect and the callable-body
+  // lowering loop later in the pipeline. Empty when nothing is eligible
+  // (the common case today - this is a purely additive, deliberately
+  // conservative candidate set).
+  std::vector<std::string> realCallEligibleOrder;
+  std::unordered_map<std::string, uint64_t> realCallReservationIndex;
 };
 
 bool runLowerSetupStage(const LowerSetupStageInput &input,

@@ -2,6 +2,40 @@
                                  const Definition &callee,
                                  const LocalMap &callerLocals,
                                  bool requireValue) -> bool {
+    // TODO-4747 Phase 1: definitions statically identified as safe for real
+    // (non-inlined) Call/CallVoid emission - see
+    // computeRealCallEligibleDefinitionPaths - are redirected here instead of
+    // falling through to the inline path below. `imm` is a placeholder
+    // ((1<<32)|reservationIndex, unambiguous since real function counts never
+    // approach 2^32) rewritten to the callee's final module.functions index by
+    // a fixup pass once every reserved function has been appended (mutual
+    // recursion means the callee's final index isn't known yet here, and may
+    // not even be known when the *caller* is fully lowered, if the caller
+    // comes first in reservation order). Arguments are evaluated in order via
+    // the ordinary emitExpr path and left on the shared operand stack - the
+    // callee's own prologue is responsible for popping them into its locals,
+    // matching the calling convention already used by the native/VM/C++
+    // backends for every existing Call/CallVoid site.
+    if (const auto realCallIt = realCallReservationIndex.find(callee.fullPath);
+        realCallIt != realCallReservationIndex.end()) {
+      ReturnInfo calleeReturnInfo;
+      if (!getReturnInfo(callee.fullPath, calleeReturnInfo)) {
+        error = "internal error: missing return info for real-call target " + callee.fullPath;
+        return false;
+      }
+      for (const Expr &argExpr : callExpr.args) {
+        if (!emitExpr(argExpr, callerLocals)) {
+          return false;
+        }
+      }
+      const uint64_t placeholderImm = (uint64_t(1) << 32) | realCallIt->second;
+      function.instructions.push_back(
+          {calleeReturnInfo.returnsVoid ? IrOpcode::CallVoid : IrOpcode::Call, placeholderImm});
+      if (!calleeReturnInfo.returnsVoid && !requireValue) {
+        function.instructions.push_back({IrOpcode::Pop, 0});
+      }
+      return true;
+    }
     const auto isInternalSoaMetadataInlineHelper =
         [](std::string_view path, std::string_view fieldName) {
           if (path.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) != 0 &&

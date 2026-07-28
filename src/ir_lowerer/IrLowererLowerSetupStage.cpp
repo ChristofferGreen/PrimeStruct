@@ -5,8 +5,11 @@
 #include "IrLowererLowerEntrySetup.h"
 #include "IrLowererLowerImportsStructsSetup.h"
 #include "IrLowererLowerLocalsSetup.h"
+#include "IrLowererRecursionAnalysis.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "primec/SourceLocationMapper.h"
+
+#include <algorithm>
 
 namespace primec::ir_lowerer {
 
@@ -41,6 +44,21 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.hasMathImport = false;
   stateOut.inferenceSetupBootstrap = {};
   stateOut.expandedSource = input.expandedSource;
+  stateOut.realCallEligibleOrder.clear();
+  stateOut.realCallReservationIndex.clear();
+  {
+    std::vector<std::string> ordered;
+    for (const std::string &path :
+        computeRealCallEligibleDefinitionPaths(*input.program, *input.entryPath)) {
+      ordered.push_back(path);
+    }
+    std::sort(ordered.begin(), ordered.end());
+    stateOut.realCallReservationIndex.reserve(ordered.size());
+    for (size_t i = 0; i < ordered.size(); ++i) {
+      stateOut.realCallReservationIndex.emplace(ordered[i], static_cast<uint64_t>(i));
+    }
+    stateOut.realCallEligibleOrder = std::move(ordered);
+  }
 
   uint64_t entryEffectMask = 0;
   uint64_t entryCapabilityMask = 0;

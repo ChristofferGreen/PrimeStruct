@@ -76,6 +76,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &currentOnError = setupStage.currentOnError;
   auto &currentReturnResult = setupStage.currentReturnResult;
   auto &setupLocalsOrchestration = setupStage.setupLocalsOrchestration;
+  auto &realCallReservationIndex = setupStage.realCallReservationIndex;
 
   const auto &runtimeErrorAndStringLiteralSetup =
       setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup;

@@ -11,42 +11,6 @@
 
 namespace primec::ir_lowerer {
 
-namespace {
-
-void collectCallEdges(const Expr &expr, std::vector<std::string> &out) {
-  if (expr.kind == Expr::Kind::Call && !expr.resolvedCallPath.empty()) {
-    out.push_back(expr.resolvedCallPath);
-  }
-  for (const Expr &arg : expr.args) {
-    collectCallEdges(arg, out);
-  }
-  for (const Expr &bodyArg : expr.bodyArguments) {
-    collectCallEdges(bodyArg, out);
-  }
-}
-
-enum class VisitState { Unvisited, OnStack, Done };
-
-struct DfsFrame {
-  size_t pathIndex = 0;
-  size_t edgeIndex = 0;
-};
-
-std::unordered_map<std::string, std::vector<std::string>> buildCallEdgeMap(const Program &program) {
-  std::unordered_map<std::string, std::vector<std::string>> edges;
-  edges.reserve(program.definitions.size());
-  for (const Definition &def : program.definitions) {
-    std::vector<std::string> &calleeList = edges[def.fullPath];
-    for (const Expr &stmt : def.statements) {
-      collectCallEdges(stmt, calleeList);
-    }
-    if (def.returnExpr.has_value()) {
-      collectCallEdges(*def.returnExpr, calleeList);
-    }
-  }
-  return edges;
-}
-
 bool isSupportedScalarTypeName(const std::string &typeName) {
   switch (valueKindFromTypeName(typeName)) {
     case LocalInfo::ValueKind::Int32:
@@ -81,6 +45,42 @@ std::string extractParameterTypeNameStatic(const Expr &paramExpr) {
     return transform.name;
   }
   return {};
+}
+
+namespace {
+
+void collectCallEdges(const Expr &expr, std::vector<std::string> &out) {
+  if (expr.kind == Expr::Kind::Call && !expr.resolvedCallPath.empty()) {
+    out.push_back(expr.resolvedCallPath);
+  }
+  for (const Expr &arg : expr.args) {
+    collectCallEdges(arg, out);
+  }
+  for (const Expr &bodyArg : expr.bodyArguments) {
+    collectCallEdges(bodyArg, out);
+  }
+}
+
+enum class VisitState { Unvisited, OnStack, Done };
+
+struct DfsFrame {
+  size_t pathIndex = 0;
+  size_t edgeIndex = 0;
+};
+
+std::unordered_map<std::string, std::vector<std::string>> buildCallEdgeMap(const Program &program) {
+  std::unordered_map<std::string, std::vector<std::string>> edges;
+  edges.reserve(program.definitions.size());
+  for (const Definition &def : program.definitions) {
+    std::vector<std::string> &calleeList = edges[def.fullPath];
+    for (const Expr &stmt : def.statements) {
+      collectCallEdges(stmt, calleeList);
+    }
+    if (def.returnExpr.has_value()) {
+      collectCallEdges(*def.returnExpr, calleeList);
+    }
+  }
+  return edges;
 }
 
 bool hasOnlyScalarParameters(const Definition &def) {

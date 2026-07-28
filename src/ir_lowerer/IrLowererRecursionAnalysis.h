@@ -47,4 +47,11 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
                                                                        const std::string &entryPath);
 
+// Exposed so real-call body lowering (which must build the exact same
+// parameter/return LocalInfo::ValueKind this eligibility scan already
+// validated) can reuse the identical extraction instead of a second,
+// possibly-diverging implementation.
+bool isSupportedScalarTypeName(const std::string &typeName);
+std::string extractParameterTypeNameStatic(const Expr &paramExpr);
+
 } // namespace primec::ir_lowerer

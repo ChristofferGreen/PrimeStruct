@@ -425,4 +425,79 @@ main() {
        "predicate with available concrete facts."});
 }
 
+// TODO-4747 Phase 1: self- and mutually-recursive definitions with scalar
+// parameters/return now lower to real Call/CallVoid instead of being
+// rejected at compile time. These exercise that path end to end across the
+// vm and cpp backends (not just compile success - the actual numeric
+// result), including the mutual-recursion forward-reference case that
+// depends on the placeholder-imm fixup pass.
+
+TEST_CASE("self-recursive scalar function computes factorial across backends") {
+  const std::string source = R"(
+[return<i32>]
+fact([i32] n) {
+  if(less_than(n, 2i32)) {
+    return(1i32)
+  }
+  return(multiply(n, fact(minus(n, 1i32))))
+}
+
+[return<int>]
+main() {
+  return(fact(5i32))
+}
+)";
+
+  expectBackendsExit("recursion_factorial_self_recursive", source, 120);
+}
+
+TEST_CASE("self-recursive scalar function with two recursive calls computes fibonacci") {
+  const std::string source = R"(
+[return<i32>]
+fib([i32] n) {
+  if(less_than(n, 2i32)) {
+    return(n)
+  }
+  return(plus(fib(minus(n, 1i32)), fib(minus(n, 2i32))))
+}
+
+[return<int>]
+main() {
+  return(fib(10i32))
+}
+)";
+
+  expectBackendsExit("recursion_fibonacci_self_recursive", source, 55);
+}
+
+TEST_CASE("mutually recursive scalar functions resolve forward call references across backends") {
+  const std::string source = R"(
+[return<bool>]
+isEven([i32] n) {
+  if(equal(n, 0i32)) {
+    return(true)
+  }
+  return(isOdd(minus(n, 1i32)))
+}
+
+[return<bool>]
+isOdd([i32] n) {
+  if(equal(n, 0i32)) {
+    return(false)
+  }
+  return(isEven(minus(n, 1i32)))
+}
+
+[return<int>]
+main() {
+  if(isEven(10i32)) {
+    return(1i32)
+  }
+  return(0i32)
+}
+)";
+
+  expectBackendsExit("recursion_mutual_is_even_odd", source, 1);
+}
+
 TEST_SUITE_END();
