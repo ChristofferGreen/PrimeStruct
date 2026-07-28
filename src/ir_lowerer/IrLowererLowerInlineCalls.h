@@ -11,11 +11,14 @@
     // a fixup pass once every reserved function has been appended (mutual
     // recursion means the callee's final index isn't known yet here, and may
     // not even be known when the *caller* is fully lowered, if the caller
-    // comes first in reservation order). Arguments are evaluated in order via
-    // the ordinary emitExpr path and left on the shared operand stack - the
-    // callee's own prologue is responsible for popping them into its locals,
-    // matching the calling convention already used by the native/VM/C++
-    // backends for every existing Call/CallVoid site.
+    // comes first in reservation order). Arguments are resolved to callee
+    // parameter order via the same buildInlineCallOrderedArguments the inline
+    // path below uses (so named arguments and callee-side defaults work
+    // identically here - a naive left-to-right walk of callExpr.args would
+    // silently mis-order or drop them), then evaluated via the ordinary
+    // emitExpr path and left on the shared operand stack - the callee's own
+    // prologue is responsible for popping them into its locals, matching the
+    // calling convention already used by every existing Call/CallVoid site.
     if (const auto realCallIt = realCallReservationIndex.find(callee.fullPath);
         realCallIt != realCallReservationIndex.end()) {
       ReturnInfo calleeReturnInfo;
@@ -23,8 +26,34 @@
         error = "internal error: missing return info for real-call target " + callee.fullPath;
         return false;
       }
-      for (const Expr &argExpr : callExpr.args) {
-        if (!emitExpr(argExpr, callerLocals)) {
+      std::vector<Expr> realCallParams;
+      std::vector<const Expr *> realCallOrderedArgs;
+      std::vector<const Expr *> realCallPackedArgs;
+      size_t realCallPackedParamIndex = 0;
+      if (!ir_lowerer::buildInlineCallOrderedArguments(callExpr,
+                                                       callee,
+                                                       structNames,
+                                                       callerLocals,
+                                                       realCallParams,
+                                                       realCallOrderedArgs,
+                                                       realCallPackedArgs,
+                                                       realCallPackedParamIndex,
+                                                       error)) {
+        return false;
+      }
+      if (!realCallPackedArgs.empty()) {
+        // Eligibility excludes args-pack parameters, so a real-call target
+        // should never produce packed arguments here - fail loudly instead
+        // of silently dropping them.
+        error = "internal error: unexpected packed arguments for real-call target " + callee.fullPath;
+        return false;
+      }
+      for (const Expr *argExpr : realCallOrderedArgs) {
+        if (argExpr == nullptr) {
+          error = "internal error: missing argument for real-call target " + callee.fullPath;
+          return false;
+        }
+        if (!emitExpr(*argExpr, callerLocals)) {
           return false;
         }
       }

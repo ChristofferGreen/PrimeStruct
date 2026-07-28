@@ -267,6 +267,45 @@ main() {
   CHECK(result == 5);
 }
 
+TEST_CASE("native backend real-call redirect resolves omitted defaults and named arguments") {
+  // Regression test: the real-call redirect in IrLowererLowerInlineCalls.h
+  // originally evaluated callExpr.args left-to-right, ignoring named
+  // arguments and callee-side defaults entirely - a call that omitted a
+  // defaulted trailing parameter would push too few values onto the
+  // operand stack for the callee's StoreLocal prologue to consume. Fixed
+  // to reuse buildInlineCallOrderedArguments, same as the inline path.
+  const std::string source = R"(
+[return<i32>]
+countUp([i32] n, [i32] limit{3i32}) {
+  if(equal(n, limit)) {
+    return(n)
+  }
+  return(countUp(plus(n, 1i32), [limit] limit))
+}
+
+[return<int>]
+main() {
+  return(countUp(0i32))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
 TEST_CASE("native backend resolves mutually recursive forward call references") {
   const std::string source = R"(
 [return<bool>]
