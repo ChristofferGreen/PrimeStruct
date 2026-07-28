@@ -29,7 +29,10 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
                                                               const std::string &entryPath);
 
 // Returns the fullPaths of definitions that (a) are self- or
-// mutually-recursive, (b) are reachable from `entryPath`, and (c) pass a
+// mutually-recursive, (b) are reachable from `entryPath`, (c) are not
+// `entryPath` itself (the entry has its own dedicated lowering path and is
+// never one of the bodies the real-call body-lowering loop iterates - a
+// self-recursive entry keeps today's rejection behavior), and (d) pass a
 // conservative, purely static shape check: every parameter and the return
 // type (if any) must resolve, via a plain explicit type transform (no
 // template args, no args-pack), to a scalar valueKindFromTypeName result

@@ -232,6 +232,14 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
 
   std::unordered_set<std::string> eligible;
   for (const std::string &path : recursive) {
+    if (path == entryPath) {
+      // The entry always has its own dedicated lowering path (argc/argv
+      // binding, whole-program validation) and is never one of the bodies
+      // the real-call body-lowering loop iterates - redirecting a
+      // self-recursive entry here would lower it twice under the same
+      // name. Keep today's rejection behavior for entry self-recursion.
+      continue;
+    }
     if (reachable.find(path) == reachable.end()) {
       continue;
     }

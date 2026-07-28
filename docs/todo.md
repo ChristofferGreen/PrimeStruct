@@ -3567,6 +3567,40 @@ This file is the live open-work queue for PrimeStruct.
       baseline too (confirmed via the same stash/pop diff); the actual
       regression was the recursion-rejection test, one line away in
       the same doctest run's tail output.
+      A second, real bug surfaced only by the full
+      `PrimeStruct_compile_run_tests` run (2215/620 baseline captured
+      via the same stash/pop methodology, on the whole ~2800-case
+      suite this time, not just `PrimeStruct_backend_ir_tests`):
+      `computeRealCallEligibleDefinitionPaths` didn't exclude the entry
+      definition itself, so a self-recursive entry (e.g.
+      `test_compile_run_vm_core_variadics.cpp`'s `main() {
+      return(main()) }` fixture) got redirected into a real `Call`
+      targeting a *second*, separately-lowered `IrFunction` also named
+      `/main` - caught by IR validation as "duplicate IR function
+      name: /main" instead of the expected "does not support recursive
+      calls" rejection. Root cause: the entry is always lowered
+      through its own dedicated path (argc/argv binding, whole-program
+      validation) at the top of `runLowerStatementsCallsStage`, never
+      through the `realCallEligibleOrder` body-lowering loop added in
+      Phase 1d - so including `entryPath` in the eligible set means
+      it's silently lowered twice. Fixed by excluding `path ==
+      entryPath` in `computeRealCallEligibleDefinitionPaths` (keeps
+      today's rejection behavior for entry self-recursion - a safe
+      under-approximation, matching the eligibility filter's existing
+      design principle). Added a targeted regression test
+      (`test_ir_pipeline_recursion_analysis.cpp`: "eligibility excludes
+      a self-recursive entry definition") plus re-verified the exact
+      `main() { return(main()) }` fixture via the CLI and confirmed
+      `PrimeStruct_backend_ir_tests` moved from 1689/45 to 1690/45 (the
+      one new regression test now passing, same 45 pre-existing
+      failures) and the previously-broken compile_run test now passes.
+      Did not re-run the full ~2800-case compile_run suite a third
+      time to completion after this fix (each full run takes several
+      minutes and the fix is a pure narrowing of an already-conservative
+      static filter - it can only remove a case from eligibility, never
+      add one, so it cannot introduce new failures beyond the one it
+      fixes); the targeted before/after checks above are the actual
+      evidence trail for this specific bug.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

@@ -297,4 +297,22 @@ TEST_CASE("eligibility accepts mutual recursion with void returns") {
   CHECK(eligible.count("/main/is_odd") == 1u);
 }
 
+TEST_CASE("eligibility excludes a self-recursive entry definition") {
+  // The entry has its own dedicated lowering path (argc/argv binding,
+  // whole-program validation) and is never one of the bodies the real-call
+  // body-lowering loop iterates. Including it here would lower it twice
+  // under the same name - see IrLowererLowerStatementsCallsStage.cpp's
+  // "duplicate IR function name" failure this regression test guards
+  // against. A self-recursive entry, otherwise eligible by shape (scalar
+  // return, no parameters), must still be excluded.
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  addReturnTransform(entry, "i32");
+  entry.statements.push_back(makeCall("/main/entry"));
+  program.definitions = {entry};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
 TEST_SUITE_END();
