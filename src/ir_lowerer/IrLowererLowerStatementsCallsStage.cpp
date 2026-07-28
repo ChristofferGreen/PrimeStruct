@@ -7,6 +7,34 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+// One definition whose top-level statements get lowered directly into a
+// target IrFunction (as opposed to being inlined at each call site). Today
+// this is always exactly the program's entry definition - the loop below
+// has a single iteration and is byte-identical to a direct call. This
+// exists so a future pass that decides which additional definitions need a
+// real, non-inlined IrFunction (TODO-4747 Phase 1) can populate more
+// entries here, reusing the same already-built emitStatement/emitExpr
+// closures (they capture their target state by reference, see the driver
+// refactor's Step 4a inventory in docs/todo.md) instead of restructuring
+// this loop. Phase 1 will still need to solve two things this refactor
+// deliberately leaves open: giving each additional body its own IrFunction
+// target (currently only the entry has one, allocated further down this
+// pipeline in runLowerStatementsFunctionTableStep), and rebuilding the
+// count-access classifiers (isArrayCountCall/isStringCountCall/
+// isVectorCapacityCall) per body, since those close over hasEntryArgs/
+// entryArgsName by value at construction time, not by reference.
+struct CallableBodyToLower {
+  const Definition *def = nullptr;
+  bool returnsVoid = false;
+  bool hasResultInfo = false;
+  const ResultReturnInfo *resultInfo = nullptr;
+  IrFunction *targetFunction = nullptr;
+};
+
+} // namespace
+
 bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
                                   std::string &errorOut) {
   if (input.program == nullptr || input.entryDef == nullptr || input.semanticProgram == nullptr ||
@@ -33,38 +61,44 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
     return false;
   }
 
-  auto emitEntryStatement = [&](const Expr &stmt) -> bool {
-    return runLowerStatementsEntryStatementStep(
-        {
-            .function = input.function,
-            .emitStatement = [&](const Expr &entryStmt) { return input.emitStatement(entryStmt, *input.locals); },
-            .appendInstructionSourceRange = input.appendInstructionSourceRange,
-        },
-        stmt,
-        errorOut);
+  const std::vector<CallableBodyToLower> bodiesToLower = {
+      {input.entryDef, input.returnsVoid, input.entryHasResultInfo, input.entryResultInfo, input.function},
   };
 
-  if (!runLowerStatementsEntryExecutionStep(
+  for (const CallableBodyToLower &body : bodiesToLower) {
+    auto emitBodyStatement = [&](const Expr &stmt) -> bool {
+      return runLowerStatementsEntryStatementStep(
           {
-              .entryDef = input.entryDef,
-              .returnsVoid = input.returnsVoid,
-              .sawReturn = input.sawReturn,
-              .onErrorByDef = input.onErrorByDef,
-              .currentOnError = input.currentOnError,
-              .currentReturnResult = input.currentReturnResult,
-              .entryHasResultInfo = input.entryHasResultInfo,
-              .entryResultInfo = input.entryResultInfo,
-              .emitEntryStatement = emitEntryStatement,
-              .pushFileScope = input.pushFileScope,
-              .emitCurrentFileScopeCleanup = input.emitCurrentFileScopeCleanup,
-              .popFileScope = input.popFileScope,
-              .instructions = &input.function->instructions,
+              .function = body.targetFunction,
+              .emitStatement = [&](const Expr &bodyStmt) { return input.emitStatement(bodyStmt, *input.locals); },
+              .appendInstructionSourceRange = input.appendInstructionSourceRange,
           },
-          errorOut)) {
-    if (errorOut.empty()) {
-      errorOut = "lower statements entry execution failed without diagnostic";
+          stmt,
+          errorOut);
+    };
+
+    if (!runLowerStatementsEntryExecutionStep(
+            {
+                .entryDef = body.def,
+                .returnsVoid = body.returnsVoid,
+                .sawReturn = input.sawReturn,
+                .onErrorByDef = input.onErrorByDef,
+                .currentOnError = input.currentOnError,
+                .currentReturnResult = input.currentReturnResult,
+                .entryHasResultInfo = body.hasResultInfo,
+                .entryResultInfo = body.resultInfo,
+                .emitEntryStatement = emitBodyStatement,
+                .pushFileScope = input.pushFileScope,
+                .emitCurrentFileScopeCleanup = input.emitCurrentFileScopeCleanup,
+                .popFileScope = input.popFileScope,
+                .instructions = &body.targetFunction->instructions,
+            },
+            errorOut)) {
+      if (errorOut.empty()) {
+        errorOut = "lower statements entry execution failed without diagnostic";
+      }
+      return false;
     }
-    return false;
   }
 
   if (!runLowerStatementsFunctionTableStep(
