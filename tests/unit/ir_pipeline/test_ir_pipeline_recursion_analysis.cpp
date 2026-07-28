@@ -41,6 +41,25 @@ primec::Expr makeStructParam(const std::string &name, const std::string &structT
   return param;
 }
 
+primec::Expr makeMutScalarParam(const std::string &name, const std::string &typeName) {
+  primec::Expr param = makeScalarParam(name, typeName);
+  primec::Transform mutTransform;
+  mutTransform.name = "mut";
+  param.transforms.push_back(mutTransform);
+  return param;
+}
+
+// Matches how the parser desugars both `try(expr)` and the `expr?` postfix
+// at parse time (see ParserExpr.cpp) - a Call named "try" wrapping the
+// inner expression.
+primec::Expr makeTryCall(primec::Expr inner) {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.name = "try";
+  call.args.push_back(std::move(inner));
+  return call;
+}
+
 void addReturnTransform(primec::Definition &def, const std::string &typeName) {
   primec::Transform returnTransform;
   returnTransform.name = "return";
@@ -310,6 +329,44 @@ TEST_CASE("eligibility excludes a self-recursive entry definition") {
   addReturnTransform(entry, "i32");
   entry.statements.push_back(makeCall("/main/entry"));
   program.definitions = {entry};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
+TEST_CASE("eligibility rejects a recursive definition with a mut out-parameter") {
+  // [T mut] is PrimeStruct's out-parameter mechanism (the inline path
+  // passes the caller's local by address) - a real call can't replicate
+  // that with a separate locals array, so this must stay excluded even
+  // though the parameter's underlying type is a plain scalar.
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/accumulate"));
+  primec::Definition accumulate = makeDef("/main/accumulate");
+  accumulate.parameters.push_back(makeScalarParam("n", "i32"));
+  accumulate.parameters.push_back(makeMutScalarParam("total", "i32"));
+  addReturnTransform(accumulate, "i32");
+  accumulate.statements.push_back(makeCall("/main/accumulate"));
+  program.definitions = {entry, accumulate};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
+TEST_CASE("eligibility rejects a recursive definition using try") {
+  // A definition with no on_error of its own can still legally use
+  // try(...)/? today, inheriting the caller's dynamically-scoped handler
+  // via the inline path. A real-call callee only ever seeds its handler
+  // from its own on_error transform, so this must stay excluded.
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/parse_step"));
+  primec::Definition parseStep = makeDef("/main/parse_step");
+  parseStep.parameters.push_back(makeScalarParam("n", "i32"));
+  addReturnTransform(parseStep, "i32");
+  parseStep.statements.push_back(makeTryCall(makeCall("/main/parse_helper")));
+  parseStep.statements.push_back(makeCall("/main/parse_step"));
+  program.definitions = {entry, parseStep};
 
   const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
   CHECK(eligible.empty());

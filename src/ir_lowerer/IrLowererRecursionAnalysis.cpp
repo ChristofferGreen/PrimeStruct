@@ -61,6 +61,54 @@ void collectCallEdges(const Expr &expr, std::vector<std::string> &out) {
   }
 }
 
+bool paramHasMutTransform(const Expr &paramExpr) {
+  for (const auto &transform : paramExpr.transforms) {
+    if (transform.name == "mut") {
+      return true;
+    }
+  }
+  return false;
+}
+
+// `try(...)` calls (both the explicit form and the `expr?` postfix, which
+// the parser desugars to `try(expr)` at parse time - see ParserExpr.cpp)
+// read the dynamically-scoped currentOnError handler active at the call
+// site: a definition with no on_error transform of its own can still
+// legally use try/? today, inheriting whatever handler is active where it
+// was inlined. A real-call callee is lowered standalone and only ever
+// seeds currentOnError from its own on_error transform, never from the
+// caller, so this only needs to look at `expr` itself and its own
+// descendants - not through calls it makes, since any callee that itself
+// needs try/? support is excluded on its own terms by this same check.
+bool containsTryUsage(const Expr &expr) {
+  if (expr.kind == Expr::Kind::Call && expr.name == "try") {
+    return true;
+  }
+  for (const Expr &arg : expr.args) {
+    if (containsTryUsage(arg)) {
+      return true;
+    }
+  }
+  for (const Expr &bodyArg : expr.bodyArguments) {
+    if (containsTryUsage(bodyArg)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool definitionUsesTry(const Definition &def) {
+  for (const Expr &stmt : def.statements) {
+    if (containsTryUsage(stmt)) {
+      return true;
+    }
+  }
+  if (def.returnExpr.has_value() && containsTryUsage(*def.returnExpr)) {
+    return true;
+  }
+  return false;
+}
+
 enum class VisitState { Unvisited, OnStack, Done };
 
 struct DfsFrame {
@@ -86,6 +134,15 @@ std::unordered_map<std::string, std::vector<std::string>> buildCallEdgeMap(const
 bool hasOnlyScalarParameters(const Definition &def) {
   for (const Expr &param : def.parameters) {
     if (isArgsPackBinding(param)) {
+      return false;
+    }
+    if (paramHasMutTransform(param)) {
+      // `[T mut]` is PrimeStruct's out-parameter mechanism, not value
+      // semantics: the inline path passes the caller's local by address
+      // (AddressOfLocal/StoreIndirect - see IrLowererInlineParamHelpers.cpp)
+      // so mutations are visible to the caller after the call returns. A
+      // real call copies the value onto the stack into the callee's own,
+      // separate locals array, silently discarding that writeback.
       return false;
     }
     const std::string typeName = extractParameterTypeNameStatic(param);
@@ -253,6 +310,9 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       continue;
     }
     if (!hasOnlyScalarParameters(def) || !hasScalarOrVoidReturn(def)) {
+      continue;
+    }
+    if (definitionUsesTry(def)) {
       continue;
     }
     eligible.insert(path);

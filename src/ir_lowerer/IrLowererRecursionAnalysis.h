@@ -35,9 +35,16 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
 // self-recursive entry keeps today's rejection behavior), and (d) pass a
 // conservative, purely static shape check: every parameter and the return
 // type (if any) must resolve, via a plain explicit type transform (no
-// template args, no args-pack), to a scalar valueKindFromTypeName result
-// (Int32/Int64/UInt64/Float32/Float64/Bool) or void; the definition must not
-// be a struct/sum/compute definition or have an on_error handler.
+// template args, no args-pack, no `mut`), to a scalar valueKindFromTypeName
+// result (Int32/Int64/UInt64/Float32/Float64/Bool) or void; the definition
+// must not be a struct/sum/compute definition, have an on_error handler, or
+// itself use `try(...)`/the `?` postfix (both desugar to the same "try"
+// call at parse time - see ParserExpr.cpp). `mut` scalar parameters are
+// PrimeStruct's out-parameter mechanism (the inline path passes the
+// caller's local by address; a real call can't replicate that with a
+// separate locals array) and `try`/`?` reads a dynamically-scoped handler
+// that only the inline path's call-site inheritance provides - a real-call
+// callee only ever seeds its handler from its own on_error transform.
 //
 // This is a *candidate* set for real (non-inlined) Call/CallVoid emission,
 // not a guarantee: it is deliberately conservative and can under-approximate

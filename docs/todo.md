@@ -3601,6 +3601,76 @@ This file is the live open-work queue for PrimeStruct.
       add one, so it cannot introduce new failures beyond the one it
       fixes); the targeted before/after checks above are the actual
       evidence trail for this specific bug.
+  - progress_2026-07-28b (also fixed: `f6d840c` fixed the real-call
+    redirect evaluating `callExpr.args` left-to-right instead of
+    resolving named arguments/callee defaults via
+    `buildInlineCallOrderedArguments` like the inline path does - a
+    recursive call omitting a defaulted trailing parameter pushed too
+    few values for the callee's `StoreLocal` prologue).
+  - progress_2026-07-28c (TODO-4747 "Part A" - closed a live correctness
+    gap in the already-landed recursive real-call path, found by two
+    parallel research agents auditing what inlining does that a real
+    Call boundary might not replicate, ahead of extending eligibility
+    to non-recursive definitions):
+    1. `[T mut]` scalar parameters are PrimeStruct's out-parameter
+       mechanism, not value semantics - `IrLowererInlineParamHelpers.cpp`
+       shows the inline path passes the caller's local by address
+       (`AddressOfLocal`/`StoreIndirect`), load-bearing in the stdlib
+       (`stdlib/std/image/image.prime`'s `ppmNextByte([i32 mut]
+       hasPending, ...)`). `computeRealCallEligibleDefinitionPaths`
+       stripped the `mut` token when extracting a parameter's type name
+       and treated `[i32 mut] x` as an ordinary eligible scalar - a
+       real call copies the *value* into a separate locals array,
+       silently discarding the writeback. Confirmed via a hand-written
+       CLI fixture (recursive `accumulate([i32] n, [i32 mut] total)`):
+       before the fix this compiled and would have produced a wrong
+       answer; after, it correctly falls back to the pre-existing
+       "does not support recursive calls" rejection, matching the
+       non-recursive case (which still works correctly via inlining,
+       confirmed separately - `mut` out-parameters aren't broken in
+       general, only the never-before-possible recursive-eligible
+       combination was). Fixed by rejecting any parameter with a `mut`
+       transform in `hasOnlyScalarParameters`.
+    2. Investigated a second flagged risk - `try(...)`/the `?` postfix
+       (same AST shape, desugared at parse time - see `ParserExpr.cpp`)
+       reads a dynamically-scoped `currentOnError` handler, and the
+       research agent's read of `OnErrorScope`'s inline-path usage
+       suggested a callee with no `on_error` of its own could inherit
+       the caller's handler while inlined, which a real-call callee
+       (seeded only from its own `on_error` transform) couldn't
+       replicate. Direct experimentation contradicted the "inherits"
+       framing: `OnErrorScope`'s constructor unconditionally
+       overwrites (`target = std::move(next)`), so entering *any*
+       inlined call site with a handler-less callee already clears
+       `currentOnError`, not inherits it - and semantic validation
+       independently rejects `try`/`?` in a definition with no
+       *local* `on_error` regardless of caller state (confirmed with a
+       hand-written fixture: a callee using `try(...)` with no
+       `on_error` of its own fails at the semantic stage - "missing
+       on_error for ? usage" - even when its only caller has a
+       handler). Since `on_error`-having definitions are already
+       excluded from eligibility, a definition that reaches
+       `computeRealCallEligibleDefinitionPaths` without one structurally
+       cannot legally use `try`/`?` today for a plain top-level
+       definition - this specific path is not currently exploitable.
+       Kept the static `try`/`?` exclusion (`definitionUsesTry`) anyway
+       as cheap defense-in-depth (it can only narrow eligibility,
+       never break anything) against the class of bug, since the
+       ir_lowerer-level on-error/effect plumbing is complex enough
+       (lambda bodies inlined without a separate `OnErrorScope`
+       boundary, etc.) that "provably unreachable via one hand-written
+       fixture" isn't the same as "provably unreachable in general."
+    Regression tests: `test_ir_pipeline_recursion_analysis.cpp` (unit
+    tests proving both exclusions at the eligibility-scan level) and
+    `test_ir_pipeline_serialization_calls.h` (end-to-end: the
+    `accumulate` mut-out-param fixture above, asserting it still
+    compiles by falling back to the pre-existing rejection path).
+    Verified via full `PrimeStruct_backend_ir_tests`: 1694/45 (1691
+    prior + 3 new passing regression tests, same 45 pre-existing
+    failures, zero newly-broken tests - expected, since this only
+    narrows an already-conservative filter and no currently-passing
+    test exercises a recursive `mut`-parameter or `try`-using
+    definition, confirmed by grep before assuming zero risk).
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

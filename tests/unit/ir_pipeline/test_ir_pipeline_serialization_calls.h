@@ -222,6 +222,44 @@ main() {
   CHECK(error.find("recursive") != std::string::npos);
 }
 
+TEST_CASE("native backend rejects recursive definition calls with a mut out-parameter") {
+  // Regression test: [T mut] is PrimeStruct's out-parameter mechanism (the
+  // inline path passes the caller's local by address, so mutations are
+  // visible to the caller after the call returns - see e.g.
+  // stdlib/std/image/image.prime's ppmNextByte). computeRealCallEligibleDefinitionPaths
+  // originally stripped the mut token when extracting a parameter's type
+  // name, so this recursive definition was treated as an ordinary eligible
+  // scalar and got a real Call that copies by value into a separate locals
+  // array, silently discarding the writeback. Now excluded, keeping the
+  // same fallback rejection as before real-call support existed.
+  const std::string source = R"(
+[return<i32>]
+accumulate([i32] n, [i32 mut] total) {
+  assign(total, plus(total, n))
+  if(less_than(n, 1i32)) {
+    return(total)
+  }
+  return(accumulate(minus(n, 1i32), total))
+}
+
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  return(accumulate(3i32, result))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("recursive") != std::string::npos);
+}
+
 TEST_CASE("native backend emits a real call for self-recursive scalar definitions") {
   const std::string source = R"(
 [return<i32>]
