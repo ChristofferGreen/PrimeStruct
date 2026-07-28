@@ -3434,13 +3434,44 @@ This file is the live open-work queue for PrimeStruct.
       statement, handles implicit return/cleanup) into the loop body
       that runs once per definition needing a real `IrFunction`,
       reusing the same once-built closures each iteration.
-    - Per the refactor plan's explicit checkpoint (closure-capture
-      correctness under looping flagged as the dominant remaining
-      risk): pausing here to confirm this narrower, now-concrete
-      picture of 4b before implementing it, rather than proceeding
-      straight through on the same broader "extract a freestanding
-      function" framing the plan started with and the inventory has
-      since replaced with something smaller and safer.
+    - Step 4b (commit a076044): user asked to drop the checkpoint above
+      and continue through to completion. `runLowerStatementsCallsStage`
+      called `runLowerStatementsEntryExecutionStep` exactly once,
+      always for the entry; the function underneath
+      (`emitEntryCallableExecutionWithCleanup`) already takes its
+      target definition/returnsVoid/result-info as plain parameters -
+      nothing about its own implementation is entry-specific, only its
+      one caller's usage was (the same "only looks entry-specific
+      because of one caller" shape as Step 1's bug, but on the
+      opposite end of the call chain: the callee here was already
+      properly parameterized). Wrapped the single call in a loop over
+      a `CallableBodyToLower` vector, currently containing exactly one
+      element (the entry, with today's exact values) - byte-identical
+      output, but now structurally a loop Phase 1 can add non-entry
+      iterations to, instead of a bare function call that would need
+      restructuring first.
+      This completes the 4-step driver refactor. Two items are called
+      out in the Step 4b commit's code comment as still open for
+      Phase 1 to solve (deliberately not solved by this refactor,
+      which was scoped to structure only, not new capability): (1)
+      giving each additional body its own `IrFunction` target -
+      currently only the entry has one, allocated in
+      `runLowerStatementsFunctionTableStep`, a step called
+      separately, after this loop; (2) rebuilding the count-access
+      classifiers (`isArrayCountCall`/`isStringCountCall`/
+      `isVectorCapacityCall`) per body, since
+      `makeIsEntryArgsName`/`makeIsArrayCountCall`/etc.
+      (`IrLowererCountAccessHelpers.cpp:1047-1100`) close over
+      `hasEntryArgs`/`entryArgsName` **by value** (`[=]`) at
+      construction time, unlike the `emit*` closures which close over
+      `function`/`nextLocal`/etc. by reference and so needed no
+      special handling here.
+      All 4 steps verified via the same-container stash/pop
+      methodology + byte-identical serialized `IrModule` output at
+      every step (see individual step notes above); the 4-step
+      sequence is otherwise unchanged from what the Plan-agent-reviewed
+      plan proposed, only the "pause and confirm before 4b" checkpoint
+      was dropped per explicit instruction.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
