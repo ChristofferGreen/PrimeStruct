@@ -17,6 +17,36 @@ primec::Expr makeCall(const std::string &resolvedCallPath) {
   call.resolvedCallPath = resolvedCallPath;
   return call;
 }
+
+primec::Expr makeScalarParam(const std::string &name, const std::string &typeName) {
+  primec::Expr param;
+  param.kind = primec::Expr::Kind::Name;
+  param.name = name;
+  param.isBinding = true;
+  primec::Transform typeTransform;
+  typeTransform.name = typeName;
+  param.transforms.push_back(typeTransform);
+  return param;
+}
+
+primec::Expr makeStructParam(const std::string &name, const std::string &structTypeName) {
+  primec::Expr param;
+  param.kind = primec::Expr::Kind::Name;
+  param.name = name;
+  param.isBinding = true;
+  primec::Transform typeTransform;
+  typeTransform.name = structTypeName;
+  typeTransform.templateArgs = {"i32"};
+  param.transforms.push_back(typeTransform);
+  return param;
+}
+
+void addReturnTransform(primec::Definition &def, const std::string &typeName) {
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {typeName};
+  def.transforms.push_back(returnTransform);
+}
 } // namespace
 
 TEST_CASE("recursion analysis finds no cycles in a plain call chain") {
@@ -119,6 +149,152 @@ TEST_CASE("recursion analysis ignores unresolved and external call paths") {
 
   const auto recursive = primec::ir_lowerer::findRecursiveDefinitionPaths(program);
   CHECK(recursive.empty());
+}
+
+TEST_CASE("reachability finds only definitions transitively called from entry") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/helper"));
+  primec::Definition helper = makeDef("/main/helper");
+  primec::Definition unreachable = makeDef("/main/unreachable");
+  program.definitions = {entry, helper, unreachable};
+
+  const auto reachable = primec::ir_lowerer::findReachableDefinitionPaths(program, "/main/entry");
+  REQUIRE(reachable.size() == 2u);
+  CHECK(reachable.count("/main/entry") == 1u);
+  CHECK(reachable.count("/main/helper") == 1u);
+  CHECK(reachable.count("/main/unreachable") == 0u);
+}
+
+TEST_CASE("reachability follows transitive and cyclic call chains") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/a"));
+  primec::Definition a = makeDef("/main/a");
+  a.statements.push_back(makeCall("/main/b"));
+  primec::Definition b = makeDef("/main/b");
+  b.statements.push_back(makeCall("/main/a"));
+  program.definitions = {entry, a, b};
+
+  const auto reachable = primec::ir_lowerer::findReachableDefinitionPaths(program, "/main/entry");
+  REQUIRE(reachable.size() == 3u);
+  CHECK(reachable.count("/main/entry") == 1u);
+  CHECK(reachable.count("/main/a") == 1u);
+  CHECK(reachable.count("/main/b") == 1u);
+}
+
+TEST_CASE("reachability returns empty set for an unknown entry path") {
+  primec::Program program;
+  program.definitions = {makeDef("/main/entry")};
+
+  const auto reachable = primec::ir_lowerer::findReachableDefinitionPaths(program, "/main/missing");
+  CHECK(reachable.empty());
+}
+
+TEST_CASE("eligibility accepts a scalar-parameter self-recursive definition") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/factorial"));
+  primec::Definition factorial = makeDef("/main/factorial");
+  factorial.parameters.push_back(makeScalarParam("n", "i32"));
+  addReturnTransform(factorial, "i32");
+  factorial.statements.push_back(makeCall("/main/factorial"));
+  program.definitions = {entry, factorial};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  REQUIRE(eligible.size() == 1u);
+  CHECK(eligible.count("/main/factorial") == 1u);
+}
+
+TEST_CASE("eligibility rejects a struct-parameter recursive definition") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/walk"));
+  primec::Definition walk = makeDef("/main/walk");
+  walk.parameters.push_back(makeStructParam("node", "/main/Node"));
+  walk.statements.push_back(makeCall("/main/walk"));
+  program.definitions = {entry, walk};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
+TEST_CASE("eligibility rejects a recursive definition with an on_error handler") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/risky"));
+  primec::Definition risky = makeDef("/main/risky");
+  risky.parameters.push_back(makeScalarParam("n", "i32"));
+  addReturnTransform(risky, "i32");
+  primec::Transform onError;
+  onError.name = "on_error";
+  risky.transforms.push_back(onError);
+  risky.statements.push_back(makeCall("/main/risky"));
+  program.definitions = {entry, risky};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
+TEST_CASE("eligibility rejects a recursive struct definition") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/Node"));
+  primec::Definition node = makeDef("/main/Node");
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  node.transforms.push_back(structTransform);
+  node.statements.push_back(makeCall("/main/Node"));
+  program.definitions = {entry, node};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
+TEST_CASE("eligibility excludes an unreachable recursive definition") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  primec::Definition factorial = makeDef("/main/factorial");
+  factorial.parameters.push_back(makeScalarParam("n", "i32"));
+  addReturnTransform(factorial, "i32");
+  factorial.statements.push_back(makeCall("/main/factorial"));
+  program.definitions = {entry, factorial};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
+TEST_CASE("eligibility excludes a non-recursive scalar definition") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/add_one"));
+  primec::Definition addOne = makeDef("/main/add_one");
+  addOne.parameters.push_back(makeScalarParam("n", "i32"));
+  addReturnTransform(addOne, "i32");
+  program.definitions = {entry, addOne};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  CHECK(eligible.empty());
+}
+
+TEST_CASE("eligibility accepts mutual recursion with void returns") {
+  primec::Program program;
+  primec::Definition entry = makeDef("/main/entry");
+  entry.statements.push_back(makeCall("/main/is_even"));
+  primec::Definition isEven = makeDef("/main/is_even");
+  isEven.parameters.push_back(makeScalarParam("n", "i32"));
+  addReturnTransform(isEven, "bool");
+  isEven.statements.push_back(makeCall("/main/is_odd"));
+  primec::Definition isOdd = makeDef("/main/is_odd");
+  isOdd.parameters.push_back(makeScalarParam("n", "i32"));
+  addReturnTransform(isOdd, "bool");
+  isOdd.statements.push_back(makeCall("/main/is_even"));
+  program.definitions = {entry, isEven, isOdd};
+
+  const auto eligible = primec::ir_lowerer::computeRealCallEligibleDefinitionPaths(program, "/main/entry");
+  REQUIRE(eligible.size() == 2u);
+  CHECK(eligible.count("/main/is_even") == 1u);
+  CHECK(eligible.count("/main/is_odd") == 1u);
 }
 
 TEST_SUITE_END();
