@@ -575,7 +575,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-07-29T12:47:22Z`
+- Last updated: `2026-07-29T13:26:15Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 4`
@@ -653,9 +653,6 @@ All other test assertion failures have been fixed in this session:
   - `1043`: `PrimeStruct_primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_623_632`
   - `1044`: `PrimeStruct_primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_633_642`
   - `1116`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_90_91`
-  - `1117`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_92_93`
-  - `1118`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_94_95`
-  - `1122`: `PrimeStruct_primestruct_compile_run_emitters_cpp_map_wrapper_and_fallback_inference_101_110`
   - `1134`: `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_213_222`
   - `1135`: `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_223_232`
   - `1142`: `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_293_302`
@@ -713,7 +710,6 @@ All other test assertion failures have been fixed in this session:
   - `1921`: `PrimeStruct_vector_surface_traces`
   - `1931`: `PrimeStruct_map_surface_strict_audit`
   - `1933`: `PrimeStruct_soa_surface_trace_zero_audit`
-  - `1949`: `PrimeStruct_compile_run_suite_registration`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
