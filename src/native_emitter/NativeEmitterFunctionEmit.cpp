@@ -1,14 +1,16 @@
 #include "NativeEmitterEmitInternal.h"
 
 #include <fcntl.h>
+#include <type_traits>
 
 namespace primec::native_emitter {
 
+template <typename EmitterT>
 bool emitNativeFunctions(const IrModule &module,
                          size_t entryIndex,
                          const std::vector<NativeEmitterFunctionLayout> &layouts,
                          const std::vector<size_t> &emitOrder,
-                         Arm64Emitter &emitter,
+                         EmitterT &emitter,
                          std::vector<NativeEmitterBranchFixup> &branchFixups,
                          std::vector<NativeEmitterCallFixup> &callFixups,
                          std::vector<NativeEmitterStringFixup> &stringFixups,
@@ -19,8 +21,9 @@ bool emitNativeFunctions(const IrModule &module,
                          std::vector<std::vector<size_t>> &instOffsets,
                          NativeEmitterInstrumentation *instrumentation,
                          std::string &error) {
+  constexpr bool kIsArm64 = std::is_same_v<EmitterT, Arm64Emitter>;
   for (size_t functionIndex : emitOrder) {
-    const Arm64InstrumentationCounters countersBefore = emitter.instrumentationCounters();
+    const auto countersBefore = emitter.instrumentationCounters();
     const IrFunction &fn = module.functions[functionIndex];
     const NativeEmitterFunctionLayout &layout = layouts[functionIndex];
     const bool isEntryFunction = functionIndex == entryIndex;
@@ -30,21 +33,42 @@ bool emitNativeFunctions(const IrModule &module,
       frameSize = alignTo(layout.localsSize + ValueStackBytes, 16);
     }
     functionOffsets[functionIndex] = emitter.currentWordIndex();
-    emitter.emitMovRegPublic(21, 27);
+    if constexpr (kIsArm64) {
+      // Save the caller's frame pointer (x27) into x21 before
+      // beginFunction overwrites x27 with this function's own frame base
+      // - later stashed into layout.framePointerLocalIndex below and
+      // restored from there at return time. x86_64 needs none of this:
+      // its call/ret plus push-rbp/pop-rbp already save/restore the
+      // caller's frame pointer and return address on the real stack (see
+      // X64Emitter's class-level design comment).
+      emitter.emitMovRegPublic(21, 27);
+    }
     if (!emitter.beginFunction(frameSize, isEntryFunction, error)) {
       return false;
     }
     if (isEntryFunction) {
       emitter.emitCaptureEntryArgs();
     }
-    if (layout.needsArgc) {
-      emitter.emitStoreLocalFromReg(layout.argcLocalIndex, 19);
+    if constexpr (kIsArm64) {
+      if (layout.needsArgc) {
+        emitter.emitStoreLocalFromReg(layout.argcLocalIndex, 19);
+      }
+      if (layout.needsArgv) {
+        emitter.emitStoreLocalFromReg(layout.argvLocalIndex, 20);
+      }
+      emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21);
+      emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30);
+    } else {
+      // X64Emitter::emitCaptureEntryArgs() already placed argc/argv in
+      // r12/r13; framePointerLocalIndex/linkLocalIndex have no x86_64
+      // equivalent to store (see above).
+      if (layout.needsArgc) {
+        emitter.emitStoreLocalFromReg(layout.argcLocalIndex, 12);
+      }
+      if (layout.needsArgv) {
+        emitter.emitStoreLocalFromReg(layout.argvLocalIndex, 13);
+      }
     }
-    if (layout.needsArgv) {
-      emitter.emitStoreLocalFromReg(layout.argvLocalIndex, 20);
-    }
-    emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21);
-    emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30);
     instOffsets[functionIndex].assign(fn.instructions.size() + 1, 0);
     std::vector<bool> branchTargets(fn.instructions.size() + 1, false);
     for (const auto &inst : fn.instructions) {
@@ -511,7 +535,7 @@ bool emitNativeFunctions(const IrModule &module,
 
     instOffsets[functionIndex][fn.instructions.size()] = emitter.currentWordIndex();
     if (instrumentation != nullptr) {
-      const Arm64InstrumentationCounters countersAfter = emitter.instrumentationCounters();
+      const auto countersAfter = emitter.instrumentationCounters();
       auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
       functionInstrumentation.valueStackPushCount =
           countersAfter.valueStackPushCount - countersBefore.valueStackPushCount;
@@ -523,5 +547,39 @@ bool emitNativeFunctions(const IrModule &module,
   }
   return true;
 }
+
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+template bool emitNativeFunctions<Arm64Emitter>(const IrModule &,
+                                                size_t,
+                                                const std::vector<NativeEmitterFunctionLayout> &,
+                                                const std::vector<size_t> &,
+                                                Arm64Emitter &,
+                                                std::vector<NativeEmitterBranchFixup> &,
+                                                std::vector<NativeEmitterCallFixup> &,
+                                                std::vector<NativeEmitterStringFixup> &,
+                                                std::vector<size_t> &,
+                                                uint64_t,
+                                                uint64_t,
+                                                std::vector<size_t> &,
+                                                std::vector<std::vector<size_t>> &,
+                                                NativeEmitterInstrumentation *,
+                                                std::string &);
+#elif defined(__linux__) && defined(__x86_64__)
+template bool emitNativeFunctions<X64Emitter>(const IrModule &,
+                                              size_t,
+                                              const std::vector<NativeEmitterFunctionLayout> &,
+                                              const std::vector<size_t> &,
+                                              X64Emitter &,
+                                              std::vector<NativeEmitterBranchFixup> &,
+                                              std::vector<NativeEmitterCallFixup> &,
+                                              std::vector<NativeEmitterStringFixup> &,
+                                              std::vector<size_t> &,
+                                              uint64_t,
+                                              uint64_t,
+                                              std::vector<size_t> &,
+                                              std::vector<std::vector<size_t>> &,
+                                              NativeEmitterInstrumentation *,
+                                              std::string &);
+#endif
 
 } // namespace primec::native_emitter

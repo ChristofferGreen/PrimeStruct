@@ -1,3 +1,4 @@
+#include "NativeEmitterInternals.h" // alignTo, PageSize (arch-agnostic)
 #include "NativeEmitterInternalsX64.h"
 
 #include <cstring>

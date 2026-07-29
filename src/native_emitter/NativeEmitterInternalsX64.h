@@ -13,25 +13,13 @@
 
 namespace primec::native_emitter {
 
-// Shared with NativeEmitterInternals.h's Arm64 declarations - both headers
-// are only ever compiled one-at-a-time (mutually exclusive platform gates
-// in NativeEmitterEmit.cpp), so no ODR conflict, but keep names distinct
-// where a build might one day include both headers' declarations in the
-// same translation unit (NativeEmitterFunctionEmit.cpp does, since its
-// template needs both emitter types visible when only one is compiled in).
-#if defined(__linux__) && !defined(PRIMESTRUCT_NATIVE_EMITTER_ALIGN_TO_DEFINED)
-#define PRIMESTRUCT_NATIVE_EMITTER_ALIGN_TO_DEFINED
-inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
-  if (alignment == 0) {
-    return value;
-  }
-  uint64_t mask = alignment - 1;
-  return (value + mask) & ~mask;
-}
-#endif
+// `alignTo`, `PageSize` (already correctly 0x1000 on any non-arm64
+// platform, including Linux x86_64), and `HeapHeaderMagic` are shared,
+// arch-agnostic definitions from NativeEmitterInternals.h - reused as-is
+// rather than redeclared here, since NativeEmitterEmitInternal.h always
+// includes both headers together in the same translation unit.
 
 #if defined(__linux__)
-constexpr uint64_t PageSize = 0x1000ull;
 constexpr uint64_t ElfLoadAddress = 0x400000ull;
 constexpr uint32_t PrintScratchBytes = 32;
 constexpr uint32_t PrintScratchSlots = (PrintScratchBytes + 15) / 16;
@@ -47,8 +35,9 @@ constexpr uint64_t LinuxSysExit = SYS_exit;
 constexpr uint64_t LinuxSysExitGroup = SYS_exit_group;
 constexpr uint64_t LinuxMmapProtReadWrite = static_cast<uint64_t>(PROT_READ | PROT_WRITE);
 constexpr uint64_t LinuxMmapFlagsPrivateAnon = static_cast<uint64_t>(MAP_PRIVATE | MAP_ANONYMOUS);
-constexpr uint64_t LinuxHeapHeaderMagic = 0x5053484541503031ull; // "PSHEAP01"
 #endif
+
+#if defined(__linux__)
 
 struct X64InstrumentationCounters {
   uint64_t valueStackPushCount = 0;
@@ -264,6 +253,47 @@ class X64Emitter {
   void emitSyscall();
   void emitRet();
 
+  // Integer arithmetic/compare primitives (all operate on 64-bit GPRs -
+  // this backend mirrors Arm64Emitter's existing simplification of using
+  // the same op for both I32 and I64 IR opcodes, see emitAdd()'s doc).
+  void emitAddRegReg(uint8_t rd, uint8_t rs);
+  void emitSubRegReg(uint8_t rd, uint8_t rs);
+  void emitImulRegReg(uint8_t rd, uint8_t rs); // rd *= rs (RM form: reg=dst)
+  void emitXorRegReg(uint8_t rd, uint8_t rs);
+  void emitCqo();                    // sign-extend rax into rdx:rax
+  void emitIdivReg(uint8_t reg);     // signed divide rdx:rax by reg
+  void emitDivReg(uint8_t reg);      // unsigned divide rdx:rax by reg
+  void emitNegReg(uint8_t rd);
+  void emitCmpRegReg(uint8_t a, uint8_t b); // flags = a - b
+  void emitSetccReg(uint8_t rd, CondCode cc);
+  void emitMovzxReg8(uint8_t rd, uint8_t rs); // rd = zero-extend(low byte of rs)
+  static uint8_t condCodeValue(CondCode cc);
+
+  // Raw conditional-jump placeholder/patch for control flow *internal* to
+  // a single emitted routine (e.g. the unsigned int64<->float conversion
+  // sequences below), independent of the IR-level Jump/JumpIfZero fixup
+  // lists the dispatch loop manages - resolved immediately within the
+  // same method that emits the placeholder, never left pending.
+  size_t emitCondJumpPlaceholder(CondCode cc);
+  void patchCondJumpHere(size_t fixupIndex);
+  size_t emitJumpPlaceholderRaw();
+  void patchJumpHere(size_t fixupIndex);
+
+  // SSE2 float primitives (xmm registers 0-15, same numbering scheme as
+  // GPRs). `isF64` selects the F2 (double) vs F3 (single) SSE prefix.
+  void emitMovqXmmFromReg(uint8_t xmm, uint8_t reg);
+  void emitMovqRegFromXmm(uint8_t reg, uint8_t xmm);
+  void emitSseBinaryOp(bool isF64, uint8_t opcode, uint8_t dstXmm, uint8_t srcXmm);
+  void emitXorpsXmm(uint8_t dstXmm, uint8_t srcXmm);
+  void emitComiss(bool isF64, uint8_t a, uint8_t b);
+  void emitCvtsi2s(bool isF64, uint8_t dstXmm, uint8_t srcReg);   // int64 -> float
+  void emitCvtts2si(bool isF64, uint8_t dstReg, uint8_t srcXmm);  // float -> int64 (truncate)
+  void emitCvtss2sd(uint8_t dstXmm, uint8_t srcXmm);
+  void emitCvtsd2ss(uint8_t dstXmm, uint8_t srcXmm);
+  void emitLoadXmmImm64(uint8_t xmm, uint64_t bits, uint8_t scratchReg);
+  void emitConvertUnsignedToFloat(bool isF64);
+  void emitConvertFloatToUnsigned(bool isF64);
+
   void emitPushReg(uint8_t reg);
   void emitPopReg(uint8_t reg);
   void emitSpillReg(uint8_t reg);
@@ -272,6 +302,12 @@ class X64Emitter {
   static uint64_t localOffset(uint32_t index);
 
   void emitExitSyscall();
+  void emitCompareAndPush(CondCode cc);
+  void emitFloatBinaryOp(bool isF64, uint8_t opcode);
+  void emitFloatNegate(bool isF64);
+  void emitFloatCompareAndPush(bool isF64, CondCode cc);
+  void emitConvertIntToFloatImpl(bool isF64);
+  void emitConvertFloatToIntImpl(bool isF64);
 
   std::vector<uint8_t> code_;
   uint64_t frameSize_ = 0;
@@ -291,12 +327,11 @@ class X64Emitter {
 };
 
 #include "NativeEmitterInternalsX64Core.h"
+#include "NativeEmitterInternalsX64Arithmetic.h"
 
-#if defined(__linux__)
-bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error);
-bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, std::string &error);
 uint32_t computeElfCodeOffset();
 bool buildElf(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error);
-#endif
+
+#endif // defined(__linux__)
 
 } // namespace primec::native_emitter

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "NativeEmitterInternals.h"
+#include "NativeEmitterInternalsX64.h"
 #include "primec/NativeEmitter.h"
 
 #include <string>
@@ -41,11 +42,17 @@ struct NativeEmitterStringFixup {
   uint32_t stringIndex = 0;
 };
 
+// Templated so the exact same IR-dispatch logic drives whichever
+// concrete emitter this platform builds - see NativeEmitterFunctionEmit.cpp
+// for the definition and the platform-gated explicit instantiation.
+// EmitterT is always deduced from the `emitter` argument at the call
+// site (NativeEmitterEmit.cpp), so callers never need to name it.
+template <typename EmitterT>
 bool emitNativeFunctions(const IrModule &module,
                          size_t entryIndex,
                          const std::vector<NativeEmitterFunctionLayout> &layouts,
                          const std::vector<size_t> &emitOrder,
-                         Arm64Emitter &emitter,
+                         EmitterT &emitter,
                          std::vector<NativeEmitterBranchFixup> &branchFixups,
                          std::vector<NativeEmitterCallFixup> &callFixups,
                          std::vector<NativeEmitterStringFixup> &stringFixups,
