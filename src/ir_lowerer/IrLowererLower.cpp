@@ -403,6 +403,8 @@ bool IrLowerer::lower(const Program &program,
                                 [&]() { perBodyResetState.reset(); },
                             .realCallEligibleOrder = &setupStage.realCallEligibleOrder,
                             .realCallReservationIndex = &setupStage.realCallReservationIndex,
+                            .entryReturnsVoidStorage =
+                                &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
                         },
                         stageError);
                   },

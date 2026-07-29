@@ -447,6 +447,52 @@ main() {
   CHECK(result == 29);
 }
 
+TEST_CASE("native backend lowers a multi-call-site definition's own return correctly when the entry is void") {
+  // Regression test: the real-call body-lowering loop (TODO-4747 Part B)
+  // reused the entry's own `emitStatement` closures to lower each eligible
+  // definition's body, but those closures read the entry's returnsVoid
+  // through a reference bound once during entry setup rather than a value
+  // threaded per body - so a non-void definition's own `return(...)` got
+  // validated against a *void* entry's returnsVoid whenever the entry itself
+  // returned void, failing with "return value not allowed for void
+  // definition" as soon as the definition crossed the 2-call-site real-call
+  // threshold. A single-call-site (still-inlined) copy of this same shape
+  // compiled fine, and the "multiple sites" test above didn't catch this
+  // because its own entry happens to be non-void too.
+  const std::string source = R"(
+[return<i32>]
+helper() {
+  return(7i32)
+}
+
+[return<void>]
+main() {
+  [i32] value{helper()}
+  [i32] value2{helper()}
+  return()
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[1].name == "/helper");
+  REQUIRE(!module.functions[1].instructions.empty());
+  CHECK(module.functions[1].instructions.back().op == primec::IrOpcode::ReturnI32);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowers implicit void return") {
   const std::string source = R"(
 [return<void>]

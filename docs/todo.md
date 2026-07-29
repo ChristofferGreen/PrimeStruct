@@ -3756,6 +3756,94 @@ This file is the live open-work queue for PrimeStruct.
        `test_ir_pipeline_serialization_calls.h` (asserts exactly one
        shared `IrFunction` for `/square`, three `Call` instructions in
        `main` all targeting index 1, correct VM result).
+  - progress_2026-07-29a (TODO-4747 Phase 4 investigation, "Step 1" - fixed
+    a live general regression in the already-pushed Part B commit, found
+    while investigating what native/wasm backend rollout actually
+    requires):
+    1. Both native (`NativeEmitterFunctionEmit.cpp`) and wasm
+       (`WasmEmitter.cpp`) already had `Call`/`CallVoid` codegen written
+       some time ago, never exercised until this session's Phase 1/Part
+       A/Part B work started emitting those opcodes. Investigating what
+       breaks when those paths are finally hit for the first time
+       surfaced two things: a wasm-specific calling-convention gap (wasm's
+       `call` instruction auto-binds arguments as the callee's first N
+       locals, but the IR's generic real-call prologue - emitted once by
+       `IrLowererLowerStatementsCallsStage.cpp` for every backend - tries
+       to `local.set`-pop values off the wasm operand stack that were
+       never pushed there, since wasm already consumed them; confirmed via
+       Node's built-in `WebAssembly.compile()` on a `--wasm-profile wasi`
+       fixture: "not enough arguments on the stack for local.set" - not
+       yet fixed, tracked separately, see below), and a **general
+       regression, reproducible on plain `--emit=vm`, unrelated to any
+       specific backend**.
+    2. The regression: compiling a non-recursive definition called from
+       2+ sites (crossing Part B's `kMinCallSitesForRealCall` threshold)
+       whose own return type differs in void-ness from its caller's -
+       e.g. `[return<i32>] helper() { return(7i32) }` called twice via
+       `[i32] value{helper()}` bindings from a `[return<void>] main()`
+       failed with "VM lowering error: return value not allowed for void
+       definition", even though `helper`'s own body is perfectly valid on
+       its own. The single-call-site version (drop the second call,
+       leaving `helper` inlined as before Part B) compiled and ran fine -
+       isolating the trigger to the real-call body-lowering loop.
+    3. Root cause: the real-call body-lowering loop
+       (`IrLowererLowerStatementsCallsStage.cpp`) reuses the entry's own
+       `emitStatement` closure chain to lower each additional
+       real-call-eligible body, appending it as its own `IrFunction`. But
+       that closure chain's return-statement lowering
+       (`tryEmitReturnStatement` in `IrLowererStatementBindingStatementEmit.cpp`)
+       reads whether "the current definition" returns void through a
+       `const bool &returnsVoid = entryReturnConfig.returnsVoid;`
+       reference (`IrLowererLowerReturnEmitStage.cpp`) bound *once*, when
+       the entry's closures were originally built - not a value threaded
+       per body. So lowering `helper`'s own `return(7i32)` validated it
+       against `main`'s void-ness, not `helper`'s own, and errored. The
+       existing Part B regression test ("... emits one real call for a
+       non-recursive definition called from multiple sites") didn't catch
+       this because its own entry (`main`) happens to return `int`, same
+       void-ness as its callee (`square`) - the bug only manifests when
+       the entry's and the real-call body's void-ness *differ*. Found via
+       adding temporary `fprintf` traces to `emitInlineDefinitionCall`
+       (confirming both calls to `helper` correctly redirect to a real
+       Call - eligibility computation was never the problem) and to
+       `tryEmitReturnStatement` (showing `definitionReturnsVoid=1` while
+       lowering `helper`'s own non-void body) - same technique as the
+       Part B call-site double-counting bug, removed once root-caused.
+    4. Fix: threaded a `bool *entryReturnsVoidStorage` pointer (pointing
+       at the actual underlying field,
+       `setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid`)
+       into `LowerStatementsCallsStageInput`. The real-call loop now
+       overrides `*entryReturnsVoidStorage` to each body's own
+       `returnInfo.returnsVoid` immediately before lowering that body, and
+       an RAII guard restores the entry's original value once every
+       eligible body has been lowered (regardless of which of the loop's
+       several early-return error paths is taken).
+    5. Verification: added a permanent regression test to
+       `test_ir_pipeline_serialization_calls.h` ("native backend lowers a
+       multi-call-site definition's own return correctly when the entry
+       is void") mirroring the exact failing shape, checking both the
+       emitted `ReturnI32` and a clean VM execution. Same-container A/B
+       (`git stash`/rebuild/rerun, comparing against `7ac52ab`) on both
+       suites: `PrimeStruct_backend_ir_tests` 1696/45 (1695/45 baseline +
+       the 1 new test), failing-test-*name*-set byte-identical to
+       baseline. `PrimeStruct_compile_run_tests` 2193/645 both before and
+       after the fix, failing-test-name-set byte-identical (note: this
+       count differs from the ~2179/659 figure recorded in
+       progress_2026-07-28d's disk-space investigation above - measured
+       identically before and after this fix in the same container, so
+       not a regression from this change; likely reflects further
+       drift/flakiness in this long-running session's environment between
+       sessions, consistent with the drift already noted there as out of
+       scope to chase further). Confirmed via the `primec` CLI that the
+       original failing fixture now compiles cleanly on `--emit=vm`.
+    6. Not yet done (tracked as the plan's remaining steps, not part of
+       this fix): wasm's parameter-prologue calling-convention gap (Step
+       2 - root-caused, fix designed, not yet implemented) and a
+       code-review-only pass over the native backend's Call/CallVoid
+       handling (Step 3 - this sandbox cannot build or execute ARM64
+       codegen at all, `NativeEmitterEmit.cpp` gates it behind
+       `#if defined(__APPLE__)`/`#if defined(__aarch64__)` at compile
+       time).
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

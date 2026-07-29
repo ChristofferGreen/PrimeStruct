@@ -145,7 +145,23 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       errorOut = "native backend missing statements-calls stage dependency: realCallReservationIndex";
       return false;
     }
+    if (input.entryReturnsVoidStorage == nullptr) {
+      errorOut = "native backend missing statements-calls stage dependency: entryReturnsVoidStorage";
+      return false;
+    }
     const uint64_t baseFunctionIndex = static_cast<uint64_t>(input.outModule->functions.size());
+
+    // The return-statement lowering machinery reached via input.emitStatement
+    // reads *input.entryReturnsVoidStorage by reference rather than a value
+    // threaded per body (it was bound once when the entry's own closures
+    // were built) - each iteration below must override it to match the body
+    // actually being lowered here, and this guard restores the entry's own
+    // value once every eligible body has been lowered.
+    struct EntryReturnsVoidRestoreGuard {
+      bool *storage;
+      bool savedValue;
+      ~EntryReturnsVoidRestoreGuard() { *storage = savedValue; }
+    } entryReturnsVoidRestoreGuard{input.entryReturnsVoidStorage, *input.entryReturnsVoidStorage};
 
     for (const std::string &path : *input.realCallEligibleOrder) {
       const auto defIt = input.defMap->find(path);
@@ -160,6 +176,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
         errorOut = "internal error: missing return info for real-call target " + path;
         return false;
       }
+      *input.entryReturnsVoidStorage = returnInfo.returnsVoid;
 
       input.resetDefinitionLoweringState();
       *input.function = IrFunction{};
