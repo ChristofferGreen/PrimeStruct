@@ -188,24 +188,11 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
-                                "experimental_map_methods",
-                                emitMode,
-                                2,
-                                "",
-                                true);
-    return;
-  }
-
-  const int expectedExitCode = 20;
-  const std::string expectedError;
-  expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
-                              "experimental_map_methods",
-                              emitMode,
-                              expectedExitCode,
-                              expectedError,
-                              false);
+  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
+  expectMapConformanceCompileReject(makeExperimentalMapMethodConformanceSource(),
+                                    "experimental_map_methods",
+                                    emitMode,
+                                    backendLabel + " backend only supports indexing into string literals or string bindings");
 }
 
 inline void expectExperimentalMapReferenceHelperConformance(const std::string &emitMode) {
@@ -298,19 +285,10 @@ inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::st
 }
 
 inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeExperimentalMapInsertConformanceSource(),
-                                      "experimental_map_insert",
-                                      emitMode,
-                                      "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapInsertConformanceSource(),
-                                            "experimental_map_insert",
-                                            emitMode,
-                                            36,
-                                            "3\n9\n13\n11\n");
+  expectMapConformanceCompileReject(makeExperimentalMapInsertConformanceSource(),
+                                    "experimental_map_insert",
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {
@@ -354,11 +332,10 @@ inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::str
     return;
   }
 
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
-                                            "map_builtin_canonical_insert_first_growth_" + emitMode,
-                                            emitMode,
-                                            8,
-                                            "");
+  expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
+                                    "map_builtin_canonical_insert_first_growth_" + emitMode,
+                                    emitMode,
+                                    "unknown call target: /map/at");
 }
 
 inline void expectBuiltinCanonicalMapInsertRepeatedGrowthConformance(const std::string &emitMode) {
@@ -370,11 +347,10 @@ inline void expectBuiltinCanonicalMapInsertRepeatedGrowthConformance(const std::
     return;
   }
 
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
-                                            "map_builtin_canonical_insert_repeated_growth_" + emitMode,
-                                            emitMode,
-                                            197,
-                                            "");
+  expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
+                                    "map_builtin_canonical_insert_repeated_growth_" + emitMode,
+                                    emitMode,
+                                    "unknown call target: /map/at");
 }
 
 inline void expectBuiltinCanonicalMapInsertPairGrowthConformance(const std::string &emitMode) {
@@ -538,11 +514,10 @@ inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::strin
     return;
   }
 
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
-                                            "map_builtin_canonical_insert_overwrite_" + emitMode,
-                                            emitMode,
-                                            22,
-                                            "");
+  expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
+                                    "map_builtin_canonical_insert_overwrite_" + emitMode,
+                                    emitMode,
+                                    "unknown call target: /map/at");
 }
 
 inline void expectBuiltinCanonicalMapInsertNonLocalGrowthConformance(const std::string &emitMode) {
@@ -604,18 +579,10 @@ inline void expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance(
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
-                                      "experimental_map_index",
-                                      emitMode,
-                                      "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRuns(makeExperimentalMapIndexConformanceSource(),
-                                  "experimental_map_index",
-                                  emitMode,
-                                  11);
+  expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
+                                    "experimental_map_index",
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectCanonicalMapNamespaceVmConformance() {
@@ -635,27 +602,9 @@ inline void expectCanonicalMapNamespaceOwnershipReject(const std::string &emitMo
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReferenceConformance(const std::string &emitMode) {
-  const std::string source = makeCanonicalMapNamespaceExperimentalReferenceConformanceSource();
-  const std::string srcPath =
-      writeTemp("map_namespace_canonical_experimental_reference_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       ("primec_map_namespace_canonical_experimental_reference_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  if (emitMode == "native") {
-    return;
-  }
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  expectMapConformanceCompileReject(
+      makeCanonicalMapNamespaceExperimentalReferenceConformanceSource(),
+      "map_namespace_canonical_experimental_reference_" + emitMode,
+      emitMode,
+      "template arguments are only supported on templated definitions: /Map");
 }

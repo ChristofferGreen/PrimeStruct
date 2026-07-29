@@ -312,7 +312,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("public soa get slash-method keeps canonical reject in C++ emitter") {
+TEST_CASE("runs public soa get slash-method in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -329,17 +329,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_get_slash_method_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_public_soa_get_slash_method_exe_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /std/collections/soa/get") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 9);
 }
 
-TEST_CASE("public soa to_aos slash-method keeps canonical reject in C++ emitter") {
+TEST_CASE("runs public soa to_aos slash-method in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -358,15 +353,10 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_to_aos_slash_method_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_public_soa_to_aos_slash_method_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
-        std::string::npos);
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
 }
 
 TEST_CASE("public soa ref helper in C++ emitter") {
@@ -482,7 +472,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("legacy soa compatibility helpers reject in C++ emitter") {
+TEST_CASE("runs legacy soa compatibility helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -508,15 +498,10 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_wildcard_legacy_soa_compatibility_helpers_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_wildcard_legacy_soa_compatibility_helpers_err.txt")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
-        std::string::npos);
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 17);
 }
 
 TEST_CASE("rejects graph-solved direct local-auto vector helper shadows in C++ emitter compatibility") {
@@ -1035,7 +1020,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
 }
 
@@ -1211,7 +1197,7 @@ main() {
   CHECK(runCommand(compileCmd) == 10);
 }
 
-TEST_CASE("rejects vector-target to_aos helper shadows in C++ emitter") {
+TEST_CASE("runs vector-target to_aos helper shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1231,14 +1217,10 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_vector_target_to_aos_shadow_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vector_target_to_aos_shadow_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("missing semantic-product bridge-path choice: /main -> /to_aos") !=
-        std::string::npos);
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 27);
 }
 
 TEST_CASE("rejects nested struct-body soa constructor-bearing helper returns in C++ emitter compatibility") {
@@ -1676,7 +1658,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
 }
 
@@ -1863,7 +1846,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
 }
 
@@ -2118,7 +2102,9 @@ main() {
              std::string::npos ||
          error.find("native backend only supports arithmetic/comparison/clamp/min/max/"
                     "abs/sign/saturate/convert/pointer/assign/increment/decrement "
-                    "calls in expressions (call=/ref_ref") != std::string::npos));
+                    "calls in expressions (call=/ref_ref") != std::string::npos ||
+         error.find("template arguments required for /std/collections/soa/ref_ref") !=
+             std::string::npos));
 }
 
 TEST_CASE("rejects helper-return experimental soa method shadows in C++ emitter") {

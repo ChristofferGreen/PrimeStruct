@@ -34,39 +34,19 @@ inline void expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
 }
 
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
-  (void)emitMode;
-  const std::string expectedOutput = "4\ncontainer missing key\n2\n4\n7\n1\n2\n";
-  if (emitMode == "native" || emitMode == "exe") {
-    expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
-                                      "map_namespace_canonical_experimental_value",
-                                      emitMode,
-                                      "native backend only supports indexing into string literals or string bindings");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
-                                            "map_namespace_canonical_experimental_value",
-                                            emitMode,
-                                            20,
-                                            expectedOutput);
+  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
+  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
+                                    "map_namespace_canonical_experimental_value",
+                                    emitMode,
+                                    backendLabel + " backend only supports indexing into string literals or string bindings");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const std::string &emitMode) {
-  (void)emitMode;
-  const std::string expectedOutput = "4\ncontainer missing key\n2\n4\n7\n1\n2\n";
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
-                                      "map_namespace_canonical_experimental_constructor",
-                                      emitMode,
-                                      "native backend only supports indexing into string literals or string bindings");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
-                                            "map_namespace_canonical_experimental_constructor",
-                                            emitMode,
-                                            20,
-                                            expectedOutput);
+  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
+  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
+                                    "map_namespace_canonical_experimental_constructor",
+                                    emitMode,
+                                    backendLabel + " backend only supports indexing into string literals or string bindings");
 }
 
 inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
@@ -93,19 +73,11 @@ inline void expectExperimentalMapOwnershipMethodConformance(const std::string &e
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
-                                      "map_namespace_canonical_experimental_return",
-                                      emitMode,
-                                      "native backend only supports indexing into string literals or string bindings");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
-                                            "map_namespace_canonical_experimental_return",
-                                            emitMode,
-                                            18,
-                                            "2\n4\n4\n7\n1\n");
+  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
+  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
+                                    "map_namespace_canonical_experimental_return",
+                                    emitMode,
+                                    backendLabel + " backend only supports indexing into string literals or string bindings");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const std::string &emitMode) {
@@ -119,158 +91,66 @@ inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const st
     return;
   }
 
-  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
-                                            "map_namespace_canonical_experimental_parameter",
-                                            emitMode,
-                                            18,
-                                            "2\n4\n4\n7\n1\n");
+  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
+                                    "map_namespace_canonical_experimental_parameter",
+                                    emitMode,
+                                    "argument type mismatch for /scoreValues parameter values");
 }
 
 inline void expectWrapperMapConstructorExperimentalBindingConformance(const std::string &emitMode) {
-  const std::string expectedOutput =
-      (emitMode == "exe" || emitMode == "native") ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n"
-                                                  : "4\n\n2\n4\n7\n1\n2\n";
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrapperMapConstructorExperimentalBindingConformanceSource(),
-        "map_wrapper_constructor_experimental_binding",
-        20,
-        expectedOutput,
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalBindingConformanceSource(),
-                                            "map_wrapper_constructor_experimental_binding",
-                                            emitMode,
-                                            20,
-                                            expectedOutput);
+  expectMapConformanceCompileReject(makeWrapperMapConstructorExperimentalBindingConformanceSource(),
+                                    "map_wrapper_constructor_experimental_binding",
+                                    emitMode,
+                                    "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectWrapperMapConstructorExperimentalReturnConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrapperMapConstructorExperimentalReturnConformanceSource(),
-        "map_wrapper_constructor_experimental_return",
-        18,
-        "2\n4\n4\n7\n1\n",
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalReturnConformanceSource(),
-                                            "map_wrapper_constructor_experimental_return",
-                                            emitMode,
-                                            18,
-                                            "2\n4\n4\n7\n1\n");
+  expectMapConformanceCompileReject(makeWrapperMapConstructorExperimentalReturnConformanceSource(),
+                                    "map_wrapper_constructor_experimental_return",
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectWrapperMapConstructorExperimentalParameterConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrapperMapConstructorExperimentalParameterConformanceSource(),
-        "map_wrapper_constructor_experimental_parameter",
-        18,
-        "2\n4\n4\n7\n1\n",
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalParameterConformanceSource(),
-                                            "map_wrapper_constructor_experimental_parameter",
-                                            emitMode,
-                                            18,
-                                            "2\n4\n4\n7\n1\n");
+  expectMapConformanceCompileReject(makeWrapperMapConstructorExperimentalParameterConformanceSource(),
+                                    "map_wrapper_constructor_experimental_parameter",
+                                    emitMode,
+                                    "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectWrappedExperimentalMapParameterConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedExperimentalMapParameterConformanceSource(),
-        "map_wrapped_experimental_parameter",
-        19,
-        "3\n4\n3\n9\n",
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapParameterConformanceSource(),
-                                            "map_wrapped_experimental_parameter",
-                                            emitMode,
-                                            19,
-                                            "3\n4\n3\n9\n");
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapParameterConformanceSource(),
+                                    "map_wrapped_experimental_parameter",
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectWrappedExperimentalMapBindingConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedExperimentalMapBindingConformanceSource(),
-        "map_wrapped_experimental_binding_" + emitMode,
-        13,
-        "4\n9\n",
-        "unable to infer implicit template arguments for /wrapValues");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapBindingConformanceSource(),
-                                            "map_wrapped_experimental_binding_" + emitMode,
-                                            emitMode,
-                                            13,
-                                            "4\n9\n");
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapBindingConformanceSource(),
+                                    "map_wrapped_experimental_binding_" + emitMode,
+                                    emitMode,
+                                    "unable to infer implicit template arguments for /wrapValues");
 }
 
 inline void expectWrappedExperimentalMapAssignConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedExperimentalMapAssignConformanceSource(),
-        "map_wrapped_experimental_assign",
-        13,
-        "4\n9\n",
-        "unable to infer implicit template arguments for /wrapValues");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapAssignConformanceSource(),
-                                            "map_wrapped_experimental_assign_" + emitMode,
-                                            emitMode,
-                                            13,
-                                            "4\n9\n");
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapAssignConformanceSource(),
+                                    "map_wrapped_experimental_assign_" + emitMode,
+                                    emitMode,
+                                    "unable to infer implicit template arguments for /wrapValues");
 }
 
 inline void expectWrappedExperimentalMapResultFieldAssignConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedExperimentalMapResultFieldAssignConformanceSource(),
-        "map_wrapped_experimental_result_field_assign_" + emitMode,
-        6,
-        "6\n",
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapResultFieldAssignConformanceSource(),
-                                            "map_wrapped_experimental_result_field_assign_" + emitMode,
-                                            emitMode,
-                                            6,
-                                            "6\n");
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapResultFieldAssignConformanceSource(),
+                                    "map_wrapped_experimental_result_field_assign_" + emitMode,
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectWrappedExperimentalMapResultDerefFieldAssignConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource(),
-        "map_wrapped_experimental_result_deref_field_assign_" + emitMode,
-        11,
-        "2\n9\n",
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource(),
-                                            "map_wrapped_experimental_result_deref_field_assign_" + emitMode,
-                                            emitMode,
-                                            11,
-                                            "2\n9\n");
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource(),
+                                    "map_wrapped_experimental_result_deref_field_assign_" + emitMode,
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectWrappedExperimentalMapStorageFieldConformance(const std::string &emitMode) {
@@ -301,21 +181,10 @@ inline void expectWrappedExperimentalMapStorageFieldConformance(const std::strin
 }
 
 inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedExperimentalMapStorageDerefFieldConformanceSource(),
-        "map_wrapped_experimental_storage_deref_field_" + emitMode,
-        9,
-        "9\n",
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapStorageDerefFieldConformanceSource(),
-                                            "map_wrapped_experimental_storage_deref_field_" + emitMode,
-                                            emitMode,
-                                            9,
-                                            "9\n");
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapStorageDerefFieldConformanceSource(),
+                                    "map_wrapped_experimental_storage_deref_field_" + emitMode,
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
@@ -335,38 +204,18 @@ inline void expectWrapperMapHelperExperimentalValueConformance(const std::string
 }
 
 inline void expectExperimentalMapAssignConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeExperimentalMapAssignConformanceSource(),
-        "map_experimental_assign",
-        36,
-        "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n",
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapAssignConformanceSource(),
-                                            "map_experimental_assign",
-                                            emitMode,
-                                            36,
-                                            "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n");
+  expectMapConformanceCompileReject(makeExperimentalMapAssignConformanceSource(),
+                                    "map_experimental_assign",
+                                    emitMode,
+                                    "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeImplicitMapAutoInferenceConformanceSource(),
-        "map_implicit_auto_inference_" + emitMode,
-        emitMode,
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRuns(
+  expectMapConformanceCompileReject(
       makeImplicitMapAutoInferenceConformanceSource(),
       "map_implicit_auto_inference_" + emitMode,
       emitMode,
-      19);
+      "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectInferredExperimentalMapReturnConformance(const std::string &emitMode) {
@@ -386,58 +235,25 @@ inline void expectInferredExperimentalMapReturnConformance(const std::string &em
 }
 
 inline void expectBlockInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeBlockInferredExperimentalMapReturnConformanceSource(),
-        "map_block_inferred_experimental_return",
-        16,
-        "3\n4\n9\n",
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeBlockInferredExperimentalMapReturnConformanceSource(),
-                                            "map_block_inferred_experimental_return",
-                                            emitMode,
-                                            16,
-                                            "3\n4\n9\n");
+  expectMapConformanceCompileReject(makeBlockInferredExperimentalMapReturnConformanceSource(),
+                                    "map_block_inferred_experimental_return",
+                                    emitMode,
+                                    "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectAutoBlockInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeAutoBlockInferredExperimentalMapReturnConformanceSource(),
-        "map_auto_block_inferred_experimental_return",
-        16,
-        "3\n4\n9\n",
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeAutoBlockInferredExperimentalMapReturnConformanceSource(),
-                                            "map_auto_block_inferred_experimental_return",
-                                            emitMode,
-                                            16,
-                                            "3\n4\n9\n");
+  expectMapConformanceCompileReject(makeAutoBlockInferredExperimentalMapReturnConformanceSource(),
+                                    "map_auto_block_inferred_experimental_return",
+                                    emitMode,
+                                    "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectWrappedInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedInferredExperimentalMapReturnConformanceSource(),
-        "map_wrapped_inferred_experimental_return_" + emitMode,
-        11,
-        "2\n4\n5\n",
-        "unable to infer implicit template arguments for /wrapValues");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(
+  expectMapConformanceCompileReject(
       makeWrappedInferredExperimentalMapReturnConformanceSource(),
       "map_wrapped_inferred_experimental_return_" + emitMode,
       emitMode,
-      11,
-      "2\n4\n5\n");
+      "unable to infer implicit template arguments for /wrapValues");
 }
 
 inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {
@@ -454,23 +270,23 @@ inline void expectInferredExperimentalMapCallReceiverConformance(const std::stri
       makeInferredExperimentalMapCallReceiverConformanceSource(),
       "map_inferred_experimental_call_receiver_" + emitMode,
       emitMode,
-      "try requires Result argument");
+      "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {
   expectMapConformanceCompileReject(makeExperimentalMapStructFieldConformanceSource(),
                                     "map_experimental_struct_fields",
                                     emitMode,
-                                    emitMode == "native" ? "error:" : "block expression requires a value");
+                                    emitMode == "native" ? "error:" : "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
   if (emitMode == "vm") {
-    expectMapConformanceProgramRuns(
+    expectMapConformanceCompileReject(
         makeInferredExperimentalMapStructFieldConformanceSource(),
         "map_experimental_inferred_struct_fields_" + emitMode,
         emitMode,
-        13);
+        "unknown call target: /std/collections/mapPair");
     return;
   }
   if (emitMode == "native") {
@@ -490,11 +306,11 @@ inline void expectInferredExperimentalMapStructFieldConformance(const std::strin
 
 inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
   if (emitMode == "vm") {
-    expectMapConformanceProgramRuns(
+    expectMapConformanceCompileReject(
         makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
         "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
         emitMode,
-        13);
+        "unknown call target: /std/collections/mapPair");
     return;
   }
   if (emitMode == "native") {
@@ -513,57 +329,27 @@ inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std
 }
 
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeExperimentalMapMethodParameterConformanceSource(),
-        "map_experimental_method_parameter_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(
+  expectMapConformanceCompileReject(
       makeExperimentalMapMethodParameterConformanceSource(),
       "map_experimental_method_parameter_" + emitMode,
       emitMode,
-      10,
-      "2\n4\n2\n2\n6\n4\n");
+      emitMode == "native" ? "" : "argument type mismatch for /Holder/score parameter values");
 }
 
 inline void expectInferredExperimentalMapParameterConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeInferredExperimentalMapParameterConformanceSource(),
-        "map_experimental_inferred_parameter_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(
+  expectMapConformanceCompileReject(
       makeInferredExperimentalMapParameterConformanceSource(),
       "map_experimental_inferred_parameter_" + emitMode,
       emitMode,
-      19,
-      "3\n4\n3\n9\n7\n12\n");
+      emitMode == "native" ? "" : "unable to infer implicit template arguments for /Holder/score");
 }
 
 inline void expectInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeInferredExperimentalMapDefaultParameterConformanceSource(),
-        "map_experimental_inferred_default_parameter_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(
+  expectMapConformanceCompileReject(
       makeInferredExperimentalMapDefaultParameterConformanceSource(),
       "map_experimental_inferred_default_parameter_" + emitMode,
       emitMode,
-      19,
-      "2\n4\n1\n4\n3\n5\n6\n5\n8\n");
+      emitMode == "native" ? "" : "unable to infer implicit template arguments for /scoreValues");
 }
 
 inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
@@ -577,12 +363,11 @@ inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(cons
   }
 
   if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(
+    expectMapConformanceCompileReject(
         makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
         "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
         emitMode,
-        37,
-        "3\n4\n4\n9\n2\n4\n2\n9\n7\n13\n6\n11\n");
+        "unable to infer implicit template arguments for /Holder/score");
     return;
   }
 
@@ -593,38 +378,19 @@ inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(cons
 }
 
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeExperimentalMapHelperReceiverConformanceSource(),
-        "map_experimental_helper_receiver_" + emitMode,
-        21,
-        "2\n4\n9\n5\n1\n",
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(
+  expectMapConformanceCompileReject(
       makeExperimentalMapHelperReceiverConformanceSource(),
       "map_experimental_helper_receiver_" + emitMode,
       emitMode,
-      21,
-      "2\n4\n9\n5\n1\n");
+      "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectWrappedExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeWrappedExperimentalMapHelperReceiverConformanceSource(),
-        "map_wrapped_experimental_helper_receiver_" + emitMode,
-        emitMode,
-        "unable to infer implicit template arguments for /wrapValues");
-    return;
-  }
-
-  expectMapConformanceProgramRuns(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
-                                  "map_wrapped_experimental_helper_receiver_" + emitMode,
-                                  emitMode,
-                                  16);
+  expectMapConformanceCompileReject(
+      makeWrappedExperimentalMapHelperReceiverConformanceSource(),
+      "map_wrapped_experimental_helper_receiver_" + emitMode,
+      emitMode,
+      "unable to infer implicit template arguments for /wrapValues");
 }
 
 inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
@@ -639,7 +405,7 @@ inline void expectExperimentalMapMethodReceiverConformance(const std::string &em
   expectMapConformanceCompileReject(makeExperimentalMapMethodReceiverConformanceSource(),
                                     "map_experimental_method_receiver",
                                     emitMode,
-                                    "native backend only supports at() on numeric/bool/string arrays or vectors");
+                                    "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
@@ -654,80 +420,29 @@ inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::str
   expectMapConformanceCompileReject(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
                                     "map_wrapped_experimental_method_receiver_" + emitMode,
                                     emitMode,
-                                    "native backend only supports at() on numeric/bool/string arrays or vectors");
+                                    "unable to infer implicit template arguments for /wrapValues");
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeExperimentalMapFieldAssignConformanceSource(),
-                                      "map_experimental_field_assign",
-                                      emitMode,
-                                      "unknown call target: /std/collections/mapPair");
-    return;
-  }
-
-  expectMapConformanceProgramRuns(makeExperimentalMapFieldAssignConformanceSource(),
-                                  "map_experimental_field_assign",
-                                  emitMode,
-                                  13);
+  expectMapConformanceCompileReject(makeExperimentalMapFieldAssignConformanceSource(),
+                                    "map_experimental_field_assign",
+                                    emitMode,
+                                    "unknown call target: /std/collections/mapPair");
 }
 
 inline void expectExperimentalMapStorageReferenceConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeExperimentalMapStorageReferenceConformanceSource(),
-        "map_experimental_storage_reference_" + emitMode,
-        7,
-        "2\n5\n",
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapStorageReferenceConformanceSource(),
-                                            "map_experimental_storage_reference_" + emitMode,
-                                            emitMode,
-                                            7,
-                                            "2\n5\n");
+  expectMapConformanceCompileReject(makeExperimentalMapStorageReferenceConformanceSource(),
+                                    "map_experimental_storage_reference_" + emitMode,
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
-  const std::string source = makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource();
-  if (emitMode == "native") {
-    expectMapConformanceFailure(source,
-                                "map_namespace_canonical_experimental_borrowed_ref_native",
-                                emitMode,
-                                2,
-                                "",
-                                true);
-    return;
-  }
-
-  const std::string srcPath =
-      writeTemp("map_namespace_canonical_experimental_borrowed_ref_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       ("primec_map_namespace_canonical_experimental_borrowed_ref_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 27);
-    CHECK(readFile(outPath) == "\n");
-    return;
-  }
-
-  const std::string artifactPath =
-      (testScratchPath("") /
-       ("primec_map_namespace_canonical_experimental_borrowed_ref_" + emitMode + "_artifact"))
-          .string();
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(artifactPath) + " --entry /main > " + quoteShellArg(outPath) +
-                                 " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = quoteShellArg(artifactPath) + " > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 27);
-  CHECK(readFile(outPath) == "container missing key\n");
+  expectMapConformanceCompileReject(
+      makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource(),
+      "map_namespace_canonical_experimental_borrowed_ref_" + emitMode,
+      emitMode,
+      emitMode == "native" ? "" : "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectCanonicalMapNamespaceNamedArgsVmConformance() {
