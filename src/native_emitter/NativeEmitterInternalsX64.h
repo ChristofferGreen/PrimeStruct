@@ -309,6 +309,65 @@ class X64Emitter {
   void emitConvertIntToFloatImpl(bool isF64);
   void emitConvertFloatToIntImpl(bool isF64);
 
+  void emitHeapAllocFromSlotCountReg(uint8_t slotCountReg, uint8_t resultReg);
+  void emitHeapFreeFromAddressReg(uint8_t addressReg);
+
+  // Byte-granularity memory access (MOVZX load / MOV r/m8,r8 store) - not
+  // needed by the compute core, but required for scratch-buffer digit
+  // writing, string-byte access, and single-byte file I/O below.
+  void emitLoadMemByte(uint8_t rd, uint8_t base, int32_t disp);
+  void emitStoreMemByte(uint8_t base, int32_t disp, uint8_t rs);
+  void emitCmpRegImm32(uint8_t reg, int32_t imm);
+
+  // rd = rbp - offsetBytes: the same "offset measured away from the frame
+  // pointer" coordinate space localOffset() already uses for locals (see
+  // Core.h's class-comment header), extended to address the scratch
+  // region that NativeEmitterEmit.cpp lays out immediately after the
+  // locals (scratchOffset = localCount*16, see NativeEmitterFunctionLayout).
+  void emitLoadFrameOffset(uint8_t rd, uint32_t offsetBytes);
+
+  void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg);
+  void emitWriteSyscallReg(uint8_t fdReg, uint8_t bufferReg, uint8_t lengthReg);
+  void emitReadSyscallReg(uint8_t fdReg, uint8_t bufferReg, uint8_t lengthReg);
+  void emitWriteNewline(uint64_t fd, uint32_t scratchOffset);
+  void emitWriteNewlineReg(uint8_t fdReg, uint32_t scratchOffset);
+  void emitPrintUnsignedInternal(uint32_t scratchOffset,
+                                 uint32_t scratchBytes,
+                                 bool includeSign,
+                                 uint8_t signReg,
+                                 bool newline,
+                                 uint64_t fd);
+  void emitPrintUnsignedInternalReg(uint32_t scratchOffset,
+                                    uint32_t scratchBytes,
+                                    bool includeSign,
+                                    uint8_t signReg,
+                                    bool newline,
+                                    uint8_t fdReg);
+
+  // RIP-relative LEA placeholder (x86_64 counterpart to Arm64Emitter's
+  // emitAdrPlaceholder): returns the fixup index of the disp32 field,
+  // resolved later via patchAdr once the string table's final position
+  // is known.
+  size_t emitLeaRipPlaceholder(uint8_t rd);
+
+  // Pops an index off the value stack and resolves it through the string
+  // offset table into an absolute address, left in `resultReg`. Mirrors
+  // the address-only half of Arm64Emitter's inlined
+  // emitFileOpenDynamicPlaceholder sequence.
+  size_t emitResolveDynamicStringAddress(uint64_t offsetTableDelta, uint8_t resultReg);
+
+  // Resolves `indexReg` (already holding an index, NOT popped - callers
+  // that need the index off the value stack pop it themselves first)
+  // through both the offset table (-> address, in addrReg) and the
+  // parallel length table (-> byte length, in lengthReg). Mirrors
+  // Arm64Emitter's inlined emitPrintStringDynamicPlaceholder /
+  // emitFileWriteStringDynamicPlaceholder sequence. Clobbers indexReg.
+  size_t emitResolveDynamicStringAddressAndLength(uint64_t offsetTableDelta,
+                                                  uint64_t offsetTableSize,
+                                                  uint8_t indexReg,
+                                                  uint8_t addrReg,
+                                                  uint8_t lengthReg);
+
   std::vector<uint8_t> code_;
   uint64_t frameSize_ = 0;
   uint64_t codeBaseOffset_ = 0;
@@ -328,6 +387,7 @@ class X64Emitter {
 
 #include "NativeEmitterInternalsX64Core.h"
 #include "NativeEmitterInternalsX64Arithmetic.h"
+#include "NativeEmitterInternalsX64Io.h"
 
 uint32_t computeElfCodeOffset();
 bool buildElf(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error);
