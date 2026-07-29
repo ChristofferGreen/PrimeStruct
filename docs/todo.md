@@ -6112,3 +6112,128 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: verify the fix on vm, exe, AND native before closing -
     this session only confirmed vm and exe fail; native's behavior for
     this specific method-sugar form was not independently checked.
+
+- [ ] TODO-4754: Fix "VM error: IR stack underflow on pop" when a value-returning function's result is discarded as a statement, then another call to it is used in an expression
+  - owner: ai
+  - created_at: 2026-07-29
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found via "runs vm with user push helper shadow" in
+    `test_compile_run_vm_collections_map_vector_shadows.cpp`. Minimal
+    repro, unrelated to the name "push" or any collection type at all:
+    ```
+    [return<int>]
+    addStuff([i32] left, [i32] right) {
+      return(plus(left, right))
+    }
+    [return<int>]
+    main() {
+      addStuff(1i32, 2i32)
+      return(addStuff(4i32, 3i32))
+    }
+    ```
+    fails on `--emit=vm` with `VM error: IR stack underflow on pop`
+    (exit 3) instead of running and returning 7. The first call's return
+    value is discarded (called as a bare statement); the second call's
+    return value is consumed by `return(...)`. Likely related to the
+    TODO-4747 epic's "real function calls (replace universal inlining)"
+    work - a statement-position call to a real (non-inlined) function
+    whose return value is discarded may not be correctly popping/
+    balancing the value stack before the next call executes. Only 1
+    occurrence in this session's full triage of the ~100-case
+    `primestruct.compile.run.vm.collections` failure set, so it doesn't
+    appear to be a dominant root cause here, but the underlying bug
+    could plausibly affect any statement-position call whose result is
+    discarded - worth checking broadly once fixed, not just this one
+    test.
+  - implementation_notes: check the IR/VM emission path for a bare
+    expression-statement (not `return(...)`, not bound to a local) whose
+    expression is a real (non-inlined per TODO-4747's eligibility rules)
+    function call - does it emit a discard/pop instruction after the
+    call to balance the stack, and if so, is that pop instruction itself
+    buggy (e.g., double-popping, or popping when the call was actually
+    eligible for the void/CallVoid path and produced nothing to pop)?
+  - acceptance: the minimal repro above runs and returns 7 on vm (and
+    exe/native, which were not independently checked this session); the
+    re-pinned "runs vm with user push helper shadow" test case reverts
+    to its original expectation (exit 7).
+  - stop_rule: reproduce with the smallest form first (no user shadowing,
+    no collections, exactly as shown above) before assuming any
+    connection to the specific "push"-named test that surfaced it.
+
+- [ ] TODO-4755: Fix vector reserve() - no longer actually grows capacity, and its compile-time local-dynamic-limit validation no longer triggers
+  - owner: ai
+  - created_at: 2026-07-29
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found via the ~10-case "vector reserve ... local dynamic
+    limit"/"folded ..." cluster in
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`.
+    Minimal repro on `--emit=vm`:
+    ```
+    import /std/collections/*
+    [effects(heap_alloc, io_out), return<int>]
+    main() {
+      [vector<i32> mut] values{vector<i32>(1i32)}
+      reserve(values, 300i32)
+      print_line(capacity(values))
+      return(0i32)
+    }
+    ```
+    prints `1` (unchanged) instead of `300` - `reserve()` (both the bare
+    call form and the fully-qualified
+    `/std/collections/vector/reserve(...)` form) no longer actually grows
+    the vector's capacity at all, for any positive value tested (5, 300,
+    1025). By contrast, `push()`-triggered internal growth (via the same
+    `vectorReserveInternal<T>` stdlib helper in
+    `stdlib/std/collections/vector.prime`) does work, and basic mutable
+    struct field writes work fine in isolation (verified with a minimal
+    unrelated struct) and even through one level of nested nested-call
+    mutable-parameter passing - so this isn't a general "field mutation
+    doesn't persist" regression, it's specific to something in
+    `reserve()`'s call path or `vectorReserveInternal`'s growth branch
+    not actually executing/persisting for a direct `reserve()` call.
+    Separately, and likely a second symptom of the same missing
+    compile-time optimization: `reserve()` used to have a dedicated
+    lowering-time pass that literal-folded constant capacity arguments
+    and rejected anything beyond a 1024 "local dynamic limit" (or
+    negative, or overflowing) at COMPILE time with specific diagnostics
+    ("vector reserve exceeds local capacity limit (1024)", "vector
+    reserve expects non-negative capacity", "vector reserve literal
+    expression overflow") - none of that triggers anymore. Values that
+    fold to a genuinely negative number now still get caught, but only
+    later, at RUNTIME, via `vectorReserveInternal`'s own `if(capacity <
+    0) { panic(capacity) }` check (same message text, different
+    exit/timing: runtime panic exit 3 instead of compile-time reject
+    exit 2). Values beyond 1024 (with no overflow) now just silently
+    succeed as no-ops (no growth, no error). Large i64/u64 arguments
+    that overflow/wrap when narrowed to the `i32 capacity` parameter
+    (`vectorReserveInternal<T>` takes `[i32] capacity`) now produce
+    "array index out of bounds" instead of a proper overflow diagnostic
+    - suggesting the arg is silently truncated/misinterpreted rather
+    than type-checked or range-checked.
+  - implementation_notes: two separate things to investigate: (1) why
+    `vectorReserveInternal`'s growth branch
+    (`if(capacity > values.field_capacity()) { ... values.fieldCapacity =
+    capacity }`) doesn't observably grow capacity when reached via
+    `reserve()` specifically, given the exact same helper IS reached (and
+    works) via `push()`'s internal auto-grow call - diff the two call
+    sites' IR/lowering to see what differs; (2) the compile-time literal-
+    folding "local dynamic limit" validation pass for `reserve()` calls -
+    find where it used to hook in (likely alongside the still-working
+    "collection literal exceeds local capacity limit (1024)" check for
+    vector *literals*, which is unaffected) and check whether `reserve()`
+    calls are still being routed through it at all.
+  - acceptance: the minimal repro above prints `300`; all ~10 re-pinned
+    "vector reserve ... limit" test cases in
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp` revert
+    to their original compile-time-rejection expectations once both (1)
+    and (2) are fixed.
+  - stop_rule: don't assume fixing the compile-time limit-checking pass
+    (2) also fixes the runtime growth bug (1), or vice versa - they were
+    shown to be independently reproducible (runtime growth is broken
+    even via the fully-qualified call form, which bypasses whatever
+    routing might affect the bare-call literal-folding pass) and must be
+    verified fixed separately.

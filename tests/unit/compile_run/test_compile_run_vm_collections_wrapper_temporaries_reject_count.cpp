@@ -1372,7 +1372,6 @@ main() {
 TEST_CASE("runs vm experimental soa stdlib push and reserve helpers") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1397,7 +1396,6 @@ main() {
 TEST_CASE("runs vm experimental soa stdlib push and reserve methods") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
