@@ -13,6 +13,7 @@ constexpr uint8_t WasmOpLoop = 0x03;
 constexpr uint8_t WasmOpBr = 0x0c;
 constexpr uint8_t WasmOpBrIf = 0x0d;
 constexpr uint8_t WasmOpI32Eqz = 0x45;
+constexpr uint8_t WasmOpUnreachable = 0x00;
 
 struct LoopRegion {
   size_t guardIndex = 0;
@@ -96,21 +97,29 @@ bool emitIfRegion(const IrFunction &function,
                   const std::vector<WasmFunctionType> &functionTypes,
                   const WasmRuntimeContext &runtime,
                   std::vector<uint8_t> &out,
-                  std::string &error) {
+                  std::string &error,
+                  bool *outDiverges) {
   (void)conditionIndex;
   out.push_back(WasmOpIf);
   out.push_back(WasmBlockTypeVoid);
-  if (!emitInstructionRange(function, trueStart, trueEnd, localLayout, functionTypes, runtime, out, error)) {
+  bool trueDiverges = false;
+  if (!emitInstructionRange(
+          function, trueStart, trueEnd, localLayout, functionTypes, runtime, out, error, &trueDiverges)) {
     return false;
   }
-  if (falseStart < falseEnd) {
+  const bool hasElse = falseStart < falseEnd;
+  bool falseDiverges = false;
+  if (hasElse) {
     out.push_back(WasmOpElse);
     if (!emitInstructionRange(
-            function, falseStart, falseEnd, localLayout, functionTypes, runtime, out, error)) {
+            function, falseStart, falseEnd, localLayout, functionTypes, runtime, out, error, &falseDiverges)) {
       return false;
     }
   }
   out.push_back(WasmOpEnd);
+  if (outDiverges != nullptr) {
+    *outDiverges = hasElse && trueDiverges && falseDiverges;
+  }
   return true;
 }
 
@@ -123,9 +132,12 @@ bool emitInstructionRange(const IrFunction &function,
                           const std::vector<WasmFunctionType> &functionTypes,
                           const WasmRuntimeContext &runtime,
                           std::vector<uint8_t> &out,
-                          std::string &error) {
+                          std::string &error,
+                          bool *outDiverges) {
   size_t index = start;
+  bool diverges = false;
   while (index < end) {
+    diverges = false;
     LoopRegion loopRegion;
     if (detectCanonicalLoopRegion(function, index, end, loopRegion, error)) {
       out.push_back(WasmOpBlock);
@@ -194,7 +206,20 @@ bool emitInstructionRange(const IrFunction &function,
             return false;
           }
 
-          out.push_back(WasmOpI32Eqz);
+          // wasm's `if` executes its then-slot when the popped condition is
+          // non-zero - exactly IrOpcode::JumpIfZero's own fall-through
+          // condition (see decodeJumpTarget's caller: JumpIfZero jumps to
+          // `target` when the value is zero, falls through to index+1
+          // otherwise), so the already-computed condition on the wasm
+          // stack is used as-is. An earlier version of this function
+          // pushed `i32.eqz` here, inverting the condition without
+          // swapping which IR range fills the then/else slots below -
+          // that put the fall-through-when-true content in the slot wasm
+          // only runs when the condition is *false*, executing the wrong
+          // branch (or producing an unbalanced stack that fails wasm
+          // validation) for essentially any if/else or early-return-from-
+          // if pattern. See TODO-4748.
+          bool ifDiverges = false;
           if (!emitIfRegion(function,
                             index,
                             index + 1,
@@ -205,15 +230,34 @@ bool emitInstructionRange(const IrFunction &function,
                             functionTypes,
                             runtime,
                             out,
-                            error)) {
+                            error,
+                            &ifDiverges)) {
             return false;
           }
+          if (ifDiverges) {
+            // Both arms end in an explicit Return* - wasm's own validator
+            // does not infer that code is unreachable here just because
+            // neither arm falls through normally (the void if/else's own
+            // `end` still resumes the *outer* frame in normal, reachable
+            // state, which then needs whatever fallthru type that outer
+            // frame expects - e.g. the enclosing function's declared
+            // return type, if this if/else is the function's last
+            // construct). An explicit `unreachable` here tells the
+            // validator so, matching this range's actual dynamic
+            // behavior. See TODO-4748.
+            out.push_back(WasmOpUnreachable);
+          }
+          diverges = ifDiverges;
           index = jumpTarget;
           continue;
         }
       }
 
-      out.push_back(WasmOpI32Eqz);
+      // Same reasoning as above - no else branch here (falseStart==falseEnd
+      // below), but the condition still must not be inverted. An `if`
+      // without an `else` never diverges: the implicit empty else always
+      // reaches the end normally, so no `unreachable` hint is needed or
+      // correct here.
       if (!emitIfRegion(function,
                         index,
                         index + 1,
@@ -224,9 +268,11 @@ bool emitInstructionRange(const IrFunction &function,
                         functionTypes,
                         runtime,
                         out,
-                        error)) {
+                        error,
+                        nullptr)) {
         return false;
       }
+      diverges = false;
       index = target;
       continue;
     }
@@ -245,9 +291,13 @@ bool emitInstructionRange(const IrFunction &function,
     if (!emitSimpleInstruction(inst, localLayout, functionTypes, runtime, out, error, function.name)) {
       return false;
     }
+    diverges = inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64;
     ++index;
   }
 
+  if (outDiverges != nullptr) {
+    *outDiverges = diverges;
+  }
   return true;
 }
 

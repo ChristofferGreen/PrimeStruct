@@ -3934,7 +3934,7 @@ This file is the live open-work queue for PrimeStruct.
        (TODO-4748) rather than folded into this one, since fixing it is a
        `WasmEmitterControlFlow.cpp`-focused investigation with its own
        scope, not a TODO-4747 real-call concern.
-- [ ] TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
+- [x] TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
   - owner: ai
   - created_at: 2026-07-29
   - phase: Backend correctness
@@ -3966,6 +3966,100 @@ This file is the live open-work queue for PrimeStruct.
     environment lacking wasmtime. Do not assume the loop path is affected
     without checking directly - the loop-region fixtures haven't been
     tested yet as of this writing.
+  - progress_2026-07-29c (fixed, tested, closed):
+    1. Root cause confirmed exactly as hypothesized: removed the two
+       erroneous `WasmOpI32Eqz` pushes in `emitInstructionRange`'s
+       `JumpIfZero` handling (both the trailing-jump/if-else case and the
+       plain if-with-no-else case). Wasm's `if` already executes its
+       then-slot on a non-zero condition - exactly `JumpIfZero`'s own
+       fall-through condition - so the already-computed value on the wasm
+       stack is used as-is; the IR-range-to-then/else-slot assignment
+       below the (now-removed) `eqz` was already correct and needed no
+       change.
+    2. That alone fixed simple if/else and early-return-from-if (matching
+       `primevm` exactly on several fixtures - single-branch clamp,
+       explicit if/else, `factorial`'s recursive `if`, mutual recursion's
+       `if`), but a *both-arms-return* if/else (e.g. `if(cond){return 7}
+       else{return 3}`) still failed wasm validation ("expected 1 elements
+       on the stack for fallthru, found 0"). Root cause: wasm's own
+       validator does not infer that code following a void-typed if/else
+       is unreachable just because neither arm falls through normally -
+       the block's own `end` resumes the *outer* frame in normal
+       (reachable) state regardless of what happened inside, which then
+       needs whatever fallthru type that outer frame expects (here, the
+       function's own declared `i32` return, satisfied by nothing since
+       the void if/else pushed 0 values). Confirmed by manually decoding
+       the emitted wasm bytes (`od -A x -t x1z`) byte-for-byte against the
+       wasm opcode table before writing this second fix - the bytecode was
+       exactly the intended `if void {i32.const 7; return} else {i32.const
+       3; return} end`, spec-legal per divergence propagation *within* a
+       branch but not, it turns out, propagated *past* the block boundary
+       automatically the way an initial reading of the spec's "stack
+       polymorphism after unreachable" rule suggested.
+    3. Fix: added an `outDiverges` out-parameter to `emitInstructionRange`
+       (default `nullptr`, so unrelated call sites - the loop-region
+       guard/body sub-ranges - are unaffected) and to `emitIfRegion`,
+       computed bottom-up: a plain instruction range diverges iff its last
+       instruction is `ReturnVoid`/`ReturnI32`/`ReturnI64`; an if/else
+       diverges iff it has an `else` and *both* arms (recursively) diverge
+       (an `if` with no `else` never diverges - the implicit empty else
+       always reaches the end normally); a loop is conservatively never
+       reported as diverging. When `emitInstructionRange`'s `JumpIfZero`
+       handling emits an if/else that reports `ifDiverges = true`, it
+       immediately appends an explicit `unreachable` (0x00) opcode right
+       after the if/else's own `end` - this is a strictly local fix (no
+       special-casing needed in `lowerFunctionCode` for "is this if/else
+       the function's last construct") since it correctly marks *whatever*
+       wasm code follows as unreachable, whether that's more sequential
+       IR in the same range or the function's own implicit closing `end`.
+    4. Verified the loop-region path (`detectCanonicalLoopRegion`'s
+       `i32.eqz`+`br_if`-to-outer-block pattern) was never affected -
+       confirmed via reading (it targets a `br_if`, whose "branch on
+       non-zero" semantics differ from `if`'s, so inverting the guard
+       condition there is correct as-is) and via a same-container A/B test
+       run (a `while` loop summing 0..4 gives the correct `10` against
+       both the pre-fix and post-fix code).
+    5. Added 4 new permanent regression tests to
+       `test_compile_run_smoke_core_wasm_core.cpp` plus a Node-execution
+       check on the pre-existing "integer local control-flow subset" test
+       (the exact both-arms-return fixture that originally exposed this
+       bug) - covering: both-arms-return if/else, nested if/else (every
+       leaf returns, exercises the divergence-combination logic
+       recursively), a `while` loop (guards the unaffected path against a
+       future shared-code regression), and a real-call-eligible definition
+       (TODO-4747 Phase 1/Part B) whose own body branches, called from 3
+       sites - verifying the parameter-prologue fix (progress_2026-07-29b)
+       and this if/else fix compose correctly. Added `hasNode()` and a
+       `runWasmMainViaNode` helper to `test_compile_run_helpers.h`
+       (mirrors the existing `hasWasmtime()` gating pattern, but Node is
+       far more often available in practice than wasmtime is - which is
+       exactly why this bug shipped undetected: the pre-existing
+       wasmtime-gated checks on this same fixture only ever verified
+       compile-success in this session's environment and quite possibly
+       in CI too). Confirmed these 4 new/extended tests actually catch the
+       regression: reverted just the `WasmEmitterControlFlow.cpp`/
+       `WasmEmitterInternal.h` fix (keeping the new tests), rebuilt, and
+       saw exactly those 4 fail with the original error signatures; then
+       restored the fix and confirmed all 6 pass.
+    6. Full-suite verification (same-container `git stash` A/B against the
+       pre-fix code): `PrimeStruct_backend_ir_tests` 1696/45 (wasm-only
+       change, unaffected). `primestruct.compile.run.smoke` (contains all
+       wasm-emitting tests): 122/55 before -> 126/55 after (177 -> 181
+       test cases, all 4 new ones passing), failing-test-*name*-set
+       byte-identical both before and after (the 55 are all pre-existing
+       native-backend failures, since this sandbox isn't macOS/arm64 -
+       unrelated to wasm).
+    7. Known, separate, still-open issue found but explicitly *not*
+       chased here (out of scope for TODO-4748, which was specifically
+       about the `JumpIfZero`/if-else inversion): a fixture combining
+       nested `if` with chained `convert<...>` float/int conversions
+       (`if(equal(convert<int>(convert<f64>(convert<i64>(7.9f32))), ...`)
+       fails wasm validation with an unrelated type error ("local.set[0]
+       expected type i32, found f32.const of type f32"), suggesting a
+       separate local-type-inference bug in float/int conversion codegen.
+       Not filed as its own TODO yet since it hasn't been isolated from
+       the nested-if wrapper it was found in - worth a minimal
+       reproduction and its own TODO entry if picked up later.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

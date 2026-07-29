@@ -125,6 +125,202 @@ main() {
     const std::string output = readFile(outPath);
     CHECK(output.find("7") != std::string::npos);
   }
+
+  // Regression test (TODO-4748): this exact if/else - both branches
+  // unconditionally return - is the fixture that exposed a bug in
+  // WasmEmitterControlFlow.cpp where an erroneous `i32.eqz` inverted the
+  // branch condition without swapping which IR range filled wasm's
+  // if-then vs. else slot, executing the wrong branch (or, when both arms
+  // diverge like here, failing wasm validation outright with "expected 1
+  // elements on the stack for fallthru, found 0" - a void if/else's own
+  // `end` does not make the wasm validator treat subsequent code, i.e.
+  // the function's own implicit end, as unreachable just because neither
+  // arm falls through normally). The prior hasWasmtime()-gated check above
+  // only verified compile-success in most environments (wasmtime is
+  // typically unavailable), which is exactly why this shipped undetected -
+  // hasNode() is available far more often and gives real execution signal.
+  if (hasNode()) {
+    std::string result;
+    std::string nodeError;
+    REQUIRE(runWasmMainViaNode(wasmPath, result, nodeError));
+    CHECK(nodeError.empty());
+    CHECK(result == "7");
+  }
+}
+
+TEST_CASE("primec wasm if/else with both branches unconditionally returning matches vm result") {
+  // Narrower reproduction of the TODO-4748 fixture above, isolating just
+  // the failing shape without the wasmtime-specific assertions - value is
+  // negative here (unlike the "value{7}, both branches return" case
+  // above), so a passing wasmtime run would have caught this too, but
+  // wasmtime isn't reliably present, so this is checked via Node instead.
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{-4i32}
+  if(less_than(value, 0i32)) {
+    return(0i32)
+  } else {
+    return(value)
+  }
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_ifelse_negative.prime", source);
+  const std::string wasmPath = (testScratchPath("") / "primec_emit_wasm_ifelse_negative.wasm").string();
+  const std::string errPath = (testScratchPath("") / "primec_emit_wasm_ifelse_negative_err.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 0);
+
+  if (hasNode()) {
+    std::string result;
+    std::string nodeError;
+    REQUIRE(runWasmMainViaNode(wasmPath, result, nodeError));
+    CHECK(nodeError.empty());
+    CHECK(result == "0");
+  }
+}
+
+TEST_CASE("primec wasm nested if/else with all branches returning matches vm result") {
+  // Every leaf in this nested if/else returns - guards against a narrower
+  // fix that only handles a single level of the TODO-4748 inversion bug
+  // (the divergence tracking added alongside the fix must also correctly
+  // combine a *nested* if/else's own divergence into its enclosing arm's
+  // divergence result).
+  const std::string source = R"(
+[return<i32>]
+classify([i32] x) {
+  if(less_than(x, 0i32)) {
+    return(-1i32)
+  } else {
+    if(equal(x, 0i32)) {
+      return(0i32)
+    } else {
+      return(1i32)
+    }
+  }
+}
+
+[return<int>]
+main() {
+  return(plus(plus(classify(-5i32), multiply(classify(0i32), 10i32)), multiply(classify(9i32), 100i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_nested_ifelse.prime", source);
+  const std::string wasmPath = (testScratchPath("") / "primec_emit_wasm_nested_ifelse.wasm").string();
+  const std::string errPath = (testScratchPath("") / "primec_emit_wasm_nested_ifelse_err.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 99);
+
+  if (hasNode()) {
+    std::string result;
+    std::string nodeError;
+    REQUIRE(runWasmMainViaNode(wasmPath, result, nodeError));
+    CHECK(nodeError.empty());
+    CHECK(result == "99");
+  }
+}
+
+TEST_CASE("primec wasm while loop matches vm result") {
+  // Covers the loop-region translation path in WasmEmitterControlFlow.cpp,
+  // which uses its own (separate, and already-correct) i32.eqz + br_if
+  // pattern for the loop guard - a regression test alongside the
+  // TODO-4748 if/else fix so a future change to the shared
+  // decodeJumpTarget/detectCanonicalLoopRegion code can't silently break
+  // this path while fixing the if/else path, or vice versa.
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] i{0i32}
+  [i32 mut] sum{0i32}
+  while(less_than(i, 5i32)) {
+    assign(sum, plus(sum, i))
+    assign(i, plus(i, 1i32))
+  }
+  return(sum)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_while_loop.prime", source);
+  const std::string wasmPath = (testScratchPath("") / "primec_emit_wasm_while_loop.wasm").string();
+  const std::string errPath = (testScratchPath("") / "primec_emit_wasm_while_loop_err.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 10);
+
+  if (hasNode()) {
+    std::string result;
+    std::string nodeError;
+    REQUIRE(runWasmMainViaNode(wasmPath, result, nodeError));
+    CHECK(nodeError.empty());
+    CHECK(result == "10");
+  }
+}
+
+TEST_CASE("primec wasm real-call definition with branching matches vm result across multiple call sites") {
+  // Combines TODO-4747's real-call parameter-prologue fix (Step 2) with
+  // the TODO-4748 if/else fix: `classify` is non-recursive but called
+  // from 3 distinct sites, crossing the real-call eligibility threshold
+  // (kMinCallSitesForRealCall), so it gets its own wasm function (not
+  // inlined) - and its body itself branches with every arm returning.
+  // Exercises both fixes together, not just each in isolation.
+  const std::string source = R"(
+[return<i32>]
+sign([i32] x) {
+  if(less_than(x, 0i32)) {
+    return(-1i32)
+  } else {
+    if(equal(x, 0i32)) {
+      return(0i32)
+    } else {
+      return(1i32)
+    }
+  }
+}
+
+[return<int>]
+main() {
+  return(plus(plus(sign(-7i32), sign(0i32)), sign(3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_realcall_branching.prime", source);
+  const std::string wasmPath = (testScratchPath("") / "primec_emit_wasm_realcall_branching.wasm").string();
+  const std::string errPath = (testScratchPath("") / "primec_emit_wasm_realcall_branching_err.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 0);
+
+  if (hasNode()) {
+    std::string result;
+    std::string nodeError;
+    REQUIRE(runWasmMainViaNode(wasmPath, result, nodeError));
+    CHECK(nodeError.empty());
+    CHECK(result == "0");
+  }
 }
 
 TEST_CASE("primec emits wasm bytecode for float ops with tolerance-gated conversions") {

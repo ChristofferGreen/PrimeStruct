@@ -112,6 +112,43 @@ inline bool hasWasmtime() {
   return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
 }
 
+inline bool hasNode() {
+  return runCommand("node --version > /dev/null 2>&1") == 0;
+}
+
+// Executes a compiled --wasm-profile wasi module's exported `main` (a
+// pure-compute program with no import requirements) via Node's built-in
+// WebAssembly API and returns its numeric result as a string. Only
+// meaningful when hasNode() is true - unlike wasmtime (gated by
+// hasWasmtime(), often unavailable), Node is present in more environments
+// this test suite runs in, so this is the more broadly effective way to
+// catch real wasm-execution regressions (see TODO-4748).
+inline bool runWasmMainViaNode(const std::string &wasmPath, std::string &outResult, std::string &outError) {
+  static const std::string runnerScript = R"(
+const fs = require('fs');
+const bytes = fs.readFileSync(process.argv[2]);
+WebAssembly.instantiate(bytes, {}).then(({ instance }) => {
+  const result = instance.exports.main();
+  process.stdout.write(String(result));
+}).catch((e) => {
+  process.stderr.write('ERROR: ' + e.message);
+  process.exitCode = 1;
+});
+)";
+  const std::string runnerPath = writeTemp("primec_wasm_node_runner.cjs", runnerScript);
+  const std::string outPath = (testScratchPath("") / "primec_wasm_node_result.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_wasm_node_error.txt").string();
+  const std::string cmd = "node " + quoteShellArg(runnerPath) + " " + quoteShellArg(wasmPath) + " > " +
+                          quoteShellArg(outPath) + " 2> " + quoteShellArg(errPath);
+  if (runCommand(cmd) != 0) {
+    outError = readFile(errPath);
+    return false;
+  }
+  outResult = readFile(outPath);
+  outError.clear();
+  return true;
+}
+
 inline bool createZip(const std::filesystem::path &zipPath,
                       const std::filesystem::path &sourceDir) {
   const std::string command = "cd " + quoteShellArg(sourceDir.string()) +

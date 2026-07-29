@@ -282,6 +282,15 @@ bool emitSimpleInstruction(const IrInstruction &inst,
                            std::string &error,
                            const std::string &functionName);
 
+// `outDiverges`, if non-null, is set to whether every path through
+// [start, end) provably ends in an explicit Return* - i.e. wasm code
+// immediately following this range is unreachable. Conservative: a loop
+// is never reported as diverging, and an `if` with no `else` never
+// diverges (the implicit empty else always reaches the end normally). See
+// TODO-4748 for why callers need this: wasm's own validator does not
+// infer that code after a void-typed if/else is unreachable just because
+// neither arm falls through normally, so callers that know both arms
+// diverge must emit an explicit `unreachable` opcode themselves.
 bool emitInstructionRange(const IrFunction &function,
                           size_t start,
                           size_t end,
@@ -289,7 +298,8 @@ bool emitInstructionRange(const IrFunction &function,
                           const std::vector<WasmFunctionType> &functionTypes,
                           const WasmRuntimeContext &runtime,
                           std::vector<uint8_t> &out,
-                          std::string &error);
+                          std::string &error,
+                          bool *outDiverges = nullptr);
 
 bool lowerFunctionCode(const IrFunction &function,
                        const std::vector<WasmFunctionType> &functionTypes,
