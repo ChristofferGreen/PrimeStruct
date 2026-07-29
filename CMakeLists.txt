@@ -1810,12 +1810,25 @@ if(PRIMESTRUCT_BUILD_TESTS)
   if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     list(APPEND PrimeStructCompileRunSuites
       primestruct.compile.run.native_backend.core
+      primestruct.compile.run.native_backend.math_numeric
+    )
+  endif()
+  # These suites' own source-level platform guards (see
+  # test_compile_run_native_backend_{argv,control,imports,maybe,pointers,
+  # uninitialized}.cpp) also accept Linux/x86_64 now that a working native
+  # backend exists there; native_backend.core and .math_numeric stay
+  # Apple/arm64-only above because they hit a pre-existing, architecture-
+  # agnostic Result<T,E>.why() hang (reproduces on --emit=vm too, so it's
+  # unrelated to either native backend) - their guards were deliberately
+  # left disabled everywhere else.
+  if((APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$") OR
+     (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$"))
+    list(APPEND PrimeStructCompileRunSuites
       primestruct.compile.run.native_backend.uninitialized
       primestruct.compile.run.native_backend.maybe
       primestruct.compile.run.native_backend.argv
       primestruct.compile.run.native_backend.control
       primestruct.compile.run.native_backend.pointers
-      primestruct.compile.run.native_backend.math_numeric
       primestruct.compile.run.native_backend.imports
     )
   endif()
