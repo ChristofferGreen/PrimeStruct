@@ -662,22 +662,37 @@ inline size_t X64Emitter::emitJumpIfZeroPlaceholder() {
   return fixupIndex;
 }
 
+// `offsetWords` (kept as the parameter name for interface parity with
+// Arm64Emitter) arrives as target-position-minus-fixup-position, computed
+// by NativeEmitterEmit.cpp's shared, architecture-agnostic fixup
+// resolution from two `currentWordIndex()` values (byte offsets on this
+// backend) - i.e. as if the jump/call were self-relative, matching
+// ARM64's branch encoding. x86_64's rel32 is instead relative to the
+// address of the *following* instruction (fixup position + 4, since the
+// disp32 field itself is 4 bytes), so that shared computation is short by
+// exactly 4 here - corrected by subtracting it internally rather than
+// pushing an x86-specific adjustment into the shared driver.
 inline void X64Emitter::patchJump(size_t index, int32_t offsetWords) {
-  patchU32(index, static_cast<uint32_t>(offsetWords));
+  patchU32(index, static_cast<uint32_t>(offsetWords - 4));
 }
 
 inline void X64Emitter::patchCall(size_t index, int32_t offsetWords) {
-  patchU32(index, static_cast<uint32_t>(offsetWords));
+  patchU32(index, static_cast<uint32_t>(offsetWords - 4));
 }
 
 inline void X64Emitter::patchJumpIfZero(size_t index, int32_t offsetWords) {
-  patchU32(index, static_cast<uint32_t>(offsetWords));
+  patchU32(index, static_cast<uint32_t>(offsetWords - 4));
 }
 
 inline void X64Emitter::patchAdr(size_t index, uint8_t rd, int32_t deltaBytes) {
   (void)rd; // the register is already baked into the ModRM byte emitted
            // alongside the placeholder - only the disp32 needs patching.
-  patchU32(index, static_cast<uint32_t>(deltaBytes));
+  // Same "-4" correction as patchJump/patchCall/patchJumpIfZero above:
+  // `deltaBytes` arrives as a plain target-minus-fixup-position delta
+  // (NativeEmitterEmit.cpp's shared string-fixup resolution computes it
+  // that way for both backends), but x86_64 RIP-relative addressing is
+  // relative to the *next* instruction (fixup position + 4).
+  patchU32(index, static_cast<uint32_t>(deltaBytes - 4));
 }
 
 inline X64Emitter::CondCode X64Emitter::invertCond(CondCode cond) {
