@@ -4175,6 +4175,94 @@ This file is the live open-work queue for PrimeStruct.
        the fix in finding 1, and run the differential fixture suite
        described there before considering the native backend ready for
        TODO-4747's real-call work.
+  - progress_2026-07-29e (new work, not part of TODO-4747 itself - a
+    prerequisite for verifying it locally: added a second native backend,
+    x86_64/Linux, parallel to the existing ARM64/macOS one, specifically
+    so the native backend's correctness - including finding 1 above - can
+    finally be checked in this Linux sandbox instead of staying
+    permanently unverified. User explicitly chose this over the cheaper
+    alternative offered (reuse the ARM64 encoder + a Linux ELF writer,
+    run under `qemu-user-static`) - see the approved plan for the full
+    architecture (templated IR-dispatch loop shared between both
+    backends, x86_64-idiomatic `call`/`ret`+`rbp`-frame internals rather
+    than porting ARM64's manual link-register scheme literally, register
+    role mapping `rsp`/`rbp`=frame, `r15`=value-stack pointer,
+    `r14`=value-stack cache register, `r12`/`r13`=argc/argv). **Phase A
+    (skeleton) complete and verified**:
+    1. New files: `NativeEmitterInternalsX64.h` (`X64Emitter` class,
+       Linux-specific constants), `NativeEmitterInternalsX64Core.h`
+       (byte-level encoder: REX/ModRM, mov/lea, push/pop, frame
+       setup/teardown, value-stack push/pop+cache mirroring
+       `Arm64Emitter`'s exact spill/reload algorithm, locals,
+       jump/call/return lowering), `NativeEmitterElf.cpp` (minimal static
+       ELF64 writer - one header, one `PT_LOAD` segment, no dynamic
+       linking/code signing needed since every syscall is issued
+       directly, same as the Mach-O path). Not yet wired into
+       `NativeEmitterEmit.cpp`'s platform gate or `CMakeLists.txt` - these
+       compile and run only via ad hoc `g++` invocation so far, proving
+       the core mechanics before full integration (Phase B).
+    2. **A real gap was found and fixed while building this, not present
+       in the ARM64/Mach-O design**: a raw Linux ELF entry point has *no*
+       caller and no return address on the stack (unlike Mach-O's
+       `LC_MAIN`, which dyld calls through a real trampoline) - executing
+       `ret` at the true entry point pops garbage and crashes. Fixed by
+       having `beginFunction`'s existing `resetValueStack` parameter
+       (already effectively "is this the entry function", since the
+       shared dispatch loop always passes `isEntryFunction` there) also
+       set an `isEntryFunction_` flag that `emitReturn*` checks, emitting
+       `exit_group(raxValue)` via syscall instead of `ret` for the entry
+       function only - reusing the exact same call sites the shared
+       dispatch loop will use for every `Return*` opcode, no special
+       entry-only opcode handling needed.
+    3. Verified via three standalone smoke tests (hand-assembled, not yet
+       going through the real IR dispatch loop - `/tmp` scratch files,
+       not committed), each built and *actually executed* in this
+       sandbox: (a) two pushes forcing a value-stack-cache spill,
+       `StoreLocal`/`LoadLocal` round trip, exit code confirms LIFO pop
+       order under the forced spill (exit 7, correct); (b) a two-function
+       module with a real `call`/`ret` round trip and cross-function
+       fixup patching (exit 99, correct - first attempt crashed with
+       SIGSEGV due to a test bug, not an emitter bug: the callee's start
+       offset was captured *after* `beginFunction` had already emitted
+       its `push rbp`/`mov rbp,rsp` prologue, so the call skipped straight
+       past it; fixed by capturing the offset before calling
+       `beginFunction`, exactly matching how the real dispatch loop
+       already orders `functionOffsets[functionIndex] =
+       emitter.currentWordIndex()` before its `beginFunction` call);
+       (c) `JumpIfZero` plus a forward-jump fixup (exit 99, correct).
+       Debugged via `objdump -D -b binary -m i386:x86-64` when (b) first
+       failed, rather than continued hand-tracing.
+    4. **Found ahead of time, needs resolving in Phase B's actual
+       templatization**: `NativeEmitterFunctionEmit.cpp`'s dispatch loop
+       currently calls `emitter.emitMovRegPublic(21, 27)` (saving ARM64's
+       caller-frame-pointer register `x27` into `x21` before
+       `beginFunction` overwrites it, later stored into
+       `layout.framePointerLocalIndex` via
+       `emitStoreLocalFromReg(..., 21)`) - these are literal ARM64
+       register numbers with no x86_64 equivalent (x86_64 restores the
+       caller's `rbp` via hardware `pop rbp`, needs no local-slot
+       bookkeeping at all, per finding 2's design). Templatizing this
+       function verbatim would either silently corrupt x86_64 codegen
+       (register indices 21/27 don't fit `X64Emitter`'s 0-15 range) or
+       require a hacky magic-number-tolerance workaround. The right fix
+       (Phase B): replace those two literal calls in the shared loop with
+       abstractly-named methods (e.g.
+       `emitter.saveCallerFrameStateIfNeeded()` /
+       `emitter.storeCallerFrameStateIfNeeded(framePointerLocalIndex)`) -
+       a real no-op for `X64Emitter`, the exact same existing
+       `emitMovRegPublic`/`emitStoreLocalFromReg` calls for
+       `Arm64Emitter` wrapped under the new name (behavior-preserving
+       rename/refactor on the ARM64 side, not a logic change - still
+       unverified on real hardware like everything else ARM64-specific
+       in this session).
+    5. Not yet done: the ~100 remaining opcodes (arithmetic, comparisons,
+       conversions including the unsigned int64↔float cases x86_64 has no
+       single instruction for, print, file I/O, heap), the templatized
+       shared dispatch loop and its CMake/platform-gate integration, the
+       differential-vs-`primevm` verification pass, and flipping on the
+       existing ~50-file native test suite. See the approved plan
+       (`/root/.claude/plans/twinkling-foraging-charm.md` at time of
+       writing) for the full phase breakdown.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
