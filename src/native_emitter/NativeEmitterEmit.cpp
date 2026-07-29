@@ -75,18 +75,12 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
   if (instrumentation != nullptr) {
     *instrumentation = NativeEmitterInstrumentation{};
   }
-#if !defined(__APPLE__)
+#if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))) && \
+    !(defined(__linux__) && defined(__x86_64__))
   (void)module;
   (void)outputPath;
   (void)options;
-  error = "native backend is only supported on macOS";
-  return false;
-#else
-#if !defined(__aarch64__) && !defined(__arm64__)
-  (void)module;
-  (void)outputPath;
-  (void)options;
-  error = "native backend requires arm64";
+  error = "native backend is only supported on macOS/arm64 or Linux/x86_64";
   return false;
 #else
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
@@ -146,7 +140,11 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     layout.frameSize = alignTo(layout.localsSize, 16);
   }
 
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
   Arm64Emitter emitter;
+#else
+  X64Emitter emitter;
+#endif
   emitter.setValueStackCacheEnabled(options.enableRegisterCache);
   std::vector<NativeEmitterBranchFixup> branchFixups;
   std::vector<NativeEmitterCallFixup> callFixups;
@@ -213,8 +211,22 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     }
   }
 
-  constexpr int64_t kImm26Min = -(1LL << 25);
-  constexpr int64_t kImm26Max = (1LL << 25) - 1;
+  // ARM64 branch/call immediates are 26 bits (word-granular, matching
+  // Arm64Emitter's word-addressed code_); x86_64 jmp/call/jz rel32 is a
+  // full signed 32-bit byte displacement. Both deltas below are computed
+  // identically as targetOffset-minus-fixupPosition, in whichever unit
+  // `currentWordIndex()` returns for the active backend (words for
+  // ARM64, bytes for X64) - patchJump/patchCall/patchJumpIfZero already
+  // absorb x86_64's relative-to-next-instruction "-4" correction
+  // internally (see NativeEmitterInternalsX64Core.h), so this range check
+  // and the patch calls themselves stay identical across backends.
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  constexpr int64_t kBranchMin = -(1LL << 25);
+  constexpr int64_t kBranchMax = (1LL << 25) - 1;
+#else
+  constexpr int64_t kBranchMin = -(1LL << 31);
+  constexpr int64_t kBranchMax = (1LL << 31) - 1;
+#endif
   for (const auto &fixup : branchFixups) {
     const IrFunction &fn = module.functions[fixup.functionIndex];
     if (fixup.targetInst > fn.instructions.size()) {
@@ -225,13 +237,13 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     int64_t branchOffset = static_cast<int64_t>(fixup.codeIndex);
     int64_t delta = targetOffset - branchOffset;
     if (fixup.isConditional) {
-      if (delta < kImm26Min || delta > kImm26Max) {
+      if (delta < kBranchMin || delta > kBranchMax) {
         error = "native backend jump offset out of range";
         return false;
       }
       emitter.patchJumpIfZero(fixup.codeIndex, static_cast<int32_t>(delta));
     } else {
-      if (delta < kImm26Min || delta > kImm26Max) {
+      if (delta < kBranchMin || delta > kBranchMax) {
         error = "native backend jump offset out of range";
         return false;
       }
@@ -246,31 +258,43 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     int64_t targetOffset = static_cast<int64_t>(functionOffsets[fixup.targetFunctionIndex]);
     int64_t branchOffset = static_cast<int64_t>(fixup.codeIndex);
     int64_t delta = targetOffset - branchOffset;
-    if (delta < kImm26Min || delta > kImm26Max) {
+    if (delta < kBranchMin || delta > kBranchMax) {
       error = "native backend call offset out of range";
       return false;
     }
     emitter.patchCall(fixup.codeIndex, static_cast<int32_t>(delta));
   }
 
-  uint32_t codeBaseOffset = 0;
-#if defined(__APPLE__)
-  codeBaseOffset = computeMachOCodeOffset();
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  uint32_t codeBaseOffset = computeMachOCodeOffset();
   emitter.setCodeBaseOffset(codeBaseOffset);
 #endif
+  // X64 doesn't need codeBaseOffset: RIP-relative deltas (see patchAdr)
+  // are position-independent, so no absolute-address/page-math step is
+  // needed before resolving string fixups below.
 
   if (!stringFixups.empty() || !stringTableFixups.empty()) {
+    // currentWordIndex() returns a word count on ARM64 (4 bytes/word) but
+    // already a byte count on X64 - see NativeEmitterInternalsX64.h's
+    // class comment on why the method name is kept for interface parity.
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
     uint64_t codeSizeBytes = static_cast<uint64_t>(emitter.currentWordIndex()) * 4;
+#else
+    uint64_t codeSizeBytes = static_cast<uint64_t>(emitter.currentWordIndex());
+#endif
     uint64_t stringBaseOffset = codeSizeBytes;
     uint64_t stringTableOffset = stringBaseOffset + stringTableOffsetDelta;
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
     constexpr int64_t kAdrpMin = -(1LL << 20);
     constexpr int64_t kAdrpMax = (1LL << 20) - 1;
+#endif
     for (const auto &fixup : stringFixups) {
       if (fixup.stringIndex >= module.stringTable.size()) {
         error = "native backend encountered invalid string fixup";
         return false;
       }
       int64_t targetOffset = static_cast<int64_t>(stringBaseOffset + stringOffsets[fixup.stringIndex]);
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
       int64_t instrOffset = static_cast<int64_t>(fixup.codeIndex) * 4;
       int64_t instrAddr = static_cast<int64_t>(codeBaseOffset) + instrOffset;
       int64_t targetAddr = static_cast<int64_t>(codeBaseOffset) + targetOffset;
@@ -282,10 +306,19 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
         error = "native backend string literal out of range";
         return false;
       }
+#else
+      int64_t instrOffset = static_cast<int64_t>(fixup.codeIndex);
+      int64_t delta = targetOffset - instrOffset;
+      if (delta < kBranchMin || delta > kBranchMax) {
+        error = "native backend string literal out of range";
+        return false;
+      }
+#endif
       emitter.patchAdr(fixup.codeIndex, 1, static_cast<int32_t>(delta));
     }
     for (size_t fixupIndex : stringTableFixups) {
       int64_t targetOffset = static_cast<int64_t>(stringTableOffset);
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
       int64_t instrOffset = static_cast<int64_t>(fixupIndex) * 4;
       int64_t instrAddr = static_cast<int64_t>(codeBaseOffset) + instrOffset;
       int64_t targetAddr = static_cast<int64_t>(codeBaseOffset) + targetOffset;
@@ -297,6 +330,14 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
         error = "native backend string table out of range";
         return false;
       }
+#else
+      int64_t instrOffset = static_cast<int64_t>(fixupIndex);
+      int64_t delta = targetOffset - instrOffset;
+      if (delta < kBranchMin || delta > kBranchMax) {
+        error = "native backend string table out of range";
+        return false;
+      }
+#endif
       emitter.patchAdr(fixupIndex, 1, static_cast<int32_t>(delta));
     }
   }
@@ -322,11 +363,16 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     }
   }
   std::vector<uint8_t> image;
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
   if (!buildMachO(code, image, error)) {
     return false;
   }
-  return writeBinaryFile(outputPath, image, error);
+#else
+  if (!buildElf(code, image, error)) {
+    return false;
+  }
 #endif
+  return writeBinaryFile(outputPath, image, error);
 #endif
 }
 
