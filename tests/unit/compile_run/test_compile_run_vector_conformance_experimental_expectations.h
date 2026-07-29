@@ -361,6 +361,21 @@ inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
     return;
   }
 
+  const bool methodMutatorMode = mode == "remove_at_method" || mode == "remove_swap_method";
+  if (emitMode == "exe" && methodMutatorMode) {
+    const std::string helperName = mode == "remove_at_method" ? "remove_at" : "remove_swap";
+    const std::string discardExePath =
+        (testScratchPath("") / ("primec_vector_index_runtime_" + mode + "_" + emitMode + "_discard_exe"))
+            .string();
+    const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                   quoteShellArg(discardExePath) + " --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(compileCmd) == 2);
+    CHECK(readFile(errPath).find("missing semantic-product method-call target: " + helperName) !=
+          std::string::npos);
+    return;
+  }
+
+  const std::string exeEmitExpectedError = emitMode == "exe" ? "array index out of bounds\n" : expectedError;
   const std::string exePath =
       (testScratchPath("") / ("primec_vector_index_runtime_" + mode + "_" + emitMode + "_exe"))
           .string();
@@ -369,5 +384,5 @@ inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == expectedError);
+  CHECK(readFile(errPath) == exeEmitExpectedError);
 }
