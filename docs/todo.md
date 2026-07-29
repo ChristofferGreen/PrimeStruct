@@ -104,6 +104,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
+- TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
 
 ### Priority Lanes
 
@@ -3836,14 +3837,135 @@ This file is the live open-work queue for PrimeStruct.
        sessions, consistent with the drift already noted there as out of
        scope to chase further). Confirmed via the `primec` CLI that the
        original failing fixture now compiles cleanly on `--emit=vm`.
-    6. Not yet done (tracked as the plan's remaining steps, not part of
-       this fix): wasm's parameter-prologue calling-convention gap (Step
-       2 - root-caused, fix designed, not yet implemented) and a
+    6. Not yet done at the time of this note (tracked as the plan's
+       remaining steps): wasm's parameter-prologue calling-convention gap
+       (Step 2 - root-caused, fix designed, not yet implemented) and a
        code-review-only pass over the native backend's Call/CallVoid
        handling (Step 3 - this sandbox cannot build or execute ARM64
        codegen at all, `NativeEmitterEmit.cpp` gates it behind
        `#if defined(__APPLE__)`/`#if defined(__aarch64__)` at compile
        time).
+  - progress_2026-07-29b (TODO-4747 Phase 4, "Step 2" - wasm
+    parameter-prologue elision, plus a significant pre-existing,
+    unrelated wasm bug found while verifying it):
+    1. Implemented the fix designed in progress_2026-07-29a: in
+       `WasmEmitterFunctionBodies.cpp`'s `lowerFunctionCode`, detect the
+       leading `function.parameterCount` instructions as the exact
+       `StoreLocal (N-1), ..., StoreLocal 0` prologue pattern (the only
+       place that shape is generated - the real-call body-lowering loop)
+       and start translation at `parameterCount` instead of `0`, since
+       wasm's own `call` instruction already auto-binds the callee's
+       arguments as locals `0..parameterCount-1` per the wasm spec - the
+       IR's generic prologue exists for the VM/native/C++ backends'
+       explicit-operand-stack convention and would otherwise try to
+       `local.set`-pop values wasm never pushed. Fails loudly (does not
+       silently mis-skip) if `parameterCount > 0` but the leading
+       instructions don't match the expected pattern exactly.
+    2. Also fixed `computeLocalLayout`'s over-declaration: wasm's function
+       signature already provides `parameterCount` locals, so the body's
+       own local-declarations section (`appendLocalDecls`) no longer
+       redeclares that same range - `layout.i32LocalCount` is now
+       `totalCount - function.parameterCount` (guaranteed non-negative,
+       since the mandatory prologue always references indices
+       `0..parameterCount-1` and so always contributes at least that much
+       to `maxLocalIndex`). `layout.irLocalCount` (used only as the
+       `LoadLocal`/`StoreLocal` bounds check) intentionally keeps the full
+       range, since those indices remain valid references even though
+       nothing needs to declare them a second time. This was flagged as
+       "wasteful, not a correctness bug" in the original plan - confirmed
+       true (declared-but-unreferenced extra wasm locals, not a
+       mis-indexing) by hand-tracing wasm's own local-numbering rules
+       before writing the fix.
+    3. Verification method: Node's built-in `WebAssembly.compile`/
+       `instantiate` (confirmed available and usable for non-import,
+       `--wasm-profile wasi` modules in this sandbox, which has no
+       `wasmtime`) against `primevm` (built fresh via `cmake --build
+       . --target primevm` - not built by default) as the known-correct
+       reference, using ad hoc fixtures (single/multi-parameter
+       non-branching real-call bodies called from 2+ sites - see Context
+       above for why call-site count matters). Both a 1-parameter
+       (`square`-shaped) and a 2-parameter (`combine(a,b)`-shaped)
+       multi-call-site fixture now produce results matching `primevm`
+       exactly (previously: wasm validation failure, "not enough
+       arguments on the stack for local.set"). Regression check: full
+       `PrimeStruct_backend_ir_tests` (1696/45, unaffected - none of these
+       tests exercise the wasm backend) and the
+       `primestruct.compile.run.smoke` compile_run suite specifically
+       (contains all the wasm-emitting tests) via the same-container
+       `git stash` A/B methodology: 122/55 both before and after, failing-
+       test-*name*-set byte-identical (most of the 55 pre-existing
+       failures are native-backend tests failing because this sandbox
+       isn't macOS/arm64 - unrelated to wasm or to this change).
+    4. **A significant, unrelated, pre-existing bug was found while
+       building the differential-verification fixtures above, not fixed
+       here - flagged to the user rather than silently expanding this
+       step's scope.** The very first *branching* (`if`/`else`) fixture
+       tried - no real-call involvement at all, `parameterCount=0`,
+       nothing this session's TODO-4747 work touches - either produced a
+       wrong result or failed wasm validation outright. Example: `if(x<0)
+       { return(0) } return(x)` called on `x=-3` returned `-3` (should
+       clamp to `0`); a version with an explicit `else` branch failed
+       `WebAssembly.compile()` validation entirely ("expected 1 elements
+       on the stack for fallthru, found 0"). Root cause (from reading, not
+       yet fixing): `WasmEmitterControlFlow.cpp`'s `JumpIfZero` handling
+       emits `i32.eqz` before wasm's own `if`, inverting the branch
+       condition, but fills wasm's `if`-then slot with the IR's
+       fall-through-on-true content instead of swapping it into the
+       `else` slot (or dropping the `eqz` and using the original
+       condition directly) - so simple if/else and early-return-from-if
+       patterns get the wrong branch content, or (when the resulting
+       stack effect happens to be unbalanced) fail to validate. Confirmed
+       via `git log --oneline -1 -- src/wasm_emitter/WasmEmitterControlFlow.cpp`
+       that this file's history traces back to the repository's very
+       first commit and has never been modified since - conclusively
+       ruling out any connection to Phase 1/Part A/Part B/Step 1/Step 2 of
+       this epic, or to anything else in this session. It appears to have
+       shipped broken from the start and never been caught because the
+       existing wasm compile_run tests only compare *execution* output
+       against the VM when `wasmtime` is installed (gated behind
+       `hasWasmtime()`), which is not the case in this sandbox and may
+       never have been true in whatever environment last validated this
+       code either - the tests do still assert wasm *compiles* (exit 0),
+       which is why this went unnoticed even by the compile-success
+       checks. This is a real, likely long-standing wasm-backend
+       correctness gap affecting essentially any wasm-targeted program
+       with conditional logic, entirely independent of real-call
+       emission - filed as a new, separate TODO below
+       (TODO-4748) rather than folded into this one, since fixing it is a
+       `WasmEmitterControlFlow.cpp`-focused investigation with its own
+       scope, not a TODO-4747 real-call concern.
+- [ ] TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
+  - owner: ai
+  - created_at: 2026-07-29
+  - phase: Backend correctness
+  - scope: `WasmEmitterControlFlow.cpp`'s `JumpIfZero` translation
+    (`emitInstructionRange`'s `JumpIfZero` branch, and `emitIfRegion`)
+    appears to invert the branch condition (`i32.eqz` before wasm's `if`)
+    without swapping which IR range fills wasm's `if`-then vs. `else`
+    slots, so `if`/`else` and early-return-from-`if` patterns can execute
+    the wrong branch or fail wasm validation ("expected 1 elements on the
+    stack for fallthru, found 0"). Confirmed via `git log --oneline -1 --
+    <file>` that this code is untouched since the repository's initial
+    commit - predates and is unrelated to TODO-4747. Reproduction:
+    `if(less_than(x, 0i32)) { return(0i32) } return(x)` compiled to
+    `--emit=wasm --wasm-profile wasi` and executed via Node's
+    `WebAssembly.instantiate` (no `wasmtime` needed) returns the
+    unclamped `x` instead of `0` for negative `x`; a version with an
+    explicit `else` fails `WebAssembly.compile()` outright. Differential
+    baseline: `primevm` (build via `cmake --build . --target primevm`)
+    gives the correct result for the same source.
+  - next_steps: re-derive the correct condition/branch-content pairing
+    from wasm's actual `if`/`else` semantics (branch nonzero => then), fix
+    `emitInstructionRange`'s `JumpIfZero` case and `detectCanonicalLoopRegion`/
+    the loop-region path (which reuses the same `i32.eqz`+`if` pattern for
+    the loop guard and may have the identical inversion), then build a
+    reusable Node-based differential harness (`WebAssembly.compile`/
+    `instantiate` vs. `primevm`, no `wasmtime` dependency) covering
+    if-only, if/else, nested-if, and loop fixtures before/after, since the
+    existing wasmtime-gated tests won't catch a regression here in any
+    environment lacking wasmtime. Do not assume the loop path is affected
+    without checking directly - the loop-region fixtures haven't been
+    tested yet as of this writing.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18

@@ -71,7 +71,26 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     layout.fileDigitsNegLocal = static_cast<uint32_t>(totalCount + 2);
     totalCount += 3;
   }
-  layout.i32LocalCount = static_cast<uint32_t>(totalCount);
+  // wasm's function signature already provides locals 0..parameterCount-1
+  // (see inferFunctionType in WasmEmitterModule.cpp) - the real-call
+  // prologue that references them is skipped during translation (see
+  // lowerFunctionCode below) but still counted into maxLocalIndex above,
+  // so totalCount here is always >= parameterCount whenever
+  // parameterCount > 0. Declaring that same range again in this
+  // function's own local-declarations section wouldn't miscompile
+  // anything (StoreLocal/LoadLocal address locals by raw IR index either
+  // way, and appended declared locals still land at the index that range
+  // implies), but it's dead weight - shrink the *declared* count by the
+  // range wasm already gives us for free. layout.irLocalCount above (used
+  // as the LoadLocal/StoreLocal bounds check) intentionally still covers
+  // the full range, since indices 0..parameterCount-1 remain valid IR
+  // local references even though nothing needs to declare them again.
+  if (totalCount < function.parameterCount) {
+    error = "internal error: wasm emitter local count inconsistent with parameterCount in function: " +
+            function.name;
+    return WasmLocalLayout{};
+  }
+  layout.i32LocalCount = static_cast<uint32_t>(totalCount - function.parameterCount);
   if (layout.hasFileNumericHelpers) {
     layout.fileDigitsValueLocal = static_cast<uint32_t>(totalCount);
     layout.fileDigitsRemLocal = static_cast<uint32_t>(totalCount + 1);
@@ -125,9 +144,42 @@ bool lowerFunctionCode(const IrFunction &function,
   outBody.instructions.clear();
   appendLocalDecls(localLayout, outBody.localDecls);
 
+  // wasm's own `call` instruction auto-binds a callee's arguments as its
+  // first N locals per the wasm spec, but the real-call body-lowering loop
+  // (IrLowererLowerStatementsCallsStage.cpp) unconditionally emits an
+  // explicit `StoreLocal (N-1) ... StoreLocal 0` prologue for every
+  // real-call-eligible body, matching the VM/native/C++ backends'
+  // caller-pushes/callee-pops operand-stack convention instead. Translating
+  // that prologue as-is would try to `local.set` values wasm never pushed
+  // (they're already bound), so skip exactly that leading pattern here.
+  // Fail loudly rather than mis-skip if a function claims parameters but
+  // its instructions don't start with the expected shape - this is the
+  // only place that shape is generated, so a mismatch means either this
+  // function's assumptions or the lowering pipeline's have drifted.
+  size_t startIndex = 0;
+  if (function.parameterCount > 0) {
+    if (function.instructions.size() < function.parameterCount) {
+      error = "wasm emitter: function " + function.name + " declares " +
+              std::to_string(function.parameterCount) +
+              " parameters but has too few instructions for the expected prologue";
+      return false;
+    }
+    for (uint32_t i = 0; i < function.parameterCount; ++i) {
+      const IrInstruction &inst = function.instructions[i];
+      const uint64_t expectedLocal = function.parameterCount - 1 - i;
+      if (inst.op != IrOpcode::StoreLocal || inst.imm != expectedLocal) {
+        error = "wasm emitter: function " + function.name +
+                " declares parameters but its leading instructions do not match the expected "
+                "StoreLocal prologue";
+        return false;
+      }
+    }
+    startIndex = function.parameterCount;
+  }
+
   if (!emitInstructionRange(
           function,
-          0,
+          startIndex,
           function.instructions.size(),
           localLayout,
           functionTypes,
