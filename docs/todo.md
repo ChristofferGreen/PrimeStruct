@@ -4060,6 +4060,121 @@ This file is the live open-work queue for PrimeStruct.
        Not filed as its own TODO yet since it hasn't been isolated from
        the nested-if wrapper it was found in - worth a minimal
        reproduction and its own TODO entry if picked up later.
+  - progress_2026-07-29d (TODO-4747 Phase 4, "Step 3" - native backend
+    code review, investigation and documentation only per the approved
+    plan: this sandbox is Linux, and `NativeEmitterEmit.cpp` gates every
+    line of ARM64 codegen behind `#if defined(__APPLE__)` /
+    `#if defined(__aarch64__) || defined(__arm64__)` at *compile time* -
+    the codegen isn't even compiled into this session's `primec` binary,
+    let alone executable, and this repo has no `.github/workflows/` or
+    other CI config of any kind to fall back on for real signal. Every
+    finding below is a code-reading argument, not a build+run result -
+    treat it accordingly.):
+    1. **High-confidence bug found, NOT fixed (no way to verify a fix
+       here): `Call`/`CallVoid` are missing a value-stack-cache flush
+       before transferring control, unlike every other control-flow
+       opcode.** `Arm64Emitter` keeps a single-slot register cache
+       (`x26`, `valueStackCacheReg_`) that lets a push/pop pair skip a
+       round trip through the actual memory-backed operand stack
+       (`x28`-relative, spilled/reloaded via `emitSpillReg`/
+       `emitReloadReg` in `NativeEmitterInternalsArm64Core.h`) - a
+       compile-time-only bookkeeping optimization (`hasValueStackCache_`),
+       tracked independently *per function being emitted*: `beginFunction`
+       unconditionally resets it to `false` at the start of every
+       function's own codegen (`NativeEmitterInternals.h`), regardless of
+       what the *caller's* compile-time cache state was. `Jump`'s handling
+       in `NativeEmitterFunctionEmit.cpp` already calls
+       `emitter.flushValueStackCachePublic()` before emitting the branch -
+       necessary because control can arrive at the jump target from a
+       different compile-time context with a different actual cache
+       state, so the actual memory stack must be made authoritative before
+       transferring control. The exact same reasoning applies to `Call`/
+       `CallVoid`, emitted a few lines below in the same function
+       (`case IrOpcode::Call:`/`case IrOpcode::CallVoid:`), but neither
+       case flushes before `emitter.emitCallPlaceholder()`. Concretely: if
+       a real-call site's last argument-evaluating instruction (e.g. a
+       bare `LoadLocal` for a single-argument call, an extremely common
+       shape) leaves its value cached only in `x26` (not yet spilled to
+       the `x28`-relative memory stack - the common case, since
+       `emitPushReg` only spills when a *second* push arrives before the
+       first is popped), the callee's own prologue (`StoreLocal
+       (N-1)...StoreLocal 0`, per the real-call body-lowering loop) reads
+       arguments via `emitStoreLocal` -> `emitPopReg`, whose behavior
+       depends on the *callee's own* `hasValueStackCache_` - which
+       `beginFunction` always resets to `false` for every function,
+       caller and callee alike, independent of each other. So the
+       callee's first `StoreLocal` always reloads from the `x28`-relative
+       memory location instead of reading `x26`, and that memory location
+       was never written (the caller's push stayed in the register,
+       uncommitted) - the callee reads stale/uninitialized data while the
+       actual argument value sits orphaned in `x26`. This is a structural
+       gap in the register-cache scheme, not a subtle edge case: it should
+       reproduce for essentially any real-call site whose immediately-
+       preceding argument push wasn't itself preceded by another
+       still-cached push. It was never caught before this session because
+       `Call`/`CallVoid` were dead code paths in every backend until
+       TODO-4747 Phase 1 started emitting them (matching the exact
+       "written some time ago, never exercised" situation that also
+       explained the wasm calling-convention gap and the TODO-4748 if/else
+       bug - the native backend's Call/CallVoid handling turns out to have
+       the same history).
+    2. **Proposed fix (NOT applied - needs a macOS/arm64 build to verify
+       before landing):** add `emitter.flushValueStackCachePublic();` as
+       the first line of both the `case IrOpcode::Call:` and
+       `case IrOpcode::CallVoid:` blocks in `NativeEmitterFunctionEmit.cpp`
+       (currently lines ~317 and ~326), mirroring `Jump`'s existing
+       pattern exactly. This is a minimal, narrowly-scoped, low-risk
+       change *in isolation*, but "low-risk on paper" is exactly the kind
+       of claim this session's practice requires verifying by actually
+       running the affected code path before trusting it - do not apply
+       without a same-container-equivalent A/B (build native, run the
+       same recursive/multi-call-site fixtures already used for VM/wasm
+       verification - factorial, mutual recursion, the `square`-shaped
+       multi-call-site case - through `--emit=native`, differential-check
+       against `primevm`'s output) on a real macOS/arm64 machine.
+    3. Everything else checked came back clean (still code-reading only,
+       not executed):
+       - Mutual recursion / forward references: `NativeEmitterEmit.cpp`
+         emits every function first (recording each one's own code offset
+         in `functionOffsets`), then patches every `callFixups` entry in a
+         second pass using the now-fully-populated offset table - so a
+         function calling another function emitted *later* in `emitOrder`
+         resolves correctly regardless of emission order. This is the
+         same placeholder+fixup pattern this session's `ir_lowerer`
+         reservation-index design was built to match, and it was already
+         exercised before this session (via `lowerCallableDefinitionOrchestration`'s
+         indirectly-reachable "callable" wrapper functions, which already
+         produced `module.functions.size() > 1` - just never with a raw
+         `Call` opcode *inside* another function's body until now).
+       - Per-function frame/local-count layout (`NativeEmitterEmit.cpp`,
+         the loop building `layouts`): generically derives `localCount`
+         from every function's own `LoadLocal`/`StoreLocal`/
+         `AddressOfLocal` usage, with no special-casing for the entry vs.
+         other functions - correctly sized for a real-call body's own
+         parameters-as-locals without any change needed.
+       - Max-stack-depth computation for `Call`/`CallVoid`
+         (`NativeEmitterHelpers.cpp`, feeding frame-size allocation):
+         already correctly uses `module.functions[inst.imm].parameterCount`
+         as the consumed depth and `1`/`0` (Call/CallVoid) as produced -
+         this was Phase 0b's fix earlier in this same session, so it
+         predates and was already exercised by this session's own
+         verification work, not a new-and-unverified concern.
+       - `x28` (the actual memory-backed value-stack pointer, distinct
+         from the `x26` register cache above) is confirmed to be a
+         genuinely global, cross-call runtime value: `beginFunction`'s
+         `resetValueStack` parameter (which re-seeds `x28` to the top of
+         the current frame) is only ever passed `true` for the *entry*
+         function - every other function's prologue leaves `x28` exactly
+         where the caller left it, matching the "one shared operand
+         stack across the whole call graph" convention this session's
+         `ir_lowerer` design assumes throughout.
+    4. No macOS CI runner or other real-signal path exists in this repo
+       to pursue instead (`.github/workflows/` doesn't exist at all, no
+       other CI config found) - the actual next step for native backend
+       readiness is simply: get access to a macOS/arm64 environment, apply
+       the fix in finding 1, and run the differential fixture suite
+       described there before considering the native backend ready for
+       TODO-4747's real-call work.
 - [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
   - owner: ai
   - created_at: 2026-07-18
