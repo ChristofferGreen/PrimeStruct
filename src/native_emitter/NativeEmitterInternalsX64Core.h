@@ -270,8 +270,20 @@ inline void X64Emitter::emitPushF64(uint64_t bits) {
   emitPushReg(0);
 }
 
+// Local N's address is (rbp - frameSize_) + localOffset(N) - i.e. locals
+// are addressed relative to the BOTTOM of the frame (the post-prologue
+// rsp), with address INCREASING as the local index increases, matching
+// Arm64Emitter's `x27 + localOffset(N)` convention (x27 sits at the
+// bottom of its frame too). This is required, not cosmetic: struct/sum-
+// type field access is lowered by shared, architecture-agnostic code as
+// `AddressOfLocal(base) + fieldIndex*IrSlotBytes`, which only lands on
+// the correct field if increasing the raw address by IrSlotBytes is
+// equivalent to increasing the local index by one - true here, but false
+// for the simpler `rbp - localOffset(N)` this backend used originally
+// (addresses decreasing with index), which silently walked off into
+// unrelated stack memory for any multi-field struct's non-first field.
 inline void X64Emitter::emitLoadLocalToReg(uint8_t reg, uint32_t index) {
-  emitLoadMem(reg, 5, -static_cast<int32_t>(localOffset(index)));
+  emitLoadMem(reg, 5, -static_cast<int32_t>(frameSize_ - localOffset(index)));
 }
 
 inline void X64Emitter::emitLoadLocal(uint32_t index) {
@@ -281,12 +293,12 @@ inline void X64Emitter::emitLoadLocal(uint32_t index) {
 
 inline void X64Emitter::emitAddressOfLocal(uint32_t index) {
   emitMovRegReg(0, 5); // mov rax, rbp
-  emitSubRegImm32(0, static_cast<int32_t>(localOffset(index)));
+  emitSubRegImm32(0, static_cast<int32_t>(frameSize_ - localOffset(index)));
   emitPushReg(0);
 }
 
 inline void X64Emitter::emitStoreLocalFromReg(uint32_t index, uint8_t reg) {
-  emitStoreMem(5, -static_cast<int32_t>(localOffset(index)), reg);
+  emitStoreMem(5, -static_cast<int32_t>(frameSize_ - localOffset(index)), reg);
 }
 
 inline void X64Emitter::emitStoreLocal(uint32_t index) {
