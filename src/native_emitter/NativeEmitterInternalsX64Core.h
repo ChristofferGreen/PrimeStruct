@@ -237,7 +237,13 @@ inline void X64Emitter::emitCaptureEntryArgs() {
   // [rbp + 16]) - _start has no return address on the stack the way a
   // `call`ed function would, only whatever `push rbp` itself added.
   emitLoadMem(12, 5, 8);  // r12 (argc) = [rbp + 8]
-  emitLoadMem(13, 5, 16); // r13 (argv) = [rbp + 16]
+  // r13 (argv) must be the ARRAY BASE ADDRESS (rbp+16 itself), not the
+  // pointer stored there - that value is argv[0] (a string pointer), not
+  // a separate "argv" pointer. The SysV ABI lays argv[] inline on the
+  // initial stack right after argc; there is no indirection to load
+  // through, only an address to compute.
+  emitMovRegReg(13, 5);
+  emitAddRegImm32(13, 16); // r13 = rbp + 16 = &argv[0]
 }
 
 inline void X64Emitter::emitMovRegPublic(uint8_t rd, uint8_t rn) {

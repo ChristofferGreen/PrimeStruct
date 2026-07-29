@@ -343,6 +343,16 @@ bool emitNativeFunctions(const IrModule &module,
           error = "native backend detected invalid call target";
           return false;
         }
+        // The value-stack cache register is a single global slot with no
+        // save/restore around calls, so anything left cached here (e.g.
+        // an operand pushed just before this call, still awaiting a
+        // later pop) would be silently clobbered by the callee's own use
+        // of the same register - flush it to the real, memory-backed
+        // stack first so it survives the call. This is the TODO-4747
+        // Step 3 finding, confirmed by actually running compiled output:
+        // a function that used a call's result in further arithmetic
+        // segfaulted/produced wrong results without this flush.
+        emitter.flushValueStackCachePublic();
         callFixups.push_back({emitter.emitCallPlaceholder(), static_cast<size_t>(inst.imm)});
         emitter.emitPushReg0();
         break;
@@ -352,6 +362,7 @@ bool emitNativeFunctions(const IrModule &module,
           error = "native backend detected invalid call target";
           return false;
         }
+        emitter.flushValueStackCachePublic();
         callFixups.push_back({emitter.emitCallPlaceholder(), static_cast<size_t>(inst.imm)});
         break;
       }

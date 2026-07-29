@@ -402,7 +402,15 @@ bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t 
   const int64_t kUnset = std::numeric_limits<int64_t>::min();
   std::vector<int64_t> depth(fn.instructions.size(), kUnset);
   std::vector<size_t> worklist;
-  depth[0] = 0;
+  // A function reached via a real Call/CallVoid is entered with its
+  // parameters already sitting on the shared value stack - the caller
+  // pushes them via ordinary expression evaluation before `call`, and the
+  // callee's own first instructions are StoreLocal ops that pop them off
+  // (see NativeEmitterFunctionEmit.cpp's Call/CallVoid and StoreLocal
+  // handling). Seeding the simulated stack at 0 regardless of
+  // parameterCount made this checker reject every real-called
+  // parameterized function's entry StoreLocal as an underflow.
+  depth[0] = static_cast<int64_t>(fn.parameterCount);
   worklist.push_back(0);
   maxDepth = 0;
 

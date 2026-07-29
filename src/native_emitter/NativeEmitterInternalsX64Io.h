@@ -14,11 +14,11 @@ inline size_t X64Emitter::emitResolveDynamicStringAddress(uint64_t offsetTableDe
   emitSubRegReg(9, 2); // reg9 = table base = anchor - offsetTableDelta
   emitMovRegImm64(3, 8);
   emitImulRegReg(0, 3); // reg0 = index * 8
-  emitMovRegReg(4, 1);
-  emitAddRegReg(4, 0);  // reg4 = anchor + idx*8 (offset-table entry address)
-  emitLoadMem(4, 4, 0); // reg4 = stored offset
+  emitMovRegReg(10, 1);
+  emitAddRegReg(10, 0);  // reg10 = anchor + idx*8 (offset-table entry address)
+  emitLoadMem(10, 10, 0); // reg10 = stored offset
   emitMovRegReg(resultReg, 9);
-  emitAddRegReg(resultReg, 4); // resultReg = table base + stored offset
+  emitAddRegReg(resultReg, 10); // resultReg = table base + stored offset
   return fixupIndex;
 }
 
@@ -33,11 +33,11 @@ inline size_t X64Emitter::emitResolveDynamicStringAddressAndLength(uint64_t offs
   emitSubRegReg(9, 2); // reg9 = table base = anchor - offsetTableDelta
   emitMovRegImm64(3, 8);
   emitImulRegReg(indexReg, 3); // indexReg *= 8
-  emitMovRegReg(4, 1);
-  emitAddRegReg(4, indexReg); // reg4 = anchor + idx*8 (offset-table entry address)
-  emitLoadMem(4, 4, 0);       // reg4 = stored offset
+  emitMovRegReg(10, 1);
+  emitAddRegReg(10, indexReg); // reg10 = anchor + idx*8 (offset-table entry address)
+  emitLoadMem(10, 10, 0);       // reg10 = stored offset
   emitMovRegReg(addrReg, 9);
-  emitAddRegReg(addrReg, 4); // addrReg = table base + stored offset
+  emitAddRegReg(addrReg, 10); // addrReg = table base + stored offset
 
   emitMovRegImm64(6, offsetTableSize);
   emitAddRegReg(6, 1);       // reg6 = anchor + offsetTableSize (length-table anchor)
@@ -61,17 +61,17 @@ inline void X64Emitter::emitPrintUnsignedInternal(uint32_t scratchOffset,
   emitMovRegReg(9, 1);                    // reg9 = write cursor
   if (newline) {
     emitSubRegImm32(9, 1);
-    emitMovRegImm64(4, '\n');
-    emitStoreMemByte(9, 0, 4);
+    emitMovRegImm64(11, '\n');
+    emitStoreMemByte(9, 0, 11);
   }
   emitMovRegImm64(10, 10); // divisor constant, untouched by DIV
   const size_t loopStart = code_.size();
   emitMovRegImm64(2, 0); // rdx = 0 before each unsigned divide
   emitDivReg(10);        // rax /= 10 (quotient), rdx = remainder (digit)
-  emitMovRegReg(4, 2);
-  emitAddRegImm32(4, '0');
+  emitMovRegReg(11, 2);
+  emitAddRegImm32(11, '0');
   emitSubRegImm32(9, 1);
-  emitStoreMemByte(9, 0, 4);
+  emitStoreMemByte(9, 0, 11);
   emitCmpRegImm32(0, 0); // quotient == 0?
   const size_t doneBranch = emitCondJumpPlaceholder(CondCode::Eq);
   const size_t jumpBack = emitJumpPlaceholderRaw();
@@ -82,8 +82,8 @@ inline void X64Emitter::emitPrintUnsignedInternal(uint32_t scratchOffset,
     emitCmpRegImm32(signReg, 0);
     const size_t skipSign = emitCondJumpPlaceholder(CondCode::Eq);
     emitSubRegImm32(9, 1);
-    emitMovRegImm64(4, '-');
-    emitStoreMemByte(9, 0, 4);
+    emitMovRegImm64(11, '-');
+    emitStoreMemByte(9, 0, 11);
     patchCondJumpHere(skipSign);
   }
 
@@ -103,17 +103,17 @@ inline void X64Emitter::emitPrintUnsignedInternalReg(uint32_t scratchOffset,
   emitMovRegReg(9, 1);
   if (newline) {
     emitSubRegImm32(9, 1);
-    emitMovRegImm64(4, '\n');
-    emitStoreMemByte(9, 0, 4);
+    emitMovRegImm64(11, '\n');
+    emitStoreMemByte(9, 0, 11);
   }
   emitMovRegImm64(10, 10);
   const size_t loopStart = code_.size();
   emitMovRegImm64(2, 0);
   emitDivReg(10);
-  emitMovRegReg(4, 2);
-  emitAddRegImm32(4, '0');
+  emitMovRegReg(11, 2);
+  emitAddRegImm32(11, '0');
   emitSubRegImm32(9, 1);
-  emitStoreMemByte(9, 0, 4);
+  emitStoreMemByte(9, 0, 11);
   emitCmpRegImm32(0, 0);
   const size_t doneBranch = emitCondJumpPlaceholder(CondCode::Eq);
   const size_t jumpBack = emitJumpPlaceholderRaw();
@@ -124,8 +124,8 @@ inline void X64Emitter::emitPrintUnsignedInternalReg(uint32_t scratchOffset,
     emitCmpRegImm32(signReg, 0);
     const size_t skipSign = emitCondJumpPlaceholder(CondCode::Eq);
     emitSubRegImm32(9, 1);
-    emitMovRegImm64(4, '-');
-    emitStoreMemByte(9, 0, 4);
+    emitMovRegImm64(11, '-');
+    emitStoreMemByte(9, 0, 11);
     patchCondJumpHere(skipSign);
   }
 
@@ -193,8 +193,8 @@ inline size_t X64Emitter::emitPrintStringDynamicPlaceholder(uint64_t offsetTable
                                                              bool newline,
                                                              uint64_t fd) {
   emitPopReg(0); // index
-  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 5, 7);
-  emitWriteSyscall(fd, 5, 7);
+  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 8, 7);
+  emitWriteSyscall(fd, 8, 7);
   if (newline) {
     emitWriteNewline(fd, scratchOffset);
   }
@@ -296,8 +296,8 @@ inline size_t X64Emitter::emitFileWriteStringPlaceholder(uint64_t lengthBytes, u
 inline size_t X64Emitter::emitFileWriteStringDynamicPlaceholder(uint64_t offsetTableDelta, uint64_t offsetTableSize) {
   emitPopReg(0); // index
   emitPopReg(8); // fd (r8 - not used internally by the resolve helper below)
-  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 5, 7);
-  emitWriteSyscallReg(8, 5, 7);
+  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 11, 7);
+  emitWriteSyscallReg(8, 11, 7);
   emitMovRegImm64(0, 0);
   emitPushReg(0);
   return fixupIndex;
@@ -384,8 +384,8 @@ inline size_t X64Emitter::emitLoadStringLengthPlaceholder(uint64_t offsetTableSi
   emitMovRegImm64(3, 8);
   emitImulRegReg(0, 3);
   emitAddRegReg(2, 0); // reg2 = length-table entry address
-  emitLoadMem(4, 2, 0);
-  emitPushReg(4);
+  emitLoadMem(9, 2, 0);
+  emitPushReg(9);
   return fixupIndex;
 }
 
@@ -413,8 +413,8 @@ inline void X64Emitter::emitPrintArgv(uint32_t argcLocalIndex,
   emitMovRegReg(3, 1); // reg3 = string cursor
   emitMovRegImm64(2, 0); // reg2 = length accumulator
   const size_t loopStart = code_.size();
-  emitLoadMemByte(4, 3, 0);
-  emitCmpRegImm32(4, 0);
+  emitLoadMemByte(9, 3, 0);
+  emitCmpRegImm32(9, 0);
   const size_t doneBranch = emitCondJumpPlaceholder(CondCode::Eq);
   emitAddRegImm32(2, 1);
   emitAddRegImm32(3, 1);
