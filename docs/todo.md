@@ -6071,3 +6071,44 @@ This file is the live open-work queue for PrimeStruct.
     literal-string print_line calls that don't involve field access at
     all, e.g. print_line of already-correct string content), and confirm
     the fix for one doesn't mask investigating the other.
+
+- [ ] TODO-4753: Fix vector .remove_at()/.remove_swap() method-call sugar - broken on both vm and exe
+  - owner: ai
+  - created_at: 2026-07-29
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found while triaging `primestruct.compile.run.vm.collections`
+    (683 cases, distinct from the smaller `imports` suite already fixed
+    this pass). Minimal repro on `--emit=vm`:
+    `[vector<i32> mut] values{vector<i32>(1i32, 2i32)}; values.remove_at(1i32)`
+    fails with `VM lowering error: missing semantic-product method-call
+    target: remove_at` - the bare-call form
+    `remove_at(values, 1i32)` works fine on the same receiver. Same for
+    `.remove_swap(idx)`. Reproduces identically on `--emit=exe` (see the
+    `vector index runtime contract` fix earlier this pass, which had to
+    special-case this exact gap for the `remove_at_method`/
+    `remove_swap_method` variants). Confirmed independent of any user
+    shadow function - it reproduces on a completely vanilla program with
+    no `/vector/remove_at` override in scope at all.
+  - implementation_notes: contrast with `.push(...)`, `.reserve(...)`,
+    `.pop()`, `.clear()`, `.count()`, `.capacity()`, `.at(...)` method-
+    call sugar on the same `vector<i32> mut` receiver, all of which
+    resolve fine per this session's testing - `remove_at`/`remove_swap`
+    specifically are missing from whatever table maps method-call-sugar
+    names to their `/std/collections/vector/...` semantic-product
+    definitions. Likely a straightforward registration gap once located
+    (compare against how `push`/`reserve` register their method-sugar
+    entries).
+  - acceptance: `values.remove_at(idx)` and `values.remove_swap(idx)`
+    method-call sugar work identically to the bare-call form on vm, exe,
+    and native; revert the re-pinned rejections in
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp` (two
+    "canonical precedence" cases) and
+    `test_compile_run_vector_conformance_experimental_expectations.h`'s
+    `expectVectorIndexRuntimeContract` (`remove_at_method`/
+    `remove_swap_method` branches) back to "runs and returns N" once
+    fixed.
+  - stop_rule: verify the fix on vm, exe, AND native before closing -
+    this session only confirmed vm and exe fail; native's behavior for
+    this specific method-sugar form was not independently checked.
