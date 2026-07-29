@@ -1,6 +1,6 @@
 #include "test_compile_run_helpers.h"
 
-#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+#if (defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))) || (defined(__linux__) && defined(__x86_64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.pointers");
 
 TEST_CASE("native hello world example") {
