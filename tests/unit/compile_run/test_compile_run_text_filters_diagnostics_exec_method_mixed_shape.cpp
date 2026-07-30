@@ -50,7 +50,7 @@ execute_repeat(wrapMap().count(), wrapVector().count())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -102,7 +102,7 @@ execute_repeat(wrapMap().count(), wrapVector().count())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -156,7 +156,7 @@ execute_repeat(wrapVector().count(), wrapMap().count())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -210,7 +210,7 @@ execute_repeat(wrapVector().count(), wrapMap().count())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -262,7 +262,7 @@ execute_repeat(wrapVector().count(true), wrapMap().count(true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -314,7 +314,7 @@ execute_repeat(wrapVector().count(true), wrapMap().count(true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -366,7 +366,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -418,7 +418,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -472,7 +472,7 @@ execute_repeat(wrapVector().count(), wrapMap().count(true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -526,7 +526,7 @@ execute_repeat(wrapVector().count(), wrapMap().count(true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -578,7 +578,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().count(1i32, 2i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 

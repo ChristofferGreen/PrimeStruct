@@ -363,7 +363,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at_unsafe\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
@@ -414,7 +414,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at_unsafe\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
@@ -465,7 +465,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key") !=
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at_unsafe\"") !=
         std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
@@ -518,7 +518,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key") !=
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at_unsafe\"") !=
         std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
@@ -570,7 +570,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
@@ -621,7 +621,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 

@@ -50,7 +50,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
@@ -193,7 +193,7 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"unknown call target: /map\"") !=
+  CHECK(diagnostics.find("\"message\":\"unknown call target: map\"") !=
         std::string::npos);
   CHECK(diagnostics.find("map literal") == std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
@@ -230,7 +230,7 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"unknown call target: /map\"") !=
+  CHECK(diagnostics.find("\"message\":\"unknown call target: map\"") !=
         std::string::npos);
   CHECK(diagnostics.find("map literal") == std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);

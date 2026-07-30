@@ -50,7 +50,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter marker: expected i32 got bool\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -102,7 +102,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter marker: expected i32 got bool\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -154,7 +154,7 @@ execute_repeat(capacity(wrapVector(), true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter marker: expected i32 got bool\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -206,7 +206,7 @@ execute_repeat(capacity(wrapVector(), true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter marker: expected i32 got bool\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -259,7 +259,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector()))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -312,7 +312,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector()))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -366,7 +366,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter marker: expected i32 got bool\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -420,7 +420,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter marker: expected i32 got bool\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -471,7 +471,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -522,7 +522,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -574,7 +574,7 @@ execute_repeat(wrapVector().capacity(true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") !=
         std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
@@ -627,7 +627,7 @@ execute_repeat(wrapVector().capacity(true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") !=
         std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }

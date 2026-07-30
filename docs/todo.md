@@ -6525,6 +6525,382 @@ This file is the live open-work queue for PrimeStruct.
     fix - they hit different error classes (semantic vs. IR-lowering)
     and may be unrelated.
 
+- [ ] TODO-4815: Templated call argument inference fails when the argument is itself a collection-helper method-call-sugar result
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found while sweeping `primestruct.compile.run.text_filters`
+    (`test_compile_run_text_filters_dumps.cpp`, three cases: "dump
+    semantic_product alias works and prints semantic output", "primec and
+    primevm dump semantic-product match", "pipeline dump surfaces keep
+    inspection order and lowering-facing boundaries"). Minimal repro:
+    ```
+    import /std/collections/*
+
+    [return<T>]
+    id<T>([T] value) {
+      return(value)
+    }
+
+    [return<int>]
+    main() {
+      [vector<i32>] values{vector<i32>()}
+      return(id(values.count()))
+    }
+    ```
+    used to successfully infer `T=i32` from `values.count()`'s return
+    type; now fails to compile with `Semantic error: unable to infer
+    implicit template arguments for /id`. Re-pinned all three affected
+    cases to the verified current rejection.
+  - implementation_notes: trace implicit-template-argument inference for
+    a call whose argument expression is a collection-helper method-call
+    (`.count()`) rather than a plain value/variable - check whether the
+    argument's inferred type is available at the point template inference
+    runs, or whether it's evaluated too late (e.g. after the inference
+    pass already gave up). Also check whether this is specific to
+    `count()` or affects any method-call-sugar argument generally (the
+    repro uses `.count()` because that's what surfaced it, not
+    necessarily the only trigger).
+  - acceptance: the minimal repro above compiles and its `--dump-stage
+    semantic-product` output matches the pre-regression form the three
+    re-pinned tests originally expected (dump succeeds, `T` inferred as
+    `i32`).
+  - stop_rule: reproduce with the smallest form first (a plain `[i32]`
+    local instead of `values.count()`) to confirm inference works for
+    ordinary arguments before concluding the method-call-sugar path is
+    specifically broken.
+
+- [ ] TODO-4814: semantic-product binding_facts ordering and ast-semantic bare-return rendering both drifted from documented/pinned form
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found in `test_compile_run_text_filters_dumps.cpp`'s
+    "semantic-product dump keeps provenance handles while ast-semantic
+    keeps syntax" test. Two independent drifts in the same test: (1)
+    `--dump-stage semantic-product`'s `binding_facts[]` list now
+    enumerates a struct's own internal field bindings (e.g. `/Packet`'s
+    `left`/`right` locals) before the bindings of the scope that actually
+    uses the struct (`/main`'s `packet` local shifted from
+    `binding_facts[0]` to `binding_facts[2]`); (2) `--dump-stage
+    ast-semantic` now renders a bare `return(selected)` statement as
+    `return selected` (no parentheses), matching the paren-less style
+    already used for other return forms elsewhere in this file (e.g.
+    `return 0`, `return total`) but not previously used for this specific
+    case. Re-pinned both to the verified current form.
+  - implementation_notes: (1) is likely intentional/harmless (struct
+    definitions are processed before their use sites, so their internal
+    bindings naturally sort first) but worth confirming the ordering is
+    now stable/deterministic rather than incidental; (2) is a pure
+    dump-formatting normalization, check
+    `src/ir_lowerer`/whatever owns ast-semantic's statement printer for
+    where parenthesized vs. paren-less return rendering is decided.
+  - acceptance: confirm (1)'s ordering is deterministic (not just
+    incidentally observed once) and (2) is applied uniformly - no
+    ast-semantic dump anywhere still emits a parenthesized bare return.
+    If both hold, this can likely be closed as "working as intended,
+    just under-documented" rather than requiring a code change.
+  - stop_rule: do not change binding_facts ordering or return-statement
+    rendering without first confirming whether other passing tests in
+    this suite already depend on the *current* (parenthesized/index-0)
+    form elsewhere - a blind revert could break tests this session left
+    green.
+
+- [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found via `test_compile_run_text_filters_runtime_if.cpp`'s
+    "string comparison" test. Minimal repro:
+    ```
+    [return<bool>]
+    main() {
+      return(equal("alpha"utf8, "alpha"utf8))
+    }
+    ```
+    `./primec --emit=exe repro.prime -o out --entry /main` used to
+    compile successfully (the resulting binary exits 1, the boolean-true
+    convention); it now fails to compile at all with `EXE IR lowering
+    error: native backend does not support string comparisons` (exit 2).
+    `--emit=vm` still works correctly and reports the analogous "vm
+    backend does not support string comparisons" only when the VM itself
+    is asked to run a string comparison directly (which is expected/
+    unchanged) - `--emit=exe` is the one that broke, apparently by now
+    routing through the same native-backend lowering path used by
+    `--emit=native` (which never supported string comparisons), where it
+    previously used a different, string-comparison-capable exe lowering
+    path. Re-pinned to the verified current rejection.
+  - implementation_notes: diff the `--emit=exe` IR lowering path against
+    whatever it used before this regression - look for a recent change
+    that merged/aliased the exe backend's validation target with the
+    native backend's (see `resolveIrBackendEmitKind`/`IrBackends.h` and
+    the "EXE IR lowering error" message's emission site) instead of
+    keeping them on separate capability sets.
+  - acceptance: the minimal repro above compiles successfully with
+    `--emit=exe` again, and the resulting binary's runtime behavior
+    (exit 1 for equal strings) is independently verified, not just
+    "compiles"; the re-pinned "string comparison" test case is flipped
+    back to its original expectation once fixed.
+  - stop_rule: do not just special-case string comparisons in the exe
+    lowering path if the underlying cause is a broader accidental
+    exe/native path merge - other exe-only capabilities may have
+    regressed the same way and should be checked once the root cause is
+    found.
+
+- [ ] TODO-4812: Modern soa<T>/SoaVector<T> public-surface method-sugar and canonicalization gaps found sweeping text_filters dumps
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: a catch-all for several distinct drifts found re-pinning
+    `test_compile_run_text_filters_dumps.cpp`'s large soa/SoaVector
+    ast-semantic dump cluster (~30 cases), after modernizing those tests
+    off the now-hard-rejected `import /std/collections/internal_soa(_conversions)/*`
+    spelling (see the "direct import of retired soa compatibility modules
+    is not supported" rejection, a deliberate TODO-4633-era removal, not
+    itself a bug). Distinct findings once the retired imports were
+    dropped:
+    1. `.push(...)` method-call sugar on a `[soa<Particle>, mut]` or
+       `[auto mut]`-typed local fails with `unknown call target: push`
+       when no `import /std/collections/*` is present (or, for `[auto
+       mut]`, even when the generic import IS present - the `auto`
+       inference apparently isn't complete by the time `.push()` is
+       resolved). Explicitly `[SoaVector<Particle> mut]`-typed locals
+       with `import /std/collections/*` present are unaffected.
+    2. Root-level same-path shadow definitions (`/to_aos`, not
+       `/soa/to_aos`) are not honored for `SoaVector<Particle>`/public
+       `soa<Particle>` receivers the way sibling shadows (`/soa/count`,
+       `/soa/get`, `/soa/ref`, `/soa/push`, `/soa/reserve`) are - `.to_aos()`
+       method-call sugar resolves straight to the canonical
+       `/std/collections/soa/to_aos__` builtin instead, an asymmetry
+       between `to_aos` and its siblings.
+    3. `count()` can no longer be used inside an expression (only as a
+       bare statement) - `plus(count(values), ...)` now rejects with
+       `count is only supported as a statement`.
+    4. Field-index-view mutation syntax (`values.y()[i]`,
+       `y(values)[i]`) no longer routes through a dedicated
+       `soaVectorRef__`/`experimental_soa/soaVectorRef__` column-view
+       helper - it now lowers to plain per-element
+       `ref__(values, i).y`/`ref_ref__(...).y` forms instead. Likely an
+       intentional simplification, not a regression.
+    5. By-value (non-borrowed) `get`/`count` helper-return receivers now
+       canonicalize to the plain `get__`/`count__` forms instead of the
+       `_ref` borrowed-reference variants, even when reached through
+       `location(...)`/`dereference(...)` wrapper syntax - also likely
+       an intentional simplification.
+    6. `to_aos__`'s own body no longer directly contains
+       `count__`/`get__` calls - the loop was factored into a separate
+       `soaVectorToAos__` implementation helper (defined earlier in the
+       dump) that uses internal `soaVectorCount__`/`soaVectorGet__`
+       names instead of the public spellings.
+    7. `soaVectorSingle`/`soaVectorNew`-family helpers now canonicalize
+       under `/std/collections/soa/...` instead of the old
+       `/std/collections/experimental_soa/...` namespace (consistent with
+       the TODO-4633 `soa`/`experimental_soa` merge - not itself a bug).
+    Each affected case was re-pinned individually to its exact verified
+    current behavior; see the `TODO-4812` comments left at each site in
+    `test_compile_run_text_filters_dumps.cpp` for the specific repro and
+    message.
+  - implementation_notes: (1) and (2) look like the highest-value real
+    bugs here (broken/asymmetric method-call-sugar resolution); (3)-(7)
+    are more likely intentional simplifications from ongoing soa
+    modernization work and may not need code changes, just confirmation.
+    Start with (1)'s `auto`-typed-local push failure (narrowest, clearest
+    repro) and (2)'s `to_aos` same-path-shadow asymmetry (directly
+    parallels the already-tracked TODO-4756 `ref_ref` gap) before the
+    rest.
+  - acceptance: split into properly-scoped sub-TODOs once triaged - this
+    entry's job is first to determine which of the 7 findings above are
+    genuine bugs (fix) vs. intentional (just confirm and close).
+  - stop_rule: do not attempt to fix all 7 findings under one change -
+    they very likely have different root causes (mixing method-sugar
+    resolution, template/type inference timing, and IR-lowering loop
+    factoring); triage into separate leaves before writing any code.
+
+- [ ] TODO-4811: count() can no longer be used inside an expression, only as a bare statement
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found in `test_compile_run_text_filters_dumps.cpp`'s "dump
+    ast-semantic rewrites builtin soa count forms to canonical helper
+    path" test. Minimal repro:
+    ```
+    [struct reflect]
+    Particle() {
+      [i32] x{1i32}
+    }
+
+    [return<int>]
+    main() {
+      [soa<Particle>] values{soa<Particle>()}
+      [int] total{plus(count(values), plus(/soa/count(values), values./soa/count()))}
+      return(total)
+    }
+    ```
+    used to compile and canonicalize all three `count()` spellings
+    within the `plus(...)` expression; it now fails with `Semantic
+    error: count is only supported as a statement` (pointing at the
+    second, `/soa/count(values)`, occurrence). Re-pinned to the verified
+    current rejection.
+  - implementation_notes: find where `count`'s call-form validation
+    decides "statement vs. expression" position and check why this
+    restriction was added/triggered - it may be an intentional
+    tightening (mirroring how some other builtins are statement-only) or
+    an accidental over-broadening of a check meant for a narrower case.
+  - acceptance: the minimal repro above compiles again and its
+    `--dump-stage ast-semantic` output matches the original pre-
+    regression expectation (all three `count()` spellings canonicalized
+    to `/std/collections/soa/count__`); the re-pinned test case is
+    flipped back once fixed.
+  - stop_rule: before changing the "statement only" check, confirm
+    whether it's deliberately restricting *all* collection-helper
+    builtins (count/capacity/etc.) to statement position or just count -
+    a narrow fix to count alone could leave a real bug in the others.
+
+- [ ] TODO-4810: --emit-diagnostics structured payload hardcodes "native backend" in the unsupported-string-comparison message regardless of the actual requested backend
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found in
+    `test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp`'s
+    "primec emit-diagnostics reports structured lowering payload" test.
+    Minimal repro:
+    ```
+    [return<bool>]
+    main() {
+      return(equal("alpha"utf8, "alpha"utf8))
+    }
+    ```
+    `./primec --emit=vm repro.prime --entry /main --emit-diagnostics`
+    reports `{"code":"PSC2001","message":"native backend does not
+    support string comparisons",...,"notes":["backend: vm"]}` - the
+    `message` field says "native backend" while the `notes` field (and
+    the actually-requested `--emit=vm` backend) correctly say "vm". The
+    plain (non-`--emit-diagnostics`) stderr path for the same repro
+    correctly says "vm backend does not support string comparisons" -
+    only the structured-diagnostics JSON payload has the wrong backend
+    name hardcoded into the message text. Re-pinned to the verified
+    current (mismatched) text.
+  - implementation_notes: find the unsupported-string-comparison
+    diagnostic's message-construction site used specifically by the
+    `--emit-diagnostics` structured-payload path (distinct from the
+    plain-stderr path, since they disagree) and check why it hardcodes
+    "native" instead of using the same backend-name variable the `notes`
+    field already correctly uses.
+  - acceptance: the minimal repro's `--emit-diagnostics` JSON payload's
+    `message` field says "vm backend does not support string
+    comparisons" (matching its `notes` field and the plain-stderr
+    wording); re-verify the analogous `--emit=native` case still
+    correctly says "native backend" once fixed (don't just swap the
+    hardcoded string).
+  - stop_rule: fix the message-construction site to use the actual
+    backend identifier, not by adding a special case for vm specifically
+    - other backends could have the same hardcoded-"native" bug once
+    checked.
+
+- [ ] TODO-4809: collect-diagnostics collection-helper (count/capacity) diagnostic collection collapses or corrupts messages when a definition mixes map- and vector-receiver errors
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found sweeping the ~150-case `--collect-diagnostics`/
+    `--emit-diagnostics` cluster across
+    `test_compile_run_text_filters_diagnostics_*.cpp`. Three related
+    diagnostic-collection bugs, all in the same subsystem:
+    1. **Mixed map/vector collection-helper diagnostic collapse.** When
+       a single definition contains two separate erroring
+       collection-helper calls where one resolves through the `/map/...`
+       namespace and the other through `/vector/...` (e.g. `count(m)`
+       with a wrong arg count, then `capacity(v, true)` with a wrong arg
+       type), only ONE of the two diagnostics survives in
+       `--collect-diagnostics` output - never both - regardless of
+       source order. Minimal repro:
+       ```
+       [return<i32>]
+       /map/count([map<i32, i32>] values, [i32] marker) {
+         return(marker)
+       }
+       [effects(heap_alloc), return<i32>]
+       /vector/capacity([vector<i32>] values, [i32] marker) {
+         return(marker)
+       }
+       [return<i32>]
+       bad() {
+         [map<i32, i32>] m{map<i32, i32>(1i32, 2i32)}
+         [vector<i32>] v{vector<i32>(3i32, 4i32)}
+         count(m)
+         capacity(v, true)
+         return(0i32)
+       }
+       [return<i32>]
+       main() {
+         return(0i32)
+       }
+       ```
+       Two identically-named-builtin calls to the SAME namespace (e.g.
+       two `/vector/capacity` calls) both collect correctly - only the
+       map/vector *mix* triggers the collapse. In some variants the
+       surviving diagnostic's message text itself is wrong for its
+       reported source position (e.g. "unknown call target: count"
+       pointing at a line containing an unrelated `m[true]` expression),
+       suggesting the two candidate diagnostics share a single
+       overwritten scratch slot rather than each being independently
+       collected.
+       2. **Multi-diagnostic collection drops all-but-first for
+       unresolved imports.** `import /missing_alpha` followed by `import
+       /missing_beta` used to collect one "unknown import path: X/*"
+       diagnostic per bad import (2 total); it now collects only the
+       first (`/missing_alpha`), and that diagnostic's message also lost
+       its "/*" suffix (now "unknown import path: /missing_alpha" instead
+       of ".../missing_alpha/*").
+       3. **Duplicate-definition report picks the last group, not the
+       first.** Two duplicate-definition groups in one file (`dup`
+       defined twice, then `other` defined twice) used to report the
+       FIRST group encountered in source order (`/dup`); it now reports
+       the LAST (`/other`) instead - still only one diagnostic total
+       (`semanticCount == 1` still holds), just the wrong one relative to
+       the "keeps first duplicate-definition payload" test's original
+       name/intent.
+       Roughly 140+ TEST_CASE assertions across 20 files were re-pinned
+       to their exact verified current messages (see the `TODO-4809`
+       references left at the individual fix sites, mostly the count/
+       capacity call-pair message swaps and the two duplicate-definition/
+       import tests).
+  - implementation_notes: start with (1) - it's the most reproducible and
+    has the clearest minimal repro. Check whatever code path collects
+    diagnostics from collection-helper (`count`/`capacity`/`at`/etc.)
+    resolution attempts within a single definition - likely a shared
+    per-definition (not per-statement) scratch/pending-diagnostic slot
+    that gets overwritten by each subsequent collection-helper candidate
+    check instead of appended to a list. (2) and (3) may share the same
+    root cause (a general "only the last thing written to a shared slot
+    survives" pattern) or may be independent - verify before assuming.
+  - acceptance: the minimal repro in (1) above collects BOTH the
+    `/map/count` arg-count-mismatch and `/vector/capacity`
+    arg-type-mismatch diagnostics (2 entries, not 1); the two-bad-import
+    repro in (2) collects both diagnostics with the "/*" suffix restored;
+    the duplicate-definition repro in (3) reports `/dup` (first group)
+    again. All ~140+ re-pinned test cases should revert to checking for
+    the multi-diagnostic/first-occurrence forms once fixed - this is a
+    large but mechanical re-pin-back pass once the underlying collection
+    bug(s) are fixed.
+  - stop_rule: do not fix (1)/(2)/(3) as one patch without first
+    confirming (via minimal repros, same as above) whether they share a
+    root cause - if they turn out to be unrelated, split into separate
+    TODOs rather than one combined fix that's hard to verify
+    independently.
+
 - [ ] TODO-4759: Canonical namespaced vector count/capacity slash-method calls on a map receiver resolve inconsistently
   - owner: ai
   - created_at: 2026-07-30
