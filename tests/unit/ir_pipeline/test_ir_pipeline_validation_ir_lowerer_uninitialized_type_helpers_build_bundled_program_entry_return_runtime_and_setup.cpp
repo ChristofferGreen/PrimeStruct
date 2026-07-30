@@ -337,8 +337,15 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   CHECK(typeName == "vector");
   CHECK(resolvedTypePath.empty());
 
+  // hasKeyValueKinds (IrLowererSharedTypes.h) requires both key and value
+  // kinds to be set (not Unknown) to recognize a map local - a bare
+  // kind=Value LocalInfo with neither set is not a real map-local shape,
+  // so it no longer routes through the map branch. Set both to match the
+  // real invariant a map local always carries.
   LocalInfo mapLocal;
   mapLocal.kind = LocalInfo::Kind::Value;
+  mapLocal.keyValueKeyKind = LocalInfo::ValueKind::Int32;
+  mapLocal.keyValueValueKind = LocalInfo::ValueKind::Int32;
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(mapLocal, typeName, resolvedTypePath));
   CHECK(typeName == "map");
   CHECK(resolvedTypePath.empty());
@@ -448,16 +455,35 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver call targets") 
   mapCall.templateArgs = {"i32", "i64"};
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(mapCall, ValueKind::Unknown) == "map");
 
+  // resolveMethodReceiverTypeNameFromCallExpr's Buffer-constructor
+  // detection is gated on the (optional, defaults to unset) resolveExprPath
+  // callback resolving the call's scoped spelling - without one supplied,
+  // there is no way to recognize a bare "Buffer" call name as the Buffer
+  // constructor (getBuiltinCollectionName does not classify "Buffer" as a
+  // builtin collection name at all). Supply a minimal realistic
+  // resolveExprPath mock, matching how a real caller's scope-aware path
+  // resolver would answer for these two specific call shapes.
+  auto resolveBufferExprPath = [](const primec::Expr &expr) -> std::string {
+    if (expr.name != "Buffer") {
+      return "";
+    }
+    if (expr.namespacePrefix.empty()) {
+      return "Buffer";
+    }
+    return expr.namespacePrefix + "/Buffer";
+  };
+
   primec::Expr bufferCall;
   bufferCall.kind = primec::Expr::Kind::Call;
   bufferCall.name = "Buffer";
   bufferCall.templateArgs = {"i32"};
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(bufferCall, ValueKind::Unknown) == "Buffer");
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(
+            bufferCall, ValueKind::Unknown, resolveBufferExprPath) == "Buffer");
 
   primec::Expr scopedBufferCall = bufferCall;
   scopedBufferCall.namespacePrefix = "/std/gfx";
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(
-            scopedBufferCall, ValueKind::Unknown) == "Buffer");
+            scopedBufferCall, ValueKind::Unknown, resolveBufferExprPath) == "Buffer");
 
   primec::Expr soaVectorCall;
   soaVectorCall.kind = primec::Expr::Kind::Call;

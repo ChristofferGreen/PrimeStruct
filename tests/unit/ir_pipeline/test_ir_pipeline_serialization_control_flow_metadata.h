@@ -255,6 +255,7 @@ TEST_CASE("ir deserialization rejects malformed local debug metadata") {
   offset += 4;     // struct count
   offset += 4 + fn.name.size(); // function name length + bytes
   offset += 8 + 8 + 4 + 4;      // function metadata
+  offset += 4;                  // parameter count
   offset += 4;                  // local debug metadata count
   offset += 4;                  // local slot index
   offset += 4 + std::string("value").size(); // local name length + bytes
@@ -284,6 +285,7 @@ TEST_CASE("ir deserialization rejects malformed instruction debug id metadata") 
   offset += 4;              // struct count
   offset += 4 + fn.name.size(); // function name length + bytes
   offset += 8 + 8 + 4 + 4;  // function metadata
+  offset += 4;              // parameter count
   offset += 4;              // local debug metadata count
   offset += 4;              // instruction count
   offset += 1 + 8;          // first instruction opcode + imm

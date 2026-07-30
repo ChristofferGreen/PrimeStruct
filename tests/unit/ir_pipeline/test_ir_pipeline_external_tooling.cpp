@@ -3,6 +3,7 @@
 #include "primec/ExternalTooling.h"
 #include "primec/ProcessRunner.h"
 
+#include <filesystem>
 #include <functional>
 #include <vector>
 
@@ -88,11 +89,36 @@ TEST_CASE("external tooling uses argv process call for glslc spirv compile") {
 }
 
 TEST_CASE("external tooling uses injected runner for cpp compile command") {
+  // compileCppExecutable conditionally splices an extra "-include-pch
+  // <path>" pair into the base command when
+  // PRIMEC_GENERATED_CPP_PCH_PATH is defined at compile time (clang++ was
+  // found when configuring the build) AND the precompiled header actually
+  // exists on disk at test-run time (see ExternalTooling.cpp and
+  // docs/todo.md TODO-4736) - this is documented, intended behavior, not a
+  // bug. The PCH's absolute path is build-directory-specific (it's not
+  // visible to this test target's own compile definitions), so assert on
+  // the command's *shape* rather than hardcoding a path: the fixed
+  // leading/trailing args must be present verbatim, and if an
+  // "-include-pch" flag appears between them it must be followed by a path
+  // to a file that actually exists.
   RecordingProcessRunner runner([](const std::vector<std::string> &) { return 0; });
   CHECK(primec::compileCppExecutable(runner, "/tmp/source.cpp", "/tmp/program"));
   REQUIRE(runner.commands.size() == 1);
-  CHECK(runner.commands.front() ==
-        std::vector<std::string>{"clang++", "-std=c++23", "-O0", "/tmp/source.cpp", "-o", "/tmp/program"});
+  const std::vector<std::string> &command = runner.commands.front();
+  REQUIRE(command.size() >= 6);
+  CHECK(command[0] == "clang++");
+  CHECK(command[1] == "-std=c++23");
+  CHECK(command[2] == "-O0");
+  size_t nextIndex = 3;
+  if (nextIndex < command.size() && command[nextIndex] == "-include-pch") {
+    REQUIRE(command.size() >= nextIndex + 2);
+    CHECK(std::filesystem::exists(command[nextIndex + 1]));
+    nextIndex += 2;
+  }
+  REQUIRE(command.size() == nextIndex + 3);
+  CHECK(command[nextIndex] == "/tmp/source.cpp");
+  CHECK(command[nextIndex + 1] == "-o");
+  CHECK(command[nextIndex + 2] == "/tmp/program");
 }
 
 TEST_SUITE_END();
