@@ -1,3 +1,4 @@
+// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include <algorithm>

@@ -1,4 +1,4 @@
-// soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 

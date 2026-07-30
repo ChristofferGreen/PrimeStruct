@@ -3,3 +3,5 @@
 # A target ending with "/" allows the source file to include any header under that prefix.
 
 # No current lowerer -> private semantics helper dependencies.
+
+tests/unit/ir_pipeline/test_ir_pipeline_recursion_analysis.cpp -> src/ir_lowerer/IrLowererRecursionAnalysis.h

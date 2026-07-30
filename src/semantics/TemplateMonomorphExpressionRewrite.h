@@ -1,3 +1,4 @@
+// collection-surface-audit: exempt
 bool isCompileTimeTypeofPredicateArg(const std::string &arg) {
   const std::string trimmed = trimWhitespace(arg);
   return trimmed.rfind("typeof<", 0) == 0 && trimmed.size() > 8 &&

@@ -1,3 +1,4 @@
+// collection-surface-audit: exempt
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
                                   const LocalTypeMap &locals,

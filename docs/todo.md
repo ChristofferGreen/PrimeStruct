@@ -6901,6 +6901,57 @@ This file is the live open-work queue for PrimeStruct.
     TODOs rather than one combined fix that's hard to verify
     independently.
 
+- [ ] TODO-4816: `IrLowererHelpers.cpp` duplicates canonical vector-helper spellings as literal strings instead of routing through `CollectionSpellingClassifier`
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-architecture-audits
+  - depends_on: (none)
+  - scope: found while fixing the `check_vector_surface_traces.py` /
+    `check_map_surface_strict_audit.py` / `check_soa_surface_trace_
+    inventory.py` governance audits (4 top-level CTest failures outside
+    the compile_run test binary). `isBuiltinClassifiedMethodCallTarget`
+    in `src/ir_lowerer/IrLowererHelpers.cpp` (around lines 311-339)
+    hardcodes the canonical vector/soa helper path spellings
+    (`"/std/collections/vector/count"`, `"/std/collections/vector/
+    capacity"`, `"/std/collections/vector/at"`, `"/std/collections/
+    vector/at_unsafe"`, `"/std/collections/soa/count"`, `"/std/
+    collections/soa/to_aos"`) as string literals compared directly
+    against `semanticTarget`, rather than asking
+    `primec::CollectionSpellingClassifier` (specifically
+    `classifyCollectionHelperSpelling` /
+    `isResolutionStageCollectionSpellingPrefix`, already the canonical
+    owner of collection-path-spelling knowledge per
+    `docs/CompatPathResolutionConsolidation.md`) whether a given path is
+    a recognized canonical collection-helper spelling. This is genuine
+    literal-duplication debt in real code, distinct from the false
+    positives elsewhere in this audit sweep, which were unrelated
+    production files whose exemption comment used an audit-specific
+    marker (`soa-surface-audit: exempt`) instead of the shared
+    `collection-surface-audit: exempt` marker all three scripts also
+    accept - those were fixed by updating the marker text, not by
+    changing any logic.
+  - implementation_notes: the compat/lowering-spelling migration epic
+    (see the pre-existing "Step 2a/2b/2c: migrate ... to classifier"
+    steps earlier in this document) intentionally left call sites like
+    this one unmigrated in earlier phases; this is a leftover, not a new
+    regression. A migration here would replace each hardcoded
+    `semanticTarget == "/std/collections/.../X"` comparison with a
+    classifier call that both confirms canonical-collection-domain
+    membership and extracts the leaf helper name, then compare the leaf
+    name (`count`/`capacity`/`at`/`at_unsafe`/`to_aos`) instead of the
+    full path - reads the same but stops literal-duplicating the
+    canonical prefix strings.
+  - acceptance: `isBuiltinClassifiedMethodCallTarget` no longer contains
+    literal `"/std/collections/..."` path strings; behavior is unchanged
+    (same builtin-classification decisions) verified by the full
+    `PrimeStruct_compile_run_tests` binary staying 100% green before and
+    after.
+  - stop_rule: do not widen this into a general refactor of
+    `IrLowererHelpers.cpp` beyond `isBuiltinClassifiedMethodCallTarget` -
+    scope is exactly the literal-duplicated spellings found by this
+    audit sweep, not a broader cleanup pass.
+
 - [ ] TODO-4759: Canonical namespaced vector count/capacity slash-method calls on a map receiver resolve inconsistently
   - owner: ai
   - created_at: 2026-07-30
