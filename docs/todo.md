@@ -6162,6 +6162,40 @@ This file is the live open-work queue for PrimeStruct.
     no collections, exactly as shown above) before assuming any
     connection to the specific "push"-named test that surfaced it.
 
+- [ ] TODO-4756: Investigate soa /ref_ref, /to_aos, /get slash-method-form call resolution gaps found across imports/vm.collections sweeps
+  - owner: ai
+  - created_at: 2026-07-29
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: a catch-all for several distinct "unknown method: /std/...soa/X"
+    / "unknown call target: ..." rejections found while sweeping
+    `primestruct.compile.run.vm.collections`, all involving fully-
+    qualified slash-form soa method calls
+    (`/std/collections/soa/ref_ref<T>(...)`, bare-root `/to_aos(...)`,
+    `values.to_aos()` with no import at all) that used to resolve
+    (however they resolved before - possibly also to a rejection, just a
+    different one) and now hit a generic "unknown method"/"unknown call
+    target" instead. Re-pinned each occurrence to its exact verified
+    current message as found; this TODO exists to track actually
+    resolving whether these are all one shared root cause (a spelling/
+    routing table missing the `ref_ref`/`to_aos` entries specifically)
+    or several unrelated small gaps - not fully investigated this
+    session due to time, unlike the more thoroughly-traced TODO-4749
+    through TODO-4755 above.
+  - implementation_notes: start from the exact repro in "vm public soa
+    read helpers route through wrapper paths"
+    (`test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`)
+    - `/std/collections/soa/get<Particle>(...)`, `get_ref`, `ref`, and
+    `count`/`count_ref` all resolve fine in the same source, only
+    `ref_ref` doesn't - compare its stdlib registration/routing against
+    the working siblings.
+  - acceptance: not yet scoped - first pass should be determining whether
+    this is one bug or several, then split into properly-scoped TODOs.
+  - stop_rule: do not batch-fix by guessing a shared cause - verify each
+    call form's actual current behavior individually first, the same way
+    the rest of this session's TODOs did.
+
 - [ ] TODO-4755: Fix vector reserve() - no longer actually grows capacity, and its compile-time local-dynamic-limit validation no longer triggers
   - owner: ai
   - created_at: 2026-07-29

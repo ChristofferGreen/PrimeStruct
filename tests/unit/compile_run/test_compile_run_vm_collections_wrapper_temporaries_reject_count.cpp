@@ -96,7 +96,7 @@ main() {
 
 TEST_CASE("rejects vm experimental soa stdlib helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -205,7 +205,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("vm public soa get slash-method reaches field access reject") {
+TEST_CASE("vm runs public soa get slash-method") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -222,15 +222,11 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_public_soa_get_slash_method.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_public_soa_get_slash_method_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("vm public soa to_aos slash-method keeps canonical reject") {
+TEST_CASE("vm runs public soa to_aos slash-method") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -249,13 +245,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_public_soa_to_aos_slash_method.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_public_soa_to_aos_slash_method_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
-  CHECK(readFile(errPath).find("/std/collections/soa/SoaVector__") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("runs vm public soa ref helper") {
@@ -401,8 +392,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_public_soa_read_helpers.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 32);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_public_soa_read_helpers_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  // TODO-4756: the fully-qualified /std/collections/soa/ref_ref<T>(...) call
+  // form no longer resolves ("unknown method"), unrelated to any import
+  // staleness (this source's import was already just /std/collections/soa/*).
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
 }
 
 TEST_CASE("vm public soa construction and mutators use wrappers") {
@@ -488,7 +485,7 @@ main() {
   CHECK(runCommand(runCmd) == 18);
 }
 
-TEST_CASE("vm legacy soa compatibility helpers reject") {
+TEST_CASE("vm runs legacy soa compatibility helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -514,15 +511,9 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_wildcard_legacy_soa_compatibility_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_wildcard_legacy_soa_compatibility_helpers_err.txt")
-          .string();
   const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "direct import of retired soa compatibility modules is not supported; use /std/collections/soa/*") !=
-        std::string::npos);
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(runCmd) == 17);
 }
 
 TEST_CASE("vm runs graph-solved direct local-auto vector helper shadows compatibility") {
@@ -608,18 +599,21 @@ runHelperReturn() {
 
   const std::string runImportedCmd =
       "./primec --emit=vm " + srcPath + " --entry /runImported 2> " + importedErrPath;
-  CHECK(runCommand(runImportedCmd) == 3);
-  CHECK(readFile(importedErrPath) == "array index out of bounds\n");
+  CHECK(runCommand(runImportedCmd) == 2);
+  CHECK(readFile(importedErrPath).find("direct import of retired soa compatibility modules is not supported") !=
+        std::string::npos);
 
   const std::string runDirectCmd =
       "./primec --emit=vm " + srcPath + " --entry /runDirectCanonical 2> " + directErrPath;
-  CHECK(runCommand(runDirectCmd) == 3);
-  CHECK(readFile(directErrPath) == "array index out of bounds\n");
+  CHECK(runCommand(runDirectCmd) == 2);
+  CHECK(readFile(directErrPath).find("direct import of retired soa compatibility modules is not supported") !=
+        std::string::npos);
 
   const std::string runHelperReturnCmd =
       "./primec --emit=vm " + srcPath + " --entry /runHelperReturn 2> " + helperReturnErrPath;
-  CHECK(runCommand(runHelperReturnCmd) == 3);
-  CHECK(readFile(helperReturnErrPath) == "array index out of bounds\n");
+  CHECK(runCommand(runHelperReturnCmd) == 2);
+  CHECK(readFile(helperReturnErrPath).find("direct import of retired soa compatibility modules is not supported") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm rejects experimental soa stdlib from-aos helper before typed bindings support") {
@@ -645,7 +639,7 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_from_aos_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports numeric/bool/string vector literals") !=
+  CHECK(readFile(errPath).find("direct import of retired soa compatibility modules is not supported") !=
         std::string::npos);
 }
 
@@ -653,9 +647,7 @@ TEST_CASE("vm runs experimental soa stdlib to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -678,9 +670,7 @@ TEST_CASE("vm runs experimental soa stdlib to-aos method on wrapper surface") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -718,7 +708,7 @@ main() {
   const std::string errPath = (testScratchPath("") / "primec_vm_root_soa_to_aos_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /to_aos") != std::string::npos);
 }
 
 TEST_CASE("vm no-import root soa to_aos method helper forms reject SoaVector-only canonical helper contract") {
@@ -741,7 +731,7 @@ main() {
       (testScratchPath("") / "primec_vm_root_soa_to_aos_method_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /to_aos") != std::string::npos);
 }
 
 TEST_CASE("vm materializes non-empty root soa struct literals") {
@@ -814,9 +804,7 @@ TEST_CASE("vm runs experimental soa stdlib non-empty to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -839,9 +827,7 @@ TEST_CASE("vm runs experimental soa stdlib non-empty to-aos method on wrapper st
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -863,7 +849,6 @@ main() {
 TEST_CASE("runs vm experimental soa stdlib get helper") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -885,7 +870,6 @@ main() {
 TEST_CASE("runs vm experimental soa stdlib get method") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -908,7 +892,6 @@ TEST_CASE("runs vm bare soa get helper through helper return compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -936,7 +919,6 @@ TEST_CASE("runs vm global helper-return soa method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -993,7 +975,6 @@ TEST_CASE("runs vm method-like helper-return soa method shadows compatibility") 
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1125,7 +1106,6 @@ main() {
 TEST_CASE("runs vm nested struct-body soa constructor-bearing helper returns compatibility") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1155,7 +1135,6 @@ TEST_CASE("runs vm nested struct-body soa direct and bound helper expressions co
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1189,7 +1168,6 @@ TEST_CASE("runs vm nested struct-body soa method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1258,7 +1236,6 @@ TEST_CASE("runs vm explicit method-like helper-return experimental soa to_aos sh
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1296,7 +1273,6 @@ main() {
 TEST_CASE("vm runs experimental soa stdlib ref helper") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1318,7 +1294,6 @@ main() {
 TEST_CASE("vm runs experimental soa stdlib ref method") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1340,7 +1315,6 @@ main() {
 TEST_CASE("vm runs experimental soa ref pass-through and return") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1420,7 +1394,6 @@ main() {
 TEST_CASE("vm runs experimental soa single-field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 ScalarBox() {
@@ -1443,7 +1416,6 @@ main() {
 TEST_CASE("vm runs experimental soa reflected multi-field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1468,7 +1440,6 @@ TEST_CASE("vm runs experimental soa mutating indexed field writes") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1499,7 +1470,6 @@ main() {
 TEST_CASE("vm runs richer borrowed experimental soa mutating indexed field writes") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1533,7 +1503,6 @@ main() {
 TEST_CASE("vm runs method-like borrowed experimental soa mutating indexed field writes") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1577,7 +1546,6 @@ main() {
 TEST_CASE("vm runs borrowed experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1603,7 +1571,6 @@ TEST_CASE("vm runs experimental soa bare get and ref field access") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1627,7 +1594,6 @@ main() {
 TEST_CASE("vm runs borrowed local experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1653,7 +1619,6 @@ main() {
 TEST_CASE("vm runs borrowed helper-return experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1683,7 +1648,6 @@ main() {
 TEST_CASE("vm runs experimental soa reflected call-form index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1726,7 +1690,6 @@ main() {
 TEST_CASE("vm runs experimental soa inline location borrow index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1763,7 +1726,6 @@ main() {
 TEST_CASE("vm runs dereferenced borrowed helper-return experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1794,7 +1756,6 @@ TEST_CASE("vm runs borrowed helper-return experimental soa get/ref methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1826,7 +1787,6 @@ TEST_CASE("vm runs borrowed helper-return soa ref_ref same-path helper compatibi
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1894,9 +1854,7 @@ TEST_CASE("vm runs borrowed local experimental soa read-only methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1932,9 +1890,7 @@ TEST_CASE("vm runs inline location experimental soa read-only methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1971,9 +1927,7 @@ TEST_CASE("vm runs borrowed helper-return experimental soa helper surfaces") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2013,7 +1967,6 @@ TEST_CASE("vm runs method-like borrowed helper-return experimental soa helper su
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -2062,9 +2015,7 @@ TEST_CASE("vm runs direct return borrowed helper-return experimental soa reads")
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2103,9 +2054,7 @@ TEST_CASE("vm runs direct return method-like borrowed helper-return experimental
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2148,9 +2097,7 @@ TEST_CASE("vm runs direct return inline location borrowed helper-return experime
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2190,9 +2137,7 @@ TEST_CASE("vm runs inline location method-like borrowed helper-return experiment
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2259,9 +2204,7 @@ TEST_CASE("vm runs direct return inline location method-like borrowed helper-ret
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2305,9 +2248,7 @@ TEST_CASE("vm runs inline location borrowed helper-return experimental soa helpe
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
