@@ -96,7 +96,7 @@ main() {
 
 TEST_CASE("rejects vm experimental soa stdlib helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa/*
+import /std/collections/experimental_soa/*
 
 [struct reflect]
 Particle() {
