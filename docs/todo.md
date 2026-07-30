@@ -7872,3 +7872,197 @@ This file is the live open-work queue for PrimeStruct.
     definition SHOULD win, which is exactly the "never silently paper
     over a real regression" case this epic's methodology exists to
     prevent.
+
+- [ ] TODO-4950: Finish TODO-4900's insert_builtin cluster and the two other genuine gaps its triage surfaced
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-ir-pipeline
+  - depends_on: TODO-4900
+  - scope: closes out the four shards TODO-4900 left red
+    (`ir_pipeline_validation_cases_1051_1060`, `_1061_1070`, `_1071_1080`,
+    `ir_pipeline_conversions_numbers_41_50`). Three of the four are now
+    fixed and verified green this session:
+    - `_1051_1060`: fixed. "ir lowerer map insert rewrite..." had a stale
+      `templateArgs == {"i32","i32"}` expectation - the real
+      `tryEmitDirectCallStatement` direct-call fallback forwards `callExpr`
+      (and its `templateArgs`) to `emitInlineDefinitionCall` unmodified, it
+      does not itself synthesize template args from semantic receiver
+      facts, so `templateArgs` is empty in all four receiver-source
+      scenarios (matching the case's own `notAMap` scenario, which already
+      asserted this correctly - re-pinned the other three to match).
+      "ir lowerer vector mutator rewrite..." had the mirror-image bug: its
+      `resolveMethodCallDefinition` mock already matches any
+      `isMethodCall && name=="push"` call and returns `fallbackPushDef`, so
+      real code inlines it directly (`inlineCalls==1`, empty `instructions`)
+      instead of deferring to the `emitExpr`/`forwardedExpr` bypass a
+      retired rewrite used to take (again matching the case's own
+      `notAVector` scenario) - re-pinned the two method-call scenarios to
+      match, and re-pinned the third (explicit non-method-call spelling of
+      the canonical push path) to `EmitResult::NotMatched` since neither
+      `resolveMethodCallDefinition` (method-call-only) nor
+      `resolveDefinitionCall` (mock always nullptr) can resolve it - a
+      distinct, unrelated bug from the other two. "ir lowerer statement
+      call helper emits buffer_store for variadic Buffer receivers" (in
+      `test_ir_pipeline_validation_ir_lowerer_statement_binding_helper_validates_print_statement_builtin_diagnostics.cpp`,
+      NOT insert_builtin-related) failed with "buffer_store requires
+      numeric/bool buffer" because `getBuiltinArrayAccessName` now excludes
+      a bare unrooted `"at"`/`"at_unsafe"` call (ambiguous with the map/
+      key-value `"at"` method surface once a receiver type isn't yet known -
+      see `IrLowererBuiltinNameHelpers.cpp`), so `resolveBufferTargetElementKind`'s
+      local-map-only fallback can no longer classify it; real callers
+      always reach this point with semantic facts already published (a
+      real, passing `/std/gpu/buffer_store(values[0i32], ...)` compile_run
+      test confirms bare `"at"` indexing on a `Buffer` args-pack element
+      does resolve correctly through the *semantic-facts* path) - fixed by
+      attaching a `semanticNodeId` and a matching `queryFact`
+      (`Buffer<i32>` / `Reference<Buffer<i32>>` / `Pointer<Buffer<i32>>`)
+      to each scenario's access expr and threading `semanticProgram`/
+      `semanticIndex` through, mirroring the pattern already used earlier
+      in this file, instead of relying on the retired bare-name fallback.
+      A speculative production-code fix (broadening
+      `resolveBufferTargetElementKind`'s local-map fallback to also try
+      `resolveVectorHelperAliasName`) was attempted first and reverted: it
+      did not actually resolve a fully bare, unrooted `"at"` either (that
+      helper also requires a rooted prefix like `array/` or
+      `std/collections/vector/`), so it added risk without fixing anything -
+      do not re-attempt that specific approach without new evidence.
+    - `_1071_1080`: fixed. "ir lowerer statement call helper prefers
+      semantic callable inventory"
+      (`test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_direct_call_diagnostics.cpp`,
+      NOT insert_builtin-related) failed with "missing semantic-product
+      callable summary: /main/target" - `findSemanticProductCallableSummary`
+      looks summaries up via
+      `publishedRoutingLookups.callableSummaryIndicesByPathId` (keyed by
+      interned `fullPathId`), not by scanning `callableSummaries`; the
+      fixture pushed the summary but never registered the routing-index
+      entry (the same "push a fact, forget its companion
+      publishedRoutingLookups registration" class of bug TODO-4900's
+      session already fixed elsewhere). Fixed by registering the
+      `callableSummaryIndicesByPathId` entry alongside the push, mirroring
+      every other `SemanticProgram*Fact` fixture in this suite. Also fixed
+      in the same file/shard: "ir lowerer statement call helper validates
+      direct-call diagnostics" second scenario (an `isMethodCall` "write"
+      statement with both `resolveMethodCallDefinition` and
+      `resolveDefinitionCall` mocked to always return null) expected
+      `error.empty()` but real code now sets "missing semantic-product
+      method-call target: write" before returning `Error` - re-pinned to
+      that message.
+    - `_1061_1070`: **still red, left for follow-up** - dominated by the
+      giant "ir lowerer statement call helper emits direct calls" TEST_CASE
+      (~5500 lines, 88 call sites referencing `insert_builtin`) in
+      `test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp`.
+      A full static trace of every `tryEmitDirectCallStatement(` call site
+      in that case this session (further than TODO-4900's session got)
+      found the mock-branch situation is *not* uniform - see that
+      TEST_CASE's own leading comment (added this session) and this
+      task's implementation_notes below for the full breakdown into 3
+      distinct resolution-contract shapes. None were re-pinned; see
+      stop_rule.
+    - `conversions_numbers_41_50`: **still red, left for follow-up** -
+      "ir lowerer preserves inline-call Result metadata from caller-scoped
+      parameter defaults" hand-splices a synthetic map2/lambda call tree
+      (semanticNodeId left at the default 0 throughout) into a real
+      SemanticProgram's `/consume` parameter default. Root-caused (further
+      than TODO-4900's session got) to
+      `validateSemanticProductDirectCallCoverage` (`IrLowererCallResolution.cpp`)
+      now requiring every non-method-call `Call` expr to carry a nonzero
+      `semanticNodeId` before it will even check for a published target -
+      confirmed via `CAPTURE(error)` + doctest run ("missing
+      semantic-product direct-call semantic id: /consume -> greeting").
+      Assigning arbitrary large `semanticNodeId` values to the three
+      unset synthetic call exprs (`greeting()`, the map2 lambda, its
+      `return(left)` body) clears that first error but immediately trades
+      it for "missing semantic-product direct-call target: /consume ->
+      greeting" from the very next check in the same function
+      (`semanticProgramLookupPublishedDirectCallTargetId(*semanticProgram,
+      expr.semanticNodeId)` found something for the synthetic ID, but the
+      separate `directCallTargetsByExpr` map built from this function's
+      own `directCallTargets` parameter did not) - meaning "any large
+      unused-looking integer" is not actually a safe/collision-free
+      `semanticNodeId` choice here, and the ID space
+      `SemanticProduct.cpp`'s publishing step actually allocates from is
+      not yet understood. Left uncommitted (this session's attempted fix
+      was reverted, keeping only a diagnostic-comment + `CAPTURE(error)`
+      trail) rather than land a half-verified guess.
+  - implementation_notes: full triage detail for the still-red
+    `_1061_1070` giant TEST_CASE (recovered via a small Python
+    bracket-matching parse of every `tryEmitDirectCallStatement(` call
+    site's mock lambdas, cross-referenced against a second pass extracting
+    every `primec::Expr` variable's final `.name`/`.isMethodCall`/
+    `.namespacePrefix` fields - scripts not preserved, but the method is
+    straightforward to redo): of the 88 call sites referencing
+    `insert_builtin`,
+    (1) ~41 already have a second, non-builtin branch in their
+    `resolveDefinitionCall` mock (returning one of the already-declared
+    `mapInsertMethodDef`/`mapInsertAliasDef`/`mapInsertGeneratedPascalAliasBareDef`
+    /`mapAt*ArgsPackDef` targets near the top of the case) that real
+    `resolveDefinitionCall(callExpr)` - called with the *unmodified*
+    original `callExpr` - would reach before ever trying the dead
+    `insert_builtin` branch. These are the closest to "small, well
+    understood, low risk" but still need per-shape confirmation: this
+    session confirmed the exact mechanism (verified live via the sibling
+    "map insert rewrite"/"vector mutator rewrite" cases and the
+    buffer_store variadic-receiver fix above) but did NOT verify all ~41
+    individually against real compiler output the way TODO-4900's
+    methodology requires - do not assume "the mock's own non-builtin
+    branch is correct" without confirming it against a live
+    parseAndValidate+lower probe per distinct scenario *shape* (bare
+    canonical, namespaced, field-access receiver, alias spelling,
+    generated-leaf spelling - roughly 5-6 shapes among the 41, not 41
+    independent unknowns).
+    (2) ~47 (mostly `*MethodStmt` args-pack/method-call-form variable
+    names) have *no* non-builtin branch anywhere in their
+    `resolveDefinitionCall`/`resolveMethodCallDefinition` mocks. Given
+    `directStmt.isMethodCall == true` routes through
+    `resolveMethodStatementDefinition`/`resolveMethodCallDefinition`
+    entirely (never falling through to `resolveDefinitionCall`'s bare-call
+    fallback), and every one of these mocks' `resolveMethodCallDefinition`
+    is stubbed to unconditionally return `nullptr`, real
+    `tryEmitDirectCallStatement` returns `Error` ("missing
+    semantic-product method-call target: ...") for all of them as
+    currently written - matching finding (3) confirmed and fixed for the
+    small "validates direct-call diagnostics" case. Whether that's the
+    *intended* final answer for each args-pack/alias method-call shape, or
+    whether the mock instead needs a real non-null
+    `resolveMethodCallDefinition` branch (the production wiring in
+    `IrLowererLowerStatementsCalls.h` does call a real, non-stubbed
+    `resolveMethodCallDefinition`), is exactly the "what SHOULD win"
+    question TODO-4900's stop_rule flags - not resolved.
+    (3) confirmed via this session's fixes to the two small cases above:
+    an `isMethodCall` statement whose `resolveMethodCallDefinition` mock
+    is stubbed to always return `nullptr` (and no `semanticProgram` is
+    passed, so `findSemanticProductMethodCallTarget` also can't help)
+    resolves to `EmitResult::Error` with message "missing
+    semantic-product method-call target: `<name>`", not `NotMatched` and
+    not `Emitted` - useful ground truth for triaging bucket (2) above.
+    For `conversions_numbers_41_50`: the `semanticNodeId` space that
+    `validateSemanticProductDirectCallCoverage`'s
+    `directCallTargetIdsByExpr`/`directCallTargets` lookups key into is
+    populated by `SemanticProduct.cpp`'s publishing step from the *real*
+    parsed program - a future session should either read that publishing
+    code to understand what ID range/scheme is actually safe to
+    fabricate, or (more robustly) register a matching
+    `SemanticProgramDirectCallTarget` entry for each synthetic call
+    (mirroring the `addBindingFact`/`addQueryFact`-style companion
+    registration pattern that fixed the `_1071_1080` callable-summary bug
+    above) instead of relying on an unregistered ID being silently
+    ignored.
+  - acceptance: `ir_pipeline_validation_cases_1061_1070` and
+    `ir_pipeline_conversions_numbers_41_50` pass; `ctest -R
+    'primestruct_ir_pipeline'` is fully green with zero shards outside
+    this TODO's scope newly failing.
+  - stop_rule: same as TODO-4900's stop_rule for the giant TEST_CASE - if
+    triage of either remaining sub-cluster reveals more distinct
+    resolution-contract/ID-space shapes than can be verified and fixed in
+    one bounded session, split further into separately scoped TODOs
+    (e.g. one per resolution-contract shape in bucket (2) above) rather
+    than attempting one giant fix. Do not re-pin any of the ~88
+    `insert_builtin` call sites, and do not fabricate `semanticNodeId`
+    values for `conversions_numbers.cpp`, without confirming the target
+    against real compiler behavior (a live `parseAndValidate` + `lower` +
+    `Vm::execute` probe, or reading the relevant publishing/resolution
+    source directly) first - guessing which alias/canonical/generated
+    definition or which ID scheme is "correct" risks silently pinning the
+    wrong contract, exactly what this epic's methodology exists to
+    prevent.

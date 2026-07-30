@@ -1831,6 +1831,32 @@ main() {
   CHECK(result == 14);
 }
 
+// TODO-4950: this test hand-splices a synthetic map2/lambda call tree (with
+// default-constructed semanticNodeId == 0 throughout) into a real
+// SemanticProgram's "/consume" parameter default and expects lowerer.lower
+// to accept it. It currently fails: validateSemanticProductDirectCallCoverage
+// (IrLowererCallResolution.cpp) now requires every non-method-call Call expr
+// reachable from a definition to carry a nonzero semanticNodeId before it
+// will even consider whether a published semantic-product target exists for
+// it, so the unset IDs on "greeting()" / the map2 lambda / its "return(left)"
+// body immediately fail with "missing semantic-product direct-call semantic
+// id: /consume -> greeting" (verified via doctest run, message captured with
+// CAPTURE(error) at the REQUIRE below). Assigning large arbitrary
+// non-colliding-looking IDs to those three exprs clears that first error but
+// trades it for "missing semantic-product direct-call target: /consume ->
+// greeting" from the very next check (semanticProgramLookupPublishedDirectCallTargetId
+// / directCallTargetsByExpr in the same function) - meaning the ID space
+// this coverage check keys into is not a simple "any large unused integer is
+// safe" scheme; some large IDs still resolve to a published-but-mismatched
+// direct-call-target entry, and getting a synthetic AST fragment to satisfy
+// this validator likely requires either constructing a genuinely fresh,
+// collision-proof semanticNodeId (understanding whatever ID space
+// SemanticProduct.cpp's publishing step actually uses) or registering a
+// matching SemanticProgramDirectCallTarget alongside each synthetic ID
+// (mirroring the addBindingFact/addQueryFact-style companion registration
+// pattern used successfully elsewhere in this suite) - not attempted blind
+// per this session's triage of the id space being not yet understood well
+// enough to be confident which is correct. See docs/todo.md TODO-4950.
 TEST_CASE("ir lowerer preserves inline-call Result metadata from caller-scoped parameter defaults") {
   const std::string source = R"(
 [struct]
@@ -1925,7 +1951,9 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  const bool lowerOk = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
+  CAPTURE(error);
+  REQUIRE(lowerOk);
   CHECK(error.empty());
 
   primec::Vm vm;

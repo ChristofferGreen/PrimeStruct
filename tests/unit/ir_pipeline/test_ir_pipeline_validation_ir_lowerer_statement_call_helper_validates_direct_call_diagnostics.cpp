@@ -52,7 +52,12 @@ TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") 
             },
             instructions,
             error) == EmitResult::Error);
-  CHECK(error.empty());
+  // TODO-4950: with hasBodyArguments cleared, this isMethodCall stmt falls
+  // through to resolveMethodStatementDefinition, which (with both
+  // resolveMethodCallDefinition and semanticProgram's method-call-target
+  // lookup unable to resolve "write") now sets a diagnostic instead of
+  // leaving error empty. Verified via doctest run.
+  CHECK(error == "missing semantic-product method-call target: write");
 
   primec::Expr defStmt;
   defStmt.kind = primec::Expr::Kind::Call;
@@ -737,6 +742,17 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
       .category = "sum",
       .isPublic = true,
   });
+  // TODO-4950: findSemanticProductCallableSummary looks a definition's
+  // callable summary up via publishedRoutingLookups.callableSummaryIndicesByPathId
+  // (keyed by the interned fullPathId), not by a linear scan of
+  // callableSummaries - pushing the summary alone (as this fixture used to)
+  // left that routing index empty, so the real lowerCallableDefinitionOrchestration
+  // never found it ("missing semantic-product callable summary: /main/target",
+  // verified via doctest run). Register the routing entry alongside the
+  // summary, mirroring how every other SemanticProgram*Fact fixture in this
+  // suite pairs its push_back with a publishedRoutingLookups entry.
+  const auto targetFullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/target");
+  const std::size_t targetCallableSummaryIndex = semanticProgram.callableSummaries.size();
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .isExecution = false,
       .returnKind = "void",
@@ -754,8 +770,10 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
       .onErrorBoundArgCount = 0,
       .semanticNodeId = 0,
       .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/target"),
+      .fullPathId = targetFullPathId,
   });
+  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(
+      targetFullPathId, targetCallableSummaryIndex);
 
   std::unordered_set<std::string> loweredCallTargets = {
       "/main/skipped",

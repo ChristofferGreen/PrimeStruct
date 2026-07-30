@@ -583,7 +583,7 @@ TEST_CASE("ir lowerer statement call helper emits buffer_store for variadic Buff
   const primec::Expr indexExpr = makeIndexExpr(0);
   const primec::Expr valueExpr = makeIndexExpr(77);
 
-  auto makePackAccess = [&](const std::string &packName) {
+  auto makePackAccess = [&](const std::string &packName, uint64_t semanticNodeId) {
     primec::Expr packExpr;
     packExpr.kind = primec::Expr::Kind::Name;
     packExpr.name = packName;
@@ -592,6 +592,16 @@ TEST_CASE("ir lowerer statement call helper emits buffer_store for variadic Buff
     accessExpr.kind = primec::Expr::Kind::Call;
     accessExpr.name = "at";
     accessExpr.args = {packExpr, indexExpr};
+    // TODO-4950: a bare, unrooted "at" call is ambiguous with the map/
+    // key-value "at" method surface (getBuiltinArrayAccessName now excludes
+    // it - see IrLowererBuiltinNameHelpers.cpp) - the local-map-only fallback
+    // this expr used to be resolved through no longer recognizes it. Real
+    // callers reach tryEmitBufferStoreStatement with semantic facts already
+    // published (see the semanticNodeId-driven queryFact wiring below,
+    // mirroring the semantic-facts scenario earlier in this file and in
+    // test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp),
+    // so attach one here instead of relying on the retired bare-name path.
+    accessExpr.semanticNodeId = semanticNodeId;
     return accessExpr;
   };
 
@@ -633,6 +643,21 @@ TEST_CASE("ir lowerer statement call helper emits buffer_store for variadic Buff
   pointerPackInfo.valueKind = ValueKind::Int32;
   locals.emplace("bufferPtrs", pointerPackInfo);
 
+  primec::SemanticProgram semanticProgram;
+  auto addQueryFact = [&](uint64_t semanticNodeId, const std::string &typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    primec::SemanticProgramQueryFact queryFact;
+    queryFact.queryTypeText = typeText;
+    queryFact.bindingTypeText = typeText;
+    queryFact.semanticNodeId = semanticNodeId;
+    semanticProgram.queryFacts.push_back(queryFact);
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(semanticNodeId, factIndex);
+  };
+  addQueryFact(8101, "Buffer<i32>");
+  addQueryFact(8102, "Reference<Buffer<i32>>");
+  addQueryFact(8103, "Pointer<Buffer<i32>>");
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
   auto runStore = [&](const primec::Expr &stmtExpr) {
     std::vector<primec::IrInstruction> instructions;
     int nextLocal = 20;
@@ -647,7 +672,10 @@ TEST_CASE("ir lowerer statement call helper emits buffer_store for variadic Buff
         },
         [&]() { return nextLocal++; },
         instructions,
-        error);
+        error,
+        &semanticProgram,
+        &semanticIndex);
+    CAPTURE(error);
     CHECK(result == EmitResult::Emitted);
     CHECK(error.empty());
     REQUIRE(instructions.size() == 16);
@@ -655,9 +683,9 @@ TEST_CASE("ir lowerer statement call helper emits buffer_store for variadic Buff
     CHECK(instructions[15].op == primec::IrOpcode::Pop);
   };
 
-  runStore(makeBufferStoreStmt(makePackAccess("buffers")));
-  runStore(makeBufferStoreStmt(makeDereference(makePackAccess("bufferRefs"))));
-  runStore(makeBufferStoreStmt(makeDereference(makePackAccess("bufferPtrs"))));
+  runStore(makeBufferStoreStmt(makePackAccess("buffers", 8101)));
+  runStore(makeBufferStoreStmt(makeDereference(makePackAccess("bufferRefs", 8102))));
+  runStore(makeBufferStoreStmt(makeDereference(makePackAccess("bufferPtrs", 8103))));
 }
 
 
