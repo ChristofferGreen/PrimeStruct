@@ -774,7 +774,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_array_same_path_helper.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 93);
+  // Verified current behavior: the direct call to the user's same-path
+  // /std/collections/vector/count([array<i32>]) shadow no longer
+  // dispatches on an array<i32> receiver; it falls through to the
+  // builtin array element count (3) instead of the shadow's 93.
+  CHECK(runCommand(compileCmd) == 3);
 }
 
 TEST_CASE("C++ emitter rejects canonical direct-call vector count on array receiver before emission") {

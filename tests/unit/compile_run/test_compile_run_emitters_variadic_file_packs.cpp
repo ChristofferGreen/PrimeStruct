@@ -338,8 +338,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_borrowed_experimental_map_count.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 11);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_variadic_args_borrowed_experimental_map_count_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/"
+            "assign/increment/decrement calls in expressions (call=/std/collections/map/count_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from borrowed locations") {

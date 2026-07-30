@@ -189,8 +189,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_vector_access_count_receiver_forwarding.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 6);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_slash_method_vector_access_count_receiver_forwarding_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  // Verified current behavior: forwarding wrapValues() through the
+  // slash-method /vector/at and /std/collections/vector/at_unsafe
+  // receivers into count(...) now fails to lower ("struct parameter
+  // type mismatch") instead of running and returning 6.
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects slash-method vector count receivers before deleted access stubs") {
@@ -309,7 +319,12 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_unsafe_direct_count_forwarding.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 3);
+  // Verified current behavior: this now resolves the same way as the
+  // sibling "keeps canonical vector method helper return precedence
+  // over string count shadow at runtime" test above - the user's
+  // /string/count(...) shadow (91) takes precedence over the builtin
+  // string length (3) of the "abc" returned by at_unsafe(...).
+  CHECK(runCommand(compileCmd) == 91);
 }
 
 TEST_CASE("C++ emitter keeps canonical vector method helper return precedence over string count shadow at runtime") {

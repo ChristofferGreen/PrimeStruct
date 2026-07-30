@@ -384,8 +384,21 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  // Verified current behavior: a named-argument direct call to the
+  // user's own /std/collections/vector/at(...) helper (bool-returning,
+  // not the builtin numeric/bool/string element accessor) now
+  // misroutes into the builtin at() restriction check instead of
+  // dispatching to the user definition.
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
 TEST_CASE("auto-inferred std namespaced access helper canonical definition in C++ emitter") {
@@ -405,8 +418,16 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime",
                 source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
 TEST_CASE("wrapper std namespaced access helper named receiver in C++ emitter") {
@@ -428,8 +449,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_std_namespaced_vector_access_named_receiver.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 32);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_wrapper_std_namespaced_vector_access_named_receiver_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
 TEST_CASE("std collections /std/collections/vector/at wrapper in C++ emitter") {

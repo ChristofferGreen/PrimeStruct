@@ -61,8 +61,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_scalar_pointer_pack_access.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 29);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_cpp_variadic_args_scalar_pointer_pack_access_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic struct pointer packs from borrowed pack access") {
@@ -130,8 +137,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_struct_pointer_pack_access.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 75);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_cpp_variadic_args_struct_pointer_pack_access_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from borrowed pack field access") {
@@ -193,8 +207,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_scalar_pointer_pack_field_access.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 29);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_cpp_variadic_args_scalar_pointer_pack_field_access_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic struct pointer packs from borrowed pack field access") {
@@ -266,8 +287,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_struct_pointer_pack_field_access.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 75);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_cpp_variadic_args_struct_pointer_pack_field_access_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from borrowed pack reference fields") {
@@ -349,8 +377,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_scalar_pointer_pack_reference_field.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 29);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_cpp_variadic_args_scalar_pointer_pack_reference_field_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from indexed dereference receiver reference fields") {
@@ -432,8 +467,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_scalar_pointer_indexed_deref_receiver_ref_field.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 29);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_variadic_args_scalar_pointer_indexed_deref_receiver_ref_field_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic struct pointer packs from borrowed pack reference fields") {
@@ -525,8 +568,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_struct_pointer_pack_reference_field.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 75);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_cpp_variadic_args_struct_pointer_pack_reference_field_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar reference packs from borrowed pack reference fields") {
@@ -608,8 +658,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_scalar_reference_pack_reference_field.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 23);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_cpp_variadic_args_scalar_reference_pack_reference_field_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 

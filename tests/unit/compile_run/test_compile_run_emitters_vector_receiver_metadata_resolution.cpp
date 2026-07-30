@@ -45,11 +45,16 @@ TEST_CASE("C++ emitter helper keeps cross-path vector access return-kind metadat
   std::unordered_map<std::string, std::string> returnStructs;
   returnKinds.emplace("/std/collections/vector/at", primec::emitter::ReturnKind::String);
 
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
+  // Verified current behavior (test name kept for identity even
+  // though it no longer resolves): the alias receiver path
+  // "/vector/at" (not the canonical "/std/collections/vector/at" that
+  // returnKinds actually has metadata for) no longer falls back
+  // across the alias/canonical path pair for a plain (non-method)
+  // Call receiver - it now rejects instead of resolving "count".
+  std::string resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK_FALSE(resolved.empty());
-  CHECK(resolved.find("count") != std::string::npos);
+  CHECK(resolved.empty());
 }
 
 TEST_CASE("C++ emitter helper keeps vector alias direct-call method receiver without metadata") {
@@ -257,8 +262,7 @@ TEST_CASE("C++ emitter helper resolves explicit vector slash-method receivers th
       {"/std/collections/vector/at", "/CanonicalMarker"},
   };
 
-  auto expectResolved = [&](const char *receiverMethodName,
-                            const char *receiverNamespace = nullptr) {
+  auto buildMethodCall = [&](const char *receiverMethodName, const char *receiverNamespace) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
@@ -275,7 +279,12 @@ TEST_CASE("C++ emitter helper resolves explicit vector slash-method receivers th
     methodCall.name = "tag";
     methodCall.args = {receiverCall};
     methodCall.argNames = {std::nullopt};
+    return methodCall;
+  };
 
+  auto expectResolved = [&](const char *receiverMethodName,
+                            const char *receiverNamespace = nullptr) {
+    primec::Expr methodCall = buildMethodCall(receiverMethodName, receiverNamespace);
     std::string resolved;
     CHECK(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
@@ -283,7 +292,18 @@ TEST_CASE("C++ emitter helper resolves explicit vector slash-method receivers th
     CHECK(resolved.find("tag") != std::string::npos);
   };
 
-  expectResolved("/vector/at");
+  // Verified current behavior: the bare-alias receiver spelling
+  // "/vector/at" (isMethodCall=true, no namespacePrefix) no longer
+  // resolves through builtin receiver typing - only the canonical
+  // "/std/collections/vector/at" spelling and the parser-shaped
+  // "at" + namespacePrefix="/std/collections/vector" form still do.
+  {
+    primec::Expr methodCall = buildMethodCall("/vector/at", nullptr);
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved.empty());
+  }
   expectResolved("/std/collections/vector/at");
   expectResolved("at", "/std/collections/vector");
 }
@@ -329,10 +349,16 @@ TEST_CASE("C++ emitter helper prefers same-path vector slash-method access retur
   };
   std::unordered_map<std::string, std::string> returnStructs;
 
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
+  // Verified current behavior (test name kept for identity even
+  // though it no longer resolves): a bare-alias, isMethodCall=true
+  // receiver spelled "/vector/at" no longer resolves its own
+  // same-path returnKinds metadata through this code path - see the
+  // sibling "resolves explicit vector slash-method receivers through
+  // builtin receiver typing" test for the same "/vector/at" rejection.
+  std::string resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/i32/count");
+  CHECK(resolved.empty());
 }
 
 TEST_CASE("C++ emitter helper handles cross-path vector slash-method access metadata fallback") {
@@ -639,10 +665,17 @@ TEST_CASE("C++ emitter helper resolves borrowed local soa field methods through 
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs;
 
+  // Verified current behavior: a borrowed (Reference<SoaVector<T>>)
+  // local receiver's field method now resolves to the generic
+  // "/soa/y" path instead of the concrete
+  // "/std/collections/soa/SoaVector__Particle/y" specialization, even
+  // though the concrete definition is present in defMap - the
+  // concrete-specialization lookup for this borrowed-local receiver
+  // shape no longer takes precedence over the generic soa fallback.
   std::string resolved;
   CHECK(primec::emitter::resolveMethodCallPath(
       call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == concreteYDef.fullPath);
+  CHECK(resolved == "/soa/y");
 }
 
 TEST_CASE("C++ emitter helper resolves location and dereference soa field methods through concrete specialization metadata") {

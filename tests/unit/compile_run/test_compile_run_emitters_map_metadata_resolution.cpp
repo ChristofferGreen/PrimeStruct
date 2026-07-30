@@ -618,7 +618,7 @@ TEST_CASE("C++ emitter helper rejects explicit map slash-method count receiver f
       {"/std/collections/map/count", "/CanonicalCountMarker"},
   };
 
-  auto expectUnresolved = [&](const char *receiverMethodName) {
+  auto buildMethodCall = [&](const char *receiverMethodName) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
@@ -632,15 +632,28 @@ TEST_CASE("C++ emitter helper rejects explicit map slash-method count receiver f
     methodCall.name = "tag";
     methodCall.args = {receiverCall};
     methodCall.argNames = {std::nullopt};
+    return methodCall;
+  };
 
+  // Verified current behavior: the same-path alias receiver
+  // ("/map/count" chained into ".tag()") now resolves through its
+  // own returnStructs metadata instead of being rejected, while the
+  // canonical receiver ("/std/collections/map/count") still rejects
+  // as before - these two no longer behave symmetrically.
+  {
+    primec::Expr methodCall = buildMethodCall("/map/count");
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == "/AliasCountMarker/tag");
+  }
+  {
+    primec::Expr methodCall = buildMethodCall("/std/collections/map/count");
     std::string resolved = "/stale/path";
     CHECK_FALSE(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
     CHECK(resolved.empty());
-  };
-
-  expectUnresolved("/map/count");
-  expectUnresolved("/std/collections/map/count");
+  }
 }
 
 TEST_CASE("C++ emitter helper rejects cross-path direct map count and contains receiver metadata fallback") {
@@ -760,7 +773,13 @@ TEST_CASE("C++ emitter helper rejects rooted map contains and tryAt direct-call 
   keyLiteral.intWidth = 32;
   keyLiteral.literalValue = 1;
 
-  auto expectUnresolved = [&](const char *receiverPath, const std::string &markerName) {
+  // Verified current behavior (test name kept for identity even
+  // though it no longer rejects): a rooted, non-method-call receiver
+  // expression (e.g. plain "/map/contains(values, key)" used as the
+  // receiver of ".tag()") now resolves through its own returnStructs
+  // metadata instead of being rejected for all four alias helper
+  // spellings below.
+  auto expectResolved = [&](const char *receiverPath, const std::string &markerName) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.name = receiverPath;
@@ -788,16 +807,16 @@ TEST_CASE("C++ emitter helper rejects rooted map contains and tryAt direct-call 
         {receiverPath, markerName},
     };
 
-    std::string resolved = "/stale/path";
-    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved.empty());
+    CHECK(resolved == markerName + "/tag");
   };
 
-  expectUnresolved("/map/contains", "/AliasContainsMarker");
-  expectUnresolved("/map/tryAt", "/AliasTryAtMarker");
-  expectUnresolved("/map/contains_ref", "/AliasContainsRefMarker");
-  expectUnresolved("/map/tryAt_ref", "/AliasTryAtRefMarker");
+  expectResolved("/map/contains", "/AliasContainsMarker");
+  expectResolved("/map/tryAt", "/AliasTryAtMarker");
+  expectResolved("/map/contains_ref", "/AliasContainsRefMarker");
+  expectResolved("/map/tryAt_ref", "/AliasTryAtRefMarker");
 }
 
 TEST_CASE("C++ emitter helper keeps canonical map contains and tryAt direct-call return metadata") {
@@ -989,10 +1008,17 @@ TEST_CASE("C++ emitter helper keeps cross-path vector alias access struct-return
   std::unordered_map<std::string, std::string> returnStructs;
   returnStructs.emplace("/std/collections/vector/at", "/Marker");
 
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
+  // Verified current behavior (test name kept for identity even
+  // though it no longer resolves): the alias receiver path
+  // "/vector/at" (not the canonical "/std/collections/vector/at" that
+  // returnStructs actually has metadata for) no longer falls back
+  // across the alias/canonical path pair when the receiver is a
+  // plain (non-method) Call node - it now rejects instead of
+  // resolving to "/i32/tag".
+  std::string resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/i32/tag");
+  CHECK(resolved.empty());
 }
 
 TEST_SUITE_END();

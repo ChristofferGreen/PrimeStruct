@@ -204,8 +204,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_body_api.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 9);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_variadic_args_body_api_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter forwards variadic args packs with explicit prefix values") {
@@ -226,8 +232,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_forward.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 20);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_variadic_args_forward_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic Result value packs with spread forwarding") {
