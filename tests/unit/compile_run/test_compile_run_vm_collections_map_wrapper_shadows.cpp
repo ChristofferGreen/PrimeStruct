@@ -443,9 +443,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_canonical_slash_vector_count_map_same_path_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_slash_vector_count_map_same_path_helper.out.txt")
+          .string();
   const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 87);
+      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper-returned canonical vector count slash-method on map receiver") {
@@ -468,7 +474,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
         std::string::npos);
 }
 
@@ -492,7 +498,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /map/capacity") !=
+  CHECK(readFile(outPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 

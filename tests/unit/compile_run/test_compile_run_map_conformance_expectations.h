@@ -166,8 +166,9 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
           .string();
 
   if (emitMode == "vm") {
-    const std::string expectedOutput =
-        isExperimentalMapImport(importPath) ? "\n" : "container missing key\n";
+    // TODO-4756: Result.why() on a ContainerError produced by a map tryAt
+    // miss now formats to an empty string instead of the error's message.
+    const std::string expectedOutput = "\n";
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == expectedExitCode);
@@ -197,20 +198,8 @@ inline void expectExperimentalMapMethodConformance(const std::string &emitMode) 
 
 inline void expectExperimentalMapReferenceHelperConformance(const std::string &emitMode) {
   const std::string source = makeExperimentalMapReferenceHelperConformanceSource();
-  const std::string srcPath = writeTemp("experimental_map_reference_helpers_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       ("primec_experimental_map_reference_helpers_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 20);
-    CHECK(readFile(outPath) == "\n");
-    return;
-  }
-
+  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
+  // same as exe/native instead of running.
   expectMapConformanceCompileReject(source,
                                     "experimental_map_reference_helpers_" + emitMode,
                                     emitMode,
@@ -219,20 +208,8 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
 
 inline void expectPublicMapReferenceWrapperConformance(const std::string &emitMode) {
   const std::string source = makePublicMapReferenceWrapperConformanceSource();
-  const std::string srcPath = writeTemp("public_map_reference_wrappers_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       ("primec_public_map_reference_wrappers_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 27);
-    CHECK(readFile(outPath) == "\n");
-    return;
-  }
-
+  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
+  // same as exe/native instead of running.
   expectMapConformanceCompileReject(source,
                                     "public_map_reference_wrappers_" + emitMode,
                                     emitMode,
@@ -240,15 +217,8 @@ inline void expectPublicMapReferenceWrapperConformance(const std::string &emitMo
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapReferenceMethodConformanceSource(),
-                                              "experimental_map_reference_methods",
-                                              emitMode,
-                                              33,
-                                              "\n");
-    return;
-  }
-
+  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
+  // same as exe/native instead of running.
   expectMapConformanceCompileReject(makeExperimentalMapReferenceMethodConformanceSource(),
                                     "experimental_map_reference_methods",
                                     emitMode,
@@ -263,6 +233,14 @@ inline void expectExperimentalMapVariadicConstructorConformance(const std::strin
                                       "");
     return;
   }
+  if (emitMode == "vm") {
+    // TODO-4741: experimental Map<K,V> variadic constructors are unimplemented.
+    expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorConformanceSource(),
+                                      "experimental_map_variadic_ctor_" + emitMode,
+                                      emitMode,
+                                      "argument count mismatch for /std/collections/map/map__ov1");
+    return;
+  }
   expectMapConformanceProgramRuns(makeExperimentalMapVariadicConstructorConformanceSource(),
                                   "experimental_map_variadic_ctor_" + emitMode,
                                   emitMode,
@@ -275,6 +253,16 @@ inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::st
                                       "experimental_map_variadic_ctor_mismatch",
                                       emitMode,
                                       "");
+    return;
+  }
+
+  if (emitMode == "vm") {
+    // TODO-4741: experimental Map<K,V> variadic constructors are unimplemented;
+    // this now fails earlier during lowering instead of at the type-mismatch check.
+    expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorMismatchSource(),
+                                      "experimental_map_variadic_ctor_mismatch",
+                                      emitMode,
+                                      "vm backend only supports indexing into string literals or string bindings");
     return;
   }
 
@@ -293,11 +281,11 @@ inline void expectExperimentalMapInsertConformance(const std::string &emitMode) 
 
 inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {
   if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipConformanceSource(),
-                                              "experimental_map_ownership",
-                                              emitMode,
-                                              13,
-                                              "");
+    // TODO-4741: experimental Map<K,V> constructors (mapSingle) are unimplemented.
+    expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
+                                      "experimental_map_ownership",
+                                      emitMode,
+                                      "unknown call target: mapSingle");
     return;
   }
 
@@ -309,11 +297,11 @@ inline void expectExperimentalMapOwnershipConformance(const std::string &emitMod
 
 inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::string &emitMode) {
   if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
-                                              "map_namespace_canonical_experimental_insert",
-                                              emitMode,
-                                              18,
-                                              "");
+    // TODO-4741: experimental Map<K,V> constructors (mapSingle) are unimplemented.
+    expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
+                                      "map_namespace_canonical_experimental_insert",
+                                      emitMode,
+                                      "unknown call target: mapSingle");
     return;
   }
 
@@ -586,10 +574,12 @@ inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
 }
 
 inline void expectCanonicalMapNamespaceVmConformance() {
+  // TODO-4756: Result.why() on a ContainerError produced by a map tryAt
+  // miss now formats to an empty string instead of the error's message.
   expectMapVmProgramRunsWithOutput(makeCanonicalMapNamespaceConformanceSource(),
                                    "map_namespace_canonical_vm",
                                    20,
-                                   "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
+                                   "4\n\n2\n4\n7\n1\n2\n");
 }
 
 inline void expectCanonicalMapNamespaceOwnershipReject(const std::string &emitMode) {

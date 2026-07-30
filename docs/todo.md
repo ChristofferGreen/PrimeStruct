@@ -2518,7 +2518,20 @@ This file is the live open-work queue for PrimeStruct.
     type (so these ~28+ cases could run instead of reject) is a
     substantial new-feature addition, not a "make tests green" bug fix -
     left as future work if the feature is still wanted; see TODO-4751.
-  - not yet covered: a targeted sweep of `primestruct.compile.run.vm.collections`
+  - resolution (2026-07-30): the follow-up sweep of
+    `primestruct.compile.run.vm.collections` referenced below is now
+    complete - all remaining `mapSingle`/`mapPair`/`mapDouble`-rooted
+    failures in that suite (plus several unrelated gaps found along the
+    way, filed separately as TODO-4757/4758/4759) were re-pinned to their
+    verified current behavior. Also broadened: `mapDouble<K,V>` (used as
+    a general constructor for the *canonical* lowercase `map<K,V>`, not
+    just experimental `Map<K,V>`) is unimplemented too - "unknown call
+    target: mapDouble" - so this gap isn't confined to the capitalized
+    experimental type as originally scoped; it's the whole `mapN`
+    templated-constructor family for generic `K,V` regardless of which
+    map type consumes it.
+  - not yet covered (superseded, see resolution above): a targeted sweep of
+    `primestruct.compile.run.vm.collections`
     (a different, much larger suite spanning many
     `test_compile_run_vm_collections_*.cpp` files) found ~18 more
     pre-existing failures hitting this exact same root cause outside the
@@ -6161,6 +6174,137 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: reproduce with the smallest form first (no user shadowing,
     no collections, exactly as shown above) before assuming any
     connection to the specific "push"-named test that surfaced it.
+
+- [ ] TODO-4759: Canonical namespaced vector count/capacity slash-method calls on a map receiver resolve inconsistently
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found while sweeping
+    `test_compile_run_vm_collections_map_wrapper_shadows.cpp`. Given a
+    helper `wrapMap()` returning `map<i32, i32>`, calling
+    `wrapMap()./std/collections/vector/count()` used to dispatch to a
+    user-defined `/std/collections/vector/count([map<i32,i32>] values)`
+    shadow (returning the shadow's value); it now fails to compile with
+    `unknown call target: /std/collections/map/count` even when no such
+    shadow exists to justify the namespace rewrite - the vector-qualified
+    slash-method call is being silently rewritten to the map namespace
+    before checking whether a definition exists there, instead of using
+    the receiver's actual type to resolve (or reporting the vector-
+    qualified name it was actually written with). The capacity sibling
+    (`wrapMap()./std/collections/vector/capacity()`) instead fails with
+    `capacity requires vector target`, a third, differently-shaped
+    message for what looks like the same underlying "wrong slash-
+    namespace name attempted against a map receiver" situation. Re-pinned
+    all three affected cases
+    (`test_compile_run_vm_collections_map_wrapper_shadows.cpp`) to their
+    exact current messages; not root-caused.
+  - implementation_notes: start in the call-resolution/spelling-classifier
+    code introduced by the TODO-4723-adjacent "compat-spelling" work
+    earlier in this epic - check whether `/std/collections/vector/count`
+    and `/std/collections/vector/capacity` go through different
+    resolution paths (one rewrites the namespace before the "does this
+    call target exist" check, the other checks receiver-type validity
+    first) despite being near-identical sibling builtins.
+  - acceptance: `wrapMap()./std/collections/vector/count()` either (a)
+    resolves the user's same-path `/std/collections/vector/count` shadow
+    when one exists (restoring the original passing behavior), or (b) if
+    that's no longer intended, reports an error naming the vector-
+    qualified spelling actually written, not a map-namespaced one the
+    user never wrote. capacity should report consistently with whatever
+    count ends up doing.
+  - stop_rule: do not change count/capacity's rejection wording without
+    first confirming which behavior (dispatch to same-path shadow vs.
+    reject) is actually intended - this may be deliberate tightening
+    rather than a bug.
+
+- [ ] TODO-4758: count() on a fresh (unbound) vector literal returns 0 instead of the literal's element count
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found while sweeping
+    `test_compile_run_vm_collections_vector_limits_push_limit.cpp`
+    ("rejects vm vector literal count helper during lowering", despite
+    the name, no longer rejects). Minimal repro:
+    ```
+    import /std/collections/*
+    [effects(heap_alloc), return<int>]
+    main() {
+      return(count(vector<i32>(1i32, 2i32, 3i32)))
+    }
+    ```
+    compiles and runs on `--emit=vm`, exit 0, instead of exit 3 (the
+    literal's actual element count). `count()` on a vector bound to a
+    local works correctly elsewhere in the suite; this is specific to
+    calling `count()` directly on an inline/unbound vector-literal
+    temporary. Re-pinned to the verified current (wrong) value; not
+    root-caused.
+  - implementation_notes: likely in the same
+    temporary-materialization path implicated by TODO-4752 (struct field
+    access on a freshly-returned temporary reading a default/zeroed
+    value) - check whether `count()`'s IR lowering for a literal-typed
+    argument reads the temporary's element count before or after the
+    literal's construction/store completes.
+  - acceptance: the minimal repro above returns 3, not 0.
+  - stop_rule: reproduce with the smallest form first (no user functions,
+    no shadowing) before assuming any connection to TODO-4752 beyond the
+    structural similarity noted above.
+
+- [ ] TODO-4757: Result.why() on a ContainerError formats to an empty string, and is severely slow, when the error originates from a map tryAt miss
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: supersedes/corrects Task #65's prior characterization as an
+    "infinite loop" - it is not infinite. Minimal repro:
+    ```
+    import /std/collections/*
+    [return<Result<int, ContainerError>> effects(io_out, heap_alloc)]
+    main() {
+      [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 4i32)}
+      [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<i32, i32>(values, 99i32)}
+      print_line(Result.why(missing))
+      return(Result.ok(0i32))
+    }
+    ```
+    On `--emit=vm` this reliably compiles and runs to completion (exit
+    0), but: (a) takes ~6.5 seconds for an 8-line program - confirmed via
+    `gdb -p <pid> -batch -ex "bt"` samples during the slow window, which
+    repeatedly landed inside `std::__introsort_loop` sorting a
+    `primec::(anonymous namespace)::SegmentLineCandidate` vector at deep
+    recursion, and separately inside `semantics::monomorphizeTemplates` -
+    consistent with a pathological diagnostic-candidate-list computation
+    happening even though no diagnostic is ultimately emitted (compile
+    succeeds); and (b) `Result.why(missing)` prints an empty string
+    instead of "container missing key". Three call sites in
+    `test_compile_run_map_conformance_expectations.h` /
+    `test_compile_run_map_conformance_runtime_expectations.h`
+    (`expectMapTryAtConformance`, `expectCanonicalMapNamespaceVmConformance`,
+    and their shared harness caller) were re-pinned to the verified blank
+    output; none were re-pinned for the ~6.5s runtime since the existing
+    harness has no per-case timeout and the suite as a whole tolerates it.
+  - implementation_notes: two separate fixes needed - (1) the perf
+    pathology: profile `runLowerReturnEmitStage`
+    (`src/ir_lowerer/...`, seen in an earlier `gdb bt` sample from the
+    same repro) and whatever builds/sorts the `SegmentLineCandidate` list
+    to find why it runs an expensive path on a *successful* compile; (2)
+    the blank message: trace `Result.why()`'s IR lowering for a
+    `ContainerError` value obtained via `/std/collections/map/tryAt`
+    against `/std/collections/ContainerError/why` in
+    `stdlib/std/collections/errors.prime` to find where the actual error
+    code/message gets lost.
+  - acceptance: the minimal repro above prints "container missing key"
+    (not blank) and completes in well under 1 second; Task #65 should be
+    closed/updated once this lands, since its "infinite loop" premise no
+    longer holds.
+  - stop_rule: do not assume (a) and (b) share one root cause without
+    verifying independently - the perf issue reproduces even in variants
+    that don't call `.why()` at all (not yet confirmed either way this
+    session; check before conflating the two).
 
 - [ ] TODO-4756: Investigate soa /ref_ref, /to_aos, /get slash-method-form call resolution gaps found across imports/vm.collections sweeps
   - owner: ai

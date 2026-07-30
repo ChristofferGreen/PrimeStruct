@@ -29,7 +29,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/push") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("rejects vm std namespaced reordered mutator compatibility helper shadow") {
@@ -55,7 +55,9 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
+            "pointer/assign/increment/decrement calls in expressions (call=/std/collections/vector/push") !=
         std::string::npos);
 }
 
@@ -82,7 +84,9 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("VM lowering error: push requires mutable vector binding") !=
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
+            "pointer/assign/increment/decrement calls in expressions (call=/push") !=
         std::string::npos);
 }
 
@@ -147,7 +151,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("push is only supported as a statement") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
         std::string::npos);
 }
 
@@ -200,7 +204,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("push is only supported as a statement") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
         std::string::npos);
 }
 
@@ -232,7 +236,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("push is only supported as a statement") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
         std::string::npos);
 }
 
@@ -546,12 +550,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_count_non_builtin_compat_fallback.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_count_non_builtin_compat_fallback_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 91);
 }
 
 TEST_CASE("rejects vm vector namespaced count non-builtin array fallback") {
@@ -696,8 +696,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
 

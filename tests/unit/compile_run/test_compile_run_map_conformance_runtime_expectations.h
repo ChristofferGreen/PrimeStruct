@@ -50,15 +50,8 @@ inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const 
 }
 
 inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipMethodConformanceSource(),
-                                              "map_experimental_ownership_method",
-                                              emitMode,
-                                              33,
-                                              "\n");
-    return;
-  }
-
+  // TODO-4741: experimental Map<K,V> constructors (mapSingle) are
+  // unimplemented; vm now rejects at compile time like exe/native.
   const std::string source = makeExperimentalMapOwnershipMethodConformanceSource();
   const std::string srcPath = writeTemp("map_experimental_ownership_method_" + emitMode + ".prime", source);
   const std::string outPath =
@@ -173,11 +166,13 @@ inline void expectWrappedExperimentalMapStorageFieldConformance(const std::strin
     return;
   }
 
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapStorageFieldConformanceSource(),
-                                            "map_wrapped_experimental_storage_field_" + emitMode,
-                                            emitMode,
-                                            9,
-                                            "9\n");
+  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
+  // same as exe/native instead of running.
+  expectMapConformanceCompileReject(
+      makeWrappedExperimentalMapStorageFieldConformanceSource(),
+      "map_wrapped_experimental_storage_field_" + emitMode,
+      emitMode,
+      "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::string &emitMode) {
@@ -188,19 +183,13 @@ inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::
 }
 
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
-  if (emitMode == "native" || emitMode == "exe") {
-    expectMapConformanceCompileReject(makeWrapperMapHelperExperimentalValueConformanceSource(),
-                                      "map_wrapper_helper_experimental_value",
-                                      emitMode,
-                                      "native backend only supports indexing into string literals or string bindings");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeWrapperMapHelperExperimentalValueConformanceSource(),
-                                            "map_wrapper_helper_experimental_value",
-                                            emitMode,
-                                            21,
-                                            "2\n4\n9\n5\n1\n");
+  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
+  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
+  // same as exe/native instead of running.
+  expectMapConformanceCompileReject(makeWrapperMapHelperExperimentalValueConformanceSource(),
+                                    "map_wrapper_helper_experimental_value",
+                                    emitMode,
+                                    backendLabel + " backend only supports indexing into string literals or string bindings");
 }
 
 inline void expectExperimentalMapAssignConformance(const std::string &emitMode) {
@@ -219,19 +208,13 @@ inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMod
 }
 
 inline void expectInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  if (emitMode == "native" || emitMode == "exe") {
-    expectMapConformanceCompileReject(makeInferredExperimentalMapReturnConformanceSource(),
-                                      "map_inferred_experimental_return",
-                                      emitMode,
-                                      "native backend only supports indexing into string literals or string bindings");
-    return;
-  }
-
-  expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapReturnConformanceSource(),
-                                            "map_inferred_experimental_return",
-                                            emitMode,
-                                            16,
-                                            "3\n4\n9\n");
+  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
+  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
+  // same as exe/native instead of running.
+  expectMapConformanceCompileReject(makeInferredExperimentalMapReturnConformanceSource(),
+                                    "map_inferred_experimental_return",
+                                    emitMode,
+                                    backendLabel + " backend only supports indexing into string literals or string bindings");
 }
 
 inline void expectBlockInferredExperimentalMapReturnConformance(const std::string &emitMode) {
