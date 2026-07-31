@@ -1831,32 +1831,27 @@ main() {
   CHECK(result == 14);
 }
 
-// TODO-4950: this test hand-splices a synthetic map2/lambda call tree (with
-// default-constructed semanticNodeId == 0 throughout) into a real
-// SemanticProgram's "/consume" parameter default and expects lowerer.lower
-// to accept it. It currently fails: validateSemanticProductDirectCallCoverage
-// (IrLowererCallResolution.cpp) now requires every non-method-call Call expr
-// reachable from a definition to carry a nonzero semanticNodeId before it
-// will even consider whether a published semantic-product target exists for
-// it, so the unset IDs on "greeting()" / the map2 lambda / its "return(left)"
-// body immediately fail with "missing semantic-product direct-call semantic
-// id: /consume -> greeting" (verified via doctest run, message captured with
-// CAPTURE(error) at the REQUIRE below). Assigning large arbitrary
-// non-colliding-looking IDs to those three exprs clears that first error but
-// trades it for "missing semantic-product direct-call target: /consume ->
-// greeting" from the very next check (semanticProgramLookupPublishedDirectCallTargetId
-// / directCallTargetsByExpr in the same function) - meaning the ID space
-// this coverage check keys into is not a simple "any large unused integer is
-// safe" scheme; some large IDs still resolve to a published-but-mismatched
-// direct-call-target entry, and getting a synthetic AST fragment to satisfy
-// this validator likely requires either constructing a genuinely fresh,
-// collision-proof semanticNodeId (understanding whatever ID space
-// SemanticProduct.cpp's publishing step actually uses) or registering a
-// matching SemanticProgramDirectCallTarget alongside each synthetic ID
-// (mirroring the addBindingFact/addQueryFact-style companion registration
-// pattern used successfully elsewhere in this suite) - not attempted blind
-// per this session's triage of the id space being not yet understood well
-// enough to be confident which is correct. See docs/todo.md TODO-4950.
+// TODO-4950: this test hand-splices a synthetic map2/lambda call tree into a
+// real SemanticProgram's "/consume" parameter default. Fixed by giving every
+// spliced Call expr a nonzero semanticNodeId (required unconditionally by
+// validateSemanticProductDirectCallCoverage for non-method calls and by
+// validateSemanticProductMethodCallCoverage for method calls, both in
+// IrLowererCallResolution.cpp) and, for the three calls that resolve to a
+// real semantic-product target ("greeting()" a direct call; "read()"/"map2()"
+// both method calls - method-call coverage has no "doesn't resolve to a
+// published target" bypass the way direct-call coverage does, so it's
+// unconditional there), also registering a companion
+// SemanticProgramDirectCallTarget/SemanticProgramMethodCallTarget +
+// publishedRoutingLookups id-by-expr entry + moduleResolvedArtifacts index -
+// mirroring what real semantic publication does for genuine call sites and
+// the addBindingFact/addQueryFact-style companion-registration pattern
+// already used elsewhere in this suite. See docs/todo.md TODO-4950 for the
+// full resolution trace (including why a bare fabricated id without the
+// companion registration still fails, and why interning "/Reader/read"
+// needs a direct callTargetStringTable append instead of
+// semanticProgramInternCallTargetString - parseAndValidate already freezes
+// the SemanticProgram's published storage, which blocks that function from
+// minting genuinely new strings).
 TEST_CASE("ir lowerer preserves inline-call Result metadata from caller-scoped parameter defaults") {
   const std::string source = R"(
 [struct]
@@ -1927,9 +1922,117 @@ main() {
   REQUIRE(consumeIt != program.definitions.end());
   REQUIRE(consumeIt->parameters.size() == 1);
 
+  auto greetingIt =
+      std::find_if(program.definitions.begin(), program.definitions.end(), [](const primec::Definition &def) {
+        return def.fullPath == "/greeting";
+      });
+  REQUIRE(greetingIt != program.definitions.end());
+
+  auto readIt =
+      std::find_if(program.definitions.begin(), program.definitions.end(), [](const primec::Definition &def) {
+        return def.fullPath == "/Reader/read";
+      });
+  REQUIRE(readIt != program.definitions.end());
+
+  // parseAndValidate has already frozen the SemanticProgram's published
+  // storage (freezeSemanticProgramPublishedStorage), so
+  // semanticProgramInternCallTargetString silently returns InvalidSymbolId
+  // for any of these (interning new strings is a write, blocked post-freeze).
+  // Every resolved path used below is already interned from real publication
+  // (greetingIt/readIt's own fullPath, or "/result/map2" - the canonical
+  // resolved path SemanticsValidatorExprResultFile.cpp resolves
+  // "Result.map2(...)" method calls to, confirmed by its own
+  // `resolved == "/result/map2"` special-case and its `args.size() != 4`
+  // check matching this fixture's 4-arg {Result, left, right, lambda} shape
+  // exactly) though, so a read-only lookup finds each one's existing id
+  // (semanticProgramLookupCallTargetStringId falls back to a linear scan of
+  // callTargetStringTable once frozen, since the fast hash index is cleared
+  // by the freeze).
+  // "/greeting" and "/result/map2" are already interned (real call sites for
+  // both exist in the untouched source/semantics), but "/Reader/read" is
+  // not - main() never actually calls it, only consume()'s spliced-in
+  // parameter default does, so real publishing never had a reason to intern
+  // it. semanticProgramInternCallTargetString can't mint it post-freeze
+  // (see above), but nothing stops appending directly to the public
+  // callTargetStringTable vector and computing the SymbolId the same way
+  // semanticProgramInternCallTargetString does when not frozen (1-indexed,
+  // id == table.size() after appending) - semanticProgramResolveCallTargetString
+  // reads directly from that same table, so this is a legitimate append, not
+  // a workaround around the frozen invariant (callTargetStringIdsByText, the
+  // thing freezing actually protects, is only a dedup cache for interning -
+  // we don't need dedup here).
+  auto lookupOrInternCallTargetStringId = [&](const std::string &text) -> primec::SymbolId {
+    if (const auto id = primec::semanticProgramLookupCallTargetStringId(semanticProgram, text)) {
+      return *id;
+    }
+    semanticProgram.callTargetStringTable.push_back(text);
+    return static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size());
+  };
+
+  // Real publishing (SemanticPublicationBuilders.cpp's
+  // publishDirectCallTargetFacts/publishMethodCallTargetFacts) always
+  // registers a fact both in its owning vector *and* in the matching
+  // publishedRoutingLookups::*IdsByExpr map *and* in some module's index
+  // list (semanticProgramDirectCallTargetView/semanticProgramMethodCallTargetView
+  // only return entries reachable through a module's index once
+  // moduleResolvedArtifacts is non-empty, which it always is for a real
+  // parsed program - anything pushed straight onto directCallTargets/
+  // methodCallTargets without a matching module index entry is silently
+  // invisible to validateSemanticProductDirectCallCoverage/
+  // validateSemanticProductMethodCallCoverage's own local index, even
+  // though publishedRoutingLookups already resolves it). These helpers
+  // mirror all three registrations, using whichever module already owns
+  // /consume's real (non-synthetic) facts of the same kind - the
+  // addBindingFact/addQueryFact-style companion registration pattern used
+  // throughout
+  // test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp.
+  // This fixture's whole source is a single file with no imports, so real
+  // publishing puts every fact in the same (and only) module bucket -
+  // registering into moduleResolvedArtifacts[0] mirrors that directly
+  // rather than searching for a specific scope's existing entries (which
+  // "/consume" may not have any of for a given fact family, e.g. its body's
+  // only calls are the builtin-handled "try"/"count", neither of which
+  // necessarily publishes an ordinary method-call-target fact).
+  REQUIRE_FALSE(semanticProgram.moduleResolvedArtifacts.empty());
+  auto registerDirectCallTarget = [&](uint64_t semanticNodeId, const std::string &resolvedPath) {
+    primec::SemanticProgramDirectCallTarget target;
+    target.scopePath = "/consume";
+    target.semanticNodeId = semanticNodeId;
+    target.resolvedPathId = lookupOrInternCallTargetStringId(resolvedPath);
+    semanticProgram.directCallTargets.push_back(target);
+    const std::size_t index = semanticProgram.directCallTargets.size() - 1;
+    semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+        semanticNodeId, target.resolvedPathId);
+    semanticProgram.moduleResolvedArtifacts.front().directCallTargetIndices.push_back(index);
+  };
+  auto registerMethodCallTarget = [&](uint64_t semanticNodeId, const std::string &resolvedPath) {
+    primec::SemanticProgramMethodCallTarget target;
+    target.scopePath = "/consume";
+    target.semanticNodeId = semanticNodeId;
+    target.resolvedPathId = lookupOrInternCallTargetStringId(resolvedPath);
+    semanticProgram.methodCallTargets.push_back(target);
+    const std::size_t index = semanticProgram.methodCallTargets.size() - 1;
+    semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+        semanticNodeId, target.resolvedPathId);
+    semanticProgram.moduleResolvedArtifacts.front().methodCallTargetIndices.push_back(index);
+  };
+
   primec::Expr leftParam = makeName("left");
   primec::Expr rightParam = makeName("right");
   primec::Expr returnLeft = makeCall("return", {makeName("left")});
+  // TODO-4950: validateSemanticProductDirectCallCoverage
+  // (IrLowererCallResolution.cpp) requires every non-method-call Call expr
+  // reachable from a definition to carry a nonzero semanticNodeId. "return"
+  // does not resolve to any published definition family target (it isn't a
+  // user Definition at all - resolveCallPathFromPublishedLookups maps it to
+  // "/return", and resolvesToPublishedDefinitionFamilyTarget never matches
+  // that against any real definition's fullPath/templated/specialized/
+  // overload prefix), so - like every other bare return(...) call in every
+  // other passing test in this suite - it only needs a nonzero id, not a
+  // registered SemanticProgramDirectCallTarget. Verified by reading
+  // validateSemanticProductDirectCallCoverage /
+  // resolvesToPublishedDefinitionFamilyTarget directly.
+  returnLeft.semanticNodeId = 900001;
 
   primec::Expr map2Lambda;
   map2Lambda.kind = primec::Expr::Kind::Call;
@@ -1937,17 +2040,48 @@ main() {
   map2Lambda.hasBodyArguments = true;
   map2Lambda.args = {leftParam, rightParam};
   map2Lambda.bodyArguments = {returnLeft};
+  // Same reasoning as returnLeft above: a lambda-literal Call node has an
+  // empty `name`, which resolves to a bare "/" path that never matches a
+  // published definition family target either - nonzero id only.
+  map2Lambda.semanticNodeId = 900002;
 
-  consumeIt->parameters.front().args = {
-      makeCall("map2",
-               {
-                   makeName("Result"),
-                   makeCall("greeting", {}),
-                   makeCall("read", {makeName("reader")}, true),
-                   map2Lambda,
-               },
-               true),
-  };
+  // Unlike "return" and the lambda literal, "greeting"/"read"/"map2" all
+  // resolve to real semantic-product targets, so - unlike the direct-call
+  // coverage check (which skips the target requirement entirely for calls
+  // that don't resolve to a published definition family, e.g. "return") -
+  // both validateSemanticProductDirectCallCoverage (for "greeting", a bare
+  // call) and validateSemanticProductMethodCallCoverage (for "read" and
+  // "map2", both isMethodCall=true) unconditionally require a registered
+  // target for every one of these. "read" resolves to the real
+  // "/Reader/read" definition; "map2" resolves to the canonical
+  // "/result/map2" builtin path (SemanticsValidatorExprResultFile.cpp
+  // special-cases `resolved == "/result/map2"` for exactly this 4-arg
+  // {Result, left, right, lambda} isMethodCall shape - the IR lowerer's own
+  // separate isResultBuiltinCall(expr, "map2", 4) special-casing bypasses
+  // resolveMethodCallDefinition entirely for actual emission, but the
+  // semantic-product coverage gate this test hits runs earlier and doesn't
+  // know about that bypass). See registerDirectCallTarget/
+  // registerMethodCallTarget above for why a plain nonzero id isn't enough
+  // (findSemanticProductDirectCallTarget/findSemanticProductMethodCallTarget
+  // still return empty without a full companion registration - confirmed
+  // live, this is exactly the error a fabricated id alone produces) and why
+  // interning can't mint fresh strings here. This mirrors what real semantic
+  // publication would have done had this call tree been parsed as part of
+  // /consume's parameter default instead of spliced in afterward.
+  primec::Expr greetingCall = makeCall("greeting", {});
+  greetingCall.semanticNodeId = 900003;
+  registerDirectCallTarget(greetingCall.semanticNodeId, greetingIt->fullPath);
+
+  primec::Expr readCall = makeCall("read", {makeName("reader")}, true);
+  readCall.semanticNodeId = 900004;
+  registerMethodCallTarget(readCall.semanticNodeId, readIt->fullPath);
+
+  primec::Expr map2Call = makeCall(
+      "map2", {makeName("Result"), greetingCall, readCall, map2Lambda}, true);
+  map2Call.semanticNodeId = 900005;
+  registerMethodCallTarget(map2Call.semanticNodeId, "/result/map2");
+
+  consumeIt->parameters.front().args = {map2Call};
 
   primec::IrLowerer lowerer;
   primec::IrModule module;

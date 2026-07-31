@@ -8066,3 +8066,201 @@ This file is the live open-work queue for PrimeStruct.
     definition or which ID scheme is "correct" risks silently pinning the
     wrong contract, exactly what this epic's methodology exists to
     prevent.
+  - session_update (2026-07-31): both sub-clusters resolved this session.
+    - `conversions_numbers_41_50`: fixed, verified green (`result == 5`
+      via real `Vm::execute`). Root cause went one level deeper than the
+      prior session's triage found: `validateSemanticProductDirectCallCoverage`
+      requiring a nonzero `semanticNodeId` was only the first gate.
+      Fabricating a large `semanticNodeId` plus registering a companion
+      `SemanticProgramDirectCallTarget`/`directCallTargetIdsByExpr` entry
+      (as the prior session already suspected would be needed) still
+      failed with "missing semantic-product direct-call target", because
+      `semanticProgramDirectCallTargetView` (`SemanticProduct.cpp`) does
+      *not* simply return `semanticProgram.directCallTargets` - once
+      `moduleResolvedArtifacts` is non-empty (true for any real parsed
+      program) it returns only entries reachable through some module's
+      `directCallTargetIndices`, silently dropping anything pushed onto
+      `directCallTargets` without a matching module index entry. Fixed by
+      also pushing the new entry's index into
+      `moduleResolvedArtifacts.front().directCallTargetIndices` (this
+      fixture is a single-file, no-import program, so there is exactly
+      one module bucket). Two more, distinct gates surfaced after that:
+      (1) `semanticProgramInternCallTargetString` silently returns
+      `InvalidSymbolId` for `resolvedPathId` because `parseAndValidate`
+      already calls `freezeSemanticProgramPublishedStorage` before the
+      test's own splicing runs (interning new strings is a write, blocked
+      post-freeze) - fixed by reading already-interned strings via
+      `semanticProgramLookupCallTargetStringId` instead (works post-freeze,
+      falls back to a linear scan since the fast hash index is cleared by
+      the freeze), and for the one path never interned by real publication
+      (`/Reader/read` - the real source never calls it, only the spliced
+      fixture does) by appending directly to the public
+      `callTargetStringTable` vector and computing the `SymbolId` the same
+      way the (frozen) intern function would. (2) the two `isMethodCall`
+      calls in the spliced tree (`read()`, `map2()`) turned out to need
+      the exact same nonzero-id-plus-companion-registration treatment as
+      `greeting()`, via a sibling validator,
+      `validateSemanticProductMethodCallCoverage` - and unlike the
+      direct-call version, it has **no** "doesn't resolve to a published
+      definition family target, skip the requirement" bypass, so it's
+      unconditional for every `isMethodCall` expr (`map2` resolves to the
+      real, textually-confirmed-canonical `"/result/map2"` path per
+      `SemanticsValidatorExprResultFile.cpp`'s own
+      `resolved == "/result/map2"` special-case, which also confirmed the
+      4-arg `{Result, left, right, lambda}` shape this fixture already
+      used is exactly the real AST shape for `Result.map2(...)`). See
+      `tests/unit/ir_pipeline/test_ir_pipeline_conversions_numbers.cpp`'s
+      own leading comment on this TEST_CASE for the full trace.
+    - `_1061_1070`'s giant "ir lowerer statement call helper emits direct
+      calls" TEST_CASE: all 88 `insert_builtin` call sites fixed and
+      verified green. A full static trace of `tryEmitDirectCallStatement`
+      (`IrLowererStatementCallEmission.cpp`) found the mechanism is fully
+      deterministic once you know none of these 88 mocks pass a
+      `semanticProgram` (confirmed by parsing every call site's argument
+      count - always the 11-arg overload, never 13): every fallback that
+      needs one is a guaranteed no-op. That collapses the "3 distinct
+      shapes" from the prior session's static analysis into a strictly
+      mechanical per-site classification - written as a small Python
+      static evaluator (symbolically resolving each stmt variable's own
+      `name`/`isMethodCall`/`namespacePrefix` through its copy/assignment
+      chain, and each site's `resolveDefinitionCall`/
+      `resolveMethodCallDefinition` mock's branch conditions, then
+      matching them against each other exactly as
+      `tryEmitDirectCallStatement` would) rather than hand-verifying 88
+      sites individually - and cross-checked against ~46 sites this file
+      already had correctly pinned from prior sessions (0 mismatches
+      against the evaluator's predictions, which is what gave confidence
+      to apply it to the other ~42). Three outcomes, no exceptions:
+      isMethodCall statements whose `resolveMethodCallDefinition` mock
+      matches the statement's own unmodified `name`/`args` ->
+      `Emitted`, inlining the *original* unmodified callExpr (never
+      `insert_builtin`, and always with empty `templateArgs` - none of
+      the `*MethodStmt` variables in this file are ever assigned
+      `templateArgs`) against whichever `Definition` that branch returns;
+      isMethodCall statements with no matching branch -> `Error`,
+      "missing semantic-product method-call target: `<name>`" (matches
+      the truth already established by the small "validates direct-call
+      diagnostics" case); bare (non-method-call) statements -> resolved
+      via `resolveDefinitionCall(callExpr)` with the *unmodified* expr,
+      and if that finds a callee (most of these mocks' "second,
+      non-builtin branch" turned out to only match a *nested* args-pack
+      receiver sub-call, not the top-level stmt's own bare name - several
+      sites the prior session's coarser grep-for-a-mentioned-Definition-
+      variable heuristic would have miscategorized), `getReturnInfo`
+      (uniformly, across all 88 sites) only recognizes the `_builtin`
+      path, so the result is `Error` with an **empty** error message
+      (`getReturnInfo` failure never sets one) - never `Emitted`, since
+      the only way to reach `_builtin` is a callExpr literally spelled
+      that way, which none of the 88 real scenarios are. See the leading
+      comment on the TEST_CASE itself
+      (`test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp`)
+      for the same summary in-place.
+    - **New, unrelated genuine gap discovered and split out as TODO-5000**:
+      fixing the 88 sites did not turn `_1061_1070` green - the *same*
+      giant TEST_CASE has a separate ~300-line tail (SoA/vector-mutator
+      "alias not handled"/"explicit direct definition"/"wrapper builtin
+      vector" scenarios, none referencing `insert_builtin`, never
+      mentioned by this TODO's own scope or triage) that is *also*
+      red, with mock resolution-call-*count* assertions (not just
+      target/outcome assertions) now mismatched (e.g. `CHECK(
+      aliasDefinitionResolutionCalls == 1)` observing 2-4 instead).
+      Confirmed pre-existing (present verbatim, byte-for-byte, in this
+      TODO's own starting commit af96dfd - not something this session's
+      edits touched or introduced) via diff against a pre-edit backup of
+      the file. Root-cause direction only, not a full fix - see TODO-5000.
+
+- [ ] TODO-5000: fix the SoA/vector-mutator alias resolution-call-count
+      mismatches at the tail of "ir lowerer statement call helper emits
+      direct calls" (blocks `ir_pipeline_validation_cases_1061_1070`)
+  - owner: ai
+  - created_at: 2026-07-31
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-ir-pipeline
+  - depends_on: none (newly discovered; not part of TODO-4900/TODO-4950's
+    insert_builtin scope)
+  - scope: `test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp`,
+    the tail of the "ir lowerer statement call helper emits direct calls"
+    TEST_CASE from the `soaFieldStmt` scenario (~line 6686, marked with a
+    `TODO-5000` comment) to the TEST_CASE's closing brace (~line 7025).
+    Discovered while fixing TODO-4950's 88 `insert_builtin` call sites in
+    the *same* TEST_CASE this session - those are now all fixed and
+    verified green (see TODO-4950's session_update), but this separate,
+    pre-existing tail cluster (confirmed present verbatim in this file's
+    starting commit af96dfd, untouched by this session's edits) is still
+    red, so the shard itself does not go green yet. 17 assertion failures
+    as of this session, all resolution-*call-count* mismatches (not
+    target/outcome mismatches like TODO-4950's cluster was), e.g.:
+    - `runVectorMutatorAliasNotHandledCase` (a local lambda helper invoked
+      ~12 times with different alias spellings like `/vector/push`,
+      `/std/collections/vector/push`, `/std/collections/vector/reserve`,
+      `/std/collections/experimental_vector/vectorPush`, etc.) expects
+      `aliasDefinitionResolutionCalls == 1` (`resolveDefinitionCall` mock
+      called exactly once) but observes 2, 3, or 4 depending on the alias
+      spelling.
+    - `runExplicitVectorMutatorDirectDefinitionCase` similarly expects
+      `helperDefinitionResolutionCalls == 1`, observes 2.
+    - the `wrapperAliasPushStmt`/`namespacedCanonicalPushStmt` scenarios
+      expect `wrapperBuiltinVectorDefinitionResolutionCalls == 1` /
+      `builtinVectorDefinitionResolutionCalls == 1`, observe 4 / 4, and
+      `wrapperBuiltinVectorMethodResolutionCalls >= 1`, observes 0.
+  - implementation_notes: root-cause direction only, from reading
+    `tryEmitDirectCallStatement`'s bare-call fallback chain
+    (`resolveDirectStatementDefinition` in
+    `IrLowererStatementCallEmission.cpp`) while triaging TODO-4950's
+    sibling sites - not independently verified against each of these
+    specific alias spellings, so treat as a lead, not a confirmed
+    diagnosis:
+    - `resolveDirectStatementDefinition` can call the injected
+      `resolveDefinitionCall` mock up to 3 times for a single bare
+      (non-method-call) statement even with no `semanticProgram` passed:
+      (1) directly with the unmodified `callExpr`; (2) inside
+      `resolveGeneratedDefinitionPath`, via
+      `resolveDefinitionPathAsDirectCall(callExpr, rawPath)` (rewrites
+      only `.name`/`.namespacePrefix`/`.templateArgs`/`.isMethodCall`,
+      calls the mock again); (3) if `rawPath` matches
+      `isCanonicalPublishedStdlibSurfaceHelperPath(rawPath,
+      StdlibSurfaceId::CollectionsManifestSurface0)` (true for canonical
+      `/std/collections/vector/*` paths - see
+      `IrLowererSetupTypeCollectionHelpers.cpp`), a third attempt via
+      `resolveVectorSurfaceImplementationPath(memberName)` +
+      `resolveGeneratedDefinitionPath` again
+      (`IrLowererStatementCallEmission.cpp` lines ~742-758). That
+      accounts for up to 3, not the observed up-to-4 - there is at least
+      one more call site/path not yet identified (possibly something in
+      the method-call fallback for the SOA-vector-target special case at
+      the very top of `tryEmitDirectCallStatement`, lines ~898-918 in
+      that file, which itself calls `resolveMethodCallDefinition` - a
+      *different* mock - under a distinct condition; worth checking
+      whether any of these bare aliases also satisfy that branch's
+      `name.find('/') == std::string::npos` guard before ruling it out,
+      though at first glance the tested alias names all contain `/` so
+      likely don't).
+    - The count varies by exact alias spelling (canonical
+      `/std/collections/vector/push` vs. legacy `/vector/push` vs.
+      `experimental_vector` spellings all produced different observed
+      counts: 3, 4, 2 respectively for otherwise-similar scenarios) -
+      confirming the extra probes are conditional on
+      `isCanonicalPublishedStdlibSurfaceHelperPath`/
+      `resolveVectorSurfaceImplementationPath`'s specific classification
+      of each path, not a uniform off-by-N.
+    - Whether the *fix* should be re-pinning each scenario's expected
+      call count to match real (verified) behavior per alias spelling, or
+      whether one of these fallback probes is itself a regression that
+      should not be firing for these inputs, is not yet determined -
+      needs the same "verify against real behavior before pinning"
+      discipline as TODO-4900/TODO-4950 (a live
+      `tryEmitDirectCallStatement` probe per distinct alias-spelling
+      shape, or a full trace of every fallback path with print
+      instrumentation, before touching any assertion).
+  - acceptance: `ir_pipeline_validation_cases_1061_1070` passes (this is
+    the last blocker in that shard - TODO-4950's 88 sites are already
+    fixed); `ctest -R 'primestruct_ir_pipeline'` fully green with zero
+    shards outside this TODO's scope newly failing.
+  - stop_rule: same discipline as TODO-4900/TODO-4950 - do not re-pin any
+    of these call-count assertions without confirming the real count
+    against actual `tryEmitDirectCallStatement` behavior per alias
+    spelling first (not just the two fallback-probe mechanisms already
+    identified above - there is at least one more, unidentified, source
+    of extra calls). If per-alias-spelling verification reveals more
+    distinct probe-count contracts than fit in one bounded session, split
+    further rather than guessing a uniform fix.
