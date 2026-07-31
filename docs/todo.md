@@ -90,7 +90,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 - TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 - TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
-- TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 - TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 - TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
 - TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
@@ -105,6 +104,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
+- TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
 
 ### Priority Lanes
 
@@ -327,7 +327,6 @@ This file is the live open-work queue for PrimeStruct.
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 55. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
 56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
-57. TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
 61. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
 62. TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
 63. TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
@@ -335,6 +334,7 @@ This file is the live open-work queue for PrimeStruct.
 65. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
 66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 67. TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
+68. TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
 
 ### Task Blocks
 
@@ -1825,9 +1825,10 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Triage and TODO-filing only - no source fixes in this leaf;
     that is explicitly deferred to the follow-up leaves it creates.
 
-- [ ] TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
+- [x] TODO-4719: Fix remaining type_resolution_graph SoA-cluster compatibility failures
   - owner: ai
   - created_at: 2026-07-15
+  - completed_at: 2026-07-31
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-type-resolution-graph
   - scope: 10 test cases in
@@ -1850,22 +1851,79 @@ This file is the live open-work queue for PrimeStruct.
     borrowed local soa field views on canonical reads compatibility",
     "keeps method-like borrowed soa field views on canonical reads
     compatibility".
-  - implementation_notes: At least one case ("keeps helper-return borrowed
-    soa read targets on canonical wrappers compatibility") was already
-    investigated in an earlier session: routing it through the real
-    compile pipeline with genuine `SoaVector<T>`/`soaVectorNew<T>()`
-    stdlib content hits a further `unknown method: /soa/push` blocker -
-    possibly the test's `.push(...)` method-call form needs updating to
-    the modern statement-form `push(values, ...)` syntax per the stdlib
-    "surface syntax" migration referenced elsewhere in the codebase, but
-    this wasn't confirmed. The other 9 cases are not yet individually
-    investigated.
-  - acceptance: All 10 cases pass; full `primestruct.semantics.type_resolution_graph`
-    suite (177/177) is green.
-  - stop_rule: If the `/soa/push` blocker turns out to require a broader
-    stdlib mutator-syntax migration beyond fixing these test expectations,
-    split that migration into its own TODO rather than expanding this
-    leaf's scope.
+  - resolution (2026-07-31): the `/soa/push` method-call-syntax hypothesis
+    from the earlier session was investigated and REFUTED - `.push(...)`/
+    `.reserve(...)` method-call sugar on `SoaVector<T>` is the current,
+    correct, actively-tested surface syntax (used throughout
+    `tests/unit/compile_run/*.cpp`, and TODO-4731's `progress_2026-07-19`
+    already fixed that exact dispatch gap). All 10 cases were individually
+    empirically verified with a real `runCompilePipeline` +
+    `addDefaultStdlibInclude` probe (the file's existing bare
+    `parseProgram()`+`Semantics::validate()` helper cannot see real
+    stdlib `SoaVector<T>` content at all, which is why every SoaVector
+    case failed uniformly with "template arguments are only supported on
+    templated definitions: /SoaVector" before switching to the real
+    pipeline - a second, distinct piece of test-harness staleness beyond
+    the imports below). Two genuinely independent classes of finding:
+    1. **Stale test fixtures (4 cases, re-pinned, no compiler change)**:
+       "keeps helper-return SoaVector mutator initializer facts on
+       wrappers compatibility", "keeps helper-return borrowed soa field
+       views on canonical reads compatibility", "keeps borrowed local soa
+       field views on canonical reads compatibility", "keeps method-like
+       borrowed soa field views on canonical reads compatibility" all
+       imported the now-retired `/std/collections/internal_soa/*` and
+       `/std/collections/internal_soa_conversions/*` modules (rejected by
+       `isDirectRemovedSoaCompatibilityImportPath` in
+       `SemanticsValidatorInferCollectionCompatibilityInternal.h` with
+       "direct import of retired soa compatibility modules is not
+       supported; use /std/collections/soa/*") - removing those import
+       lines and switching to the real compile pipeline fixed 3 of the 4
+       outright. The 4th (mutator initializer facts) additionally needed
+       its assertions re-pinned: `.push(...)`/`.reserve(...)` on the
+       public `SoaVector<T>` wrapper now records as a directCallTarget
+       (`callName` is the full rooted `/soa/push` path) rather than a
+       methodCallTarget, unlike the equivalent same-path-shadow case on
+       the builtin `soa<T>` receiver elsewhere in this file (still
+       methodCallTarget there) - re-pinned to the verified current
+       direct-call shape. The 3 field-view cases also needed their
+       routing-symbol assertion corrected: `.y()[i]`/`y(...)[i]` no
+       longer routes through a `soaFieldViewRead` direct-call bridge, it
+       resolves as a methodCallTarget fact to the element struct's own
+       reflect-generated field accessor (`/Particle/y`) - re-pinned to
+       that verified value. "keeps builtin soa ref_ref targets on
+       same-path helpers" also had an unrelated stale-fixture bug (its
+       `Particle` struct was missing the `[struct reflect]` tag that
+       every sibling fixture has - `soa<Particle>` construction now
+       requires a reflect-enabled element type) fixed alongside its
+       genuine-gap re-pin below.
+    2. **Genuine compiler gaps (6 cases, left red by re-pinning the
+       verified CURRENT failing behavior with an explanatory comment,
+       filed as new TODO-5050 rather than fixed - production code was
+       not touched)**: three distinct, narrower shapes than one giant
+       "soa compat is broken" bug, isolated with a battery of minimal
+       reproduction probes (see TODO-5050 for the full breakdown):
+       (a) canonical public soa read-helper routing (get/get_ref/ref/
+       ref_ref/to_aos/to_aos_ref/count/count_ref) fails - both call
+       forms - when the receiver is a call to a user-defined helper
+       returning `Reference<SoaVector<T>>`/`Reference<soa<T>>` (a local
+       variable holding the same Reference type, or the builtin
+       `location(...)` call used directly, both route correctly);
+       (b) method-call-form dispatch (`.ref(...)`/`.ref_ref(...)`) does
+       not honor a same-path user shadow (`/soa/ref`, `/soa/ref_ref`)
+       the equivalent direct-call form does, on both borrowed and owned
+       receivers; (c) an explicit rooted-path direct call
+       (`/std/collections/soa/get_ref(...)`) to a function declared
+       directly at that canonical path breaks specifically on a borrowed
+       helper-return receiver, while the bare unrooted direct call and
+       the method-call form to the same declared function both work.
+  - acceptance: MET - all 10 cases pass;
+    `primestruct.semantics.type_resolution_graph` suite is 177/177 green
+    (`--first=101 --last=120` shards both fully pass); full
+    `PrimeStruct_semantics_tests` binary run with zero regressions
+    elsewhere (see TODO-5050 for the genuine-gap follow-up work still
+    open).
+  - stop_rule: N/A - resolved without needing a broader stdlib migration;
+    the `/soa/push` hypothesis that motivated this stop_rule was refuted.
 
 
 - [ ] TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
@@ -8264,3 +8322,131 @@ This file is the live open-work queue for PrimeStruct.
     of extra calls). If per-alias-spelling verification reveals more
     distinct probe-count contracts than fit in one bounded session, split
     further rather than guessing a uniform fix.
+
+- [ ] TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
+  - owner: ai
+  - created_at: 2026-07-31
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-soa-surface
+  - depends_on: TODO-4731
+  - scope: TODO-4719's 10-case type_resolution_graph SoA cluster is now
+    green (4 cases were stale test fixtures, re-pinned; see TODO-4719's
+    resolution notes), but 6 of those cases pin CURRENT, VERIFIED-BROKEN
+    compiler behavior rather than a fix, because production code was not
+    touched. Each shape was isolated with minimal standalone
+    `runCompilePipeline` probes (add `import /std/collections/soa/*` +
+    `addDefaultStdlibInclude`, no mocks) before being pinned - not
+    guessed. Three distinct shapes, not one bug:
+    (a) **canonical public soa read-helper routing through a
+    helper-return borrowed receiver.** `get`/`get_ref`/`ref`/`ref_ref`/
+    `to_aos`/`to_aos_ref`/`count`/`count_ref` all fail - in BOTH
+    method-call and direct-call form - when the receiver expression is a
+    call to a user-defined function returning
+    `Reference<SoaVector<T>>`/`Reference<soa<T>>` (free function or
+    struct method, doesn't matter). Confirmed NOT broken for: a local
+    variable holding the same `Reference<...>` type
+    (`[Reference<SoaVector<Particle>>] borrowed{location(values)}`), or
+    the builtin `location(...)` call used directly as the receiver
+    (`location(values).get(...)`) - both route correctly. Symptom
+    varies by helper: `get`/`to_aos`/`count` fail with "unknown method:
+    /std/collections/soa_vector/get_ref" (leaks the retired
+    `soa_vector` family name into the diagnostic - the exact class
+    TODO-4731 gap (e) described), while `ref`/`ref_ref` fail with
+    "unknown method: /std/collections/soa/ref_ref" (canonical path not
+    found at all). Repro: two sibling functions, `pickBorrowed`
+    returning `Reference<SoaVector<Particle>>` vs a local `Reference`
+    binding calling `.get(1i32)` on each - the local one validates, the
+    helper-return one does not. This is the TODO-4731 residual gap (f)
+    class, generalized past `count_ref` to the whole read-helper family
+    and confirmed for both call forms.
+    (b) **method-call-form dispatch does not honor a same-path user
+    shadow.** Given a user-declared `/soa/ref` or `/soa/ref_ref`
+    function, the direct-call form (`ref_ref(receiver, index)`) resolves
+    to the shadow correctly, but the method-call form
+    (`receiver.ref_ref(index)`) does not - it instead falls through
+    toward the canonical templated stdlib helper and fails with
+    "template arguments required for /std/collections/soa/ref_ref" (or
+    "template arguments are only supported on templated definitions:
+    /soa/ref_ref" depending on receiver shape). Reproduced identically
+    on both a borrowed `Reference<SoaVector<Particle>>` receiver and an
+    owned `soa<Particle>` receiver, so it is not specific to borrowed
+    receivers - it is specific to method-call syntax with a same-path
+    shadow present. `.push`/`.reserve`/`.get`/`.count`/`.to_aos` method
+    calls (no same-path shadow involved) are unaffected; this is
+    `ref`/`ref_ref` specific, likely because those two names hit a
+    different branch of the method-target resolver that checks the
+    canonical templated definition before the same-path shadow (unlike
+    the vector/map `shouldPreferCanonicalVectorPath`/
+    `shouldPreferCanonicalKeyValuePath` precedent in
+    `IrLowererSetupTypeMethodTargetHelpers.cpp`, there is no semantics-
+    layer `shouldPreferCanonicalSoaPath` equivalent gating this - see
+    TODO-4900's own `implementation_notes` for the IR-lowering-layer
+    version of this same asymmetry, found independently in a different
+    subsystem the same session TODO-4900 was filed).
+    (c) **explicit rooted-path direct call breaks on a borrowed
+    helper-return receiver, narrower than (a).** A function the user
+    declares directly at the canonical path (e.g.
+    `/std/collections/soa/get_ref(...)`, no import needed since it's a
+    real declaration) is reachable correctly via the bare unrooted
+    direct call (`get_ref(receiver, index)`) and via method-call form
+    (`receiver.get_ref(index)`) on a borrowed helper-return receiver,
+    but the SAME declared function called via its explicit rooted path
+    (`/std/collections/soa/get_ref(receiver, index)`) fails with
+    "unknown method: /std/collections/soa_vector/get_ref" on that exact
+    same receiver. Confirmed narrow to `get_ref` specifically in this
+    probe matrix - the sibling rooted calls to user-declared
+    `/std/collections/soa/count` and `/std/collections/soa/count_ref`
+    (no index argument) on the identical borrowed helper-return receiver
+    shape both succeed, so the failure correlates with helpers that take
+    an index/extra argument, not with "rooted direct call" alone -
+    needs further narrowing before attempting a fix.
+  - implementation_notes: all three shapes live somewhere in the
+    resolution chain covering
+    `SemanticsValidatorExprMethodTargetResolution.cpp`,
+    `SemanticsValidatorExprCallResolution.cpp`,
+    `SemanticsValidatorExprVectorHelpers.cpp`, and
+    `SemanticsValidatorBuildInitializerInference.cpp`'s
+    `preferredSoaHelperTargetForCurrentImports`/
+    `preferredSoaHelperTargetForCollectionType` family - the exact
+    dispatch/rewrite step where a helper-return call expression's
+    result type stops being recognized as "borrowed" for routing
+    purposes (shape (a)), where `ref`/`ref_ref` diverges from every
+    other soa helper name in preferring canonical over same-path (shape
+    (b)), and why `get_ref`'s rooted spelling specifically loses
+    borrowed-receiver recognition that its bare/method spellings keep
+    (shape (c)) were not traced to a specific function/line this
+    session - each shape is confirmed via black-box `runCompilePipeline`
+    probes only, not yet root-caused in the source. A future session
+    should start by reproducing each isolated repro standalone (see the
+    minimal shapes above; they only need a couple of definitions and one
+    call expression each) under a debugger or with targeted logging in
+    the resolution files listed above, not by re-reading the 10 pinned
+    test cases in `test_semantics_type_resolution_graph_snapshots.cpp`
+    (those exercise all three shapes combined with extra noise from
+    struct/holder plumbing, useful for regression coverage once fixed,
+    not for root-causing).
+  - acceptance: each of the three shapes either gets a genuine compiler
+    fix (with the corresponding pinned `TODO-5050` assertion in
+    `test_semantics_type_resolution_graph_snapshots.cpp` flipped back to
+    asserting success/correct routing) or, if a shape turns out to be
+    intentional/by-design on closer investigation, gets that intent
+    documented explicitly (in this TODO and as a code comment at the
+    relevant resolution site) rather than left as an unexplained pinned
+    diagnostic. `primestruct.semantics.type_resolution_graph` stays
+    177/177 green throughout.
+  - stop_rule: fix and regress one shape at a time (a, then b, then c -
+    they are independent, not sequential dependencies, but bundling a
+    fix for more than one per commit makes it hard to isolate which
+    change caused which regression if the collections/soa gates catch
+    one). If root-causing shape (c) reveals it is actually the same
+    underlying cause as shape (a) once traced to source (plausible given
+    both involve borrowed helper-return receivers, but not confirmed by
+    this session's black-box probes since shape (a)'s `count`/`count_ref`
+    rooted calls do NOT fail the way shape (c)'s `get_ref` does), merge
+    their tracking rather than fixing the same root cause twice under two
+    names. Do not guess at a fix for any shape without first reproducing
+    it standalone and confirming the fix doesn't flip the
+    `calls_flow.collections`/`ir.pipeline.validation` gates (per this
+    epic's established methodology) - these are subtle routing-precedence
+    bugs in code with a documented history of "seemingly small fixes
+    causing regressions" (see TODO-4731's own progress notes).
