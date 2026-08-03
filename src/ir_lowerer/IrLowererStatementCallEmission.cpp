@@ -720,8 +720,11 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return nullptr;
   };
 
-  auto resolveDirectStatementDefinition = [&](const Expr &callExpr) -> const Definition * {
-    if (const Definition *callee = resolveDefinitionCall(callExpr);
+  auto resolveDirectStatementDefinition =
+      [&](const Expr &callExpr,
+          std::optional<const Definition *> precomputedCallee = std::nullopt) -> const Definition * {
+    if (const Definition *callee =
+            precomputedCallee.has_value() ? *precomputedCallee : resolveDefinitionCall(callExpr);
         callee != nullptr) {
       return callee;
     }
@@ -842,8 +845,10 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   };
   Expr directStmt = stmt;
 
+  std::optional<const Definition *> bareTwoArgCalleeProbe;
   if (!directStmt.isMethodCall && directStmt.args.size() == 2) {
-	if (const Definition *callee = resolveDefinitionCall(directStmt);
+    bareTwoArgCalleeProbe = resolveDefinitionCall(directStmt);
+	if (const Definition *callee = *bareTwoArgCalleeProbe;
         callee != nullptr &&
         (isSimpleCallName(directStmt, "set_field_count") ||
          isSimpleCallName(directStmt, "set_field_capacity")) &&
@@ -1015,7 +1020,8 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   }
 
   const std::string priorError = error;
-  const Definition *callee = resolveDirectStatementDefinition(directStmt);
+  const Definition *callee =
+      resolveDirectStatementDefinition(directStmt, bareTwoArgCalleeProbe);
   if (!callee) {
     return DirectCallStatementEmitResult::NotMatched;
   }

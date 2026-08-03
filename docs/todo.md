@@ -8227,7 +8227,7 @@ This file is the live open-work queue for PrimeStruct.
       edits touched or introduced) via diff against a pre-edit backup of
       the file. Root-cause direction only, not a full fix - see TODO-5000.
 
-- [ ] TODO-5000: fix the SoA/vector-mutator alias resolution-call-count
+- [x] TODO-5000 (RESOLVED): fix the SoA/vector-mutator alias resolution-call-count
       mismatches at the tail of "ir lowerer statement call helper emits
       direct calls" (blocks `ir_pipeline_validation_cases_1061_1070`)
   - owner: ai
@@ -8322,6 +8322,75 @@ This file is the live open-work queue for PrimeStruct.
     of extra calls). If per-alias-spelling verification reveals more
     distinct probe-count contracts than fit in one bounded session, split
     further rather than guessing a uniform fix.
+  - resolution_2026-07-31: found the "4th source" - a genuine redundant
+    duplicate call, not a legitimate fallback stage. In
+    `tryEmitDirectCallStatement`, the top-of-function
+    set_field_count/set_field_capacity metadata-setter probe (bare 2-arg
+    statements only) calls `resolveDefinitionCall(directStmt)` with the
+    exact same unmodified `directStmt`
+    `resolveDirectStatementDefinition`'s own first stage was about to
+    query again a few lines later - since `resolveDefinitionCall` is a
+    pure lookup (no side effects, same input always yields same output),
+    this was a genuinely wasteful duplicate query, not intentional
+    multi-probing. Fixed in `IrLowererStatementCallEmission.cpp` by
+    threading the early probe's result through
+    (`std::optional<const Definition *> precomputedCallee` parameter on
+    `resolveDirectStatementDefinition`) so it's queried once and reused;
+    verified behavior-preserving (same final resolution target, same
+    error messages) by diffing doctest's own printed actual call counts
+    before/after via `git stash`/`git stash pop` A-B comparison - every
+    2-arg scenario's count dropped by exactly 1, every 1-arg scenario
+    (structurally ineligible for the duplicate, since the metadata-setter
+    probe only fires for `args.size()==2`) stayed identical. The
+    remaining (now correctly 2-or-3, not 1) counts are legitimate
+    multi-stage fallback probing - re-pinned to their verified real
+    values with a documenting comment
+    (`runVectorMutatorAliasNotHandledCase` and its call sites in
+    `test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp`
+    now take an explicit expected-count parameter derived from whether
+    the spelling is the canonical `/std/collections/vector/*` path (3
+    calls: raw callExpr, generated-path attempt, canonical-surface-impl
+    attempt) or any other spelling (2 calls, no canonical-surface
+    attempt) - independent of argument count). Also re-pinned a
+    stale `wrapperBuiltinVectorMethodResolutionCalls >= 1` expectation to
+    `== 0` in the same file/TEST_CASE: a bare (non-method) 2-arg
+    statement structurally never reaches `resolveMethodCallDefinition`,
+    so the real count is always 0 there, not the old
+    insert_builtin-indirection-era assumption of "at least 1". Verified
+    the production fix against a live in-process
+    `parseValidateAndLower`+`Vm::execute` regression sweep of the full
+    `PrimeStruct_backend_ir_tests` binary (not just the target shard) via
+    a `git stash`/`git stash pop` A-B diff of failing-case names -
+    confirmed zero net change outside the target TEST_CASE. Two
+    unrelated, pre-existing (not caused by this fix, confirmed via the
+    same A-B diff) issues surfaced while doing that full-binary sweep,
+    both out of `ctest`'s scope entirely so not blocking this epic's
+    green bar and not fixed here: (1)
+    `tests/unit/ir_pipeline/test_ir_pipeline_conversions_method_calls_and_argv.cpp`
+    is not wired into any `CMakeLists`/`PrimeStructManagedUnitBackendSuites.cmake`
+    `SOURCE_FILE`-scoped shard at all (an orphaned test file, `ctest`
+    never runs it - matches the historical "orphaned CI suite" pattern
+    tracked earlier in this epic), and its one TEST_CASE currently fails
+    a real compile (`Semantic error: template arguments are only
+    supported on templated definitions: /std/collections/map/count` for
+    a `map<K,V>` method-call receiver routing to a bare same-path-shadow
+    definition); (2) the `primestruct.ir.pipeline.validation` CTest
+    registration in `cmake/PrimeStructManagedUnitBackendSuites.cmake` has
+    stale `TOTAL_CASES 1389` - the suite actually has 1413 cases as of
+    this session (confirmed via `--list-test-cases`), so the last ~24
+    cases (including at least "semantics validate publishes module
+    artifacts in import order", which fails a `REQUIRE(maxArtifacts !=
+    nullptr)`) are silently never run by `ctest` at all. This is the same
+    class of drift TODO-4720's earlier session found and fixed in
+    `cmake/PrimeStructManagedSemanticsSuites.cmake` specifically - that
+    audit did not cover this sibling cmake file. Neither (1) nor (2) is
+    fixed here; a future session should re-run the TOTAL_CASES/shard-range
+    drift audit across ALL `cmake/PrimeStructManaged*Suites.cmake` files
+    (not just the semantics one) and separately register/triage the
+    orphaned `conversions_method_calls_and_argv.cpp` file, since fixing
+    either will likely newly expose more red `ctest` shards that then
+    need their own triage - out of scope for this fix, noted for
+    tracking.
 
 - [ ] TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
   - owner: ai
