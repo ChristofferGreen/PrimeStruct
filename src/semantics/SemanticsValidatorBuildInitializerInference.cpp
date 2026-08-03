@@ -1045,6 +1045,54 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     bindingOut.isEntryArgString = bindingOut.isEntryArgString || preservedIsEntryArgString;
     return true;
   };
+  // TODO-5210 (resolved): an if(cond, then(){...}, else(){...}) expression
+  // used as a binding initializer (including a function's implicit or
+  // explicit `return(if(...))` value, since inferDefinitionReturnBinding
+  // falls back to this same function) was never recognized here - every
+  // other branch below only matches specific call shapes (lambdas, sum
+  // constructors, task spawn/wait, field access, ...), so an if-expression
+  // fell through all of them and silently failed to infer, leaving
+  // auto-typed bindings/returns built from an if/else with (e.g.) a
+  // map<K,V> constructor in each branch untyped. Recurse into each
+  // branch's block, find its value expression (an explicit return()'s
+  // argument if present, matching real early-return semantics; otherwise
+  // the last non-binding statement in the block, matching how
+  // inferDefinitionReturnBinding treats a whole function body), infer
+  // each branch's type via this same function, and require both branches
+  // to agree before accepting the result - if either branch can't be
+  // inferred, or they disagree, defer to the checks below exactly as
+  // before (harmless no-op for every previously-passing case, since none
+  // of them start with an if-call).
+  if (isIfCall(initializer) && initializer.args.size() == 3) {
+    auto blockValueExpr = [](const Expr &block) -> const Expr * {
+      const Expr *lastValueExpr = nullptr;
+      for (const auto &bodyStmt : block.bodyArguments) {
+        if (bodyStmt.isBinding) {
+          continue;
+        }
+        if (isReturnCall(bodyStmt)) {
+          return bodyStmt.args.empty() ? nullptr : &bodyStmt.args.front();
+        }
+        lastValueExpr = &bodyStmt;
+      }
+      return lastValueExpr;
+    };
+    const Expr *thenValueExpr = blockValueExpr(initializer.args[1]);
+    const Expr *elseValueExpr = blockValueExpr(initializer.args[2]);
+    if (thenValueExpr != nullptr && elseValueExpr != nullptr) {
+      BindingInfo thenBinding;
+      BindingInfo elseBinding;
+      if (inferBindingTypeFromInitializer(*thenValueExpr, params, locals, thenBinding) &&
+          inferBindingTypeFromInitializer(*elseValueExpr, params, locals, elseBinding) &&
+          !thenBinding.typeName.empty() &&
+          thenBinding.typeName == elseBinding.typeName &&
+          thenBinding.typeTemplateArg == elseBinding.typeTemplateArg) {
+        bindingOut.typeName = thenBinding.typeName;
+        bindingOut.typeTemplateArg = thenBinding.typeTemplateArg;
+        return preserveBindingQualifiers();
+      }
+    }
+  }
   auto assignBindingTypeFromText = [&](const std::string &typeText) -> bool {
     const std::string normalizedType = normalizeBindingTypeName(typeText);
     if (normalizedType.empty()) {

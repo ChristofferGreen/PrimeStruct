@@ -320,7 +320,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     std::string base;
     std::string argText;
     if (splitTemplateTypeName(normalizedTypeText, base, argText) &&
-        normalizeBindingTypeName(base) == "map") {
+        (normalizeBindingTypeName(base) == "map" || normalizeBindingTypeName(base) == "Map")) {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
         return false;

@@ -392,7 +392,18 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("inferred canonical map call receivers report retired tryAt diagnostics") {
+TEST_CASE("inferred canonical map call receivers resolve tryAt/count/contains") {
+  // TODO-5210: this fixture used to hit "unknown call target: /map/tryAt" as
+  // a side effect of a receiver-type-inference gap (an if/else-branched
+  // auto-return function's map<K,V> return type was never recognized, so
+  // every method call on it fell back to the bare, rejected "/map/*"
+  // spelling). Now that inferBindingTypeFromInitializer unifies if/else
+  // branch types and resolveBuiltinKeyValueResultType recognizes the
+  // inferred "Map<K,V>" backing-type spelling (not just the declared-local
+  // "map<K,V>" surface spelling), tryAt/count/contains all resolve
+  // correctly on this receiver, matching a directly-typed [map<K,V>]
+  // local's behavior. Re-pinned from asserting rejection to asserting
+  // successful validation.
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -421,8 +432,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("inferred canonical map call receivers keep mismatch diagnostics") {

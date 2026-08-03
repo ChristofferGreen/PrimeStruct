@@ -8622,9 +8622,10 @@ This file is the live open-work queue for PrimeStruct.
     compiler behavior before touching any assertion; split genuine gaps
     into their own dated TODO rather than guessing a fix.
 
-- [ ] TODO-5210: method-call target resolution doesn't recognize a map<K,V> receiver whose type comes from an if/else-branched auto-return function
+- [x] TODO-5210 (RESOLVED): method-call target resolution doesn't recognize a map<K,V> receiver whose type comes from an if/else-branched auto-return function
   - owner: ai
   - created_at: 2026-07-31
+  - resolved_at: 2026-08-03
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-ir-pipeline
   - depends_on: TODO-5200
@@ -8690,3 +8691,52 @@ This file is the live open-work queue for PrimeStruct.
     reveals this shares a root cause with TODO-5050's shape (b) (method-
     call-form dispatch not honoring canonical routing for certain
     receiver shapes), merge tracking rather than fixing twice.
+  - resolution: two independent, narrowly-scoped fixes, both traced via
+    direct `primec` probes before touching any production code (per the
+    stop_rule) rather than guessed.
+    1. **Root cause** (`SemanticsValidatorBuildInitializerInference.cpp`,
+       `inferBindingTypeFromInitializer`): this shared function - used both
+       for local-binding type inference and, via
+       `inferDefinitionReturnBinding`'s fallback, for `auto`-return
+       function-return-type inference - had zero handling for
+       `if(cond, then(){...}, else(){...})` expressions, so any auto-typed
+       binding or auto-return function whose value came through an if/else
+       branch silently failed inference, leaving the binding untyped -
+       which is what caused the bare, unrooted `/map/count` fallback
+       spelling. Fixed by adding explicit if/else branch-unification logic
+       (extract each branch's value expression - an explicit `return()` as
+       an early-exit value, else the last non-binding statement -
+       recursively infer each branch's type, and accept the result only
+       when both branches agree on `typeName`+`typeTemplateArg`), modeled
+       on (but simpler than - no block-local-binding tracking) the IR
+       lowerer's already-correct `IrLowererReturnInferenceHelpers.cpp`
+       `recordInferredReturn` pattern.
+    2. **Adjacent gap surfaced by fix #1** (`SemanticsValidatorResultHelpers.cpp`,
+       `resolveBuiltinKeyValueResultType`): once receiver-type inference
+       started succeeding for if/else-branched map<K,V> returns, a second,
+       previously-unreachable gap became visible: `.tryAt()` on such a
+       receiver produced "try requires Result argument" instead of
+       compiling, because the inferred type text for a map built via
+       `/std/collections/map/map(...)` is the capitalized internal backing
+       spelling `Map<K,V>`, while `resolveBuiltinKeyValueResultType` only
+       recognized the lowercase surface spelling `map<K,V>` (the form a
+       directly-declared `[map<K,V>] m{...}` local produces). Confirmed via
+       a standalone non-branching repro (no if/else at all) that this
+       mismatch is pre-existing and orthogonal to fix #1, just newly
+       reachable through it. Fixed by accepting both `map` and `Map` as the
+       base type name in that one check.
+    Verified via: (a) three standalone `.prime` repros reaching the same
+    downstream, pre-existing, unrelated VM-backend limitation
+    (`vm backend only supports ... (call=/std/collections/map/at...)`)
+    that a directly-typed local's `.count()`/`.tryAt()` already hit before
+    this fix; (b) full `PrimeStruct_semantics_tests` (2940 cases) run
+    clean except the one expected re-pin; (c) full
+    `PrimeStruct_backend_ir_tests` (1741 cases) run clean except the
+    expected re-pin plus the 2 already-known, ctest-unregistered,
+    pre-existing failures from TODO-5000's resolution note (confirmed via
+    `git stash` A/B that both fail identically without this fix, i.e. not
+    regressions); (d) full `PrimeStruct_compile_run_tests` (2940 cases)
+    clean, zero failures. `ir_pipeline_validation_cases_1151_1160` and the
+    semantics "inferred canonical map call receivers" tryAt test both
+    re-pinned from asserting rejection to asserting successful resolution,
+    per this TODO's acceptance criteria.
