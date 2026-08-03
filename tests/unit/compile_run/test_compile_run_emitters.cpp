@@ -6,6 +6,8 @@
 #include <sstream>
 #include <thread>
 
+#include <unistd.h>
+
 namespace {
 void writeTextFile(const std::filesystem::path &path, const std::string &contents) {
   std::filesystem::create_directories(path.parent_path());
@@ -91,9 +93,35 @@ bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
     return false;
   }
 
+  // Compile to a temp path in the same directory and rename into place only
+  // once the executable is fully written. Other processes racing on the
+  // same cache key (see buildCachedEmittedCppExecutableAtO0's exists()
+  // checks, and acquireCacheBuildLock's exists() check above) treat
+  // exePath's mere existence as "build complete" - if the compiler wrote
+  // exePath directly, a concurrent reader could see (and try to execute) a
+  // partially-written file, since std::filesystem::rename is atomic on the
+  // same filesystem but a compiler's own -o output is not.
+  const std::filesystem::path finalExePath(exePath);
+  const std::filesystem::path tempExePath =
+      finalExePath.parent_path() /
+      (finalExePath.filename().string() + ".building." + std::to_string(::getpid()));
+  std::error_code removeTempEc;
+  std::filesystem::remove(tempExePath, removeTempEc);
+
   const std::string compileCmd =
-      cxx + " -std=c++23 -O0 " + quoteShellArg(cppPath) + " -o " + quoteShellArg(exePath);
-  return runCommand(compileCmd) == 0;
+      cxx + " -std=c++23 -O0 " + quoteShellArg(cppPath) + " -o " + quoteShellArg(tempExePath.string());
+  if (runCommand(compileCmd) != 0) {
+    std::filesystem::remove(tempExePath, removeTempEc);
+    return false;
+  }
+
+  std::error_code renameEc;
+  std::filesystem::rename(tempExePath, finalExePath, renameEc);
+  if (renameEc) {
+    std::filesystem::remove(tempExePath, removeTempEc);
+    return false;
+  }
+  return true;
 }
 
 bool buildCachedEmittedCppExecutableAtO0(const std::string &fixtureName,
