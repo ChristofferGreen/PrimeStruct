@@ -426,6 +426,15 @@ TEST_CASE("ir lowerer arithmetic helper treats reference handles as pointer oper
   referenceInfo.isMutable = false;
   referenceInfo.index = 7;
   referenceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  // TODO-5200 (resolved): a plain scalar Reference<i32> is deliberately
+  // NOT a pointer operand (emitArithmeticOperatorExpr's
+  // isScalarReferenceValueOperand exclusion - it lowers as an implicit
+  // value load, not pointer arithmetic). This test's own name and its
+  // AddI64/LoadLocal expectations only make sense for an array-backed
+  // reference, which is what production code
+  // (IrLowererBindingTypeHelpers.cpp) actually sets referenceToArray for
+  // - the fixture was missing this field.
+  referenceInfo.referenceToArray = true;
   locals.emplace("ref", referenceInfo);
 
   primec::Expr left;

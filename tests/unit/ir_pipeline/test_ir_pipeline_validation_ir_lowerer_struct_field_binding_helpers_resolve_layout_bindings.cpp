@@ -363,10 +363,23 @@ TEST_CASE("ir lowerer struct field binding helpers collect layout bindings from 
 }
 
 TEST_CASE("ir lowerer struct return path helpers infer from definitions") {
+  // TODO-5200 (resolved): resolveSpecializedExperimentalSoaVectorReturnPath
+  // (IrLowererStructReturnPathHelpers.cpp) resolves a SoaVector<T> return
+  // type through specializedExperimentalSoaVectorStructPathForElementType,
+  // which names the specialized struct via an FNV-1a-64 hash of the
+  // element type text ("/std/collections/soa/SoaVector__t<hex-hash>"), not
+  // the plain literal element name - the same hashed-specialization
+  // convention specializedCollectionVectorRecordPathForElementType uses
+  // for plain Vector<T>. The fixture's literal
+  // "SoaVector__Particle" name never appears in production, so
+  // structNames.count(...) never matched and the whole lookup silently
+  // fell through to "". Replaced with the actual FNV-1a-64 hash of
+  // "Particle", computed independently (not copied from any single call
+  // site) to cross-check the algorithm.
   const std::unordered_set<std::string> structNames = {
       "/pkg/A",
       "/pkg/B",
-      "/std/collections/soa/SoaVector__Particle",
+      "/std/collections/soa/SoaVector__tdd6edf08e597bb3d",
   };
   const std::unordered_map<std::string, std::string> importAliases;
   const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
@@ -444,7 +457,7 @@ TEST_CASE("ir lowerer struct return path helpers infer from definitions") {
 
   CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(
             "/pkg/makeSoa", structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap) ==
-        "/std/collections/soa/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__tdd6edf08e597bb3d");
 }
 
 TEST_CASE("ir lowerer struct return path helpers infer from expressions") {

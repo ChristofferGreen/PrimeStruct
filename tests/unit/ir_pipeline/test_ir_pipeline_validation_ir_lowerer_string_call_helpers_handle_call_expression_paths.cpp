@@ -107,6 +107,15 @@ TEST_CASE("ir lowerer string call helpers report call-expression diagnostics") {
   primec::ir_lowerer::StringCallSource source = primec::ir_lowerer::StringCallSource::None;
   bool argvChecked = true;
   std::string error;
+  // TODO-5200 (resolved): the emitExpr mock must return false to simulate a
+  // call expression that fails to lower - it previously returned true
+  // unconditionally, which always drove emitCallStringCallValue's fallback
+  // branch to Handled, never Error. Also fixed a genuine (small) production
+  // gap in IrLowererStringCallHelpers.cpp: that fallback's `!emitExpr(arg)`
+  // branch returned Error without ever setting `error`, unlike every other
+  // Error path in the same function - now defaults to this same message
+  // (guarded by `error.empty()` so a more specific inner message, if any,
+  // is preserved) instead of silently returning an empty diagnostic.
   CHECK(primec::ir_lowerer::emitCallStringCallValue(
             badCall,
             [](const primec::Expr &, std::string &) { return false; },
@@ -114,7 +123,7 @@ TEST_CASE("ir lowerer string call helpers report call-expression diagnostics") {
             [](const primec::Expr &, const std::string &, primec::ir_lowerer::StringIndexOps &, std::string &) {
               return false;
             },
-            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
             [](const primec::Expr &) { return false; },
             []() { return 0; },
             [](primec::IrOpcode, uint64_t) {},

@@ -134,6 +134,9 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
   }
 
   if (!emitExpr(arg)) {
+    if (error.empty()) {
+      error = "native backend requires string arguments to use string literals, bindings, or entry args";
+    }
     return StringCallEmitResult::Error;
   }
   sourceOut = StringCallSource::RuntimeIndex;
