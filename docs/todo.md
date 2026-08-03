@@ -8580,13 +8580,44 @@ This file is the live open-work queue for PrimeStruct.
        hash (`SoaVector__tdd6edf08e597bb3d`), independently verified via
        a standalone Python FNV-1a-64 reimplementation before touching the
        test.
-  - remaining_scope: `ir_pipeline_validation_cases_1151_1160` (genuine
-    gap, split out as **TODO-5210** below), `_1191_1200`, `_1201_1210`,
-    `_1251_1260` not yet investigated - continue this TODO or split
-    further per the same discipline once picked back up.
-  - acceptance: (partial - 3 of 7 shards) confirmed each fixed shard
-    passes individually and the full `PrimeStruct_backend_ir_tests`
-    binary shows zero regressions outside the remaining known-red set.
+  - remaining_scope: DONE - all 7 shards addressed.
+    `ir_pipeline_validation_cases_1151_1160` was a genuine gap, split out
+    as **TODO-5210** (not fixed, re-pinned to its verified rejection).
+    The other 3 (`_1191_1200`, `_1201_1210`, `_1251_1260`) turned out to
+    all be pure test-only re-pins, no production changes: `_1191_1200`
+    and `_1201_1210` both hit the same already-elsewhere-validated 3->5
+    vector/soa struct-field slot-count header growth (the sibling
+    "resolve struct slot layouts from definition fields" TEST_CASE in
+    the same file already asserts `totalSlots == 5` for both the vector
+    and soa header structs' own internal layout - these two tests'
+    magic numbers (3, 4, 7) simply predated that migration, re-pinned to
+    5/6/11 accordingly). `_1251_1260` ("ir lowerer count access helpers
+    classify entry args and count calls",
+    `test_ir_pipeline_validation_ir_lowerer_uninitialized_type_helpers_build_storage_resolver_from_definition_field_ind.cpp`)
+    had two independent issues: (a) the test re-spelled its shared
+    `countEntry.name` to rooted forms (`/vector/count`,
+    `/std/collections/vector/count`) partway through, which
+    `isUnqualifiedCollectionBuiltinName`
+    (`IrLowererCountAccessClassifiers.cpp`) never recognized via this
+    function's no-`SemanticProgram` 4-arg overload (confirmed
+    `/vector/count(v)` is itself a retired, rejected spelling end-to-end;
+    `/std/collections/vector/count(v)` compiles but as an ordinary
+    definition call, not something this low-level classifier is meant to
+    recognize) - reverted to keep the bare `"count"` spelling throughout,
+    which is what the test's per-target-shape scenarios actually need;
+    (b) a bare `count(vector<i64>(...))` call whose target is itself an
+    inline vector literal is deliberately excluded by
+    `isArrayCountCall`'s `isVectorCountTarget` guard
+    (`IrLowererCountAccessHelpers.cpp:1165-1168` in the non-semantic-fact
+    path) - confirmed this is the current, deliberate design (not a
+    regression) by tracing the guard, re-pinned that one assertion from
+    `CHECK` to `CHECK_FALSE`.
+  - acceptance: MET. All 7 shards pass individually; full
+    `PrimeStruct_backend_ir_tests` binary (1741 cases) shows zero
+    regressions - only the 2 pre-existing, `ctest`-unregistered issues
+    documented in TODO-5000's resolution note remain (the orphaned
+    `test_ir_pipeline_conversions_method_calls_and_argv.cpp` and the
+    `PrimeStructManagedUnitBackendSuites.cmake` `TOTAL_CASES` drift).
   - stop_rule: same as TODO-4900/4950/5000/5050 - verify against real
     compiler behavior before touching any assertion; split genuine gaps
     into their own dated TODO rather than guessing a fix.

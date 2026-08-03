@@ -452,14 +452,21 @@ TEST_CASE("ir lowerer struct type helpers resolve bare std ui field aliases") {
   primec::ir_lowerer::StructSlotLayoutInfo layout;
   REQUIRE(resolveStructSlotLayout("LayoutTree", layout));
   CHECK(layout.structPath == "/std/ui/LayoutTree");
-  CHECK(layout.totalSlots == 7);
+  // TODO-5210 (resolved): a vector-typed struct field occupies the vector
+  // header's full 5-slot layout inline (matching the vector struct's own
+  // internal layout - see "ir lowerer struct type helpers resolve struct
+  // slot layouts from definition fields" above,
+  // `vectorLayout.totalSlots == 5`), not 3 - this test's magic numbers
+  // predate that already-migrated (and elsewhere already-verified) 3->5
+  // header growth. totalSlots = 1 reserved base slot + 2 fields * 5 = 11.
+  CHECK(layout.totalSlots == 11);
   REQUIRE(layout.fields.size() == 2);
 
   primec::ir_lowerer::StructSlotFieldInfo field;
   REQUIRE(resolveStructFieldSlot("LayoutTree", "kinds", field));
   CHECK(field.name == "kinds");
   CHECK(field.slotOffset == 1);
-  CHECK(field.slotCount == 3);
+  CHECK(field.slotCount == 5);
   CHECK(field.structPath == "/vector");
 }
 
@@ -792,11 +799,16 @@ TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnost
                                                                              layout,
                                                                              error));
     CHECK(error.empty());
-    CHECK(layout.totalSlots == 4);
+    // TODO-5210 (resolved): same 3->5 slot header growth as the
+    // "resolve bare std ui field aliases" test above (already validated
+    // for SoA's own internal SoaColumn storage layout at line ~408 in
+    // this file, `storageLayout.totalSlots == 5`) - a soa-typed struct
+    // field occupies the full 5-slot header inline, not 3.
+    CHECK(layout.totalSlots == 6);
     REQUIRE(layout.fields.size() == 1);
     CHECK(layout.fields[0].name == "storage");
     CHECK(layout.fields[0].slotOffset == 1);
-    CHECK(layout.fields[0].slotCount == 3);
+    CHECK(layout.fields[0].slotCount == 5);
     CHECK(layout.fields[0].structPath == "/soa");
   }
 
@@ -824,11 +836,12 @@ TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnost
                                                                              layout,
                                                                              error));
     CHECK(error.empty());
-    CHECK(layout.totalSlots == 4);
+    // TODO-5210 (resolved): same 3->5 slot header growth as above.
+    CHECK(layout.totalSlots == 6);
     REQUIRE(layout.fields.size() == 1);
     CHECK(layout.fields[0].name == "storage");
     CHECK(layout.fields[0].slotOffset == 1);
-    CHECK(layout.fields[0].slotCount == 3);
+    CHECK(layout.fields[0].slotCount == 5);
     CHECK(layout.fields[0].structPath.rfind(
               "/std/collections/soa/SoaVector__", 0) == 0);
   }

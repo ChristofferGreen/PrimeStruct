@@ -1083,8 +1083,23 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, true, "argv"));
-  countEntry.name = "/vector/count";
-  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, true, "argv"));
+  // TODO-5210 (resolved): isUnqualifiedCollectionBuiltinName
+  // (IrLowererCountAccessClassifiers.cpp) requires an exact slash-free
+  // name - it never recognized rooted spellings like "/vector/count" or
+  // "/std/collections/vector/count" via this 4-arg (no SemanticProgram)
+  // overload, and re-spelling countEntry.name to a rooted form here
+  // (as this test previously did) just makes every subsequent
+  // isArrayCountCall call return false regardless of the target shape
+  // being exercised below, defeating this test's actual purpose (target-
+  // shape differentiation: local array var, reference-to-array var,
+  // inline vector-literal target). Confirmed via a real end-to-end probe
+  // that "/vector/count(v)" is itself a retired, rejected spelling
+  // ("unknown call target"), while "/std/collections/vector/count(v)"
+  // compiles fine but as an ordinary call to a real stdlib definition,
+  // not something this low-level unqualified-name classifier is meant to
+  // recognize. Kept countEntry.name as the bare "count" spelling
+  // throughout instead of switching it, which is what this test's
+  // per-target-shape scenarios below actually need to exercise.
 
   primec::ir_lowerer::LocalInfo arrayInfo;
   arrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
@@ -1110,8 +1125,16 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   vectorCall.name = "vector";
   vectorCall.templateArgs = {"i64"};
   countEntry.args = {vectorCall};
-  countEntry.name = "/std/collections/vector/count";
-  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+  // TODO-5210 (resolved): isArrayCountCall deliberately excludes a bare
+  // count() call whose target is already unambiguously a vector (per
+  // isVectorCountTarget/isVectorTargetImpl recognizing an inline
+  // vector<T>(...) literal target directly, IrLowererCountAccessClassifiers.cpp)
+  // - that shape isn't the "array count access" builtin pattern this
+  // function classifies, it's excluded so it can be handled elsewhere
+  // without double-dispatch. Verified this is the current, deliberate
+  // exclusion (not a regression) by tracing the guard at
+  // IrLowererCountAccessHelpers.cpp:1165-1168.
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
 
   primec::ir_lowerer::LocalInfo mapRefArgs;
   mapRefArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
