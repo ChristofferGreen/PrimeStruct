@@ -166,9 +166,10 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
           .string();
 
   if (emitMode == "vm") {
-    // TODO-4756: Result.why() on a ContainerError produced by a map tryAt
-    // miss now formats to an empty string instead of the error's message.
-    const std::string expectedOutput = "\n";
+    // TODO-4756/TODO-4757 (fixed): Result.why() on a ContainerError
+    // produced by a map tryAt miss now reports the real message instead of
+    // an empty string.
+    const std::string expectedOutput = "container missing key\n";
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == expectedExitCode);
@@ -574,12 +575,13 @@ inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
 }
 
 inline void expectCanonicalMapNamespaceVmConformance() {
-  // TODO-4756: Result.why() on a ContainerError produced by a map tryAt
-  // miss now formats to an empty string instead of the error's message.
+  // TODO-4756/TODO-4757 (fixed): Result.why() on a ContainerError produced
+  // by a map tryAt miss now reports the real message instead of an empty
+  // string.
   expectMapVmProgramRunsWithOutput(makeCanonicalMapNamespaceConformanceSource(),
                                    "map_namespace_canonical_vm",
                                    20,
-                                   "4\n\n2\n4\n7\n1\n2\n");
+                                   "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
 }
 
 inline void expectCanonicalMapNamespaceOwnershipReject(const std::string &emitMode) {

@@ -183,13 +183,16 @@ main() {
   const std::string outPath = (testScratchPath("") / "primec_vm_image_api_unsupported.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  // TODO-4757: Result.why() on an ImageError Result now formats to an
-  // empty string instead of the error's message.
+  // TODO-4757 (fixed): Result.why() now reports the real per-variant
+  // message instead of an empty string. ppm/png write() report a generic
+  // "image_invalid_operation" (their own why() has no dedicated variant
+  // for the failure this repro hits), and png/read() reports
+  // "image_read_unsupported" since PNG decoding isn't implemented.
   CHECK(readFile(outPath) ==
-        "\n"
-        "\n"
-        "\n"
-        "\n");
+        "image_invalid_operation\n"
+        "image_invalid_operation\n"
+        "image_read_unsupported\n"
+        "image_invalid_operation\n");
 }
 
 TEST_CASE("runs vm ppm read for ascii p3 inputs") {
@@ -344,10 +347,10 @@ main() {
       (testScratchPath("") / "primec_vm_image_read_p6_truncated.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  // TODO-4757: Result.why() on an ImageError Result now formats to an
-  // empty string instead of the error's message.
+  // TODO-4757 (fixed): Result.why() on an ImageError Result now reports the
+  // real message instead of an empty string.
   CHECK(readFile(outPath) ==
-        "\n"
+        "image_invalid_operation\n"
         "0\n"
         "0\n"
         "0\n");
@@ -422,14 +425,14 @@ main() {
       (testScratchPath("") / "primec_vm_image_read_overflow.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  // TODO-4757: Result.why() on an ImageError Result now formats to an
-  // empty string instead of the error's message.
+  // TODO-4757 (fixed): Result.why() on an ImageError Result now reports the
+  // real message instead of an empty string.
   CHECK(readFile(outPath) ==
-        "\n"
+        "image_invalid_operation\n"
         "0\n"
         "0\n"
         "0\n"
-        "\n"
+        "image_invalid_operation\n"
         "0\n"
         "0\n"
         "0\n");
@@ -597,15 +600,16 @@ main() {
       (testScratchPath("") / "primec_vm_image_write_overflow.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + stdoutPath;
   CHECK(runCommand(runCmd) == 0);
-  // TODO-4757-adjacent: Result.why() on these oversized-write ImageError
-  // Results now reports "image_write_unsupported" instead of the
-  // previously-pinned "image_invalid_operation" - unlike the read-path
-  // cases in this file, this is a non-blank, non-generic message, so this
-  // looks more like an error-code selection drift than the blank/generic
-  // formatting bug tracked there.
+  // TODO-4757 (fixed): Result.why() on these oversized-write ImageError
+  // Results now reports the real message. Both ppm/write and png/write map
+  // every writeImpl() failure to invalidOperation() (image.prime's
+  // ppm/write and png/write, e.g. lines 2532-2539) regardless of cause, so
+  // "image_invalid_operation" - not "image_write_unsupported" - is the
+  // correct message here; the previous "image_write_unsupported" pin was
+  // an unverified guess made while Result.why() was still blank.
   CHECK(readFile(stdoutPath) ==
-        "image_write_unsupported\n"
-        "image_write_unsupported\n");
+        "image_invalid_operation\n"
+        "image_invalid_operation\n");
   CHECK(!std::filesystem::exists(ppmOutPath));
   CHECK(!std::filesystem::exists(pngOutPath));
 }
@@ -1123,10 +1127,10 @@ main() {
       (testScratchPath("") / "primec_vm_image_read_invalid_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  // TODO-4757: Result.why() on an ImageError Result now formats to an
-  // empty string instead of the error's message.
+  // TODO-4757 (fixed): Result.why() on an ImageError Result now reports the
+  // real message instead of an empty string.
   CHECK(readFile(outPath) ==
-        "\n"
+        "image_invalid_operation\n"
         "0\n"
         "0\n"
         "0\n");
@@ -1176,10 +1180,10 @@ main() {
       (testScratchPath("") / "primec_vm_image_read_invalid_crc_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  // TODO-4757: Result.why() on an ImageError Result now formats to an
-  // empty string instead of the error's message.
+  // TODO-4757 (fixed): Result.why() on an ImageError Result now reports the
+  // real message instead of an empty string.
   CHECK(readFile(outPath) ==
-        "\n"
+        "image_invalid_operation\n"
         "0\n"
         "0\n"
         "0\n");
@@ -1234,10 +1238,10 @@ main() {
       (testScratchPath("") / "primec_vm_image_read_invalid_idat_order_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  // TODO-4757: Result.why() on an ImageError Result now formats to an
-  // empty string instead of the error's message.
+  // TODO-4757 (fixed): Result.why() on an ImageError Result now reports the
+  // real message instead of an empty string.
   CHECK(readFile(outPath) ==
-        "\n"
+        "image_invalid_operation\n"
         "0\n"
         "0\n"
         "0\n");

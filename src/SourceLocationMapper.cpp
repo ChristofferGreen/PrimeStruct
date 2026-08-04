@@ -410,38 +410,61 @@ const SourceLocationMapperLookupStats &SourceLocationMapper::lookupStats()
   return lookupStats_;
 }
 
+namespace {
+
+// Building a SourceLocationMapper sorts every segment in the (fully
+// import-expanded) source, which for a program importing large stdlib
+// surfaces like /std/collections/* can be thousands of segments. The two
+// free functions below are called once per emitted instruction's source
+// span (see IrLowererLowerReturnEmitStage.cpp's appendInstructionSourceRange
+// and IrLowererLowerSetupStage.cpp), so rebuilding the mapper from scratch
+// on every call turned an O(segments log segments) cost into an
+// O(instructions * segments log segments) one - the dominant cost behind
+// TODO-4757's ~6.5s/call pathology, confirmed via gdb landing repeatedly in
+// std::__introsort_loop over SegmentLineCandidate here. All call sites pass
+// the same single ExpandedSource - built once and threaded by pointer
+// through the whole compile - so a mapper cached by that address is safe to
+// reuse across calls within one compilation.
+thread_local const ExpandedSource *g_cachedSource = nullptr;
+thread_local std::optional<SourceLocationMapper> g_cachedMapper;
+
+const SourceLocationMapper &cachedMapperFor(const ExpandedSource &source) {
+  if (g_cachedSource != &source || !g_cachedMapper.has_value()) {
+    g_cachedMapper.emplace(source);
+    g_cachedSource = &source;
+  }
+  return *g_cachedMapper;
+}
+
+} // namespace
+
 std::optional<SourceUnitLocation> mapExpandedSourceLocation(
     const ExpandedSource &source,
     int flattenedLine,
     int flattenedColumn) {
-  const SourceLocationMapper mapper(source);
-  return mapper.mapExpandedSourceLocation(flattenedLine, flattenedColumn);
+  return cachedMapperFor(source).mapExpandedSourceLocation(flattenedLine, flattenedColumn);
 }
 
 DiagnosticSpan mapDiagnosticSpanToSourceUnit(const ExpandedSource &source,
                                              const DiagnosticSpan &span) {
-  const SourceLocationMapper mapper(source);
-  return mapper.mapDiagnosticSpanToSourceUnit(span);
+  return cachedMapperFor(source).mapDiagnosticSpanToSourceUnit(span);
 }
 
 void mapDiagnosticRecordSpansToSourceUnits(const ExpandedSource &source,
                                            DiagnosticSinkRecord &record) {
-  const SourceLocationMapper mapper(source);
-  mapper.mapDiagnosticRecordSpansToSourceUnits(record);
+  cachedMapperFor(source).mapDiagnosticRecordSpansToSourceUnits(record);
 }
 
 void mapAndSortDiagnosticRecordsToSourceUnits(
     const ExpandedSource &source,
     std::vector<DiagnosticSinkRecord> &records) {
-  const SourceLocationMapper mapper(source);
-  mapper.mapAndSortDiagnosticRecordsToSourceUnits(records);
+  cachedMapperFor(source).mapAndSortDiagnosticRecordsToSourceUnits(records);
 }
 
 void mapAndSortDiagnosticReportSpansToSourceUnits(
     const ExpandedSource &source,
     DiagnosticSinkReport &report) {
-  const SourceLocationMapper mapper(source);
-  mapper.mapAndSortDiagnosticReportSpansToSourceUnits(report);
+  cachedMapperFor(source).mapAndSortDiagnosticReportSpansToSourceUnits(report);
 }
 
 } // namespace primec

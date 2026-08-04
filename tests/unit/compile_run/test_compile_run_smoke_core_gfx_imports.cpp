@@ -252,11 +252,10 @@ main() {
       (testScratchPath("") / "primec_gfx_experimental_error_helper_native").string();
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  // TODO-4757: on vm (but not native - see below), GfxError.why(err) now
-  // returns the fixed generic "gfx_error" string (9 chars) instead of the
-  // real message (19 chars), and err.code reads back as 0 instead of 8,
-  // so only 2 of the 4 score checks pass.
-  CHECK(runCommand(runVmCmd) == 2);
+  // TODO-4757 (fixed): GfxError.why(err) now returns the real
+  // "queue_submit_failed" message (19 chars) and err.code reads back as 8,
+  // so all 4 score checks pass, matching native below.
+  CHECK(runCommand(runVmCmd) == 4);
 
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);

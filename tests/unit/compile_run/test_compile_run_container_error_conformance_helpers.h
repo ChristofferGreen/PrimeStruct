@@ -40,27 +40,33 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
   const std::string srcPath = writeTemp("container_error_contract_" + emitMode + ".prime", source);
   const std::string outPath =
       (testScratchPath("") / ("primec_container_error_contract_" + emitMode + "_out.txt")).string();
-  // TODO-4752: struct field access on a freshly-returned temporary (e.g.
+  // TODO-4752 (fixed, same root cause as TODO-4757): struct field access on
+  // a freshly-returned temporary (e.g.
   // /ContainerError/why(/ContainerError/missing_key()), or
-  // /ContainerError/missing_key().code used inline) reads a default/zeroed
-  // field instead of the real value; binding the same call to a local first
-  // (e.g. [ContainerError] err{...}; why(err)) works correctly. This is a
-  // genuine compiler bug, not test staleness - the values below are the
-  // verified *current* (buggy) output, pinned so this suite stays green
-  // until TODO-4752 is fixed, at which point this should revert to the
-  // fully-correct "container missing key" x8 + "container error", exit 10.
+  // /ContainerError/missing_key().code used inline) used to read a
+  // default/zeroed field instead of the real value, because the compiler's
+  // real-(non-inlined-)call eligibility check
+  // (computeRealCallEligibleDefinitionPaths /
+  // IrLowererRecursionAnalysis.cpp's hasScalarOrVoidReturn) treated
+  // ContainerError/GfxError/ImageError/FileError return types as plain
+  // scalars, letting struct-constructing functions like missing_key() be
+  // called via a real VM Call/Return instead of inlined - the returned
+  // "scalar" was actually a stack-frame-relative struct address that
+  // outlived the callee's own call frame. Now that those four types are
+  // excluded from real-call eligibility (forcing inlining, which keeps the
+  // constructed struct in the caller's own frame), all values are correct.
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 0);
+    CHECK(runCommand(runCmd) == 10);
     CHECK(readFile(outPath) ==
-          "container error\n"
-          "container error\n"
-          "container error\n"
-          "\n"
-          "\n"
-          "\n"
-          "\n"
-          "\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
           "container error\n");
     return;
   }

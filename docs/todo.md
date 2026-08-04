@@ -7088,7 +7088,7 @@ This file is the live open-work queue for PrimeStruct.
     no shadowing) before assuming any connection to TODO-4752 beyond the
     structural similarity noted above.
 
-- [ ] TODO-4757: Result.why() on a ContainerError formats to an empty string, and is severely slow, when the error originates from a map tryAt miss
+- [x] TODO-4757 (RESOLVED): Result.why() on a ContainerError formats to an empty string, and is severely slow, when the error originates from a map tryAt miss
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -7185,6 +7185,81 @@ This file is the live open-work queue for PrimeStruct.
     through error construction, not a single uniform bug. Re-pinned 7
     affected `test_compile_run_vm_outputs.cpp` cases to their verified
     outputs.
+  - resolved_at: 2026-08-04
+  - resolution_summary: two independent root causes, both fixed.
+    (1) blank/wrong Result.why(): the compiler's real-(non-inlined-)call
+    eligibility check
+    (`computeRealCallEligibleDefinitionPaths`/`hasScalarOrVoidReturn` in
+    `src/ir_lowerer/IrLowererRecursionAnalysis.cpp`) delegates to
+    `valueKindFromTypeName`, which intentionally reports `Int32` for
+    `FileError`/`ImageError`/`ContainerError`/`GfxError` so Result<T,E>
+    packing and binding representations can treat them as scalars - but a
+    definition whose *declared return type* is bare one of these names
+    still builds a real struct via the generic constructor path
+    (`emitInlineStructDefinitionArguments` in
+    `IrLowererInlineStructArgHelpers.cpp`, which always does
+    `AddressOfLocal`), so `hasScalarOrVoidReturn` wrongly treated such
+    definitions as eligible for a real (non-inlined) VM `Call`/`Return`.
+    A real call's `Return` opcode just pushes whatever's on the callee's
+    operand stack as the "scalar" - a small integer that is actually the
+    address of a struct living in the callee's own per-call locals array.
+    That array is discarded when the frame pops, so the caller reads back
+    a stale, meaningless address (usually landing on zeroed memory,
+    producing an empty why() string or the fallback branch of a
+    variant-lookup if/else chain, e.g. "gfx_error"/"image_invalid_operation").
+    Confirmed with gdb/`--debug-json --debug-json-snapshots=all` VM traces
+    showing the returned value was the constructing function's own
+    frame-relative `AddressOfLocal` result, not the field value, and that
+    inlined calls (the same construction, but never crossing a real
+    call/return boundary) always produced correct results. Fix: excluded
+    these four type names from real-call eligibility in
+    `hasScalarOrVoidReturn` (forcing them to always inline, which keeps
+    the constructed struct in the caller's own frame). This also
+    incidentally fixes TODO-4752's "struct field access on a freshly-
+    returned temporary reads a zeroed field" symptom (same root cause) and
+    the "direct method-call forms return a fixed generic constant"
+    symptom noted below.
+    (2) severe slowness: `mapExpandedSourceLocation`/
+    `mapDiagnosticSpanToSourceUnit` and friends
+    (`src/SourceLocationMapper.cpp`) each constructed a brand-new
+    `SourceLocationMapper` from scratch per call - and its constructor
+    sorts every segment in the fully import-expanded source (thousands of
+    segments for a program importing `/std/collections/*`). These free
+    functions are called once per emitted instruction's source span
+    during IR lowering (`appendInstructionSourceRange` in
+    `IrLowererLowerReturnEmitStage.cpp`), so the cost was
+    O(instructions * segments log segments) instead of
+    O(segments log segments) - confirmed via gdb landing repeatedly in
+    `std::__introsort_loop` over `SegmentLineCandidate` there, matching
+    the TODO's earlier gdb samples. Fix: cache the mapper (thread-local,
+    keyed by the `ExpandedSource` pointer, which is built once and
+    threaded by pointer through the whole compile) so it's built once per
+    compilation instead of once per instruction.
+  - verification: the TODO's minimal repro now compiles+runs correctly
+    (`container missing key`, not blank) in ~3.7s, down from ~7.6s (import-
+    only baseline for `/std/collections/*` is ~1.9s, itself tracked
+    separately under TODO-4742/4743's near-quadratic large-stdlib-import
+    semantic validation cost - not part of this fix's scope). Also
+    verified: `GfxError.why(err)`/`err.why()`/`/ImageError/why(err)` direct
+    call forms now report the real per-variant message instead of a fixed
+    generic constant, matching Result.why()'s fix (same root cause).
+    Updated 12 previously-pinned tests across
+    `test_compile_run_vm_core_gfx_helpers.cpp` (6 cases),
+    `test_compile_run_vm_outputs.cpp` (7 cases, including the one
+    documenting the "489 failing tests" symptom),
+    `test_compile_run_emitters_core_behaviors.cpp` (1 case - the C++
+    emitter shares this IR-lowering code path and had the identical bug),
+    `test_compile_run_container_error_conformance_helpers.h` (TODO-4752's
+    pin, shared by 2 test cases), `test_compile_run_vm_core_results_structs.cpp`,
+    `test_compile_run_vm_core_results_basic.cpp`,
+    `test_compile_run_smoke_core_gfx_imports.cpp`, and
+    `test_compile_run_map_conformance_expectations.h` (2 cases, TODO-4756's
+    pins) from their verified-buggy output to their verified-correct
+    output. Full `PrimeStruct_semantics_tests` (2940/2940),
+    `PrimeStruct_backend_ir_tests` (1739/1741, the 2 failures being the
+    known pre-existing unrelated `ir_pipeline` failures), and
+    `PrimeStruct_compile_run_tests` (2940/2940) suites pass with no new
+    regressions.
 
 - [ ] TODO-4756: Investigate soa /ref_ref, /to_aos, /get slash-method-form call resolution gaps found across imports/vm.collections sweeps
   - owner: ai
