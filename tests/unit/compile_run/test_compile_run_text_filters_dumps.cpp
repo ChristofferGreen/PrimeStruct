@@ -1137,16 +1137,16 @@ main() {
        "primec_dump_ast_semantic_inline_location_method_like_borrowed_return_experimental_soa_helpers_err.txt")
           .string();
 
-  // TODO-4756 (extends): .ref(...) method-call sugar on a doubly-borrowed
-  // (location(holder.pickBorrowed(location(values)))) receiver now fails to
-  // resolve at all ("unknown method: /std/collections/soa/ref_ref") before
-  // any of this test's later helper forms can even be reached. Re-pinned to
-  // the verified current rejection.
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
+  // doubly-borrowed (location(holder.pickBorrowed(location(values))))
+  // receiver; the fixture still fails, but only at .to_aos() (a separate,
+  // narrower, pre-existing gap - no stdlib to_aos_ref function exists at
+  // all, for any receiver kind).
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa/ref_ref") !=
+  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
         std::string::npos);
 }
 
@@ -1259,15 +1259,16 @@ main() {
        "primec_dump_ast_semantic_direct_return_borrowed_helper_reads_err.txt")
           .string();
 
-  // TODO-4756 (extends): bare count(...) on the borrowed receiver misroutes
-  // to the dead legacy /std/collections/soa_vector/count_ref spelling and
-  // fails to compile, before any of this test's later helper forms can
-  // even be reached. Re-pinned to the verified current rejection.
+  // TODO-5050 shape (a) (RESOLVED): count/count_ref now route to the
+  // canonical public soa helper on this borrowed helper-return receiver;
+  // this fixture now proceeds further and only fails at .to_aos() (a
+  // separate, narrower, pre-existing gap - no stdlib to_aos_ref function
+  // exists at all, for any receiver kind).
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/count_ref") !=
+  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
         std::string::npos);
 }
 
@@ -2100,18 +2101,16 @@ main() {
        "primec_dump_ast_semantic_borrowed_soa_ref_ref_same_path_err.txt")
           .string();
 
-  // TODO-4756 (extends): the bare/method ref_ref call forms on a borrowed
-  // Reference<SoaVector<Particle>> now fail to resolve to the user's
-  // same-path /soa/ref_ref shadow at all - the routing logic instead treats
-  // the (non-templated) shadow as if it were being called with template
-  // arguments. Re-pinned to the verified current rejection.
+  // TODO-5050 shape (a) (RESOLVED), shape (b) side effect: the bare/method
+  // ref_ref call forms on this borrowed Reference<SoaVector<Particle>>
+  // receiver now both correctly resolve to the user's same-path (non-
+  // templated) /soa/ref_ref shadow, matching the equivalent owned soa<T>
+  // same-path-shadow case below. Dump now succeeds.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "Semantic error: template arguments are only supported on templated definitions: /soa/ref_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("dump ast-semantic keeps builtin soa ref_ref same-path helper shadows") {
@@ -2292,15 +2291,15 @@ main() {
        "primec_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_helpers_err.txt")
           .string();
 
-  // TODO-4756 (extends): .ref(...) method-call sugar on the inline-location
-  // borrowed receiver fails to resolve ("unknown method:
-  // /std/collections/soa/ref_ref") before any of this test's later helper
-  // forms can even be reached. Re-pinned to the verified current rejection.
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
+  // inline-location borrowed receiver; the fixture still fails, but only
+  // at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
+  // to_aos_ref function exists at all, for any receiver kind).
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa/ref_ref") !=
+  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
         std::string::npos);
 }
 

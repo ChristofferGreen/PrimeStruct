@@ -2051,8 +2051,24 @@ main() {
   const std::string srcPath =
       writeTemp("compile_experimental_soa_borrowed_return_ref_ref_same_path_exe.prime",
                 source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 38);
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_borrowed_return_ref_ref_same_path_exe.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  // TODO-5050 shape (a) (RESOLVED), shape (b) still open for TEMPLATED
+  // same-path shadows specifically: .ref(...)/ref_ref(...) on this
+  // borrowed helper-return receiver now correctly resolve to the real
+  // canonical /std/collections/soa/ref_ref<T> stdlib helper rather than
+  // the templated user shadow at the same short path - unlike the
+  // non-templated same-path-shadow case (see
+  // test_semantics_type_resolution_graph_snapshots.cpp's "keeps borrowed
+  // soa ref_ref targets on same-path helpers" test), a templated
+  // same-path shadow does not take priority. Since `values` is empty
+  // here, the real helper's array indexing now correctly fails at
+  // runtime instead of silently returning the shadow's fixed 19i32.
+  CHECK(runCommand(compileCmd) == 3);
+  CHECK(readFile(errPath).find("array index out of bounds") != std::string::npos);
 }
 
 TEST_CASE("rejects builtin helper-return soa ref_ref same-path helper in C++ emitter") {

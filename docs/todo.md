@@ -8392,12 +8392,93 @@ This file is the live open-work queue for PrimeStruct.
     need their own triage - out of scope for this fix, noted for
     tracking.
 
-- [ ] TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
+- [x] TODO-5050 (PARTIALLY RESOLVED - shape (a) fixed, shape (b) partially fixed as a side effect, shape (c) still open): Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
   - owner: ai
   - created_at: 2026-07-31
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-soa-surface
   - depends_on: TODO-4731
+  - resolution (2026-08-04): root-caused and fixed shape (a). The bug lives
+    in `rewriteBuiltinSoaAccessExpr`/`rewriteBuiltinSoaCountExpr`
+    (`SemanticsValidate.cpp`), a whole-program AST-rewrite pre-pass that
+    runs BEFORE per-statement semantic validation and mutates `.get()`/
+    `.get_ref()`/`.ref()`/`.ref_ref()`/`.count()`/`.count_ref()` method
+    calls into bare direct-call `Expr` nodes. It unconditionally routed
+    every borrowed-receiver rewrite through
+    `compatibilitySoaHelperTargetPath` (the dead `/std/collections/
+    soa_vector/*` spelling - per `CollectionSpellingClassifier.cpp`, this
+    family has NO real definitions, ever) instead of preferring
+    `publicSoaHelperTargetPath` (the real `/std/collections/soa/*`
+    spelling) when a genuine stdlib definition is visible at that path.
+    Fixed by computing a `visiblePublicSoaHelpers` set (checking
+    `program.definitions` for the canonical path's existence) once per
+    rewrite-pass invocation and threading it through both rewrite-pass
+    families to prefer the public spelling when available. A second,
+    related bug was found and fixed in
+    `SemanticsValidatorBuildInitializerInference.cpp`'s
+    `isExperimentalSoaLikeExpr` lambda (inside
+    `builtinSoaDirectPendingHelperPath`): it failed to unwrap
+    `Reference<>`/`Pointer<>` wrappers before checking "is this SoA-like",
+    so a genuinely SoA-like *borrowed* receiver was misclassified as "not
+    SoA-like" - independently blocking `.ref()`/`.ref_ref()` even after
+    the primary routing fix. Root-caused via `gdb` on a `RelWithDebInfo`
+    build with a message-matching `abort()` hook in the single diagnostic
+    choke point (`SemanticValidationResultSink::fail()`) - static tracing
+    through the interactive per-call resolution files
+    (`SemanticsValidatorExprMethodTargetResolution.cpp` etc.) never found
+    it because the real bug was in the AST-rewrite pre-pass, which those
+    files never see.
+  - shape (b) side effect: fixing shape (a) also fixed method-call-form
+    dispatch (`.ref(...)`) honoring a user's same-path `/soa/ref_ref`
+    shadow when the shadow is NON-templated - confirmed via a standalone
+    `--emit=vm` run returning the shadow's literal value, not the real
+    stdlib helper's computed value. This applies regardless of receiver
+    kind (local binding, helper-return call, doubly-borrowed) since the
+    routing fix isn't receiver-kind-specific. However, a TEMPLATED
+    same-path shadow (`/soa/ref_ref<T>(...)`) does NOT get this benefit -
+    found while re-pinning `test_compile_run_imports_operations.cpp`'s
+    "borrowed helper-return soa ref_ref same-path helper in C++ emitter
+    compatibility" test: with a templated shadow, `.ref(...)`/`ref_ref(...)`
+    now correctly route to the REAL canonical stdlib helper instead
+    (bypassing the templated shadow entirely), which then fails at runtime
+    with "array index out of bounds" on the fixture's empty vector rather
+    than returning the shadow's fixed value. This narrower templated-shadow
+    case remains an open, undocumented-until-now gap; re-pinned to the
+    verified new behavior rather than fixed, since it is out of scope for
+    shape (a) and shape (b) was never this session's target.
+  - to_aos_ref gap (newly documented, separate, narrower issue): `.to_aos()`
+    on ANY borrowed soa/SoaVector receiver (local binding, helper-return,
+    doubly-borrowed - confirmed receiver-kind-independent) fails with
+    "unknown method: /std/collections/soa_vector/to_aos_ref" because NO
+    `to_aos_ref` stdlib function exists at all, for any receiver kind - a
+    pre-existing, structural stdlib gap, not a routing bug. This is now the
+    first (and often only) remaining failure point in most of this TODO's
+    re-pinned tests. Not fixed this session; would need a new stdlib
+    `to_aos_ref<T>` function analogous to `get_ref`/`ref_ref`/`count_ref`.
+  - shape (c) confirmed still open, unchanged: the narrow explicit-
+    rooted-path-call gap (`/std/collections/soa/get_ref(...)` breaking on a
+    borrowed helper-return receiver while the bare/method-call forms of the
+    same declared function succeed) was re-verified against the fixed
+    build and still reproduces identically - genuinely unrelated root
+    cause, left open.
+  - verification: `PrimeStruct_semantics_tests` 2940/2940 green (9 tests
+    re-pinned to verified new behavior: 5 in
+    `test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`,
+    4 in `test_semantics_type_resolution_graph_snapshots.cpp`).
+    `PrimeStruct_compile_run_tests` 2940/2940 green (14 tests re-pinned: 1
+    in `test_compile_run_imports_operations.cpp`, 4 in
+    `test_compile_run_text_filters_dumps.cpp`, 9 in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`).
+    `PrimeStruct_backend_ir_tests` 1739/1741 (2 pre-existing, unrelated
+    failures, unchanged by this fix - see the ir_pipeline_conversions/
+    ir_pipeline_validation notes elsewhere in this file). Every re-pin was
+    verified via a standalone `primec`/`--emit=vm` probe of the exact
+    fixture before the test assertion was edited, per this epic's
+    established discipline.
+  - stop_rule (updated): do not attempt shape (c) or the templated-
+    same-path-shadow sub-case of shape (b) without first reproducing them
+    standalone and tracing to a specific function/line - both were
+    confirmed-but-not-root-caused this session, same caution as before.
   - scope: TODO-4719's 10-case type_resolution_graph SoA cluster is now
     green (4 cases were stale test fixtures, re-pinned; see TODO-4719's
     resolution notes), but 6 of those cases pin CURRENT, VERIFIED-BROKEN

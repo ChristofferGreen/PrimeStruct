@@ -958,6 +958,16 @@ bool localImportPathCoversTarget(const std::string &importPath, const std::strin
   return false;
 }
 
+bool hasVisiblePublicSoaHelperDefinition(const Program &program, std::string_view helperName) {
+  const std::string canonicalPath = "/std/collections/soa/" + std::string(helperName);
+  for (const Definition &def : program.definitions) {
+    if (def.fullPath == canonicalPath) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName) {
   const std::string rootPath = "/" + std::string(helperName);
   const std::string samePath = "/soa/" + std::string(helperName);
@@ -2050,7 +2060,8 @@ void rewriteBuiltinSoaAccessExpr(
     bool preserveGetHelper,
     bool preserveGetRefHelper,
     bool preserveRefHelper,
-    bool preserveRefRefHelper);
+    bool preserveRefRefHelper,
+    const std::unordered_set<std::string> &visiblePublicSoaHelpers);
 
 void rewriteBuiltinSoaAccessStatements(
     std::vector<Expr> &statements,
@@ -2061,7 +2072,8 @@ void rewriteBuiltinSoaAccessStatements(
     bool preserveGetHelper,
     bool preserveGetRefHelper,
     bool preserveRefHelper,
-    bool preserveRefRefHelper) {
+    bool preserveRefRefHelper,
+    const std::unordered_set<std::string> &visiblePublicSoaHelpers) {
   for (Expr &stmt : statements) {
     rewriteBuiltinSoaAccessExpr(
         stmt,
@@ -2072,7 +2084,8 @@ void rewriteBuiltinSoaAccessStatements(
         preserveGetHelper,
         preserveGetRefHelper,
         preserveRefHelper,
-        preserveRefRefHelper);
+        preserveRefRefHelper,
+        visiblePublicSoaHelpers);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteBuiltinSoaAccessStatements(
@@ -2084,7 +2097,8 @@ void rewriteBuiltinSoaAccessStatements(
           preserveGetHelper,
           preserveGetRefHelper,
           preserveRefHelper,
-          preserveRefRefHelper);
+          preserveRefRefHelper,
+          visiblePublicSoaHelpers);
     }
     if (stmt.isBinding) {
       if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
@@ -2105,7 +2119,8 @@ void rewriteBuiltinSoaAccessExpr(
     bool preserveGetHelper,
     bool preserveGetRefHelper,
     bool preserveRefHelper,
-    bool preserveRefRefHelper) {
+    bool preserveRefRefHelper,
+    const std::unordered_set<std::string> &visiblePublicSoaHelpers) {
   auto findBuiltinVectorValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(candidate.name);
@@ -2226,7 +2241,8 @@ void rewriteBuiltinSoaAccessExpr(
         preserveGetHelper,
         preserveGetRefHelper,
         preserveRefHelper,
-        preserveRefRefHelper);
+        preserveRefRefHelper,
+        visiblePublicSoaHelpers);
   }
   if (expr.kind != Expr::Kind::Call || expr.args.size() != 2 ||
       !expr.templateArgs.empty() ||
@@ -2268,7 +2284,9 @@ void rewriteBuiltinSoaAccessExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = semantics::compatibilitySoaHelperTargetPath(resolvedHelperName);
+  expr.name = visiblePublicSoaHelpers.count(resolvedHelperName) > 0
+                  ? semantics::publicSoaHelperTargetPath(resolvedHelperName)
+                  : semantics::compatibilitySoaHelperTargetPath(resolvedHelperName);
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
   if (receiverBinding.has_value() && !receiverBinding->binding.typeTemplateArg.empty()) {
@@ -2302,6 +2320,12 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
   const bool preserveGetRefHelper = hasVisibleRootSoaHelper(program, "get_ref");
   const bool preserveRefHelper = hasVisibleRootSoaHelper(program, "ref");
   const bool preserveRefRefHelper = hasVisibleRootSoaHelper(program, "ref_ref");
+  std::unordered_set<std::string> visiblePublicSoaHelpers;
+  for (std::string_view helperName : {"get_ref", "ref_ref"}) {
+    if (hasVisiblePublicSoaHelperDefinition(program, helperName)) {
+      visiblePublicSoaHelpers.insert(std::string(helperName));
+    }
+  }
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
@@ -2325,7 +2349,8 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
         preserveGetHelper,
         preserveGetRefHelper,
         preserveRefHelper,
-        preserveRefRefHelper);
+        preserveRefRefHelper,
+        visiblePublicSoaHelpers);
     if (def.returnExpr.has_value()) {
       rewriteBuiltinSoaAccessExpr(
           *def.returnExpr,
@@ -2336,7 +2361,8 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
           preserveGetHelper,
           preserveGetRefHelper,
           preserveRefHelper,
-          preserveRefRefHelper);
+          preserveRefRefHelper,
+          visiblePublicSoaHelpers);
     }
   }
   return true;
@@ -2349,7 +2375,8 @@ void rewriteBuiltinSoaCountExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveCountHelper,
-    bool preserveCountRefHelper);
+    bool preserveCountRefHelper,
+    const std::unordered_set<std::string> &visiblePublicSoaHelpers);
 
 void rewriteBuiltinSoaCountStatements(
     std::vector<Expr> &statements,
@@ -2358,7 +2385,8 @@ void rewriteBuiltinSoaCountStatements(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveCountHelper,
-    bool preserveCountRefHelper) {
+    bool preserveCountRefHelper,
+    const std::unordered_set<std::string> &visiblePublicSoaHelpers) {
   for (Expr &stmt : statements) {
     rewriteBuiltinSoaCountExpr(
         stmt,
@@ -2367,7 +2395,8 @@ void rewriteBuiltinSoaCountStatements(
         soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveCountHelper,
-        preserveCountRefHelper);
+        preserveCountRefHelper,
+        visiblePublicSoaHelpers);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteBuiltinSoaCountStatements(
@@ -2377,7 +2406,8 @@ void rewriteBuiltinSoaCountStatements(
           soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveCountHelper,
-          preserveCountRefHelper);
+          preserveCountRefHelper,
+          visiblePublicSoaHelpers);
     }
     if (stmt.isBinding) {
       if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
@@ -2396,7 +2426,8 @@ void rewriteBuiltinSoaCountExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveCountHelper,
-    bool preserveCountRefHelper) {
+    bool preserveCountRefHelper,
+    const std::unordered_set<std::string> &visiblePublicSoaHelpers) {
   auto findBuiltinVectorValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(candidate.name);
@@ -2515,7 +2546,8 @@ void rewriteBuiltinSoaCountExpr(
         soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveCountHelper,
-        preserveCountRefHelper);
+        preserveCountRefHelper,
+        visiblePublicSoaHelpers);
   }
   if (expr.kind != Expr::Kind::Call || expr.args.size() != 1 ||
       !expr.templateArgs.empty() ||
@@ -2552,7 +2584,9 @@ void rewriteBuiltinSoaCountExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = semantics::compatibilitySoaHelperTargetPath(resolvedHelperName);
+  expr.name = visiblePublicSoaHelpers.count(resolvedHelperName) > 0
+                  ? semantics::publicSoaHelperTargetPath(resolvedHelperName)
+                  : semantics::compatibilitySoaHelperTargetPath(resolvedHelperName);
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
   if (receiverBinding.has_value() && !receiverBinding->binding.typeTemplateArg.empty()) {
@@ -2584,6 +2618,10 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
   }
   const bool preserveCountHelper = hasVisibleRootSoaHelper(program, "count");
   const bool preserveCountRefHelper = hasVisibleRootSoaHelper(program, "count_ref");
+  std::unordered_set<std::string> visiblePublicSoaHelpers;
+  if (hasVisiblePublicSoaHelperDefinition(program, "count_ref")) {
+    visiblePublicSoaHelpers.insert("count_ref");
+  }
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
@@ -2605,7 +2643,8 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
         soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveCountHelper,
-        preserveCountRefHelper);
+        preserveCountRefHelper,
+        visiblePublicSoaHelpers);
     if (def.returnExpr.has_value()) {
       rewriteBuiltinSoaCountExpr(
           *def.returnExpr,
@@ -2614,7 +2653,8 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
           soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveCountHelper,
-          preserveCountRefHelper);
+          preserveCountRefHelper,
+          visiblePublicSoaHelpers);
     }
   }
   return true;

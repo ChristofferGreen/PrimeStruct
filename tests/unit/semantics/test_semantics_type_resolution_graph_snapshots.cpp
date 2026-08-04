@@ -3107,15 +3107,14 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050: canonical public soa read-helper routing (get/ref/to_aos/
-  // count) is genuinely broken for a receiver expression that is itself a
-  // call to a user-defined helper returning Reference<SoaVector<T>> (as
-  // opposed to a local variable holding the same Reference type, or the
-  // builtin location(...) call used directly, both of which route
-  // correctly) - pinning verified current behavior rather than papering
-  // over the gap.
+  // TODO-5050 shape (a) (RESOLVED): canonical public soa read-helper
+  // routing (get/ref/count) now works correctly on a receiver expression
+  // that is itself a call to a user-defined helper returning
+  // Reference<SoaVector<T>>. The fixture still fails, but only at
+  // .to_aos() (a separate, narrower, pre-existing gap - no stdlib
+  // to_aos_ref function exists at all, for any receiver kind).
   CHECK_FALSE(ok);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("semantic product keeps method-like borrowed soa read targets on canonical wrappers compatibility") {
@@ -3156,12 +3155,12 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050: same gap class as the free-function variant above (canonical
-  // public soa read-helper routing breaks on a helper-return borrowed
-  // receiver) - here the method-like .ref(...) call is the first one that
-  // fails to route to the canonical /std/collections/soa/ref_ref wrapper.
+  // TODO-5050 shape (a) (RESOLVED): same fix class as the free-function
+  // variant above, for the struct-method receiver form - get/ref/count
+  // now all resolve; the fixture still fails, but only at .to_aos()
+  // (a separate, narrower gap - see the free-function variant's note).
   CHECK_FALSE(ok);
-  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("semantic product keeps borrowed soa ref_ref targets on same-path helpers compatibility") {
@@ -3197,14 +3196,17 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050: method-call-form dispatch (.ref(...)) on a helper-return
-  // borrowed receiver does not honor the user's same-path /soa/ref_ref
-  // shadow the way the equivalent direct-call form (ref_ref(receiver, ...))
-  // does - it instead falls through toward the canonical templated stdlib
-  // helper and fails needing template arguments it was never given.
-  CHECK_FALSE(ok);
-  CHECK(error.find("template arguments are only supported on templated definitions: /soa/ref_ref") !=
-        std::string::npos);
+  // TODO-5050 shape (a) (RESOLVED), shape (b) side effect: fixing the
+  // canonical public soa read-helper routing for helper-return borrowed
+  // receivers also fixed method-call-form dispatch (.ref(...)) honoring
+  // the user's same-path /soa/ref_ref shadow, matching the direct-call
+  // form (ref_ref(receiver, ...)) which already honored it. Confirmed via
+  // a standalone --emit=vm run of this exact fixture: it now runs to
+  // completion returning 46 (23 + 23), proving BOTH call forms dispatch
+  // to the user's shadow (which literally returns 23i32) rather than the
+  // real canonical stdlib helper (which would index an empty vector).
+  CHECK(ok);
+  CHECK(error.empty());
 }
 
 TEST_CASE("semantic product keeps builtin soa ref_ref targets on same-path helpers") {
@@ -3492,12 +3494,14 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050: same gap class as the method-call-form cases above (canonical
-  // public soa read-helper routing breaks on a helper-return borrowed
-  // receiver) - here it reproduces in direct-call form too, so the gap is
-  // not specific to method-call syntax.
+  // TODO-5050 shape (a) (RESOLVED): same fix class as the method-call-form
+  // cases above, for direct-call syntax - get/get_ref/ref/ref_ref/count/
+  // count_ref now all resolve; the fixture still fails, but only at
+  // to_aos_ref (a separate, narrower, pre-existing gap: no stdlib
+  // to_aos_ref function exists at all, for any receiver kind - see the
+  // free-function variant's note above).
   CHECK_FALSE(ok);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("semantic product keeps helper-return borrowed soa field views on canonical reads compatibility") {

@@ -676,8 +676,12 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  // Residual TODO-4731 gap: borrowed helper-return receivers still route count_ref through the retired family diagnostic.
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") != std::string::npos);
+  // TODO-5050 shape (a) (RESOLVED): count/count_ref now route to the
+  // canonical public soa helper on this borrowed helper-return receiver;
+  // validation now proceeds further and only fails at .to_aos() (the
+  // separate, narrower, pre-existing to_aos_ref gap - see the other
+  // TODO-5050 re-pinned tests in this file for details).
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("public soa to_aos helper validates on public wrapper bindings") {
@@ -1129,7 +1133,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa alias-only borrowed helper-return helpers reject current ref_ref path") {
+TEST_CASE("experimental soa alias-only borrowed helper-return helpers resolve current ref_ref path") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/soa/*
@@ -1154,13 +1158,15 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) (RESOLVED): canonical public soa read-helper
+  // routing now works on this helper-return borrowed receiver; get/ref/
+  // count all resolve correctly.
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa method-like borrowed helper-return helper surfaces reject current ref_ref path") {
+TEST_CASE("experimental soa method-like borrowed helper-return helper surfaces resolve current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1202,10 +1208,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) (RESOLVED): same fix class as the free-function
+  // variant above, for the struct-method receiver form - get/ref/count/
+  // field-access-sugar variants all resolve correctly now.
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa direct return method-like borrowed helper-return reads reject retired helper path") {
@@ -1421,8 +1429,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  // Residual TODO-4731 gap: borrowed method-like ref_ref is not routed to the canonical wrapper yet.
-  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
+  // borrowed helper-return receiver; the fixture still fails, but only at
+  // .to_aos() (a separate, narrower, pre-existing gap - no stdlib
+  // to_aos_ref function exists at all, for any receiver kind).
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("experimental soa direct return inline location method-like borrowed") {
@@ -1736,16 +1747,19 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [Reference<Particle>] value{pickBorrowed(location(values)).ref(1i32)}
+  [Reference<Particle>] value{pickBorrowed(location(values)).ref(0i32)}
   soaVectorReserve<Particle>(values, 3i32)
   return(value.x)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) (RESOLVED): .ref(...) on this borrowed helper-
+  // return receiver now resolves correctly. The bare soaVectorReserve<T>(...)
+  // call form isn't currently tracked by the borrow checker (unlike
+  // .push()), so full validation now succeeds.
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa inline location borrowed helper-return ref validates direct soa wildcard import") {
@@ -1766,16 +1780,19 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 main() {
   [SoaVector<Particle> mut] values{
       soaVectorSingle<Particle>(Particle(7i32))}
-  [Reference<Particle>] value{location(pickBorrowed(location(values))).ref(1i32)}
+  [Reference<Particle>] value{location(pickBorrowed(location(values))).ref(0i32)}
   values.push(Particle(11i32))
   return(value.x)
 }
 )";
   std::string error;
+  // TODO-5050 shape (a) (RESOLVED): .ref(...) on this borrowed helper-
+  // return receiver now resolves correctly, so validation reaches the
+  // borrow checker, which correctly rejects the .push() call while the
+  // `value` reference is still live.
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa") !=
-        std::string::npos);
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
 }
 
 TEST_CASE("experimental soa stdlib push and reserve helpers validate through soa import") {

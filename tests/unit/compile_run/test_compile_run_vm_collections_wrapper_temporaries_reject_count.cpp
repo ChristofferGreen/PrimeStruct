@@ -391,11 +391,13 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_public_soa_read_helpers_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: the fully-qualified /std/collections/soa/ref_ref<T>(...) call
-  // form no longer resolves ("unknown method"), unrelated to any import
-  // staleness (this source's import was already just /std/collections/soa/*).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
+  // TODO-5050 shape (a) (RESOLVED): the fully-qualified
+  // /std/collections/soa/ref_ref<T>(...) call form (and the sibling
+  // get/get_ref/ref/count/count_ref forms) on borrowed receivers now
+  // resolve and run correctly, returning 32 (verified via the arithmetic
+  // in this fixture's return expression).
+  CHECK(runCommand(runCmd) == 32);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm public soa construction and mutators use wrappers") {
@@ -1788,10 +1790,11 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_soa_borrowed_return_get_ref_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: .get()/.ref() method-call sugar on a Reference<SoaVector<T>>
-  // returned from a helper no longer resolves.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get_ref") != std::string::npos);
+  // TODO-5050 shape (a) (RESOLVED): .get()/.ref() method-call sugar on a
+  // Reference<SoaVector<T>> returned from a helper now resolves and runs
+  // correctly, returning 16 (first.x=7, second.x=9).
+  CHECK(runCommand(runCmd) == 16);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs borrowed helper-return soa ref_ref same-path helper compatibility") {
@@ -1828,12 +1831,11 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_borrowed_return_ref_ref_same_path_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: bare ref_ref(...) call no longer resolves to the user's
-  // same-path /soa/ref_ref shadow.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "template arguments are only supported on templated definitions: /soa/ref_ref") !=
-        std::string::npos);
+  // TODO-5050 shape (a) (RESOLVED), shape (b) side effect: both .ref(...)
+  // and bare ref_ref(...) now correctly resolve to the user's same-path
+  // (non-templated) /soa/ref_ref shadow, returning 38 (19 + 19).
+  CHECK(runCommand(runCmd) == 38);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs builtin helper-return soa ref_ref same-path helper") {
@@ -1909,10 +1911,13 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_soa_borrowed_local_methods_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: borrowed.ref(idx) method-call sugar resolves to a "ref_ref"
-  // method name that doesn't exist.
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
+  // local Reference<SoaVector<T>> binding; the fixture still fails, but
+  // only at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
+  // to_aos_ref function exists at all, for any receiver kind, including
+  // this local-binding case).
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("vm runs inline location experimental soa read-only methods") {
@@ -1991,10 +1996,12 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_soa_borrowed_return_methods_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: .get(...) method-call sugar on a Reference<SoaVector<T>>
-  // resolves to a "get_ref" method name that doesn't exist.
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
+  // borrowed helper-return receiver; the fixture still fails, but only at
+  // .to_aos() (a separate, narrower, pre-existing gap - no stdlib
+  // to_aos_ref function exists at all, for any receiver kind).
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get_ref") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("vm runs method-like borrowed helper-return experimental soa helper surfaces") {
@@ -2045,10 +2052,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_method_like_borrowed_return_helpers_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: .ref(...) method-call sugar on a Reference<SoaVector<T>>
-  // resolves to a "ref_ref" method name that doesn't exist.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count and field-access sugar
+  // on this struct-method borrowed helper-return receiver now all resolve
+  // and run correctly, returning 85 (verified via the arithmetic in this
+  // fixture's return expression).
+  CHECK(runCommand(runCmd) == 85);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs direct return borrowed helper-return experimental soa reads") {
@@ -2090,10 +2099,13 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_direct_return_borrowed_return_reads_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: bare count(...) on a Reference<SoaVector<T>> resolves to a
-  // "count_ref" method name that doesn't exist.
+  // TODO-5050 shape (a) (RESOLVED): count/count_ref now route to the
+  // canonical public soa helper on this borrowed helper-return receiver;
+  // this fixture now proceeds further and only fails at .to_aos() (a
+  // separate, narrower, pre-existing gap - no stdlib to_aos_ref function
+  // exists at all, for any receiver kind).
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("vm runs direct return method-like borrowed helper-return experimental soa reads") {
@@ -2258,10 +2270,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_inline_location_method_like_borrowed_return_helpers_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: .ref(...) method-call sugar on a Reference<SoaVector<T>>
-  // resolves to a "ref_ref" method name that doesn't exist.
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
+  // doubly-borrowed struct-method receiver; the fixture still fails, but
+  // only at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
+  // to_aos_ref function exists at all, for any receiver kind).
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("vm runs direct return inline location method-like borrowed helper-return experimental soa reads") {
@@ -2371,10 +2385,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_inline_location_borrowed_return_helpers_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: .ref(...) method-call sugar on a Reference<SoaVector<T>>
-  // resolves to a "ref_ref" method name that doesn't exist.
+  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
+  // doubly-borrowed free-function receiver; the fixture still fails, but
+  // only at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
+  // to_aos_ref function exists at all, for any receiver kind).
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("runs vm experimental soa storage helpers") {

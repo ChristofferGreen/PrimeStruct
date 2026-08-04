@@ -655,7 +655,17 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
     std::string base;
     std::string argText;
     if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
-      normalizedTypeText = normalizeBindingTypeName(base);
+      const std::string normalizedBase = normalizeBindingTypeName(base);
+      if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+          !argText.empty()) {
+        // A borrowed receiver (Reference<SoaVector<T>>/Pointer<SoaVector<T>>)
+        // is just as SoA-like as an owned one for this check's purposes -
+        // unwrap one level so borrowed receivers aren't misclassified as
+        // "not experimental SoA-like" (TODO-5050 shape (a)).
+        normalizedTypeText = normalizeBindingTypeName(argText);
+      } else {
+        normalizedTypeText = normalizedBase;
+      }
     }
     std::string soaSurfaceTypeHelper;
     const bool isPublicSoaTypeText =
