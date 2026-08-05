@@ -6624,6 +6624,27 @@ This file is the live open-work queue for PrimeStruct.
     `uninitialized<...>`, rather than the compiler needing to accept the
     plain form) - the message reads like a deliberate, not accidental,
     restriction.
+  - investigated_2026-08-05: confirmed the stop_rule's suspicion -
+    `drop`/`init`'s `requires uninitialized<T> storage` check
+    (`SemanticsValidatorStatement.cpp:126-142`) is a clean, deliberate,
+    well-formed validation shared identically by both `drop` and `init`
+    (not an accidental narrowing specific to this reflection helper) -
+    it unconditionally requires `resolveUninitializedStorageBinding` to
+    resolve the target to an actual `uninitialized<T>`-typed binding, no
+    exceptions. This strongly suggests the TEST is the stale artifact
+    here: bare `drop(storage)` on a plain (non-`uninitialized<T>`)
+    `/Wide/SoaSchemaStorage mut` local is simply no longer valid usage,
+    and the reflection-generated `SoaSchemaStorage` struct likely relies
+    on ordinary scope-exit `Destroy()` semantics instead of an explicit
+    `drop()` call now. Did not change the test or the generator - this
+    needs someone who understands the current storage-struct lifecycle
+    contract (does `SoaSchemaStorage` even need explicit disposal
+    anymore, or was `drop(storage)` in the test always meant to model a
+    now-removed pattern?) to decide the RIGHT replacement, not a
+    guessed one. Separately, this test's own ~42s-per-backend compile
+    time (noted in its own scope) remains unexplained and unaffected by
+    this investigation - still a real, separate perf concern for the
+    task #6 cluster.
 
 - [x] TODO-4766 (RESOLVED): Reflection-generated Deserialize emits an internal count() call the backends no longer accept in expression position
   - resolution_summary (2026-08-05): confirmed reflection-codegen-specific
@@ -6781,6 +6802,23 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: reproduce with a small custom struct with a nested-struct-
     typed field carrying a default (not just `Swapchain`) before assuming
     this is specific to the gfx stdlib's `Swapchain` type.
+  - investigated_2026-08-05: re-verified both TEST_CASEs still pass
+    (still correctly pinned to the "struct field type mismatch: expected
+    .../ColorFormat, got <unknown>" rejection - not fixed). Per the
+    stop_rule, tried a minimal custom struct with an omitted
+    nested-struct-typed field carrying a default
+    (`Outer{[token] 5i32}` where `Outer.inner` is an `Inner`-typed field
+    with a default `Inner{}`) - this compiled and ran correctly (no
+    `<unknown>` type, no rejection), meaning the bug does NOT reproduce
+    with a generic nested-struct-default shape and is specific to
+    something about the real `/std/gfx/*` `Swapchain`/`ColorFormat`
+    pair (possibly an enum-backed struct, a templated default, or a
+    same-family struct-identity issue like TODO-4761's - not
+    distinguished this pass). Given the minimal-repro attempt came back
+    negative, a future session should build up from the ACTUAL gfx
+    stdlib source (`ColorFormat`'s real declaration) rather than a
+    fresh custom struct, to find what's actually different about it.
+    Not fixed this session.
 
 - [ ] TODO-4763: "internal error: missing struct slot layout" for SubstrateDeviceConfig/SubstrateRenderPassConfig
   - owner: ai
