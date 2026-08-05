@@ -361,7 +361,12 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
           makeEnvelopeExpr("then", std::move(thenBody)),
           makeEnvelopeExpr("else", {})));
     }
-    helper.returnExpr = makeI32LiteralExpr(0);
+    // A trailing `returnExpr` (with no matching statement) is only honored
+    // for single-expression bodies - once `statements` is non-empty (the
+    // if-chain above), it is silently dropped, so an out-of-range `index`
+    // fell off the end of the function with no return at all. Append a
+    // real trailing return statement instead.
+    helper.statements.push_back(makeReturnStatementExpr(makeI32LiteralExpr(0)));
     helper.hasReturnStatement = true;
     context.rewrittenDefinitions.push_back(std::move(helper));
     context.definitionPaths.insert(fullPath);
@@ -379,7 +384,10 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
           makeEnvelopeExpr("then", std::move(thenBody)),
           makeEnvelopeExpr("else", {})));
     }
-    helper.returnExpr = makeStringLiteralExpr("");
+    // See the trailing-return note in appendIndexedI32Helper above - the
+    // same `returnExpr`-is-dropped-when-statements-are-non-empty gap
+    // applies here too.
+    helper.statements.push_back(makeReturnStatementExpr(makeStringLiteralExpr("")));
     helper.hasReturnStatement = true;
     context.rewrittenDefinitions.push_back(std::move(helper));
     context.definitionPaths.insert(fullPath);

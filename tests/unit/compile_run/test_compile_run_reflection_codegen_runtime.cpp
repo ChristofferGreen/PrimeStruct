@@ -318,10 +318,8 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_reflection_soa_schema_chunk_runtime.prime", source);
 
-  // TODO-4750: SoaSchemaChunkFieldCount (and friends) hit "missing return
-  // in IR function" on vm.
   const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
-  CHECK(runCommand(vmCmd) == 3);
+  CHECK(runCommand(vmCmd) == 127);
 
   const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_chunk_exe").string();
   const std::string exeCompileCmd =
@@ -333,10 +331,7 @@ main() {
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
-  // TODO-4765: the compiled native binary segfaults (exit 139) instead of
-  // returning 127, deterministically, for this same SoaSchemaChunkFieldCount
-  // reflection-generated helper gap.
-  CHECK(runCommand(quoteShellArg(nativePath)) == 139);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 127);
 }
 
 TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends") {

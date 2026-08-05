@@ -285,8 +285,11 @@ main() {
                                             const std::string &expectedSecond) {
     REQUIRE(helperDef.parameters.size() == 1);
     CHECK(helperDef.parameters.front().name == "index");
-    REQUIRE(helperDef.statements.size() == 2);
-    for (size_t i = 0; i < helperDef.statements.size(); ++i) {
+    // TODO-4750 fix: a trailing `returnExpr` (with no matching statement) is
+    // silently dropped once `statements` is non-empty, so the fallback is
+    // now a real trailing return statement appended after the if-chain.
+    REQUIRE(helperDef.statements.size() == 3);
+    for (size_t i = 0; i + 1 < helperDef.statements.size(); ++i) {
       const primec::Expr &guardStmt = helperDef.statements[i];
       REQUIRE(guardStmt.kind == primec::Expr::Kind::Call);
       CHECK(guardStmt.name == "if");
@@ -310,9 +313,12 @@ main() {
       REQUIRE(returnCall.args[0].kind == primec::Expr::Kind::StringLiteral);
       CHECK(returnCall.args[0].stringValue == (i == 0 ? expectedFirst : expectedSecond));
     }
-    REQUIRE(helperDef.returnExpr.has_value());
-    CHECK(helperDef.returnExpr->kind == primec::Expr::Kind::StringLiteral);
-    CHECK(helperDef.returnExpr->stringValue == "\"\"utf8");
+    const primec::Expr &trailingReturn = helperDef.statements.back();
+    REQUIRE(trailingReturn.kind == primec::Expr::Kind::Call);
+    CHECK(trailingReturn.name == "return");
+    REQUIRE(trailingReturn.args.size() == 1);
+    REQUIRE(trailingReturn.args[0].kind == primec::Expr::Kind::StringLiteral);
+    CHECK(trailingReturn.args[0].stringValue == "\"\"utf8");
   };
 
   const auto assertIndexedI32Helper = [](const primec::Definition &helperDef,
@@ -320,8 +326,12 @@ main() {
                                          std::optional<uint64_t> expectedSecond = std::nullopt) {
     REQUIRE(helperDef.parameters.size() == 1);
     CHECK(helperDef.parameters.front().name == "index");
-    REQUIRE(helperDef.statements.size() == (expectedSecond.has_value() ? 2 : 1));
-    for (size_t i = 0; i < helperDef.statements.size(); ++i) {
+    // TODO-4750 fix: a trailing `returnExpr` (with no matching statement) is
+    // silently dropped once `statements` is non-empty, so the fallback is
+    // now a real trailing return statement appended after the if-chain.
+    const size_t ifBranchCount = expectedSecond.has_value() ? 2 : 1;
+    REQUIRE(helperDef.statements.size() == ifBranchCount + 1);
+    for (size_t i = 0; i < ifBranchCount; ++i) {
       const primec::Expr &guardStmt = helperDef.statements[i];
       REQUIRE(guardStmt.kind == primec::Expr::Kind::Call);
       CHECK(guardStmt.name == "if");
@@ -345,9 +355,12 @@ main() {
       REQUIRE(returnCall.args[0].kind == primec::Expr::Kind::Literal);
       CHECK(returnCall.args[0].literalValue == (i == 0 ? expectedFirst : *expectedSecond));
     }
-    REQUIRE(helperDef.returnExpr.has_value());
-    CHECK(helperDef.returnExpr->kind == primec::Expr::Kind::Literal);
-    CHECK(helperDef.returnExpr->literalValue == 0);
+    const primec::Expr &trailingReturn = helperDef.statements.back();
+    REQUIRE(trailingReturn.kind == primec::Expr::Kind::Call);
+    CHECK(trailingReturn.name == "return");
+    REQUIRE(trailingReturn.args.size() == 1);
+    REQUIRE(trailingReturn.args[0].kind == primec::Expr::Kind::Literal);
+    CHECK(trailingReturn.args[0].literalValue == 0);
   };
 
   assertIndexedStringHelper(*nameHelper, "\"x\"utf8", "\"label\"utf8");
@@ -477,12 +490,18 @@ main() {
   REQUIRE(chunkCountHelper->returnExpr.has_value());
   CHECK(chunkCountHelper->returnExpr->kind == primec::Expr::Kind::Literal);
   CHECK(chunkCountHelper->returnExpr->literalValue == 2);
-  REQUIRE(chunkStartHelper->statements.size() == 2);
-  REQUIRE(chunkFieldCountHelper->statements.size() == 2);
+  // TODO-4750 fix: the fallback is now a real trailing return statement
+  // appended after the if-chain, not a dropped `returnExpr`.
+  REQUIRE(chunkStartHelper->statements.size() == 3);
+  REQUIRE(chunkFieldCountHelper->statements.size() == 3);
   CHECK(chunkStartHelper->statements[0].args[1].bodyArguments[0].args[0].literalValue == 0);
   CHECK(chunkStartHelper->statements[1].args[1].bodyArguments[0].args[0].literalValue == 16);
   CHECK(chunkFieldCountHelper->statements[0].args[1].bodyArguments[0].args[0].literalValue == 16);
   CHECK(chunkFieldCountHelper->statements[1].args[1].bodyArguments[0].args[0].literalValue == 1);
+  CHECK(chunkStartHelper->statements[2].name == "return");
+  CHECK(chunkStartHelper->statements[2].args[0].literalValue == 0);
+  CHECK(chunkFieldCountHelper->statements[2].name == "return");
+  CHECK(chunkFieldCountHelper->statements[2].args[0].literalValue == 0);
   REQUIRE(strideHelper->returnExpr.has_value());
   CHECK(strideHelper->returnExpr->kind == primec::Expr::Kind::Literal);
   CHECK(strideHelper->returnExpr->literalValue == 68);

@@ -6116,7 +6116,38 @@ This file is the live open-work queue for PrimeStruct.
     or re-pinned this session - left open with this trace so a future
     session doesn't have to re-derive the entry point.
 
-- [ ] TODO-4750: Investigate `SoaSchemaChunkFieldCount`/`SoaSchemaChunkCount` reflection-generated helpers hitting "missing return in IR function" on `--emit=vm`
+- [x] TODO-4750 (RESOLVED): Investigate `SoaSchemaChunkFieldCount`/`SoaSchemaChunkCount` reflection-generated helpers hitting "missing return in IR function" on `--emit=vm`
+  - resolution_summary (2026-08-05): root cause found via `--dump-stage
+    ast-semantic` - the generated helper's body literally had no
+    fallback return statement at all: `appendIndexedI32Helper`/
+    `appendIndexedStringHelper` in
+    `SemanticsValidateReflectionGeneratedHelpersValidate.cpp` set a
+    fallback via `helper.returnExpr = ...` alongside a non-empty
+    `helper.statements` (the per-index if-chain), but `returnExpr` is
+    only honored for single-expression bodies - once `statements` is
+    non-empty it is silently dropped, so calling the helper with an
+    index past the end of the if-chain fell off the end of the function
+    with no return at all (VM: "missing return in IR function"; native:
+    reads whatever garbage was left, causing TODO-4765's segfault). Fix:
+    append a real trailing `return(fallback)` statement to
+    `helper.statements` instead of only setting `.returnExpr`, in both
+    generator lambdas. Verified: minimal repro
+    (`/Wide/SoaSchemaChunkFieldCount(2i32)` on a 17-field struct, the
+    exact out-of-range case) now returns 0 as expected on vm, exe, and
+    native; the full test source now returns 127 on all three backends
+    (previously vm exit 3, native segfault). Updated
+    `test_compile_run_reflection_codegen_runtime.cpp` to the correct
+    exit 127 on all backends (also resolves TODO-4765's native segfault
+    pin), and 2 assertion blocks in
+    `test_semantics_capabilities_structs_metadata.cpp` that inspected
+    the generated `Definition`'s exact `statements.size()` and asserted
+    on `.returnExpr` directly - both updated to expect one extra
+    trailing statement and check the new real return statement instead
+    of the now-absent `.returnExpr`. Verified via full 3-suite run:
+    `PrimeStruct_compile_run_tests` 2940/2940,
+    `PrimeStruct_semantics_tests` 2940/2940,
+    `PrimeStruct_backend_ir_tests` 1739/1741 (the 2 pre-existing,
+    unrelated `ir_pipeline` failures only).
   - owner: ai
   - created_at: 2026-07-29
   - phase: Hidden test failure remediation
@@ -6637,7 +6668,16 @@ This file is the live open-work queue for PrimeStruct.
     the bug is in what the generator emits, not in the backends'
     acceptance rules.
 
-- [ ] TODO-4765: Native binary segfaults for the same SoaSchemaChunkFieldCount reflection gap that vm rejects cleanly
+- [x] TODO-4765 (RESOLVED): Native binary segfaults for the same SoaSchemaChunkFieldCount reflection gap that vm rejects cleanly
+  - resolution_summary (2026-08-05): fixed as part of TODO-4750 - see
+    that entry's resolution_summary for the root cause (a dropped
+    fallback return in reflection-generated indexed helpers) and fix.
+    Option (b) from this TODO's acceptance criteria was achieved: the
+    underlying gap is fixed, so `--emit=native` now compiles and runs
+    this repro correctly to exit 127 (previously segfault, exit 139) -
+    no separate native-specific validation change was needed once the
+    generated function actually had a real return on every path.
+    Verified via the same 3-suite run recorded under TODO-4750.
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -6757,6 +6797,22 @@ This file is the live open-work queue for PrimeStruct.
     `/std/gfx/experimental/*`) are unaffected before assuming this is a
     generic "any Substrate*Config struct" bug rather than something
     specific to the canonical surface's registration path.
+  - cross_reference_2026-08-05: re-verified both TEST_CASEs still pass
+    (still correctly pinned to the "internal error: missing struct slot
+    layout for SubstrateDeviceConfig" message - not fixed). Likely the
+    SAME underlying family as TODO-4761's second-layer finding: a live
+    probe there hit `vm backend cannot resolve struct layout: UiScene`
+    from struct-slot-layout resolution immediately after fixing the
+    parameter-type-mismatch layer - i.e. there appear to be (at least)
+    two independent struct-layout-registration gaps for
+    stdlib-short-name-imported structs (one for `/std/ui/*` names, one
+    for `/std/gfx/*` names), both stemming from the same class of bug:
+    struct type spellings not canonicalized consistently across the
+    lowerer's various struct-layout/parameter-matching call sites. See
+    TODO-4761's `investigated_2026-08-05` note for the specific
+    functions already traced (`isStructParamMatch` and its sibling
+    struct-slot-layout resolver) - a future session fixing one should
+    check whether it also resolves the other.
 
 - [ ] TODO-4762: Native binary exit code is non-deterministic for the experimental gfx window constructor smoke test
   - owner: ai
@@ -6813,6 +6869,19 @@ This file is the live open-work queue for PrimeStruct.
     signature - guessing at the fix without a sanitizer confirming the
     read is very likely to produce a change that "looks fixed" (stable
     exit code) while leaving the actual UB in place.
+  - cross_reference_2026-08-05: re-verified the relaxed test still
+    passes and the truncated "gf" stdout is unchanged, confirming the
+    bug is still present and matches TODO-4752's still-open native
+    print_line truncation finding (there: any function-returned
+    `string` printed via native truncates - here: 2 chars instead of
+    1, consistent with this TODO's own note that the truncation length
+    itself may be UB-dependent). Did not attempt a fix - this TODO's
+    own stop_rule requires an ASan/UBSan build first, which was not set
+    up this session (would need a separate sanitizer CMake
+    configuration, out of scope for this pass's time budget). A future
+    session should investigate this together with TODO-4752's native
+    truncation finding, since both point at the same native-backend
+    string/struct-return-ABI code path.
 
 - [ ] TODO-4760: Two variadic-args-pack indexing gaps found sweeping vm.core
   - owner: ai
