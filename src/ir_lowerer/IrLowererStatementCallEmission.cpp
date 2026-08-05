@@ -1047,9 +1047,6 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false)) {
     return DirectCallStatementEmitResult::Error;
   }
-  if (!info.returnsVoid && !isStructDefinitionCallee(*callee)) {
-    instructions.push_back({IrOpcode::Pop, 0});
-  }
   error = priorError;
   return DirectCallStatementEmitResult::Emitted;
 }

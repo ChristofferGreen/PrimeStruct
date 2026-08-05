@@ -6235,6 +6235,42 @@ This file is the live open-work queue for PrimeStruct.
     literal-string print_line calls that don't involve field access at
     all, e.g. print_line of already-correct string content), and confirm
     the fix for one doesn't mask investigating the other.
+  - progress_2026-08-05: **the vm-side bug is confirmed fixed** - it was
+    the same root cause as TODO-4757 (the `hasScalarOrVoidReturn`
+    real-call-eligibility fix in `IrLowererRecursionAnalysis.cpp`
+    already excludes `ContainerError` from real-call treatment). Both
+    `expectContainerErrorConformance`'s `vm` branch and all 3
+    conformance TEST_CASEs (`container error contract conformance in C++
+    emitter`, `native imported container error contract conformance`,
+    `runs vm imported container error contract conformance`) pass
+    currently. The **native-side truncation bug is still open and is
+    broader than originally scoped** - it is NOT specific to `why()`,
+    `ContainerError`, or unbound temporaries: `[return<string>]
+    makeMsg() { return("hello world"raw_utf8) }` then `[string]
+    msg{makeMsg()}; print_line(msg)` (fully bound, no field access, no
+    error-struct types involved at all) still prints only `h` on
+    `--emit=native`, while the identical source prints the full string
+    correctly on `--emit=vm`. A literal bound directly (`[string]
+    msg{"hello world"raw_utf8}`, no function call) prints correctly on
+    native too - so the truncation is specific to a `string` value that
+    crossed a real (non-inlined) native function-call return boundary.
+    Since `"string"` is not in `isSupportedScalarTypeName`
+    (`IrLowererRecursionAnalysis.cpp:14-26`), it should already be
+    ineligible for real-call treatment and forced to inline the same way
+    the VM path now does for the four packed-error-struct types - the
+    fact that native still truncates suggests the native/ARM64/x86_64
+    emitter has its own, separate real-call/struct-return-ABI path that
+    doesn't consult (or isn't governed by) this same eligibility
+    analysis, and that path's handling of a struct-shaped return value
+    (likely a `{Pointer<u8>, i32 length}`-shaped `string`) truncates the
+    length to 1 when actually going through a real native call. This is
+    a materially different, native-emitter-specific investigation from
+    anything already traced for TODO-4757 - needs its own gdb/trace pass
+    into the native/ARM64/x86_64 backend's call-emission code (not
+    `IrLowererRecursionAnalysis.cpp`, which VM already correctly
+    respects) before any fix. Not fixed this session; the acceptance
+    criterion's native half remains unmet, so leaving this TODO open
+    despite the vm half now being correct.
 
 - [ ] TODO-4753: Fix vector .remove_at()/.remove_swap() method-call sugar - broken on both vm and exe
   - owner: ai
@@ -6276,8 +6312,84 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: verify the fix on vm, exe, AND native before closing -
     this session only confirmed vm and exe fail; native's behavior for
     this specific method-sugar form was not independently checked.
+  - investigated_2026-08-05: gdb/debug-print-traced to the actual root
+    cause, which is deeper than a simple registration-table gap.
+    `tryEmitDirectCallStatement`'s `resolveMethodStatementDefinition`
+    lambda (`IrLowererStatementCallEmission.cpp:764`) only tries
+    `resolveMethodCallDefinition` and
+    `findSemanticProductMethodCallTarget` for method-call-sugar
+    statements - unlike its sibling `resolveDirectStatementDefinition`
+    (used for the bare-call form, which works), it has no fallback to
+    `resolveVectorSurfaceImplementationPath` (the `push`->`vectorPush`,
+    `remove_at`->`vectorRemoveAt` name-mapping table at line 28-37).
+    Prototyped adding that exact fallback (mirroring the bare-call
+    version) and confirmed via debug prints that it computes the right
+    implementation path
+    (`/std/collections/vector/vectorRemoveAt`) and receives the correct
+    2-arg callExpr (receiver + index both present, so this is NOT the
+    receiver-omitted-from-args theory) - but `resolveGeneratedDefinitionPath`
+    still can't find a matching `Definition`: `semanticProgram->definitions`
+    contains only 35 entries total for this repro, and zero of them match
+    `vectorRemoveAt<...>` (or even `remove_at<...>`) by the `__t`/`__ov`/`<`
+    generated-leaf markers this lookup relies on. This means the deeper
+    bug is NOT in this IR-lowering lookup at all - it's that
+    monomorphization never generates a concrete `vectorRemoveAt<i32>`
+    specialization in the first place when `remove_at` is only ever
+    reached via method-call-sugar syntax (`values.remove_at(idx)`);
+    monomorphization's use-site discovery apparently doesn't recognize
+    that call shape as a use of `vectorRemoveAt<T>`, while it does
+    recognize the bare-call form. Reverted the prototyped IR-lowering
+    fallback (confirmed non-functional, would only help if the
+    definition existed) and all debug instrumentation (`git diff --stat`
+    confirms `IrLowererStatementCallEmission.cpp` is clean). The real fix
+    belongs in monomorphization's call-site discovery/collection pass
+    (find where it walks the AST for template-instantiation triggers and
+    extend it to recognize `.remove_at(...)`/`.remove_swap(...)`
+    method-call-sugar the same way it already recognizes their bare-call
+    form), not in `IrLowererStatementCallEmission.cpp`. Not fixed this
+    session.
 
-- [ ] TODO-4754: Fix "VM error: IR stack underflow on pop" when a value-returning function's result is discarded as a statement, then another call to it is used in an expression
+- [x] TODO-4754 (RESOLVED): Fix "VM error: IR stack underflow on pop" when a value-returning function's result is discarded as a statement, then another call to it is used in an expression
+  - resolution_summary (2026-08-05): root cause was a double-pop, not a
+    missing pop. `tryEmitDirectCallStatement`'s generic direct-call
+    fallback (`IrLowererStatementCallEmission.cpp`, the final block
+    before the function's end) called
+    `emitInlineDefinitionCall(directStmt, *callee, localsIn, false)`
+    (`requireValue=false`) and THEN unconditionally pushed its own extra
+    `Pop` for any non-void, non-struct return. But
+    `emitInlineDefinitionCall`'s real-(non-inlined-)call branch
+    (`IrLowererLowerInlineCalls.h:60-66`, the TODO-4747 "real calls"
+    work) already self-balances when `requireValue=false` - it emits the
+    `Call`/`CallVoid` instruction and then pops the result itself when
+    the caller doesn't need it. The caller's additional unconditional
+    Pop was therefore popping an already-empty stack for any
+    real-call-eligible definition invoked as a discarded statement (any
+    scalar-or-void-returning definition, per `hasScalarOrVoidReturn` -
+    not specific to any particular function name, type, or collection).
+    Fix: removed the caller's redundant `Pop` (already correctly absent
+    at the other two call sites in the same file that pass
+    `requireValue=false`, lines ~916 and ~1013, confirming the removed
+    block was the outlier, not the norm). Verified: minimal repro now
+    returns 7 on vm, exe, and native (all three independently checked).
+    Re-pinned 3 tests that had been pinned to the verified-buggy exit-3
+    crash: "runs vm with user push helper shadow"
+    (`test_compile_run_vm_collections_map_vector_shadows.cpp`, exit 7),
+    "bare zero-arg calls"
+    (`test_compile_run_bindings_basic.cpp`, exit 41 - a second,
+    previously-undiscovered occurrence of the same bug caught by this
+    fix), and a doctest unit test exercising
+    `tryEmitDirectCallStatement` directly
+    (`test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp`,
+    "ir lowerer statement call helper emits direct calls" - its mock
+    `emitInlineDefinitionCall` never itself pushed instructions, so the
+    old assertion `instructions.size() == 1` / `Pop` was asserting the
+    OLD (buggy) double-pop contract; updated to `instructions.empty()`
+    matching the corrected single-source-of-truth-for-balancing
+    contract). Verified via full 3-suite run: `PrimeStruct_compile_run_tests`
+    2940/2940, `PrimeStruct_semantics_tests` 2940/2940,
+    `PrimeStruct_backend_ir_tests` 1739/1741 (the 2 failures are the
+    pre-existing, unrelated `ir_pipeline` known issues - confirmed via
+    the exact same 2 filenames/lines as before this session's changes).
   - owner: ai
   - created_at: 2026-07-29
   - phase: Hidden test failure remediation

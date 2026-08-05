@@ -1484,8 +1484,13 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
-  REQUIRE(instructions.size() == 1);
-  CHECK(instructions.front().op == primec::IrOpcode::Pop);
+  // TODO-4754 fix: emitInlineDefinitionCall(..., requireValue=false) is
+  // responsible for balancing its own discarded return value (it already
+  // does so for the real-call path), so the statement-call helper must not
+  // add a second Pop on top of it - doing so caused a VM stack underflow
+  // for any statement-position call to a real (non-inlined) function whose
+  // result was discarded.
+  CHECK(instructions.empty());
 
   primec::Expr valuesFactoryCall;
   valuesFactoryCall.kind = primec::Expr::Kind::Call;
