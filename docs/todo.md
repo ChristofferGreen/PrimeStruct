@@ -7294,6 +7294,55 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: do not batch-fix by guessing a shared cause - verify each
     call form's actual current behavior individually first, the same way
     the rest of this session's TODOs did.
+  - progress_2026-08-04: the `to_aos_ref` sub-cluster (all pins in
+    `test_compile_run_vm_outputs.cpp`/`test_compile_run_vm_core_gfx_helpers.cpp`/
+    map conformance helpers referencing blank-`Result.why()`) turned out
+    to be TODO-4757's root cause, not a separate soa routing gap - fixed
+    there. A genuinely distinct, still-open sub-cluster remains: a
+    same-path user shadow (`/soa/count`, `/soa/get`, `/soa/ref`,
+    `/soa/ref_ref`) is silently NOT invoked via the direct-call form on
+    an owned (non-borrowed) `SoaVector<T>` helper-return receiver - the
+    real stdlib builtin runs instead, with no diagnostic (wrong VALUE,
+    not a compile error) - while `/soa/push`/`/soa/reserve` shadows ARE
+    correctly invoked in the identical source shape. Repro: see
+    "runs vm global helper-return soa method shadows compatibility" in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`
+    (pinned to the verified-buggy sum 83, not the fully-correct 1+23+29+31+37=121).
+    Traced significantly further than prior sessions - **ruled out**, with
+    receipts, several plausible root-cause locations so a future session
+    doesn't re-walk them: (1) NOT a semantic-validation routing bug -
+    `--dump-stage ast-semantic` shows the AST already correctly rewrites
+    ALL FIVE calls (`count`/`get`/`ref`/`push`/`reserve`) to their
+    `/soa/xxx` same-path shadow target before IR lowering ever runs, so
+    the shadow *is* found and selected at the semantic layer for all
+    five, not just push/reserve. (2) NOT `preferredSoaHelperTargetForCollectionType`
+    (`SemanticsValidatorBuildInitializerInference.cpp`) - confirmed via
+    a temporary debug print that this correctly computes samePath
+    ("/soa/count") as the preferred target when called, but "get"/"ref"
+    never even reach this function at all (only "count"/"push"/"reserve"
+    do), and "count" reaching the right answer here doesn't fix the
+    observed runtime behavior - so this function is not on the path that
+    matters. (3) NOT the generic IR-lowering call resolver
+    (`resolveDefinitionCall` in `IrLowererCallResolution.cpp`) - a
+    temporary debug print gated on `callExpr.name` starting with
+    "/soa/" never fired for this repro at all, meaning direct calls to
+    `/soa/count` etc. never reach this function - something else
+    resolves them first. (4) NOT `isUnqualifiedCollectionBuiltinName`
+    (`IrLowererCountAccessClassifiers.cpp`) - it requires an exact
+    `expr.name == "count"` (no slash), so `/soa/count` structurally
+    can't match it. The actual interception point is still unfound -
+    likely a `count`/`get`/`ref`/`ref_ref`-specific (but not
+    `push`/`reserve`-specific) IR-lowering code path somewhere in the
+    large `IrLowererCountAccessHelpers.cpp` (2000+ lines,
+    `soa_paths::legacySoaFolder()`-prefixed checks throughout) or
+    `IrLowererInlineNativeCallDispatch.cpp`/`IrLowererNativeTailDispatch.cpp`
+    that re-derives the target from receiver type/leaf-name instead of
+    trusting the already-correctly-rewritten `/soa/xxx` call name -
+    needs a gdb breakpoint on the VM's actual `Call` instruction dispatch
+    (or on whichever function ultimately populates `IrFunction`'s callee
+    index for this call site) with a reverse hypothesis: find what's
+    different about push/reserve's IR-lowering code path vs
+    count/get/ref/ref_ref's, since both start from an identical AST.
 
 - [ ] TODO-4755: Fix vector reserve() - no longer actually grows capacity, and its compile-time local-dynamic-limit validation no longer triggers
   - owner: ai
