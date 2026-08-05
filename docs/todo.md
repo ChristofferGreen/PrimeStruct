@@ -6625,7 +6625,34 @@ This file is the live open-work queue for PrimeStruct.
     plain form) - the message reads like a deliberate, not accidental,
     restriction.
 
-- [ ] TODO-4766: Reflection-generated Deserialize emits an internal count() call the backends no longer accept in expression position
+- [x] TODO-4766 (RESOLVED): Reflection-generated Deserialize emits an internal count() call the backends no longer accept in expression position
+  - resolution_summary (2026-08-05): confirmed reflection-codegen-specific
+    per the stop_rule (ordinary hand-written `count()` in expression
+    position elsewhere in the suite is unaffected). Root cause:
+    `emitReflectionDeserializeHelper` in
+    `SemanticsValidateReflectionGeneratedHelpersSerialization.cpp`
+    built the payload-size check as
+    `not_equal(count(payload), N)` - a bare `count()` call nested
+    directly inside another call's argument, which none of the three
+    backends accept in expression position (same restriction family as
+    TODO-4749/siblings, just hit by generated code instead of
+    user-written code this time). Fix: bind the count to a local
+    (`[i32] payloadCount{count(payload)}`) in its own leading statement
+    first, then reference that local in the `not_equal` comparison -
+    the same shape ordinary hand-written code would use to work around
+    the same restriction. Verified: minimal repro now returns 7 on vm,
+    exe, and native. Updated the pinned rejection in
+    `test_compile_run_reflection_codegen_runtime.cpp` ("reflection
+    serde helper runtime stays aligned across backends") to the correct
+    "runs and returns 7" on all three backends, and 3 assertion blocks
+    in `test_semantics_capabilities_structs_reflect_serde.cpp` that
+    inspected the generated `Definition`'s exact `statements` shape -
+    updated to expect the new leading binding statement (shifting every
+    subsequent index by one). Verified via full 3-suite run:
+    `PrimeStruct_compile_run_tests` 2940/2940,
+    `PrimeStruct_semantics_tests` 2940/2940,
+    `PrimeStruct_backend_ir_tests` 1739/1741 (the 2 pre-existing,
+    unrelated `ir_pipeline` failures only).
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation

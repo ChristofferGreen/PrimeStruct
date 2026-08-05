@@ -217,9 +217,21 @@ bool emitReflectionDeserializeHelper(ReflectionGeneratedHelperContext &context) 
   payloadCountExpr.name = "count";
   payloadCountExpr.args.push_back(makeNameExpr("payload"));
   payloadCountExpr.argNames.push_back(std::nullopt);
+  // Backends reject non-arithmetic/comparison calls nested inside another
+  // expression (e.g. `not_equal(count(payload), N)`) - bind the count to a
+  // local first, matching the shape ordinary hand-written code would use.
+  Expr payloadCountBinding;
+  payloadCountBinding.isBinding = true;
+  payloadCountBinding.name = "payloadCount";
+  Transform payloadCountType;
+  payloadCountType.name = "i32";
+  payloadCountBinding.transforms.push_back(std::move(payloadCountType));
+  payloadCountBinding.args.push_back(std::move(payloadCountExpr));
+  payloadCountBinding.argNames.push_back(std::nullopt);
+  helper.statements.push_back(std::move(payloadCountBinding));
   Expr sizeCheckExpr =
       makeBinaryCallExpr("not_equal",
-                         std::move(payloadCountExpr),
+                         makeNameExpr("payloadCount"),
                          makeI32LiteralExpr(static_cast<uint64_t>(context.fieldNames.size() + 1)));
   std::vector<Expr> sizeCheckBody;
   sizeCheckBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(DeserializePayloadSizeErrorCode)));

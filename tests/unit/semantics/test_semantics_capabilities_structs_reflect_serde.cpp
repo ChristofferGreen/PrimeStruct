@@ -251,12 +251,16 @@ main() {
   CHECK(generated->returnExpr->args.front().kind == primec::Expr::Kind::Name);
   CHECK(generated->returnExpr->args.front().name == "Result");
 
-  REQUIRE(generated->statements.size() == 4);
-  REQUIRE(generated->statements[0].kind == primec::Expr::Kind::Call);
-  CHECK(generated->statements[0].name == "if");
-  REQUIRE(generated->statements[0].args.size() == 3);
+  // TODO-4766 fix: the payload-length check no longer nests a bare count()
+  // call inside `not_equal(...)` (rejected by the backends in expression
+  // position) - it's bound to a local `payloadCount` in its own leading
+  // statement first, shifting every statement index below by one.
+  REQUIRE(generated->statements.size() == 5);
+  REQUIRE(generated->statements[0].isBinding);
+  CHECK(generated->statements[0].name == "payloadCount");
+  REQUIRE(generated->statements[0].args.size() == 1);
   REQUIRE(generated->statements[0].args[0].kind == primec::Expr::Kind::Call);
-  CHECK(generated->statements[0].args[0].name == "not_equal");
+  CHECK(generated->statements[0].args[0].name == "count");
 
   REQUIRE(generated->statements[1].kind == primec::Expr::Kind::Call);
   CHECK(generated->statements[1].name == "if");
@@ -265,12 +269,10 @@ main() {
   CHECK(generated->statements[1].args[0].name == "not_equal");
 
   REQUIRE(generated->statements[2].kind == primec::Expr::Kind::Call);
-  CHECK(generated->statements[2].name == "assign");
-  REQUIRE(generated->statements[2].args.size() == 2);
-  REQUIRE(generated->statements[2].args[1].kind == primec::Expr::Kind::Call);
-  CHECK(generated->statements[2].args[1].name == "convert");
-  REQUIRE(generated->statements[2].args[1].templateArgs.size() == 1);
-  CHECK(generated->statements[2].args[1].templateArgs.front() == "i32");
+  CHECK(generated->statements[2].name == "if");
+  REQUIRE(generated->statements[2].args.size() == 3);
+  REQUIRE(generated->statements[2].args[0].kind == primec::Expr::Kind::Call);
+  CHECK(generated->statements[2].args[0].name == "not_equal");
 
   REQUIRE(generated->statements[3].kind == primec::Expr::Kind::Call);
   CHECK(generated->statements[3].name == "assign");
@@ -278,7 +280,15 @@ main() {
   REQUIRE(generated->statements[3].args[1].kind == primec::Expr::Kind::Call);
   CHECK(generated->statements[3].args[1].name == "convert");
   REQUIRE(generated->statements[3].args[1].templateArgs.size() == 1);
-  CHECK(generated->statements[3].args[1].templateArgs.front() == "bool");
+  CHECK(generated->statements[3].args[1].templateArgs.front() == "i32");
+
+  REQUIRE(generated->statements[4].kind == primec::Expr::Kind::Call);
+  CHECK(generated->statements[4].name == "assign");
+  REQUIRE(generated->statements[4].args.size() == 2);
+  REQUIRE(generated->statements[4].args[1].kind == primec::Expr::Kind::Call);
+  CHECK(generated->statements[4].args[1].name == "convert");
+  REQUIRE(generated->statements[4].args[1].templateArgs.size() == 1);
+  CHECK(generated->statements[4].args[1].templateArgs.front() == "bool");
 }
 
 TEST_CASE("generate Deserialize for empty reflected struct keeps version guards only") {
@@ -310,7 +320,7 @@ main() {
     }
   }
   REQUIRE(generated != nullptr);
-  REQUIRE(generated->statements.size() == 2);
+  REQUIRE(generated->statements.size() == 3);  // TODO-4766 fix: +1 for the leading payloadCount binding
 }
 
 TEST_CASE("generate Deserialize ignores static fields") {
@@ -343,7 +353,7 @@ main() {
     }
   }
   REQUIRE(generated != nullptr);
-  REQUIRE(generated->statements.size() == 2);
+  REQUIRE(generated->statements.size() == 3);  // TODO-4766 fix: +1 for the leading payloadCount binding
 }
 
 TEST_CASE("generate Compare Hash64 Clear CopyFrom Validate Serialize Deserialize helpers keep canonical v2 order") {
