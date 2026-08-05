@@ -1743,7 +1743,17 @@ This file is the live open-work queue for PrimeStruct.
     target file remain unfixed even with the (reverted) broad version,
     also still open.
 
-- [ ] TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
+- [x] TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters (RESOLVED)
+  - resolution_summary (2026-08-05): this leaf's own scope was
+    triage-only (stop_rule explicitly defers all source fixes to the
+    follow-up leaves it names), and every named follow-up file/cluster
+    is now green: `./PrimeStruct_semantics_tests
+    --test-suite="primestruct.semantics.calls_flow.collections"` passes
+    1305/1305 cases, 4873/4873 assertions, including all 92 cases across
+    the 13 files this entry enumerated (wrapper_returned_map_method_resolution.cpp,
+    wrapper_temporary_access_resolution.cpp,
+    vector_stdlib_push_auto_inference.cpp, and the rest of the
+    per-file breakdown above). No further triage or filing needed.
   - owner: ai
   - created_at: 2026-07-15
   - phase: Hidden test failure remediation
@@ -2109,7 +2119,20 @@ This file is the live open-work queue for PrimeStruct.
     namespace-recognition broadening like the other 3, so it's larger
     in scope than this progress note's fixes.
 
-- [ ] TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
+- [x] TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline (RESOLVED)
+  - resolution_summary (2026-08-05): re-verified against the current
+    build. All 95 TEST_CASEs in
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    (a superset of this entry's 18 named cases) pass individually
+    (95/95, 647/647 assertions) - the test-side modernization blocked on
+    in `progress_2026-07-18b`'s (a)-(e) gap list has evidently landed
+    since (the file is untouched by this session; likely closed out by
+    the same TODO-4741/TODO-4739-adjacent passes that fixed TODO-4723's
+    scope). Also re-verified the confirmed-overlapping vm.collections
+    case named in this entry's acceptance criteria, "rejects vm user
+    vector pop call expression shadow"
+    (`test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`) -
+    passes. No code changes were needed in this session.
   - owner: ai
   - created_at: 2026-07-16
   - phase: Hidden test failure remediation
@@ -5271,7 +5294,32 @@ This file is the live open-work queue for PrimeStruct.
     ~7.5GB Debug tree) - do not build both trees' full target sets
     simultaneously without checking `df` first.
 
-- [ ] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
+- [x] TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases) (RESOLVED)
+  - resolution_summary (2026-08-05): re-verified against the current
+    build rather than re-deriving from scratch, since this entry's own
+    progress notes show most sub-clusters were already fixed across the
+    2026-07-16 through 2026-07-22d passes (imported-helper diagnostics,
+    the rooted-helper-fallback pair, the metadataPathCandidates
+    unrooted-key bridge, etc.) with only prose-level uncertainty about
+    final status left behind. Ran the acceptance criterion directly: all
+    70 TEST_CASEs in
+    `test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp`
+    (a superset of the 15 named in scope) pass individually via
+    `PrimeStruct_semantics_tests -tc=<names>` (70/70, 281/281 assertions).
+    Also spot-verified the three previously-unresolved emitters-cluster
+    residuals mentioned in the 2026-07-22d note ("rejects explicit map
+    slash-method count receiver fallback", "rejects rooted map contains
+    and tryAt direct-call return metadata", "rejects bare map access
+    metadata-only struct forwarding") - all 3 pass now - plus full runs
+    of the four emitters files this TODO's notes touched
+    (map_metadata_resolution.cpp 19/19, vector_access_metadata_resolution.cpp
+    14/14, namespaced_vector_push_and_count_helpers.cpp 25/25,
+    wrapper_map_count_sugar.cpp 19/19). No code changes were needed in
+    this session - the earlier passes' fixes already cover the full
+    scope. Note: TODO-4739 (vector/at direct-call override-precedence,
+    filed as this TODO's own explicit follow-up for a separate root
+    cause) remains open and tracked independently - it is out of this
+    TODO's 15-case scope, not a residual of it.
   - owner: ai
   - created_at: 2026-07-16
   - phase: Hidden test failure remediation
