@@ -3107,14 +3107,13 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050 shape (a) (RESOLVED): canonical public soa read-helper
-  // routing (get/ref/count) now works correctly on a receiver expression
-  // that is itself a call to a user-defined helper returning
-  // Reference<SoaVector<T>>. The fixture still fails, but only at
-  // .to_aos() (a separate, narrower, pre-existing gap - no stdlib
-  // to_aos_ref function exists at all, for any receiver kind).
-  CHECK_FALSE(ok);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): canonical public soa
+  // read-helper routing (get/ref/count/to_aos) now all work correctly on a
+  // receiver expression that is itself a call to a user-defined helper
+  // returning Reference<SoaVector<T>>. Verified via a standalone
+  // `--emit=vm` probe that the fixture also runs to completion, returning
+  // 20 (9 + 7 + 2 + 2).
+  CHECK(ok);
 }
 
 TEST_CASE("semantic product keeps method-like borrowed soa read targets on canonical wrappers compatibility") {
@@ -3155,12 +3154,12 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050 shape (a) (RESOLVED): same fix class as the free-function
-  // variant above, for the struct-method receiver form - get/ref/count
-  // now all resolve; the fixture still fails, but only at .to_aos()
-  // (a separate, narrower gap - see the free-function variant's note).
-  CHECK_FALSE(ok);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): same fix class as the
+  // free-function variant above, for the struct-method receiver form -
+  // get/ref/count/to_aos now all resolve. Verified via a standalone
+  // `--emit=vm` probe that the fixture also runs to completion, returning
+  // 20 (9 + 7 + 2 + 2).
+  CHECK(ok);
 }
 
 TEST_CASE("semantic product keeps borrowed soa ref_ref targets on same-path helpers compatibility") {
@@ -3494,14 +3493,12 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050 shape (a) (RESOLVED): same fix class as the method-call-form
-  // cases above, for direct-call syntax - get/get_ref/ref/ref_ref/count/
-  // count_ref now all resolve; the fixture still fails, but only at
-  // to_aos_ref (a separate, narrower, pre-existing gap: no stdlib
-  // to_aos_ref function exists at all, for any receiver kind - see the
-  // free-function variant's note above).
-  CHECK_FALSE(ok);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): same fix class as the
+  // method-call-form cases above, for direct-call syntax -
+  // get/get_ref/ref/ref_ref/count/count_ref/to_aos/to_aos_ref now all
+  // resolve. Verified via a standalone `--emit=vm` probe that the fixture
+  // also runs to completion, returning 40 (9+9+7+7+2+2+2+2).
+  CHECK(ok);
 }
 
 TEST_CASE("semantic product keeps helper-return borrowed soa field views on canonical reads compatibility") {

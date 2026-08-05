@@ -4057,7 +4057,7 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       expr.name = borrowedHelperRoot + "ref_ref";
       return true;
     }
-    expr.name = semantics::compatibilitySoaHelperTargetPath("to_aos_ref");
+    expr.name = borrowedHelperRoot + "to_aos_ref";
     return true;
   }
   if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {

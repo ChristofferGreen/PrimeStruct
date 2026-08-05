@@ -2571,10 +2571,17 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
-  // Residual TODO-4731 gap (h) family: borrowed to_aos_ref canonical wrappers are not routed yet.
-  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  // TODO-5050 to_aos_ref gap (RESOLVED): the explicit rooted-path call now
+  // resolves to the real `to_aos_ref<T>` stdlib function, so semantic
+  // validation succeeds (superseding the old TODO-4731 gap (h) rejection
+  // this test pinned). A standalone `--emit=vm` probe shows the program
+  // still fails to compile (exit 2), but with no diagnostic text printed
+  // at all - a distinct, narrower, not-yet-investigated gap somewhere
+  // between semantic validation and VM code generation for this call
+  // shape, out of scope for TODO-5050's routing fixes.
+  CHECK(parseAndValidate(source, program, semanticProgram, error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("borrowed helper-return experimental wrapper bare conversion alias lowers through generic wildcard import") {

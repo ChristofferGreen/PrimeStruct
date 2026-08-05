@@ -8467,7 +8467,7 @@ This file is the live open-work queue for PrimeStruct.
     need their own triage - out of scope for this fix, noted for
     tracking.
 
-- [x] TODO-5050 (PARTIALLY RESOLVED - shape (a) fixed, shape (b) partially fixed as a side effect, shape (c) still open): Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
+- [x] TODO-5050 (PARTIALLY RESOLVED - shape (a) fixed, shape (b) partially fixed as a side effect, shape (c) still open, to_aos_ref gap now fixed): Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
   - owner: ai
   - created_at: 2026-07-31
   - phase: Hidden test failure remediation
@@ -8550,6 +8550,49 @@ This file is the live open-work queue for PrimeStruct.
     verified via a standalone `primec`/`--emit=vm` probe of the exact
     fixture before the test assertion was edited, per this epic's
     established discipline.
+  - to_aos_ref gap resolution (2026-08-05): fixed both halves. (1) Added
+    the missing public stdlib wrapper `/std/collections/soa/to_aos_ref<T>`
+    in `stdlib/std/collections/soa.prime`, mirroring `count_ref`/`get_ref`/
+    `ref_ref` - the internal `soaVectorToAosRef<T>` implementation already
+    existed, only the public wrapper was missing. (2) That alone wasn't
+    enough: `rewriteBuiltinSoaToAosCallExpr`'s borrowed-receiver branch in
+    `SemanticsValidate.cpp` (~line 4060) unconditionally rewrote borrowed
+    `.to_aos()`/`to_aos_ref(...)` calls to
+    `semantics::compatibilitySoaHelperTargetPath("to_aos_ref")` - the dead
+    `/std/collections/soa_vector/to_aos_ref` spelling - instead of the
+    `borrowedHelperRoot + "to_aos_ref"` pattern its sibling
+    count/get/ref branches already used (their ternary computing
+    `borrowedHelperRoot` was itself dead code, both arms already resolving
+    to `/std/collections/soa/`, left over from an earlier fix that never
+    touched the to_aos_ref arm). Fixed by routing to_aos_ref through the
+    same `borrowedHelperRoot + "to_aos_ref"` pattern. Verified via
+    `--dump-stage ast-semantic` that borrowed `.to_aos()`/`to_aos_ref(...)`
+    calls (bare, method-call, explicit-template, doubly-borrowed,
+    struct-method-receiver, free-function-receiver shapes) all now rewrite
+    to the real canonical path and the programs compile/run correctly.
+    This full-program-execution reach (not just semantic validation)
+    updated 8 `test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`
+    cases from "rejects at compile" to "runs to completion, returning
+    <verified value>", 8 `test_compile_run_text_filters_dumps.cpp` AST-dump
+    cases, 1 `test_compile_run_imports_operations.cpp` case (which now
+    fails later, at IR lowering, with a distinct
+    struct-parameter-type-mismatch error for the `soa<T>`-vs-`SoaVector<T>`
+    monomorphization mismatch - not investigated further, out of scope),
+    and 12 semantics-suite cases (10 in
+    `test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`,
+    plus the two `test_semantics_type_resolution_graph_snapshots.cpp`
+    to_aos_ref cases already counted above). Also found and re-pinned (not
+    fixed) a new, narrower, silent gap while sweeping: the explicit
+    rooted-path call `/std/collections/soa/to_aos_ref<T>(borrowedReceiver)`
+    now passes semantic validation (previously rejected as "unknown
+    method"), but still fails to compile to `--emit=vm` with exit 2 and
+    *no diagnostic text printed at all* - `PrimeStruct_backend_ir_tests`'
+    "borrowed helper-return experimental wrapper lowers through conversion
+    helper" test was re-pinned to this verified behavior. `PrimeStruct_semantics_tests`
+    2940/2940, `PrimeStruct_compile_run_tests` 2940/2940 (18 cases
+    re-pinned total in this pass), `PrimeStruct_backend_ir_tests` 1739/1741
+    (the same 2 pre-existing unrelated failures, plus this one re-pin) all
+    green.
   - stop_rule (updated): do not attempt shape (c) or the templated-
     same-path-shadow sub-case of shape (b) without first reproducing them
     standalone and tracing to a specific function/line - both were

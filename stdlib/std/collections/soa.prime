@@ -252,3 +252,8 @@ namespace std {
 /std/collections/soa/to_aos<T>([SoaVector<T>] values) {
   return(/std/collections/soa/soaVectorToAos<T>(values))
 }
+
+[public effects(heap_alloc), return<vector<T>>]
+/std/collections/soa/to_aos_ref<T>([Reference<SoaVector<T>>] values) {
+  return(/std/collections/soa/soaVectorToAosRef<T>(values))
+}

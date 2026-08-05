@@ -1911,13 +1911,11 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_soa_borrowed_local_methods_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
-  // local Reference<SoaVector<T>> binding; the fixture still fails, but
-  // only at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
-  // to_aos_ref function exists at all, for any receiver kind, including
-  // this local-binding case).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): get/ref/count/to_aos
+  // all now resolve on this local Reference<SoaVector<T>> binding, so the
+  // program runs to completion, returning 38 (7+9+9+7+2+2+2).
+  CHECK(runCommand(runCmd) == 38);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs inline location experimental soa read-only methods") {
@@ -1996,12 +1994,11 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_soa_borrowed_return_methods_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
-  // borrowed helper-return receiver; the fixture still fails, but only at
-  // .to_aos() (a separate, narrower, pre-existing gap - no stdlib
-  // to_aos_ref function exists at all, for any receiver kind).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): get/ref/count/to_aos
+  // all now resolve on this borrowed helper-return receiver, so the
+  // program runs to completion, returning 38 (7+9+9+7+2+2+2).
+  CHECK(runCommand(runCmd) == 38);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs method-like borrowed helper-return experimental soa helper surfaces") {
@@ -2099,13 +2096,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_direct_return_borrowed_return_reads_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5050 shape (a) (RESOLVED): count/count_ref now route to the
-  // canonical public soa helper on this borrowed helper-return receiver;
-  // this fixture now proceeds further and only fails at .to_aos() (a
-  // separate, narrower, pre-existing gap - no stdlib to_aos_ref function
-  // exists at all, for any receiver kind).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): count/get/ref/to_aos/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program runs to completion, returning 55
+  // (2 + 2 + 7 + 12 + 12 + 12 + 8).
+  CHECK(runCommand(runCmd) == 55);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs direct return method-like borrowed helper-return experimental soa reads") {
@@ -2151,10 +2147,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_direct_return_method_like_borrowed_return_reads_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: bare count(...).to_aos() on a Reference<SoaVector<T>> resolves
-  // to a "to_aos_ref" method name that doesn't exist.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): count/get/ref/to_aos/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program runs to completion, returning 55
+  // (2 + 2 + 7 + 12 + 12 + 12 + 8).
+  CHECK(runCommand(runCmd) == 55);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs direct return inline location borrowed helper-return experimental soa reads") {
@@ -2197,10 +2195,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_direct_return_inline_location_borrowed_return_reads_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: bare count(...).to_aos() on a Reference<SoaVector<T>> resolves
-  // to a "to_aos_ref" method name that doesn't exist.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): count/get/ref/to_aos/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program runs to completion, returning 52
+  // (2 + 2 + 9 + 7 + 12 + 8 + 12).
+  CHECK(runCommand(runCmd) == 52);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs inline location method-like borrowed helper-return experimental soa helpers") {
@@ -2270,12 +2270,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_inline_location_method_like_borrowed_return_helpers_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
-  // doubly-borrowed struct-method receiver; the fixture still fails, but
-  // only at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
-  // to_aos_ref function exists at all, for any receiver kind).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): get/ref/count/to_aos/
+  // field-view accessors all now resolve on this doubly-borrowed
+  // struct-method receiver, so the program runs to completion, returning
+  // 147.
+  CHECK(runCommand(runCmd) == 147);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs direct return inline location method-like borrowed helper-return experimental soa reads") {
@@ -2322,10 +2322,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_direct_return_inline_location_method_like_borrowed_return_reads_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: bare count(...).to_aos() on a Reference<SoaVector<T>> resolves
-  // to a "to_aos_ref" method name that doesn't exist.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): count/get/ref/to_aos/
+  // field-view accessors all now resolve on this doubly-borrowed
+  // struct-method receiver, so the program runs to completion, returning
+  // 52.
+  CHECK(runCommand(runCmd) == 52);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs inline location borrowed helper-return experimental soa helpers") {
@@ -2385,12 +2387,12 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_inline_location_borrowed_return_helpers_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
-  // doubly-borrowed free-function receiver; the fixture still fails, but
-  // only at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
-  // to_aos_ref function exists at all, for any receiver kind).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): get/ref/count/to_aos/
+  // field-view accessors all now resolve on this doubly-borrowed
+  // free-function receiver, so the program runs to completion, returning
+  // 116.
+  CHECK(runCommand(runCmd) == 116);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("runs vm experimental soa storage helpers") {

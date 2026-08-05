@@ -674,14 +674,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): count/count_ref/get/
+  // ref/to_aos/to_aos_ref/field-view accessors all now route correctly on
+  // this borrowed helper-return receiver, so the whole program validates
+  // and (verified via a standalone `--emit=vm` probe) runs to completion
+  // returning 55 (2 + 2 + 7 + 12 + 12 + 12 + 8).
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  // TODO-5050 shape (a) (RESOLVED): count/count_ref now route to the
-  // canonical public soa helper on this borrowed helper-return receiver;
-  // validation now proceeds further and only fails at .to_aos() (the
-  // separate, narrower, pre-existing to_aos_ref gap - see the other
-  // TODO-5050 re-pinned tests in this file for details).
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("public soa to_aos helper validates on public wrapper bindings") {
@@ -1004,10 +1003,14 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) (RESOLVED): get/ref/to_aos/count all now route
+  // correctly on this borrowed-parameter receiver, so the program
+  // validates. (A standalone `--emit=vm` probe shows it then crashes at
+  // runtime with "array index out of bounds" - the fixture's single-
+  // element vector doesn't have the index-1 elements `.ref(1i32)`/
+  // `get(borrowed, 1i32)` read, unrelated to this TODO's routing gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa") !=
-        std::string::npos);
 }
 
 TEST_CASE("experimental soa inline location read-only methods reject rooted helper path") {
@@ -1088,10 +1091,15 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) (RESOLVED): get/ref/to_aos/count all now route
+  // correctly on this doubly-borrowed helper-return receiver, so the
+  // program validates. (A standalone `--emit=vm` probe shows it then
+  // crashes at runtime with "array index out of bounds" - the fixture's
+  // single-element vector doesn't have the index-1 elements various
+  // `.ref(1i32)`/`get(..., 1i32)` calls read, unrelated to this TODO's
+  // routing gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa") !=
-        std::string::npos);
 }
 
 TEST_CASE("experimental soa borrowed helper-return helper surfaces reject current ref_ref path") {
@@ -1127,10 +1135,14 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) (RESOLVED): get/ref/to_aos/count all now route
+  // correctly on this borrowed helper-return receiver, so the program
+  // validates. (A standalone `--emit=vm` probe shows it then crashes at
+  // runtime with "array index out of bounds" - the fixture's single-
+  // element vector doesn't have the index-1 elements `.ref(1i32)`/
+  // `get(..., 1i32)` read, unrelated to this TODO's routing gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
 }
 
 TEST_CASE("experimental soa alias-only borrowed helper-return helpers resolve current ref_ref path") {
@@ -1253,10 +1265,15 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): count/to_aos/get/ref/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program validates. (A standalone `--emit=vm` probe
+  // shows it then crashes at runtime with "array index out of bounds" -
+  // the fixture's single-element vector doesn't have the index-1 elements
+  // `.ref(...)`/`get(..., 1i32)` read, unrelated to this TODO's routing
+  // gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
 }
 
 TEST_CASE("experimental soa direct helper shadows validate without duplicate reserve diagnostics") {
@@ -1427,13 +1444,15 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): get/ref/count/to_aos/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program validates. (A standalone `--emit=vm` probe
+  // shows it then crashes at runtime with "array index out of bounds" -
+  // the fixture's single-element vector doesn't have the index-1 elements
+  // various `.ref(1i32)`/`get(..., 1i32)` calls read, unrelated to this
+  // TODO's routing gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
-  // borrowed helper-return receiver; the fixture still fails, but only at
-  // .to_aos() (a separate, narrower, pre-existing gap - no stdlib
-  // to_aos_ref function exists at all, for any receiver kind).
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") != std::string::npos);
 }
 
 TEST_CASE("experimental soa direct return inline location method-like borrowed") {
@@ -1473,10 +1492,15 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): count/to_aos/get/ref/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program validates. (A standalone `--emit=vm` probe
+  // shows it then crashes at runtime with "array index out of bounds" -
+  // the fixture's single-element vector doesn't have the index-1 elements
+  // `.get(1i32)`/`get(..., 1i32)` read, unrelated to this TODO's routing
+  // gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
 }
 
 TEST_CASE("experimental soa stdlib get helper accepts direct soa wildcard import") {
@@ -2620,10 +2644,15 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): count/to_aos/get/ref/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program validates. (A standalone `--emit=vm` probe
+  // shows it then crashes at runtime with "array index out of bounds" -
+  // the fixture's single-element vector doesn't have the index-1 elements
+  // `.ref(1i32)`/`get(..., 1i32)` read, unrelated to this TODO's routing
+  // gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
 }
 
 TEST_CASE("experimental soa stdlib reflected method-like borrowed helper-return index syntax reports field_count diagnostic") {
@@ -2737,10 +2766,15 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): count/to_aos/get/ref/
+  // field-view accessors all now resolve on this borrowed helper-return
+  // receiver, so the program validates. (A standalone `--emit=vm` probe
+  // shows it then crashes at runtime with "array index out of bounds" -
+  // the fixture's single-element vector doesn't have the index-1 elements
+  // `.get(1i32)`/`get(..., 1i32)` read, unrelated to this TODO's routing
+  // gaps.)
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
 }
 
 TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {

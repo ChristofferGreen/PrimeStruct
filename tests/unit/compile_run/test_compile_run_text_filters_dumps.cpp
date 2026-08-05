@@ -1137,17 +1137,18 @@ main() {
        "primec_dump_ast_semantic_inline_location_method_like_borrowed_return_experimental_soa_helpers_err.txt")
           .string();
 
-  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
-  // doubly-borrowed (location(holder.pickBorrowed(location(values))))
-  // receiver; the fixture still fails, but only at .to_aos() (a separate,
-  // narrower, pre-existing gap - no stdlib to_aos_ref function exists at
-  // all, for any receiver kind).
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): get/ref/count/to_aos
+  // all now resolve on this doubly-borrowed
+  // (location(holder.pickBorrowed(location(values)))) receiver. Verified
+  // via a standalone `--dump-stage ast-semantic` probe that `.to_aos()`
+  // now rewrites to the real canonical `/std/collections/soa/to_aos_ref`
+  // helper (not the retired `soa_vector` spelling).
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites direct return method-like borrowed helper-return experimental soa reads") {
@@ -1200,17 +1201,16 @@ main() {
        "primec_dump_ast_semantic_direct_return_method_like_borrowed_helper_reads_err.txt")
           .string();
 
-  // TODO-4756 (extends): .to_aos() method-call sugar on a method-like
-  // borrowed receiver misroutes to the dead legacy
-  // /std/collections/soa_vector/to_aos_ref spelling and fails to compile,
-  // same as the other borrowed to_aos() cases in this file. Re-pinned to
-  // the verified current rejection.
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): .to_aos() method-call
+  // sugar on a method-like borrowed receiver now rewrites to the real
+  // canonical /std/collections/soa/to_aos_ref helper instead of the dead
+  // legacy soa_vector spelling, so the program compiles.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites direct return borrowed helper-return experimental soa reads") {
@@ -1259,17 +1259,15 @@ main() {
        "primec_dump_ast_semantic_direct_return_borrowed_helper_reads_err.txt")
           .string();
 
-  // TODO-5050 shape (a) (RESOLVED): count/count_ref now route to the
-  // canonical public soa helper on this borrowed helper-return receiver;
-  // this fixture now proceeds further and only fails at .to_aos() (a
-  // separate, narrower, pre-existing gap - no stdlib to_aos_ref function
-  // exists at all, for any receiver kind).
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): count/get/ref/to_aos
+  // all now route correctly on this borrowed helper-return receiver, so
+  // the program compiles.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites direct return inline location method-like borrowed") {
@@ -1322,17 +1320,16 @@ main() {
        "primec_dump_ast_semantic_direct_return_inline_location_method_like_borrowed_helper_reads_err.txt")
           .string();
 
-  // TODO-4756 (extends): count(...to_aos()) on an inline-location
-  // method-like borrowed receiver misroutes to the dead legacy
-  // /std/collections/soa_vector/to_aos_ref spelling and fails to compile,
-  // same as the other borrowed to_aos() cases in this file. Re-pinned to
-  // the verified current rejection.
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): count(...to_aos()) on
+  // an inline-location method-like borrowed receiver now rewrites to the
+  // real canonical /std/collections/soa/to_aos_ref helper instead of the
+  // dead legacy soa_vector spelling, so the program compiles.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites direct return inline location borrowed helper-return experimental soa reads") {
@@ -1381,17 +1378,16 @@ main() {
        "primec_dump_ast_semantic_direct_return_inline_location_borrowed_helper_reads_err.txt")
           .string();
 
-  // TODO-4756 (extends): count(...to_aos()) on an inline-location borrowed
-  // receiver misroutes to the dead legacy
-  // /std/collections/soa_vector/to_aos_ref spelling and fails to compile,
-  // same as the other borrowed to_aos() cases in this file. Re-pinned to
-  // the verified current rejection.
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): count(...to_aos()) on
+  // an inline-location borrowed receiver now rewrites to the real
+  // canonical /std/collections/soa/to_aos_ref helper instead of the dead
+  // legacy soa_vector spelling, so the program compiles.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites builtin soa count forms to canonical helper path") {
@@ -1803,17 +1799,16 @@ main() {
       (testScratchPath("") / "primec_dump_ast_semantic_borrowed_return_experimental_soa_to_aos_err.txt")
           .string();
 
-  // TODO-4756 (extends): .to_aos() method-call sugar on a borrowed
-  // Reference<SoaVector<Particle>> receiver now misroutes to the dead
-  // legacy /std/collections/soa_vector/to_aos_ref spelling (not the
-  // canonical /std/collections/soa/to_aos_ref__ this test expected) and
-  // fails to compile. Re-pinned to the verified current rejection.
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): .to_aos() method-call
+  // sugar on a borrowed Reference<SoaVector<Particle>> receiver now
+  // rewrites to the real canonical /std/collections/soa/to_aos_ref
+  // helper, so the program compiles.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa to_aos_ref via canonical helper") {
@@ -1851,16 +1846,16 @@ main() {
       (testScratchPath("") / "primec_dump_ast_semantic_borrowed_return_experimental_soa_to_aos_ref_err.txt")
           .string();
 
-  // TODO-4756 (extends): explicit .to_aos_ref<Particle>() method-call sugar
-  // now rejects the explicit template argument outright ("to_aos_ref does
-  // not accept template arguments") instead of resolving to the canonical
-  // helper this test expected. Re-pinned to the verified current rejection.
+  // TODO-4756/TODO-5050 to_aos_ref gap (RESOLVED): explicit
+  // .to_aos_ref<Particle>() method-call sugar now resolves to the real
+  // canonical /std/collections/soa/to_aos_ref helper, so the program
+  // compiles.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: to_aos_ref does not accept template arguments") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic keeps helper-return experimental soa to_aos with same-path helper") {
@@ -2291,16 +2286,15 @@ main() {
        "primec_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_helpers_err.txt")
           .string();
 
-  // TODO-5050 shape (a) (RESOLVED): get/ref/count now all resolve on this
-  // inline-location borrowed receiver; the fixture still fails, but only
-  // at .to_aos() (a separate, narrower, pre-existing gap - no stdlib
-  // to_aos_ref function exists at all, for any receiver kind).
+  // TODO-5050 shape (a) + to_aos_ref gap (RESOLVED): get/ref/count/to_aos
+  // all now resolve on this inline-location borrowed receiver, so the
+  // program compiles.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/to_aos_ref") !=
-        std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(outPath).find("/std/collections/soa/to_aos_ref") != std::string::npos);
+  CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast_semantic alias works") {
