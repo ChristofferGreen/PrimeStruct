@@ -6051,6 +6051,51 @@ This file is the live open-work queue for PrimeStruct.
     the first place, since the same bug likely affects any other
     map-namespaced method-sugar call sharing whatever code path produces
     the truncated `/map/` prefix.
+  - investigated_2026-08-05: gdb-traced (breakpoint on
+    `SemanticValidationResultSink::fail` with message matching, then a
+    second sweep tracing which calls ever enter
+    `validateExprPreDispatchDirectCalls`) to the exact rejection site:
+    `SemanticsValidatorExprPreDispatchDirectCalls.cpp:813-820`, the
+    "even when the canonical helper is imported, calling it on a legacy
+    alias receiver (map<K,V> rather than MapValue<K,V>) is retired"
+    branch. Confirmed `values.at(1i32)` (Name receiver, method-call
+    sugar) desugars to an unqualified bare-call form (`isMethodCall`
+    already `false`, `expr.name == "at"`, args = [receiver, key]) by
+    the time it reaches this function - the SAME shape a hypothetical
+    bare unqualified `at(values, key)` call would have. `.insert()`/
+    `.count()` sugar on the identical receiver, by contrast, NEVER
+    enters `validateExprPreDispatchDirectCalls` at all (confirmed via an
+    unconditional entry-trace over the whole compile) - they resolve
+    earlier via `resolveMethodTarget`'s `setPreferredKeyValueMethodTarget`
+    path and never reach the legacy-receiver check. This asymmetry (not
+    a wrong-prefix bug) is the real mechanism: `at`/`at_unsafe`
+    specifically route through the generic pre-dispatch resolver (see
+    `shouldBuiltinValidateBareKeyValueAccessCall` in
+    `SemanticsValidatorExpr.cpp:872-876`, which only covers the
+    `at`-family, not insert/count), and once there, `isLegacyAliasReceiver`
+    fires because `map<K,V>` (lowercase) IS a registered legacy-alias
+    spelling for `MapValue<K,V>`, regardless of how the call was
+    written.
+    **Direct test-suite conflict found, blocking a safe fix**: an
+    EXISTING PASSING test,
+    "canonical map value methods report retired insert diagnostics" in
+    `test_semantics_calls_and_flow_collections_count_helpers_and_bare_map_calls.cpp`
+    (`import /std/collections/*`, `[map<string, Owned> mut] values`,
+    4x successful `.insert()` sugar calls, then `.tryAt()`/`.at()`/
+    `.count()`/`.contains()` sugar), explicitly expects rejection with
+    this exact message ("unknown call target: /map/at") for `.at()`
+    method-sugar on a `map<K,V>` receiver - the identical call shape
+    TODO-4749 wants fixed to SUCCEED. Both tests use `import
+    /std/collections/*` and a lowercase `map<K,V>` receiver; one wants
+    `.at()` sugar accepted, the other wants it rejected. This is not a
+    simple prefix bug to patch - it's an unresolved design question
+    (does the "legacy alias receiver" retirement apply to method-sugar
+    calls or only to genuinely-explicit/bare-spelled calls?) that needs
+    a decision before any fix, the same class of "which contract is
+    current" ambiguity flagged as regression-prone elsewhere in this
+    session's history (see TODO-4756's investigation notes). Not fixed
+    or re-pinned this session - left open with this trace so a future
+    session doesn't have to re-derive the entry point.
 
 - [ ] TODO-4750: Investigate `SoaSchemaChunkFieldCount`/`SoaSchemaChunkCount` reflection-generated helpers hitting "missing return in IR function" on `--emit=vm`
   - owner: ai
@@ -7101,6 +7146,25 @@ This file is the live open-work queue for PrimeStruct.
     first confirming which behavior (dispatch to same-path shadow vs.
     reject) is actually intended - this may be deliberate tightening
     rather than a bug.
+  - investigated_2026-08-05: re-verified against the current build - all
+    28 cases in `test_compile_run_vm_collections_map_wrapper_shadows.cpp`
+    pass (still pinned to the same not-root-caused messages from the
+    prior session, unchanged). Neither acceptance option is actually met
+    yet: (a) the same-path `/std/collections/vector/count([map<i32,i32>]
+    values)` shadow is still not dispatched to (still rejects), and (b)
+    the rejection still names the map-namespaced path
+    (`/std/collections/map/count`), not the vector-qualified spelling
+    the user actually wrote. This is a Call-receiver shape
+    (`wrapMap()./std/collections/vector/count()`, receiver is a call
+    expression, not a Name) - structurally different from TODO-4749's
+    Name-receiver `.at()` bug, so not the same root cause, though both
+    now look like instances of a broader "unqualified/cross-namespace
+    slash-method resolution on a non-matching receiver type" family.
+    Per the stop_rule, did not touch the resolution code without first
+    confirming intended behavior; that confirmation (same-path shadow
+    dispatch vs. deliberate rejection) still needs a project-level
+    decision, not a compiler trace, so leaving this open rather than
+    guessing.
 
 - [ ] TODO-4758: count() on a fresh (unbound) vector literal returns 0 instead of the literal's element count
   - owner: ai
@@ -7135,6 +7199,29 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: reproduce with the smallest form first (no user functions,
     no shadowing) before assuming any connection to TODO-4752 beyond the
     structural similarity noted above.
+  - investigated_2026-08-05: reproduced the minimal repro standalone
+    exactly as scoped - confirmed `primec --emit=vm t4758.prime --entry
+    /main` exits 0 (not 3) for `return(count(vector<i32>(1i32, 2i32,
+    3i32)))` (note: this build's `primec --emit=vm` executes the program
+    directly and returns the program's own exit code, rather than
+    writing a runnable `.vm` file to disk - useful to record since nothing
+    else in this doc's repro instructions makes that explicit).
+    `--dump-stage ir` shows the call staying unlowered at that stage
+    (`return count(vector(1, 2, 3))`), so the wrong value is introduced
+    later, during final IR-to-VM lowering/emission, not during initial IR
+    construction. Did not find the exact emission site in this pass -
+    `IrLowererCountAccessHelpers.cpp` (2000+ lines) has several
+    Call-kind-receiver branches for count() but none obviously specific
+    to a bare `vector<T>(...)` constructor-call receiver (as opposed to
+    a string/key-value access call receiver, which is what most of the
+    file's Call-receiver branches key off). Given the wrong value is
+    exactly the zero-initialized default (matching TODO-4752's pattern
+    of a freshly-materialized temporary's field read before its
+    constructing store completes) and this TODO's own implementation_notes
+    already flagged that exact connection, recommend investigating this
+    together with TODO-4752 in the runtime/backend cluster rather than
+    continuing to isolate it here - the shared root cause, if confirmed,
+    would fix both with one change. Not fixed or re-pinned this session.
 
 - [x] TODO-4757 (RESOLVED): Result.why() on a ContainerError formats to an empty string, and is severely slow, when the error originates from a map tryAt miss
   - owner: ai
@@ -7467,6 +7554,45 @@ This file is the live open-work queue for PrimeStruct.
     even via the fully-qualified call form, which bypasses whatever
     routing might affect the bare-call literal-folding pass) and must be
     verified fixed separately.
+  - investigated_2026-08-05: reproduced the minimal repro standalone
+    (confirmed prints `1`, not `300`). For (2): confirmed
+    `vectorReserveExceedsLocalCapacityLimitMessage()`
+    (`IrLowererHelpers.cpp:152`) is defined but has zero call sites
+    anywhere else in `src/` - the compile-time literal-folding/limit-
+    check pass for `reserve()` really has been fully removed/orphaned,
+    not just misrouted; whoever restores it needs to build it fresh, not
+    just find a broken call site. For (1): ruled out call-routing as the
+    cause - called `/std/collections/vector/vectorReserveInternal<i32>`
+    directly (bypassing the `reserve()`/`vectorReserve<T>` wrapper chain
+    entirely) and capacity still didn't grow, confirming the bug is
+    inside `vectorReserveInternal`'s own execution/mutation, not in how
+    calls reach it. Built several isolated analogs to bisect which
+    structural element breaks the mutation (all standalone, unrelated to
+    stdlib): a plain 2-field mut struct with sequential field writes
+    inside an if-block works; adding an intervening function call and a
+    nested if/local-var (mirroring vectorReserveInternal's
+    `allocCount`/zero-check shape) still works; making the struct and
+    the intervening call templated (`Box<T>`/`sideEffectFn<T>`) still
+    works - so no single one of "two sequential field writes",
+    "intervening call", "nested if + local var", or "templated struct
+    receiver" in isolation reproduces the bug. Attempted a live trace by
+    temporarily adding `print_line` debug statements directly inside
+    `vectorReserveInternal` in `stdlib/std/collections/vector.prime`
+    (reverted before finishing this session - confirmed via `git status`/
+    `git diff --stat` that the file is clean) but got contradictory
+    results (no output at all for the original bare-`reserve()` repro,
+    despite `vectorCheckShape` and other calls upstream clearly running;
+    a VM-lowering error for the direct-`vectorReserveInternal` repro
+    claiming `print_line` isn't supported "in expressions" for a
+    plain statement position) that weren't resolved before time ran out
+    on this pass. The remaining gap is real Pointer<uninitialized<T>>
+    reallocation plus multiple chained helper calls
+    (`vectorAllocStorage`/`vectorMovePrefixToBuffer`/`vectorFreeStorage`)
+    between the two field writes - none of the isolated analogs combined
+    ALL of those together, so the next session should build one that
+    does (real pointer field type, real multi-call sequence) rather than
+    continuing to add debug prints to the stdlib source, which produced
+    confusing/inconsistent results this pass. Not fixed or re-pinned.
 
 - [ ] TODO-4800: Fix `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` variadic-pack elements failing to lower on vm with "missing lowered definition: /array/at"
   - owner: ai
