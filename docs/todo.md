@@ -2504,6 +2504,25 @@ This file is the live open-work queue for PrimeStruct.
     problem.
 
 - [ ] TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
+  - superseded_2026-08-05: re-checked both named TEST_CASEs
+    ("canonical vector indexed removal helpers with owned elements in
+    C++ emitter", "supports indexed vector removals with ownership
+    semantics in C++ emitter") - both pass currently, but not because
+    this TODO's original defect (wrong runtime VALUE, exit 1 returning 1
+    instead of 18) was fixed. Between this TODO being filed and now, the
+    symptom changed shape: `--emit=exe` no longer silently returns a
+    wrong value, it now crashes with "invalid indirect address in IR"
+    (exit 1) - a distinct, since-filed bug now tracked as TODO-4804
+    ("Struct value returned directly from
+    /std/collections/vector/at(.../at_unsafe(...) and immediately
+    field-accessed or method-chained crashes with '(un)aligned indirect
+    address in IR'"), which explicitly covers both these TEST_CASEs by
+    name in its own scope note. This TODO's own acceptance criterion
+    (returns the correct value, doesn't crash) is NOT met - the
+    underlying defect is still open, just superseded by a broader,
+    later-filed, currently-unfixed TODO. Leaving this open but pointing
+    at TODO-4804 as the actual tracking entry rather than duplicating
+    investigation here.
   - owner: ai
   - created_at: 2026-07-22
   - phase: Hidden test failure remediation (emitters cluster)
@@ -6486,6 +6505,55 @@ This file is the live open-work queue for PrimeStruct.
     /std/gfx/experimental/SubstrateDeviceConfig`, same short-name-vs-
     fully-qualified mismatch shape as `UiScene`. Raises confidence this
     is a general struct-type-identity bug, not tied to one stdlib file.
+  - investigated_2026-08-05: root-caused
+    `isStructParamMatch`/`isStdUiStructAliasMatch`/`isStdGfxStructAliasMatch`
+    in `IrLowererInlineParamHelpers.cpp` - these already exist
+    specifically to bridge bare-vs-qualified struct name mismatches, but
+    (a) `isKnownStdUiStructAlias`'s hardcoded whitelist is simply
+    missing `UiScene` (and, once that's added, also
+    `UiSceneTextOverlays` - confirmed by probing further), and (b)
+    `isStdGfxStructAliasMatch`'s bare-to-qualified matcher hardcodes an
+    exact `"/std/gfx/" + bare` prefix, which doesn't match the REAL
+    qualified path `/std/gfx/experimental/SubstrateDeviceConfig` (extra
+    `experimental` segment) even though `SubstrateDeviceConfig` IS
+    already in that whitelist - explaining why the gfx side of this bug
+    never actually got fixed by adding names to its list.
+    **Prototyped and reverted** a two-part fix: added the missing UI
+    names, and generalized both alias matchers to check that `qualified`
+    ENDS WITH `/` + bare (any namespace depth) while still requiring the
+    right root prefix, rather than an exact one-segment-only prefix.
+    This got the minimal UiScene repro past the parameter-type-mismatch
+    check, but immediately hit a SECOND, independent bug one layer
+    deeper: `vm backend cannot resolve struct layout: UiScene` from
+    struct-slot-layout resolution (a different function/file than the
+    one this TODO's fix touches) that has the exact same short-name-vs-
+    qualified-name blind spot - meaning `isStructParamMatch` is not the
+    only place in the lowerer that compares struct type spellings
+    without canonicalizing first. Confirmed via a full
+    `PrimeStruct_compile_run_tests` run that the gfx-side prototype
+    fix, despite being "more correct" in isolation, broke 6 previously-
+    passing gfx TEST_CASEs (`gfx compatibility shim end-to-end coverage
+    runs across backends`, `experimental gfx device constructor entry
+    point runs across backends`, `experimental gfx resource wrapper
+    slice runs across backends`, `experimental gfx render pass wrapper
+    slice runs across backends`, `experimental gfx pipeline entry point
+    runs across backends`, `gfx compatibility shim substrate boundary
+    imports across backends`) - the broadened prefix match apparently
+    lets through cases the exact-prefix version correctly rejected
+    elsewhere in the gfx surface, a shape not investigated further this
+    session. Reverted both parts of the prototype in full (`git diff
+    --stat` confirms `IrLowererInlineParamHelpers.cpp` is clean) rather
+    than land a fix that trades one bug for a worse one. **Root cause
+    understood, safe fix not found**: this needs (1) a canonicalization
+    fix applied consistently everywhere a struct type's declared name is
+    compared (not just the two call sites patched here) - the
+    `structPath`/`argStruct` comparison should resolve both sides
+    through the same short-name-to-fully-qualified mapping used at
+    definition-registration time, rather than each call site
+    re-implementing its own partial alias whitelist - and (2) whatever
+    caused the 6 gfx regressions from the broadened-prefix version
+    understood and fixed before any similar generalization is
+    attempted. Not fixed this session.
 
 - [ ] TODO-4767: drop() on a plain local now requires uninitialized<T> storage
   - owner: ai
