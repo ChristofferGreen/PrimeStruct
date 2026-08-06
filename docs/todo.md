@@ -7218,6 +7218,47 @@ This file is the live open-work queue for PrimeStruct.
     exe/native path merge - other exe-only capabilities may have
     regressed the same way and should be checked once the root cause is
     found.
+  - investigated_2026-08-06: the "exe/native path merge" hypothesis does
+    NOT hold - verified all four backends against the identical minimal
+    repro: `--emit=vm` rejects with "vm backend does not support string
+    comparisons", `--emit=native` and `--emit=exe` both reject with
+    "native backend does not support string comparisons", and
+    `--emit=cpp` ALSO rejects with the identical "native backend does
+    not support string comparisons" message (same wording, same
+    "C++ IR lowering error: " prefix pattern). All four backends' AST-
+    to-IR lowering routes through the same shared
+    `emitComparisonOperatorExpr` in
+    `IrLowererOperatorComparisonHelpers.cpp`, which unconditionally
+    rejects `equal(...)` whenever either operand's inferred
+    `LocalInfo::ValueKind` is `String`, regardless of which backend
+    requested the lowering - there is no per-backend capability flag or
+    branch here at all, so this cannot be an "exe accidentally merged
+    onto native" routing bug specifically - cpp (which was never
+    supposed to share exe/native's limitations, per this TODO's own
+    framing) is equally affected right now. `git log` on
+    `IrLowererOperatorComparisonHelpers.cpp` and `IrBackends.cpp` (the
+    file containing `ExeIrBackend`, confirmed via code reading to
+    already route its final `emit()` step through the string-capable
+    `IrToCppEmitter`, same as the cpp backend - the failure happens
+    earlier, at the shared AST-to-IR lowering stage before any backend-
+    specific emit code runs) shows no recent related commits in this
+    session's history, so if `--emit=exe` genuinely once supported this,
+    the regression predates this epic's tracked changes and isn't
+    something a git-blame/bisect within this repo's visible history can
+    recover. Re-scoping: this is not a routing/merge bug to fix by
+    re-splitting exe from native - it is a missing FEATURE (string
+    equality lowering) in the shared operator-comparison IR lowering
+    used by all four backends alike. Implementing it properly means
+    teaching `emitComparisonOperatorExpr` (or a per-backend override
+    upstream of it) to lower `equal(string, string)` to an actual
+    runtime string-comparison call for the backends whose runtime models
+    support it (cpp/exe definitely can, since they emit real C++ and can
+    use `std::string::operator==`; vm/native's stack-machine IR would
+    need a new opcode or runtime-call convention) - a nontrivial,
+    multi-backend feature addition, not a small bug fix. Not attempted
+    this session given the scope; leaving open for a session with room
+    to design the cross-backend string-comparison lowering strategy
+    properly rather than a quick special-case patch.
 
 - [ ] TODO-4812: Modern soa<T>/SoaVector<T> public-surface method-sugar and canonicalization gaps found sweeping text_filters dumps
   - owner: ai
