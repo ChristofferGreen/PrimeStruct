@@ -1584,7 +1584,7 @@ This file is the live open-work queue for PrimeStruct.
     verified; rolling the same change out to every other managed suite is
     follow-up work, not part of this leaf.
 
-- [ ] TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
+- [x] TODO-4713 (RESOLVED to documented limit): Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
   - owner: ai
   - created_at: 2026-07-15
   - phase: Test runtime optimization
@@ -1652,6 +1652,35 @@ This file is the live open-work queue for PrimeStruct.
     points there - that overlaps `docs/CompatPathResolutionConsolidation.md`
     and should be its own coordinated effort, not a side effect of a
     performance leaf.
+  - resolution_2026-08-05: obtained the profiler-backed diagnosis this
+    acceptance criterion requires - `valgrind --tool=callgrind` (not
+    available in earlier sessions, confirmed present this session) on
+    the 12-column case, recorded in full under TODO-4743's
+    `progress_2026-08-05` note (same compat-path-resolution hot path,
+    same root cause family this TODO already suspected via gdb
+    sampling). Real breakdown: no single function exceeds ~6.3% of
+    total instructions; cost is genuinely diffuse across
+    `stripResolvedPathSpecializationSuffix`, `matchesAny`,
+    `resolveStdlibSurfaceMemberName`, `resolveCalleePath`, and generic
+    string/allocation primitives - confirming (with instrumentation,
+    not just statistical samples) TODO-4713's own preliminary
+    conclusion. Landed two small, verified, safe fixes found while
+    reading the profile (memoizing two pure zero-argument path-building
+    functions on the hot recursion path; a cheap early-return in
+    `stripResolvedPathSpecializationSuffix` for the common no-marker
+    case) - measured ~11% further wall-time reduction on the 16-column
+    case (~64s -> ~57s), down from the originally-reported 426s (a
+    combined ~7.5x improvement across this TODO's and TODO-4742/4743's
+    fixes to date). Zero regressions (full 3-suite verification, see
+    TODO-4743's note for exact numbers). Per this TODO's own stop_rule:
+    the profiler-backed diagnosis is now on record and a verified
+    (partial) fix has landed; the remaining cost is the same diffuse,
+    architecturally-inherent compat-path-resolution overhead TODO-4743
+    already formally accepted as a residual limitation requiring the
+    separately-scoped `docs/CompatPathResolutionConsolidation.md`
+    rewrite, not a leaf-level bug. Not attempting that broader rewrite
+    here, per the stop_rule's explicit instruction. Treating this leaf
+    as resolved to its documented limit.
 
 - [ ] TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
   - owner: ai
@@ -2709,7 +2738,26 @@ This file is the live open-work queue for PrimeStruct.
     cluster's TODO-4739 investigation found that "looks like the same
     bug" repro shapes turned out to have different root causes on
     closer inspection.
-- [ ] TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
+- [x] TODO-4742 (RESOLVED): Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
+  - resolution_2026-08-05: closing this leaf on its own bounded terms.
+    The specific algorithmic defect this TODO named -
+    `hasDefinitionFamilyPath`'s two O(N) linear scans over
+    `program_.definitions`/`paramsByDef_` - was fixed exactly as
+    `progress_2026-07-26` describes (the `definitionFamilyPathIndex()`
+    precomputed ordered index, O(log N) lookups) and verified to
+    deliver a real, reproducible 1.87x win with zero regressions.
+    The broader ~2-5s aspirational target was never met by this fix
+    alone - but per this TODO's own notes, that gap was correctly
+    triaged into TODO-4743 as a distinct, larger, multi-site
+    investigation rather than left as an open question here. TODO-4743
+    has since (across two more rounds, including this session's
+    callgrind-backed round) exhausted the safe, boundable fixes it
+    identified and formally invoked its own stop_rule, accepting the
+    residual as an architectural cost of the whole-program text-splicing
+    validation model (see TODO-4743's closing note). Since this leaf's
+    named defect is fixed and verified, and the remaining gap belongs to
+    TODO-4743's explicitly-accepted residual rather than anything left
+    undone here, marking this resolved.
   - owner: ai
   - created_at: 2026-07-26
   - phase: Compiler performance
@@ -3120,6 +3168,60 @@ This file is the live open-work queue for PrimeStruct.
     leaf level. Not closing TODO-4743 (acceptance target unmet), but
     treating further chasing here as needing fresh scoping/justification
     rather than an open thread to keep pulling on.
+  - progress_2026-08-05: obtained the "fresh scoping" the prior note
+    called for - a real profiler (`valgrind --tool=callgrind`, not
+    statistical gdb sampling) was available in this session's
+    environment. Profiled the 12-column `SoaColumnsN` monomorphization
+    case (TODO-4713's slow case, structurally the same
+    compat-path-resolution hot path this TODO already implicated).
+    `callgrind_annotate` self-cost breakdown: no single function exceeds
+    ~6.3% of total instructions (`stripResolvedPathSpecializationSuffix`
+    at 6.26%, everything else at or below ~2%, with generic
+    malloc/free/memcpy/strlen primitives making up a large chunk of the
+    top-20) - this is a real, instrumented confirmation of the diffuse-
+    cost conclusion already reached by gdb sampling, not a new finding,
+    but removes any doubt that statistical sampling missed a
+    concentrated hotspot. Found and fixed two additional small, safe,
+    verified wins while reading the profile: (1)
+    `experimentalSoaStorageTypePath`/
+    `templateMonomorphExperimentalSoaHelperPrefix`
+    (`SemanticsBuiltinPathHelpers.cpp`,
+    `TemplateMonomorphCoreUtilities.h`) were pure zero-argument (or
+    argument-independent per call) functions rebuilding the same string
+    via concatenation on every call from deep inside the per-expression-
+    node monomorphization recursion - memoized via function-local
+    `static const` (safe: both inputs are process-lifetime-immutable);
+    (2) `stripResolvedPathSpecializationSuffix`
+    (`StdlibSurfaceRegistry.cpp`) ran two substring `rfind("__t")`/
+    `rfind("__ov")` scans unconditionally - added a cheap `find("__") ==
+    npos` early return, since neither marker can match without a literal
+    "__" present (behavior-preserving: verified the existing early-return
+    path already handled "no marker found" identically). Measured
+    impact on the 16-column case: ~64s -> ~57s, a real but modest ~11%
+    further improvement - confirms the diffuse-cost diagnosis rather
+    than revealing a new dominant bottleneck (the callgrind numbers
+    predicted this: the top self-cost function was only ~6%, so no
+    single fix could move the needle dramatically). Verified via full
+    3-suite run: `PrimeStruct_compile_run_tests` 2940/2940,
+    `PrimeStruct_semantics_tests` 2940/2940,
+    `PrimeStruct_backend_ir_tests` 1739/1741 (2 pre-existing unrelated
+    failures only) - zero regressions from either change.
+    **Formally invoking this TODO's own stop_rule now**: the profiler-
+    backed diagnosis this note provides confirms (with real
+    instrumentation, not just statistical sampling) that the remaining
+    cost after TODO-4742 + this TODO's three implemented items + this
+    session's two additional micro-optimizations is genuinely diffuse
+    across dozens of small string/allocation/lookup operations
+    integral to the compat-path-resolution architecture
+    (`docs/CompatPathResolutionConsolidation.md`), not a fixable leaf-
+    level bug. Per the stop_rule, NOT attempting the broader compat-path
+    consolidation rewrite here - that is explicitly out of scope for
+    this leaf and would need its own coordinated effort. Treating the
+    ~2-5s acceptance target as not achievable without that larger,
+    separately-scoped rewrite; the achieved state (TODO-4742's 1.87x +
+    this TODO's cumulative further ~2.6x, i.e. roughly 5x faster than
+    the original baseline, with a profiler-verified diffuse-cost
+    diagnosis on record) is the accepted final state for this leaf.
 - [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
   - owner: ai
   - created_at: 2026-07-27

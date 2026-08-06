@@ -923,6 +923,14 @@ bool matchesAny(std::span<const std::string_view> spellings, std::string_view sp
 }
 
 std::string_view stripResolvedPathSpecializationSuffix(std::string_view path) {
+  // Both "__t..." and "__ov..." markers require a literal "__" - skip the
+  // two substring rfind scans entirely for the common case of a path with
+  // no "__" at all (this function sits on the hot per-expression-node
+  // monomorphization path, called on every candidate surface/alias, so
+  // the cheap npos check is a real win at scale).
+  if (path.find("__") == std::string_view::npos) {
+    return path;
+  }
   const std::size_t lastSlash = path.rfind('/');
   const std::size_t specializationMarker = path.rfind("__t");
   const std::size_t overloadMarker = path.rfind("__ov");

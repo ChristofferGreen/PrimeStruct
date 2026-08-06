@@ -54,11 +54,16 @@ std::string templateMonomorphPublicSoaHelperPrefix(bool leadingSlash = true) {
 }
 
 std::string templateMonomorphExperimentalSoaHelperPrefix() {
-  std::string prefix = experimentalSoaStorageTypePath(true);
-  const size_t lastSlash = prefix.find_last_of('/');
-  if (lastSlash != std::string::npos) {
-    prefix.erase(lastSlash + 1);
-  }
+  // Zero-argument pure function - memoize instead of recomputing on every
+  // call (this is on the hot per-expression-node monomorphization path).
+  static const std::string prefix = [] {
+    std::string result = experimentalSoaStorageTypePath(true);
+    const size_t lastSlash = result.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+      result.erase(lastSlash + 1);
+    }
+    return result;
+  }();
   return prefix;
 }
 

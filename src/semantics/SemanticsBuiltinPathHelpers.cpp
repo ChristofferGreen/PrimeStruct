@@ -395,13 +395,19 @@ std::string experimentalSoaStorageTypeName() {
 }
 
 std::string experimentalSoaStorageTypePath(bool leadingSlash) {
-  std::string path = experimentalCollectionMemberRootLocal(
-      internalSoaCollectionTypeName());
-  path += experimentalSoaStorageTypeName();
-  if (leadingSlash) {
-    path.insert(path.begin(), '/');
-  }
-  return path;
+  // Pure function of `leadingSlash` alone (both inputs it builds from are
+  // static/immutable for the process lifetime) - called deep inside
+  // per-expression-node monomorphization recursion, so memoize both
+  // outcomes instead of rebuilding the string via concatenation on every
+  // call.
+  static const std::string unrooted = [] {
+    std::string path = experimentalCollectionMemberRootLocal(
+        internalSoaCollectionTypeName());
+    path += experimentalSoaStorageTypeName();
+    return path;
+  }();
+  static const std::string rooted = "/" + unrooted;
+  return leadingSlash ? rooted : unrooted;
 }
 
 bool isInternalSoaCollectionTypeName(std::string_view normalizedTypeName) {
