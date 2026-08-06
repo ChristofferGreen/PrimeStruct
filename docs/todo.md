@@ -7543,6 +7543,38 @@ This file is the live open-work queue for PrimeStruct.
     root cause - if they turn out to be unrelated, split into separate
     TODOs rather than one combined fix that's hard to verify
     independently.
+  - investigated_2026-08-06: root-caused sub-bug (1) via temporary
+    instrumentation (added then reverted) in
+    `collectDefinitionIntraBodyCallDiagnostics`'s `scanExpr` lambda
+    (`SemanticsValidatorPassesDiagnostics.cpp`). It is NOT a shared-
+    scratch-slot overwrite as originally hypothesized - the two
+    candidate calls are handled by genuinely asymmetric code paths.
+    For the repro's `capacity(v, true)` call, some earlier resolution
+    pass has already rewritten `expr.name` from the bare `"capacity"`
+    to the fully-qualified `"/vector/capacity"` (since `v`'s type
+    resolves unambiguously to vector), so `isBuiltinCall(expr)` returns
+    false for it and it correctly flows into
+    `collectResolvedCallArgumentDiagnostic`, producing the observed
+    "argument type mismatch for /vector/capacity ..." diagnostic. For
+    the repro's `count(m)` call, no equivalent rewrite ever happens -
+    `expr.name` stays the bare, unqualified `"count"` even though `m`
+    is a map with a same-path user override at `/map/count`. Because
+    `isSimpleCallName(expr, "count")` matches on the bare name alone
+    (see `isCollectionHelperBuiltin` in this file), `isBuiltinCall`
+    unconditionally classifies bare `count(...)` calls as a generic
+    builtin collection helper regardless of any user override, so the
+    `!isBuiltinCall(expr)` guard skips it entirely and no diagnostic is
+    ever produced for it - not overwritten by capacity's diagnostic,
+    simply never generated. This is the same map/vs/vector same-path-
+    shadow resolution asymmetry documented as the still-unresolved
+    TODO-4756 (bare-name collection-helper calls resolve/rewrite
+    correctly for vector receivers but not consistently for map
+    receivers) - TODO-4756 was investigated to exhaustion earlier in
+    this epic with 4 ruled-out hypotheses and no interception point
+    found; fixing sub-bug (1) here requires the same fix as TODO-4756
+    and should not be attempted independently of it. Did not investigate
+    sub-bugs (2)/(3) further this pass since (1) turned out to depend on
+    TODO-4756 rather than being independently tractable; left open.
 
 - [ ] TODO-4816: `IrLowererHelpers.cpp` duplicates canonical vector-helper spellings as literal strings instead of routing through `CollectionSpellingClassifier`
   - owner: ai
