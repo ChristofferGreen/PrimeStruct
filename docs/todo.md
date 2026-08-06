@@ -8242,6 +8242,38 @@ This file is the live open-work queue for PrimeStruct.
     (and exe/native, not independently checked this session); all 14
     re-pinned cases above revert to their original "runs and returns N"
     expectations once fixed.
+  - investigated_2026-08-06: attempted a fix by loosening
+    `emitVectorIndexedAccessBeforeInline`'s
+    (`IrLowererLowerEmitExprTailDispatch.h`, ~line 1142) receiver-type
+    gate from requiring `targetInfo.isVectorTarget` to also accept
+    `targetInfo.isArgsPackTarget`, on the theory that `.at()`/`at()`
+    method-call-sugar dispatch simply wasn't reaching the same
+    `emitArrayVectorIndexedAccess` machinery that already correctly
+    handles args-pack targets for plain bracket-index access (confirmed
+    via code reading that `validateArrayVectorAccessTargetInfo` already
+    explicitly permits `isStructArgsPackTarget`/`isMapArgsPackTarget`/
+    `isVectorArgsPackTarget`/etc). This did NOT fix the repro - added a
+    temporary debug print (reverted) right after the gate and it never
+    fired for either the minimal repro's `.at(1i32)` inner call or the
+    outer `.count()` chain, meaning `emitVectorIndexedAccessBeforeInline`
+    is never even reached for this call shape - some earlier guard
+    (`inlineDispatchExpr.kind != Expr::Kind::Call`, the `args.size()!=2`
+    check, or the `getBuiltinArrayAccessName`/`resolveVectorHelperAliasName`
+    resolution at the top of the lambda) must already be diverting this
+    exact case elsewhere before this function's body ever runs, or this
+    whole `IrLowererLowerEmitExprTailDispatch.h` code path is only
+    reachable from a different call context than the one this repro
+    exercises (it's plausible "TailDispatch" is specific to certain
+    positions, e.g. return-statement tails, not the general nested
+    method-chain-argument position `values.at(1i32).count()` puts the
+    `.at()` call in). Reverted cleanly (verified via `git diff`). Next
+    step for a future session: trace with a debug print or gdb
+    breakpoint starting from the OUTER `.count()` call's dispatch (since
+    that's what actually fails) to find where it tries to emit its
+    receiver expression (`values.at(1i32)`) and thus discover which
+    actual function handles (or fails to handle) `.at()` sugar on an
+    args-pack in this nested-receiver position - `IrLowererLowerEmitExprTailDispatch.h`
+    may simply be the wrong file for this repro shape entirely.
   - stop_rule: verify the fix doesn't only cover the specific element
     types listed above - reproduce with at least one more untried
     `args<T>` shape (e.g. `args<map<K,V>>` or `args<vector<T>>`) before
