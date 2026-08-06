@@ -8529,7 +8529,7 @@ This file is the live open-work queue for PrimeStruct.
     independently once a candidate fix exists, the same way TODO-4752
     required doing for its own vm/native split.
 
-- [ ] TODO-4805: Direct-call `/std/collections/vector/count(...)` same-path user shadow not dispatched when the receiver is an `array<i32>`-typed helper-return value
+- [x] TODO-4805 (RESOLVED): Direct-call `/std/collections/vector/count(...)` same-path user shadow not dispatched when the receiver is an `array<i32>`-typed helper-return value
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation (emitters cluster)
@@ -8578,6 +8578,35 @@ This file is the live open-work queue for PrimeStruct.
     since the same gap likely affects other collection-typed helper-
     return receivers too (not verified this session, worth checking once
     the array case is understood).
+  - resolution_summary: found the actual divergence by comparing the
+    array repro against its already-passing string-receiver sibling
+    (same file, same shape) via a temporary debug print (reverted) at the
+    canonical direct-call `count`/`capacity` dispatch site in
+    `IrLowererLowerEmitExprTailDispatch.h`. That site has two branches:
+    one fires when the receiver arg is still a raw `Expr::Kind::Call`
+    (dispatches unconditionally via `emitInlineDefinitionCall`), the
+    other is a fallback for when the receiver has already been rewritten
+    to a materialized local `Expr::Kind::Name` (some earlier pass
+    materializes collection-typed call-receivers into a temporary local
+    before this point is reached) - the fallback only fires when the
+    resolved callee's first parameter's normalized type name is `"map"`
+    or `"vector"` per `normalizeCollectionBindingTypeName`, which has no
+    `"array"` case at all. The debug print confirmed the string repro's
+    receiver arg was still `Expr::Kind::Call` (first branch, dispatches
+    fine) while the array repro's had already been rewritten to
+    `Expr::Kind::Name` (second branch, and the missing `"array"` check
+    silently skipped shadow dispatch, falling through to the builtin).
+    Fixed by adding `ir_lowerer::isBuiltinCollectionTypeName(receiverTypeName, "array")`
+    as an additional accepted case alongside the existing map/vector
+    check - this is the general eligibility-check fix the stop_rule
+    asked for (extending the existing type-based check, not adding a
+    receiver-shape special case). Verified the minimal repro now returns
+    93 (the shadow) instead of 3 (the builtin array count), with the
+    string-receiver sibling still correctly returning 92 unaffected.
+    Full 3-suite rebuild confirmed 0 regressions (backend_ir: 1739/1741,
+    the 2 known pre-existing ir_pipeline failures only; semantics:
+    2940/2940; compile_run: 2940/2940, including the one re-pinned
+    TEST_CASE reverted to its original "returns 93" expectation).
 
 - [ ] TODO-4806: Slash-method-call chained off a helper-return vector temporary into `count(...)` fails to lower with "struct parameter type mismatch"
   - owner: ai

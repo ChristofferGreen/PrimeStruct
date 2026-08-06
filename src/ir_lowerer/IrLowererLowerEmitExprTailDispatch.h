@@ -1232,7 +1232,8 @@
                   (ir_lowerer::normalizeCollectionBindingTypeName(
                        receiverTypeName) == "map" ||
                    ir_lowerer::normalizeCollectionBindingTypeName(
-                       receiverTypeName) == "vector")) {
+                       receiverTypeName) == "vector" ||
+                   ir_lowerer::isBuiltinCollectionTypeName(receiverTypeName, "array"))) {
                 if (!emitInlineDefinitionCall(
                         inlineDispatchExpr,
                         *directVectorMetadataCallee,
