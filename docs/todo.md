@@ -8002,6 +8002,38 @@ This file is the live open-work queue for PrimeStruct.
     index for this call site) with a reverse hypothesis: find what's
     different about push/reserve's IR-lowering code path vs
     count/get/ref/ref_ref's, since both start from an identical AST.
+  - cross_reference_2026-08-06: found a concrete, more basic instance of
+    this same map/vector asymmetry while investigating TODO-4809's sub-
+    bug (1) - `SemanticsValidatorExprCollectionCountCapacity.cpp` has a
+    `context.tryRewriteBareVectorHelperCall` hook (see
+    `tryRewriteBareNamedVectorHelperCall` around line 392) that eagerly
+    rewrites a bare `count(v)`/`capacity(v)` call's `expr.name` to its
+    resolved path (e.g. `/vector/capacity`) when `v` is a vector and a
+    same-path shadow/override exists - this is what lets downstream
+    passes (including the `--collect-diagnostics` scanner in
+    `SemanticsValidatorPassesDiagnostics.cpp`) see the real target.
+    There is no equivalent `tryRewriteBareMapHelperCall` counterpart for
+    map receivers anywhere in this file or its callers - bare
+    `count(m)` for a map `m` is intentionally left unrewritten and
+    resolved generically later (this is fine and correct for the
+    *unshadowed* case - plain `count(m)` on an unshadowed map still
+    works, verified with a minimal repro), but it means a map-side
+    same-path shadow (`/map/count`) can never be distinguished from the
+    generic builtin at the point something needs to know "is this call
+    already resolved to a concrete/overridden target." This is a
+    plausible, narrower interception point than the soa-specific
+    `ref_ref` gap investigated above (4 ruled-out hypotheses, none of
+    which examined this vector-only rewrite hook) - worth checking
+    first in a future pass before continuing the IR-lowering-side
+    search: does adding a map-side counterpart to
+    `tryRewriteBareVectorHelperCall` (rewriting bare `count(m)` to
+    `/map/count` when a same-path shadow exists, mirroring the vector
+    case) fix both this TODO's `ref_ref`/`get` shadow gap and TODO-4809's
+    sub-bug (1) diagnostic-collection drop at once? Not attempted this
+    session - the vector-side rewrite hook's exact preconditions/
+    guardrails (why it only fires for shadow cases, not the general
+    case) need to be understood first to avoid changing plain
+    `count(m)`'s already-correct unshadowed behavior.
 
 - [ ] TODO-4755: Fix vector reserve() - no longer actually grows capacity, and its compile-time local-dynamic-limit validation no longer triggers
   - owner: ai
