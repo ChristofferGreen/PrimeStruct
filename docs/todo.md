@@ -8656,6 +8656,50 @@ This file is the live open-work queue for PrimeStruct.
     slash-method-call syntax on a helper-return receiver and not a
     broader "any call forwarding a helper-return vector into
     /vector/at" gap.
+  - investigated_2026-08-06: per the stop_rule, reproduced the direct-
+    call form (`count(/vector/at(wrapValues(), 0i32))`, no slash-method
+    chaining) - it fails identically with the same "struct parameter
+    type mismatch" message, so this is NOT slash-method-call-specific;
+    the bug is the broader "any call forwarding a helper-return vector
+    into /vector/at inside count(...)" gap the stop_rule warned about.
+    Root-caused via code reading (no instrumentation needed once the
+    right function was found): `isWrapperReturnedKeyValueAccessCall` in
+    `IrLowererLowerEmitExpr.h` (checked unconditionally at the very top
+    of `emitExpr`'s `Expr::Kind::Call` case, before any other dispatch)
+    unconditionally emits `"struct parameter type mismatch"` whenever
+    `count(...)`'s single argument is itself a call whose resolved path
+    or namespace-scoped name's trailing segment is `at`/`at_unsafe`/
+    `at_ref`/`at_unsafe_ref` AND that call's own first argument is itself
+    a call (the helper-return receiver, e.g. `wrapValues()`). The
+    intended scope (per the name) is presumably map/key-value `at()`
+    receivers whose element type is a struct, where wrapping a struct
+    value in `count(...)` really is a mismatch - but the actual
+    implementation has no such scoping: it fires for ANY `at`/`at_unsafe`
+    leaf name regardless of receiver collection kind or actual return
+    type, including a plain vector `/vector/at` returning `string` (a
+    perfectly valid `count()` target, i.e. string length). Confirmed the
+    intended narrower gate, `resolveKeyValueHelperAliasName` (the
+    overload actually linked into this translation unit, in
+    `IrLowererSetupTypeCollectionHelpers.cpp`), is a permanent stub that
+    always returns `false` - so the only thing actually gating this
+    check today is the unscoped leaf-name match. Attempted a narrow fix
+    (skip the "struct parameter type mismatch" verdict when
+    `getBuiltinArrayAccessName` recognizes the candidate as a genuine
+    vector access) but verified via debug print that
+    `getBuiltinArrayAccessName` itself returns `false` for a bare
+    user-defined `/vector/at` path (it only recognizes canonical stdlib-
+    registered spellings, by design, per its own "explicitly excluded"
+    canonical-path branch found during TODO-4803's investigation) - so
+    that exclusion never fires for this repro and doesn't fix it.
+    Reverted the attempt (verified clean via `git diff`). A correct fix
+    needs to positively determine the receiver `at()` call's actual
+    return type (struct vs plain scalar) rather than pattern-matching on
+    path shape, and `Definition` has no direct return-type field - the
+    return type lives in `Definition::transforms` (e.g. `return<string>`)
+    and would need whatever helper this codebase already uses elsewhere
+    to extract a definition's declared return type from its transform
+    list (not identified this session) before this heuristic can be
+    made type-aware. Left open, not fixed.
 
 - [ ] TODO-4807: `resolveMethodCallPath`'s alias<->canonical cross-path fallback broke for several bare-alias vector/map receiver shapes (emitter-internal unit-test regressions, not yet observed end-to-end)
   - owner: ai
