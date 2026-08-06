@@ -213,7 +213,18 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure, con
       cliFailure.plainPrefix = diagnostics.loweringErrorPrefix;
       cliFailure.notes = makeIrBackendNotes(diagnostics);
       backend.normalizeLoweringError(cliFailure.message);
-      break;
+      cliFailure.diagnosticInfo = failure.diagnosticInfo;
+      // emitCliFailure's structured-diagnostics (--emit-diagnostics) path
+      // prefers diagnosticInfo's own message text over cliFailure.message
+      // when present, so the backend-name normalization above must be
+      // applied there too, or the plain-stderr and JSON outputs disagree.
+      if (cliFailure.diagnosticInfo.has_value()) {
+        backend.normalizeLoweringError(cliFailure.diagnosticInfo->message);
+        for (DiagnosticSinkRecord &record : cliFailure.diagnosticInfo->records) {
+          backend.normalizeLoweringError(record.message);
+        }
+      }
+      return cliFailure;
   }
 
   cliFailure.diagnosticInfo = failure.diagnosticInfo;
@@ -246,10 +257,19 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
       cliFailure.code = diagnostics.loweringDiagnosticCode;
       cliFailure.plainPrefix = diagnostics.loweringErrorPrefix;
       cliFailure.notes = makeIrBackendNotes(diagnostics);
+      cliFailure.diagnosticInfo = failure.diagnosticInfo;
       if (normalizeLoweringError != nullptr) {
         normalizeLoweringError(cliFailure.message);
+        // See the sibling overload above: --emit-diagnostics prefers
+        // diagnosticInfo's own message text, so normalize it too.
+        if (cliFailure.diagnosticInfo.has_value()) {
+          normalizeLoweringError(cliFailure.diagnosticInfo->message);
+          for (DiagnosticSinkRecord &record : cliFailure.diagnosticInfo->records) {
+            normalizeLoweringError(record.message);
+          }
+        }
       }
-      break;
+      return cliFailure;
   }
 
   cliFailure.diagnosticInfo = failure.diagnosticInfo;

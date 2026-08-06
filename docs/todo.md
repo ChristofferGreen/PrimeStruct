@@ -7377,7 +7377,7 @@ This file is the live open-work queue for PrimeStruct.
     statement-only over-restriction) resolved; the deeper same-path
     routing gap it unmasked remains tracked under TODO-4756.
 
-- [ ] TODO-4810: --emit-diagnostics structured payload hardcodes "native backend" in the unsupported-string-comparison message regardless of the actual requested backend
+- [x] TODO-4810 (RESOLVED): --emit-diagnostics structured payload hardcodes "native backend" in the unsupported-string-comparison message regardless of the actual requested backend
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -7419,6 +7419,37 @@ This file is the live open-work queue for PrimeStruct.
     backend identifier, not by adding a special case for vm specifically
     - other backends could have the same hardcoded-"native" bug once
     checked.
+  - resolution_summary: root-caused via gdb breakpoints on
+    `primec::emitCliFailure` and `CliDriver.cpp`'s
+    `describeIrPreparationFailure`. `CliFailure` carries both a
+    `.message` field and an optional `.diagnosticInfo`
+    (`DiagnosticSinkReport`, with its own `.message`/`.records[].message`
+    copies). `describeIrPreparationFailure`'s lowering-stage branch calls
+    `backend.normalizeLoweringError(cliFailure.message)` (which does the
+    "native backend" -> "vm backend" text substitution for the vm
+    backend) but only ever normalized `.message` - `.diagnosticInfo` was
+    copied from the raw `failure.diagnosticInfo` afterward and never
+    itself normalized. `emitCliFailure`'s `--emit-diagnostics` JSON path
+    prefers `diagnosticInfo`'s message text over `.message` when present,
+    while the plain-stderr "no location info" fallback path uses
+    `.message` directly - explaining why the two output paths disagreed.
+    Fixed both overloads of `describeIrPreparationFailure` in
+    `src/CliDriver.cpp` to also call the backend's
+    normalizer/`normalizeLoweringError` function pointer on
+    `diagnosticInfo->message` and every `record.message` in
+    `diagnosticInfo->records`, not just `cliFailure.message`. Verified
+    manually that `--emit=vm ... --emit-diagnostics` now reports "vm
+    backend does not support string comparisons" and that `--emit=native`
+    still correctly reports "native backend does not support string
+    comparisons" (per the TODO's own acceptance criteria - no backend-
+    specific special-casing was added). Re-pinned the
+    "primec emit-diagnostics reports structured lowering payload" test in
+    `test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp`
+    to assert the now-correct "vm backend" wording. Full 3-suite rebuild
+    confirmed 0 regressions (backend_ir: 1739/1741, the 2 known
+    pre-existing ir_pipeline failures only; semantics: 2940/2940;
+    compile_run: 2940/2940).
+  - progress_2026-08-06: fixed, verified, committed.
 
 - [ ] TODO-4809: collect-diagnostics collection-helper (count/capacity) diagnostic collection collapses or corrupts messages when a definition mixes map- and vector-receiver errors
   - owner: ai

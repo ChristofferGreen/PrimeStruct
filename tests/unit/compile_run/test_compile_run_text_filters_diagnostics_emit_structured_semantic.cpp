@@ -45,11 +45,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC2001\"") != std::string::npos);
-  // TODO-4810: the message text says "native backend" while the notes field
-  // (and the actually-requested --emit=vm backend) correctly say "backend:
-  // vm" - the unsupported-string-comparison lowering message hardcodes the
-  // wrong backend name. Re-pinned to the verified current (mismatched) text.
-  CHECK(diagnostics.find("native backend does not support string comparisons") != std::string::npos);
+  CHECK(diagnostics.find("vm backend does not support string comparisons") != std::string::npos);
   CHECK(diagnostics.find("\"notes\":[\"backend: vm\"]") != std::string::npos);
 }
 
