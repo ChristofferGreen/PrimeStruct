@@ -242,9 +242,14 @@ main() {
                                   .string();
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  // TODO-4802 (fixed): args<Pointer<uninitialized<Struct>>> itself now
+  // resolves its struct type correctly (see the minimal repro in that
+  // TODO, now passing independently). This test's own source additionally
+  // uses .at()/.at_unsafe() method-call sugar to index the pack, which
+  // still hits TODO-4800's separate "/array/at" gap - re-pinned to that
+  // now-current rejection rather than TODO-4802's original one.
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports numeric/bool/string variadic args parameters") !=
+  CHECK(readFile(errPath).find("struct parameter type mismatch: expected /Pair, got <unknown>") !=
         std::string::npos);
 }
 
@@ -354,16 +359,14 @@ main() {
       (testScratchPath("") / "primec_cpp_variadic_args_reference_uninitialized_struct_err.txt").string();
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  // Verified current behavior (found via a full-suite run after the
-  // rest of this file's re-pins landed, not in the originally-given
-  // failing-name list): args<Reference<uninitialized<Struct>>> now
-  // rejects the same way args<Pointer<uninitialized<Struct>>> does -
-  // see the new TODO covering this "uninitialized<Struct> as a
-  // variadic args element" restriction gap, filed alongside this
-  // re-pin.
+  // TODO-4802 (fixed): args<Reference<uninitialized<Struct>>> itself now
+  // resolves its struct type correctly, matching the Pointer<> sibling
+  // above. This test's own source additionally uses .at()/.at_unsafe()
+  // method-call sugar to index the pack, which still hits TODO-4800's
+  // separate "/array/at" gap - re-pinned to that now-current rejection.
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
-            "vm backend only supports numeric/bool/string variadic args parameters") !=
+            "semantic-product method-call target missing lowered definition: /array/at") !=
         std::string::npos);
 }
 

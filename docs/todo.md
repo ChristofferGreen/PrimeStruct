@@ -8328,7 +8328,7 @@ This file is the live open-work queue for PrimeStruct.
     at all (plain `args<string>`), so verify independently before
     assuming a shared fix.
 
-- [ ] TODO-4802: `args<Pointer<uninitialized<Struct>>>`/`args<Reference<uninitialized<Struct>>>` variadic packs reject with "vm backend only supports numeric/bool/string variadic args parameters" even though non-uninitialized struct packs and uninitialized scalar packs both work
+- [x] TODO-4802 (RESOLVED): `args<Pointer<uninitialized<Struct>>>`/`args<Reference<uninitialized<Struct>>>` variadic packs reject with "vm backend only supports numeric/bool/string variadic args parameters" even though non-uninitialized struct packs and uninitialized scalar packs both work
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation (emitters cluster)
@@ -8388,6 +8388,50 @@ This file is the live open-work queue for PrimeStruct.
     struct, one pack element) before assuming any connection to
     TODO-4800's `/array/at` gap - this rejection happens earlier, before
     any `.at()`-style access is even reached.
+  - resolution_summary: root-caused via a temporary debug print (reverted)
+    at the actual rejection site in `IrLowererInlinePackedArgs.cpp`,
+    which showed `paramInfo.structTypeName` was empty for the failing
+    repro. Traced upstream to `applyArgsPackElementStructMetadata`
+    (`IrLowererStatementBindingTypeMetadata.cpp`) - the function
+    responsible for resolving an args-pack element's struct type by
+    building a synthetic binding `Expr` and running it back through the
+    same namespace-aware struct-resolution callbacks (`applyStructArrayInfo`/
+    `applyStructValueInfo`) used for ordinary bindings, so the resolved
+    struct path stays correctly namespace-qualified (verified this
+    matters via a first, wrong fix attempt: a naive "just take the raw
+    type text" fallback added directly in the `Pointer`/`Reference`
+    branches of `IrLowererStatementBindingTypeMetadata.cpp`'s type-text
+    parser compiled and ran, but broke 3 previously-passing
+    `ir_pipeline` unit tests that expect a namespace-prefixed
+    `/pkg/Pair`, since it bypassed the proper resolution mechanism and
+    produced the un-namespaced `/Pair` instead - reverted that attempt
+    cleanly per this session's "verify via full suite before landing"
+    discipline). The actual gap: `applyArgsPackElementStructMetadata`'s
+    own unwrapping step (building `structElementTypeText` from the
+    declared `Pointer<X>`/`Reference<X>` element type) only unwrapped
+    the `Pointer`/`Reference` layer itself, never the `uninitialized<>`
+    layer nested inside it - so for `Pointer<uninitialized<Pair>>` the
+    synthetic binding's transform name ended up literally
+    `"uninitialized"` (with `"Pair"` merely as its template arg) instead
+    of `"Pair"`, so the struct-resolution callbacks never matched it and
+    silently returned with `structTypeName` still empty. Fixed by adding
+    an `unwrapTopLevelUninitializedTypeText` call when computing
+    `structElementTypeText`, mirroring the unwrapping already done one
+    level up in the `Pointer`/`Reference` branches of the type-text
+    parser. Verified the minimal repro returns 1 and its
+    `Reference<uninitialized<Pair>>` sibling returns 5; the two originally
+    re-pinned TEST_CASEs in
+    `test_compile_run_emitters_variadic_reference_pack_access.cpp` still
+    don't reach their full "returns 30" expectation because their own
+    source ALSO exercises `.at()`/`.at_unsafe()` method-call sugar on the
+    pack, which independently hits TODO-4800's still-open "/array/at"
+    gap - re-pinned both to their new current (different, TODO-4800-
+    attributable) rejection messages with cross-reference notes rather
+    than blocking this fix on TODO-4800. Full 3-suite rebuild confirmed
+    0 regressions after the corrected fix (backend_ir: 1739/1741, the 2
+    known pre-existing ir_pipeline failures only - the 3 `/pkg/Pair`
+    unit-test regressions from the first attempt are gone; semantics:
+    2940/2940; compile_run: 2940/2940).
 
 - [x] TODO-4803 (RESOLVED): Named-argument direct calls to a user-defined `/std/collections/vector/at(...)` helper misroute into the builtin `at()` restriction check instead of dispatching to the user's own definition
   - owner: ai
