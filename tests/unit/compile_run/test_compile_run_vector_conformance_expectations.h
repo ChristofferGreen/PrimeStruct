@@ -444,11 +444,18 @@ inline void expectCanonicalVectorCapacityVmImportRequirement() {
 }
 
 inline void expectCanonicalVectorAccessNamedArgsConformance(const std::string &emitMode) {
-  expectVectorConformanceCompileReject(
+  // TODO-4803 (fixed): named-argument calls to the canonical
+  // /std/collections/vector/at(...)/at_unsafe(...) builtins (out-of-order
+  // [index]/[values] argument names) used to misroute into the generic
+  // at() builtin-restriction rejection instead of resolving the receiver
+  // correctly; they now behave like their count/capacity/push siblings
+  // above and actually perform the element access (4 at index 0, 5 at
+  // index 1, sum 9).
+  expectVectorConformanceProgramRuns(
       makeCanonicalVectorAccessNamedArgsSource(),
       "vector_access_canonical_named_args_" + emitMode,
       emitMode,
-      "backend only supports at() on numeric/bool/string arrays or vectors");
+      9);
 }
 
 inline void expectCanonicalVectorAccessVmImportRequirement(const std::string &helperName) {

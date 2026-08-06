@@ -8357,7 +8357,7 @@ This file is the live open-work queue for PrimeStruct.
     TODO-4800's `/array/at` gap - this rejection happens earlier, before
     any `.at()`-style access is even reached.
 
-- [ ] TODO-4803: Named-argument direct calls to a user-defined `/std/collections/vector/at(...)` helper misroute into the builtin `at()` restriction check instead of dispatching to the user's own definition
+- [x] TODO-4803 (RESOLVED): Named-argument direct calls to a user-defined `/std/collections/vector/at(...)` helper misroute into the builtin `at()` restriction check instead of dispatching to the user's own definition
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation (emitters cluster)
@@ -8407,6 +8407,61 @@ This file is the live open-work queue for PrimeStruct.
     resolution for any direct call to a user override of a builtin-
     named canonical path) and this TODO's scope should be widened
     accordingly.
+  - resolution_summary: confirmed the positional form dispatches
+    correctly (per the stop_rule), narrowing this to named-argument-
+    order specifically. Root cause: the earliest `Expr::Kind::Call`
+    dispatch entry in `IrLowererLowerEmitExpr.h`'s `emitExpr` never
+    reorders a call's `args`/`argNames` into canonical positional order
+    before any downstream `at()`/`at_unsafe()` classification runs.
+    `getBuiltinArrayAccessName` (the `ir_lowerer`-local variant in
+    `IrLowererBuiltinNameHelpers.cpp`, distinct from the semantics
+    validator's own same-named helper) deliberately returns `false` for
+    the exact canonical `/std/collections/vector/at(_unsafe)` paths so
+    they fall through to a separate special-cased branch in
+    `IrLowererLowerEmitExprTailDispatch.h`'s
+    `emitVectorIndexedAccessBeforeInline` (and the analogous
+    `IrLowererIndexedAccessEmit.cpp`/`IrLowererLowerEmitExprCollectionHelpers.h`
+    call sites) that reads `expr.args.front()`/`expr.args[1]` directly as
+    (receiver, index) with no named-argument awareness. When the source
+    wrote the named arguments out of canonical order
+    (`([index] 0i32, [values] values)`, i.e. index first), `args.front()`
+    was the index literal and `args[1]` was the actual vector - swapped
+    relative to what every downstream consumer assumes - so
+    `resolveArrayVectorAccessTargetInfo` saw a non-vector "target" and
+    rejected with the generic at()-restriction message. Fixed by adding
+    a normalization step at the very top of the `Expr::Kind::Call` case
+    in `IrLowererLowerEmitExpr.h`: when a non-method 2-argument call
+    resolves to exactly `/std/collections/vector/at` or `.../at_unsafe`
+    and its named arguments are `[index], [values]` (out of canonical
+    order), swap `args`/`argNames` into canonical `(values, index)` order
+    and recurse into `emitExpr` - fixing every downstream consumer at
+    once without touching their positional-order assumptions. Verified
+    the minimal repro now runs and returns 0 (bool `false`) on `--emit=vm`
+    as expected, and that the generalization also fixes the identical
+    bug in the canonical builtin (no user override) case - a
+    `vector_access_canonical_named_args_vm` conformance test
+    (`test_compile_run_vector_conformance_expectations.h`) that had been
+    incorrectly pinned to expect the same rejection (rather than success,
+    like its sibling count/capacity/push named-args conformance checks)
+    was also fixed by this change and re-pinned to its correct value (9).
+    Re-pinned 4 affected TEST_CASEs total (3 in
+    `test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp`
+    plus 1 duplicate scenario in
+    `test_compile_run_vm_collections_vector_shadow_access.cpp`) to their
+    now-correct success values. One of the original three TEST_CASEs
+    (the "wrapper" case, receiver `wrapVector()`, expecting 32) surfaced
+    a second, unrelated, still-open bug once the named-argument routing
+    itself was fixed: an int-return `/std/collections/vector/at`
+    override is silently not dispatched when the receiver is a call
+    expression rather than a plain variable - confirmed independent of
+    argument order (the equivalent positional call reproduces
+    identically) and is the same same-path-shadow-not-dispatched family
+    as TODO-4805/4806, not this TODO; re-pinned that one TEST_CASE to its
+    verified-current (still incorrect, 0) value with a cross-reference
+    note rather than blocking this fix on it. Full 3-suite rebuild
+    confirmed 0 regressions (backend_ir: 1739/1741, the 2 known
+    pre-existing ir_pipeline failures only; semantics: 2940/2940;
+    compile_run: 2940/2940, all green including the newly-fixed pins).
 
 - [ ] TODO-4804: Struct value returned directly from `/std/collections/vector/at(...)`/`at_unsafe(...)` and immediately field-accessed or method-chained crashes with "(un)aligned indirect address in IR" on both vm and native exe
   - owner: ai

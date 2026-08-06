@@ -134,6 +134,20 @@
         return false;
       }
       case Expr::Kind::Call: {
+        if (!expr.isMethodCall && expr.args.size() == 2 && expr.argNames.size() == 2 &&
+            expr.argNames[0].has_value() && expr.argNames[1].has_value() &&
+            *expr.argNames[0] != "values" && *expr.argNames[1] == "values") {
+          const std::string namedAccessResolvedPath = resolveExprPath(expr);
+          const bool isNamedAtAccess =
+              namedAccessResolvedPath == "/std/collections/vector/at" ||
+              namedAccessResolvedPath == "/std/collections/vector/at_unsafe";
+          if (isNamedAtAccess) {
+            Expr reorderedExpr = expr;
+            std::swap(reorderedExpr.args[0], reorderedExpr.args[1]);
+            std::swap(reorderedExpr.argNames[0], reorderedExpr.argNames[1]);
+            return emitExpr(reorderedExpr, localsIn);
+          }
+        }
         auto isWrapperReturnedKeyValueAccessCall = [&](const Expr &candidate) {
           if (candidate.kind != Expr::Kind::Call ||
               candidate.args.size() < 2 ||

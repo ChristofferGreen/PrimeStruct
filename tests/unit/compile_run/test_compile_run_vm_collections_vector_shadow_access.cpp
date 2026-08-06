@@ -696,14 +696,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays or vectors") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  // TODO-4803 (fixed): a named-argument direct call to the canonical
+  // /std/collections/vector/at(...) path now correctly dispatches to the
+  // user's own bool-returning definition instead of misrouting into the
+  // builtin at() restriction check.
+  CHECK(runCommand(runCmd) == 1);
 }
 
 
