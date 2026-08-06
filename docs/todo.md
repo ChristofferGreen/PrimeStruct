@@ -8633,7 +8633,7 @@ This file is the live open-work queue for PrimeStruct.
     inconsistency that never surfaces in real compiled programs, which
     would change this TODO's priority significantly.
 
-- [ ] TODO-4808: `/std/image/*` read/write `Result.why(...)` calls silently produce no output instead of the expected status strings
+- [x] TODO-4808 (RESOLVED): `/std/image/*` read/write `Result.why(...)` calls silently produce no output instead of the expected status strings
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation (emitters cluster)
@@ -8688,6 +8688,23 @@ This file is the live open-work queue for PrimeStruct.
     error struct families (`ImageError` vs `ContainerError`) - verify
     independently once a candidate fix for either exists, the same way
     TODO-4752's vm/native split had to be checked independently.
+  - resolution_summary: verified independently, per the stop_rule above -
+    TODO-4757's fix (commit `9098489`, "Result.why() blank/slow on
+    ContainerError/GfxError/ImageError") already covered the `ImageError`
+    family this TODO tracks, not just `ContainerError`. Re-ran this
+    TODO's exact minimal repro via `--emit=cpp` + `c++ -O0` (matching the
+    test's own harness) and confirmed it now prints exactly the expected
+    `"image_invalid_operation\nimage_invalid_operation\n
+    image_read_unsupported\nimage_invalid_operation\n"` and exits 0. The
+    test itself
+    ("C++ emitter supports image api contract deterministically" in
+    `test_compile_run_emitters_core_behaviors.cpp`) was already re-pinned
+    to this exact expected output as part of the TODO-4757 commit,
+    correctly labeled `// TODO-4757 (fixed)` there - no further code or
+    test changes needed, this entry just needed its own resolved status
+    recorded.
+  - progress_2026-08-06: verified fixed by TODO-4757's existing fix; no
+    new changes required.
 
 - [ ] TODO-4900: Re-pin the remaining ir_pipeline/type_resolution_graph hidden failures; two confirmed architecture-drift clusters need real follow-up
   - owner: ai
