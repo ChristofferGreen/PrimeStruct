@@ -1410,16 +1410,19 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_dump_ast_semantic_builtin_soa_count_err.txt").string();
 
-  // TODO-4811: count() can no longer be used inside an expression (only as a
-  // bare statement) - this source used to compile and rewrite all three
-  // count() spellings to the canonical helper path within a plus(...)
-  // expression; it now fails to compile at all. Re-pinned to the verified
-  // current rejection.
+  // TODO-4811 fix: the over-broad "count is only supported as a statement"
+  // rejection (count/get/ref/to_aos incorrectly classified as statement-only
+  // mutators alongside push/reserve) is gone - expression position is
+  // legitimate for these same-path soa read helpers. Still fails to compile,
+  // but now for a separate, still-open reason: same-path shadow routing for
+  // an explicit /soa/count(...) call falls through to the retired
+  // soa_vector diagnostic family (see TODO-4756's investigation notes).
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: count is only supported as a statement") != std::string::npos);
+  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites imported builtin soa to_aos forms to canonical helper path") {

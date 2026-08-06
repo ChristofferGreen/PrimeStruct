@@ -940,7 +940,16 @@ bool SemanticsValidator::getVectorMutatorHelperName(const Expr &candidate,
   }
   const std::string oldExplicitSoaPath = explicitOldSoaHelperPath(candidate);
   if (!oldExplicitSoaPath.empty()) {
-    helperNameOut = oldExplicitSoaPath.substr(oldExplicitSoaPath.find_last_of('/') + 1);
+    const std::string oldExplicitSoaHelperName =
+        oldExplicitSoaPath.substr(oldExplicitSoaPath.find_last_of('/') + 1);
+    // explicitOldSoaHelperPath()/isSoaSamePathHelperName() cover the whole
+    // same-path-shadow family (count/get/ref/to_aos/push/reserve), not just
+    // the genuine statement-only mutators - only push/reserve actually
+    // require statement position, matching the canonical-path branch below.
+    if (oldExplicitSoaHelperName != "push" && oldExplicitSoaHelperName != "reserve") {
+      return false;
+    }
+    helperNameOut = oldExplicitSoaHelperName;
     return true;
   }
   auto canonicalSoaMutatorHelperName = [&]() -> std::string {

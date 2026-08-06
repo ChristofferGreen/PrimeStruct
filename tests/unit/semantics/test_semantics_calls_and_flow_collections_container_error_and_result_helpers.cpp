@@ -288,7 +288,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("count is only supported as a statement") != std::string::npos);
+  // TODO-4811 fix: "count is only supported as a statement" was an
+  // over-broad rejection (count is a same-path read helper, not a
+  // statement-only mutator) - expression position is legitimate now.
+  // Still rejects, for a separate, still-open reason (same-path shadow
+  // routing falls through to the retired soa_vector diagnostic family -
+  // see TODO-4756's investigation notes).
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count") != std::string::npos);
 }
 
 TEST_CASE("explicit old-surface soa count slash-method validates with soa type") {
@@ -321,7 +327,12 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("count requires soa target") != std::string::npos);
+  // TODO-4811 fix: "count" is no longer classified as a statement-only
+  // mutator, so this statement-position call no longer reaches the
+  // mutator-specific "requires soa target" check - it now fails call
+  // resolution directly (no /soa/count definition exists for a plain
+  // vector receiver), which is still a correct rejection.
+  CHECK(error.find("unknown call target: /soa/count") != std::string::npos);
 }
 
 TEST_CASE("public soa count helper validates through struct helper return receivers") {

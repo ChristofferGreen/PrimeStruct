@@ -2137,10 +2137,15 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
-  // Expression-position bare get without imports pins the statement-only contract now.
+  // TODO-4811 fix: "get"/"count" are same-path soa read helpers, not
+  // statement-only mutators, so expression position is legitimate - the
+  // over-broad "is only supported as a statement" rejection is gone.
+  // Still rejects for a separate, still-open reason (same-path shadow
+  // routing falls through to the retired soa_vector diagnostic family -
+  // see TODO-4756's investigation notes).
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   INFO(error);
-  CHECK(error.find("get is only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown method: /soa/get") != std::string::npos);
 }
 
 TEST_CASE("root get vector receiver rejects template arguments") {

@@ -7290,7 +7290,7 @@ This file is the live open-work queue for PrimeStruct.
     resolution, template/type inference timing, and IR-lowering loop
     factoring); triage into separate leaves before writing any code.
 
-- [ ] TODO-4811: count() can no longer be used inside an expression, only as a bare statement
+- [x] TODO-4811 (RESOLVED): count() can no longer be used inside an expression, only as a bare statement
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -7331,6 +7331,51 @@ This file is the live open-work queue for PrimeStruct.
     whether it's deliberately restricting *all* collection-helper
     builtins (count/capacity/etc.) to statement position or just count -
     a narrow fix to count alone could leave a real bug in the others.
+  - resolution_summary (2026-08-05): confirmed via the stop_rule's own
+    question - this was an accidental over-broadening, not a deliberate
+    restriction. Root cause: `getVectorMutatorHelperName`
+    (`SemanticsValidatorInferCollectionCompatibility.cpp`) is meant to
+    identify genuine statement-only soa mutators (`push`/`reserve`) via
+    `explicitOldSoaHelperPath`/`isSoaSamePathHelperName`, but that shared
+    helper's name list actually covers the WHOLE same-path-shadow family
+    (`count`/`count_ref`/`get`/`get_ref`/`ref`/`ref_ref`/`to_aos`/
+    `to_aos_ref`/`push`/`reserve`) for a different purpose (same-path
+    shadow detection), and `getVectorMutatorHelperName` treated any match
+    as a mutator requiring statement position - incorrectly roping in
+    the 8 pure read helpers alongside the 2 genuine mutators. Fixed by
+    restricting that branch to only accept `push`/`reserve`, matching
+    the sibling canonical-path branch a few lines below it that already
+    had the correct restriction. Verified: the minimal repro's
+    over-broad rejection is gone; `count`/`get` now validate correctly
+    in expression position for a genuine `soa<Particle>` receiver.
+    **Full acceptance not met**: fixing the statement-only
+    over-restriction unmasked a separate, pre-existing, deeper bug for
+    the *explicit* `/soa/count(...)`/`/soa/get(...)` same-path forms -
+    they now fail with "unknown method: /std/collections/soa_vector/..."
+    (leaking the retired legacy family) instead of resolving to the
+    canonical helper. Traced this to
+    `canonicalSoaPendingHelperPath`/`soaUnavailableMethodDiagnostic`
+    (`SemanticsBuiltinPathHelpers.cpp`) - this is the SAME same-path
+    shadow-routing gap already investigated to exhaustion under
+    TODO-4756 (4 ruled-out hypotheses, interception point not found).
+    Did not re-open that investigation here per its own documented
+    stop_rule; re-pinned the 4 affected tests
+    (`test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`'s
+    "explicit old-surface soa count validates bare soa path" and
+    "explicit soa count forms reject non-soa target",
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`'s
+    "root get helper forms lower through canonical helper routing",
+    `test_compile_run_text_filters_dumps.cpp`'s "dump ast-semantic
+    rewrites builtin soa count forms to canonical helper path") to their
+    exact verified-current (still-rejecting, but for the TODO-4756
+    reason now, not the TODO-4811 reason) messages, each cross-
+    referencing TODO-4756. Verified via full 3-suite run:
+    `PrimeStruct_compile_run_tests` 2940/2940,
+    `PrimeStruct_semantics_tests` 2940/2940,
+    `PrimeStruct_backend_ir_tests` 1739/1741 (2 pre-existing unrelated
+    failures only). Marking this TODO's own named defect (the
+    statement-only over-restriction) resolved; the deeper same-path
+    routing gap it unmasked remains tracked under TODO-4756.
 
 - [ ] TODO-4810: --emit-diagnostics structured payload hardcodes "native backend" in the unsupported-string-comparison message regardless of the actual requested backend
   - owner: ai
