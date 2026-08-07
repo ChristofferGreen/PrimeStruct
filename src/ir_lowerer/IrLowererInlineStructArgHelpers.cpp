@@ -331,6 +331,20 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     if (argStruct.empty() && (isUninitializedStructStorage || isDefaultUninitializedStructStorage)) {
       argStruct = field.structPath;
     }
+    bool isImplicitSingleScalarFieldWrap = false;
+    if (argStruct.empty() && !field.structPath.empty()) {
+      StructSlotLayoutInfo targetLayout;
+      if (resolveStructSlotLayout(field.structPath, targetLayout) &&
+          targetLayout.fields.size() == 1 &&
+          targetLayout.fields.front().structPath.empty()) {
+        const LocalInfo::ValueKind wrappedFieldKind = targetLayout.fields.front().valueKind;
+        LocalInfo::ValueKind argKind = inferExprKind(*arg, argLocals);
+        if (argKind == wrappedFieldKind && argKind != LocalInfo::ValueKind::Unknown) {
+          argStruct = field.structPath;
+          isImplicitSingleScalarFieldWrap = true;
+        }
+      }
+    }
     if (argStruct.empty() ||
         !isCompatibleInlineStructFieldPath(field.structPath, argStruct)) {
       error = "struct field type mismatch: expected " + field.structPath + ", got " +
@@ -340,6 +354,19 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     }
     if (isUninitializedStructStorage || isDefaultUninitializedStructStorage) {
       emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(field.slotCount - 1)));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));
+      LocalInfo fieldInfo;
+      if (!inferFieldLocalInfo(param, structLocals, fieldInfo, error)) {
+        return false;
+      }
+      materializeInlineStructFieldLocal(field, baseLocal, nextLocal, fieldInfo, emitInstruction);
+      structLocals[param.name] = std::move(fieldInfo);
+      continue;
+    }
+    if (isImplicitSingleScalarFieldWrap) {
+      if (!emitExpr(*arg, argLocals)) {
+        return false;
+      }
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));
       LocalInfo fieldInfo;
       if (!inferFieldLocalInfo(param, structLocals, fieldInfo, error)) {

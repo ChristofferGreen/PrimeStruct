@@ -6871,7 +6871,7 @@ This file is the live open-work queue for PrimeStruct.
     a crash bug, worth a slightly higher bar than the message-drift items
     in this epic.
 
-- [ ] TODO-4764: Struct literal omitting a field with a struct-typed default now infers that field as an unknown type
+- [x] TODO-4764 (RESOLVED): Struct literal omitting a field with a struct-typed default now infers that field as an unknown type
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -6921,6 +6921,48 @@ This file is the live open-work queue for PrimeStruct.
     stdlib source (`ColorFormat`'s real declaration) rather than a
     fresh custom struct, to find what's actually different about it.
     Not fixed this session.
+  - resolution_summary: following the prior investigation's own advice,
+    built the repro from `ColorFormat`'s actual stdlib declaration
+    (`stdlib/std/gfx/gfx.prime`): `ColorFormat` is a single-field wrapper
+    struct (`[i32] value{0i32}`), and `Swapchain`'s `colorFormat` field
+    defaults to a bare `0i32` literal - relying on implicit construction
+    of a single-scalar-field struct directly from a matching scalar,
+    the same pattern `ColorFormat`'s own `Bgra8Unorm{0i32}` static
+    constant uses. This is NOT a same-family struct-identity issue like
+    TODO-4761 (ruled out) - it's a missing case entirely: a minimal
+    custom struct with this exact shape (`ColorFormat`-alike single-field
+    wrapper defaulted via a bare scalar) reproduced immediately, unlike
+    the prior session's nested-full-constructor-call attempt
+    (`Inner{}`), which never exercised this code path since a full
+    constructor call is a completely different AST shape from a bare
+    scalar literal. Root-caused to
+    `emitInlineStructDefinitionArguments`/`resolveInlineStructFieldValue`
+    machinery in `IrLowererInlineStructArgHelpers.cpp`: when a struct
+    field's value (default or explicit) doesn't itself carry a resolvable
+    struct path (`inferStructExprPath` returns empty, as it does for a
+    bare scalar literal), the existing special cases only recognized
+    brace-constructor syntax, parameterless-constructor calls, and
+    `uninitialized<T>` storage - nothing recognized "the argument is a
+    scalar, and the target struct type is itself a single-non-struct-
+    field wrapper whose field kind matches this scalar." Fixed by adding
+    that case: resolve the target struct's own slot layout via the
+    already-available `resolveStructSlotLayout`, and if it has exactly
+    one non-struct field whose `valueKind` matches the argument's
+    inferred scalar kind, treat it as compatible and emit the scalar
+    directly into that single field slot (via `emitExpr` + `StoreLocal`)
+    rather than routing through the generic struct-pointer-copy path
+    (`emitStructCopySlots`), which assumes the argument evaluates to a
+    struct address and would have corrupted memory if naively applied to
+    a bare scalar value. Verified both a minimal custom-struct repro and
+    the real `/std/gfx/*` `Swapchain`/`ColorFormat` case (both
+    `/std/gfx/*` canonical and `/std/gfx/experimental/*` shim spellings)
+    compile and run correctly on both `--emit=vm` and `--emit=native`,
+    re-pinning the two affected TEST_CASEs in
+    `test_compile_run_smoke_core_gfx_imports.cpp` to their now-correct
+    "runs and returns 10" expectations. Full 3-suite rebuild (primec and
+    primevm) confirmed 0 regressions (backend_ir: 1739/1741, the 2 known
+    pre-existing failures only; semantics: 2940/2940; compile_run:
+    2940/2940).
 
 - [ ] TODO-4763: "internal error: missing struct slot layout" for SubstrateDeviceConfig/SubstrateRenderPassConfig
   - owner: ai

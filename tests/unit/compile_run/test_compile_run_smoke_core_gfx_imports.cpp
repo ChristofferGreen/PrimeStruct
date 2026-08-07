@@ -95,21 +95,17 @@ main() {
   const std::string nativeErrPath =
       (testScratchPath("") / "primec_gfx_experimental_type_surface_native_err.txt").string();
 
-  // TODO-4764: Swapchain{[token] 11i32} (omitting colorFormat) now fails
-  // to lower on both vm and native with a struct field type mismatch on
-  // the omitted field's default value.
+  // TODO-4764 (fixed): Swapchain{[token] 11i32} (omitting colorFormat)
+  // now correctly lowers on both vm and native - the omitted field's
+  // default value (a bare 0i32) implicitly constructs the single-field
+  // ColorFormat struct it defaults to.
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + vmErrPath;
-  CHECK(runCommand(runVmCmd) == 2);
-  CHECK(readFile(vmErrPath).find(
-            "struct field type mismatch: expected /std/gfx/experimental/ColorFormat, got <unknown> in "
-            "/std/gfx/experimental/Swapchain::colorFormat") != std::string::npos);
+  CHECK(runCommand(runVmCmd) == 10);
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + nativeErrPath;
-  CHECK(runCommand(compileNativeCmd) == 2);
-  CHECK(readFile(nativeErrPath).find(
-            "struct field type mismatch: expected /std/gfx/experimental/ColorFormat, got <unknown> in "
-            "/std/gfx/experimental/Swapchain::colorFormat") != std::string::npos);
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 10);
 }
 
 TEST_CASE("canonical gfx type surface imports across backends") {
@@ -203,21 +199,17 @@ main() {
   const std::string nativeErrPath =
       (testScratchPath("") / "primec_gfx_canonical_type_surface_native_err.txt").string();
 
-  // TODO-4764: Swapchain{[token] 11i32} (omitting colorFormat) now fails
-  // to lower on both vm and native with a struct field type mismatch on
-  // the omitted field's default value.
+  // TODO-4764 (fixed): Swapchain{[token] 11i32} (omitting colorFormat)
+  // now correctly lowers on both vm and native - the omitted field's
+  // default value (a bare 0i32) implicitly constructs the single-field
+  // ColorFormat struct it defaults to.
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + vmErrPath;
-  CHECK(runCommand(runVmCmd) == 2);
-  CHECK(readFile(vmErrPath).find(
-            "struct field type mismatch: expected /std/gfx/ColorFormat, got <unknown> in /std/gfx/Swapchain::colorFormat") !=
-        std::string::npos);
+  CHECK(runCommand(runVmCmd) == 10);
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + nativeErrPath;
-  CHECK(runCommand(compileNativeCmd) == 2);
-  CHECK(readFile(nativeErrPath).find(
-            "struct field type mismatch: expected /std/gfx/ColorFormat, got <unknown> in /std/gfx/Swapchain::colorFormat") !=
-        std::string::npos);
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 10);
 }
 
 TEST_CASE("gfx compatibility shim error helper imports across backends") {
