@@ -9223,6 +9223,55 @@ This file is the live open-work queue for PrimeStruct.
     seemingly-small-turned-subtle regressions per TODO-4731's progress
     notes) knows to re-flip those specific re-pinned assertions back to
     preferring canonical.
+  - investigated_2026-08-07: attempted the "small, mechanical" fix this
+    note predicted - added a `shouldPreferCanonicalSoaPath` lambda
+    (mirroring `shouldPreferCanonicalVectorPath`/`shouldPreferCanonicalKeyValuePath`'s
+    structure exactly) and wired it into both `resolvedBase` ternary
+    chains. It correctly fixed all 16 assertions this note predicted
+    (bare `"soa"` typeName now prefers canonical for `get`/`ref`/`push`/
+    `reserve`/`to_aos`, matching `"std/collections/soa"`'s existing
+    behavior) - verified via `PrimeStruct_backend_ir_tests`. However,
+    the SAME full-suite run also surfaced a genuine regression this
+    note's "parallel structure to vector/map" framing did not anticipate:
+    "ir lowerer setup type helper normalizes helper-return SoaVector
+    collections for shadows" (same file) explicitly expects a
+    **helper-return** `SoaVector<Particle>` receiver's `.get()`/`.ref()`
+    calls to resolve to the user's rooted `/soa/get`/`/soa/ref`
+    same-path-shadow definitions, NOT the canonical ones - i.e. for a
+    receiver obtained via a wrapper/helper function call (as opposed to
+    a bare `[soa<Particle>]`-typed parameter/local, TODO-4900's own
+    original repro shape), the alias/shadow winning is the CORRECT,
+    intended behavior (consistent with this epic's many other "same-path
+    shadow on a helper-return receiver should be honored" fixes this
+    session, e.g. TODO-4805). Vector/map's existing
+    `shouldPreferCanonicalVectorPath`/`shouldPreferCanonicalKeyValuePath`
+    never hit this exact conflict only because `get`/`ref` are not
+    vector/map builtin method names at all (their preference lists are
+    count/capacity/at/at_unsafe/push/pop/reserve/clear/remove_at/
+    remove_swap and count/contains/tryAt/at/at_unsafe/insert
+    respectively - no overlap with the helper-return-shadow scenario),
+    not because they have some smarter bare-parameter-vs-helper-return
+    discriminator that soa also needs. `resolveMethodDefinitionFromReceiverTarget`'s
+    `(resolvedTypePath, typeName)` parameter pair does not appear to
+    carry a "was this typeName derived from a bare local/param or a
+    helper-return call" signal at the point the canonical-preference
+    ternary runs - both scenarios reach the function with `typeName ==
+    "soa"` indistinguishably as far as the code reviewed this session
+    could tell. Given landing the "small, mechanical" fix as originally
+    envisioned would fix TODO-4900's bug at the cost of breaking a
+    different, already-correct same-path-shadow behavior, reverted the
+    fix entirely (verified clean via `git diff`) rather than trade one
+    regression for another - this is NOT the small mechanical addition
+    the prior note assumed. A correct fix needs a way to distinguish
+    "bare soa-typed parameter/local receiver" from "helper-return soa
+    receiver" before choosing to prefer canonical, which requires
+    tracing where `resolveMethodDefinitionFromReceiverTarget`'s callers
+    (`resolveMethodCallDefinitionFromExpr` and whatever calls it for the
+    bare-parameter case) derive `resolvedTypePath`/`typeName` to find a
+    thread-through-able discriminator, or threading a new explicit
+    "receiver is a bare declared local/param" boolean parameter into the
+    function - neither attempted this session given the scope creep risk
+    already demonstrated.
   - acceptance: all shards named above pass; `ctest -R
     'primestruct_ir_pipeline|primestruct_semantics_type_resolution_graph'`
     is fully green with zero shards outside this TODO's scope newly
