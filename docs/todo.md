@@ -8327,6 +8327,40 @@ This file is the live open-work queue for PrimeStruct.
     TODO-4800's repro reproduces with zero use of `map` or `count_ref`
     at all (plain `args<string>`), so verify independently before
     assuming a shared fix.
+  - investigated_2026-08-07: confirmed the bare method-call-sugar form
+    (`count_ref(location(values))`) doesn't even exist as a callable
+    spelling (`unknown call target: count_ref` at the semantic layer),
+    and that the direct-call rejection also fires identically when the
+    call result is first bound to a local rather than used inline in
+    `return(...)` - ruling out both alternate framings the
+    implementation_notes suggested checking. Found the dispatch chain in
+    `IrLowererLowerStatementsExpr.h` (~line 1718) that handles this exact
+    call shape for `count` specifically: it checks
+    `resolveSameFamilyKeyValueHelperMemberName(...) == "count"` gated by
+    `hasSemanticKeyValueHelperDefinition("count")`, then rewrites to the
+    canonical helper path and emits an inline definition call - `count_ref`
+    is never included in this check anywhere in the file (confirmed via
+    grep - only bare `"count"` string-literal comparisons exist, no
+    `"count_ref"` ones in any of the several map/vector count-dispatch
+    blocks in this file). Attempted the obvious fix (add
+    `|| keyValueCountHelperName == "count_ref"` alongside the existing
+    `"count"` check at that site) and rebuilt/retested - it made no
+    difference at all to the observed rejection, meaning this exact
+    block either never gets reached for `count_ref` (some earlier guard
+    in the same large `if`, e.g. the `keyValueHelperMetadata() != nullptr`
+    check a few lines up, may already fail before this point) or
+    `hasSemanticKeyValueHelperDefinition("count_ref")` itself returns
+    false (i.e. `count_ref` may not be registered as a recognized stdlib
+    surface member for maps at all, unlike vector's `count_ref`/`at_ref`
+    family) - not disambiguated this session. Reverted the one-line
+    attempt cleanly (verified via `git diff`) rather than land a no-op
+    change. This has the same "single guarded dispatch site with several
+    plausible failure points, none individually confirmed" shape as the
+    exhausted TODO-4756 investigation - next session should add a debug
+    print at the `keyValueHelperMetadata()`/`hasSemanticKeyValueHelperDefinition`
+    checks specifically (not just the leaf-name comparison this session
+    tried) to see which one actually rejects `count_ref` before
+    attempting another fix.
 
 - [x] TODO-4802 (RESOLVED): `args<Pointer<uninitialized<Struct>>>`/`args<Reference<uninitialized<Struct>>>` variadic packs reject with "vm backend only supports numeric/bool/string variadic args parameters" even though non-uninitialized struct packs and uninitialized scalar packs both work
   - owner: ai
