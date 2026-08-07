@@ -376,6 +376,10 @@ std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
              expr.templateArgs[1] + ">";
     }
   }
+  if (!expr.isBinding && expr.args.size() == 1 &&
+      (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity"))) {
+    return "i32";
+  }
   std::string resolved;
   if (expr.isMethodCall) {
     if (!resolveMethodCallTemplateTarget(expr, locals, ctx, resolved)) {

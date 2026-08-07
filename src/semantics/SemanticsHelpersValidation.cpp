@@ -478,6 +478,10 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
     }
     if (expr.kind == Expr::Kind::Call) {
       if (expr.isMethodCall) {
+        if (expr.args.size() == 1 &&
+            (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity"))) {
+          return ReturnKind::Int;
+        }
         return ReturnKind::Unknown;
       }
       if (expr.hasBodyArguments && expr.args.empty()) {

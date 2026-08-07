@@ -6634,8 +6634,10 @@ TEST_CASE("semantic product formatter emits deterministic lowering-facing sectio
   primec::SemanticProgram semanticProgram;
   std::string error;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  CHECK_FALSE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK_FALSE(error.empty());
+  // TODO-4815 (fixed): id(/std/collections/vector/count(values)) now
+  // correctly infers its implicit template argument (T=i32) again.
+  CHECK(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
 }
 
 TEST_CASE("semantic product formatter resolves module direct-call indices deterministically") {
@@ -8492,8 +8494,11 @@ TEST_CASE("semantic product dump helper matches formatter output") {
   primec::Semantics semantics;
   primec::SemanticProgram semanticProgram;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  CHECK_FALSE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK_FALSE(error.empty());
+  // TODO-4815 (fixed): id(/std/collections/vector/count(values)) now
+  // correctly infers its implicit template argument (T=i32) again,
+  // agreeing with captureSemanticBoundaryDumpsForTesting's success above.
+  CHECK(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
   CHECK_FALSE(dumps.semanticProduct.empty());
 }
 

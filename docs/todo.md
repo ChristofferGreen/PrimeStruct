@@ -7092,7 +7092,7 @@ This file is the live open-work queue for PrimeStruct.
     fix - they hit different error classes (semantic vs. IR-lowering)
     and may be unrelated.
 
-- [ ] TODO-4815: Templated call argument inference fails when the argument is itself a collection-helper method-call-sugar result
+- [x] TODO-4815 (RESOLVED): Templated call argument inference fails when the argument is itself a collection-helper method-call-sugar result
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -7138,6 +7138,61 @@ This file is the live open-work queue for PrimeStruct.
     local instead of `values.count()`) to confirm inference works for
     ordinary arguments before concluding the method-call-sugar path is
     specifically broken.
+  - resolution_summary: per the stop_rule, confirmed plain-var/literal/
+    user-function arguments all inferred correctly, narrowing the gap to
+    specifically collection-helper calls (`count`/`capacity`, both bare
+    `count(values)` and method-sugar `values.count()` forms - confirmed
+    NOT method-sugar-specific per the implementation_notes' own question).
+    Root-caused to two independent, complementary gaps, both requiring
+    fixes: (1) `inferExprTypeTextForTemplatedVectorFallback`
+    (`TemplateMonomorphFallbackTypeInference.h`) - the fallback query-type
+    inferer used when the argument IS itself the templated call - required
+    `ctx.sourceDefs.find(resolved)` to succeed, but `count`/`capacity`
+    calls on a plain (non-shadowed) collection have no real AST-level
+    source `Definition` to find (they're compiler intrinsics), so this
+    always failed for the direct/bare-argument case (`id(values.count())`).
+    Fixed by special-casing bare 1-arg `count`/`capacity` calls to return
+    `"i32"` directly before attempting the `sourceDefs` lookup - safe
+    because by the time this fallback runs, the primary inference path
+    has already tried and failed to find a real user-defined shadow at
+    this exact call, so no override could be silently skipped. (2)
+    `inferPrimitiveReturnKind` (`SemanticsHelpersValidation.cpp`) - the
+    separate arithmetic-operand-type inferer used when the argument is an
+    arithmetic expression containing a collection-helper call as an
+    operand (e.g. `id(plus(1i32, values.count()))`) - unconditionally
+    returned `Unknown` for ANY method-call expression
+    (`if (expr.isMethodCall) { return ReturnKind::Unknown; }`), with no
+    exception for count/capacity. Fixed by special-casing 1-arg
+    `count`/`capacity` method calls to return `ReturnKind::Int` before
+    that catch-all. Verified both the direct-argument and arithmetic-
+    operand forms compile and run correctly, and that a THIRD, more
+    complex combination in the original third re-pinned test
+    (`id(packet.left + values.count())`, struct field access as the OTHER
+    arithmetic operand) still fails for a genuinely separate, still-open
+    reason: `inferPrimitiveReturnKind` has no case for field-access
+    expressions at all (confirmed `id(packet.left)` alone works via a
+    different code path, `resolveFieldBindingTarget`, not this function) -
+    left that one re-pinned to its current (still-rejecting) state with a
+    note, since fixing it would require broader plumbing (struct
+    definitions aren't available to this function's simpler signature)
+    beyond this TODO's collection-helper scope. Also found and fixed 2
+    MORE tests exercising the identical `id(/std/collections/vector/count(values))`
+    pattern in `test_semantics_type_resolution_graph_snapshots.cpp` that
+    weren't part of the original 3-test triage (added independently,
+    apparently during the same regression, without a TODO-4815
+    cross-reference) - re-pinned both from `CHECK_FALSE(semantics.validate(...))`
+    to `CHECK(...)` since they exercise the exact fixed case. While
+    verifying, discovered `primevm` had been stale since before this
+    session's earlier fixes (last built prior to today, missing TODO-4810/
+    4803/4805/4802) - only `primec` was being rebuilt after each fix this
+    session; a `primec`-vs-`primevm` dump-equality test caught this by
+    failing on `primevm`'s stale rejection. Rebuilt `primevm` and re-ran
+    the full compile_run suite against it to confirm no other fix this
+    session had silently-unverified primevm-specific coverage - full
+    2940/2940 pass confirmed clean. Full 3-suite rebuild (both binaries)
+    confirmed 0 regressions (backend_ir: 1739/1741, the 2 known
+    pre-existing failures only; semantics: 2940/2940; compile_run:
+    2940/2940).
 
 - [ ] TODO-4814: semantic-product binding_facts ordering and ast-semantic bare-return rendering both drifted from documented/pinned form
   - owner: ai

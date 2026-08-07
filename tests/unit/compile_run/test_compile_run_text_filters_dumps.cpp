@@ -2380,22 +2380,19 @@ main() {
   const std::string underscoreErrPath =
       (testScratchPath("") / "primec_dump_semantic_product_underscore_err.txt").string();
 
-  // TODO-4815: id(values.count()) used to successfully infer T=i32 for the
-  // templated `id<T>` call from its argument's (values.count()) return
-  // type; it now fails template-argument inference entirely ("unable to
-  // infer implicit template arguments for /id") on both dump-stage spelling
-  // aliases. Re-pinned to the verified current rejection (both spellings
-  // still agree with each other).
+  // TODO-4815 (fixed): id(values.count()) now correctly infers T=i32 for
+  // the templated `id<T>` call from its argument's (values.count())
+  // return type again, on both dump-stage spelling aliases.
   const std::string hyphenCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " +
                                 quoteShellArg(hyphenOut) + " 2> " + quoteShellArg(hyphenErrPath);
   const std::string underscoreCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic_product > " +
                                     quoteShellArg(underscoreOut) + " 2> " + quoteShellArg(underscoreErrPath);
-  CHECK(runCommand(hyphenCmd) == 2);
-  CHECK(runCommand(underscoreCmd) == 2);
+  CHECK(runCommand(hyphenCmd) == 0);
+  CHECK(runCommand(underscoreCmd) == 0);
 
-  const std::string hyphenErr = readFile(hyphenErrPath);
-  CHECK(hyphenErr == readFile(underscoreErrPath));
-  CHECK(hyphenErr.find("Semantic error: unable to infer implicit template arguments for /id") != std::string::npos);
+  const std::string hyphenDump = readFile(hyphenOut);
+  CHECK(hyphenDump == readFile(underscoreOut));
+  CHECK(hyphenDump.find("full_path=\"/id__") != std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic reports semantic errors") {
@@ -2536,16 +2533,16 @@ main() {
   const std::string primevmErrPath =
       (testScratchPath("") / "primevm_dump_shared_semantic_product_err.txt").string();
 
-  // TODO-4815: id(values.count()) no longer infers its template argument -
-  // see the "dump semantic_product alias works" test above. Both primec and
-  // primevm still agree on the rejection, just re-pinned to expect it.
+  // TODO-4815 (fixed): id(values.count()) now infers its template argument
+  // again - see the "dump semantic_product alias works" test above. Both
+  // primec and primevm agree on the successful dump.
   const std::string primecCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " +
                                 quoteShellArg(primecOut) + " 2> " + quoteShellArg(primecErrPath);
   const std::string primevmCmd = "./primevm " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " +
                                  quoteShellArg(primevmOut) + " 2> " + quoteShellArg(primevmErrPath);
-  CHECK(runCommand(primecCmd) == 2);
-  CHECK(runCommand(primevmCmd) == 2);
-  CHECK(readFile(primecErrPath) == readFile(primevmErrPath));
+  CHECK(runCommand(primecCmd) == 0);
+  CHECK(runCommand(primevmCmd) == 0);
+  CHECK(readFile(primecOut) == readFile(primevmOut));
 }
 
 TEST_CASE("semantic-product dump keeps provenance handles while ast-semantic keeps syntax") {
@@ -2616,11 +2613,16 @@ TEST_CASE("pipeline dump surfaces keep inspection order and lowering-facing boun
       "  return(selected)\n"
       "}\n";
 
-  // TODO-4815: id(packet.left + values.count()) no longer infers its
-  // template argument (same root cause as the "dump semantic_product alias
-  // works" test above) - the compile-pipeline capture helper now fails
-  // outright instead of producing the three boundary dumps this test
-  // originally inspected. Re-pinned to the verified current rejection.
+  // TODO-4815: the count()-specific root cause is fixed (see the two
+  // TEST_CASEs above), but this particular repro combines it with a
+  // separate, still-open gap: `inferPrimitiveReturnKind`'s arithmetic
+  // operand descent (used to type-check `plus(...)`'s operands for
+  // implicit template inference) has no case for `Expr::Kind` field
+  // access at all (`packet.left`), so `plus(packet.left,
+  // values.count())` still fails even though `values.count()` alone (or
+  // `packet.left` alone, per `id(packet.left)`) now correctly infers.
+  // Re-pinned to the verified current rejection - same message, now a
+  // narrower cause.
   primec::testing::CompilePipelineBoundaryDumps dumps;
   std::string error;
   CHECK_FALSE(primec::testing::captureSemanticBoundaryDumpsForTesting(source, "/main", dumps, error));
