@@ -7194,7 +7194,7 @@ This file is the live open-work queue for PrimeStruct.
     pre-existing failures only; semantics: 2940/2940; compile_run:
     2940/2940).
 
-- [ ] TODO-4814: semantic-product binding_facts ordering and ast-semantic bare-return rendering both drifted from documented/pinned form
+- [x] TODO-4814 (RESOLVED - working as intended): semantic-product binding_facts ordering and ast-semantic bare-return rendering both drifted from documented/pinned form
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -7230,6 +7230,21 @@ This file is the live open-work queue for PrimeStruct.
     this suite already depend on the *current* (parenthesized/index-0)
     form elsewhere - a blind revert could break tests this session left
     green.
+  - resolution_summary: verified both acceptance criteria hold, per the
+    TODO's own "likely just under-documented" framing - no code change
+    made. (1) Ran `--dump-stage semantic-product` on a minimal repro
+    twice and confirmed `binding_facts[]` ordering is byte-identical
+    across runs (struct-internal bindings for `/Packet`'s `left`/`right`
+    consistently precede `/main`'s use-site bindings, matching the
+    "structs are processed before their use sites" hypothesis - genuinely
+    deterministic, not incidental). (2) Ran `--dump-stage ast-semantic`
+    on the same repro and confirmed every bare return statement
+    (`return value`, `return selected`) renders without parentheses
+    consistently - grepped the test suite for any lingering expectation
+    of a parenthesized bare return in dump OUTPUT (not `.prime` source
+    text, which legitimately uses `return(x)` syntax) and found none.
+    Closed as working-as-intended with no regression risk, since no code
+    was touched.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
