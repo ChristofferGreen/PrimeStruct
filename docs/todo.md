@@ -8638,6 +8638,61 @@ This file is the live open-work queue for PrimeStruct.
     a fix just because they share a message family - verify each
     independently once a candidate fix exists, the same way TODO-4752
     required doing for its own vm/native split.
+  - investigated_2026-08-07: narrowed the trigger significantly - the
+    crash is NOT about field access or method chaining on the returned
+    struct at all (confirmed via a temporary debug print, reverted):
+    even `[Marker] m{/std/collections/vector/at_unsafe(values, 2i32)}`
+    with no subsequent `.value`/method access, and even returning `m`
+    directly with no further use, crashes identically (`"unaligned
+    indirect address in IR: 7"` for that variant vs `: 23` for the
+    original minimal repro - the address value shifts with context,
+    ruling out a fixed hardcoded constant). The ONLY thing that matters
+    is renaming the user's struct-returning function away from the
+    canonical `/std/collections/vector/at_unsafe` path (e.g. to
+    `getMarker` with an identical body/signature otherwise) - that
+    variant runs correctly and returns 2. Ruled out (with receipts) two
+    plausible interception points: (1) NOT
+    `emitVectorIndexedAccessBeforeInline`
+    (`IrLowererLowerEmitExprTailDispatch.h`, the same function fixed for
+    TODO-4803) - its override-detection guard is gated behind
+    `inlineDispatchExpr.isMethodCall`, so a direct (non-method) call like
+    this repro's skips it entirely and falls straight into
+    `emitArrayVectorIndexedAccess`; extended the guard to also run for
+    non-method calls (mirroring TODO-4803's fix pattern) and confirmed
+    via debug print that this correctly identifies the real, non-trivial
+    user `Definition` and returns `std::nullopt` (bailing out of the
+    indexed-access fast path as intended) - but the crash persisted
+    completely unchanged, proving this function was never actually
+    responsible. Reverted that attempt cleanly (verified via `git diff`)
+    since it didn't fix anything and I couldn't verify it was safe
+    without further investigation. (2) NOT a function-return-type
+    registration bug - compared `--dump-stage ir` output for the
+    crashing repro against the working `getMarker` rename: both print
+    `def /std/collections/vector/at_unsafe(...): i32` /
+    `def /getMarker(...): i32` identically (the text IR printer appears
+    to always show `i32` for struct-returning functions, a printer
+    quirk, not a signal of the actual bug), so the function-level return
+    type isn't where the two diverge. Since the crash reproduces
+    identically even with zero downstream use of the returned struct,
+    and disappears entirely under a mere rename with an otherwise
+    byte-identical body, the actual interception point must be something
+    that special-cases the *callee's own path* independently of the
+    call-site dispatch heuristics already investigated (and independent
+    of TODO-4803/4805's "does a real override exist" checks, which
+    matter for call-SITE routing, not whatever is happening here) -
+    plausibly a native/precompiled-body substitution for canonical
+    collection-helper paths, or a struct-vs-scalar return-convention
+    decision made from the callee's path rather than its actual
+    `[return<T>]` transform, but the exact site was not found this
+    session (grepped for several plausible naming patterns
+    - `isCanonicalCollectionHelperDefinition`,
+    `synthesizeNativeFunctionBody`, `def.fullPath == rootCollectionMemberPath`
+    - with no hits, meaning it's under a name not yet guessed). Next
+    session should search from the callee side: trace how
+    `/std/collections/vector/at_unsafe`'s OWN function body gets lowered
+    (not any call SITE to it) and diff that against `/getMarker`'s
+    lowering, since the call sites are now confirmed structurally
+    identical AST/semantic-wise between the two.
 
 - [x] TODO-4805 (RESOLVED): Direct-call `/std/collections/vector/count(...)` same-path user shadow not dispatched when the receiver is an `array<i32>`-typed helper-return value
   - owner: ai
