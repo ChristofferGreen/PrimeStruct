@@ -7330,6 +7330,40 @@ This file is the live open-work queue for PrimeStruct.
     they very likely have different root causes (mixing method-sugar
     resolution, template/type inference timing, and IR-lowering loop
     factoring); triage into separate leaves before writing any code.
+  - investigated_2026-08-07: triaged finding (1) (`.push()` sugar without
+    import). Confirmed the exact asymmetry: `values.count()` on a
+    `[soa<Particle> mut]` local resolves and runs fine with NO import at
+    all, while `values.push(...)` on the identical receiver rejects with
+    "unknown call target: push" - traced to
+    `resolveMethodCallPath`/`matchesBuiltinSoaCollectionHelper`
+    (`SemanticsValidatorExprMethodTargetResolution.cpp`, ~line 1947),
+    whose always-visible-without-import allowlist covers
+    `count`/`count_ref`/`get`/`get_ref`/`to_aos`/`to_aos_ref`/ref-like
+    helpers but has no `push`/`reserve` entries at all - contrasted with
+    this same TODO's own cross-reference elsewhere in this file
+    describing `count`/`count_ref`/`get`/`get_ref`/`ref`/`ref_ref`/
+    `to_aos`/`to_aos_ref`/`push`/`reserve` as one unified "same-path
+    shadow family" for OTHER purposes, suggesting push/reserve's
+    exclusion here specifically could be either an oversight or a
+    deliberate "read methods always visible, write methods need explicit
+    import" design choice - genuinely ambiguous either way from code
+    alone. Went one step further and found this isn't a clean binary
+    "bug or not": testing the explicitly-typed `[SoaVector<Particle> mut]`
+    sibling (not `soa<Particle>`) with the identical no-import `push`
+    call produces a THIRD, different behavior - it passes semantic
+    validation cleanly (no "unknown call target" at all) but then fails
+    at IR LOWERING with `"vm backend only supports arithmetic/.../
+    increment/decrement calls in expressions (call=/std/collections/soa/push,
+    ...)"`, an entirely different rejection class. So the three receiver
+    spellings (`soa<Particle>` without import, `SoaVector<Particle>`
+    without import, either with import) each hit a different code path
+    with different behavior for the exact same logical operation - this
+    is more tangled than a single allowlist gap and needs a design
+    decision (should push/reserve require import like write-mutators
+    elsewhere, or be uniformly visible like their sibling family members)
+    before a fix should be attempted; not fixed this session, leaving
+    for a session that can get that design question answered first
+    rather than guess.
 
 - [x] TODO-4811 (RESOLVED): count() can no longer be used inside an expression, only as a bare statement
   - owner: ai
