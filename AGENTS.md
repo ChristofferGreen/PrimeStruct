@@ -114,8 +114,20 @@ build and layout solidify.
 - **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
 - **Test-count helper:** `./scripts/test_count.sh` reports total defined `TEST_CASE` macros under `tests/` and, when test binaries exist, sums doctest `--count` output across `build-release/PrimeStruct_*_tests`.
 - **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
-- **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`
-  or from the repo root via `ctest --test-dir build-release`; do not assume
+- **CTest must run multithreaded:** `ctest`'s own default is `--parallel 1`
+  (serial), and `--parallel 0` does **not** mean "auto-detect cores" - it
+  measured as serial too. Always pass an explicit `--parallel <N>` (`N` =
+  detected core count; `scripts/compile.sh` already does this via its
+  `detect_jobs()` helper). The root `CMakePresets.json` bakes this in for
+  ad hoc/IDE use: `ctest --preset release` (or `debug`/`relwithdebinfo`) runs
+  with `--parallel 8` and `--output-on-failure` automatically, no flags to
+  remember. Never invoke a bare `ctest` (or `ctest --output-on-failure`) with
+  no parallel flag and no preset - that silently falls back to serial
+  execution.
+- **CTest:** prefer running from `build-release/` via
+  `ctest --output-on-failure --parallel <N>`, via the `release` CTest preset
+  (`ctest --preset release`), or from the repo root via
+  `ctest --test-dir build-release --parallel <N>`; do not assume
   `build-release/ctest` exists. Use `build-debug/` when investigating failures
   in more detail.
 - **Direct test binary runs:** prefer executing the matching release-mode doctest binary from `build-release/` so compile-run suites can resolve `./primec` correctly. Use `PrimeStruct_backend_ir_tests` for IR-lowering contract coverage, `PrimeStruct_backend_runtime_tests` for backend-registry/runtime adapter coverage, `PrimeStruct_compile_run_tests` for compile-run suites, or the corresponding narrower release binary for parser, semantics, text-filter, or misc slices. Switch to the matching `build-debug/` binary only when deeper debugging is needed.
