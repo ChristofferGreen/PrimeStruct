@@ -7436,6 +7436,47 @@ This file is the live open-work queue for PrimeStruct.
     the args-pack-indexing question. Part (b) not investigated this
     session (`stop_rule` requires verifying them independently as they
     hit different error classes).
+  - cross_reference_2026-08-08: part (b) (`.at()`/`.at_unsafe()` on
+    `args<Pointer<uninitialized<i32>>>` failing with `VM lowering error:
+    semantic-product method-call target missing lowered definition:
+    /array/at`) is the SAME bug as TODO-4800 (identical error message
+    and shape - `.at()`/`at()` sugar on any `args<T>` pack element type
+    failing to resolve to a real lowered definition for the synthesized
+    `/array/at`/`/array/at_unsafe` targets), just rediscovered
+    independently via a different test file. Confirmed via direct
+    reproduction: `values.at(1i32)` where `values` is
+    `[args<Pointer<uninitialized<i32>>>]` fails identically to TODO-4800's
+    own `args<string>`/`args<Pointer<i32>>`/etc. repros. TODO-4800 already
+    has a full `investigated_2026-08-06` note documenting a disproven fix
+    attempt (loosening `emitVectorIndexedAccessBeforeInline`'s receiver
+    gate in `IrLowererLowerEmitExprTailDispatch.h` to accept
+    `isArgsPackTarget` - confirmed via a debug print that this function
+    is never even reached for this call shape) and a concrete next step
+    (trace from the OUTER call's own emission dispatch, not
+    `TailDispatch`, since that file may not be reachable from this call
+    position at all). Traced one layer further this session: the error
+    originates in `resolveMethodCallDefinition`
+    (`IrLowererSetupTypeMethodCallResolution.cpp`, ~line 636-648) - for
+    `.at()`/`.at_unsafe()`, `blocksSyntheticCollectionFallbackDirectTarget("/array/at")`
+    returns false (its checks are all vector/map/soa-collection-path
+    prefixes; `/array/at` matches none of them), so
+    `directTargetKeepsSyntheticCollectionFallback` becomes true and the
+    code tries `resolveLoweredDefinitionPath("/array/at")` - which fails
+    (no real definition exists for this synthetic marker path, since
+    array/pack indexed access is meant to be intercepted earlier via
+    `getBuiltinArrayAccessName` + `emitArrayVectorIndexedAccess`, not
+    resolved as a real callable) - producing exactly this TODO's error
+    text. This confirms TODO-4800's own hypothesis that the correct
+    array/pack-index interception path is being bypassed for method-call
+    (`.at()`) syntax specifically, and narrows "where" one step further
+    (into `resolveMethodCallDefinition`'s fallback-direct-target branch)
+    without yet finding why the interception happens correctly for
+    plain (non-method) `at(values, N)` sugar elsewhere but not here, nor
+    a safe fix. Given the depth of both this and TODO-4800's prior
+    investigation without a safe fix, and this session's effort budget,
+    treating TODO-4760(b) as closed-by-duplication in favor of
+    continuing under TODO-4800 (which should be the tracking TODO for
+    any future fix attempt on this bug).
 
 - [x] TODO-4815 (RESOLVED): Templated call argument inference fails when the argument is itself a collection-helper method-call-sugar result
   - owner: ai
