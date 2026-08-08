@@ -7401,6 +7401,41 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: verify (a) and (b) independently before assuming a shared
     fix - they hit different error classes (semantic vs. IR-lowering)
     and may be unrelated.
+  - investigated_2026-08-08 (part a only): reproduced with a minimal
+    repro (`score_maps([args<map<i32, i32>>] values) { [map<i32, i32>]
+    head{at(values, 0i32)} ... }`). The observed error ("argument count
+    mismatch for /std/collections/map/map") is misleading about WHERE
+    the bug actually is - it's a SEMANTIC resolution bug, not an
+    IR-lowering one (the scope's own guess that it's "misrouted to the
+    map<K,V> constructor overload" turns out to be half right but for a
+    different reason than expected). Checked `--dump-stage
+    semantic-product`: the call target for `at(values, 0i32)` is
+    resolved to `resolved_path="/std/collections/map/at"` - i.e. the
+    semantic layer picks map's own `at<K, V>([MapValue<K, V>] entries,
+    [K] key)` helper (defined in `stdlib/std/collections/map.prime:425`
+    - map's `at` means "look up by KEY", an entirely different operation
+    from positional pack-element indexing), NOT a constructor call and
+    NOT array/pack-index sugar. This is wrong on its face: `values` is
+    an `args<map<i32,i32>>` PACK (a pack of whole maps), not a single
+    `MapValue<K,V>` - the two types don't match, yet overload/parameter
+    matching accepted this candidate anyway. Did not get far enough to
+    find WHY the type mismatch is accepted (likely somewhere in
+    template-argument inference/monomorphization matching loosely
+    treating "map-shaped" types as compatible with `MapValue<K,V>`,
+    or the pack-element-indexing special case for `at()` on args-packs
+    simply never gets a chance to run because plain call-target
+    resolution finds `/std/collections/map/at` as a candidate FIRST and
+    stops looking). A future session should: (1) find where `at()` calls
+    get classified as "index into an args-pack" vs "resolve to a normal
+    definition named at" and confirm that classification is checked
+    BEFORE normal overload resolution for an `args<T>`-typed receiver,
+    regardless of what `T` is; (2) separately check why
+    `/std/collections/map/at<K,V>([MapValue<K,V>] entries, ...)`'s
+    parameter type matching accepted an `args<map<K,V>>` argument at all
+    - that mismatch should have been rejected outright, independent of
+    the args-pack-indexing question. Part (b) not investigated this
+    session (`stop_rule` requires verifying them independently as they
+    hit different error classes).
 
 - [x] TODO-4815 (RESOLVED): Templated call argument inference fails when the argument is itself a collection-helper method-call-sugar result
   - owner: ai
