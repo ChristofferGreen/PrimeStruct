@@ -6590,7 +6590,7 @@ This file is the live open-work queue for PrimeStruct.
     no collections, exactly as shown above) before assuming any
     connection to the specific "push"-named test that surfaced it.
 
-- [ ] TODO-4761: Locally-declared struct binding typed with a stdlib module's short name no longer type-unifies against the same struct's fully-qualified spelling
+- [x] TODO-4761: (RESOLVED) Locally-declared struct binding typed with a stdlib module's short name no longer type-unifies against the same struct's fully-qualified spelling
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -6687,6 +6687,86 @@ This file is the live open-work queue for PrimeStruct.
     caused the 6 gfx regressions from the broadened-prefix version
     understood and fixed before any similar generalization is
     attempted. Not fixed this session.
+  - resolution_summary (2026-08-08): fixed as a narrow follow-on to
+    TODO-4763's namespace-ancestor-climbing fix. The root cause matched
+    the `investigated_2026-08-05` note exactly: `UiScene` and
+    `UiSceneTextOverlays` were simply missing from `isKnownStdUiStructAlias`'s
+    hardcoded whitelist - a function duplicated (independently, not
+    shared) in three files:
+    `src/ir_lowerer/IrLowererInlineParamHelpers.cpp`,
+    `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp`, and
+    `src/ir_lowerer/IrLowererInlineStructArgHelpers.cpp`. Added both
+    names to all three copies (deliberately not deduplicating the three
+    copies into a shared helper in this pass, to keep the change minimal
+    and low-risk). Unlike the earlier reverted attempt, this fix does
+    NOT broaden the alias-matching logic itself (still requires an exact
+    `/std/ui/` + bare match) - it only adds two names to the existing
+    whitelist, so it can't introduce the same over-broad-prefix
+    regressions the 2026-08-05 attempt hit. The previously-predicted
+    "second, independent bug one layer deeper" (`vm backend cannot
+    resolve struct layout: UiScene`) did not reproduce after this fix,
+    because TODO-4763's separately-landed ancestor-namespace-climbing
+    fix in `resolveStructTypePathFromScope` already covers that layer
+    generically for any bare struct name declared in an ancestor
+    namespace of the resolving definition.
+    Verified via minimal repro built from the TODO's own
+    `test_compile_run_scene_model_helpers.h::uiSceneAdapterSource()`:
+    `./primec --emit=vm` now compiles and runs it to completion, with
+    output matching `expectedUiSceneAdapterOutput()` byte-for-byte (`diff`
+    confirmed) and exit code 11, matching the already-passing native
+    backend's "native ui scene adapter deterministically" test. Re-pinned
+    `test_compile_run_vm_core_ui.cpp`'s "runs vm ui scene adapter
+    deterministically" from expecting the compile-reject to asserting
+    that verified success. Full-suite verification (via `ctest -R
+    PrimeStruct_primestruct_compile_run` per-shard, since running the
+    monolithic `PrimeStruct_compile_run_tests` binary directly hangs
+    indefinitely on an unrelated, pre-existing infinite loop - see new
+    TODO-4901 below): all previously-passing cases still pass, none of
+    this session's other re-pinned gfx tests regressed.
+    `PrimeStruct_semantics_tests` (2940/2940) and `PrimeStruct_backend_ir_tests`
+    (only the 2 known pre-existing `ir_pipeline` failures) both clean for
+    this exact change-set.
+
+- [ ] TODO-4901: primec --emit=wasm hangs indefinitely (infinite loop) compiling quaternion arithmetic helpers
+  - owner: ai
+  - created_at: 2026-08-08
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-smoke
+  - depends_on: (none)
+  - scope: discovered incidentally while trying to verify TODO-4761's fix
+    by running the full `PrimeStruct_compile_run_tests` binary directly -
+    the run never terminated. Traced to a single test case,
+    `"primec emits wasm bytecode for quaternion arithmetic helpers with
+    tolerance"`, which invokes `./primec --emit=wasm` on
+    `compile_emit_wasm_quaternion_arithmetic_helpers.prime`; that child
+    process pegs a CPU core at ~100% indefinitely (observed running 2+
+    minutes with no sign of terminating before being killed). Confirmed
+    present in the pre-TODO-4763-fix binary too (i.e. NOT a regression
+    introduced this session) - this is a previously-undiscovered,
+    pre-existing infinite loop, likely dating back to whenever wasm
+    quaternion-helper emission was last touched. This is why the
+    monolithic test binary must currently be run via `ctest` with
+    per-test timeouts (`ctest -R PrimeStruct_primestruct_compile_run`)
+    rather than invoked directly, to avoid the whole suite hanging
+    forever on this one case.
+  - implementation_notes: not yet investigated. Start by reproducing
+    directly: `./primec --emit=wasm <the .prime source> -o /tmp/out.wasm
+    --entry /main` (extract the source from the test file/helper it's
+    built from) and attach a debugger or add iteration-count instrumentation
+    to the wasm emitter's quaternion/arithmetic-helper lowering path to
+    find the non-terminating loop. Given the test name references
+    "tolerance" (likely a floating-point comparison helper), suspect a
+    loop bound computed from a float value that never reaches its
+    terminating condition, or infinite recursion in constant-folding/
+    monomorphization for a quaternion helper.
+  - acceptance: `./primec --emit=wasm` on the repro source terminates
+    (successfully or with a normal error) in a bounded, reasonable time,
+    and the full `PrimeStruct_compile_run_tests` binary can be run
+    directly to completion again without hanging.
+  - stop_rule: confirm whether this is specific to the "quaternion
+    arithmetic helpers with tolerance" test's exact source shape, or a
+    more general wasm-backend infinite-loop class, before assuming a fix
+    for one case covers the whole bug.
 
 - [ ] TODO-4767: drop() on a plain local now requires uninitialized<T> storage
   - owner: ai

@@ -74,7 +74,8 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
 bool isKnownStdUiStructAlias(std::string_view bareName) {
   return bareName == "CommandList" || bareName == "HtmlCommandList" ||
          bareName == "LayoutTree" || bareName == "LoginFormNodes" ||
-         bareName == "Rgba8" || bareName == "UiEventStream";
+         bareName == "Rgba8" || bareName == "UiEventStream" ||
+         bareName == "UiScene" || bareName == "UiSceneTextOverlays";
 }
 
 bool isStdUiStructAliasMatch(const std::string &expectedStruct,

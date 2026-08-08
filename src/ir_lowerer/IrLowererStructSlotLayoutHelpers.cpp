@@ -54,7 +54,8 @@ bool isKnownStdUiStructAlias(const std::string &typeName) {
   return typeName.find('/') == std::string::npos &&
          (typeName == "CommandList" || typeName == "HtmlCommandList" ||
           typeName == "LayoutTree" || typeName == "LoginFormNodes" ||
-          typeName == "Rgba8" || typeName == "UiEventStream");
+          typeName == "Rgba8" || typeName == "UiEventStream" ||
+          typeName == "UiScene" || typeName == "UiSceneTextOverlays");
 }
 
 std::string resolveStructSlotLookupPath(
