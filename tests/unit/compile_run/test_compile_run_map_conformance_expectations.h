@@ -313,33 +313,25 @@ inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::
 }
 
 inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
-                                      "map_builtin_canonical_insert_first_growth_" + emitMode,
-                                      emitMode,
-                                      "native backend only supports at() on numeric/bool/string arrays or vectors");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
-                                    "map_builtin_canonical_insert_first_growth_" + emitMode,
-                                    emitMode,
-                                    "unknown call target: /map/at");
+  // TODO-4749 (fixed): the source was missing `import /std/collections/map/*`
+  // - without it, `.at()`/`.at_unsafe()` method-call sugar on a `map<K,V>`
+  // receiver correctly falls back to the "legacy alias receiver, helper not
+  // imported" retirement diagnostic (still exercised deliberately by
+  // "canonical map value methods report retired insert diagnostics" in
+  // test_semantics_calls_and_flow_collections_count_helpers_and_bare_map_calls.cpp).
+  // Adding the missing import lets it resolve to the real canonical helper.
+  expectMapConformanceProgramRuns(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
+                                  "map_builtin_canonical_insert_first_growth_" + emitMode,
+                                  emitMode,
+                                  8);
 }
 
 inline void expectBuiltinCanonicalMapInsertRepeatedGrowthConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
-                                      "map_builtin_canonical_insert_repeated_growth_" + emitMode,
-                                      emitMode,
-                                      "native backend only supports at() on numeric/bool/string arrays or vectors");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
-                                    "map_builtin_canonical_insert_repeated_growth_" + emitMode,
-                                    emitMode,
-                                    "unknown call target: /map/at");
+  // TODO-4749 (fixed): see expectBuiltinCanonicalMapInsertFirstGrowthConformance.
+  expectMapConformanceProgramRuns(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
+                                  "map_builtin_canonical_insert_repeated_growth_" + emitMode,
+                                  emitMode,
+                                  197);
 }
 
 inline void expectBuiltinCanonicalMapInsertPairGrowthConformance(const std::string &emitMode) {

@@ -6129,7 +6129,7 @@ This file is the live open-work queue for PrimeStruct.
     decomposition behavior-preserving first, then any subsequent
     TODO-4723 fixes get to build on smaller, more legible functions.
 
-- [ ] TODO-4749: Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
+- [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai
   - created_at: 2026-07-29
   - phase: Hidden test failure remediation (Map<K,V> cluster follow-up)
@@ -6217,6 +6217,59 @@ This file is the live open-work queue for PrimeStruct.
     session's history (see TODO-4756's investigation notes). Not fixed
     or re-pinned this session - left open with this trace so a future
     session doesn't have to re-derive the entry point.
+  - resolution_summary (2026-08-08): the "unresolved design question"
+    above turned out to have a clean, non-contradictory answer -
+    resolved without any compiler change. Traced both conflicting tests
+    with direct `primec` invocations and found the discriminator isn't
+    value-type or a design ambiguity at all: it's simply whether
+    `/std/collections/map/*` is imported *specifically*, in addition to
+    the general `/std/collections/*` wildcard. `isLegacyAliasReceiver`'s
+    retirement check in `SemanticsValidatorExprPreDispatchDirectCalls.cpp`
+    only fires when the specific canonical helper module isn't imported;
+    when it is, `.at()`/`.at_unsafe()` method-call sugar resolves via the
+    earlier `setPreferredKeyValueMethodTarget` path (the same one
+    `.insert()`/`.count()` sugar already used) and the retirement check
+    never runs. Verified directly: adding `import
+    /std/collections/map/*` to the OTHER test's exact `Owned`-value
+    source (the one deliberately expecting rejection) ALSO clears the
+    "unknown call target: /map/at" rejection - proving the split is
+    purely about which modules are imported, not about `.at()` sugar
+    being retired for `map<K,V>` in general, and not about the value
+    type's ownership semantics. TODO-4749's own two target sources
+    (`makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource`/
+    `...RepeatedGrowthConformanceSource` in
+    `test_compile_run_map_conformance_sources.h`) were simply missing
+    the specific import (unlike sibling conformance sources in the same
+    file using more complex value types, which already had it) - added
+    it to both. The "canonical map value methods report retired insert
+    diagnostics" semantics test is untouched and still correctly passes:
+    it deliberately only imports the general wildcard, so it continues
+    to exercise the (working-as-intended) retirement diagnostic for an
+    unimported-module scenario. Verified via direct `primec` invocation
+    before editing: both fixed sources now compile and run correctly on
+    BOTH `vm` and `native` (native was previously assumed - untested -
+    to hit a separate "native backend only supports at() on
+    numeric/bool/string arrays or vectors" limitation; that assumption
+    was wrong, native handles this shape fine once the import gate is
+    fixed). Re-pinned `expectBuiltinCanonicalMapInsertFirstGrowthConformance`/
+    `...RepeatedGrowthConformance` in
+    `test_compile_run_map_conformance_expectations.h` from
+    `expectMapConformanceCompileReject` to `expectMapConformanceProgramRuns`
+    with independently-computed correct exit codes (8 and 197
+    respectively), affecting 4 TEST_CASEs across
+    `test_compile_run_imports_operations.cpp`,
+    `test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp`,
+    and `test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`
+    - all 4 verified passing. Note: ~25 sibling
+    `makeBuiltinCanonicalMapInsert*GrowthConformanceSource` helper
+    functions (Pair/Triple/Quad/... through Twentieth) in the same
+    header have the identical missing-import bug and matching
+    ready-to-use `expectBuiltinCanonicalMapInsert*GrowthConformance`
+    wrappers, but none of those wrappers are currently called from any
+    TEST_CASE (confirmed via repo-wide grep) - they are unused/dead
+    helpers, not currently-passing-or-failing tests, so left as-is; a
+    future session wiring them into real TEST_CASEs should add the same
+    missing import at that point.
 
 - [x] TODO-4750 (RESOLVED): Investigate `SoaSchemaChunkFieldCount`/`SoaSchemaChunkCount` reflection-generated helpers hitting "missing return in IR function" on `--emit=vm`
   - resolution_summary (2026-08-05): root cause found via `--dump-stage
