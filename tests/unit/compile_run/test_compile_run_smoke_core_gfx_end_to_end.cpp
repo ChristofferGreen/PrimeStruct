@@ -124,17 +124,20 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  const std::string experimentalConfigMismatch =
-      "struct parameter type mismatch: expected SubstrateDeviceConfig, got "
-      "/std/gfx/experimental/SubstrateDeviceConfig";
+  // TODO-4763 follow-up: the namespace-resolution fix means this no longer
+  // hits the old SubstrateDeviceConfig mismatch; it now compiles the
+  // struct/type surface fine and instead hits the pre-existing VM/native
+  // array-literal limitation on the VertexColored array literal, same as
+  // the canonical end-to-end test below. Re-pinned to that verified
+  // behavior.
   if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_end_to_end_conformance",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                experimentalConfigMismatch,
-                                                experimentalConfigMismatch)) {
+                                                std::string(NativeArrayLiteralUnsupportedMessage),
+                                                std::string(VmArrayLiteralUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 10);

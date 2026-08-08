@@ -91,17 +91,48 @@ bool buildCallableDefinitionCallContext(
     }
     StructSlotLayoutInfo layout;
     if (!resolveStructSlotLayout(info.structTypeName, layout)) {
-      if (info.structTypeName.empty() || info.structTypeName.front() == '/') {
-        error = "internal error: missing struct slot layout for " + info.structTypeName;
-        return false;
+      bool resolvedViaEnclosingNamespace = false;
+      if (!info.structTypeName.empty() && info.structTypeName.front() != '/') {
+        // A bare struct type name declared inside a nested namespace (e.g. a
+        // helper namespace like GraphicsSubstrate reopened inside std::gfx)
+        // is not itself namespace-qualified; the actual struct is typically a
+        // sibling declared in an ancestor namespace, not the definition's own
+        // namespace. Walk up the enclosing namespace chain looking for it
+        // before falling back to a bare root-level lookup.
+        std::string prefix = def.namespacePrefix;
+        while (!prefix.empty()) {
+          const std::string candidate = prefix + "/" + info.structTypeName;
+          if (resolveStructSlotLayout(candidate, layout)) {
+            info.structTypeName = candidate;
+            resolvedViaEnclosingNamespace = true;
+            break;
+          }
+          const size_t lastSlash = prefix.find_last_of('/');
+          if (lastSlash == std::string::npos) {
+            break;
+          }
+          prefix = prefix.substr(0, lastSlash);
+        }
       }
-      const std::string rootedStructTypeName = "/" + info.structTypeName;
-      if (!resolveStructSlotLayout(rootedStructTypeName, layout)) {
-        error = "internal error: missing struct slot layout for " + info.structTypeName;
-        return false;
+      if (!resolvedViaEnclosingNamespace) {
+        if (info.structTypeName.empty() || info.structTypeName.front() == '/') {
+          error = "internal error: missing struct slot layout for " + info.structTypeName;
+          return false;
+        }
+        const std::string rootedStructTypeName = "/" + info.structTypeName;
+        if (!resolveStructSlotLayout(rootedStructTypeName, layout)) {
+          error = "internal error: missing struct slot layout for " + info.structTypeName;
+          return false;
+        }
+        info.structTypeName = rootedStructTypeName;
       }
-      info.structTypeName = rootedStructTypeName;
     }
+    // A prior speculative resolveStructSlotLayout attempt (e.g. an
+    // enclosing-namespace climb candidate that didn't exist) may have left a
+    // stale failure message in the shared error string even though this
+    // local ultimately resolved successfully. Clear it so an unrelated later
+    // failure doesn't surface this leftover, misleading text.
+    error.clear();
     info.structSlotCount = layout.totalSlots;
     return true;
   };

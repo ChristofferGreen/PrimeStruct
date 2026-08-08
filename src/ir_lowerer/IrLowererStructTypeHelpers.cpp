@@ -333,10 +333,23 @@ bool resolveStructTypePathFromScope(
         return true;
       }
     }
-    std::string candidate = namespacePrefix + "/" + typeName;
-    if (structNames.count(candidate) > 0) {
-      resolvedOut = candidate;
-      return true;
+    // A bare type name may refer to a struct declared in an ancestor
+    // namespace rather than the immediately enclosing one - e.g. a helper
+    // namespace (like GraphicsSubstrate) reopened inside std::gfx whose own
+    // functions reference a sibling struct declared directly under std::gfx.
+    // Walk up the enclosing namespace chain before giving up.
+    std::string prefix = namespacePrefix;
+    while (!prefix.empty()) {
+      const std::string candidate = prefix + "/" + typeName;
+      if (structNames.count(candidate) > 0) {
+        resolvedOut = candidate;
+        return true;
+      }
+      const size_t lastSlash = prefix.find_last_of('/');
+      if (lastSlash == std::string::npos) {
+        break;
+      }
+      prefix = prefix.substr(0, lastSlash);
     }
   }
   auto importIt = importAliases.find(typeName);

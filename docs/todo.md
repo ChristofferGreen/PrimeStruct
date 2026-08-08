@@ -6964,7 +6964,7 @@ This file is the live open-work queue for PrimeStruct.
     pre-existing failures only; semantics: 2940/2940; compile_run:
     2940/2940).
 
-- [ ] TODO-4763: "internal error: missing struct slot layout" for SubstrateDeviceConfig/SubstrateRenderPassConfig
+- [x] TODO-4763: (RESOLVED) "internal error: missing struct slot layout" for SubstrateDeviceConfig/SubstrateRenderPassConfig
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -7022,6 +7022,118 @@ This file is the live open-work queue for PrimeStruct.
     functions already traced (`isStructParamMatch` and its sibling
     struct-slot-layout resolver) - a future session fixing one should
     check whether it also resolves the other.
+  - resolution_summary (2026-08-07/08): root-caused as exactly the
+    "struct type spellings not canonicalized consistently" family
+    predicted above. `GraphicsSubstrate` (and other internal helper
+    namespaces) are declared via `[struct] X() {}` then reopened with
+    `namespace X { ... }` directly inside `namespace std { namespace gfx
+    { ... } }`. Functions declared in that reopened namespace (e.g.
+    `GraphicsSubstrate.createDevice([SubstrateDeviceConfig] config)`)
+    have `def.namespacePrefix == "/std/gfx/GraphicsSubstrate"`, but the
+    bare parameter type `SubstrateDeviceConfig` is actually declared one
+    level up, directly under `/std/gfx`. Three call sites only ever tried
+    the immediate namespace prefix (or a single root-level `/` + name
+    fallback) and gave up instead of walking further up the enclosing
+    namespace chain:
+    1. `resolveStructLayoutForLocal` (a lambda inside
+       `buildCallableDefinitionCallContext`,
+       `src/ir_lowerer/IrLowererStatementCallHelpers.cpp`) - used to
+       compute struct slot counts for every local/parameter of a
+       definition (this is where the literal "internal error: missing
+       struct slot layout for X" message originates). Fixed by adding an
+       ancestor-namespace climb (try `def.namespacePrefix + "/" + bare`,
+       then strip the last path segment and retry, down to root) before
+       falling back to the old bare-root-slash check.
+    2. `resolveStructTypePathFromScope`
+       (`src/ir_lowerer/IrLowererStructTypeHelpers.cpp`) - the general
+       scope-based struct-type-name resolver used by
+       `applyStructValueInfoFromBinding` for ordinary local/parameter
+       type-annotation resolution (this is what produced the "vm backend
+       cannot resolve struct layout: /std/gfx/GraphicsSubstrate/X"
+       symptom once (1) was fixed and lowering pushed further into
+       parameter-passing). Same ancestor-climb fix applied against the
+       `structNames` set.
+    3. `isStructParamMatch`'s alias-list helpers
+       (`src/ir_lowerer/IrLowererInlineParamHelpers.cpp`) already had a
+       `isStdGfxStructAliasMatch` allow-list for bare-vs-`/std/gfx/`-qualified
+       names, but (a) didn't also allow the `/std/gfx/experimental/`
+       prefix, and (b) even when the match succeeded, never canonicalized
+       the *stored* `paramInfo.structTypeName` to the qualified spelling,
+       so a later single-shot (non-climbing) `resolveStructSlotLayout`
+       call on that stale bare name would still fail. Added the
+       experimental prefix to the alias match, and a new
+       `canonicalStructTypeName` helper that canonicalizes to the
+       qualified spelling only for the rooted-slash/alias-match cases
+       (deliberately *not* touching the builtin vector/soa bridging
+       matches, which must keep the collection's generic backing-type
+       spelling). Also fixed a stale-shared-error-string bug found along
+       the way: `resolveStructLayoutForLocal`'s climb calls
+       `resolveStructSlotLayout` speculatively multiple times against a
+       single shared-by-reference `error` string; a failed speculative
+       candidate before a successful one left a misleading stale message
+       in that shared string with nothing to clear it, which then
+       surfaced as the reported error for a later, unrelated failure.
+       Now cleared on any successful resolution.
+    `canonicalStructTypeName` was initially also applied to the
+    mutable-struct-parameter and reference-parameter branches in
+    `emitInlineDefinitionCallParameters`, but that broke the existing
+    passing test "ir lowerer inline param helper accepts bare std ui
+    mutable struct params" (`test_ir_pipeline_validation_ir_lowerer_inline_param_helper_rejects_borrowed_vector_variadic_alias_type_mismatch.cpp:908`),
+    which deliberately expects the bare spelling to be preserved for that
+    case - reverted those two call sites, keeping the canonicalization
+    fix scoped to only the non-mutable struct-copy parameter path where
+    the crash actually occurred.
+    Verified via minimal repro (`GraphicsSubstrate.createDevice`/
+    `createPipeline` reached through `Device()?` and
+    `device.create_pipeline(...)` sugar) that the internal error and the
+    parameter-type mismatch are both gone on canonical and experimental
+    surfaces alike, and via the full 3-suite run: `PrimeStruct_semantics_tests`
+    2940/2940, `PrimeStruct_backend_ir_tests` only the 2 pre-existing
+    known failures, `PrimeStruct_compile_run_tests` 2940/2940 (7 tests
+    that were previously pinned to the old error messages - see
+    TODO-4763-followup below - were re-pinned to their new, verified
+    behavior; no other regressions).
+  - TODO-4763-followup: fixing the layout-resolution bug let compilation
+    proceed further into these gfx code paths and exposed two more,
+    separate, still-open bugs (not fixed this session - out of scope for
+    this pass, tracked here for a future session):
+    (a) Struct-local field-value corruption: declaring a `Device` local
+    together with a `ShaderLibrary` local in the same scope corrupts one
+    of their field reads at runtime (VM backend). Minimal repro:
+    ```
+    import /std/gfx/*
+    [return<int>]
+    main() {
+      [Device] device{[token] 2i32}
+      [ShaderLibrary] shader{ShaderLibrary.CubeBasic}
+      return(plus(shader.value, device.token))
+    }
+    ```
+    returns 4 instead of the correct 2 (each local alone reads back
+    correctly; only the combination corrupts). Suspected a struct-local
+    slot-allocation/overlap bug specific to this struct pairing (both
+    involve `[public static X] Name{...}` self-typed static constants),
+    not a name-resolution issue - not yet root-caused. This is why
+    "canonical/experimental gfx pipeline entry point runs across
+    backends" now compile and run instead of crashing, but stop at score
+    90 (first score-check mismatch) on exe/vm and segfault (exit 139) on
+    native. A related but distinct corruption was also observed for
+    `swapchain.colorFormat` reading back as the window's `hostToken` in
+    the "experimental gfx compatibility shim substrate boundary imports"
+    test (VM score 9 instead of 10).
+    (b) A separate, unrelated pre-existing VM/native backend limitation
+    on array literals of a struct type (e.g. `array<VertexColored>(...)`)
+    surfaced once the SubstrateDeviceConfig mismatch stopped masking it
+    in the "gfx compatibility shim end-to-end coverage" and "experimental
+    gfx resource wrapper slice" tests - both now re-pinned to the
+    existing `NativeArrayLiteralUnsupportedMessage`/
+    `VmArrayLiteralUnsupportedMessage` constants instead.
+    (c) `Frame.render_pass`'s body (constructing a
+    `SubstrateRenderPassConfig` struct literal referencing `this`)
+    surfaced a "backend does not know identifier: this" error on both
+    experimental and canonical surfaces once the struct-slot-layout gap
+    stopped masking it - re-pinned "experimental/canonical gfx render
+    pass wrapper slice" tests to that verified message.
 
 - [ ] TODO-4762: Native binary exit code is non-deterministic for the experimental gfx window constructor smoke test
   - owner: ai

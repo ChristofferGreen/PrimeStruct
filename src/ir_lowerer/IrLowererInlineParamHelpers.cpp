@@ -101,12 +101,39 @@ bool isStdGfxStructAliasMatch(const std::string &expectedStruct,
                               const std::string &argStruct) {
   auto matchesBareToQualified = [](const std::string &bare,
                                    const std::string &qualified) {
-    return bare.find('/') == std::string::npos &&
-           isKnownStdGfxStructAlias(bare) &&
-           qualified == std::string("/std/gfx/") + bare;
+    if (bare.find('/') != std::string::npos || !isKnownStdGfxStructAlias(bare)) {
+      return false;
+    }
+    return qualified == std::string("/std/gfx/") + bare ||
+           qualified == std::string("/std/gfx/experimental/") + bare;
   };
   return matchesBareToQualified(expectedStruct, argStruct) ||
          matchesBareToQualified(argStruct, expectedStruct);
+}
+
+// When a struct parameter is declared with a bare/short type name (e.g. a
+// nested-namespace helper's `[SubstrateDeviceConfig] config`) and the caller's
+// argument resolves to that same struct's fully-qualified path, isStructParamMatch
+// accepts the pair but the *parameter's* stored structTypeName stays bare. Any
+// downstream struct-layout lookup keyed on that bare name then fails to find the
+// registered (qualified) layout, so callers must canonicalize to the qualified
+// spelling before storing/using the parameter's structTypeName. Restricted to the
+// rooted-slash and std-ui/std-gfx alias matches specifically - the builtin
+// vector/soa bridging matches intentionally keep the collection's generic
+// backing-type spelling and must not be redirected to a caller's specialized one.
+std::string canonicalStructTypeName(const std::string &expectedStruct,
+                                     const std::string &argStruct) {
+  if (expectedStruct == argStruct) {
+    return expectedStruct;
+  }
+  if (!expectedStruct.empty() && expectedStruct.front() != '/' &&
+      !argStruct.empty() && argStruct.front() == '/' &&
+      (argStruct.substr(1) == expectedStruct ||
+       isStdUiStructAliasMatch(expectedStruct, argStruct) ||
+       isStdGfxStructAliasMatch(expectedStruct, argStruct))) {
+    return argStruct;
+  }
+  return expectedStruct;
 }
 
 bool isStructParamMatch(const std::string &calleePath,
@@ -878,10 +905,7 @@ bool emitInlineDefinitionCallParameters(
         return false;
       }
       LocalInfo copiedParamInfo = paramInfo;
-      if (!argStruct.empty() && argStruct.front() == '/' &&
-          argStruct.substr(1) == paramInfo.structTypeName) {
-        copiedParamInfo.structTypeName = argStruct;
-      }
+      copiedParamInfo.structTypeName = canonicalStructTypeName(paramInfo.structTypeName, argStruct);
       if (paramInfo.isMutable || isMapLikeStructTypeName(copiedParamInfo.structTypeName)) {
         if (!emitExpr(*orderedArg, callerLocals)) {
           return false;

@@ -379,21 +379,22 @@ main() {
   const std::string nativeErrPath =
       (testScratchPath("") / "primec_gfx_experimental_substrate_boundary_native_err.txt").string();
 
-  // TODO-4761: a SubstrateDeviceConfig binding no longer type-unifies
-  // against the fully-qualified spelling used internally, on both vm and
+  // TODO-4761 (fixed): the SubstrateDeviceConfig binding now type-unifies
+  // against its fully-qualified spelling, so this compiles on both vm and
   // native.
+  // TODO-4763 follow-up: vm now runs but scores 9/10 - swapchain.colorFormat
+  // reads back as the window's hostToken (11) instead of
+  // ColorFormat.Bgra8Unorm's value (0), a separate, still-open struct-field
+  // data-corruption bug exposed once compilation succeeds. The native
+  // binary compiles but segfaults deterministically instead of running.
+  // Re-pinned to this verified behavior.
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + vmErrPath;
-  CHECK(runCommand(runVmCmd) == 2);
-  CHECK(readFile(vmErrPath).find(
-            "struct parameter type mismatch: expected SubstrateDeviceConfig, got "
-            "/std/gfx/experimental/SubstrateDeviceConfig") != std::string::npos);
+  CHECK(runCommand(runVmCmd) == 9);
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + nativeErrPath;
-  CHECK(runCommand(compileNativeCmd) == 2);
-  CHECK(readFile(nativeErrPath).find(
-            "struct parameter type mismatch: expected SubstrateDeviceConfig, got "
-            "/std/gfx/experimental/SubstrateDeviceConfig") != std::string::npos);
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 139);
 }
 
 
