@@ -6767,6 +6767,82 @@ This file is the live open-work queue for PrimeStruct.
     arithmetic helpers with tolerance" test's exact source shape, or a
     more general wasm-backend infinite-loop class, before assuming a fix
     for one case covers the whole bug.
+  - investigated_2026-08-08: it's NOT wasm-specific, and it's not
+    literally infinite - it's exponential. Confirmed via a minimal
+    repro with a plain `[f32] totalError{abs(a - b) + abs(a - b) + ...}`
+    chain (no Quat/math types needed at all) on BOTH `--emit=vm` and
+    `--emit=wasm`: n=8 terms ~2.4s, n=10 ~2.6s, n=12 ~3.2s, n=14 ~6.2s,
+    n=16 times out (>15s) - a clean doubling-ish pattern per couple of
+    added terms, i.e. O(2^depth) in the depth of a left-associated `+`
+    chain, not O(1) per term. The quaternion test just happens to build
+    a 20-term chain, which lands deep enough in the exponential curve to
+    look like a hang. Confirmed with `--dump-stage ast` (near-instant)
+    vs `--dump-stage ast-semantic` (exponentially slow) that the blowup
+    is entirely within semantic validation, before IR lowering.
+    Root-caused via `gdb -p <pid> -batch -ex bt` on a hung process:
+    the recursion is inside `rewriteExpr` in
+    `src/semantics/TemplateMonomorphExpressionRewrite.h`. Around
+    (as of this investigation) line 2091: for ANY non-method,
+    non-binding call expression, an unconditional block calls
+    `mutableCollectionHelperReceiverExpr(expr)`, which - despite its
+    name - does NOT check that `expr` is actually a genuine collection
+    helper call; it just returns `&expr.args.front()` for any call with
+    args (see the lambda's own body: no callee-path/name check at all).
+    For a left-associated `+`/`plus(...)` chain, `args.front()` is the
+    entire left subtree built so far. The block then unconditionally
+    recurses with a full `rewriteExpr(*receiverExpr, ...)` call on that
+    subtree - and the SAME subtree is *also* visited again immediately
+    afterward via the function's normal generic per-argument loop
+    (`for (auto &arg : expr.args) { rewriteExpr(arg, ...) }`, further
+    down in the same function). That's two full recursive rewrite passes
+    over the left subtree at every nesting level, i.e. `T(depth) =
+    2*T(depth-1) + O(1)`, exactly the observed O(2^depth) blowup - the
+    other three call sites of `mutableCollectionHelperReceiverExpr` in
+    the same file are all correctly gated behind an actual
+    collection-helper-path check first and don't have this problem.
+    **Prototyped and reverted**: removed the redundant early
+    `rewriteExpr(*receiverExpr, ...)` call (keeping the two
+    `rewriteNestedExperimentalKeyValueConstructorValue`/
+    `rewriteNestedExperimentalVectorConstructorValue` pre-processing
+    calls, which are plain linear tree walks, not recursive rewriteExpr
+    calls, and are not the source of the blowup). This fixed the
+    performance bug completely (verified n=20/30/50-term chains all
+    ~2.2s flat, vs. timing out before) but broke a substantial number of
+    genuinely collection/vector-related tests when run via the full
+    `ctest -R "PrimeStruct_"` suite: `PrimeStruct_vector_surface_traces`,
+    multiple `..._semantics_calls_flow_collections_*` shards, multiple
+    `..._compile_run_vm_collections_collections_newly_exposed_2026_07_16_*`
+    shards, `..._compile_run_imports_operations_and_collections_*`
+    shards, plus a couple of unrelated-looking `..._semantics_executions_*`
+    and `..._ir_pipeline_validation_cases_*` shards - roughly 25-30
+    failing test cases total. This means the early, seemingly-redundant
+    rewrite genuinely IS load-bearing for real collection-receiver cases
+    (e.g. a receiver that's itself a constructor call needing rewriting
+    to a form that `resolveCalleePath`/the key-value-entry-constructor
+    checks further down the SAME function - which run BETWEEN this block
+    and the later generic args loop - depend on already being rewritten)
+    - it's not simply dead/duplicate work in the general case, only for
+    non-collection calls like plain arithmetic. Reverted cleanly (`git
+    diff` confirms `TemplateMonomorphExpressionRewrite.h` is clean).
+    **Root cause fully understood, safe fix not found**: a correct fix
+    needs `mutableCollectionHelperReceiverExpr`'s call at this specific
+    site to be gated on `expr` actually being a genuine collection-helper
+    call (mirroring how the other 3 call sites in the same file already
+    gate their own use of the same lambda) rather than firing for every
+    non-method call unconditionally - but doing that requires knowing
+    what "genuine collection helper call" check those other 3 sites use
+    and confirming it's cheap enough / available early enough at this
+    point in the function to not just reintroduce a different form of
+    the same problem. Not fixed this session. In the meantime, this is a
+    real but narrow practical limitation: any hand-written expression
+    with a long (as a rule of thumb, roughly 16+) left-associated chain
+    of binary arithmetic/comparison operators will make compilation
+    unacceptably slow. `docs/todo.md`'s own advice for future sessions:
+    look at what distinguishes the other 3 gated call sites' conditions
+    (`!experimentalKeyValuePath.empty() && ctx.sourceDefs.count(...) > 0
+    && resolves...Receiver(...)`-shaped checks) from this one, and thread
+    an equivalent cheap check into this site instead of removing the
+    early rewrite outright.
 
 - [ ] TODO-4767: drop() on a plain local now requires uninitialized<T> storage
   - owner: ai
