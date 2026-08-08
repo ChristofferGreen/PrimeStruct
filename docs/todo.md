@@ -8769,6 +8769,42 @@ This file is the live open-work queue for PrimeStruct.
     `args<T>` shape (e.g. `args<map<K,V>>` or `args<vector<T>>`) before
     closing, since the bug appears to be about the pack-indexing
     mechanism itself, not any specific element type.
+  - investigated_2026-08-08: traced one layer further using `gdb -batch
+    -ex "break ... -ex run -ex bt"` on a fresh, simpler repro
+    (`args<Pointer<uninitialized<i32>>>`, cross-referenced from
+    TODO-4760(b) - see that TODO's own note for the exact source) that,
+    unlike the 2026-08-06 attempt's `.count()`-chained repro, DOES reach
+    `emitVectorIndexedAccessBeforeInline`
+    (`IrLowererLowerEmitExprTailDispatch.h`, ~line 1117) - confirming the
+    earlier session's hypothesis that reachability of this function
+    depends on the call's syntactic position (this repro's `.at()` calls
+    sit inside `init(dereference(values.at(1i32)), 2i32)` /
+    `take(dereference(...))` statements, not chained after `.count()`).
+    Re-tried the same fix the 2026-08-06 attempt proposed (loosening the
+    `targetInfo.isVectorTarget`-only gate at ~line 1146 to also accept
+    `targetInfo.isArgsPackTarget`) - this time the function IS reached,
+    but the fix still didn't help: added debug prints and found
+    `emitVectorIndexedAccessBeforeInline` bails out even EARLIER than the
+    `targetInfo` gate, at the accessName-resolution step itself (~line
+    1124): for the method-call form (`values.at(1i32)`,
+    `resolvedAccessPath` reported as `/array/at`), `getBuiltinArrayAccessName`
+    returns FALSE - so does the equivalent bracket-index-sugar form
+    (`resolvedAccessPath` `/at`), meaning accessName must be getting set
+    via `resolveVectorHelperAliasName` for whichever of the two actually
+    works (not confirmed which, or whether the print's "isMethodCall=0"
+    line really was the bracket form and not a coincidental substring
+    match against an unrelated node also containing "at", since the
+    debug filter used a loose `name.find("at") != npos` check). Reverted
+    both the loosened gate and all debug prints cleanly (verified via
+    `git diff`) rather than land a fix that doesn't actually work. Next
+    step for a future session: instrument `resolveVectorHelperAliasName`
+    itself (not just `getBuiltinArrayAccessName`) to find which
+    resolution path the WORKING bracket-index form actually takes, then
+    check why that same path doesn't also match the method-call form -
+    the two forms clearly diverge before `emitVectorIndexedAccessBeforeInline`'s
+    `targetInfo`/`isMethodCall` gates are ever reached, so fixing those
+    gates (as both this and the 2026-08-06 attempt did) treats a symptom
+    one layer too late.
 
 - [ ] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
   - owner: ai
