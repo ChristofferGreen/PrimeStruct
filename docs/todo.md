@@ -6844,7 +6844,7 @@ This file is the live open-work queue for PrimeStruct.
     an equivalent cheap check into this site instead of removing the
     early rewrite outright.
 
-- [ ] TODO-4767: drop() on a plain local now requires uninitialized<T> storage
+- [x] TODO-4767: (RESOLVED) drop() on a plain local now requires uninitialized<T> storage
   - owner: ai
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
@@ -6903,6 +6903,31 @@ This file is the live open-work queue for PrimeStruct.
     time (noted in its own scope) remains unexplained and unaffected by
     this investigation - still a real, separate perf concern for the
     task #6 cluster.
+  - resolution_summary (2026-08-08): decided per the 2026-08-05
+    investigation's own analysis - `drop()` is deliberately restricted
+    to `uninitialized<T>` bindings project-wide (confirmed by grepping
+    every OTHER `drop(...)` call site in the test suite: every single
+    one pairs it with an `uninitialized<T>`-typed binding; this test was
+    the only outlier). `storage` in this test is declared as a plain
+    `[/Wide/SoaSchemaStorage mut]` local, constructed via
+    `/Wide/SoaSchemaStorageNew()` and mutated via
+    `SoaSchemaStorageReserve`/`SoaSchemaStorageClear` - an ordinary
+    mutable-local lifecycle with no `uninitialized<T>` init/take idiom
+    anywhere in its usage. The trailing `drop(storage)` call was
+    therefore a stale leftover, not a still-needed disposal step -
+    removed it from the test's embedded source. Verified directly with
+    `./primec` before editing: the corrected source compiles and runs to
+    exit 127 (the exact value this TODO's own `acceptance` criterion
+    named) on all three backends. Re-pinned the test's assertions from
+    the compile-reject checks to `CHECK(runCommand(...) == 0)` (compile)
+    / `CHECK(runCommand(...) == 127)` (run) accordingly. Note: this
+    source's compile time is genuinely slow independent of this fix -
+    observed ~55s (vm), ~55s (native), ~104s (exe) even after removing
+    `drop(storage)` - matching this TODO's own `~42-45s` note from
+    2026-07-30. That remains a real, separate, unfixed performance
+    concern (cross-reference the perf-pathology cluster under
+    TODO-4757/TODO-4901) and was deliberately NOT addressed as part of
+    this correctness fix.
 
 - [x] TODO-4766 (RESOLVED): Reflection-generated Deserialize emits an internal count() call the backends no longer accept in expression position
   - resolution_summary (2026-08-05): confirmed reflection-codegen-specific

@@ -354,39 +354,31 @@ main() {
   if(equal(storage.chunk1.field_capacity(), 5i32), then() { assign(score, plus(score, 32i32)) }, else() { })
   /Wide/SoaSchemaStorageClear(storage)
   if(equal(/Wide/SoaSchemaStorageCount(storage), 0i32), then() { assign(score, plus(score, 64i32)) }, else() { })
-  drop(storage)
   return(score)
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_soa_schema_storage_runtime.prime", source);
 
-  // TODO-4767: drop() on a plain (non-uninitialized<T>) local now rejects
-  // with "drop requires uninitialized<T> storage" at the semantic stage,
-  // before any backend-specific codegen runs - identical across
-  // vm/exe/native.
-  const std::string vmErrPath =
-      (testScratchPath("") / "primec_reflection_soa_schema_storage_vm_err.txt").string();
-  const std::string vmCmd =
-      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);
-  CHECK(runCommand(vmCmd) == 2);
-  CHECK(readFile(vmErrPath).find("drop requires uninitialized<T> storage") != std::string::npos);
+  // TODO-4767 (fixed): drop() is deliberately restricted to
+  // uninitialized<T> storage; `storage` here is an ordinary mut local
+  // (constructed via SoaSchemaStorageNew(), not the uninitialized<T>
+  // init/take idiom), so it never needed an explicit drop() call - the
+  // original source's trailing `drop(storage)` was stale. Removing it
+  // restores the originally-intended passing behavior on all backends.
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 127);
 
   const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_exe").string();
-  const std::string exeErrPath =
-      (testScratchPath("") / "primec_reflection_soa_schema_storage_exe_err.txt").string();
   const std::string exeCompileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                    quoteShellArg(exePath) + " --entry /main 2> " + quoteShellArg(exeErrPath);
-  CHECK(runCommand(exeCompileCmd) == 2);
-  CHECK(readFile(exeErrPath).find("drop requires uninitialized<T> storage") != std::string::npos);
+                                    quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 127);
 
   const std::string nativePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_native").string();
-  const std::string nativeErrPath =
-      (testScratchPath("") / "primec_reflection_soa_schema_storage_native_err.txt").string();
   const std::string nativeCompileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
-                                       quoteShellArg(nativePath) + " --entry /main 2> " +
-                                       quoteShellArg(nativeErrPath);
-  CHECK(runCommand(nativeCompileCmd) == 2);
-  CHECK(readFile(nativeErrPath).find("drop requires uninitialized<T> storage") != std::string::npos);
+                                       quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 127);
 }
 
 TEST_SUITE_END();
