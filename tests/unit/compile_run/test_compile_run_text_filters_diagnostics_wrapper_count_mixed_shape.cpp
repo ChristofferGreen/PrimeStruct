@@ -425,7 +425,7 @@ main() {
 }
 
 TEST_CASE(
-    "primec collect-diagnostics keeps user wrapper method count capacity pair") {
+    "primec collect-diagnostics keeps user wrapper method count capacity pair type-mismatch diagnostics with reversed call order") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -481,7 +481,7 @@ main() {
 }
 
 TEST_CASE(
-    "primevm collect-diagnostics keeps user wrapper method count capacity pair") {
+    "primevm collect-diagnostics keeps user wrapper method count capacity pair type-mismatch diagnostics with reversed call order") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {

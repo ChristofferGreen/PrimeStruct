@@ -1,6 +1,6 @@
 #include "test_parser_basic_helpers.h"
 
-TEST_CASE("parses while loop form with body and condition") {
+TEST_CASE("parses loop form with count and body") {
   const std::string source = R"(
 [return<int>]
 main() {

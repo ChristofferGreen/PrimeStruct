@@ -481,7 +481,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("stdlib wrapper map constructor validates on explicit canonical map returns") {
+TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map return used across helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -515,7 +515,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper map constructor validates on explicit canonical map returns") {
+TEST_CASE("stdlib wrapper map constructor rejects mismatched value type in explicit canonical map return") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
