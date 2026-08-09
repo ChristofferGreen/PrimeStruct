@@ -125,7 +125,30 @@ by the normal queue rather than living only as prose in this doc:
 - **TODO-4712** — once TODO-4707 proves a suite pollution-free, grow its
   CTest shard size (fewer, bigger shards) so the many small per-shard
   fixed costs (binary launch, doctest registration) stop adding up across
-  hundreds of tiny shards for the same total case count.
+  hundreds of tiny shards for the same total case count. **Deprioritized
+  2026-08-08**: TODO-4708's measurement found per-shard fixed cost is only
+  ~5-9ms, so this whole angle would save on the order of ~15-20s total,
+  not a meaningful fraction of the ~4748s suite. Not closed outright,
+  since TODO-4707's pollution-correctness motivation still stands
+  independent of the (now much weaker) performance case.
+- **TODO-4708** — **RESOLVED 2026-08-08**: measured at 5-9ms per binary
+  invocation across all three major suites. Fixed overhead is negligible;
+  see the 2026-08-08 log entry below for the full measurement and its
+  implication for TODO-4712.
+- **TODO-5220** (new 2026-08-08) — fix TODO-4901's exponential-blowup call
+  site in `TemplateMonomorphExpressionRewrite.h` narrowly, by gating it
+  the same way its 3 sibling call sites already are, rather than removing
+  it unconditionally (already tried, reverted — broke ~25-30 collection
+  tests). This is now the single highest-ROI item in this doc: it
+  directly explains 2 of the top-3 slowest shards measured on
+  2026-08-08.
+- **TODO-5221** (new 2026-08-08, `depends_on: TODO-5220`) — re-measure the
+  full suite's cost distribution after TODO-5220 lands and triage any
+  newly-surfaced slow outliers for the same "one pathological source
+  shared across multiple test files" pattern.
+- **TODO-5222** (new 2026-08-08) — reduce real C++ toolchain compile+link
+  cost for `compile_run` tests using `--emit=cpp`/`exe`/`native`
+  (optimization level, faster linker, completing TODO-4709's audit).
 
 This doc stays the narrative/findings log; `docs/todo.md` is the
 execution queue — keep them in sync when a TODO's scope or status changes.
@@ -215,3 +238,71 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   pollution fix lands) is the better long-term answer to that, and
   TODO-4713 (the real algorithmic fix) would shrink the timeout need
   itself.
+- 2026-08-08: Full data-driven pass at "make `./scripts/compile.sh
+  --release`'s full suite run faster," covering parallelism and real cost
+  drivers, using measured data rather than assumptions. Findings:
+  - **CTest parallelism was already correctly wired in `scripts/
+    compile.sh`** via its `detect_jobs()` helper (portable core-count
+    detection: `getconf _NPROCESSORS_ONLN` → `nproc` → `sysctl -n
+    hw.ncpu` → fallback 4) feeding `ctest --parallel "$CTEST_JOBS"`. The
+    gap was ad-hoc/manual `ctest` invocations (IDE, direct shell) that
+    default to **serial** execution. Empirically disproved the common
+    assumption that `ctest --parallel 0` means "auto-detect cores": on a
+    16-test slice of `calls_flow_control`, `--parallel 1` took 25.04s,
+    `--parallel 0` took 23.01s (essentially serial), `--parallel 4` took
+    14.52s, and `--parallel 8` (oversubscribed on a 4-core box) took
+    15.14s with no regression. Fixed by adding `CMakePresets.json`
+    (`debug`/`release`/`relwithdebinfo` presets, each wiring `ctest
+    --preset <name>` to `--parallel 8 --output-on-failure` automatically)
+    and a new **hard rule in `AGENTS.md`**: never invoke a bare `ctest`
+    with no `--parallel <N>` and no preset.
+  - **Cost-distribution analysis** of a full run's `CTestCostData.txt`
+    (1954 total tests, ~4748.4s total serial-equivalent time): 1499 tests
+    (77%) run in ≤1s (sum 90.7s total — nearly free); 327 tests (1-10s
+    band) sum to 1213.73s; **128 tests (6.5% of all tests, >10s each)
+    consume 3443.93s — 72.5% of total suite time.** This confirms the
+    suite's cost is concentrated in a small tail, not spread evenly — the
+    highest-leverage work is fixing/trimming that tail, not broad
+    per-test micro-optimization.
+  - **Registration/startup overhead measured directly** (TODO-4708):
+    `time ./<binary> --list-test-cases` and `time ./<binary>
+    --test-case="__no_such_test_case_xyz__"` isolate pure process-start +
+    doctest-registration cost from actual test execution.  Measured
+    **5-9 milliseconds** across all three major binaries
+    (`PrimeStruct_semantics_tests`, 2940 cases; `PrimeStruct_backend_ir_tests`,
+    1741 cases; `PrimeStruct_compile_run_tests`, 2940 cases). Across all
+    1954 shards this is a ~15-20s fixed-cost ceiling total — a rounding
+    error against the ~4748s measured total. **This falsifies the premise
+    behind TODO-4712** (grow shard size to amortize per-shard fixed cost):
+    even eliminating all fixed overhead from every shard would not
+    meaningfully reduce runtime. TODO-4708 closed as resolved; TODO-4712
+    deprioritized (not closed — TODO-4707's correctness motivation for
+    small shards stands on its own).
+  - **Traced the actual #1 and #2 slowest shards** (256s and 200s) via
+    `ps aux` while they ran live, and found both were spawning `primec
+    --emit=wasm`/`--emit=vm` on the exact same pathological "quaternion
+    arithmetic helpers with tolerance" source already documented under
+    **TODO-4901** (exponential O(2^depth) blowup in
+    `TemplateMonomorphExpressionRewrite.h`'s `rewriteExpr`, root-caused
+    but not yet fixed earlier this session — see that TODO's entry in
+    `docs/todo.md` for the full investigation). That single source is
+    referenced from 3 separate test files
+    (`test_compile_run_emitters_matrix_quaternion_support.cpp`,
+    `test_compile_run_smoke_core_wasm_core.cpp`,
+    `test_compile_run_vm_math.cpp`), so one unfixed bug is directly
+    multiplying its cost across several of the very slowest shards in the
+    entire suite. This makes **TODO-4901's proper fix the single
+    highest-ROI item** currently identified for suite runtime — filed as
+    **TODO-5220** (narrow fix: gate the one unconditionally-firing call
+    site the same way its 3 correctly-gated siblings already are, rather
+    than removing it outright, which was tried earlier this session and
+    reverted for breaking ~25-30 collection tests).
+  - **Action plan / new TODO chain** (see `docs/todo.md`): **TODO-5220**
+    (fix TODO-4901 narrowly — top priority) → **TODO-5221** (`depends_on:
+    TODO-5220`; re-measure the full cost distribution post-fix and triage
+    any newly-surfaced slow outliers for the same
+    one-source-multiple-files multiplier pattern) → **TODO-5222**
+    (independent of the above two; reduce real C++ toolchain compile+link
+    cost for `compile_run`'s `--emit=cpp`/`exe`/`native` cases —
+    optimization level, faster linker, completing TODO-4709's existing
+    audit of pass/fail-only cases as downgrade candidates).

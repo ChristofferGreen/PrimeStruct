@@ -1445,7 +1445,7 @@ This file is the live open-work queue for PrimeStruct.
     do so — that's a follow-up once pollution-freedom is proven broadly,
     not just for these two known cases.
 
-- [ ] TODO-4708: Measure per-shard doctest binary startup/registration overhead
+- [x] TODO-4708: (RESOLVED) Measure per-shard doctest binary startup/registration overhead
   - owner: ai
   - created_at: 2026-07-15
   - phase: Test runtime optimization
@@ -1471,6 +1471,22 @@ This file is the live open-work queue for PrimeStruct.
     implement any startup-cost optimization in this leaf — file a
     follow-up if the measured cost is a significant fraction of total
     suite runtime.
+  - resolution_summary (2026-08-08): measured directly - `--list-test-cases`
+    and a zero-match `--test-case=__no_such_test_case_xyz__` invocation of
+    `PrimeStruct_semantics_tests` (2940 cases), `PrimeStruct_backend_ir_tests`
+    (1741 cases), and `PrimeStruct_compile_run_tests` (2940 cases) each
+    completed in **5-9 milliseconds**. Registration/startup overhead is
+    negligible, not a significant fraction of runtime - the full 1954-shard
+    CTest suite's fixed-overhead ceiling is on the order of ~15-20s total
+    (1954 shards x ~8-10ms), a rounding error against the ~4748s measured
+    total suite time (see `docs/TestRuntimeOptimization.md`'s
+    2026-08-08 log entry for the full cost-distribution breakdown). This
+    **falsifies the premise behind TODO-4712** (growing shard size to
+    amortize per-shard fixed cost) - shard consolidation would not
+    meaningfully reduce suite runtime and should be deprioritized in favor
+    of the real cost drivers (a small number of pathologically slow tests,
+    and real C++ toolchain compile+link time for `--emit=cpp`/`exe`/`native`
+    cases) identified in the same log entry.
 
 - [ ] TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
   - owner: ai
@@ -1583,6 +1599,21 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once `calls_flow.collections` is re-sharded and
     verified; rolling the same change out to every other managed suite is
     follow-up work, not part of this leaf.
+  - cross_reference_2026-08-08: TODO-4708's measurement (now resolved)
+    found per-shard fixed overhead is ~5-9ms - negligible against the
+    measured ~4748s total suite time. This TODO's whole premise (grow
+    shard size to amortize that fixed cost) is real but now known to be
+    **low-value**: even eliminating all fixed overhead from all 1954
+    shards entirely would save on the order of ~15-20s, not a
+    meaningful fraction of runtime. Deprioritized relative to the real
+    cost drivers identified in `docs/TestRuntimeOptimization.md`'s
+    2026-08-08 log entry (a handful of pathologically slow tests
+    dominate total time; see TODO-5220/5221/5222 for the higher-ROI
+    follow-up chain). Not closing this TODO outright since TODO-4707
+    (cross-test-case pollution) is still open and independently worth
+    fixing for correctness reasons even without the perf motivation -
+    just noting the perf case for it is much weaker than originally
+    assumed.
 
 - [x] TODO-4713 (RESOLVED to documented limit): Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
   - owner: ai
@@ -10722,3 +10753,133 @@ This file is the live open-work queue for PrimeStruct.
     semantics "inferred canonical map call receivers" tryAt test both
     re-pinned from asserting rejection to asserting successful resolution,
     per this TODO's acceptance criteria.
+
+- [ ] TODO-5220: fix TODO-4901's exponential blowup narrowly (gate the
+  unconditional receiver rewrite call site instead of removing it)
+  - owner: ai
+  - created_at: 2026-08-08
+  - phase: Test suite runtime optimization
+  - parallel_track: test-runtime-optimization
+  - depends_on: (none) - builds directly on TODO-4901's existing
+    investigation notes above (this file, ~line 6814)
+  - scope: `TemplateMonomorphExpressionRewrite.h`'s `rewriteExpr` has 4
+    call sites of the `mutableCollectionHelperReceiverExpr` lambda. 3 of
+    them are correctly gated behind an actual check that the call is on a
+    genuine collection-helper path before doing any expensive recursive
+    rewrite work. The 4th (originally ~line 2092, may have drifted since
+    TODO-4901's investigation) is unconditional: for ANY non-method call
+    expression with args, it does a full recursive `rewriteExpr(*receiverExpr,
+    ...)` on the receiver, and then the function's own later generic
+    per-argument loop visits that same receiver again - doubling work at
+    every nesting level of a left-associated binary-operator chain (e.g.
+    the 20-term `abs(x)+abs(y)+...` chain in the quaternion-helpers test),
+    giving O(2^depth) total time. This single bug is directly responsible
+    for at least 2 of the top-3 slowest shards observed in a full
+    `CTestCostData.txt` run (~256s and ~200s), both driven by the same
+    pathological source referenced from 3 test files
+    (`test_compile_run_emitters_matrix_quaternion_support.cpp`,
+    `test_compile_run_smoke_core_wasm_core.cpp`,
+    `test_compile_run_vm_math.cpp`).
+  - implementation_notes: a prior attempt (this session, reverted cleanly,
+    no trace left in the tree) tried removing the unconditional early
+    `rewriteExpr` call entirely - this fixed the performance bug
+    completely but broke ~25-30 genuinely collection-related tests
+    (confirmed via `ctest -R "PrimeStruct_"`), because that call site
+    apparently also does legitimate work for real collection-helper
+    receivers some of the time. The correct fix is narrower: add the same
+    kind of actual collection-helper-path guard the other 3 call sites
+    already use (look at how they check before calling
+    `mutableCollectionHelperReceiverExpr` and/or before acting on its
+    result) to this 4th call site, so it only does the expensive
+    recursive rewrite when the receiver is a genuine collection-helper
+    call, and otherwise falls through to the function's normal generic
+    per-argument traversal (which already visits the receiver once,
+    correctly, without needing the special-cased early rewrite).
+  - acceptance: the minimal repro (`[f32] totalError{abs(a-b)+abs(a-b)+...}`
+    with n=16+ terms) compiles in well under 1s on both `--emit=vm` and
+    `--emit=wasm` (down from timing out at >15s); the quaternion-helpers
+    wasm/vm/matrix test cases in all 3 referencing test files pass and run
+    fast; full `PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`,
+    and `PrimeStruct_compile_run_tests` suites show zero new failures
+    (beyond the 2 known pre-existing `ir_pipeline` failures) versus a
+    pre-fix baseline run.
+  - stop_rule: if no narrower guard can be found that both fixes the
+    exponential blowup AND keeps all ~25-30 currently-passing
+    collection-helper tests green, stop and document the specific
+    conflicting test(s) and what guard condition was tried, rather than
+    force through a fix that trades one regression for another.
+
+- [ ] TODO-5221: re-measure full suite cost distribution after TODO-5220
+  lands and triage the new slowest tests
+  - owner: ai
+  - created_at: 2026-08-08
+  - phase: Test suite runtime optimization
+  - parallel_track: test-runtime-optimization
+  - depends_on: TODO-5220
+  - scope: TODO-5220 is expected to remove the single largest known
+    outlier cost (the quaternion-helpers exponential blowup, ~256s+200s+
+    other referencing shards). Once it lands, a fresh full `ctest
+    --parallel <N>` run will regenerate `build*/Testing/Temporary/
+    CTestCostData.txt` with a different cost distribution than the one
+    analyzed in `docs/TestRuntimeOptimization.md`'s 2026-08-08 log entry
+    (which found 128 tests >10s consuming 72.5% of a ~4748s total, with
+    this bug as the top contributor).
+  - implementation_notes: re-run the same analysis methodology used for
+    the 2026-08-08 log entry (histogram of test durations from
+    `CTestCostData.txt`; identify tests >10s, then >30s, then >60s; for
+    each new outlier, check with `ps aux`/direct `primec` invocation
+    whether it shares the "one pathological source referenced from
+    multiple test files" pattern the quaternion-helpers case had, since
+    that pattern multiplies a single root-cause bug's cost across several
+    shards). Update `docs/TestRuntimeOptimization.md`'s log with the new
+    measurements.
+  - acceptance: a new dated log entry in `docs/TestRuntimeOptimization.md`
+    documenting the post-TODO-5220 cost distribution, with any newly
+    surfaced high-cost outliers either fixed (if trivially root-caused) or
+    filed as new TODOs with the same "reproduce directly with primec
+    before touching any assertion" rigor as this session's other fixes.
+  - stop_rule: this is a measurement/triage task, not an open-ended
+    optimization task - stop once the new distribution is documented and
+    any clear single-bug multi-shard patterns are filed as TODOs; don't
+    chase general single-digit-second test speedups here (see TODO-5222
+    for the toolchain-cost angle instead).
+
+- [ ] TODO-5222: reduce real C++ toolchain compile+link cost for
+  --emit=cpp/exe/native compile_run tests
+  - owner: ai
+  - created_at: 2026-08-08
+  - phase: Test suite runtime optimization
+  - parallel_track: test-runtime-optimization
+  - depends_on: (none)
+  - scope: after the single exponential-blowup outlier (TODO-5220) and the
+    already-falsified shard-consolidation premise (TODO-4708/TODO-4712),
+    the remaining large share of the ~4748s total suite time in the
+    2026-08-08 `CTestCostData.txt` analysis is ordinary per-test cost from
+    `compile_run` tests that shell out to a real C++ toolchain
+    (`g++`/`clang++`) for `--emit=cpp`, `--emit=exe`, and `--emit=native`
+    modes - compiling and linking a fresh translation unit per test case
+    is inherently slower than the in-process `--emit=vm` path, and this
+    is spread across many of the 327 tests in the 1-10s band plus a chunk
+    of the >10s band, rather than concentrated in one fixable bug.
+  - implementation_notes: (1) check what optimization level these test
+    invocations currently pass to the toolchain - if any use `-O2`/`-O3`
+    for correctness-only (pass/fail, not perf-measuring) test builds,
+    downgrading to `-O0` or `-O1` should cut compile time with no loss of
+    test validity; (2) check whether a faster linker (`lld`/`mold`) is
+    available in the build environment and can be wired in for these
+    test-invoked toolchain calls without affecting the main `primec`/
+    `primevm` build itself; (3) complete TODO-4709's existing audit (see
+    that TODO's entry for current status) of which pass/fail-only
+    `compile_run` cases are candidates for downgrading from `--emit=exe`/
+    `--emit=native` to `--emit=vm` where the native/exe-specific behavior
+    isn't actually what's being tested.
+  - acceptance: measurable reduction in total `compile_run` suite wall
+    time (compare fresh `CTestCostData.txt` sums before/after) with zero
+    test behavior changes - no test's pass/fail outcome or the specific
+    backend behavior it verifies may change, only how fast the toolchain
+    step underneath it runs.
+  - stop_rule: if a proposed change (opt-level downgrade, alternate
+    linker) turns out to change any test's observable pass/fail behavior
+    or isn't portably available across the environments this suite runs
+    in, revert that specific change and document why, rather than
+    special-casing the build for one environment.
