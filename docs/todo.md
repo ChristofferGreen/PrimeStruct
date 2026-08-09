@@ -3393,6 +3393,21 @@ This file is the live open-work queue for PrimeStruct.
     this TODO's cumulative further ~2.6x, i.e. roughly 5x faster than
     the original baseline, with a profiler-verified diffuse-cost
     diagnosis on record) is the accepted final state for this leaf.
+  - cross_reference_2026-08-09: re-encountered this exact cost class
+    while attacking the highest-cost `CTestCostData.txt` entries per
+    user request. `smoke_core_paths_newly_exposed_2026_07_16_113_122`
+    (~95s, 8 "gfx ... across backends" tests) and several `vm.core`
+    shards (35-59s, `ImageError` helper tests) both trace to the same
+    root cause this TODO already diagnosed: `import /std/gfx/experimental/*`
+    costs ~5.2s per `primec` invocation even with a totally unused,
+    empty `main()` (vs ~0.25s with no import), and narrowing to a single
+    symbol import made no difference (~4.3s) - confirming (as this TODO
+    already found for `/std/image/*`) the cost is inherent to processing
+    the whole imported module, not proportional to actual usage. Did
+    NOT re-attempt a fix, per this TODO's own already-invoked stop_rule -
+    see `docs/TestRuntimeOptimization.md`'s 2026-08-09 log entry for the
+    full re-verification. Noting this here so a future session doesn't
+    mistake the gfx-import symptom for a distinct, new bug.
 - [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
   - owner: ai
   - created_at: 2026-07-27

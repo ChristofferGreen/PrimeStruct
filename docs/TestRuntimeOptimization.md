@@ -487,3 +487,86 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   reference for anyone who wants to hand-migrate a handful of specific
   tests for non-performance reasons (e.g. reducing external-process
   flakiness), but this is closed out as a runtime-optimization lever.
+- 2026-08-09: User asked to attack the highest-taking tests directly and
+  look for refactor opportunities, and separately flagged that tests
+  showing very different costs under parallel load vs. standalone is
+  itself a problem worth fixing (not just something to write off).
+  Investigated the top ~20 entries of a fresh post-TODO-5220
+  `CTestCostData.txt` one at a time, verifying each standalone before
+  deciding whether it's a real target. Findings:
+  - **`PrimeStruct_semantic_memory_definition_worker_parity` (128.68s)
+    and `PrimeStruct_semantic_memory_benchmark` (42.98s) are deliberate
+    performance-regression benchmarks** (history/trend/budget reports,
+    `CMakeLists.txt:1657-1785`), not test-suite bloat - they're supposed
+    to run realistic workloads to produce valid benchmark data. Not a
+    refactor target.
+  - **The entire `emitters_cpp_collection_access_and_alias_forwarding`
+    cluster (6 of the original top-30 entries, summing to ~437s) was a
+    measurement artifact, not real cost.** Every one of those shards
+    ran in well under 1 second when re-run standalone. Root-caused the
+    discrepancy: **`CTestCostData.txt` stores a rolling average across
+    historical ctest invocations, not a fresh per-run measurement** -
+    confirmed by the arithmetic after a second full run: shard `94_95`'s
+    cost went from 127.73s (run 1) to 63.883s averaged over "2" runs;
+    solving `(127.73 + x) / 2 = 63.883` gives `x ≈ 0.036s` for the
+    second run's actual cost - matching the ~0.02-0.06s measured directly
+    within a few percent. **One noisy run's numbers stay baked into the
+    average for several subsequent runs** before washing out. The
+    original 127.73s almost certainly came from residual load on this
+    session's shared machine (this session ran a great many interactive
+    `primec`/`ctest` commands directly beforehand, some overlapping in
+    time) rather than anything intrinsic to the test. Same story for
+    `imports_operations_and_collections_155_156` (56.09s recorded, 3.3s
+    standalone) and several other entries in the original top-30 that
+    didn't reproduce when re-measured directly.
+  - **Directly tested whether these tests are unsafe to run alongside
+    other heavy tests, since that's the more important question the
+    user raised**: raced 3 genuinely heavy `vm.core` shards (each
+    35-59s alone) concurrently against the "fast" `94_95` shard and it
+    still completed in 0.059s - no slowdown at all. This is real,
+    controlled evidence that this specific test is **not** parallel-
+    unsafe or resource-starved by concurrent load; the original spike
+    really was one-time noise, not a reproducible contention bug.
+  - **Two clusters of genuinely, reproducibly slow tests were found**
+    (confirmed standalone AND on a fresh full-suite re-run):
+    `smoke_core_paths_newly_exposed_2026_07_16_113_122` (~95s,
+    consistent across both measurements) and several `vm.core` shards
+    testing `ImageError`/gfx helpers (35-59s). Traced both to the exact
+    same root cause: **importing `/std/gfx/experimental/*` or
+    `/std/image/*` costs several seconds per `primec` invocation just
+    from the import itself**, confirmed via a minimal repro
+    (`import /std/gfx/experimental/*` + an empty unused `main()`) taking
+    ~5.2s at the `--dump-stage semantic-product` checkpoint, vs. ~0.25s
+    with no import at all. Narrowing the import to a single symbol
+    (`import /std/gfx/experimental/Device`) made no difference (~4.3s) -
+    the cost isn't proportional to what's actually used, it's the whole
+    module being processed regardless.
+  - **This is not a new bug - it's a confirmed instance of TODO-4743's
+    already-exhausted investigation.** TODO-4743 (still open, see
+    `docs/todo.md`) already profiled the structurally identical
+    `/std/image/*` case across 4 rounds (gdb statistical sampling twice,
+    then real `callgrind` instrumentation), implemented every fix its
+    own investigation surfaced (duplicate O(N)-scan reuse, stdlib-
+    registry memoization, an `[=, this]` lambda-capture lifetime audit
+    and fix, two additional micro-optimizations found via callgrind),
+    took the cost from ~34.85s down to ~17.5s (2x), and then **formally
+    invoked its own stop_rule**: the remaining cost is diffuse across
+    dozens of small string/allocation/lookup operations integral to the
+    compat-path-resolution architecture
+    (`docs/CompatPathResolutionConsolidation.md`), not fixable at the
+    leaf level without a larger, separately-scoped consolidation
+    rewrite. Confirmed today's `smoke_core_paths`/`vm.core` measurements
+    (14.7-15s per `ImageError` case, ~95s for a shard chaining 8 gfx
+    tests each doing 3 backend invocations) are the same class of cost,
+    not a new bug - re-chasing it here would duplicate already-exhausted
+    work and violate that stop_rule.
+  - **Net conclusion**: after this pass, there is no further
+    actionable, safely-fixable single-bug slow-test target left in the
+    suite that hasn't already been either fixed (TODO-5220) or
+    exhaustively investigated and formally closed as an architectural
+    limitation (TODO-4743, referencing TODO-4735's earlier finding on
+    the same subject). The main practical takeaway for future sessions:
+    **don't trust a single `CTestCostData.txt` snapshot for prioritizing
+    work** - always re-verify a "slow" entry standalone before
+    investing time in it, since one noisy run's numbers can masquerade
+    as a real cost for several subsequent runs.
