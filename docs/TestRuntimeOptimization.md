@@ -135,13 +135,17 @@ by the normal queue rather than living only as prose in this doc:
   invocation across all three major suites. Fixed overhead is negligible;
   see the 2026-08-08 log entry below for the full measurement and its
   implication for TODO-4712.
-- **TODO-5220** (new 2026-08-08) — fix TODO-4901's exponential-blowup call
-  site in `TemplateMonomorphExpressionRewrite.h` narrowly, by gating it
-  the same way its 3 sibling call sites already are, rather than removing
-  it unconditionally (already tried, reverted — broke ~25-30 collection
-  tests). This is now the single highest-ROI item in this doc: it
-  directly explains 2 of the top-3 slowest shards measured on
-  2026-08-08.
+- **TODO-5220 — RESOLVED 2026-08-09**: fixed TODO-4901's exponential-blowup
+  call site in `TemplateMonomorphExpressionRewrite.h`. Two earlier
+  type-inference-based guard attempts were tried and reverted (each fixed
+  the perf bug but regressed 17-30 tests); the working fix gates the
+  redundant early receiver rewrite behind a name-based check instead: does
+  the outer call's own path leaf match a known collection-helper name, or
+  does a plain (non-rewriting) scan of the receiver's subtree find such a
+  call anywhere in it. See `docs/todo.md`'s TODO-5220 resolution_summary
+  for the full attempt history. Confirmed via direct timing (n=16-term
+  repro: 8.19s → ~0.13s; scales linearly through n=48) and a full `ctest
+  --parallel 8` run with zero new failures.
 - **TODO-5221** (new 2026-08-08, `depends_on: TODO-5220`) — re-measure the
   full suite's cost distribution after TODO-5220 lands and triage any
   newly-surfaced slow outliers for the same "one pathological source

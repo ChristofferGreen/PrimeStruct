@@ -2097,16 +2097,56 @@ bool rewriteExpr(Expr &expr,
       if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
         return false;
       }
-      if (!rewriteExpr(*receiverExpr,
-                       mapping,
-                       allowedParams,
-                       namespacePrefix,
-                       ctx,
-                       error,
-                       locals,
-                       params,
-                       allowMathBare)) {
+      const auto callLeafIsPlausibleCollectionHelper = [](const Expr &callExpr) {
+        std::string name = callExpr.name;
+        const size_t lastSlash = name.find_last_of('/');
+        const std::string leaf =
+            lastSlash == std::string::npos ? name : name.substr(lastSlash + 1);
+        const size_t genericSuffix = leaf.find("__t");
+        const std::string leafBase =
+            genericSuffix == std::string::npos ? leaf : leaf.substr(0, genericSuffix);
+        static const std::unordered_set<std::string> kCollectionHelperLeafNames = {
+            "at", "at_unsafe", "count", "capacity", "contains", "tryAt",
+            "insert", "push", "remove_at", "remove_swap", "get", "to_aos",
+            "ref_ref", "map", "vector"};
+        return kCollectionHelperLeafNames.count(leafBase) > 0;
+      };
+      // A plain scan (no rewriting) for a collection-constructor-shaped call
+      // anywhere in the receiver's subtree - e.g. a user wrapper call whose
+      // argument is a Result-ok-payload wrapping a `map(...)` constructor
+      // needs the pre-rewrite even though neither the outer wrapper nor the
+      // intermediate Result payload accessor is itself a collection helper
+      // name; the `map(...)` a couple of levels down is what matters. This
+      // is a read-only walk (no recursive rewrite call), so it's O(subtree
+      // size) per node rather than the O(2^depth) this whole guard exists
+      // to avoid.
+      const std::function<bool(const Expr &)> subtreeContainsCollectionHelperCall =
+          [&](const Expr &node) -> bool {
+        if (node.kind == Expr::Kind::Call && callLeafIsPlausibleCollectionHelper(node)) {
+          return true;
+        }
+        for (const Expr &arg : node.args) {
+          if (subtreeContainsCollectionHelperCall(arg)) {
+            return true;
+          }
+        }
         return false;
+      };
+      const bool outerCallIsPlausibleCollectionHelper =
+          callLeafIsPlausibleCollectionHelper(expr) ||
+          subtreeContainsCollectionHelperCall(*receiverExpr);
+      if (outerCallIsPlausibleCollectionHelper) {
+        if (!rewriteExpr(*receiverExpr,
+                         mapping,
+                         allowedParams,
+                         namespacePrefix,
+                         ctx,
+                         error,
+                         locals,
+                         params,
+                         allowMathBare)) {
+          return false;
+        }
       }
     }
     std::string resolvedPath =
