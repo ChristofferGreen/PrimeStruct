@@ -146,10 +146,13 @@ by the normal queue rather than living only as prose in this doc:
   for the full attempt history. Confirmed via direct timing (n=16-term
   repro: 8.19s → ~0.13s; scales linearly through n=48) and a full `ctest
   --parallel 8` run with zero new failures.
-- **TODO-5221** (new 2026-08-08, `depends_on: TODO-5220`) — re-measure the
-  full suite's cost distribution after TODO-5220 lands and triage any
-  newly-surfaced slow outliers for the same "one pathological source
-  shared across multiple test files" pattern.
+- **TODO-5221 — RESOLVED 2026-08-09**: re-measured the full cost
+  distribution after TODO-5220. The quaternion-helpers outlier is
+  confirmed gone from the top of the list. No new single-bug/multi-shard
+  pattern surfaced - the new top offenders (`vm.collections` and
+  `emitters.cpp` collection-conformance shards) are distributed real
+  backend/toolchain cost across many genuine test cases, not one fixable
+  bug. See the 2026-08-09 log entry below for the full measurement.
 - **TODO-5222** (new 2026-08-08) — reduce real C++ toolchain compile+link
   cost for `compile_run` tests using `--emit=cpp`/`exe`/`native`
   (optimization level, faster linker, completing TODO-4709's audit).
@@ -310,3 +313,42 @@ execution queue — keep them in sync when a TODO's scope or status changes.
     cost for `compile_run`'s `--emit=cpp`/`exe`/`native` cases —
     optimization level, faster linker, completing TODO-4709's existing
     audit of pass/fail-only cases as downgrade candidates).
+- 2026-08-09: **TODO-5220 landed** (see `docs/todo.md` for the fix and its
+  attempt history) and **TODO-5221's re-measurement** immediately
+  followed. Fresh `CTestCostData.txt` from a `ctest --parallel 8` run:
+  1953 tests, 8903.78s total serial-equivalent time (1430 tests ≤1s, sum
+  108.23s; 300 tests 1-10s, sum 1347.93s; 223 tests >10s, sum 7447.61s).
+  - The quaternion-helpers outlier (previously #1/#2 at 256s/200s) is
+    **gone** - not present anywhere near the top of the new sorted list,
+    confirming TODO-5220's fix actually eliminated the cost, not just
+    moved it.
+  - New top offenders are `compile_run_vm_collections_collections_newly_exposed_2026_07_16_*`
+    shards (220s, 125s, 122s, 58s, 57s, 57s) and
+    `compile_run_emitters_cpp_collection_access_and_alias_forwarding_*`/
+    `compile_run_emitters_cpp_map_wrapper_and_fallback_inference_*` shards
+    (213s, 201s, 187s, 106s, 97s). Investigated the worst one directly:
+    re-ran shard `593_602` standalone (no `--parallel 8` contention) and
+    it took ~111s serially for its actual 10 test cases (confirmed via
+    `--list-test-cases`; doctest's own summary line is misleading here -
+    "682 passed" refers to the whole suite's registered-case total, not
+    this shard). All 10 are genuine map/vector conformance and
+    growth-limit tests (e.g. "runs vm shared stdlib vector conformance
+    harness") - broad harnesses legitimately exercising many real backend
+    operations, not one fixable bug like quaternion was. **No new
+    single-bug/multi-shard pattern found** this time; this cost is
+    distributed real backend/toolchain work, which is exactly TODO-5222's
+    existing scope rather than a new leaf.
+  - Total suite time in this run (8903.78s) is roughly 2x the original
+    2026-08-08 baseline (4748.4s) for a similar test count. Cross-checked
+    via the same shard's serial-vs-parallel timing (111s serial vs. ~220s
+    reported under 8-way parallel contention in the full run, roughly
+    2x) - this points to general machine/environment load during the
+    parallel run as the likely explanation, not a regression from
+    TODO-5220 (which only removes redundant work; it cannot make an
+    already-passing case's own logic slower). Worth re-confirming on a
+    quieter run before drawing conclusions from absolute totals, but the
+    *relative* finding (quaternion gone, no new single-bug pattern) holds
+    regardless of the noise on the totals.
+  - **Both TODO-5220 and TODO-5221 are now resolved.** TODO-5222 (real
+    C++ toolchain compile+link cost reduction) is the only remaining item
+    in this doc's tracked chain.

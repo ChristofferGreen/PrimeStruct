@@ -10922,7 +10922,7 @@ This file is the live open-work queue for PrimeStruct.
     `PrimeStruct_vector_surface_traces` gate-script failure (a
     production-file trace-count check, unrelated to this change).
 
-- [ ] TODO-5221: re-measure full suite cost distribution after TODO-5220
+- [x] TODO-5221 (RESOLVED): re-measure full suite cost distribution after TODO-5220
   lands and triage the new slowest tests
   - owner: ai
   - created_at: 2026-08-08
@@ -10956,6 +10956,39 @@ This file is the live open-work queue for PrimeStruct.
     any clear single-bug multi-shard patterns are filed as TODOs; don't
     chase general single-digit-second test speedups here (see TODO-5222
     for the toolchain-cost angle instead).
+  - resolution_summary (2026-08-09): regenerated `CTestCostData.txt` via a
+    fresh `ctest --parallel 8` run immediately after TODO-5220 landed
+    (1953 tests, 8903.78s total serial-equivalent time). Confirmed the
+    quaternion-helpers outlier is gone entirely - it no longer appears
+    anywhere near the top of the sorted-by-cost list (previously #1/#2 at
+    256s/200s). New top offenders: several
+    `compile_run_vm_collections_collections_newly_exposed_2026_07_16_*`
+    shards (220s, 125s, 122s, 58s, 57s, 57s) and
+    `compile_run_emitters_cpp_collection_access_and_alias_forwarding_*`/
+    `compile_run_emitters_cpp_map_wrapper_and_fallback_inference_*` shards
+    (213s, 201s, 187s, 106s, 97s). Investigated the single worst one
+    directly: re-ran shard `593_602` standalone (not under `--parallel 8`
+    contention) and it took ~111s serially for its 10 real cases
+    (`--list-test-cases` confirmed exactly 10, despite doctest's summary
+    line misleadingly saying "682 passed" - that count is the whole
+    suite's registered-case total, not this shard's). All 10 cases are
+    genuine map/vector conformance and growth-limit tests (e.g. "runs vm
+    shared stdlib vector conformance harness", "runs vm shared vector
+    conformance harness for stdlib and experimental helpers") - broad
+    harnesses that legitimately exercise many real backend operations,
+    not one fixable bug like quaternion was. **No new single-bug
+    multi-shard pattern found** - unlike quaternion, this cost is
+    distributed real backend/toolchain work, matching TODO-5222's
+    existing scope rather than warranting a new TODO. Also note: total
+    suite time here (8903.78s) is roughly 2x the original 2026-08-08
+    baseline (4748.4s) for a similar test count - cross-checked via the
+    same shard's serial-vs-parallel timing (111s serial vs. this run's
+    ~220s reported under 8-way parallel contention, roughly 2x), which
+    points to general machine/environment load during the parallel run
+    as the likely explanation rather than a regression introduced by
+    TODO-5220 (which only removes work, never adds a slower path for
+    already-passing cases). TODO-5222 remains the right next step for
+    the real remaining cost.
 
 - [ ] TODO-5222: reduce real C++ toolchain compile+link cost for
   --emit=cpp/exe/native compile_run tests
