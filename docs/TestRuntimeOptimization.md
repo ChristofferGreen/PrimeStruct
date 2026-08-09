@@ -153,9 +153,17 @@ by the normal queue rather than living only as prose in this doc:
   `emitters.cpp` collection-conformance shards) are distributed real
   backend/toolchain cost across many genuine test cases, not one fixable
   bug. See the 2026-08-09 log entry below for the full measurement.
-- **TODO-5222** (new 2026-08-08) — reduce real C++ toolchain compile+link
-  cost for `compile_run` tests using `--emit=cpp`/`exe`/`native`
-  (optimization level, faster linker, completing TODO-4709's audit).
+- **TODO-5222 — RESOLVED 2026-08-09**: investigated all 3 candidate
+  levers. `-O0` and a precompiled header for the fixed stdlib includes
+  were already implemented and are the dominant win (66% reduction
+  measured: 1.168s → 0.390s on a representative generated `.cpp`). Tested
+  adding `-fuse-ld=lld` on top and found only a ~3% further improvement -
+  not worth the portability risk, so not adopted. `--emit=native` doesn't
+  invoke an external toolchain at all, so this whole cost class is
+  specific to `--emit=cpp`/`exe`. TODO-4709's audit (downgrading
+  pass/fail-only cases off exe/native to vm) remains its own separate,
+  still-open TODO rather than folded in here. See the 2026-08-09 log
+  entry for the full measurement.
 
 This doc stays the narrative/findings log; `docs/todo.md` is the
 execution queue — keep them in sync when a TODO's scope or status changes.
@@ -352,3 +360,40 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   - **Both TODO-5220 and TODO-5221 are now resolved.** TODO-5222 (real
     C++ toolchain compile+link cost reduction) is the only remaining item
     in this doc's tracked chain.
+- 2026-08-09: **TODO-5222 investigated and resolved** - no code change
+  landed, because the two big, safe wins were already in place and the
+  one untried lever wasn't worth its risk. Details:
+  - `src/ExternalTooling.cpp`'s `compileCppExecutable` (the `--emit=exe`/
+    `cpp` toolchain call) already passes `-O0` to `clang++`, and already
+    wires in a precompiled header (`PRIMEC_GENERATED_CPP_PCH_PATH`) for
+    the fixed stdlib `#include`s every generated `.cpp` carries. Measured
+    the PCH's actual impact directly: compiling a representative
+    generated `.cpp` (69KB) with `-O0` alone took 1.168s; with the PCH
+    added, 0.390s - a 66% reduction, already captured before this
+    investigation.
+  - `--emit=native` doesn't invoke an external toolchain at all - it's
+    `src/native_emitter/`'s own direct machine-code emitter (confirmed by
+    grep: no `clang`/`g++`/`ld`/`ProcessRunner` references in that
+    directory) - so the toolchain-cost premise only applies to
+    `--emit=cpp`/`exe`.
+  - Tried the one remaining candidate lever, `-fuse-ld=lld`: confirmed
+    available and functional in this environment, but measured only a
+    ~3% further improvement on top of the PCH'd baseline (0.390s →
+    0.377s) - a single-TU test executable has almost nothing to link, so
+    the linker choice barely matters once the PCH has already removed the
+    dominant cost (parsing/instantiating the stdlib includes). Decided
+    not to adopt it: a 3% gain doesn't clear the bar against this TODO's
+    own stop_rule concern about portability risk (lld/mold availability
+    isn't guaranteed everywhere this suite runs).
+  - TODO-4709's audit (downgrading pass/fail-only `compile_run` cases off
+    `--emit=exe`/`native` to `--emit=vm`) remains open as its own
+    separate TODO, not folded into this one, since it has its own "audit
+    only" stop rule.
+  - **This closes out every TODO in this doc's tracked chain**
+    (TODO-4708, TODO-5220, TODO-5221, TODO-5222 all resolved; TODO-4712
+    deprioritized with its rationale documented). The remaining
+    identified cost in the suite is genuine, distributed per-test
+    compile+link/backend work across hundreds of real test cases, not a
+    single further fixable inefficiency - see TODO-4709 (separately
+    tracked) for the next real lever if suite runtime becomes a priority
+    again.

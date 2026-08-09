@@ -10990,7 +10990,7 @@ This file is the live open-work queue for PrimeStruct.
     already-passing cases). TODO-5222 remains the right next step for
     the real remaining cost.
 
-- [ ] TODO-5222: reduce real C++ toolchain compile+link cost for
+- [x] TODO-5222 (RESOLVED): reduce real C++ toolchain compile+link cost for
   --emit=cpp/exe/native compile_run tests
   - owner: ai
   - created_at: 2026-08-08
@@ -11029,3 +11029,48 @@ This file is the live open-work queue for PrimeStruct.
     or isn't portably available across the environments this suite runs
     in, revert that specific change and document why, rather than
     special-casing the build for one environment.
+  - resolution_summary (2026-08-09): investigated all 3 implementation_notes
+    levers directly rather than guessing:
+    1. **Optimization level**: `compileCppExecutable` in
+       `src/ExternalTooling.cpp` already passes `-O0` to `clang++` for the
+       `--emit=exe`/`cpp` toolchain invocation - already optimal, no
+       change needed. `--emit=native` doesn't invoke an external toolchain
+       at all (`src/native_emitter/`'s own direct ELF/Mach-O machine-code
+       emitter, confirmed by grep - no `clang`/`g++`/`ld`/`ProcessRunner`
+       references there), so this whole TODO's toolchain-cost premise
+       only applies to `--emit=cpp`/`exe`, not `--emit=native`.
+    2. **Precompiled header**: also already implemented
+       (`PRIMEC_GENERATED_CPP_PCH_PATH`, wired into the same function) -
+       this turned out to be the dominant existing win. Measured directly:
+       compiling a representative generated `.cpp` (69KB, from the
+       `abs(a-b)+...` chain repro) with `clang++ -std=c++23 -O0` alone
+       took 1.168s; adding the already-wired PCH cut that to 0.390s (a
+       66% reduction) - i.e. most of the available win here was already
+       captured before this investigation started.
+    3. **Faster linker (lld/mold)**: not previously wired in. Confirmed
+       `lld`/`ld.lld` available in this environment and functional
+       (`clang++ -fuse-ld=lld` compiles and links correctly). Measured on
+       top of the already-PCH'd baseline: 0.390s (default linker) vs.
+       0.377s (`-fuse-ld=lld`) - only a ~3% additional improvement, since
+       a single-translation-unit `--emit=exe` test program has very
+       little to link (no other `.o` files) and the actual bottleneck the
+       PCH already addresses (parsing/instantiating the fixed stdlib
+       `#include`s) dominates. Decision: **not worth adding** - a ~3%
+       gain doesn't justify the portability risk this TODO's own
+       stop_rule warns about (lld/mold availability isn't guaranteed
+       across every environment this suite runs in), especially since the
+       large win (PCH) is already in place and unconditional.
+    4. **TODO-4709's audit** (downgrading pass/fail-only `compile_run`
+       cases off `--emit=exe`/`native` to `--emit=vm`): left to that
+       TODO's own separate, already-filed entry rather than folded in
+       here - it has its own "audit only, no migrations in that leaf"
+       stop rule and shouldn't be scope-crept into this one.
+    Net: the two big, safe, already-implemented wins (`-O0` + PCH, 66%
+    reduction versus a naive baseline) account for essentially all of
+    this TODO's realistically achievable, zero-risk toolchain-cost
+    reduction; the one untried lever (lld) was tested and found not worth
+    its portability tradeoff for the marginal gain measured. No code
+    change landed from this investigation since there was nothing safe
+    left to change - remaining suite cost in this area is genuine
+    per-test compile+link work (many distinct translation units across
+    hundreds of `compile_run` cases), not a single fixable inefficiency.
