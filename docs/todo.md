@@ -1533,7 +1533,7 @@ This file is the live open-work queue for PrimeStruct.
     and real C++ toolchain compile+link time for `--emit=cpp`/`exe`/`native`
     cases) identified in the same log entry.
 
-- [ ] TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
+- [x] TODO-4709 (RESOLVED - audit only): Audit compile_run pass/fail-only cases for downgrade candidates
   - owner: ai
   - created_at: 2026-07-15
   - phase: Test runtime optimization
@@ -1557,6 +1557,42 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once the audit list exists; do not perform any of the
     downgrades in this leaf — each migration is its own follow-up leaf so
     correctness can be verified per-file.
+  - resolution_summary (2026-08-09): scanned all 3,967 `TEST_CASE` bodies
+    across `tests/unit/compile_run/`'s 207 files. First correction to
+    this TODO's own scope premise: **no `compile_run` test actually calls
+    `validateProgramThroughCompilePipeline`/`runCompilePipeline`** (those
+    in-process APIs have zero usages anywhere in this directory) - every
+    single test spawns real `primec`/`primevm` processes via
+    `runCommand(...)`, confirmed via direct grep. So "downgrade" here
+    means rewriting a process-spawn test to an in-process
+    `Semantics::validate()` call, a real per-test structural change, not
+    just deleting an assertion.
+    Built a heuristic classifier around the actual discriminator: does
+    the test's `runCommand(...)` check ever get past the *compile* step?
+    This codebase consistently uses exit code `2` for compile/semantic
+    rejection (verified across dozens of samples); a test whose entire
+    body is exactly one `runCommand(...) == 2` check never produces any
+    runtime behavior, regardless of `--emit=` flag, since the compile
+    itself failed. Note: an initial attempt lumped exit codes `{1, 2, 3}`
+    together as "rejection-like" and was **wrong** - manually verified
+    counter-examples showed exit code `1` is often a genuine *computed*
+    program result (e.g. `return(plus(count(values), 1i32))` legitimately
+    evaluating to `1`) and exit code `3` is this codebase's VM
+    runtime-error convention (an out-of-bounds panic *during* execution,
+    not a compile-time rejection) - both need the full pipeline, they
+    just happen to use small integers. Corrected to only trust a lone
+    `== 2` check.
+    Results: **1,470 SAFE_TO_DOWNGRADE candidates**, **1,727
+    NEEDS_FULL_PIPELINE**, **767 AMBIGUOUS** (no literal
+    `runCommand(...) == N` pattern - variable-based comparisons, or not
+    really a compile/execute test at all, e.g. several
+    `test_compile_run_examples_docs_locks.cpp` source-inventory-lock
+    cases). Full file:line lists for all three buckets recorded in the
+    new `docs/TODO4709CompileRunAudit.md`, cross-referenced from
+    `docs/TestRuntimeOptimization.md`'s 2026-08-09 log entry. This is a
+    heuristic triage list, not a certified-safe migration list - each
+    SAFE-bucket entry still needs an individual read before migrating.
+    No migrations performed in this leaf, per its own stop_rule.
 
 - [ ] TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
   - owner: ai

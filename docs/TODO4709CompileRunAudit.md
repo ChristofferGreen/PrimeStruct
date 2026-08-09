@@ -1,0 +1,4009 @@
+# TODO-4709 Audit: compile_run pass/fail-only case inventory
+
+Generated 2026-08-09 by a mechanical, heuristic scan of `tests/unit/compile_run/`
+(3,967 `TEST_CASE` bodies scanned across 207 files). See
+`docs/TestRuntimeOptimization.md`'s 2026-08-09 log entry for the full
+methodology and its known limitations - **this is a heuristic audit for
+triage, not a certified-safe migration list.** Every entry, especially in
+the SAFE bucket, needs a human/agent read of the actual test body before
+any migration, per TODO-4709's own stop_rule (audit only, no migrations
+in that leaf).
+
+- **SAFE_TO_DOWNGRADE candidates: 1471** - test body contains exactly
+  one `runCommand(...)` call, checking exit code `2` (this codebase's
+  consistent "compile/semantic rejection" convention) and nothing else -
+  i.e. the program never got past compilation, so there is no runtime
+  behavior to speak of regardless of which `--emit=` flag was requested.
+- **NEEDS_FULL_PIPELINE: 1728** - checks a computed/executed program
+  result (any exit code other than a lone `2`, multiple `runCommand`
+  invocations, a known program-output-checking helper, or direct stdout
+  content comparison).
+- **AMBIGUOUS (needs manual look): 768** - no literal
+  `runCommand(...) == N` pattern found (uses a variable, `CHECK_MESSAGE`,
+  a shared helper not in the known list, or is a source/doc-inventory
+  lock test unrelated to compile/execute behavior at all, e.g. several
+  `test_compile_run_examples_docs_locks.cpp` cases).
+
+## SAFE_TO_DOWNGRADE candidates
+
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:9: rejects canonical slash-method map access without helper on canonical at first in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:51: rejects bare map count without imported canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:71: rejects bare map count through compatibility alias when canonical helper is absent in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:134: rejects bare map at call without helper in C++ emitter with unknown-target diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:152: rejects bare map at through compatibility alias in C++ emitter with unknown-target diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:175: rejects bare map at_unsafe call without helper in C++ emitter with unknown-target diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:194: rejects bare map at_unsafe through compatibility alias in C++ emitter with unknown-target diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:234: rejects bare vector at without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:266: rejects bare vector at_unsafe without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:303: rejects map unnamespaced contains through compatibility helper when canonical helper is absent in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:353: rejects map unnamespaced contains without helper in C++ emitter with unknown-target diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:374: rejects map unnamespaced tryAt through canonical helper in C++ emitter without on_error`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:398: rejects map unnamespaced tryAt through compatibility helper in C++ emitter without on_error`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:423: rejects map unnamespaced tryAt preferring canonical helper over compatibility alias in C++ emitter without on_error`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:567: rejects bare map tryAt call without imported canonical helper in C++ emitter with unknown-target diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:585: rejects map tryAt compatibility call struct method chain canonical forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:668: canonical direct map tryAt struct method chain in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:716: compiles same-path direct map at_unsafe struct method chain through alias helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:764: compiles canonical direct map at_unsafe struct method chain in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:831: rejects bare map count method without imported canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:850: C++ emitter rejects bare map contains method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:896: rejects bare map contains struct method chain through alias helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:932: C++ emitter rejects bare map tryAt method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:979: rejects bare map tryAt struct method chain through alias helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:1015: C++ emitter rejects bare map access methods without imported canonical helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:9: compiles canonical map slash-method unsafe struct helper receiver forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:49: rejects wrapper-returned map method alias primitive receiver fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:80: rejects wrapper-returned canonical map slash-method struct helper receiver forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:120: rejects std-namespaced vector method alias access struct helper receiver mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:164: rejects std-namespaced vector method alias access receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:193: rejects std-namespaced vector method alias access struct method chain with`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:233: rejects std-namespaced vector unsafe method alias access receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:262: C++ emitter forwards explicit-template vector count wrappers through canonical return kinds`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:303: C++ emitter keeps canonical diagnostics for explicit-template vector count wrappers`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:344: rejects namespaced access method chain non-collection target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:370: rejects namespaced map capacity method chain target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:9: rejects map access compatibility call struct method chain canonical diagnostics forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:44: rejects map unsafe compatibility call struct method chain canonical forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:80: rejects map unsafe compatibility call struct method chain primitive argument diagnostics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:116: rejects vector alias access auto wrapper canonical struct-return forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:160: rejects vector alias access auto wrapper canonical diagnostics forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:204: C++ emitter rejects vector method alias access struct method forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:248: rejects vector method alias access canonical-only helper routing with array receiver diagnostics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:288: rejects vector method alias access struct method chain with Marker receiver diagnostics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:328: runs vector method alias access field expression with struct receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:357: C++ emitter rejects vector unsafe method alias access struct method forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:400: rejects vector method alias access receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:429: accepts vector unsafe method alias access field expression with struct receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:464: rejects vector unsafe method alias access receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:493: runs vector method alias struct-return precedence in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:525: rejects canonical vector method access struct forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:559: runs canonical vector unsafe method field forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp:582: runs canonical map slash-method struct method chain forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:814: C++ emitter renders lambda captures`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:831: C++ emitter preserves explicit lambda captures`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:9: rejects wrapper explicit vector capacity calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:89: C++ emitter rejects local explicit vector count capacity calls without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:112: rejects local explicit vector count capacity calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:135: rejects namespaced wrapper vector capacity vector target without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:189: C++ emitter rejects wrapper bare vector capacity calls without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:213: rejects wrapper bare vector capacity calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:270: rejects wrapper vector capacity methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:293: rejects wrapper vector capacity methods without helper before emission in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:318: C++ emitter rejects wrapper vector capacity slash-method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:351: C++ emitter rejects duplicate local canonical slash-method vector capacity overloads`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:395: C++ emitter rejects local canonical slash-method vector capacity on map receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:418: rejects local canonical slash-method vector capacity on string receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:441: rejects local alias slash-method vector capacity on string receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:462: rejects local alias slash-method vector capacity on array receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:543: C++ emitter rejects vector namespaced count capacity slash methods without same-path helper`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:566: C++ emitter rejects stdlib namespaced vector count capacity slash methods without same-path helper`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:590: rejects vector namespaced count capacity slash methods without same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:613: rejects stdlib namespaced vector count capacity slash methods without same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:637: C++ emitter rejects cross-path vector count capacity slash methods before builtin fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:669: rejects cross-path vector count capacity slash helper routing in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:726: C++ emitter rejects stdlib namespaced vector access slash methods without helper before lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:748: rejects stdlib namespaced vector access slash methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:9: C++ emitter rejects canonical vector mutator methods with alias-only helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:37: rejects explicit canonical vector mutator statement helper without vector access helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:65: rejects reordered explicit canonical vector mutator statement helper without vector access helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:93: C++ emitter rejects alias vector mutator statements with canonical-only helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:119: C++ emitter rejects alias reordered vector mutator statements with canonical-only helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:145: rejects alias vector mutator statements with canonical-only helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:171: C++ emitter rejects canonical vector mutator statements with alias-only helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:198: C++ emitter rejects canonical reordered vector mutator statements with alias-only helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:225: rejects canonical vector mutator statements with alias-only helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:276: C++ emitter infers wrapper access builtin fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:309: rejects inferred wrapper access key mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:336: C++ emitter infers wrapper string access builtin fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:397: C++ emitter rejects bare builtin count on wrapper-returned canonical map access before lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:423: C++ emitter keeps canonical map unknown-target diagnostics on wrapper-returned map indexing`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:449: C++ emitter keeps imported wrapper-returned canonical map reference alias diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:487: C++ emitter rejects direct wrapper-returned canonical map access count shadow`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:523: C++ emitter rejects wrapper-returned canonical map method access string receiver typing`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:569: C++ emitter keeps canonical map unknown-target diagnostics on direct-call`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:40: C++ emitter lambda mutators honor user vector helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:77: C++ emitter lambda mutator positional call resolves user helper`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:99: rejects lambda std namespaced reordered mutator compatibility helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:126: C++ emitter lambda mutator bool positional call resolves user helper`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:148: C++ emitter lambda mutator named call prefers values receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:172: C++ emitter lambda mutator rewrite keeps known vector receiver leading names`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:491: C++ emitter statement mutator call-form rejects shadow helper`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:530: C++ emitter statement mutator named call rejects shadow helper without import`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:551: rejects imported user vector mutator positional call shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:9: rejects local canonical slash-method vector count on string receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:91: rejects local alias slash-method vector count on string receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:111: rejects local alias slash-method vector count on array receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:150: C++ emitter rejects local alias slash-method vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:217: C++ emitter rejects alias slash-method vector count on string receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:241: rejects alias slash-method vector count on string receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:265: C++ emitter rejects alias slash-method vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:292: C++ emitter rejects canonical slash-method vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:323: rejects wrapper-returned canonical vector capacity slash-method on map receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:349: C++ emitter rejects alias slash-method vector count on map receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:371: rejects alias slash-method vector count on map receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:462: rejects wrapper-returned canonical vector capacity slash-method on array receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:488: C++ emitter rejects alias slash-method vector count on array receiver with rooted target before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:510: rejects alias slash-method vector count on array receiver with rooted target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:555: C++ emitter rejects canonical direct-call vector count on string receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:581: rejects canonical direct-call vector count on string receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:630: C++ emitter rejects alias direct-call vector count on string receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:656: rejects alias direct-call vector count on string receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:705: C++ emitter rejects alias direct-call vector count on array receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:731: rejects alias direct-call vector count on array receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:784: C++ emitter rejects canonical direct-call vector count on array receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:810: rejects canonical direct-call vector count on array receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:836: rejects namespaced access method chain compatibility fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:865: rejects namespaced wrapper string access method chain compatibility fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:193: C++ emitter runs variadic args body access and indexed method calls`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:217: C++ emitter forwards variadic args packs with explicit prefix values`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:537: C++ emitter rejects retired variadic map value pack count methods`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:9: rejects user map access unsafe string positional call shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:34: C++ emitter rejects canonical map access positional reorder`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:59: C++ emitter keeps canonical map access key diagnostics on positional reorder`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:84: C++ emitter access rewrite keeps known collection receiver leading names`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:105: rejects user vector mutator shadow arg mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:124: rejects user vector mutator call-form arg mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:163: rejects array namespaced vector constructor alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:182: rejects array namespaced vector at alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:203: rejects array namespaced vector at_unsafe alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:225: rejects wrapper array namespaced vector at alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:247: rejects wrapper array namespaced vector at_unsafe alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:270: rejects array namespaced vector count builtin alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:291: rejects array namespaced vector count method alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:316: rejects array namespaced vector capacity alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:337: rejects array namespaced vector capacity method alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:362: rejects array namespaced vector mutator alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:19: C++ emitter keeps canonical diagnostics on direct-call map count receivers`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:50: rejects stdlib namespaced vector capacity on map target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:70: C++ emitter rejects user wrapper count/capacity shadow precedence on map count first`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:114: rejects user wrapper temporary count capacity shadow value mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:162: C++ emitter rejects wrapper count/capacity builtin fallback on map count first`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:190: rejects namespaced wrapper vector count map target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:214: rejects namespaced wrapper vector count vector target without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:238: C++ emitter rejects mixed array-count wrapper fallback on array count first`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:317: C++ emitter keeps vector-count diagnostic for alias direct-call vector count on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:342: C++ emitter rejects array namespaced wrapper capacity builtin fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:366: rejects namespaced count/capacity method chain fallback on vector count first in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:396: C++ emitter keeps string-count diagnostic for slash-method vector count on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:418: C++ emitter keeps map receiver method diagnostic for slash-method vector count on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:440: C++ emitter keeps array-count diagnostic for slash-method vector count on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:462: C++ emitter rejects duplicate local canonical slash-method vector count overloads`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:499: C++ emitter rejects local canonical slash-method vector count on map receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:134: C++ emitter keeps support-matrix plus mismatch diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:160: C++ emitter keeps support-matrix implicit conversion diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:314: string comparisons in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:330: string map values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:9: rejects vector alias templated forwarding past non-templated compatibility helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:141: C++ emitter compiles stdlib namespaced vector at map target without import`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:178: C++ emitter keeps wrapper-returned canonical map references through reference binding`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:207: C++ emitter keeps canonical diagnostics on wrapper-returned canonical map reference method sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:253: C++ emitter keeps non-string diagnostics on canonical map reference access receivers`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:274: rejects map namespaced count compatibility alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:297: rejects map namespaced contains compatibility alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:322: rejects map namespaced tryAt compatibility alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:346: rejects stdlib namespaced map count alias fallback without import in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:372: rejects map namespaced at compatibility alias in C++ emitter without explicit alias`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:393: rejects map namespaced at unsafe compatibility alias in C++ emitter without explicit alias`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:417: C++ emitter rejects canonical direct map access before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:439: rejects canonical direct map access without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:461: C++ emitter rejects direct builtin count on canonical map access without helper before lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:483: C++ emitter rejects direct builtin contains on canonical map access before deleted stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:527: C++ emitter rejects wrapper-returned map access contains receivers before deleted stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:550: rejects wrapper-returned slash-method map access contains without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:573: C++ emitter rejects canonical slash-method map access before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:9: rejects reordered namespaced vector push call expression compatibility alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:209: rejects std namespaced count non-builtin compatibility fallback type mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:232: rejects vector namespaced count non-builtin array fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:319: C++ emitter mutator rewrite keeps known vector receiver leading names`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:339: rejects user vector access named call shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:532: rejects user vector access positional call shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:555: rejects user map access string positional call shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:578: C++ emitter rejects later map receiver positional shadow without canonical reorder`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:9: C++ emitter rejects direct-call string vector access helpers before lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:32: rejects direct-call string vector access builtin fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:55: rejects slash-method wrapper string access method chain compatibility fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:89: rejects slash-method wrapper string access method chain i32 diagnostics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:115: C++ emitter rejects slash-method string vector access helpers before lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:141: rejects slash-method string vector access builtin fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:167: rejects alias slash-method vector access on array receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:190: rejects vector alias access struct method chain without same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:223: rejects vector alias access struct method chain canonical receiver diagnostics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:255: rejects vector alias access field expression without same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:366: keeps canonical direct-call map access struct method chain forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:394: keeps canonical direct-call map unsafe struct method chain forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:422: keeps canonical direct-call map access primitive diagnostics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:462: prefers canonical bare map method struct chain forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:505: prefers canonical bare map unsafe method struct chain forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:548: keeps canonical bare map method non-struct diagnostics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:587: rejects map access compatibility call struct method chain canonical forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:208: C++ emitter rejects variadic pointer string packs`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:232: C++ emitter rejects variadic reference string packs`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:256: C++ emitter rejects variadic reference packs without location forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:280: C++ emitter rejects variadic pointer packs without location forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:304: C++ emitter materializes variadic borrowed map packs with indexed count_ref calls`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:9: C++ emitter materializes variadic scalar pointer packs from borrowed pack access`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:75: C++ emitter materializes variadic struct pointer packs from borrowed pack access`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:151: C++ emitter materializes variadic scalar pointer packs from borrowed pack field access`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:221: C++ emitter materializes variadic struct pointer packs from borrowed pack field access`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:301: C++ emitter materializes variadic scalar pointer packs from borrowed pack reference fields`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:391: C++ emitter materializes variadic scalar pointer packs from indexed dereference receiver reference fields`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:482: C++ emitter materializes variadic struct pointer packs from borrowed pack reference fields`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_pointer_pack_access.cpp:582: C++ emitter materializes variadic scalar reference packs from borrowed pack reference fields`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_reference_pack_access.cpp:9: C++ emitter materializes variadic struct reference packs from borrowed pack reference fields`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_reference_pack_access.cpp:109: C++ emitter materializes variadic pointer uninitialized scalar packs with indexed init and take`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_reference_pack_access.cpp:176: C++ emitter materializes variadic pointer uninitialized struct packs from borrowed helper references`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_reference_pack_access.cpp:256: C++ emitter materializes variadic borrowed uninitialized scalar packs with indexed init and take`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_reference_pack_access.cpp:309: C++ emitter materializes variadic borrowed uninitialized struct packs with indexed init and take`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:110: rejects array compatibility access slash methods on vector receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:132: rejects array compatibility access slash method chain before receiver typing in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:160: rejects wrapper-returned array compatibility access slash method chains before receiver typing in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:193: C++ emitter rejects bare vector at methods without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:212: rejects bare vector at methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:230: C++ emitter rejects bare vector at_unsafe methods without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:251: rejects wrapper vector at_unsafe methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:275: C++ emitter rejects wrapper bare vector at calls before deleted stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:299: rejects wrapper bare vector at calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:323: C++ emitter rejects wrapper bare vector at_unsafe calls before deleted stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:348: C++ emitter rejects wrapper explicit vector access calls before deleted stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:371: rejects wrapper bare vector at_unsafe calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:396: rejects wrapper explicit vector access calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:630: rejects explicit canonical vector mutator method helper without access helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:40: compiles vector alias compatibility template forwarding on bool->i32 conversion in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:474: rejects wrapper temporary templated vector method canonical forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:510: rejects array alias templated forwarding to canonical vector helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:534: rejects stdlib templated vector count fallback to array alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:648: rejects array alias slash-method helper chains on vector receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:9: C++ emitter rejects local canonical slash-method vector capacity same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:32: C++ emitter rejects local canonical slash-method vector capacity same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:55: C++ emitter rejects local canonical slash-method vector capacity same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:101: rejects canonical direct-call vector capacity on map receiver without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:126: rejects alias direct-call vector capacity on map receiver without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:151: rejects alias direct-call vector capacity on array receiver without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:176: rejects canonical direct-call vector capacity builtin fallback on map receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:201: C++ emitter rejects canonical slash-method vector capacity same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:228: C++ emitter rejects canonical slash-method vector capacity same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:259: C++ emitter rejects canonical slash-method vector capacity same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:291: C++ emitter rejects canonical slash-method vector capacity on map receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:317: rejects canonical slash-method vector capacity on map receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:343: C++ emitter rejects alias slash-method vector capacity same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:375: C++ emitter rejects alias slash-method vector capacity on map receiver before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:400: rejects alias slash-method vector capacity on map receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:425: C++ emitter infers wrapper collection builtin fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:552: rejects wrapper vector count methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:574: rejects wrapper vector count methods without helper before emission in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:596: C++ emitter rejects wrapper vector count slash-method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:647: C++ emitter rejects wrapper bare vector count calls without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:670: C++ emitter rejects namespaced vector count on wrapper map target before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:696: rejects wrapper explicit vector count alias calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:721: C++ emitter rejects wrapper explicit vector count capacity calls on count first before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:748: rejects wrapper explicit vector count capacity aliases on count first when only canonical helpers exist in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:785: rejects wrapper bare vector count calls without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:1165: rejects stdlib canonical vector helper method-precedence forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:1256: rejects vector namespaced count capacity aliases with only canonical helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:1284: rejects vector namespaced templated canonical helper alias call without alias definition in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:9: wrapper canonical direct-call struct method chain forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:41: rejects wrapper canonical direct-call method receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:74: rejects wrapper canonical direct-call map method receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:107: rejects wrapper compatibility direct-call map receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:139: C++ emitter rejects wrapper-returned vector direct-call string count forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:177: C++ emitter rejects vector alias direct-call count canonical wrapper return forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:204: C++ emitter keeps primitive diagnostics on vector alias access count with canonical non-string wrapper return`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:231: rejects inferred wrapper string count arg mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:251: rejects inferred wrapper string access index mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:273: rejects user wrapper temporary access shadow precedence in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:326: rejects user wrapper temporary access shadow value mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:381: rejects non-vector capacity call target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:399: rejects non-vector capacity method target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:9: C++ emitter rejects wrapper-returned slash-method map access count with same-path diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:49: C++ emitter rejects wrapper-returned slash-method map access count before deleted stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:97: C++ emitter keeps stdlib namespaced vector string access count fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:139: C++ emitter rejects wrapper vector direct-call count receivers before deleted access stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:162: C++ emitter keeps slash-method vector access count through builtin string length`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:206: C++ emitter rejects slash-method vector count receivers before deleted access stubs`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:233: rejects slash-method vector count receivers without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:259: rejects wrapper vector alias direct-call count without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:281: rejects stdlib namespaced vector access count for non-string element in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:378: rejects slash-method vector access element-type count fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:415: C++ emitter rejects slash-method vector access helper return-kind count forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:452: rejects wrapper-returned vector alias direct-call string count fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:490: rejects bare vector method access receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:519: rejects bare map method access receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:548: rejects wrapper bare vector unsafe method access receiver fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:581: rejects wrapper vector alias direct-call struct method chain canonical forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:617: rejects wrapper vector alias direct-call method receiver fallback without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:32: C++ emitter keeps canonical map count diagnostics on wrapper slash return method sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:90: C++ emitter keeps canonical diagnostics on templated wrapper slash return map count sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:149: C++ emitter keeps canonical diagnostics on direct canonical map count reference wrappers`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:188: C++ emitter keeps canonical map return arity diagnostics for stdlib envelopes`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:215: C++ emitter rejects explicit canonical map typed bindings for builtin helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:319: C++ emitter resolves alias explicit-template map count method precedence`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:347: C++ emitter keeps builtin map diagnostics on explicit canonical typed bindings`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:413: C++ emitter rejects canonical precedence for stdlib namespaced map at in expressions`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:478: C++ emitter keeps canonical diagnostics for stdlib namespaced map count`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:514: C++ emitter rejects canonical unknown map helper with canonical diagnostics`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:580: C++ emitter keeps canonical diagnostics on direct-call map access receivers`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:423: collection docs snippets reject mutators in value position`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1194: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_native_launcher.cpp:181: native window launcher script rejects missing primec binary path`
+- `tests/unit/compile_run/test_compile_run_examples_native_launcher.cpp:208: native window launcher script rejects unknown args`
+- `tests/unit/compile_run/test_compile_run_examples_native_launcher.cpp:233: native window launcher script rejects incompatible smoke flags`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:637: native window preflight script rejects unknown args`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:475: glsl-ir validation rejects out-of-range i64 literals`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:495: glsl emitter surfaces ir validation-stage failures without fallback`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:621: spirv emit reports missing tool`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:662: spirv emitter surfaces ir validation-stage failures without fallback`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:223: rejects negate on u64`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:125: map wildcard import rejects stdlib-owned surface in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:203: rejects experimental soa stdlib helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:254: public soa count helper on public wrapper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:296: public soa get helper rejects template arguments on non-soa receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:611: rejects experimental soa stdlib from-aos helper in C++ emitter before typed bindings support`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:693: rejects experimental soa stdlib to-aos method on wrapper surface in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:723: no-import root soa to_aos bare and direct helper forms reject`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:748: no-import root soa to_aos method helper forms reject during semantics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:773: no-import root soa canonical to_aos_ref helper form rejects in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:807: experimental SoaVector canonical to_aos_ref helper form rejects in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:912: rejects experimental soa stdlib non-empty to-aos method on wrapper state in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:943: rejects experimental soa stdlib get helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:971: rejects experimental soa stdlib get method in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:999: rejects bare soa get helper through helper return in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1233: rejects nested struct-body soa constructor-bearing helper returns in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1269: rejects nested struct-body soa direct and bound helper expressions in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1310: rejects nested struct-body soa method shadows in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1386: rejects explicit method-like helper-return experimental soa to_aos shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1434: rejects experimental soa stdlib ref helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1461: rejects experimental soa stdlib ref method in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1488: rejects experimental soa ref pass-through and return in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1526: rejects experimental soa stdlib push and reserve helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1557: rejects experimental soa stdlib push and reserve methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1633: rejects experimental soa mutating indexed field writes in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1828: rejects experimental soa bare get and ref field access in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1861: rejects experimental soa reflected call-form index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1911: rejects experimental soa inline location borrow index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1955: rejects dereferenced borrowed helper-return experimental soa reflected index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1993: rejects borrowed helper-return experimental soa get/ref methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2081: rejects builtin helper-return soa ref_ref same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2133: rejects helper-return experimental soa method shadows in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2188: rejects helper-return soa shadows with explicit canonical fallbacks in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2271: rejects borrowed local experimental soa read-only methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2315: rejects inline location experimental soa read-only methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2360: rejects borrowed helper-return experimental soa helper surfaces in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2408: rejects method-like borrowed helper-return experimental soa helper surfaces in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2463: rejects direct return borrowed helper-return experimental soa reads in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2512: rejects direct return method-like borrowed helper-return experimental soa reads in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2565: rejects direct return inline location borrowed helper-return experimental soa reads in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2614: rejects inline location method-like borrowed helper-return experimental soa helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2670: rejects direct return inline location method-like borrowed helper-return experimental soa reads in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2723: rejects inline location borrowed helper-return experimental soa helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3258: rejects string-keyed map constructors in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3279: rejects string-keyed map constructor indexing sugar in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3630: rejects bare vector count without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3647: rejects bare vector capacity without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3738: compile run rejects execution body arguments`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3798: assignment operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3908: unary minus operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:81: rejects versioned legacy include alias expansion`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:95: rejects version-first legacy include alias expansion`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:395: rejects versioned import mismatch across roots`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:434: rejects missing versioned import in compile`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:177: conformance: versioned import rejects underscore-private paths`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:204: conformance: wildcard import does not expose private members from imported source`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:202: native argv rejects returning entry arg string directly`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:223: native argv rejects passing entry arg string to helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:242: native argv rejects assigning entry arg string into aggregates`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:267: native argv rejects helper forwarding entry arg string`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:290: native argv rejects returning unsafe helper string directly`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:308: native argv rejects string comparisons on entry arg strings`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:326: native argv rejects echoing entry args from nested helper calls`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:350: native argv rejects string results in call arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:12: rejects native vector method alias access with current array receiver chain diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:51: rejects native vector method alias field expression without alias helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:85: rejects native vector unsafe method alias access with current array receiver chain diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:125: rejects native vector unsafe method alias field expression without alias helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:269: native keeps primitive diagnostics for canonical vector method access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:330: rejects native map method alias access struct method chain with primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:368: rejects native wrapper-returned map method alias primitive receiver fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:398: rejects native wrapper-returned canonical map slash-method struct receiver forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:437: rejects native wrapper-returned canonical direct-call map receiver fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:469: rejects native wrapper-returned compatibility direct-call map receiver fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:500: native keeps wrapper-returned map method alias primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:12: rejects native templated stdlib vector wrapper temporary unsafe method index mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:32: rejects native vector alias access auto wrapper primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:76: rejects native vector alias access auto wrapper canonical diagnostics forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:121: rejects native vector alias access struct method chain with rooted helper diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:156: rejects native vector alias access struct method chain with primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:191: rejects native vector alias access field expression with struct receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:288: rejects native map access compatibility call struct method chain with primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:321: rejects native map access compatibility call struct method chain with primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:354: rejects native map unsafe compatibility call struct method chain with primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:388: rejects native map unsafe compatibility call struct method chain with primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:421: rejects native vector method alias access struct method chain with array receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:461: rejects native vector namespaced access slash methods without alias helper on vector receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:483: rejects native array compatibility access slash methods on vector receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:504: rejects native array compatibility access slash method chain before receiver typing`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:531: rejects native wrapper-returned array compatibility access slash method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:240: rejects native slash-method wrapper string access method chain compatibility fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:274: native keeps slash-method wrapper string access i32 diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:299: rejects native alias slash-method vector access on array receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:616: native map namespaced at compatibility alias rejects without explicit alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:644: native map namespaced at unsafe compatibility alias rejects without explicit alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:12: rejects native named vector push expression receiver precedence in semantics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:45: rejects native auto-inferred named vector push expression receiver precedence in semantics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:490: rejects native vector namespaced count non-builtin array fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:12: native keeps imported wrapper-returned canonical map reference access lowering diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:51: native keeps canonical map unknown-target diagnostics on wrapper-returned map reference access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:83: rejects native map method sugar on wrapper-returned canonical map references without imported helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:111: native keeps non-string diagnostics on canonical map reference access count shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:137: native keeps canonical map unknown-target diagnostics on wrapper-returned map reference method sugar`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:163: native keeps non-string diagnostics on wrapper-returned canonical map access count shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:221: rejects native canonical vector unsafe access count shadow with expression-call diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:251: rejects native canonical vector method access builtin string count shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:281: rejects native canonical vector unsafe method access count shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:313: rejects native direct wrapper-returned canonical map access count shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:349: rejects native wrapper-returned canonical map method access string receiver typing`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:391: rejects native wrapper-returned slash-method map access count shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:432: rejects native slash-method vector access string count fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:469: native keeps slash-method vector access unknown-method diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:506: native wrapper-returned vector access string count fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:545: native keeps wrapper-returned vector access primitive count diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:608: rejects native canonical slash vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:639: rejects native wrapper-returned canonical vector count slash-method on map receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:663: rejects native wrapper-returned canonical vector capacity slash-method on map receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:718: rejects native wrapper-returned canonical vector count slash-method on array receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:774: rejects native wrapper-returned canonical vector count slash-method on string receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:800: rejects native wrapper-returned canonical vector capacity slash-method on array receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:893: rejects native user array capacity call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:36: rejects native canonical map method with slash return type receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:67: rejects native canonical map access helpers on wrapper slash return receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:104: rejects native canonical map access helper key mismatch on wrapper slash return receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:157: rejects native explicit canonical map typed binding key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:179: rejects native stdlib map constructor alias fallback without import`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:206: rejects native stdlib map at alias fallback without import`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:235: rejects native stdlib map at unsafe alias fallback without import`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:292: rejects native bare map count without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:366: rejects native bare map at call without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:389: rejects native bare map at_unsafe call without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:442: rejects native bare map count method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:491: rejects native bare map contains call without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:513: rejects native bare map contains method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:535: rejects native bare map tryAt method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:557: rejects native bare map access methods without imported canonical helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:28: rejects native templated stdlib return wrapper temporaries in expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:140: rejects native experimental soa stdlib helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:168: rejects native raw soa type spelling`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:245: native public soa get helper rejects template arguments on non-soa receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:264: native public soa get slash-method keeps canonical reject`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:292: native public soa to_aos slash-method keeps canonical reject`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:430: native legacy soa compatibility helpers reject`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:466: native wildcard-imported canonical soa helpers reject current metadata inference gap`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:500: native public soa type spelling keeps generated identity rejection`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:541: native public soa read helpers reject current metadata inference gap`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:582: native public soa construction and mutators reject current metadata inference gap`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:619: native public soa from-aos rejects current metadata inference gap`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:653: native public soa field-view wrappers reject current metadata inference gap`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:799: native rejects experimental soa stdlib from-aos helper before typed bindings support`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:888: native rejects experimental soa stdlib to-aos method on wrapper surface`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:919: native no-import root soa to_aos bare and direct helper forms reject SoaVector-only canonical helper contract`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:943: native no-import root soa to_aos method helper forms reject during semantics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:969: native rejects non-empty root soa struct literals`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:993: native rejects non-empty root soa literals with unsupported element envelopes`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1013: native rejects non-empty root soa literals above former local capacity limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1078: native rejects experimental soa stdlib non-empty to-aos method on wrapper state`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1110: native rejects experimental soa stdlib get helper through retired import path`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1139: native rejects experimental soa stdlib get method through retired import path`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1168: native rejects bare soa get helper through helper return compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1377: native rejects vector-target to_aos helper shadows`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1407: native rejects nested struct-body soa constructor-bearing helper returns compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1442: native rejects nested struct-body soa direct and bound helper expressions compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1482: native rejects nested struct-body soa method shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1557: native rejects explicit method-like helper-return experimental soa to_aos shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1605: native rejects experimental soa stdlib ref helper through retired import path`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1633: native rejects experimental soa stdlib ref method through retired import path`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1661: native rejects experimental soa ref pass-through and return`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1699: native rejects experimental soa stdlib push and reserve helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1731: native rejects experimental soa stdlib push and reserve methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1763: native rejects experimental soa single-field index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1794: native rejects experimental soa reflected multi-field index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1825: native rejects experimental soa mutating indexed field writes`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1865: native rejects richer borrowed experimental soa mutating indexed field writes`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1907: native rejects method-like borrowed experimental soa mutating indexed field writes`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1959: native rejects borrowed experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1991: native rejects experimental soa bare get and ref field access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2023: native rejects borrowed local experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2055: native rejects borrowed helper-return experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2091: native rejects experimental soa reflected call-form index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2140: native rejects experimental soa inline location borrow index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2184: native rejects dereferenced borrowed helper-return experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2222: native rejects borrowed helper-return experimental soa get/ref methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2299: native rejects builtin helper-return soa ref_ref same-path helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2336: native rejects helper-return experimental soa method shadows`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2391: native rejects helper-return soa shadows with explicit canonical fallbacks compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2475: native rejects borrowed local experimental soa read-only methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2519: native rejects inline location experimental soa read-only methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2563: native rejects borrowed helper-return experimental soa helper surfaces`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2611: native rejects method-like borrowed helper-return experimental soa helper surfaces`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2667: native rejects direct return borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2716: native rejects direct return method-like borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2769: native rejects direct return inline location borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2818: native rejects inline location method-like borrowed helper-return experimental soa helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2895: native rejects direct return inline location method-like borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2948: native rejects inline location borrowed helper-return experimental soa helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3559: rejects native templated stdlib wrapper temporary call forms`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:4034: rejects native templated stdlib wrapper temporary index forms`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:4070: rejects native templated stdlib wrapper temporary syntax parity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:4108: rejects native templated stdlib wrapper temporary unsafe parity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:4144: rejects native templated stdlib wrapper temporary count capacity parity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:287: rejects native map constructor odd args`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:304: rejects native map constructor type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:406: rejects native map indexing with argv key`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:446: rejects native map lookup with argv string key`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:470: rejects native map constructor string key from argv binding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:116: rejects native user vector pop call shadow on immutable call-form receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:213: rejects native user vector clear call shadow on immutable call-form receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:262: rejects native user vector remove_at call shadow on immutable call-form receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:311: rejects native user vector remove_swap call shadow on immutable call-form receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:32: rejects native vector literal above local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:64: rejects native vector reserve beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:107: rejects native vector reserve negative literal at lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:128: rejects native vector reserve folded expression beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:149: rejects native vector reserve folded negative expression at lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:170: rejects native vector reserve folded signed overflow at lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:192: rejects native vector reserve folded negate negative at lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:214: rejects native vector reserve folded negate overflow at lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:236: rejects native vector reserve folded unsigned expression beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:257: rejects native vector reserve folded unsigned wraparound at lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:278: rejects native vector reserve folded unsigned add overflow at lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:65: rejects native user map count call shadow without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:90: rejects native user map count method shadow without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:190: rejects native canonical map access string shadow before compatibility aliases during lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:353: rejects native explicit canonical map helper calls through same-path helpers with current lowering diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:714: rejects native canonical map reference string access without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:745: rejects native builtin count on canonical map reference string access without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:771: native rejects bare builtin count on wrapper-returned canonical map access before lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:801: native user string count method shadow on wrapper-returned canonical map access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:56: rejects native stdlib collection shim map at type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:71: rejects native stdlib collection shim map at string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:118: rejects native stdlib collection shim map at unsafe type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:133: rejects native stdlib collection shim map at unsafe string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:165: rejects native stdlib collection shim map method at string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:181: rejects native stdlib collection shim map method at unsafe string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:217: rejects native stdlib collection shim map method call parity key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:233: rejects native stdlib collection shim map method call parity unsafe key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:266: rejects native stdlib collection shim map single standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:298: rejects native stdlib collection shim map pair standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:331: rejects native stdlib collection shim map pair standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:364: rejects native stdlib collection shim map double standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:398: rejects native stdlib collection shim map triple standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:449: rejects native stdlib collection shim map quad standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:466: rejects native stdlib collection shim map quad standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:518: rejects native stdlib collection shim map quint standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:535: rejects native stdlib collection shim map quint standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:589: rejects native stdlib collection shim map sext standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:606: rejects native stdlib collection shim map sext standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:63: rejects native stdlib collection shim map sept standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:80: rejects native stdlib collection shim map sept standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:136: rejects native stdlib collection shim map oct standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:154: rejects native stdlib collection shim map oct standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:189: rejects native stdlib collection shim map double type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:221: rejects native stdlib collection shim map triple type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:254: rejects native stdlib collection shim extended constructor type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:289: rejects native stdlib collection shim vector quint type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:324: rejects native stdlib collection shim vector sext type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:359: rejects native stdlib collection shim vector sept type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:394: rejects native stdlib collection shim vector oct type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:426: rejects native stdlib collection shim map pair type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:458: rejects native stdlib collection shim map quad type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:491: rejects native stdlib collection shim map quint type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:525: rejects native stdlib collection shim map sext type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:560: rejects native stdlib collection shim map sept type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:596: rejects native stdlib collection shim map oct type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:51: rejects native std-namespaced vector access slash methods without canonical helper on vector receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:72: rejects native std-namespaced vector method alias access struct method chain with helper missing-method diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:112: rejects native templated stdlib map wrapper temporary unsafe key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:132: rejects templated stdlib map return envelope unsupported key arg`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:158: rejects templated stdlib map return envelope unsupported value arg`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:184: rejects native templated stdlib vector return envelope nested arg`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:210: rejects native templated stdlib map return envelope nested arg`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:236: rejects native templated stdlib vector return envelope wrong arity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:262: rejects native templated stdlib map return envelope wrong arity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:476: rejects native stdlib collection shim map single type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:491: rejects native stdlib collection shim map single key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:545: rejects native stdlib collection shim map new type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:560: rejects native stdlib collection shim map new string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:615: rejects native stdlib collection shim map count type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:630: rejects native stdlib collection shim map count string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:76: rejects native stdlib collection shim vector capacity type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:110: rejects native stdlib collection shim vector count type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:144: rejects native stdlib collection shim vector at type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:179: rejects native stdlib collection shim vector at unsafe type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:216: rejects native stdlib collection shim vector push type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:252: rejects native stdlib collection shim vector pop type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:288: rejects native stdlib collection shim vector reserve type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:325: rejects native stdlib collection shim vector clear type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:362: rejects native stdlib collection shim vector remove at type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:400: rejects native stdlib collection shim vector remove swap type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:467: rejects native bare vector capacity without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:501: rejects native wrapper temporary vector capacity method without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:144: native user map at string positional call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:166: native map access preferring later map receiver over string`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:193: native user map at_unsafe string positional call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:238: rejects native user vector at call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:353: rejects native named vector at expression receiver precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:452: rejects native user vector at_unsafe call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:143: rejects native builtin vector constructor named arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:160: rejects native builtin array constructor named arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:177: rejects native builtin map constructor named arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:232: rejects native removed vector access alias named arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:250: rejects native removed vector access alias at_unsafe named arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:269: rejects native namespaced vector count with soa literal target`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:391: rejects native reordered namespaced vector push call compatibility alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:536: rejects native reordered namespaced vector push call expression compatibility alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:12: rejects native array namespaced vector capacity alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:35: rejects native array namespaced wrapper vector capacity alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:62: rejects native array namespaced wrapper vector count alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:89: rejects native array namespaced vector mutator alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:113: rejects native stdlib canonical vector helper method-precedence forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:142: rejects native templated stdlib canonical vector helper method template args`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:174: rejects native vector namespaced call aliases without alias helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:206: rejects native vector namespaced templated canonical helper alias call without alias definition`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:234: rejects native vector alias arity-mismatch compatibility template forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:702: rejects native local alias slash-method vector count on string receiver during lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:724: rejects native local alias slash-method vector count on array receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:12: rejects native vector helper method expression legacy alias forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:42: rejects native vector alias named-argument compatibility template forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:74: rejects native wrapper temporary templated vector method compatibility template forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:109: rejects native array alias templated forwarding to canonical vector helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:136: rejects native stdlib templated vector count fallback to array alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:326: rejects native vector alias templated forwarding past non-templated compatibility helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:377: rejects native vector namespaced count capacity access aliases without alias helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:482: rejects native bare vector literal unsafe access through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:523: rejects native bare vector at without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:541: rejects native bare vector at method without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:559: rejects native wrapper temporary vector at method without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:602: rejects native bare vector at_unsafe without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:620: rejects native bare vector at_unsafe method without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:640: rejects native wrapper temporary vector at_unsafe method without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:684: rejects native bare vector count without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:701: rejects native bare vector count method without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:720: rejects native wrapper temporary vector count method without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:744: rejects native wrapper vector count slash-method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:774: rejects native wrapper vector capacity slash-method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:805: rejects native local alias slash-method vector capacity on string receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:825: rejects native local alias slash-method vector capacity on array receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:12: rejects native templated stdlib collection return envelope unsupported arg`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:37: rejects native templated stdlib map wrapper temporary key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:57: rejects native templated stdlib map wrapper temporary index key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:77: rejects native templated stdlib wrapper temporary syntax parity key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:101: rejects native templated stdlib wrapper temporary syntax parity value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:133: rejects native templated stdlib wrapper temporary unsafe parity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:161: rejects native templated stdlib wrapper temporary unsafe parity value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:190: rejects native templated stdlib wrapper temporary unsafe parity arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:219: rejects native templated stdlib wrapper temporary unsafe parity missing arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:247: rejects native templated stdlib wrapper temporary count capacity parity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:276: rejects native templated stdlib map wrapper temporary index value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:292: rejects native templated stdlib map wrapper temporary call key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:319: rejects native templated stdlib map wrapper temporary call value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:339: rejects native templated stdlib map wrapper temporary unsafe call key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:366: rejects native templated stdlib map wrapper temporary unsafe call value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:386: rejects native templated stdlib map wrapper temporary count key mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:406: rejects native templated stdlib map wrapper temporary count value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:426: rejects native templated stdlib map wrapper temporary call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:446: rejects native templated stdlib map wrapper temporary call missing key argument`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:466: rejects native templated stdlib map wrapper temporary unsafe call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:486: rejects native templated stdlib map wrapper temporary unsafe call missing key argument`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:506: rejects native templated stdlib map wrapper temporary count call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:526: rejects native templated stdlib map wrapper temporary count method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:546: rejects native templated stdlib map wrapper temporary method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:566: rejects native templated stdlib map wrapper temporary method missing key argument`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:586: rejects native templated stdlib map wrapper temporary unsafe method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp:606: rejects native templated stdlib map wrapper temporary unsafe method missing key argument`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:12: rejects native templated stdlib vector wrapper temporary call type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:56: rejects native templated stdlib vector wrapper temporary call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:77: rejects native templated stdlib vector wrapper temporary call missing index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:97: rejects native templated stdlib vector wrapper temporary unsafe call type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:141: rejects native templated stdlib vector wrapper temporary unsafe call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:161: rejects native templated stdlib vector wrapper temporary unsafe call missing index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:181: rejects native templated stdlib vector wrapper temporary count type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:201: rejects native templated stdlib vector wrapper temporary count call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:222: rejects native templated stdlib vector wrapper temporary count method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:243: rejects native templated stdlib vector wrapper temporary method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:263: rejects native templated stdlib vector wrapper temporary method missing index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:283: rejects native templated stdlib vector wrapper temporary unsafe method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:303: rejects native templated stdlib vector wrapper temporary unsafe method missing index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:323: rejects native templated stdlib vector wrapper temporary capacity type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:343: rejects native templated stdlib vector wrapper temporary capacity call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:364: rejects native templated stdlib vector wrapper temporary capacity method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:385: rejects native templated stdlib vector wrapper temporary method index mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:405: rejects native templated stdlib vector wrapper temporary index mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:425: rejects native templated stdlib vector wrapper temporary index value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:50: rejects native user wrapper temporary unsafe parity shadow mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:84: rejects native user wrapper temporary unsafe parity shadow value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:121: rejects native user wrapper temporary unsafe parity shadow arity mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:156: rejects native user wrapper temporary unsafe parity shadow missing arguments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:191: native user wrapper temporary at shadow precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:229: native user wrapper temporary count capacity shadow precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:273: rejects native user wrapper temporary count capacity shadow value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:317: native user wrapper temporary index shadow precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:354: native user wrapper temporary syntax parity shadow precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:398: rejects native user wrapper temporary syntax parity shadow mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:433: rejects native user wrapper temporary syntax parity shadow value mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:292: default effects token does not enable io_err output`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:355: default effects none requires explicit effects`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:8: native rejects variadic borrowed map packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:66: native rejects variadic borrowed map packs with indexed dereference count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:124: native rejects variadic borrowed map packs with indexed dereference lookup helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:185: native rejects variadic borrowed map packs with indexed tryAt inference`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:246: native rejects variadic pointer map packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:303: native rejects variadic pointer map packs with indexed dereference count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:361: native rejects variadic pointer map packs with indexed lookup helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:422: native rejects variadic pointer map packs with indexed dereference lookup helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:483: native rejects variadic pointer map packs with indexed tryAt inference`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:695: native rejects map constructor literal parity with canonical entries`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:8: native rejects variadic struct pointer packs from borrowed pack access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:84: native rejects variadic scalar reference packs from borrowed pack access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:150: native rejects variadic struct reference packs from borrowed pack access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:226: native rejects variadic scalar pointer packs from borrowed pack field access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:296: native rejects variadic struct pointer packs from borrowed pack field access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:376: native rejects variadic scalar pointer packs from borrowed pack reference fields`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:466: native rejects variadic struct pointer packs from borrowed pack reference fields`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:378: rejects native recursive calls`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:410: native rejects variadic pointer string packs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:434: native rejects variadic reference string packs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:554: native rejects variadic map packs with indexed tryAt inference`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:6: rejects unsupported effects in native backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:26: rejects unsupported default effects in native backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:47: rejects unsupported default effects in vm backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:65: rejects unsupported execution effects in native backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:87: rejects unsupported execution effects in vm backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:138: rejects vm support-matrix effect outside allowlist`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:154: rejects native support-matrix effect outside allowlist`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:267: rejects legacy include expansion alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:328: rejects import path with suffix`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:447: native explicit math imports currently reject unsupported stdlib helper returns`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:126: rejects native non-literal string bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:141: rejects native software numeric types`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:368: rejects native support-matrix plus mismatch diagnostic`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:394: rejects native support-matrix implicit conversion diagnostic`
+- `tests/unit/compile_run/test_compile_run_native_backend_uninitialized.cpp:28: native uninitialized string storage`
+- `tests/unit/compile_run/test_compile_run_native_backend_uninitialized.cpp:126: native uninitialized struct field`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:137: reflection compare helper rejects unsupported field envelope deterministically`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:161: reflection hash64 helper rejects unsupported field envelope deterministically`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:291: reflection validate helper rejects field hook collisions deterministically`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:358: reflection serialize helper rejects unsupported field envelope deterministically`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:382: reflection deserialize helper rejects unsupported field envelope deterministically`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:406: reflection ToString generator reports deferred diagnostic deterministically`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:182: runs vm with string literal method count`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:409: string-keyed map indexing in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:429: string-keyed map indexing checks missing key in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_smoke_core_contracts_and_cli.cpp:447: rejects stdlib version flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:82: primevm debug-json snapshots mode requires debug-json`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:99: primevm rejects invalid debug-json snapshots mode`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:594: primevm debug-dap rejects incompatible debug-json mode`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_end_to_end.cpp:285: gfx imports reject unsupported backend targets with deterministic diagnostics`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:59: rejects non-argv entry parameter in exe`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:696: primec rejects wasm support-matrix plus mismatch with deterministic diagnostic`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:724: primec rejects wasm support-matrix implicit conversion with deterministic diagnostic`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:755: primec emits wasm bytecode for direct callable definitions`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:626: primec emit-diagnostics reports structured wasm emit payload`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:650: primec emit-diagnostics rejects unsupported wasm IR features with stable payloads`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:322: primec wasm wasi ppm write requires heap_alloc for vector literal`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:353: primec wasm wasi invalid ppm write requires heap_alloc for vector literal`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_write.cpp:57: primec wasm wasi png write requires heap_alloc for vector literal`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_write.cpp:141: primec wasm wasi invalid png write requires heap_alloc for vector literal`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:112: no transforms rejects infix operators`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:129: no transforms rejects float without suffix`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:146: no transforms rejects single-letter float suffix`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:163: no transforms rejects increment sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:181: no transforms rejects if sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:199: no transforms rejects loop sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:218: no transforms rejects while sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:237: no transforms rejects for sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:256: no transforms rejects indexing sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:274: text transforms none disables implicit utf8`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:293: transform list none disables implicit utf8`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:402: transform list rejects unknown transform name`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:420: transform list none rejects infix operators`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:437: text transforms none rejects infix operators`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp:5: primevm emit-diagnostics reports structured semantic payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp:30: primec emit-diagnostics reports structured lowering payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:5: primevm collect-diagnostics keeps execution wrapper at_unsafe arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:64: primec collect-diagnostics keeps execution wrapper unsafe arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:123: primevm collect-diagnostics keeps execution wrapper unsafe arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:183: primec collect-diagnostics keeps execution wrapper at arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:242: primevm collect-diagnostics keeps execution wrapper at arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:301: primec collect-diagnostics keeps execution wrapper index arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:360: primevm collect-diagnostics keeps execution wrapper index arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:419: primec collect-diagnostics keeps execution wrapper count capacity arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:470: primevm collect-diagnostics keeps execution wrapper count capacity arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:521: primec collect-diagnostics keeps execution wrapper count capacity arg-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp:573: primevm collect-diagnostics keeps execution wrapper count capacity arg-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:5: primevm collect-diagnostics keeps execution wrapper count call-pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:57: primec collect-diagnostics keeps execution wrapper count call-pair arg-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:110: primevm collect-diagnostics keeps execution wrapper count call-pair arg-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:163: primec collect-diagnostics keeps execution wrapper count call-pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:215: primevm collect-diagnostics keeps execution wrapper count call-pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:267: primec collect-diagnostics keeps execution wrapper count call-pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:321: primevm collect-diagnostics keeps execution wrapper count call-pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:375: primec collect-diagnostics keeps execution wrapper count pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:427: primevm collect-diagnostics keeps execution wrapper count pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:479: primec collect-diagnostics keeps execution wrapper count pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp:533: primevm collect-diagnostics keeps execution wrapper count pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:5: primec collect-diagnostics keeps execution wrapper count capacity pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:57: primevm collect-diagnostics keeps execution wrapper count capacity pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:109: primec collect-diagnostics keeps execution wrapper count capacity pair missing-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:161: primevm collect-diagnostics keeps execution wrapper count capacity pair missing-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:213: primec collect-diagnostics keeps execution wrapper count capacity pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:267: primevm collect-diagnostics keeps execution wrapper count capacity pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:321: primec collect-diagnostics keeps execution wrapper method count capacity pair missing-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:373: primevm collect-diagnostics keeps execution wrapper method count capacity pair missing-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:425: primec collect-diagnostics keeps execution wrapper method count capacity pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:479: primevm collect-diagnostics keeps execution wrapper method count capacity pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp:533: primec collect-diagnostics keeps execution wrapper method count capacity pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:5: primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:57: primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:109: primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:161: primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:213: primec collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:266: primevm collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:319: primec collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:373: primevm collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:427: primec collect-diagnostics keeps execution wrapper count capacity arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:478: primevm collect-diagnostics keeps execution wrapper count capacity arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:529: primec collect-diagnostics keeps execution wrapper count capacity arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp:582: primevm collect-diagnostics keeps execution wrapper count capacity arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:5: primevm collect-diagnostics keeps execution wrapper count pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:57: primec collect-diagnostics keeps execution wrapper method count pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:109: primevm collect-diagnostics keeps execution wrapper method count pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:161: primec collect-diagnostics keeps execution wrapper count call-pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:213: primevm collect-diagnostics keeps execution wrapper count call-pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:265: primec collect-diagnostics keeps execution wrapper count call-pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:317: primevm collect-diagnostics keeps execution wrapper count call-pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:369: primec collect-diagnostics keeps execution wrapper count call-pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:421: primevm collect-diagnostics keeps execution wrapper count call-pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:473: primec collect-diagnostics keeps execution wrapper count call-pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:527: primevm collect-diagnostics keeps execution wrapper count call-pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp:581: primec collect-diagnostics keeps execution wrapper count call-pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:5: primec collect-diagnostics keeps execution wrapper method count capacity pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:57: primevm collect-diagnostics keeps execution wrapper method count capacity pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:109: primec collect-diagnostics keeps execution wrapper method count capacity pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:164: primevm collect-diagnostics keeps execution wrapper method count capacity pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:219: primec collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:271: primevm collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:323: primec collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:377: primevm collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:431: primec collect-diagnostics keeps execution wrapper count pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:483: primevm collect-diagnostics keeps execution wrapper count pair arg-type diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp:535: primec collect-diagnostics keeps execution wrapper count pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:5: primevm collect-diagnostics keeps execution wrapper method count capacity pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:57: primec collect-diagnostics keeps execution wrapper method count capacity pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:111: primevm collect-diagnostics keeps execution wrapper method count capacity pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:165: primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:217: primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:269: primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:322: primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:375: primec collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:427: primevm collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:479: primec collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp:533: primevm collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:5: primevm collect-diagnostics keeps execution wrapper method count pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:57: primec collect-diagnostics keeps execution wrapper method count pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:111: primevm collect-diagnostics keeps execution wrapper method count pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:165: primec collect-diagnostics keeps execution wrapper count pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:217: primevm collect-diagnostics keeps execution wrapper count pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:269: primec collect-diagnostics keeps execution wrapper count pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:323: primevm collect-diagnostics keeps execution wrapper count pair extra-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:377: primec collect-diagnostics emits intra-execution argument-type payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:431: primevm collect-diagnostics emits intra-execution argument-type payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:486: primec collect-diagnostics emits intra-execution flow-effect payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp:543: primevm collect-diagnostics emits intra-execution flow-effect payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:5: primec collect-diagnostics keeps execution wrapper method count pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:57: primevm collect-diagnostics keeps execution wrapper method count pair arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:109: primec collect-diagnostics keeps execution wrapper method count pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:163: primevm collect-diagnostics keeps execution wrapper method count pair missing-arg reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:217: primec collect-diagnostics keeps execution wrapper method count pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:269: primevm collect-diagnostics keeps execution wrapper method count pair arg-type reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:321: primec collect-diagnostics keeps execution wrapper method count pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:373: primevm collect-diagnostics keeps execution wrapper method count pair mixed-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:425: primec collect-diagnostics keeps execution wrapper method count pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:479: primevm collect-diagnostics keeps execution wrapper method count pair mixed-shape reverse diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp:533: primec collect-diagnostics keeps execution wrapper method count pair extra-arg diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:5: primevm collect-diagnostics emits intra-definition multi-semantic payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:48: primec collect-diagnostics emits intra-definition argument-shape payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:81: primevm collect-diagnostics emits intra-definition argument-shape payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:115: primec collect-diagnostics keeps user vector arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:149: primevm collect-diagnostics keeps user vector arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:183: primec collect-diagnostics keeps user array arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:217: primevm collect-diagnostics keeps user array arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:251: primec collect-diagnostics keeps user map arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:285: primevm collect-diagnostics keeps user map arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:319: primec collect-diagnostics keeps user wrapper at_unsafe arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:370: primevm collect-diagnostics keeps user wrapper at_unsafe arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:421: primec collect-diagnostics keeps user wrapper unsafe arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:473: primevm collect-diagnostics keeps user wrapper unsafe arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:526: primec collect-diagnostics keeps user wrapper at arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp:577: primevm collect-diagnostics keeps user wrapper at arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:5: primec collect-diagnostics emits stable multi-parse payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:45: primevm collect-diagnostics emits stable multi-parse payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:85: primec collect-diagnostics keeps first duplicate-definition payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:137: primevm collect-diagnostics keeps first duplicate-definition payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:189: primec collect-diagnostics emits stable semantic import payload for unknown paths`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:229: primec collect-diagnostics maps parse spans through source units`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:276: primevm collect-diagnostics emits stable semantic import payload for unknown paths`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:316: primec collect-diagnostics emits stable multi-semantic payload for invalid transforms`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:365: primevm collect-diagnostics emits stable multi-semantic payload for invalid transforms`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:414: primec collect-diagnostics emits stable multi-semantic payload for return-kind errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:471: primevm collect-diagnostics emits stable multi-semantic payload for return-kind errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:528: primec collect-diagnostics emits stable multi-semantic payload for definition pass errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:566: primevm collect-diagnostics emits stable multi-semantic payload for definition pass errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp:604: primec collect-diagnostics emits intra-definition multi-semantic payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:5: primec collect-diagnostics emits stable multi-semantic payload for execution pass errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:46: primec collect-diagnostics emits intra-execution multi-semantic payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:90: primevm collect-diagnostics emits stable multi-semantic payload for execution pass errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:131: primevm collect-diagnostics emits intra-execution multi-semantic payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:175: primec collect-diagnostics emits intra-execution argument-shape payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:218: primevm collect-diagnostics emits intra-execution argument-shape payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:262: primec collect-diagnostics keeps execution map arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:306: primevm collect-diagnostics keeps execution map arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:350: primec collect-diagnostics keeps execution vector arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:394: primevm collect-diagnostics keeps execution vector arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:438: primec collect-diagnostics keeps execution array arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:482: primevm collect-diagnostics keeps execution array arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp:526: primec collect-diagnostics keeps execution wrapper at_unsafe arg-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:5: primec collect-diagnostics keeps user wrapper count call-pair extra-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:68: primevm collect-diagnostics keeps user wrapper count call-pair extra-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:131: primec collect-diagnostics keeps user wrapper count pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:183: primevm collect-diagnostics keeps user wrapper count pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:235: primec collect-diagnostics keeps user wrapper count pair missing-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:297: primevm collect-diagnostics keeps user wrapper count pair missing-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:359: primec collect-diagnostics keeps user wrapper method count pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:411: primevm collect-diagnostics keeps user wrapper method count pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:463: primec collect-diagnostics keeps user wrapper method count pair missing-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp:526: primevm collect-diagnostics keeps user wrapper method count pair missing-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:5: primevm collect-diagnostics keeps user wrapper count call-pair arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:65: primec collect-diagnostics keeps user wrapper count call-pair mixed-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:117: primevm collect-diagnostics keeps user wrapper count call-pair mixed-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:169: primec collect-diagnostics keeps user wrapper count call-pair mixed-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:224: primevm collect-diagnostics keeps user wrapper count call-pair mixed-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:279: primec collect-diagnostics keeps user wrapper count call-pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:331: primevm collect-diagnostics keeps user wrapper count call-pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:383: primec collect-diagnostics keeps user wrapper count call-pair arg-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:437: primevm collect-diagnostics keeps user wrapper count call-pair arg-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:491: primec collect-diagnostics keeps user wrapper count call-pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp:543: primevm collect-diagnostics keeps user wrapper count call-pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:5: primevm collect-diagnostics keeps user wrapper count pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:57: primec collect-diagnostics keeps user wrapper count pair extra-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:111: primevm collect-diagnostics keeps user wrapper count pair extra-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:165: primec collect-diagnostics reports ordinary map resolution failure before execution`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:202: primevm collect-diagnostics reports ordinary map resolution failure before execution`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:239: primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:276: primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:313: primec collect-diagnostics reports builtin array literal template-arity failure before execution`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:350: primevm collect-diagnostics reports builtin array literal template-arity failure before execution`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:387: primec collect-diagnostics emits intra-definition argument-type payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:439: primevm collect-diagnostics emits intra-definition argument-type payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:492: primec collect-diagnostics emits intra-definition flow-effect payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp:544: primevm collect-diagnostics emits intra-definition flow-effect payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:5: primec collect-diagnostics keeps user wrapper count capacity call-pair`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:60: primevm collect-diagnostics keeps user wrapper count capacity call-pair`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:115: primec collect-diagnostics keeps user wrapper count capacity arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:166: primevm collect-diagnostics keeps user wrapper count capacity arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:217: primec collect-diagnostics keeps user wrapper count capacity arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:270: primevm collect-diagnostics keeps user wrapper count capacity arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:323: primec collect-diagnostics keeps user wrapper method count capacity pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:375: primevm collect-diagnostics keeps user wrapper method count capacity pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:427: primec collect-diagnostics keeps user wrapper method count capacity pair type-mismatch diagnostics with reversed call order`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:483: primevm collect-diagnostics keeps user wrapper method count capacity pair type-mismatch diagnostics with reversed call order`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp:539: primec collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:5: primec collect-diagnostics keeps user wrapper method count capacity pair missing-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:57: primevm collect-diagnostics keeps user wrapper method count capacity pair missing-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:109: primec collect-diagnostics keeps user wrapper method count capacity pair missing-arg diagnostics with reversed call order`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:164: primevm collect-diagnostics keeps user wrapper method count capacity pair missing-arg diagnostics with reversed call order`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:219: primec collect-diagnostics keeps user wrapper method count capacity pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:271: primevm collect-diagnostics keeps user wrapper method count capacity pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:323: primec collect-diagnostics keeps user wrapper method count capacity pair extra-arg diagnostics with reversed call order`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:378: primevm collect-diagnostics keeps user wrapper method count capacity pair extra-arg diagnostics with reversed call order`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:433: primec collect-diagnostics keeps user wrapper count capacity call-pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:485: primevm collect-diagnostics keeps user wrapper count capacity call-pair arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp:537: primec collect-diagnostics keeps user wrapper count capacity call-pair arg-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:5: primec collect-diagnostics keeps user wrapper method count pair arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:58: primevm collect-diagnostics keeps user wrapper method count pair arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:111: primec collect-diagnostics keeps user wrapper method count pair mixed-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:163: primevm collect-diagnostics keeps user wrapper method count pair mixed-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:215: primec collect-diagnostics keeps user wrapper method count pair mixed-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:278: primevm collect-diagnostics keeps user wrapper method count pair mixed-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:341: primec collect-diagnostics keeps user wrapper method count pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:393: primevm collect-diagnostics keeps user wrapper method count pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:445: primec collect-diagnostics keeps user wrapper method count pair extra-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:500: primevm collect-diagnostics keeps user wrapper method count pair extra-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp:555: primec collect-diagnostics keeps user wrapper count pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:5: primevm collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:57: primec collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics with count-arg mismatch`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:112: primevm collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics with capacity-arg mismatch`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:167: primec collect-diagnostics keeps user wrapper count pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:219: primevm collect-diagnostics keeps user wrapper count pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:271: primec collect-diagnostics keeps user wrapper count pair arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:323: primevm collect-diagnostics keeps user wrapper count pair arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:375: primec collect-diagnostics keeps user wrapper method count pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:427: primevm collect-diagnostics keeps user wrapper method count pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:479: primec collect-diagnostics keeps user wrapper count call-pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:531: primevm collect-diagnostics keeps user wrapper count call-pair arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp:583: primec collect-diagnostics keeps user wrapper count call-pair arg-type reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:99: dump ast-semantic shows experimental map destroy cleanup`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1393: dump ast-semantic rewrites builtin soa count forms to canonical helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1696: dump ast-semantic canonical soa to_aos_ref helper body uses canonical count_ref/get_ref loop compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1918: dump ast-semantic keeps helper-return builtin soa to_aos with same-path helper`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1970: dump ast-semantic rewrites global helper-return builtin soa reads to canonical helpers`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2015: dump ast-semantic rewrites method-like helper-return builtin soa reads to canonical helpers`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2114: dump ast-semantic keeps builtin soa ref_ref same-path helper shadows`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2398: dump ast-semantic reports semantic errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2415: dump stage rejects unknown value`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2632: primevm dump stage rejects unknown value`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2649: primec plain parse diagnostics include file line and caret`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2669: primevm plain semantic diagnostics include file line and note`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2689: primec emit-diagnostics reports structured parse payload`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:101: min`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:114: max f32`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:231: clamp f64`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:292: rejects bool and u64 comparison`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:325: two-element array literal`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:117: rejects mixed int/float arithmetic`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:130: rejects method call on array`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:144: rejects method call on pointer`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:159: rejects method call on reference`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:188: rejects method call on map`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:18: transform list enables single_type_to_return`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:35: per-definition single_type_to_return marker`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:51: semantic transforms flag enables single_type_to_return`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:146: semantic transform rules ignore empty rule tokens`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:191: semantic transform root wildcard applies to top-level definitions`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:212: semantic transform rules reject recurse without wildcard`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:232: semantic transform rules reject empty transform list`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:252: semantic transform rules reject non-trailing wildcard`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:273: semantic transform rules reject path without slash prefix`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:293: semantic transform rules reject missing equals`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:313: semantic transform rules reject empty path`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:333: semantic transform rules reject text-only transform name`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:353: semantic transform rules reject unknown transform name`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:493: semantic transforms ignore text transforms`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:6: no transforms disables single_type_to_return`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:36: per-envelope text transforms override operators`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:128: text transform rules ignore unrelated wildcard path`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:147: text transform rules ignore unrelated exact path`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:166: text transform wildcard does not match base path`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:185: text transform wildcard does not match sibling prefix`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:228: text transform rules none token without follow-up keeps rules empty`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:335: text transform rules reject missing equals`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:355: text transform rules reject empty transform list`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:375: text transform rules reject empty path`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:395: text transform rules reject path without slash prefix`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:415: text transform rules reject non-trailing wildcard`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:436: text transform rules reject recurse without wildcard`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:456: text transform rules reject semantic-only transform name`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:476: text transform rules reject unknown transform name`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:511: text transform rules ignore nested transform lists`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:70: array slice rejects statically out-of-range literal ranges`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:608: vm argv string binding count fails`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:624: vm argv string binding index fails`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:640: rejects vm argv call argument`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:660: rejects vm argv call argument unsafe`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:11: runs vm with builtin array count before user call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:52: rejects vm wrapper-returned canonical vector count slash-method on array receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:76: rejects vm wrapper-returned canonical vector capacity slash-method on array receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:100: rejects vm alias slash-method vector access on array receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:124: rejects vm user map count call shadow without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:145: rejects vm user map count method shadow without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:210: rejects vm canonical unknown map helper with canonical diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:334: rejects vm map compatibility count call mismatch with canonical templated helper present`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:392: rejects vm map compatibility explicit-template count call with non-templated alias helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:421: rejects vm map compatibility explicit-template count method with non-templated alias helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:451: rejects vm canonical explicit-template map count call with non-templated canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:481: rejects vm canonical implicit-template map count call with canonical argument-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:591: rejects vm builtin count on canonical map reference string access without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:610: vm rejects bare builtin count on wrapper-returned canonical map access before lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:633: vm rejects user string count method shadow on wrapper-returned canonical map access`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:656: vm keeps imported wrapper-returned canonical map reference access lowering diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:688: vm keeps wrapper-returned canonical map reference primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:717: rejects vm user map method sugar on wrapper-returned canonical map references without imported helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:743: vm keeps non-string diagnostics on canonical map reference access count shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:767: vm keeps canonical map unknown-target diagnostics on wrapper-returned map reference method sugar`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:71: rejects vm namespaced wrapper string access method chain compatibility fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:105: rejects vm slash-method wrapper string access method chain compatibility fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:137: vm keeps slash-method wrapper string access i32 diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:160: rejects vm array namespaced vector constructor alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:177: rejects vm array namespaced vector at alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:196: rejects vm array namespaced vector at_unsafe alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:216: rejects vm wrapper array namespaced vector at alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:237: rejects vm wrapper array namespaced vector at_unsafe alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:258: rejects vm array namespaced vector count builtin alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:277: rejects vm array namespaced vector count method alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:300: rejects vm array namespaced vector capacity method alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:323: rejects vm map namespaced count compatibility alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:345: rejects vm map namespaced contains compatibility alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:370: rejects vm map namespaced tryAt compatibility alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:398: rejects vm map namespaced at compatibility alias without explicit alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:421: rejects vm map namespaced at unsafe compatibility alias without explicit alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:635: rejects vm canonical map access helper key mismatch on wrapper slash return receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:682: rejects vm explicit canonical map typed binding key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:704: rejects vm stdlib namespaced map constructor alias fallback without import`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:726: rejects vm stdlib namespaced map at fallback without import`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:752: rejects vm stdlib namespaced map at unsafe fallback without import`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:801: rejects vm bare map count without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:11: rejects vm user map at string positional call shadow during semantics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:34: runs vm with map access preferring later map receiver over string`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:61: rejects vm user map at_unsafe string positional call shadow during semantics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:84: runs vm with user map at method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:102: rejects vm user vector at call shadow during semantics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:124: rejects vm named vector at expression receiver precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:152: keeps vm builtin vector at method over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:206: rejects vm user vector at_unsafe call shadow during semantics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:228: keeps vm builtin vector at_unsafe method over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:302: rejects vm vector mutator method calls during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:334: rejects vm vector push with non-relocation-trivial elements`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:366: rejects vm vector constructor with non-relocation-trivial elements`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:470: rejects vm builtin vector constructor named arguments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:485: rejects vm builtin array constructor named arguments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:500: rejects vm builtin map constructor named arguments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:515: runs vm namespaced vector count named arguments through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:530: runs vm namespaced vector capacity named arguments through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:545: rejects vm removed vector access alias named arguments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:561: rejects vm removed vector access alias at_unsafe named arguments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:11: rejects vm wrapper-returned canonical map access count shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:38: rejects vm direct wrapper-returned canonical map access count shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:72: rejects vm wrapper-returned canonical map method access string receiver typing`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:112: rejects vm builtin string count on wrapper-returned slash-method map access`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:265: rejects vm slash-method vector access string count fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:299: vm keeps slash-method vector access unknown-method diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:333: rejects vm wrapper-returned vector access string literals`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:371: vm keeps wrapper-returned vector access primitive count diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:409: runs vm with user vector count method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:427: runs vm canonical slash vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:457: rejects vm wrapper-returned canonical vector count slash-method on map receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:481: rejects vm wrapper-returned canonical vector capacity slash-method on map receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:505: runs vm with user vector capacity method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:607: keeps vm builtin array at call over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:643: keeps vm builtin array at_unsafe call over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:679: runs vm with user map at_unsafe call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:697: runs vm with user map at_unsafe method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:715: runs vm with user map at call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:11: rejects vm vector method alias field expression without alias helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:44: rejects vm vector unsafe method alias access struct method chain with array receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:83: rejects vm vector unsafe method alias field expression without alias helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:116: runs vm map method alias access with helper receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:154: keeps canonical vm map method access field expression forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:182: vm runs vector method alias struct-return precedence with canonical override`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:213: vm keeps primitive diagnostics for canonical vector method access`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:245: vm runs canonical vector unsafe method field forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:268: rejects vm map method alias access struct method chain with primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:306: rejects vm wrapper-returned map method alias primitive receiver fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:338: rejects vm wrapper-returned canonical map slash-method struct receiver fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:377: rejects vm wrapper-returned canonical direct-call map receiver fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:408: rejects vm wrapper-returned compatibility direct-call map receiver fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:438: vm keeps wrapper-returned map method alias primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:480: rejects vm std-namespaced vector method alias access struct method chain with helper receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:522: rejects vm std-namespaced vector access slash methods without canonical helper on vector receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:542: rejects vm std-namespaced vector method alias access struct method chain with helper missing-method diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:580: rejects vm templated stdlib map wrapper temporary unsafe key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:600: rejects vm templated stdlib map return envelope unknown key spelling`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:625: rejects vm templated stdlib map return envelope unsupported value arg`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:650: rejects vm templated stdlib vector return envelope nested arg`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:674: rejects vm templated stdlib map return envelope nested arg`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:698: rejects vm templated stdlib vector return envelope wrong arity`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:723: rejects vm templated stdlib map return envelope wrong arity`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:11: rejects vm templated stdlib vector wrapper temporary method missing index`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:31: rejects vm templated stdlib vector wrapper temporary unsafe method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:51: rejects vm templated stdlib vector wrapper temporary unsafe method missing index`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:71: rejects vm templated stdlib vector wrapper temporary capacity type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:91: rejects vm templated stdlib vector wrapper temporary capacity call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:111: rejects vm templated stdlib vector wrapper temporary capacity method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:131: rejects vm templated stdlib vector wrapper temporary method index mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:151: rejects vm templated stdlib vector wrapper temporary index mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:171: rejects vm templated stdlib vector wrapper temporary index value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:187: rejects vm templated stdlib vector wrapper temporary unsafe method index mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:207: rejects vm vector alias access auto wrapper primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:250: rejects vm vector alias access auto wrapper canonical diagnostics forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:293: rejects vm vector alias access struct method chain with rooted helper diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:327: rejects vm vector alias access struct method chain with primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:360: rejects vm vector alias access field expression with struct receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:444: rejects vm map access compatibility call struct method chain with primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:478: rejects vm map access compatibility call struct method chain with primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:512: rejects vm map unsafe compatibility call struct method chain with primitive receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:546: rejects vm map unsafe compatibility call struct method chain with primitive argument diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:580: rejects vm vector method alias struct method chain with array receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:618: rejects vm vector namespaced access slash methods without alias helper on vector receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:639: rejects vm array compatibility access slash methods on vector receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:659: rejects vm array compatibility access slash method chain before receiver typing`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:685: rejects vm wrapper-returned array compatibility access slash method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:716: rejects vm vector method alias scalar method chain with array receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:11: rejects vm bare stdlib collection shim map quint`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:33: rejects vm stdlib collection shim map quint type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:54: rejects vm bare stdlib collection shim map sext`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:77: rejects vm stdlib collection shim map sext type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:99: rejects vm bare stdlib collection shim map sept`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:122: rejects vm stdlib collection shim map sept type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:145: rejects vm bare stdlib collection shim map oct`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:168: rejects vm stdlib collection shim map oct type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:191: rejects vm bare stdlib collection shim access helper map source`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:247: rejects vm stdlib collection shim vector capacity type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:303: rejects vm stdlib collection shim vector count type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:339: rejects vm stdlib collection shim vector at type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:378: rejects vm stdlib collection shim vector at unsafe type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:420: rejects vm stdlib collection shim vector push type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:461: rejects vm stdlib collection shim vector pop type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:502: rejects vm stdlib collection shim vector reserve type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:543: rejects vm stdlib collection shim vector clear type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:584: rejects vm stdlib collection shim vector remove at type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:625: rejects vm stdlib collection shim vector remove swap type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:693: rejects vm bare vector capacity without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:722: rejects vm wrapper temporary vector capacity method without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:744: runs vm bare vector capacity after pop through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:778: runs vm with user array count method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:11: rejects vm stdlib collection shim map triple standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:32: rejects vm bare stdlib collection shim map quad standalone`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:53: rejects vm bare stdlib collection shim map quad standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:75: rejects vm stdlib collection shim map quad standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:97: rejects vm stdlib collection shim map quad standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:118: rejects vm bare stdlib collection shim map quint standalone`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:139: rejects vm bare stdlib collection shim map quint standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:162: rejects vm stdlib collection shim map quint standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:184: rejects vm stdlib collection shim map quint standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:206: rejects vm bare stdlib collection shim map sext standalone`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:227: rejects vm bare stdlib collection shim map sext standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:251: rejects vm stdlib collection shim map sext standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:274: rejects vm stdlib collection shim map sext standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:296: rejects vm bare stdlib collection shim map sept standalone`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:317: rejects vm bare stdlib collection shim map sept standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:341: rejects vm stdlib collection shim map sept standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:364: rejects vm stdlib collection shim map sept standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:387: rejects vm bare stdlib collection shim map oct standalone`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:409: rejects vm bare stdlib collection shim map oct standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:433: rejects vm stdlib collection shim map oct standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:457: rejects vm stdlib collection shim map oct standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:481: rejects vm bare stdlib collection shim map double`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:501: rejects vm stdlib collection shim map double type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:521: rejects vm bare stdlib collection shim map triple`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:542: rejects vm stdlib collection shim map triple type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:562: rejects vm bare stdlib collection shim extended constructors`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:584: rejects vm stdlib collection shim extended constructor type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:618: rejects vm stdlib collection shim vector quint type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:649: rejects vm stdlib collection shim vector sext type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:680: rejects vm stdlib collection shim vector sept type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:711: rejects vm stdlib collection shim vector oct type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:726: rejects vm bare stdlib collection shim map pair string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:747: rejects vm stdlib collection shim map pair type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:768: rejects vm bare stdlib collection shim map quad`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:789: rejects vm stdlib collection shim map quad type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:26: rejects vm stdlib collection shim vector single type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:56: rejects vm stdlib collection shim vector pair type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:86: rejects vm stdlib collection shim vector triple type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:116: rejects vm stdlib collection shim vector quad type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:131: rejects vm bare stdlib collection shim map single`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:150: rejects vm bare stdlib collection shim map single bool value conversion`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:169: rejects vm stdlib collection shim map single key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:190: rejects vm bare stdlib collection shim map new`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:209: rejects vm bare stdlib collection shim map new string key envelope`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:228: rejects vm bare stdlib collection shim map new bool key envelope`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:247: rejects vm bare stdlib collection shim map new string key envelope mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:267: rejects vm bare stdlib collection shim map count source`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:286: rejects vm bare stdlib collection shim map count string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:306: rejects vm stdlib collection shim map count type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:326: rejects vm stdlib collection shim map count string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:347: rejects vm bare stdlib collection shim map at source`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:366: rejects vm bare stdlib collection shim map at string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:386: rejects vm stdlib collection shim map at type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:406: rejects vm stdlib collection shim map at string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:427: rejects vm bare stdlib collection shim map at unsafe source`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:446: rejects vm bare stdlib collection shim map at unsafe string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:466: rejects vm stdlib collection shim map at unsafe type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:487: rejects vm stdlib collection shim map at unsafe string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:508: rejects vm bare stdlib collection shim map method access string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:528: rejects vm stdlib collection shim map method at string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:550: rejects vm stdlib collection shim map method at unsafe string key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:572: rejects vm bare stdlib collection shim map method call parity string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:596: rejects vm stdlib collection shim map method call parity key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:618: rejects vm stdlib collection shim map method call parity unsafe key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:640: rejects vm bare stdlib collection shim map single standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:661: rejects vm stdlib collection shim map single standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:682: rejects vm bare stdlib collection shim map pair standalone`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:702: rejects vm stdlib collection shim map pair standalone type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:723: rejects vm bare stdlib collection shim map pair standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:744: rejects vm stdlib collection shim map pair standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:765: rejects vm bare stdlib collection shim map double standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:786: rejects vm stdlib collection shim map double standalone key type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:807: rejects vm bare stdlib collection shim map triple standalone string keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:29: rejects vm bare map at call without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:46: rejects vm bare map at_unsafe call without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:85: rejects vm bare map count method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:124: rejects vm bare map contains call without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:141: rejects vm bare map contains method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:158: rejects vm bare map tryAt method without imported canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:175: rejects vm bare map access methods without imported canonical helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:214: rejects vm array namespaced vector capacity alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:232: rejects vm array namespaced wrapper vector capacity alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:254: rejects vm array namespaced wrapper vector count alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:276: rejects vm array namespaced vector mutator alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:295: rejects vm stdlib canonical vector helper method-precedence forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:322: rejects vm templated stdlib canonical vector helper method template args`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:349: rejects vm vector namespaced call aliases without alias definitions`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:376: rejects vm vector namespaced templated canonical helper alias call without alias definition`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:398: rejects vm vector alias arity-mismatch compatibility template forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:684: rejects vm local alias slash-method vector count on string receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:703: rejects vm local alias slash-method vector count on array receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:125: rejects vm vector helper method expression legacy alias forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:148: rejects vm vector alias named-argument compatibility template forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:177: rejects vm wrapper temporary templated vector method compatibility template forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:211: rejects vm array alias templated forwarding to canonical vector helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:234: rejects vm stdlib templated vector count fallback to array alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:345: vm array alias slash-method helpers through same-path helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:394: rejects vm vector alias templated forwarding past non-templated compatibility helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:424: runs vm vector namespaced mutator alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:440: rejects vm vector namespaced count capacity access aliases without alias definitions`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:568: rejects vm bare vector at without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:584: rejects vm bare vector at method without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:601: rejects vm wrapper temporary vector at method without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:637: rejects vm bare vector at_unsafe without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:654: rejects vm bare vector at_unsafe method without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:671: rejects vm wrapper temporary vector at_unsafe method without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:708: vector aliases vm map at_unsafe helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:779: rejects vm bare vector count without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:811: rejects vm wrapper vector count slash-method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:841: rejects vm wrapper vector capacity slash-method chains before receiver typing`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:872: rejects vm local alias slash-method vector capacity on string receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:891: rejects vm local alias slash-method vector capacity on array receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:51: rejects vm user vector pop call expression shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:72: runs vm with user vector reserve call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:92: runs vm with user vector reserve method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:112: rejects vm user vector reserve call expression shadow during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:153: rejects vm user vector clear call expression shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:174: rejects vm user vector remove_at call expression shadow during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:195: rejects vm user vector remove_swap call expression shadow during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:256: runs vm with user vector remove_at method canonical precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:302: runs vm with user vector remove_swap method canonical precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:439: rejects vm vector literal above local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_push_limit.cpp:11: runs vm vector push past former local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:11: rejects vm reordered namespaced vector push call compatibility alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:35: rejects vm std namespaced reordered mutator compatibility helper shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:64: rejects vm user vector push bool positional call shadow during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:133: rejects vm user vector push call expression shadow during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:158: rejects vm reordered namespaced vector push call expression compatibility alias`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:180: rejects vm named vector push expression receiver precedence during semantics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:211: rejects vm auto-inferred named vector push expression receiver precedence during semantics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:243: rejects vm auto-inferred std namespaced vector push compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:295: rejects vm auto-inferred std namespaced count helper compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:345: rejects vm std namespaced count expression compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:372: rejects vm std namespaced count without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:389: rejects vm std namespaced count map target without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:411: rejects vm alias count map target without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:432: rejects vm std namespaced capacity map target without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:453: rejects vm alias capacity map target without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:497: rejects vm alias capacity array target without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:557: rejects vm vector namespaced count non-builtin array fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:575: rejects vm std namespaced capacity expression compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:621: rejects vm auto-inferred named access helper receiver precedence before lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:653: rejects vm auto-inferred std namespaced access helper compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:11: rejects vm wrapper temporary vector count method without helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:97: rejects vm experimental soa stdlib helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:144: runs vm public soa count helper on public wrapper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:186: vm public soa get helper rejects template arguments on non-soa receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:432: vm public soa from-aos uses wrapper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:617: vm rejects experimental soa stdlib from-aos helper before typed bindings support`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:690: vm no-import root soa to_aos bare and direct helper forms reject SoaVector-only canonical helper contract`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:712: vm no-import root soa to_aos method helper forms reject SoaVector-only canonical helper contract`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:735: vm materializes non-empty root soa struct literals`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:753: vm rejects non-empty root soa literals with unsupported element envelopes`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1841: vm runs builtin helper-return soa ref_ref same-path helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2846: runs vm with stdlib collection shim helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2866: runs vm with stdlib collection shim multi constructors`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2889: runs vm with templated stdlib collection return envelopes`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2921: runs vm templated stdlib return wrapper temporaries in expressions`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2958: runs vm with templated stdlib wrapper temporary call forms`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3226: runs vm experimental map custom comparable struct keys`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3442: runs vm with templated stdlib wrapper temporary index forms`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3474: runs vm with templated stdlib wrapper temporary syntax parity`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3514: runs vm with templated stdlib wrapper temporary unsafe parity`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3552: runs vm templated stdlib wrapper temporary count capacity parity`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:11: rejects vm templated stdlib wrapper temporary unsafe parity missing arguments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:39: rejects vm templated stdlib wrapper temporary count capacity parity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:68: rejects vm templated stdlib map wrapper temporary index value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:84: rejects vm templated stdlib map wrapper temporary call key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:113: rejects vm templated stdlib map wrapper temporary call value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:133: rejects vm templated stdlib map wrapper temporary unsafe call key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:162: rejects vm templated stdlib map wrapper temporary unsafe call value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:182: rejects vm templated stdlib map wrapper temporary count key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:202: rejects vm templated stdlib map wrapper temporary count value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:222: rejects vm templated stdlib map wrapper temporary call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:242: rejects vm templated stdlib map wrapper temporary call missing key argument`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:262: rejects vm templated stdlib map wrapper temporary unsafe call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:282: rejects vm templated stdlib map wrapper temporary unsafe call missing key argument`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:302: rejects vm templated stdlib map wrapper temporary count call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:322: rejects vm templated stdlib map wrapper temporary count method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:342: rejects vm templated stdlib map wrapper temporary method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:362: rejects vm templated stdlib map wrapper temporary method missing key argument`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:382: rejects vm templated stdlib map wrapper temporary unsafe method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:402: rejects vm templated stdlib map wrapper temporary unsafe method missing key argument`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:422: rejects vm templated stdlib vector wrapper temporary call type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:462: rejects vm templated stdlib vector wrapper temporary call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:482: rejects vm templated stdlib vector wrapper temporary call missing index`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:502: rejects vm templated stdlib vector wrapper temporary unsafe call type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:542: rejects vm templated stdlib vector wrapper temporary unsafe call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:562: rejects vm templated stdlib vector wrapper temporary unsafe call missing index`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:582: rejects vm templated stdlib vector wrapper temporary count type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:602: rejects vm templated stdlib vector wrapper temporary count call arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:622: rejects vm templated stdlib vector wrapper temporary count method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:642: rejects vm templated stdlib vector wrapper temporary method arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:45: rejects vm user wrapper temporary unsafe parity shadow mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:79: rejects vm user wrapper temporary unsafe parity shadow value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:116: rejects vm user wrapper temporary unsafe parity shadow arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:151: rejects vm user wrapper temporary unsafe parity shadow missing arguments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:260: rejects vm user wrapper temporary count capacity shadow value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:375: rejects vm user wrapper temporary syntax parity shadow mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:409: rejects vm user wrapper temporary syntax parity shadow value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:447: rejects vm templated stdlib collection return envelope unsupported arg`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:471: rejects vm templated stdlib map wrapper temporary key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:490: rejects vm templated stdlib map wrapper temporary index key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:510: rejects vm templated stdlib wrapper temporary syntax parity key mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:533: rejects vm templated stdlib wrapper temporary syntax parity value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:564: rejects vm templated stdlib wrapper temporary unsafe parity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:592: rejects vm templated stdlib wrapper temporary unsafe parity value mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:621: rejects vm templated stdlib wrapper temporary unsafe parity arity mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:104: runs vm software renderer command serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:284: default effects none requires explicit effects in vm`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:300: default effects token does not enable io_err output in vm`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:335: runs vm with literal method call`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:8: vm rejects recursive calls`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:37: vm rejects variadic pointer string packs`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:60: vm rejects variadic reference string packs`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:210: vm materializes variadic experimental map packs with indexed canonical count calls`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:312: vm materializes variadic pointer uninitialized scalar packs with indexed init and take`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:20: runs vm with map constructor count helper`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:35: runs vm with map count helper`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:50: runs vm with map method call`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:70: rejects vm map indexing sugar without canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:86: runs vm with map at_unsafe helper`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:101: rejects vm bool map access helpers without canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:117: rejects vm u64 map access helpers without canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:133: rejects vm map constructor odd args`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:148: rejects vm map constructor type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:163: runs vm with map constructor string binding key`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:179: runs vm with string-keyed map indexing sugar`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:194: runs vm with string-keyed map indexing binding key`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:210: rejects vm map constructor string key from argv binding`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:36: rejects vm software numeric types`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:49: runs vm with convert bool from integers`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:263: rejects vm support-matrix plus mismatch diagnostic`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:287: vm support-matrix implicit conversion remains deterministic`
+- `tests/unit/compile_run/test_compile_run_vm_maybe.cpp:37: runs vm with Maybe some and pick`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:618: runs vm png read for stored rgba inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2632: exe emitter uses ir backend for f64 to i32 conversion`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3296: literal method call in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:21: runs vm with uninitialized string storage`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:132: runs vm with uninitialized struct field`
+
+## NEEDS_FULL_PIPELINE (for reference/completeness)
+
+<details><summary>Expand full list</summary>
+
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:86: semantic memory non-math include fixture keeps comparable definition scale`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:160: semantic memory baseline report is checked in with fixture phase coverage`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:242: semantic memory ctest targets keep dependency ordering and serialization`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:397: semantic memory semantic-product index parity evidence artifact is checked in`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:470: semantic memory semantic-product index measured report artifact is checked in`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:564: semantic memory benchmark helper accepts benchmark-only collector controls`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:614: semantic memory benchmark helper supports validator-vs-fact A/B mode`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:679: semantic memory benchmark helper supports semantic-product-force A/B mode`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:742: semantic memory benchmark helper keeps memoization deltas mode-scoped`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:818: semantic memory benchmark helper keeps key-mode deltas force-scoped`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:888: semantic memory benchmark helper keeps side-channel deltas force-scoped`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:958: semantic memory benchmark helper keeps dependency deltas force-scoped`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1028: semantic memory benchmark helper toggles fact families independently`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1110: semantic memory benchmark helper reports deterministic worker-mode parity`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1167: semantic memory benchmark helper fails worker parity on fact-family drift`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1229: semantic memory benchmark helper canonicalizes legacy all fact-family rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1296: semantic memory benchmark helper canonicalizes blank force mode rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1363: semantic memory benchmark helper canonicalizes legacy no-fact rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1430: semantic memory benchmark helper canonicalizes mixed-case legacy mode rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1501: semantic memory benchmark helper canonicalizes null no-fact rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1568: semantic memory benchmark helper canonicalizes null legacy mode rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1639: semantic memory benchmark helper canonicalizes boolean-like mode rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1744: semantic memory benchmark helper emits wall-rss machine report rows`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1804: semantic memory benchmark helper emits key-cardinality report fields`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1871: semantic memory benchmark helper counts semantic-product index families from dumps`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1922: semantic memory benchmark helper reports semantic-product index family parity across definition workers`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:1993: semantic memory benchmark helper defaults to three runs with median-worst rollups`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2061: semantic memory benchmark helper covers no-import and math-vector phases`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2114: semantic memory benchmark helper covers math-vector-matrix and math-star phases`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2168: semantic memory benchmark helper covers inline-vs-import math fixture phases`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2263: semantic memory benchmark helper reports 1x-2x-4x scale slopes`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2358: semantic memory benchmark required fixture-phase matrix fails when tuples are missing`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2506: benchmark regression checker passes for in-threshold report`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2555: benchmark regression checker fails for threshold regression`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2603: semantic memory budget checker passes for in-budget report`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2650: semantic memory budget checker fails when report tuple lacks policy entry`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2704: semantic memory budget checker fails for sustained regressions`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2780: semantic memory phase-one checker passes for current and sustained window`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2869: semantic memory phase-one checker fails when sustained window misses target`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2951: semantic memory trend checker passes without history reports`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3001: semantic memory trend checker writes trend summary report`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3082: semantic memory trend checker fails for sustained regressions from history dir`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3168: semantic memory trend checker ignores duplicate current report in history dir`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3284: semantic memory ci artifact wrapper captures reports on success`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3362: semantic memory ci artifact wrapper benchmark mode runs budget gate`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3446: semantic memory ci artifact wrapper benchmark mode can skip budget gate`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3534: semantic memory ci artifact wrapper benchmark mode fails on budget gate`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3613: semantic memory ci artifact wrapper writes failure artifacts`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3671: semantic memory ci artifact wrapper ignores stale reports on benchmark failure`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:5: empty void main`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:16: local binding`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:29: bare zero-arg calls`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:53: typeof type locals`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:84: local generated struct`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:109: emits stable IR names for specialized local generated struct`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:144: compiles with struct definition`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:161: assign to mutable binding`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:175: assign to reference`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:190: location on reference`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:205: reference arithmetic`
+- `tests/unit/compile_run/test_compile_run_bindings_basic.cpp:220: array reference helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:32: bare map count through canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:96: bare map at through canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:115: bare map at_unsafe through canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:219: canonical vector at through imported stdlib helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:251: canonical vector at_unsafe through imported stdlib helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:284: map unnamespaced contains through canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:328: map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:453: explicit map helper calls while canonical map access stays authoritative in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:504: runs explicit canonical map helper calls through same-path helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:620: same-path direct map tryAt struct method chain through alias helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:812: compiles namespaced map count method through canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:868: bare map contains struct method chain through canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:951: bare map tryAt struct method chain through canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:1033: uses canonical helper for namespaced map at method alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_helper_calls.cpp:1052: C++ emitter runs extra-argument stdlib canonical map count method-call sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:396: C++ emitter keeps canonical direct-call vector capacity same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_canonical_map_method_forwarding.cpp:419: C++ emitter keeps alias direct-call vector capacity same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:24: C++ emitter serializes scene model source deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:41: chained method calls in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:70: C++ emitter preserves explicit Result constructor payloads`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:110: C++ emitter compiles Result.why on ok bridge values`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:164: C++ emitter packs single-field error sum constructor payloads`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:194: C++ emitter packs single-field Result.ok payloads`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:224: C++ emitter packs single-field ok sum constructor payloads`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:255: C++ emitter packs single-field Result.map payloads`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:329: executions are ignored by C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:353: struct Create/Destroy helpers do not trip C++ emitter stack underflow at runtime`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:386: C++ emitter returns structs from functions`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:414: C++ emitter uses struct field defaults`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:433: C++ emitter supports file io`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:470: C++ emitter supports file read_byte with deterministic eof`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:518: C++ emitter supports custom Result.why hooks`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:710: C++ emitter supports graphics-style int return propagation with on_error`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:769: C++ emitter renders static fields and visibility`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:792: C++ emitter uses copy to force by-value params`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:35: wrapper explicit vector count capacity aliases through same-path helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:64: local explicit vector count capacity calls through same-path helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:160: rejects wrapper bare vector capacity imported override as duplicate definition in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:238: C++ emitter compiles bare vector capacity methods without helper`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:257: runs bare vector capacity methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:483: vector alias count capacity slash methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:518: stdlib namespaced vector count capacity slash methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp:701: stdlib namespaced vector access slash methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:358: C++ emitter infers wrapper string count builtin fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:346: import alias in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:365: array method calls in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:383: array index sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:396: argv helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:412: array index sugar with u64`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:425: vector helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:447: canonical vector mutators over imported user shadow helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:511: canonical vector mutator named calls over imported user shadow helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:31: C++ emitter keeps local canonical slash-method vector count same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:51: C++ emitter keeps local canonical slash-method vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:71: C++ emitter keeps local canonical slash-method vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:131: C++ emitter keeps rooted vector count same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:175: C++ emitter keeps rooted vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:194: C++ emitter keeps rooted wrapper vector count same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:393: C++ emitter keeps rooted wrapper vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:416: C++ emitter keeps canonical slash-method vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:439: C++ emitter keeps canonical slash-method vector count same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:532: C++ emitter keeps canonical direct-call vector count same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:607: C++ emitter keeps alias direct-call vector count same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:682: C++ emitter keeps alias direct-call vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp:757: C++ emitter keeps canonical direct-call vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:9: repeat loop`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:25: loop while for sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:49: for binding condition`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:65: shared_scope loops`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:90: shared_scope for binding condition`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:109: shared_scope while loop`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:130: increment decrement sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:145: brace constructor value`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:162: nested definition call`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:178: paired map constructor`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:245: C++ emitter materializes variadic Result value packs with spread forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:300: C++ emitter materializes variadic status-only Result value packs with spread forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:353: C++ emitter materializes variadic borrowed Result value packs with indexed dereference helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:425: C++ emitter materializes variadic borrowed status-only Result packs with indexed dereference helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:495: C++ emitter materializes variadic FileError value packs with indexed why methods`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:579: C++ emitter materializes variadic Buffer value packs with indexed count helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:617: C++ emitter materializes variadic File handle packs with indexed file methods`
+- `tests/unit/compile_run/test_compile_run_emitters_loop_sugar_runtime.cpp:689: C++ emitter materializes variadic borrowed FileError packs with indexed dereference why methods`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:142: stdlib namespaced vector helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:271: C++ emitter keeps canonical direct-call vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp:294: C++ emitter keeps alias direct-call vector count same-path helper on map receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:212: lerp in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:225: math-qualified clamp in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:237: math-qualified trig in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:249: math-qualified min/max in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:261: math-qualified constants in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:273: imported math constants in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:286: rounding builtins in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:302: convert<bool> from float in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:347: power/log builtins in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:369: integer pow negative exponent in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:386: trig builtins in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:413: hyperbolic builtins in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:433: float utils in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:449: float predicates in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:469: import aliases in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:488: math constants in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:504: array unsafe access in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:517: array unsafe access with u64 index in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:534: canonical vector indexed removal helpers with owned elements in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:626: supports indexed vector removals with ownership semantics in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:77: C++ emitter lowers stdlib namespaced vector mutator statement through imported helper`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:118: C++ emitter keeps stdlib namespaced vector access helper emission`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:160: C++ emitter compiles stdlib namespaced map access and count helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:237: C++ emitter runs canonical map reference string access`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:34: auto-inferred std namespaced vector push canonical precedence in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:65: auto-inferred std namespaced vector push canonical definition in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:118: compiles std namespaced count helper canonical fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:143: std namespaced count expression canonical precedence in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:167: compiles std namespaced count expression canonical fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:191: rejects std namespaced count non-builtin compatibility fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:252: std namespaced capacity expression canonical precedence in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:276: std namespaced capacity expression canonical fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:366: auto-inferred std namespaced access helper canonical precedence in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:395: auto-inferred std namespaced access helper canonical definition in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:417: wrapper std namespaced access helper named receiver in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:450: std collections /std/collections/vector/at wrapper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:282: keeps canonical vector access call struct method chain forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_string_receiver_vector_access.cpp:328: C++ emitter keeps canonical vector unsafe access field expression forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:9: C++ emitter materializes variadic pointer FileError packs with indexed dereference why methods`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:54: C++ emitter materializes variadic borrowed File handle packs with indexed dereference file methods`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:131: C++ emitter materializes variadic pointer File handle packs with indexed dereference file methods`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:353: C++ emitter materializes variadic scalar pointer packs from borrowed locations`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:408: C++ emitter materializes variadic struct pointer packs from borrowed locations`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:473: C++ emitter materializes variadic scalar pointer packs from imported helper references`
+- `tests/unit/compile_run/test_compile_run_emitters_variadic_file_packs.cpp:533: C++ emitter materializes variadic struct pointer packs from imported helper references`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:9: vector namespaced access slash methods through explicit alias helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:559: array alias count through same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:581: array alias capacity through same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:603: array alias at through same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:625: array alias at_unsafe through same-path helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:78: C++ emitter keeps alias direct-call vector capacity same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:454: C++ emitter keeps bare vector count methods on same-path helper`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:472: C++ emitter keeps bare vector capacity methods on same-path helper`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:490: C++ emitter keeps bare vector count methods on emitter fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:508: keeps bare vector count methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:521: C++ emitter rejects bare vector capacity methods before emitter fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:539: rejects bare vector capacity methods without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp:628: wrapper bare vector count through imported stdlib helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:1222: runs vector namespaced count capacity aliases through explicit alias helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:417: rejects user array capacity helper shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:435: std math vector and color types`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:462: std math matrix types`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:490: std math quaternion type`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:508: std math quat_to_mat3 helper`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:524: std math quat_to_mat4 helper`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:540: std math mat3_to_quat helper`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:560: C++ support-matrix math nominal helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:585: C++ quaternion reference multiply and rotation`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp:605: C++ matrix composition order references with tolerance`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:72: C++ emitter rejects explicit canonical map count slash-method receiver fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:115: rejects canonical vector access direct-call string count fallback in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:301: C++ emitter keeps canonical vector unsafe direct-call count via builtin string length`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:330: C++ emitter keeps canonical vector method helper return precedence over string count shadow at runtime`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp:354: C++ emitter rejects canonical vector unsafe method string count forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:9: C++ emitter resolves canonical map count helper on wrapper slash return method sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:63: C++ emitter rejects templated canonical map count helper on wrapper slash return method sugar`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:117: C++ emitter resolves direct canonical map count wrappers on map references`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:237: C++ emitter keeps canonical map sugar before compatibility aliases`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:286: C++ emitter rejects explicit-template map count method with non-templated alias helper`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:369: C++ emitter rejects canonical stdlib namespaced map access helpers in expressions`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:445: C++ emitter keeps canonical stdlib namespaced map count helpers in expressions`
+- `tests/unit/compile_run/test_compile_run_emitters_wrapper_map_count_sugar.cpp:537: C++ emitter rejects canonical direct-call map access string receivers at runtime`
+- `tests/unit/compile_run/test_compile_run_examples_browser_smoke.cpp:7: spinning cube integration artifact matrix stays valid`
+- `tests/unit/compile_run/test_compile_run_examples_browser_smoke.cpp:206: spinning cube optional startup visual smoke checks`
+- `tests/unit/compile_run/test_compile_run_examples_browser_smoke.cpp:406: spinning cube browser startup smoke proves wasm bootstrap`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_core.cpp:7: spinning cube demo script emits deterministic summary`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_core.cpp:51: spinning cube demo script skips known native backend limitation`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_core.cpp:138: spinning cube demo script accepts primec path with spaces`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_core.cpp:225: spinning cube demo script accepts work-dir path with spaces`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_core.cpp:314: spinning cube demo script skips when browser command is unavailable`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_core.cpp:414: spinning cube demo script reports fail when native compile fails`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:44: checked-in ast transform example runs in VM`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:73: procedural generic docs example runs in VM and native`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:124: generic design examples stay documented and executable`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:306: sum docs snippets stay public style and executable`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:443: spinning cube shared source reflects current profile support`
+- `tests/unit/compile_run/test_compile_run_examples_docs_commands.cpp:7: spinning cube docs command snippets stay executable`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1180: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1187: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:9: spinning cube metal shader path compiles and enforces profile gating`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:281: browser launcher skips smoke before wasm compile when python3 is unavailable`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:437: metal launcher compile run coverage validates shared helper path`
+- `tests/unit/compile_run/test_compile_run_examples_metal_smoke_and_borrows.cpp:7: spinning cube metal host missing metallib diagnostics stay stable`
+- `tests/unit/compile_run/test_compile_run_examples_metal_smoke_and_borrows.cpp:60: spinning cube metal host pipeline creation regression stays fixed`
+- `tests/unit/compile_run/test_compile_run_examples_metal_smoke_and_borrows.cpp:128: spinning cube metal full-path smoke renders frame`
+- `tests/unit/compile_run/test_compile_run_examples_metal_smoke_and_borrows.cpp:192: spinning cube metal software surface bridge smoke`
+- `tests/unit/compile_run/test_compile_run_examples_metal_smoke_and_borrows.cpp:248: borrow checker negative examples fail with expected diagnostics`
+- `tests/unit/compile_run/test_compile_run_examples_native_launcher.cpp:48: native window launcher script builds and launches with preflight`
+- `tests/unit/compile_run/test_compile_run_examples_native_launcher.cpp:260: native window launcher defaults to ten-second bounded run`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:7: native window launcher visual smoke skips on non-macOS runners`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:45: native window launcher visual smoke skips without GUI session`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:96: native window launcher visual smoke validates criteria`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:221: native window launcher visual smoke fails when rotation does not change`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:341: native window launcher compile run coverage validates host build and visual smoke`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:413: native window preflight script validates required tools and GUI session`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:479: native window preflight script fails when xcrun metal is unavailable`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:527: native window preflight script fails when xcrun metallib is unavailable`
+- `tests/unit/compile_run/test_compile_run_examples_native_visual.cpp:575: native window preflight script fails when GUI session is unavailable`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:7: spinning cube native flat frame entrypoints compile and run deterministically`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:114: spinning cube stdlib gfx frame stream entry stays deterministic`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:151: spinning cube browser host assets pass pipeline smoke checks`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:225: spinning cube browser host assets stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:284: spinning cube browser profile rules gate unsupported code`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:343: spinning cube native host runtime smoke emits success marker`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_runtime.cpp:7: spinning cube native window host sample compiles and validates args deterministically`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_runtime.cpp:198: spinning cube native window host software surface bridge visual smoke`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_runtime.cpp:253: spinning cube fixed-step snapshots stay deterministic`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_runtime.cpp:306: spinning cube transform rotation parity stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:245: compile-time effect rejections surface through primec diagnostics`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:21: glsl emitter writes minimal shader`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:38: glsl-ir emitter writes IR-lowered shader for integer subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:58: glsl-ir emitter writes IR-lowered shader for f32 literal subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:76: glsl emitter uses ir backend for f32 literal subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:94: glsl-ir emitter writes IR-lowered shader for f32 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:114: glsl emitter uses ir backend for f32 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:134: glsl-ir emitter writes IR-lowered shader for f32 to i32 conversion subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:156: glsl emitter uses ir backend for f32 to i32 conversion subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:178: glsl-ir emitter writes IR-lowered shader for i32 to f32 conversion subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:198: glsl emitter uses ir backend for i32 to f32 conversion subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:218: glsl-ir emitter writes IR-lowered shader for f32 return subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:236: glsl emitter uses ir backend for f32 return subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:254: glsl-ir emitter writes IR-lowered shader for helper-call subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:279: glsl emitter uses ir backend for helper-call subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:304: glsl-ir emitter writes IR-lowered shader for entry args count subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:323: glsl emitter uses ir backend for entry args count subset`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:342: glsl emitter matches glsl-ir on shared corpus`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:520: defaults to glsl extension for emit=glsl`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:541: defaults to spv extension for emit=spirv`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:566: glsl emitter allows entry args parameter`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:582: glsl emitter writes spirv when tool available`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:600: spirv-ir emitter writes spirv when tool available`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:639: glsl emitter writes locals and arithmetic`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:687: glsl emitter allows assign in expressions`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:706: glsl emitter allows increment/decrement in expressions`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:728: glsl emitter writes if blocks`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:748: glsl emitter writes loops`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:771: glsl emitter handles shared_scope blocks`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:795: glsl emitter handles shared_scope while`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:821: glsl emitter handles block initializers`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:843: glsl emitter handles brace constructor values`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:863: glsl emitter ignores print builtins`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:886: glsl emitter accepts capabilities`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:903: glsl emitter accepts support-matrix effects and capabilities`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:921: glsl emitter supports support-matrix scalar bindings`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1237: glsl emitter handles math constants`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1259: glsl emitter writes integer pow helper`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1279: glsl emitter handles block expressions in arguments`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1297: glsl emitter handles block expression return value`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1317: glsl emitter handles block expression early return`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1338: glsl emitter ignores pathspace builtins`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1362: glsl emitter writes math builtins`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1386: glsl emitter rejects explicit effects`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1401: glsl emitter rejects static bindings`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1418: glsl emitter rejects non-scalar bindings`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1454: glsl emitter rejects mixed boolean comparisons`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1471: glsl emitter rejects string literals`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1520: glsl emitter rejects non-void entry`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:5: import inside namespace`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:27: import with import aliases`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:54: block expression with multiline body`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:76: block expression return value`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:97: block expression early return`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:119: block binding inference for method calls`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:148: block binding inference for mixed if numeric types`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:168: operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:180: operator rewrite with calls`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:197: operator rewrite with parentheses`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:209: operator rewrite with unary minus operand`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:236: short-circuit and`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:251: short-circuit or`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:266: numeric boolean ops`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:278: convert<bool>`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:290: convert<i64>`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:302: convert<u64>`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:314: convert<bool> from u64`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:326: convert<bool> from negative i64`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:338: pointer helpers`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:351: pointer plus helper`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:364: pointer plus on reference`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:378: pointer minus helper`
+- `tests/unit/compile_run/test_compile_run_imports_blocks.cpp:392: pointer minus u64 offset`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:29: runs collection literals with map at in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:44: query-local auto vector helpers run in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:108: exact vector import runs explicit stdlib surface in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:149: concise vector binding example runs in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:176: concise vector binding example runs in VM`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:230: validates soa type spelling in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:275: public soa get helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:315: runs public soa get slash-method in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:337: runs public soa to_aos slash-method in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:362: public soa ref helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:383: public soa mutator helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:408: public soa to_aos helper lowers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:431: public soa to_aos temporaries route through canonical vector capacity in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:453: public soa to_aos explicit helper is a vector target in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:475: runs legacy soa compatibility helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:507: rejects graph-solved direct local-auto vector helper shadows in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:531: rejects experimental soa stdlib wide structs on pending width boundary`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:638: rejects root non-struct non-empty soa literal with semantic/emit parity in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:671: runs experimental soa stdlib to-aos helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:890: runs experimental soa stdlib non-empty to-aos helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1159: vector-target old-explicit soa mutator shadows in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1183: vector-target method soa mutator shadows in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1207: runs vector-target to_aos helper shadows in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1588: runs experimental soa single-field index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1610: runs experimental soa reflected multi-field index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1673: runs richer borrowed experimental soa mutating indexed field writes in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1706: runs method-like borrowed experimental soa mutating indexed field writes in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1749: runs borrowed experimental soa reflected index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1774: runs borrowed local experimental soa reflected index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1799: runs borrowed helper-return experimental soa reflected index syntax in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2031: borrowed helper-return soa ref_ref same-path helper in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2790: experimental soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2813: experimental soa storage borrowed ref helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2831: experimental soa storage borrowed view helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2850: rejects experimental soa storage reserve overflow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2871: experimental two-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2895: experimental three-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2920: experimental four-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2946: experimental five-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:2973: experimental six-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3001: experimental seven-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3030: experimental eight-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3060: experimental nine-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3086: experimental ten-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3113: emits experimental eleven-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3137: emits experimental twelve-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3161: emits experimental thirteen-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3185: emits experimental fourteen-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3209: emits experimental fifteen-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3234: emits experimental sixteen-column soa storage helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3598: bare vector count and capacity through imported stdlib helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3613: bare vector access through imported stdlib helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3705: container error contract conformance in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3720: compiles with executions using collection arguments`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3761: pointer plus u64 offset`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3774: i64 literals`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3786: u64 literals`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3812: comparison operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3824: less_than operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3836: greater_equal operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3848: less_equal operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3860: and operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3872: or operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3884: not operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3896: not operator with parentheses`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3921: equality operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3933: not_equal operator rewrite`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:5: versioned import expansion with relative import entry`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:43: exact versioned import expansion`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:109: versioned import expansion with quoted import entries`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:147: import expansion with comments`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:185: duplicate imports once`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:217: versioned import with single quotes`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:255: versioned import with major-only selector`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:300: versioned import with minor selector`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:345: versioned import expansion with multiple import entries`
+- `tests/unit/compile_run/test_compile_run_imports_versions.cpp:461: versioned import expansion with mixed quoted and relative entries`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:1: archive import expansion`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:32: exact versioned archive import expansion`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:71: newest archive import expansion`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:110: conformance: versioned import selects latest for wildcard import exposure`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:148: conformance: duplicate versioned imports are deduplicated before import aliasing`
+- `tests/unit/compile_run/test_compile_run_imports_versions_archive.h:237: conformance: versioned import directory expansion order is deterministic`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:7: math conformance reference printer script`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:2052: math conformance convert non-finite float to int`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:2131: math conformance integer pow negative exponent`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:6: native argv count`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:22: native argv count helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:38: native argv error output`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:57: native argv error output without newline`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:78: native argv error output u64 index`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:99: native argv unsafe error output`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:120: native argv unsafe line error output`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:141: native argv access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:164: native argv line output`
+- `tests/unit/compile_run/test_compile_run_native_backend_argv.cpp:183: native argv inline string binding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections.cpp:6: native array slice count and indexed access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:160: native map method alias access forwards helper receiver chains`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:200: keeps canonical native map method access field expression forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:232: native vector method alias struct-return field access uses canonical helper typing`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp:302: native forwards canonical vector unsafe method struct field access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:220: keeps native canonical vector access call struct method chain forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp:254: rejects native canonical vector unsafe access field expression forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:12: native array literals`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:28: native array access with u64 index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:44: native array access rejects negative index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:63: native array unsafe access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:79: native array unsafe access with u64 index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:95: native array literal count method`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:111: native array literal unsafe access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:127: native array count helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:144: native array literal count helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:160: native vector literals`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:178: native stdlib namespaced vector builtin aliases`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:116: native auto-inferred std namespaced vector push canonical definition`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:144: native auto-inferred std namespaced count uses compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:180: native auto-inferred std namespaced count canonical fallback uses builtin count`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:211: native std namespaced count expression uses compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:377: native alias capacity array target accepts same-path helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:432: native std namespaced count expression canonical fallback uses builtin count`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:462: native std namespaced count non-builtin compatibility fallback resolves alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:513: native std namespaced capacity expression uses compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:548: native std namespaced capacity expression canonical fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:192: compiles native canonical vector access builtin string count shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:586: native user vector count method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:689: native canonical slash vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:744: native canonical slash vector count same-path helper on string receiver`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:826: native user vector capacity method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:849: native user vector count call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:871: native user vector capacity call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:915: native user array capacity method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_count_shadows.cpp:937: native user array at call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:12: native stdlib namespaced map reference access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:131: native explicit canonical map typed bindings with builtin helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:264: compiles native bare map count through canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:312: compiles native bare map at through canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:339: compiles native bare map at_unsafe through canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:414: native map namespaced count method runs through canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:464: native bare map contains through canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_canonical_map_helpers.cpp:579: native map namespaced at method compatibility alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:67: native query-local auto vector helpers run through lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:195: native public soa count helper on public wrapper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:220: native public soa get helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:322: native public soa ref helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:347: native public soa mutator helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:376: native public soa to_aos helper lowers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:403: native public soa to_aos temporaries route through canonical vector capacity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:689: native compiles and runs graph-solved direct local-auto vector helper shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:717: native rejects experimental soa stdlib wide structs on pending width`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:827: native runs experimental soa stdlib to-aos helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1049: native runs experimental soa stdlib non-empty to-aos helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1321: native runs vector-target old-explicit soa mutator shadows`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1349: native runs vector-target method soa mutator shadows`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:2259: native compiles and runs borrowed helper-return soa ref_ref same-path helper compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3015: native experimental soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3043: native experimental soa storage borrowed ref helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3066: native experimental soa storage borrowed view helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3090: rejects native experimental soa storage reserve overflow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3115: native experimental two-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3144: native experimental three-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3174: native experimental four-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3205: native experimental five-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3237: native experimental six-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3270: native experimental seven-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3304: native experimental eight-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3339: native experimental nine-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3370: native experimental ten-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3402: native experimental eleven-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3428: native experimental twelve-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3454: native experimental thirteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3480: native experimental fourteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3506: native experimental fifteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3533: native experimental sixteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3964: native imported container error contract conformance`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3976: native templated stdlib vector wrapper temporary call forms`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:4005: native templated stdlib vector wrapper temporary methods in expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:31: native collection syntax parity expression access forms`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:59: native vector literal count helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:77: native collection constructor parity expression access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:114: native map count helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:132: native map method call`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:156: native map at helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:174: native map indexing sugar`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:192: native map at_unsafe helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:210: native bool map access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:228: native u64 map access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:246: native map at missing key`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:268: native typed map binding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:322: compiles native string-valued map constructors on stdlib path`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:89: native auto-inferred std namespaced access helper canonical definition`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:141: native user vector pop method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:165: native user vector reserve call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:189: native user vector reserve method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:238: native user vector clear method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:287: native user vector remove_at method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:336: native indexed vector assign`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:357: native user vector remove_swap method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:381: grows native vector reserve beyond initial capacity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:402: preserves native vector values across reserve growth`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:423: grows native vector push beyond initial capacity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:442: preserves native vector values across push growth`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:461: native vector literal at local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:12: native vector reserve past former local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:85: native vector push past former local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:300: rejects native vector reserve dynamic value beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:324: rejects native vector push beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp:350: native vector shrink helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:21: native builtin array count before user method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:43: native builtin array count before user call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:115: native canonical map sugar with current precedence before compatibility aliases`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:241: native canonical map access non-string shadow before compatibility aliases`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:291: native explicit map helper calls through same-path aliases`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:462: native map compatibility explicit-template count call with canonical templated helper present`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:641: native canonical implicit-template map count call with wrapper slash return envelope`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:670: native builtin string count before user call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:692: native user string count method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:269: native stdlib collection shim vector quint constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:304: native stdlib collection shim vector sext constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:339: native stdlib collection shim vector sept constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:374: native stdlib collection shim vector oct constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:12: rejects native std-namespaced vector method alias access struct method chain with helper receiver diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:287: native stdlib collection shim vector single`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:306: native stdlib collection shim vector new`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:325: rejects native stdlib collection shim vector new type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:340: rejects native stdlib collection shim vector single type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:355: native stdlib collection shim vector pair`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:374: rejects native stdlib collection shim vector pair type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:389: native stdlib collection shim vector triple`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:408: rejects native stdlib collection shim vector triple type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:423: native stdlib collection shim vector quad`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:442: rejects native stdlib collection shim vector quad type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:457: native stdlib collection shim map single`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:507: native stdlib collection shim map new`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:526: native stdlib collection shim map new string key envelope`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:576: native stdlib collection shim map count`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp:595: native stdlib collection shim map count string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:12: native stdlib collection shim access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:36: native stdlib collection shim capacity helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:56: native stdlib collection shim vector capacity`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:91: native stdlib collection shim vector count`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:125: native stdlib collection shim vector at`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:159: native stdlib collection shim vector at unsafe`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:195: native stdlib collection shim vector push`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:232: native stdlib collection shim vector pop`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:268: native stdlib collection shim vector reserve`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:305: native stdlib collection shim vector clear`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:341: native stdlib collection shim vector remove at`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:379: native stdlib collection shim vector remove swap`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:417: native stdlib collection shim vector mutators`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:447: native bare vector capacity through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:484: native bare vector capacity method without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:525: native bare vector capacity after pop through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:12: native user array at method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:34: native user array at_unsafe call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:56: native user array at_unsafe method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:78: native user map at_unsafe call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:100: native user map at_unsafe method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:122: native user map at call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:216: native user map at method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:385: native user vector at method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:408: native user string at_unsafe call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:430: native user string at_unsafe method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:476: native user vector at_unsafe method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:499: native user string at call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:521: native user string at method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:12: native vector push helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:33: native vector mutator method calls`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:58: native user push helper shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:80: native user vector constructor shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:101: native user array constructor shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:122: native user map constructor shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:194: native namespaced vector count named arguments through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:213: native namespaced vector capacity named arguments through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:292: native user map constructor block shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:317: native user vector constructor block shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:342: native user array constructor block shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:367: native user vector push call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:416: native std namespaced reordered mutator compatibility helper shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:441: native user vector push bool positional call shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:466: native user vector push call named shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:490: native user vector push method shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp:514: native user vector push call expression shadow`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:164: native array alias count through same-path helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:191: native array alias capacity through same-path helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:218: native array alias at through same-path helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:245: native array alias at_unsafe through same-path helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:272: native array alias slash-method helpers through same-path helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:357: native vector namespaced mutator alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:399: native vector access checks bounds`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:420: native vector access rejects negative index`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:442: runs native vector literal count method without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:458: native vector method call`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:504: native bare vector at through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:583: native bare vector at_unsafe through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:665: native bare vector count through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:845: native stdlib collection shim helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:869: native stdlib collection shim multi constructors`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp:891: native templated stdlib collection return envelopes`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:32: rejects native templated stdlib vector wrapper temporary call index mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp:117: rejects native templated stdlib vector wrapper temporary unsafe call index mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp:12: native user wrapper temporary at_unsafe shadow precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:6: native void executable`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:21: native explicit void return`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:36: native locals`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:53: native if/else`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:73: native repeat loop`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:92: native for binding condition`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:112: native shared_scope for binding condition`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:135: native shared_scope while loop`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:160: native pointer helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:178: native pointer plus`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:194: native print output`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:219: default effects token enables io output`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:239: default entry effects enable io output`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:265: entry defaults apply to helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:316: default effects token enables vm output`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:333: default effects allow capabilities in native`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:372: native implicit utf8 strings`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:393: native implicit utf8 single-quoted strings`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:414: native escaped utf8 strings`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:435: native raw utf8 single-quoted strings`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:456: native string binding print`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:476: native raw string literal output`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:497: native raw single-quoted string output`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:519: native string binding copy`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:540: native string count and indexing`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:560: native string access checks bounds`
+- `tests/unit/compile_run/test_compile_run_native_backend_control.cpp:579: native string access rejects negative index`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:8: native materializes variadic Buffer packs with indexed count helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:50: native forwards variadic Reference<Buffer> packs through location/dereference`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:105: native materializes variadic Pointer<Buffer> packs with dereference helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:162: native preserves if expression values in arithmetic context`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:181: native float arithmetic`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:199: native image api contract deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:232: native keeps std image user helpers distinct from builtin aliases`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:265: native uses stdlib ImageError result helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:298: native uses stdlib ImageError why wrapper`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:342: native uses stdlib ImageError constructor wrappers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:378: native uses stdlib GfxError result helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:419: native uses canonical stdlib GfxError result helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:458: native uses canonical stdlib GfxError why helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:502: native uses canonical stdlib GfxError constructors`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:539: native uses stdlib experimental Buffer helper methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:573: native uses canonical stdlib Buffer helper methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:607: native uses stdlib experimental Buffer readback helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:634: native uses canonical stdlib Buffer readback helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:661: native uses stdlib experimental Buffer allocation helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:683: native uses canonical stdlib Buffer allocation helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:705: native uses stdlib experimental Buffer allocation readback path`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp:728: native uses canonical stdlib Buffer allocation readback path`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:8: native backend supports graphics-style int return propagation with on_error`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:74: native backend supports string Result.ok payloads through try`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:117: native backend supports direct string Result combinator consumers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:159: native backend supports definition-backed string Result combinator sources`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:218: native FileError.why mapping`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:243: native uses stdlib FileError why wrapper`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:273: native uses stdlib FileError eof wrapper`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:305: native uses stdlib FileError eof constructor wrapper`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:334: native materializes variadic FileError packs with indexed why methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:375: native materializes variadic borrowed FileError packs with indexed dereference why methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:426: native materializes variadic pointer FileError packs with indexed dereference why methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:477: native materializes variadic wrapped FileError packs with named free builtin at receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:566: native materializes variadic File handle packs with indexed file methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:642: native materializes variadic borrowed File handle packs with indexed dereference file methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_error_and_file_variadics.cpp:733: native materializes variadic pointer File handle packs with indexed dereference file methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:8: native file io`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:48: native file read_byte with deterministic eof`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:99: native uses stdlib File helper wrappers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:142: native uses stdlib File open helper wrappers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:191: native stdlib File close helper disarms the original handle`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:230: native uses stdlib File string helper wrappers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:270: native uses stdlib File helper wrappers and broader fallback arities`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:311: native resolves templated helper overload families by exact arity`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:358: native mutable scalar helper copy-back`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:385: native executable`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:400: native supports support-matrix binding types`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:436: native materializes direct variadic args packs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:457: native materializes string variadic args packs and pure spread forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:483: native materializes mixed explicit and spread variadic forwarding`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:509: native materializes direct struct variadic args packs for count`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:536: native materializes pure spread struct variadic packs for count`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:568: native materializes mixed struct spread variadic forwarding for count`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:600: native materializes direct struct variadic pack indexing and method access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:634: native lowers compile-time type pack index get helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:663: native uses imported stdlib tuple get helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:684: native uses tuple bracket indexing sugar`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:754: native infers heterogeneous stdlib tuple make_tuple`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:831: native destructures stdlib tuple values`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:935: native compiles empty and borrowed stdlib tuple access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp:8: native png read for 16-bit rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp:80: native png read for 16-bit rgba inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp:153: native png read for 16-bit grayscale-alpha inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp:225: native png read for Adam7 interlaced rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp:355: native png read for Adam7 interlaced indexed-color inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp:480: compiles and rejects malformed Adam7 interlaced native png inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp:546: native png read for optional plte and split idat inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:8: native png read for stored paeth-filter rgba inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:94: native png read for fixed-huffman backreference rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:171: native png read for dynamic-huffman literal rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:245: native png read for dynamic-huffman backreference rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:325: compiles and rejects malformed native png inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:370: native png read for sub-filter indexed-color inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:444: compiles and rejects indexed native png inputs with out-of-range palette indexes`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:501: native png read for 2-bit indexed-color inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp:581: compiles and rejects 1-bit indexed native png inputs with out-of-range palette indexes`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:8: native png read for sub-filter grayscale-alpha inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:80: native png read for 1-bit grayscale inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:150: native png read for 4-bit grayscale inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:220: native png read for 16-bit grayscale inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:292: native png read for stored sub-filter rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:363: native png read for stored up-filter rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:434: native png read for stored average-filter rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp:507: native png read for stored paeth-filter rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:8: native uses stdlib experimental Buffer upload helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:29: native uses canonical stdlib Buffer upload helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:50: native ppm read for ascii p3 inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:107: native ppm read for binary p6 inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:170: compiles and rejects truncated native binary ppm reads deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:219: compiles and rejects oversized native image read dimensions before overflow`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:303: native ppm write for ascii p3 outputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:341: compiles and rejects invalid native ppm write inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:373: native png write for deterministic rgb outputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:414: compiles and rejects invalid native png write inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:446: rejects oversized native image write dimensions before overflow`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:492: native png read for stored rgb inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp:556: native png read for sub-filter grayscale inputs`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:544: native materializes variadic pointer vector packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:603: native materializes variadic pointer vector packs with indexed dereference capacity methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_map_and_vector_variadics.cpp:662: native runs vector constructor parity with canonical paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:566: native materializes variadic pointer uninitialized scalar packs with indexed init and take`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp:627: native materializes variadic borrowed uninitialized scalar packs with indexed init and take`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:8: native materializes pure spread struct pack indexing and method access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:45: native materializes mixed struct pack indexing and method access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:82: native materializes variadic Result packs with indexed why and try access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:142: native materializes variadic borrowed Result packs with indexed dereference try and why access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:218: native materializes variadic pointer Result packs with indexed dereference try and why access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:294: native materializes variadic status-only Result packs with indexed error and why access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:352: native materializes variadic borrowed status-only Result packs with indexed dereference error and why access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:426: native materializes variadic pointer status-only Result packs with indexed dereference error and why access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:500: native materializes variadic vector packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:547: native materializes variadic vector packs with indexed capacity methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_and_vector_variadics.cpp:594: native materializes variadic vector packs with indexed statement mutators`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:8: native backend supports imported stdlib Result sum pick`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:48: native backend supports Result.error on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:78: native backend supports Result.why on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:117: native backend supports Result.ok compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:175: native backend supports Result.map compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:240: native backend supports Result.and_then compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:322: native backend supports Result.map2 compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:404: native backend supports direct stdlib Result sum sources in compatibility combinators`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:536: native backend compiles packed error struct Result combinator payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:585: native backend supports direct single-slot struct Result.ok payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:624: native backend supports single-slot struct Result combinator payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:677: native backend supports direct File Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:728: native backend supports packed File Result combinator payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:795: native backend compiles multi-slot struct Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:849: native backend compiles direct array Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:884: native backend supports block-bodied Result.and_then lambdas on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:919: native backend supports final-if Result.and_then lambdas on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:954: native backend compiles direct map Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:989: native backend compiles Buffer Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1071: native backend supports auto-bound direct Result combinator try consumers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1105: native direct type namespace string helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1140: native backend supports try on imported stdlib Result sum ok`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1168: native backend supports try on imported stdlib Result sum error`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1200: native backend supports postfix question on direct imported stdlib Result sum ok`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1232: native backend supports postfix question on direct imported stdlib Result sum error`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1282: native backend supports dereferenced borrowed stdlib Result sum helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1382: native backend propagates imported stdlib Result sum try ok through Result return`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_result_payloads_and_strings.cpp:1424: native backend propagates imported stdlib Result sum try error through Result return`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:8: compiles and rejects native png inputs with critical chunk crc mismatches`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:63: compiles and rejects native png inputs with plte after idat`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:123: if expression in native backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:138: match cases in native backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:154: native definition call`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:174: native backend runs single task spawn wait`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:197: native backend returns stdlib tuple from multi task wait`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:230: native method call`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:253: native method count call`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:276: native literal method call`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:298: native chained method calls`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:330: native Result.why hooks`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:367: native supports stdlib FileError result helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:434: native backend supports Result.map on IR-backed path`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:476: native backend supports Result.and_then on IR-backed path`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:525: native backend supports Result.map2 on IR-backed path`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:573: native backend supports f32 Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:612: native backend supports direct Result.ok combinator sources on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp:650: native backend compiles direct packed ContainerError and ImageError Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:8: native void call with string param`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:32: native string indexing`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:52: native string parameter indexing`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:72: native software renderer command serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:123: native software renderer clip stack serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:181: native two-pass layout tree serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:227: native two-pass layout empty root deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:267: native basic widget controls through layout deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:334: native panel container widget deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_basic_call.cpp:406: native empty panel container stays balanced deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:9: native scene model authoring deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:21: native ui scene adapter deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:37: native composite login form deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:112: native html adapter login form deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:190: native ui event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:249: native ui ime event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:305: native ui resize and focus event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:361: native large frame`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:393: native accepts string pointers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_ui_layout_scene_model.cpp:458: native ignores top-level executions`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:106: accepts vm support-matrix effects`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:120: accepts native support-matrix effects`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:173: namespace entry`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:188: native import alias in namespace`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:213: native import alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:236: native with multiple imports`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:259: import expansion`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:278: emit-diagnostics reports legacy include alias rejection payload`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:311: single-quoted import expansion`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:319: with duplicate imports ignored`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:338: unquoted import expansion`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:358: unquoted import expansion with -I`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:383: legacy include-path alias is rejected in primec and primevm`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:426: emit-diagnostics reports argument payload for removed include-path option`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:489: versioned import expansion`
+- `tests/unit/compile_run/test_compile_run_native_backend_imports.cpp:526: versioned import with version first`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:6: native clamp`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:22: native clamp i64`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:38: native math abs/sign/min/max`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:58: native qualified math names`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:79: native math saturate/lerp`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:99: native math clamp`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:118: native math pow`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:135: native math pow rejects negative exponent`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:156: native math constant conversions`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:173: native math constants`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:191: native math predicates`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:213: native math rounding`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:238: native math roots`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:257: native math fma/hypot`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:276: native math copysign`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:295: native math angle helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:314: native math trig helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:336: native sin range reduction`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:358: native sin pi accuracy`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:380: native math arc trig helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:400: native math exp/log`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:423: native math hyperbolic`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:466: native float pow`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:483: native i64 arithmetic`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:498: native u64 division`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:513: native u64 comparison`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:528: native bool return`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:543: native bool comparison with i32`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:559: native implicit void main`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:573: native boolean ops`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:588: native numeric boolean ops`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:603: native short-circuit and`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric.cpp:621: native short-circuit or`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:1: native convert`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:16: native convert bool`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:31: native convert bool from integers`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:49: native convert i64`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:64: native convert u64`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:79: native integer width convert`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:94: native float literals`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:109: native float bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:156: native support-matrix math nominal helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:185: native quaternion reference multiply and rotation`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:210: native matrix composition order references with tolerance`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:249: native matrix arithmetic helpers with tolerance`
+- `tests/unit/compile_run/test_compile_run_native_backend_math_numeric_types.h:320: native quaternion arithmetic helpers with tolerance`
+- `tests/unit/compile_run/test_compile_run_native_backend_maybe.cpp:39: native Maybe some and pick`
+- `tests/unit/compile_run/test_compile_run_native_backend_maybe.cpp:66: native Maybe none and helper methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_maybe.cpp:100: native Maybe present variant payload`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:6: native hello world example`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:19: native pointer plus offsets`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:36: native pointer plus on reference`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:54: native pointer minus offsets`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:71: native pointer minus u64 offsets`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:88: native pointer minus negative i64 offsets`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:105: native pointer plus u64 offsets`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:122: native pointer plus negative i64 offsets`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:139: native references`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:157: native location on reference`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:175: native heap alloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:192: native heap free intrinsic`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:211: native heap realloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:232: native checked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:253: native unchecked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_native_backend_pointers.cpp:274: native reference arithmetic`
+- `tests/unit/compile_run/test_compile_run_native_backend_uninitialized.cpp:6: native uninitialized local storage`
+- `tests/unit/compile_run/test_compile_run_native_backend_uninitialized.cpp:55: native pointer-backed uninitialized storage`
+- `tests/unit/compile_run/test_compile_run_native_backend_uninitialized.cpp:77: native reference-backed uninitialized storage`
+- `tests/unit/compile_run/test_compile_run_native_backend_uninitialized.cpp:98: native pointer-backed uninitialized struct storage`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:6: reflection codegen ast-semantic dump uses canonical helper order`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:40: reflection codegen ir dump keeps generated helper call sites`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:69: reflection compare helper appears in ast-semantic and ir dumps`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:104: reflection hash64 helper appears in ast-semantic and ir dumps`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:185: reflection clear helper appears in ast-semantic and ir dumps`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:220: reflection copyfrom helper appears in ast-semantic and ir dumps`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:256: reflection validate helper appears in ast-semantic and ir dumps`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen.cpp:319: reflection serialize and deserialize helpers appear in ast-semantic and ir dumps`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:6: reflection codegen helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:38: reflection compare helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:76: reflection hash64 helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:115: reflection clear helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:148: reflection validate helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:180: reflection serde helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:217: reflection SoaSchema helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:263: reflection SoaSchema chunk helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp:319: reflection SoaSchema storage helper runtime stays aligned across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:8: binding inference from if expression feeding method call`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:35: binding inference from mixed if branches`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:62: parameter inferring i64 from default initializer`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:86: map constructor preserving assignment value`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:108: C++ emitter array access checks bounds`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:124: C++ emitter string access checks bounds`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:140: vm runs hello world entry point`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:194: runs primevm with argv count`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:206: vm string access checks bounds`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:221: vm string access rejects negative index`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:236: runs vm with argv printing`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:251: runs vm with argv printing without newline`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:267: runs vm with forwarded argv`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:286: runs vm with argv count helper`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:298: runs vm with argv i64 index`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:313: runs vm with argv u64 index`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:328: runs vm with argv error output`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:344: runs vm with argv error output without newline`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:360: runs vm with argv error output u64 index`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:376: runs vm with argv line error output u64 index`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:392: runs vm with argv unsafe error output`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:408: runs vm with argv unsafe line error output`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:8: import after definitions`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:34: rejects import alias for nested definitions`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:76: fully-qualified nested call`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:103: method call with fully-qualified definition`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:126: repeat with bool count`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:151: repeat with non-positive count`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:177: pathspace builtins as no-ops`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:205: binding without explicit type`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:225: binding inferring i64`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:245: binding inferring u64`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:265: binding inferring array type`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:285: array bracket sugar`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:305: indexing into array bracket literal`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:324: binding inferring map type`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:345: map count`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:367: map indexing`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:388: map indexing with u64 keys`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:449: map indexing checks missing key`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:473: map indexing rejects mismatched key type in vm/native`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:503: map bindings reject unsupported key type in vm/native`
+- `tests/unit/compile_run/test_compile_run_smoke_collective.cpp:536: binding inference feeding method call`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:7: runs simple void main program`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:20: float arithmetic in VM`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:36: primitive brace constructors`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:54: default entry path is main`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:67: enum value access lowers across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:91: scalar sum construction and pick lower across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:124: procedural generic local generated struct lowers across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:160: unit sum construction and pick lower across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:211: aggregate sum payloads bind only the active pick branch`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:254: aggregate sum pick results copy active payloads before escape`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:308: sum moves route helpers through the active payload only`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:363: sum drops route destroy through the active payload only`
+- `tests/unit/compile_run/test_compile_run_smoke_core_basic.cpp:410: nested sum payloads compile through VM lowering`
+- `tests/unit/compile_run/test_compile_run_smoke_core_contracts_and_cli.cpp:7: graphics api contract doc-linked constraints stay locked`
+- `tests/unit/compile_run/test_compile_run_smoke_core_contracts_and_cli.cpp:496: primec and primevm accept ir inline flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_contracts_and_cli.cpp:514: primevm accepts explicit emit vm compatibility flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_contracts_and_cli.cpp:526: primevm debug-json emits stable NDJSON schema`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:7: primevm debug-json snapshots include payloads across step boundaries`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:117: primec rejects debug-json option`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:163: primevm debug-trace requires path and mode exclusivity`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:191: primevm debug-trace writes deterministic complete event logs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:261: primevm debug-replay requires trace and mode exclusivity`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:310: primevm debug-replay restores checkpoint snapshots at requested sequence`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:454: primevm debug-replay is deterministic and rejects invalid traces`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:534: primevm debug-replay bypasses source compilation on trace-only path`
+- `tests/unit/compile_run/test_compile_run_smoke_core_debug_and_docs.cpp:563: primevm debug-replay accepts whitespace and escaped checkpoint fields`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:7: primevm debug-dap emits deterministic framed transcripts`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:72: primevm debug-dap end-to-end process smoke emits exit events`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:101: primevm debug-dap accepts instruction breakpoints and rejects post-exit locals`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:149: primevm rejects primec output flags`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:173: wasm runtime tooling hook executes or reports explicit skip`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:198: defaults to native output with stem name`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:221: emits PSIR bytecode with --emit=ir`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:265: primevm forwards entry args`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:281: primevm supports argv string bindings`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:298: with line comments after expressions`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:351: method calls via type namespaces`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:376: count forwarding to method`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:401: method call on constructor`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:429: call with body block`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:454: templated method call`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:479: block expression`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:500: boolean ops with conversions`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:518: integer width converts`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:537: convert bool from negative integer`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:556: boolean ops short-circuit`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_end_to_end.cpp:7: gfx compatibility shim end-to-end coverage runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_end_to_end.cpp:149: canonical gfx end-to-end conformance runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_end_to_end.cpp:359: gfx compatibility shim static fields import across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:7: experimental gfx window constructor entry point runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:77: experimental gfx device constructor entry point runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:133: experimental gfx resource wrapper slice runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:230: canonical gfx resource wrapper slice runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:322: experimental gfx render pass wrapper slice runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:397: canonical gfx render pass wrapper slice runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:472: experimental gfx resource wrapper errors stay deterministic across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:526: canonical gfx resource wrapper errors stay deterministic across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:580: experimental gfx pipeline entry point runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_entrypoints.cpp:640: canonical gfx pipeline entry point runs across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_imports.cpp:7: gfx compatibility shim type surface imports across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_imports.cpp:111: canonical gfx type surface imports across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_imports.cpp:215: gfx compatibility shim error helper imports across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_gfx_imports.cpp:257: gfx compatibility shim substrate boundary imports across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:7: count forwards to type method across backends`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:32: semicolons act as separators`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:75: rejects unsupported emit kinds`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:96: primec emits wasm bytecode for integer local control-flow subset`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:151: primec wasm if/else with both branches unconditionally returning matches vm result`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:190: primec wasm nested if/else with all branches returning matches vm result`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:237: primec wasm while loop matches vm result`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:278: primec wasm real-call definition with branching matches vm result across multiple call sites`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:326: primec emits wasm bytecode for float ops with tolerance-gated conversions`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:361: primec emits wasm bytecode for i64 and u64 conversion opcodes`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:398: primec emits wasm bytecode for support-matrix math nominal helpers`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:445: primec emits wasm bytecode for quaternion reference multiply and rotation`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:490: primec emits wasm bytecode for matrix composition order references with tolerance`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:545: primec emits wasm bytecode for matrix arithmetic helpers with tolerance`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_core.cpp:632: primec emits wasm bytecode for quaternion arithmetic helpers with tolerance`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_limits.cpp:7: primec wasm documented limit IDs have conformance coverage`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:58: primec wasm parity corpus matches vm outputs and exits deterministically`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:197: primec wasm i64 and u64 conversion edge cases trap in runtime`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:235: primec emits wasm bytecode for repeat while and for loops`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:716: primec wasm profile matrix gates wasi-only effects and opcodes`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:7: primec wasm wasi stdout and stderr match vm output`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:47: primec wasm wasi argc path matches vm exit code`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:75: primec wasm wasi supports File<Read>.read_byte with deterministic eof`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_write.cpp:7: primec wasm wasi runs ppm write for deterministic rgb outputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_write.cpp:88: primec wasm wasi runs png write for deterministic rgb outputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_write.cpp:171: primec wasm wasi rejects invalid png write inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:6: implicit i32 suffix`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:29: increment/decrement sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:68: no transforms accepts canonical syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:90: no transforms accepts brace constructors`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:312: transform list default enables implicit i32`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:326: transform list none clears prior defaults`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:351: transform list semicolons split tokens`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:376: transform list whitespace splits tokens`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:454: text transforms none still accepts canonical syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:476: legacy text-filters alias forms are rejected in primec and primevm`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:509: implicit i32 via transform list`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:523: implicit i32 via transform list in primevm`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp:52: emit-diagnostics reports argument payload for removed text-filters option`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp:108: primec list transforms prints metadata`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp:121: primec and primevm list transforms match`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:7: dump pre_ast shows imports and text filters`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:33: dump ir prints canonical output`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:53: dump ast ignores semantic errors`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:72: dump ast-semantic shows canonicalized ast`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:126: dump ast-semantic shows experimental soa wrapper count runtime`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:160: dump ast-semantic keeps canonical soa get helper path compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:189: dump ast-semantic rewrites bare soa get helper on helper return compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:232: dump ast-semantic rewrites global helper-return soa method shadows to same-path helpers compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:308: dump ast-semantic rewrites method-like helper-return soa method shadows to same-path helpers compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:388: dump ast-semantic accepts nested struct-body soa constructor-bearing helper returns compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:432: dump ast-semantic rewrites nested struct-body soa method shadows to same-path helpers compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:527: dump ast-semantic rewrites experimental soa reflected field index syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:566: dump ast-semantic rewrites experimental soa mutating field index targets to soaVectorRef`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:612: dump ast-semantic rewrites richer borrowed experimental soa mutating field index targets to soaVectorRef`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:668: dump ast-semantic rewrites method-like borrowed experimental soa mutating field index targets to soaVectorRef`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:732: dump ast-semantic rewrites borrowed experimental soa reflected field index syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:769: dump ast-semantic rewrites borrowed local experimental soa reflected field index syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:808: dump ast-semantic rewrites borrowed helper-return experimental soa reflected field index syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:851: dump ast-semantic rewrites experimental soa reflected call-form field index syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:909: dump ast-semantic rewrites experimental soa inline location borrow field index syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:966: dump ast-semantic rewrites dereferenced borrowed helper-return experimental soa reflected field index syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1009: dump ast-semantic rewrites method-like borrowed helper-return experimental soa helpers`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1071: dump ast-semantic rewrites inline location method-like borrowed helper-return experimental soa helpers`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1154: dump ast-semantic rewrites direct return method-like borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1216: dump ast-semantic rewrites direct return borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1273: dump ast-semantic rewrites direct return inline location method-like borrowed`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1335: dump ast-semantic rewrites direct return inline location borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1428: dump ast-semantic rewrites imported builtin soa to_aos forms to canonical helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1462: dump ast-semantic rewrites no-import builtin soa to_aos forms to canonical helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1502: dump ast-semantic rewrites vector-target helper-shadowed to_aos method forms to direct helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1542: dump ast-semantic rewrites vector-target old-explicit mutator shadows to direct helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1579: dump ast-semantic rewrites vector-target method mutator shadows to direct helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1616: dump ast-semantic keeps direct canonical experimental soa to_aos helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1650: dump ast-semantic canonical soa to_aos helper body uses canonical count/get loop compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1735: dump ast-semantic keeps imported experimental soa to_aos helper path`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1770: dump ast-semantic rewrites borrowed helper-return experimental soa to_aos`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1817: dump ast-semantic rewrites borrowed helper-return experimental soa to_aos_ref via canonical helper`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:1864: dump ast-semantic keeps helper-return experimental soa to_aos with same-path helper`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2063: dump ast-semantic keeps borrowed soa ref_ref same-path helper shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2168: dump ast-semantic rewrites inline location experimental soa read-only methods`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2234: dump ast-semantic rewrites inline location borrowed helper-return experimental soa helpers`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2303: dump ast_semantic alias works`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2325: dump type_graph alias works and prints graph output`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2358: dump semantic_product alias works and prints semantic output`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2432: primec and primevm dump pre_ast match`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2456: primec and primevm dump ast-semantic match`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2484: primec and primevm dump type-graph match`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2511: primec and primevm dump semantic-product match`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:5: with comments`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:29: block expression with outer scope capture`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:53: greater_than`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:65: less_than`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:77: equal`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:89: not_equal`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:127: abs`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:140: sign f32`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:153: saturate f32`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:166: clamp`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:179: clamp i64`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:192: clamp mixed i32/i64`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:205: clamp u64`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:218: clamp f32`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:244: boolean literal`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:256: bool return`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:268: bool comparison`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:280: bool and signed int comparison`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:305: string binding`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:337: flat map constructor`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:352: map entry constructor`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:368: canonical map constructor`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:383: named-arg call`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:401: convert builtin`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:413: mixed named args`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:430: interleaved named args`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:447: reordered named args`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:464: map constructor with named-arg value`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:484: if statement sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_misc.cpp:502: early return in if`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:5: implicit utf8 suffix by default`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:24: implicit hex literal`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:38: float binding`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:52: single-letter float suffix`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:64: float comparison`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:76: string comparison`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:174: pointer operator sugar`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:204: implicit suffix enabled by default`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:216: text filter rewrites if expression`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:233: if expression`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:245: runs if expression in vm`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:257: if block sugar in return expression`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:275: if expr block statements`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:294: lazy if expression taking then branch`
+- `tests/unit/compile_run/test_compile_run_text_filters_runtime_if.cpp:320: lazy if expression taking else branch`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:6: text transforms accept whitespace separators`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:68: semantic transform rules apply per path`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:92: semantic transform rules prefer later matching entry`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:120: semantic transform rules clear on none token`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:165: semantic transform rules prefer later wildcard match`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:373: semantic transform rules accept recursive suffix alias`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:408: semantic transform wildcard does not match sibling prefix`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:421: semantic transform wildcard does not match base path`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:434: semantic transform rules ignore unrelated exact path`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:447: semantic transform rules ignore unrelated wildcard path`
+- `tests/unit/compile_run/test_compile_run_text_filters_semantic_rules.cpp:460: semantic root wildcard only recurses when requested`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:23: per-envelope text transforms enable collections`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:53: per-envelope text transforms apply to bindings`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:66: per-envelope text transforms apply to executions in arguments`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:83: text transforms can append additional transforms`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:95: transform list auto-deduces append_operators`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:107: text transform rules apply to namespace paths`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:204: text transform rules apply without transform lists`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:215: text transform rules ignore empty rule tokens`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:247: text transform rules prefer later matching entry`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:272: text transform rules prefer later wildcard match`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:298: text transform root wildcard applies to top-level definitions`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:310: text transform rules clear on none token`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:496: text transform rules apply to nested definitions`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:530: text transform rules recurse when requested`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:565: text transform rules accept recursive suffix alias`
+- `tests/unit/compile_run/test_compile_run_text_filters_text_rules.cpp:588: root wildcard transform rules only recurse when requested`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:10: vm array access checks bounds`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:25: vm array access with u64 index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:38: vm array slice count and indexed access use slice extent`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:52: vm array slice checks runtime bounds at construction`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:89: vm array access rejects negative index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:104: vm vector access checks bounds`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:121: vm vector access rejects negative index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:138: vm experimental vector at_unsafe checks positive out-of-range index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:156: vm experimental vector method at_unsafe checks positive out-of-range index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:174: vm experimental vector at checks positive out-of-range index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:192: vm experimental vector method at checks positive out-of-range index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:210: vm experimental vector at_unsafe rejects index past capacity even if count is forged`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:231: vm experimental vector method at rejects index past capacity even if count is forged`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:252: vm experimental vector reserve rejects forged count above capacity`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:274: vm experimental vector clear rejects forged count above capacity`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:296: vm experimental vector destroy rejects forged count above capacity`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:322: vm experimental vector count rejects forged count above capacity`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:343: vm experimental vector capacity rejects forged negative capacity`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:364: vm experimental vector capacity rejects forged excessive capacity`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:385: vm experimental vector set_field_count rejects negative count`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:405: vm experimental vector set_field_capacity rejects below-count value`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:426: vm rejects misaligned pointer dereference`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:441: vm array unsafe access reads element`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:457: vm array unsafe access with u64 index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:473: vm argv access checks bounds`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:488: vm argv access rejects negative index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:503: vm argv unsafe access skips bounds`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:520: vm argv unsafe access with u64 index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:535: vm argv unsafe access skips negative index`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:552: vm argv binding checks bounds`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:569: vm argv binding unsafe skips bounds`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:587: vm argv unsafe binding copy skips bounds`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:680: vm never-returning call terminates control path`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:29: runs vm with canonical slash vector count same-path helper on array receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:166: runs vm canonical map sugar with current helper precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:228: runs vm canonical map access string shadow through builtin storage`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:266: runs vm canonical map access same-path string shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:305: runs vm rooted map count as ordinary user definition`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:363: runs vm map compatibility explicit-template count call with canonical templated helper present`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:510: runs vm canonical implicit-template map count expression call with wrapper slash return envelope`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:533: runs vm with builtin string count before user call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:551: runs vm with builtin string count before user method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp:569: runs vm canonical map reference string access with imported canonical helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:11: runs vm with numeric array literals`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:29: runs vm with numeric vector literals`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:52: runs vm with stdlib namespaced vector builtin aliases`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:446: runs vm explicit map helper count/contains/tryAt through same-path aliases while direct access stays builtin`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:501: runs vm explicit canonical map helpers with current mixed count precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:562: runs vm stdlib namespaced map helpers on canonical map references`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:584: runs vm canonical map method with slash return type receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:606: runs vm canonical map access direct calls on wrapper slash return receiver`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:661: runs vm explicit canonical map typed bindings with builtin helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:779: runs vm bare map count through visible canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:820: runs vm bare map at through explicit canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:170: keeps vm builtin string at_unsafe call over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:188: keeps vm builtin string at_unsafe method over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:246: keeps vm builtin string at call over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:264: keeps vm builtin string at method over user shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:282: rejects vm vector push helper during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:401: runs vm with user push helper shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:419: runs vm with user vector constructor shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:436: runs vm with user array constructor shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:453: runs vm with user map constructor shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:579: runs vm with user map constructor block shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:600: runs vm with user vector constructor block shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:621: runs vm with user array constructor block shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:642: runs vm with user vector push call shadow returning grown count`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:151: runs vm canonical vector access string literal count fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:179: runs vm canonical vector unsafe access count shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:208: runs vm canonical vector method access count shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:236: rejects vm canonical vector unsafe method access count shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:526: runs vm user vector count call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:547: runs vm user vector capacity call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:568: rejects vm user array capacity call shadow with semantic query diagnostic`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:589: runs vm with user array capacity method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:625: runs vm with user array at method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_wrapper_shadows.cpp:661: runs vm with user array at_unsafe method shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:748: runs vm with stdlib collection shim vector single`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_field_expression.cpp:763: runs vm with stdlib collection shim vector new`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:388: keeps vm canonical vector access call struct method chain forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp:416: rejects vm canonical vector unsafe access field expression forwarding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:215: runs vm with stdlib collection shim capacity helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:231: runs vm with stdlib collection shim vector capacity`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:268: runs vm with stdlib collection shim vector count`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:283: runs vm published vector count and capacity on mutable locals`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:324: runs vm with stdlib collection shim vector at`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:363: runs vm with stdlib collection shim vector at unsafe`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:403: runs vm with stdlib collection shim vector push`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:445: runs vm with stdlib collection shim vector pop`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:486: runs vm with stdlib collection shim vector reserve`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:527: runs vm with stdlib collection shim vector clear`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:568: runs vm with stdlib collection shim vector remove at`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:609: runs vm with stdlib collection shim vector remove swap`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:651: runs vm with stdlib collection shim vector mutators`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:677: runs vm with bare vector capacity through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:709: runs vm bare vector capacity method without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:602: runs vm with stdlib collection shim vector quint constructor`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:633: runs vm with stdlib collection shim vector sext constructor`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:664: runs vm with stdlib collection shim vector sept constructor`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_triple.cpp:695: runs vm with stdlib collection shim vector oct constructor`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:11: runs vm with stdlib collection shim vector new bool element`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:41: runs vm with stdlib collection shim vector pair`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:71: runs vm with stdlib collection shim vector triple`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_vector_new.cpp:101: runs vm with stdlib collection shim vector quad`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:11: runs vm bare map at_unsafe through canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:63: runs vm map namespaced count method through canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:102: vm bare map contains through canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:192: runs vm map namespaced at method through canonical helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:257: vm array alias count through same-path helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:279: vm array alias capacity through same-path helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:301: vm array alias at through same-path helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:323: vm array alias at_unsafe through same-path helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:462: runs vm with array vector bracket literals and map constructor`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:479: runs vm with array literal count method`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:491: runs vm vector literal count method without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:507: runs vm vector method call`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:527: runs vm with array literal unsafe access`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:539: runs vm with bare vector literal unsafe access through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:553: runs vm bare vector at through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:622: runs vm bare vector at_unsafe through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:693: runs vm with map at helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:722: runs vm with array count helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:735: runs vm with array literal count helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:747: runs vm with bare vector count through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:762: runs vm with bare vector access through imported stdlib helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:795: rejects vm bare vector count method without imported helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:11: runs vm with user vector pop call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:31: runs vm with user vector pop method canonical precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:133: runs vm with user vector clear call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:216: runs vm with user vector clear method canonical precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:236: runs vm with user vector remove_at call shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:282: runs vm with user vector remove_swap call canonical precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:326: runs vm vector reserve growth through count and capacity helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:343: preserves vm vector values across reserve growth`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:360: runs vm vector push growth through count and capacity helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:376: preserves vm vector values across push growth`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:392: runs vm vector literal at local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:420: runs vm vector reserve past former local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:468: rejects vm vector reserve beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:489: rejects vm vector reserve negative literal at lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:511: rejects vm vector reserve folded expression beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:530: rejects vm vector reserve folded negative expression at lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:550: rejects vm vector reserve folded signed overflow at lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:572: rejects vm vector reserve folded negate negative at lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:592: rejects vm vector reserve folded negate overflow at lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:612: rejects vm vector reserve folded unsigned expression beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:631: rejects vm vector reserve folded unsigned wraparound at lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:651: rejects vm vector reserve folded unsigned add overflow at lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp:672: rejects vm vector reserve dynamic value beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_push_limit.cpp:29: rejects vm vector push beyond local dynamic limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_push_limit.cpp:49: rejects vm vector shrink helpers during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_push_limit.cpp:70: rejects vm collection syntax parity helpers during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_limits_push_limit.cpp:94: rejects vm vector literal count helper during lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:93: runs vm with user vector push named call canonical precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:113: runs vm with user vector push method canonical precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:274: runs vm with auto-inferred std namespaced vector push canonical definition`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:323: runs vm with auto-inferred std namespaced count helper canonical fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:474: vm alias capacity array target accepts same-path helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:518: runs vm with std namespaced count expression canonical fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:539: rejects vm std namespaced count non-builtin compatibility fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:603: runs vm with std namespaced capacity expression canonical fallback`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_shadow_access.cpp:683: runs vm with auto-inferred std namespaced access helper canonical definition`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:33: vm query-local auto vector helpers run through lowering`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:123: rejects vm raw soa type spelling`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:165: runs vm public soa get helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:204: vm runs public soa get slash-method`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:225: vm runs public soa to_aos slash-method`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:248: runs vm public soa ref helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:269: runs vm public soa mutator helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:294: vm public soa to_aos helper lowers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:317: vm public soa to_aos temporaries route through canonical vector capacity`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:339: vm public soa to_aos explicit helper is a vector target`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:361: vm public soa read helpers route through wrapper paths`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:403: vm public soa construction and mutators use wrappers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:458: vm public soa field-view wrappers use public reads`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:486: vm runs legacy soa compatibility helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:517: vm runs graph-solved direct local-auto vector helper shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:541: vm rejects experimental soa stdlib wide structs on pending width`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:644: vm runs experimental soa stdlib to-aos helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:667: vm runs experimental soa stdlib to-aos method on wrapper surface`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:771: vm materializes non-empty root soa literals above former local capacity limit`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:801: vm runs experimental soa stdlib non-empty to-aos helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:824: vm runs experimental soa stdlib non-empty to-aos method on wrapper state`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:847: runs vm experimental soa stdlib get helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:868: runs vm experimental soa stdlib get method`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:889: runs vm bare soa get helper through helper return compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:916: runs vm global helper-return soa method shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:977: runs vm method-like helper-return soa method shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1038: runs vm vector-target old-explicit soa mutator shadows`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1062: runs vm vector-target method soa mutator shadows`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1086: runs vm vector-target to_aos helper shadows`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1110: runs vm nested struct-body soa constructor-bearing helper returns compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1138: runs vm nested struct-body soa direct and bound helper expressions compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1171: runs vm nested struct-body soa method shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1243: runs vm explicit method-like helper-return experimental soa to_aos shadow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1281: vm runs experimental soa stdlib ref helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1302: vm runs experimental soa stdlib ref method`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1323: vm runs experimental soa ref pass-through and return`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1354: runs vm experimental soa stdlib push and reserve helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1378: runs vm experimental soa stdlib push and reserve methods`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1402: vm runs experimental soa single-field index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1424: vm runs experimental soa reflected multi-field index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1447: vm runs experimental soa mutating indexed field writes`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1478: vm runs richer borrowed experimental soa mutating indexed field writes`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1511: vm runs method-like borrowed experimental soa mutating indexed field writes`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1554: vm runs borrowed experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1578: vm runs experimental soa bare get and ref field access`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1602: vm runs borrowed local experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1627: vm runs borrowed helper-return experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1656: vm runs experimental soa reflected call-form index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1698: vm runs experimental soa inline location borrow index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1734: vm runs dereferenced borrowed helper-return experimental soa reflected index syntax`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1763: vm runs borrowed helper-return experimental soa get/ref methods`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1800: vm runs borrowed helper-return soa ref_ref same-path helper compatibility`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1879: vm runs borrowed local experimental soa read-only methods`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1921: vm runs inline location experimental soa read-only methods`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:1958: vm runs borrowed helper-return experimental soa helper surfaces`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2004: vm runs method-like borrowed helper-return experimental soa helper surfaces`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2060: vm runs direct return borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2107: vm runs direct return method-like borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2158: vm runs direct return inline location borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2206: vm runs inline location method-like borrowed helper-return experimental soa helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2281: vm runs direct return inline location method-like borrowed helper-return experimental soa reads`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2333: vm runs inline location borrowed helper-return experimental soa helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2398: runs vm experimental soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2421: runs vm experimental soa storage borrowed ref helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2439: runs vm experimental soa storage borrowed view helper`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2458: rejects vm experimental soa storage reserve overflow`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2477: runs vm experimental two-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2501: runs vm experimental three-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2526: runs vm experimental four-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2552: runs vm experimental five-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2579: runs vm experimental six-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2607: runs vm experimental seven-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2636: runs vm experimental eight-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2666: runs vm experimental nine-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2692: runs vm experimental ten-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2719: runs vm experimental eleven-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2740: runs vm experimental twelve-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2761: runs vm experimental thirteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2782: runs vm experimental fourteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2803: runs vm experimental fifteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2825: runs vm experimental sixteen-column soa storage helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3376: runs vm imported container error contract conformance`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3388: runs vm with templated stdlib vector wrapper temporary call forms`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3412: runs vm templated stdlib vector wrapper temporary methods in expressions`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:442: rejects vm templated stdlib vector wrapper temporary call index mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp:522: rejects vm templated stdlib vector wrapper temporary unsafe call index mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:303: runs vm with user wrapper temporary index shadow precedence`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:8: runs vm with method call result`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:28: vm supports support-matrix binding types`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:61: runs vm with raw string literal output`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:76: runs vm with raw single-quoted string literal output`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:92: runs vm with string literal indexing`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:151: runs vm software renderer clip stack serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:204: runs vm software renderer clip underflow stays deterministic`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:245: runs vm software renderer empty text serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:284: runs vm two-pass layout tree serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:325: runs vm two-pass layout empty root deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:360: runs vm basic widget controls through layout deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:422: runs vm panel container widget deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_basic.cpp:489: runs vm empty panel container stays balanced deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:8: vm uses stdlib File helper wrappers`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:54: vm uses stdlib File open helper wrappers`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:112: vm stdlib File close helper disarms the original handle`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:154: vm uses stdlib File string helper wrappers`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:197: vm uses stdlib File helper wrappers and broader fallback arities`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:263: vm resolves templated helper overload families by exact arity`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:307: vm supports graphics-style int return propagation with on_error`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:369: vm supports string Result.ok payloads through try`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:407: vm supports direct string Result combinator consumers`
+- `tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp:444: vm supports definition-backed string Result combinator sources`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:9: vm maps FileError.why codes`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:29: vm uses stdlib ImageError result helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:60: vm uses stdlib ImageError why wrapper`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:104: vm uses stdlib ImageError constructor wrappers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:138: vm uses stdlib GfxError result helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:177: vm uses canonical stdlib GfxError result helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:214: vm uses canonical stdlib GfxError why helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:258: vm uses canonical stdlib GfxError constructors`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:292: vm uses stdlib experimental Buffer helper methods`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:322: vm uses canonical stdlib Buffer helper methods`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:352: vm uses stdlib experimental Buffer readback helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:375: vm uses canonical stdlib Buffer readback helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:398: vm uses stdlib experimental Buffer allocation helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:416: vm uses canonical stdlib Buffer allocation helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:434: vm uses stdlib experimental Buffer allocation readback path`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:452: vm uses canonical stdlib Buffer allocation readback path`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:470: vm uses stdlib experimental Buffer upload helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:491: vm uses canonical stdlib Buffer upload helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:512: vm uses stdlib FileError why wrapper`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:537: vm uses stdlib FileError eof wrapper`
+- `tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp:571: vm uses stdlib FileError eof constructor wrapper`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:8: vm supports string return types`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:28: vm supports Result.why hooks`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:60: vm supports stdlib FileError result helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:122: vm supports imported stdlib Result sum pick`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:159: vm supports Result.error on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:186: vm supports Result.why on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:222: vm supports Result.ok compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:277: vm supports Result.map compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:339: vm supports Result.and_then compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:418: vm supports Result.map2 compatibility on imported stdlib Result sum`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:497: vm supports direct stdlib Result sum sources in compatibility combinators`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:625: vm supports Result.map on IR-backed path`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:662: vm supports Result.and_then on IR-backed path`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:706: vm supports Result.map2 on IR-backed path`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:751: vm supports f32 Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:785: vm supports direct Result.ok combinator sources on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:818: vm supports direct packed ContainerError and ImageError Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:844: vm supports packed error struct Result combinator payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:888: vm supports direct single-slot struct Result.ok payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:923: vm supports try on imported stdlib Result sum ok`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:948: vm supports try on imported stdlib Result sum error`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:977: vm supports postfix question on direct imported stdlib Result sum ok`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:1006: vm supports postfix question on direct imported stdlib Result sum error`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:1054: vm supports dereferenced borrowed stdlib Result sum helpers`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:1149: vm propagates imported stdlib Result sum try ok through Result return`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_basic.cpp:1188: vm propagates imported stdlib Result sum try error through Result return`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:8: vm supports single-slot struct Result combinator payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:53: vm supports direct File Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:99: vm supports packed File Result combinator payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:161: vm supports multi-slot struct Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:217: vm supports direct array and vector Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:255: vm supports block-bodied Result.and_then lambdas on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:285: vm supports final-if Result.and_then lambdas on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:315: vm supports direct map Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:348: vm supports Buffer Result payloads on IR-backed paths`
+- `tests/unit/compile_run/test_compile_run_vm_core_results_structs.cpp:421: vm supports auto-bound direct Result combinator try consumers`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:8: runs vm with heap alloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:22: runs vm with heap free intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:38: runs vm with heap realloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:56: runs vm with checked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:74: runs vm with unchecked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:123: runs vm with match cases`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:136: runs vm with single task spawn wait`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:155: runs vm with multi task wait tuple`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:182: runs vm with chained method calls`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:211: runs vm with import alias`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:230: runs vm with multiple imports`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:249: runs vm with whitespace-separated imports`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:268: runs vm with capabilities and default effects`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:317: runs vm with implicit utf8 strings`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:332: runs vm with implicit utf8 single-quoted strings`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:348: runs vm with escaped utf8 strings`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:363: runs vm with raw utf8 single-quoted strings`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:9: runs vm scene model authoring deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:18: runs vm ui scene adapter deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:35: runs vm composite login form deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:105: runs vm html adapter login form deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:178: runs vm ui event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:232: runs vm ui ime event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_ui.cpp:283: runs vm ui resize and focus event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:22: vm accepts string pointers`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:83: vm ignores top-level executions`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:102: vm materializes variadic Result packs with indexed why and try access`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:157: vm materializes variadic status-only Result packs with indexed error and why access`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:256: vm forwards variadic Reference<Buffer> packs through helper methods`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:284: vm forwards variadic Pointer<Buffer> packs through helper methods`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:374: vm materializes variadic borrowed Result packs with indexed dereference try and why access`
+- `tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp:446: vm materializes variadic pointer Result packs with indexed dereference try and why access`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:5: runs vm with gpu dispatch fallback`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:36: runs vm with canonical stdlib Buffer compute access helpers`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:63: runs vm with experimental stdlib Buffer compute access helpers`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:90: runs vm with gpu dispatch fallback and variadic Buffer packs`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:153: runs vm variadic Reference<Buffer> packs through location/dereference`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:204: runs vm variadic Pointer<Buffer> packs with dereference helpers`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:258: runs vm with gpu dispatch fallback and borrowed variadic Buffer packs`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:331: runs vm with gpu dispatch fallback and pointer variadic Buffer packs`
+- `tests/unit/compile_run/test_compile_run_vm_gpu.cpp:404: runs vm with canonical stdlib Buffer arg-pack method receivers`
+- `tests/unit/compile_run/test_compile_run_vm_maps.cpp:5: runs vm with map constructor`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:19: runs vm with qualified math names`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:64: runs vm float literals`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:76: runs vm float bindings`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:90: rejects vm support-matrix math nominal helpers`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:115: runs vm quaternion multiply and rotation helpers`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:135: runs vm matrix composition order helpers`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:170: runs vm matrix arithmetic helpers with tolerance`
+- `tests/unit/compile_run/test_compile_run_vm_math.cpp:229: runs vm quaternion arithmetic helpers with tolerance`
+- `tests/unit/compile_run/test_compile_run_vm_maybe.cpp:59: runs vm with Maybe none and helper methods`
+- `tests/unit/compile_run/test_compile_run_vm_maybe.cpp:88: runs vm with Maybe present variant payload`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:8: writes serialized ir output`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:62: writes outputs under out dir`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:81: runs vm file io`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:118: runs vm file read_byte with deterministic eof`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:165: runs vm image api contract deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:198: runs vm ppm read for ascii p3 inputs`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:252: runs vm ppm read for binary p6 inputs`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:312: rejects truncated vm binary ppm reads deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:359: rejects oversized vm image read dimensions before overflow`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:441: runs vm ppm write for ascii p3 outputs`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:476: rejects invalid vm ppm write inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:503: runs vm png write for deterministic rgb outputs`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:541: rejects invalid vm png write inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:568: rejects oversized vm image write dimensions before overflow`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:677: runs vm png read for stored sub-filter rgba inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:743: runs vm png read for stored up-filter rgba inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:809: runs vm png read for stored average-filter rgba inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:877: runs vm png read for fixed-huffman backreference rgba inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:949: runs vm png read for dynamic-huffman literal indexed inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1022: runs vm png read for dynamic-huffman backreference rgba inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1097: rejects malformed vm png inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1139: rejects vm png inputs with critical chunk crc mismatches deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1192: rejects vm png inputs with non-consecutive idat chunks deterministically`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1251: defaults to cpp extension for emit=cpp`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1273: defaults to cpp extension for emit=cpp-ir`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1325: cpp-ir emitter writes IR-lowered cpp for integer subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1345: cpp-ir emitter writes string and argv print paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1366: cpp-ir emitter writes dynamic string print path`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1388: cpp-ir emitter writes string indexing paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1410: cpp emitter uses ir backend for string indexing`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1433: cpp-ir emitter writes pointer indirect paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1456: cpp emitter uses ir backend for pointer indirect paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1478: cpp-ir emitter writes callable dispatch paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1509: cpp-ir emitter writes file read paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1533: cpp-ir emitter writes file io paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1560: cpp emitter uses ir backend for file io subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1586: cpp-ir emitter writes f64 arithmetic paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1606: cpp emitter uses ir backend for f64 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1627: cpp-ir emitter writes f64 conversion paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1652: cpp emitter uses ir backend for f64 conversion subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1676: cpp-ir emitter writes f64 to i32 conversion paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1695: cpp emitter uses ir backend for f64 to i32 conversion`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1715: cpp-ir emitter writes f32 to i64 conversion paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1734: cpp emitter uses ir backend for f32 to i64 conversion`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1754: cpp-ir emitter writes f64 to i64 conversion paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1773: cpp emitter uses ir backend for f64 to i64 conversion`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1793: cpp-ir emitter writes f64 to u64 conversion paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1812: cpp emitter uses ir backend for f64 to u64 conversion`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1832: cpp-ir emitter writes f64 comparison paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1850: cpp emitter uses ir backend for f64 comparison subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1868: cpp-ir emitter writes f32 arithmetic and comparison paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1889: cpp emitter uses ir backend for f32 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1909: defaults to psir extension for emit=ir`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1931: cpp emitter uses ir backend for file read subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1956: void main with local binding`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1968: exe-ir emitter compiles and runs i32 subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:1986: exe-ir emitter compiles and runs i64 subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2005: exe-ir emitter compiles and runs argv prints`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2024: exe-ir emitter compiles and runs dynamic string print`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2045: exe-ir emitter compiles and runs string indexing`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2065: exe-ir emitter compiles and runs pointer indirect paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2084: exe-ir emitter compiles and runs heap alloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2102: exe-ir emitter compiles and runs heap free intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2122: exe-ir emitter compiles and runs heap realloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2144: exe-ir emitter compiles and runs checked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2166: exe-ir emitter compiles and runs unchecked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2188: exe-ir emitter faults on checked memory at out of bounds`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2208: exe-ir emitter faults on dereference after heap free intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2230: exe-ir emitter compiles and runs file io subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2271: exe-ir emitter reports misaligned pointer dereference`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2291: exe-ir emitter compiles and runs call and callvoid paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2320: exe-ir emitter compiles and runs f32 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2339: exe-ir emitter compiles and runs f64 comparison subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2355: exe emitter uses ir backend for f32 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2370: exe emitter uses ir backend for string indexing`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2390: exe emitter uses ir backend for pointer indirect paths`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2406: exe emitter uses ir backend for heap alloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2421: exe emitter uses ir backend for heap free intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2438: exe emitter uses ir backend for heap realloc intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2457: exe emitter uses ir backend for checked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2476: exe emitter uses ir backend for unchecked memory at intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2495: exe emitter uses ir backend for file io subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2533: exe-ir emitter compiles and runs f64 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2551: exe emitter uses ir backend for f64 comparison subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2564: exe emitter uses ir backend for f64 arithmetic subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2579: exe-ir emitter compiles and runs f64 conversion subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2599: exe emitter uses ir backend for f64 conversion subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2616: exe-ir emitter compiles and runs f64 to i32 conversion`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2645: exe-ir emitter clamps f32/f64 to i64 conversion edges`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2669: exe emitter uses ir backend for f32/f64 to i64 conversion edges`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2689: exe-ir emitter truncates in-range f32/f64 to i64`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2710: exe emitter uses ir backend for in-range f32/f64 to i64 truncation`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2727: exe-ir emitter truncates in-range f32/f64 to u64`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2748: exe emitter uses ir backend for in-range f32/f64 to u64 truncation`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2766: cpp and exe emitters match cpp-ir and exe-ir on shared corpus`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2983: explicit void return`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2995: exe emitter uses ir backend for file read subset`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3014: implicit void main`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3026: argv count`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3040: argv count helper`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3054: argv error output in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3069: argv error output without newline in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3085: argv error output u64 index in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3104: argv unsafe error output in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3123: argv unsafe line error output in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3142: argv print in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3161: argv print without newline in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3180: argv print with u64 index in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3198: argv unsafe access in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3217: argv unsafe access with u64 index in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3235: three-element array literal`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3247: array literal count method`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3259: array literal unsafe access`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3271: array count helper`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:3284: array literal count helper`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:5: runs vm with uninitialized local storage`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:44: runs vm with pointer-backed uninitialized storage`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:60: runs vm with reference-backed uninitialized storage`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:75: runs vm with pointer-backed uninitialized struct storage`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:97: runs vm with uninitialized borrow`
+- `tests/unit/compile_run/test_compile_run_vm_uninitialized.cpp:114: runs vm with dereferenced uninitialized borrow`
+
+</details>
+
+## AMBIGUOUS (needs manual look)
+
+<details><summary>Expand full list</summary>
+
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:22: benchmark baseline artifact includes native allocator coverage`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:35: semantic memory benchmark fixtures are checked in`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:51: semantic memory benchmark helper keeps primary fixture first`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:68: semantic memory primary fixture stays minimal math-star reproducer`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:366: semantic memory budget policy artifacts are checked in`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:540: semantic memory phase-one success criteria artifacts are checked in`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:2420: semantic memory benchmark helper defines method-target memoization delta report fields`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3273: semantic memory ci artifact wrapper forwards definition worker mode`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3736: semantic benchmark plumbing keeps production validate surface narrow`
+- `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp:3852: tsan semantics smoke is gated behind optional-ci wiring`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:10: array slice count and indexed access in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:291: C++ emitter rejects experimental map custom comparable struct keys`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:552: C++ emitter compiles nested Result combinators`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:557: C++ emitter compiles Result.and_then direct Result.ok lambda`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:562: C++ emitter supports image api contract deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:582: C++ emitter runs software renderer command serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:592: C++ emitter runs software renderer clip stack serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:603: C++ emitter runs two-pass layout tree serialization deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:614: C++ emitter runs two-pass layout empty root deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:624: C++ emitter runs basic widget controls through layout deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:635: C++ emitter runs panel container widget deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:646: C++ emitter runs empty panel container stays balanced deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:656: C++ emitter runs composite login form deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:667: C++ emitter runs html adapter login form deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:678: C++ emitter runs ui event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:689: C++ emitter runs ui ime event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_core_behaviors.cpp:700: C++ emitter runs ui resize and focus event stream deterministically`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:252: rejects explicit canonical vector remove methods without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp:375: rejects builtin count on canonical map reference string access without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:196: C++ emitter rejects lambda explicit vector mutator statements without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:215: C++ emitter rejects lambda cross-path explicit vector mutator statements before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:238: C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:261: C++ emitter rejects lambda explicit vector mutator methods without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:280: C++ emitter rejects lambda cross-path explicit vector mutator methods before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:303: C++ emitter lambda mutator mismatch rejects user helper signatures`
+- `tests/unit/compile_run/test_compile_run_emitters_lambda_mutator_resolution.cpp:325: C++ emitter lambda mutator mismatch rejects call-form helper`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:383: C++ emitter helper rejects full-path array mutator aliases`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:393: C++ emitter helper rejects rooted vector mutator aliases`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:403: C++ emitter helper accepts canonical vector mutators without alias bridge`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:432: C++ emitter helper rejects array namespaced vector constructor alias builtin`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:441: C++ emitter helper rejects rooted map constructor alias builtin`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:451: C++ emitter helper rejects bare vector count methods without helper metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:485: C++ emitter helper resolves bare vector count methods when helper metadata exists`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:519: C++ emitter helper rejects bare vector capacity methods without helper metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:548: C++ emitter helper resolves bare vector capacity methods when helper metadata exists`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:582: C++ emitter helper keeps explicit stdlib vector count and capacity methods canonical`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:621: C++ emitter helper prefers stdlib File flush helper when present`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:659: C++ emitter helper prefers stdlib File close helper when present`
+- `tests/unit/compile_run/test_compile_run_emitters_map_access_and_collection_rewrites.cpp:697: C++ emitter helper prefers stdlib File multi-value helpers when present`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:9: C++ emitter helper resolves direct slashless canonical map return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:53: C++ emitter helper resolves parser-shaped canonical map return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:98: C++ emitter helper keeps canonical map access method unresolved without metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:141: C++ emitter helper rejects removed full-path map method aliases`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:176: C++ emitter helper rejects full-path map aliases without receiver type`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:200: C++ emitter helper normalizes slashless map type import alias method targets`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:257: C++ emitter helper prefers canonical map method sugar over compatibility aliases`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:369: C++ emitter helper rejects canonical metadata fallback for explicit map slash methods`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:424: C++ emitter helper rejects compatibility metadata fallback for canonical map slash methods`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:479: C++ emitter helper rejects same-path map contains and tryAt slash-method metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:535: C++ emitter helper keeps same-path map access slash-method metadata precedence`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:598: C++ emitter helper rejects explicit map slash-method count receiver fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:659: C++ emitter helper rejects cross-path direct map count and contains receiver metadata fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:720: C++ emitter helper rejects canonical return-struct fallback for direct map tryAt compatibility calls`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:766: C++ emitter helper rejects rooted map contains and tryAt direct-call return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:822: C++ emitter helper keeps canonical map contains and tryAt direct-call return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:872: C++ emitter helper rejects rooted map access direct-call return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:922: C++ emitter helper keeps canonical map access direct-call return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_map_metadata_resolution.cpp:972: C++ emitter helper keeps cross-path vector alias access struct-return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:9: rejects C++ matrix arithmetic helpers with unsupported divide lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:83: rejects C++ quaternion arithmetic helpers with unsupported divide lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:187: rejects string-keyed map constructor in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:530: canonical vector discard helpers with owned elements in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:557: rejects vector reserve with non-relocation-trivial elements in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp:592: rejects vector constructor with non-relocation-trivial elements in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:41: rejects vector namespaced count capacity access aliases without helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:99: C++ emitter rejects vector namespaced mutator alias statement without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp:505: rejects direct builtin contains on canonical map access without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:87: rejects auto-inferred std namespaced count helper return mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:295: rejects user vector mutator bool positional call shadow in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:465: rejects wrapper std namespaced access helper named receiver without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:491: rejects removed vector access alias named arguments in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp:510: rejects removed vector access alias at_unsafe named arguments in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:9: C++ emitter helper rejects bare vector access methods without helper metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:59: C++ emitter helper resolves bare vector access methods through canonical helper metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:111: C++ emitter helper keeps bare vector access canonical metadata precedence`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:159: C++ emitter helper rejects canonical metadata fallback for explicit vector count capacity aliases`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:202: C++ emitter helper keeps /vector/count while rejecting removed full-path vector aliases`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:244: C++ emitter helper keeps canonical receiver metadata for namespaced map access`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:289: C++ emitter helper falls back to canonical map receiver metadata when alias missing`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:333: C++ emitter helper rejects bare map access metadata-only struct forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:389: C++ emitter helper rejects direct map access compatibility metadata fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:434: C++ emitter helper keeps slash-path map access struct forwarding`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:480: C++ emitter helper normalizes slashless map import receiver metadata paths`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:530: C++ emitter helper resolves map method via import-alias return metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:575: C++ emitter helper normalizes slashless map metadata lookup targets`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_metadata_resolution.cpp:620: C++ emitter helper resolves direct slashless canonical map receiver metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:44: C++ emitter rejects vector namespaced access slash methods without alias helper before lowering`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:66: rejects vector namespaced access slash methods without alias helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:88: rejects stdlib vector namespaced access slash methods without canonical helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:418: C++ emitter rejects bare vector mutator calls without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:438: C++ emitter rejects bare vector mutator methods without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:459: C++ emitter rejects explicit vector mutator alias methods without helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:480: rejects bare vector mutator call statements without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:500: rejects bare vector mutator method statements without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:520: rejects explicit vector mutator alias method statements without helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:542: rejects explicit canonical vector clear method without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:564: rejects explicit canonical vector push method without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:586: rejects explicit canonical vector pop method without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:608: rejects explicit canonical vector reserve method without imported helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:658: C++ emitter rejects alias vector mutator methods with canonical-only helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:684: rejects alias vector mutator methods with canonical-only helper in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp:710: slash alias C++ emitter rejects canonical vector mutator methods with alias-only helper before emission`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:9: rejects vector alias arity-mismatch compatibility template forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:68: rejects vector alias compatibility template forwarding on non-bool type mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:92: rejects vector alias compatibility template forwarding on struct type mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:120: rejects vector alias compatibility template forwarding on constructor temporary struct mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:147: rejects vector alias compatibility template forwarding on method-call temporary struct mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:181: rejects vector alias compatibility template forwarding on chained method-call temporary struct mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:222: rejects vector alias compatibility template forwarding on array envelope element mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:247: rejects vector alias compatibility template forwarding on map envelope mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:272: rejects vector alias compatibility template forwarding on map envelope mismatch from call return in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:301: rejects vector alias compatibility template forwarding on primitive mismatch from call return in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:330: rejects vector alias compatibility template forwarding when unknown expected meets primitive call return in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:361: rejects vector alias compatibility template forwarding when unknown expected meets primitive binding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:388: rejects vector alias compatibility template forwarding when unknown expected`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:416: rejects vector helper method expression legacy alias forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_alias_template_forwarding.cpp:442: rejects vector alias named-argument compatibility template forwarding in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:9: C++ emitter helper keeps cross-path vector access return-kind metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:60: C++ emitter helper keeps vector alias direct-call method receiver without metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:105: C++ emitter helper rejects canonical direct-call method receiver without metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:149: C++ emitter helper resolves canonical direct-call method receiver through same-path metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:195: C++ emitter helper resolves parser-shaped canonical direct-call method receiver through same-path metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:240: C++ emitter helper resolves explicit vector slash-method receivers through builtin receiver typing`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:311: C++ emitter helper prefers same-path vector slash-method access return-kind metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:364: C++ emitter helper handles cross-path vector slash-method access metadata fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:421: C++ emitter helper handles explicit vector slash-method receivers without metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:476: C++ emitter helper handles explicit removed vector slash count capacity helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:535: C++ emitter helper handles parser-shaped canonical vector count capacity methods`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:580: C++ emitter helper resolves borrowed soa receiver methods to canonical ref helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:639: C++ emitter helper resolves borrowed local soa field methods through concrete specialization metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:681: C++ emitter helper resolves location and dereference soa field methods through concrete specialization metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:733: C++ emitter helper resolves helper-return soa borrow methods to canonical ref helpers`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:812: C++ emitter helper resolves helper-return concrete soa field methods through return-struct metadata`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:864: C++ emitter helper keeps helper-return soa mutator shadows on wrapper paths`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:951: C++ emitter helper keeps direct helper-return soa mutator shadows on wrapper paths`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:1029: C++ emitter helper keeps nested helper-return soa mutator shadows on wrapper paths`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:1117: C++ emitter helper handles cross-path vector slash count capacity fallback`
+- `tests/unit/compile_run/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp:1193: rejects templated stdlib canonical vector helper method template args in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_args.cpp:149: spinning cube demo script rejects invalid port-base values`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_args.cpp:175: spinning cube demo script rejects missing primec values`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_args.cpp:201: spinning cube demo script rejects missing work-dir values`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_args.cpp:227: spinning cube demo script rejects missing port-base values`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_args.cpp:253: spinning cube demo script rejects explicit primec paths that are not executable files`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_args.cpp:294: spinning cube demo script rejects invalid default primec paths`
+- `tests/unit/compile_run/test_compile_run_examples_demo_script_args.cpp:350: spinning cube demo script rejects unknown tokens`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:10: compiles concrete examples to IR`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:18: compiles template and inference examples to IR`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:27: compiles surface examples to IR`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:35: compiles web examples to IR`
+- `tests/unit/compile_run/test_compile_run_examples_docs.cpp:186: collection docs snippets stay code-examples style and executable`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:76: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:139: contributor doctest guardrails stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:156: focused backend rerun helper stays documented`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:189: skipped doctest debt stays absent from unit shards`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:200: spinning cube native-window status avoids inactive TODO pointers`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:234: vector dynamic-storage docs lock completed first slice`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:318: semantic-product docs avoid inactive Group 12 pointers`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:364: reflection metadata docs avoid inactive roadmap pointers`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:389: result payload docs avoid inactive follow-up pointers`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:416: graphics UI docs avoid inactive follow-up pointers`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:454: coding guidelines avoid inactive surface status pointers`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:491: stdlib style boundary docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:588: vector map bridge boundary docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:713: stdlib de-experimentalization policy docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:810: generic contiguous buffer substrate docs and coverage stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:870: soa public collection docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1113: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1117: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1121: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1127: legacy soa compatibility rejection matrix stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1204: soa compatibility fixture migration boundary stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1242: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1244: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1246: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1248: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1250: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1252: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1255: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1259: arg-pack docs do not point at inactive TODO slices`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1315: generic soa substrate boundary stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1405: canonical soa example stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1456: source lock inventory keeps replacement surfaces explicit`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1485: status-only result bridge docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1534: Result helper compatibility adapter inventory stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1597: generic requirement predicate surface stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1805: safe pointer optionality docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1861: capability parameterized views docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:1938: task spawn wait prototype docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:2003: todo queue and skipped doctest debt stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3163: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3164: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3166: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3168: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3171: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3173: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3175: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3177: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3179: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3181: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3184: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3186: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3188: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3191: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3193: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3195: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3197: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3199: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3201: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3203: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3206: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3209: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3213: constructor-shaped compatibility inventory stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3270: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3273: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3276: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3279: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3282: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3284: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3287: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3291: <unnamed>`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3302: scene renderer ui producer contract stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3472: ui command list adapter docs stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3678: image api docs and stdlib stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:3954: file readByte docs and helpers stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4104: container error docs and helpers stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4165: maybe stdlib control flow stays source locked to surface if syntax`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4217: small stdlib wrappers stay source locked to inferred locals`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4482: ppm image workflows keep explicit read locals`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4535: png prelude image workflows keep explicit read locals`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4616: png scanline bitstream and inflate helpers stay source locked to inferred locals`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4722: png top-level read write workflows stay source locked to inferred locals`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4817: gfx stdlib wrappers stay source locked to parser-safe locals`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4880: ui stdlib workflows stay source locked to inferred locals`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4928: surface examples stay source locked to lowering-compatible helper forms`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:4963: gfx stdlib compatibility shim stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:5042: ui stdlib arithmetic and assignment stay source locked to surface operators`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:5071: ui scene producer composite widgets stay locked to basic widgets`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:5138: ui html adapter stays source locked to shared widgets`
+- `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp:5163: ui event stream stays source locked to normalized helpers`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:97: spinning cube metal host pipeline config locks vertex descriptor wiring`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:148: spinning cube metal host software surface bridge stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:171: shared metal offscreen host helper stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:202: shared spinning cube simulation reference helper stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:222: shared browser runtime helper stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:240: browser spinning cube launcher wrapper stays thin over shared helper`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:338: browser launcher compile run coverage validates shared helper path`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:397: metal spinning cube launcher wrapper stays thin over shared helper`
+- `tests/unit/compile_run/test_compile_run_examples_metal_and_browser_hosts.cpp:489: spinning cube vertexcolored snippets stay source locked`
+- `tests/unit/compile_run/test_compile_run_examples_native_launcher.cpp:7: native window launcher wrapper delegates to shared gfx helper`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:81: spinning cube stdlib gfx frame stream entry stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:401: spinning cube native window host locks indexed cube pipeline resources`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:457: spinning cube native window host software surface bridge stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:489: shared gfx contract header stays source locked`
+- `tests/unit/compile_run/test_compile_run_examples_spinning_cube_native.cpp:528: shared native metal window helper stays source locked`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:53: generic same-type and value requirements execute across backends`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:69: constrained overload selection executes the only viable candidate`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:90: selected ct_if branches execute and discarded branches stay inert`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:122: direct requirement failures include call and predicate provenance`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:149: requirement diagnostics improve unconstrained generic failures`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:193: constrained overload diagnostics cover ambiguity and value failures`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:307: runtime count contract admits callers it cannot prove statically`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:328: runtime count contract failure exits with the contract message`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:352: runtime integer parameter contracts check each call boundary`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:387: runtime contracts stay rejected on the program entry definition`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:403: non-checkable runtime require operands stay compile-time errors`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:435: self-recursive scalar function computes factorial across backends`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:454: self-recursive scalar function with two recursive calls computes fibonacci`
+- `tests/unit/compile_run/test_compile_run_generic_requirements.cpp:473: mutually recursive scalar functions resolve forward call references across backends`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:948: glsl emitter lowers quaternion nominal values and quaternion operators`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1000: glsl emitter lowers quaternion conversion helpers`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1043: glsl emitter surfaces quaternion shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1067: glsl emitter lowers matrix nominal values field access and matrix operators`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1122: glsl emitter accepts vector nominal values and matrix vector multiply`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1181: glsl emitter lowers documented vector arithmetic operators`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1435: glsl emitter rejects mixed signed/unsigned math`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1488: glsl emitter rejects unsupported capabilities`
+- `tests/unit/compile_run/test_compile_run_glsl.cpp:1503: glsl emitter rejects effects on executions`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:836: direct experimental soaVectorToAos helpers on builtin soa reject in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1035: rejects global helper-return soa method shadows in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:1095: rejects method-like helper-return soa method shadows in C++ emitter compatibility`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3300: canonical namespaced map helpers on experimental map values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3304: wrapper map helpers on experimental map values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3308: ownership-sensitive experimental map value methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3312: helper-wrapped inferred experimental map returns in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3316: helper-wrapped experimental map parameters in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3320: helper-wrapped experimental map bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3324: helper-wrapped experimental map assignment RHS values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3328: canonical namespaced map constructors on explicit experimental map bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3332: canonical namespaced map constructors through explicit experimental map returns in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3336: canonical namespaced map constructors through explicit experimental map parameters in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3340: wrapper map constructors on explicit experimental map bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3344: wrapper map constructors through explicit experimental map returns in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3348: wrapper map constructors through explicit experimental map parameters in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3352: experimental map constructor assignments in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3356: implicit map auto constructor inference in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3360: inferred experimental map returns in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3364: block inferred experimental map returns in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3368: auto block inferred experimental map returns in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3372: inferred experimental map call receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3376: rejects explicit experimental map struct field constructors in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3380: inferred experimental map struct fields in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3384: helper-wrapped inferred experimental map struct fields in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3388: experimental map method parameters in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3392: inferred experimental map parameters in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3396: inferred experimental map default parameters in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3400: helper-wrapped inferred experimental map default parameters in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3404: experimental map helper receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3408: helper-wrapped experimental map helper receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3412: runs direct-constructor experimental map method receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3416: runs helper-wrapped experimental map method receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3420: experimental map field assignments through canonical helper access in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3424: dereferenced experimental map storage references in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3428: helper-wrapped Result.ok experimental map result struct fields in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3432: helper-wrapped dereferenced Result.ok experimental map result struct fields in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3436: helper-wrapped experimental map struct storage fields in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3440: helper-wrapped dereferenced experimental map struct storage fields in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3444: rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3448: canonical namespaced map _ref helpers on borrowed experimental map values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3452: experimental map methods on bound map values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3456: borrowed experimental map helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3460: public borrowed map wrappers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3464: borrowed experimental map methods in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3468: experimental map inserts in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3472: experimental map ownership-sensitive values in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3476: canonical namespaced map inserts on explicit experimental map bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3480: builtin canonical map first-growth inserts in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3484: builtin canonical map repeated-growth inserts in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3488: builtin canonical map insert overwrites in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3492: builtin canonical map non-local growth in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3496: builtin canonical map nested non-local growth in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3500: builtin canonical map helper-return borrowed method inserts in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3504: builtin canonical map struct-field initializer in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3508: builtin canonical map direct insert on helper-return value receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3512: builtin canonical map method insert on helper-return value receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3516: builtin canonical map direct insert on borrowed holder field receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3520: rejects canonical map constructor ownership growth in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3524: rejects experimental map bracket access in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3528: shared vector conformance harness in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3532: canonical namespaced vector helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3536: canonical namespaced vector helpers on explicit Vector bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3540: stdlib wrapper vector helpers on explicit Vector bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3544: rejects stdlib wrapper vector helper explicit Vector mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3548: stdlib wrapper vector constructors on explicit Vector bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3552: keeps stdlib wrapper vector constructor explicit Vector mismatch contract in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3556: stdlib wrapper vector constructors on inferred auto bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3560: rejects stdlib wrapper vector constructor auto inference mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3564: rejects stdlib wrapper vector constructor receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3568: rejects stdlib wrapper vector helper receiver mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3572: rejects stdlib wrapper vector method receiver mismatch in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3576: rejects canonical namespaced vector constructor temporaries in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3580: rejects canonical namespaced vector explicit builtin bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3584: rejects canonical namespaced vector named-argument temporaries in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3588: rejects canonical namespaced vector named-argument explicit builtin bindings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3592: rejects canonical namespaced vector mutators without imported helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3665: bare vector mutators reject without imported helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3674: experimental vector helper runtime contracts in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3678: experimental vector ownership-sensitive helpers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3682: canonical vector helpers on experimental vector receivers in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3685: vector pop empty runtime contract in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3695: vector index runtime contract in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3709: checked pointer conformance harness in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_imports_operations.cpp:3715: unchecked pointer conformance harness in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:26: math conformance PrimeStructc policy docs`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:39: math conformance labeled output allowlist`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:48: math conformance sign and range helpers`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:61: math conformance batch emit helper`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:95: math conformance constants`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:164: math conformance exp log basics`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:231: math conformance roots`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:285: math conformance trig quadrants axes`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:336: math conformance trig quadrants symmetries`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:382: math conformance trig quadrants range reduction`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:437: math conformance float helpers parse tokens`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:451: math conformance float helpers compare tolerance`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:467: math conformance trig basics`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:539: math conformance inverse trig and atan2`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:633: math conformance hyperbolic`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:687: math conformance inverse hyperbolic`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:732: math conformance exp and log`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:775: math conformance exp/log domains`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:825: math conformance float64 basics`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:881: math conformance float64 inverse trig and logs`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:931: math conformance float64 hyperbolic`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:980: math conformance float64 grids`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1044: math conformance float64 rounding`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1087: math conformance roots and pow`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1138: math conformance rounding`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1187: math conformance misc ops`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1280: math conformance stress grid`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1341: math conformance float baseline trigonometric samples`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1371: math conformance float baseline transcendental samples`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1402: math conformance float baseline composition samples`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1431: math conformance float grid sin`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1462: math conformance float grid cos`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1493: math conformance float grid exp_log`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1528: math conformance float grid hypot`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1555: math conformance native approximation limits`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1608: math conformance heavy trig workload`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1645: math conformance heavy exp log workload`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1682: math conformance array math usage`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1723: math conformance dense grids`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1830: math conformance deterministic samples`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1895: math conformance deterministic exp/log samples`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:1962: math conformance fixed seed samples`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:2012: math conformance conversions and comparisons`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:2090: math conformance policy behavior`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:2162: math conformance integer edge cases`
+- `tests/unit/compile_run/test_compile_run_math_conformance.cpp:2201: math conformance atan2 edges`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:201: native namespaced wrapper string access method chain compatibility fallback`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:324: native unchecked pointer conformance harness for imported .prime helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:329: rejects native array namespaced vector constructor alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:351: rejects native array namespaced vector at alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:374: rejects native array namespaced vector at_unsafe alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:399: rejects native wrapper array namespaced vector at alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:423: rejects native wrapper array namespaced vector at_unsafe alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:449: rejects native array namespaced vector count builtin alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:473: rejects native array namespaced vector count method alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:501: rejects native array namespaced vector capacity method alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:529: rejects native map namespaced count compatibility alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:557: rejects native map namespaced contains compatibility alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_arrays_and_aliases.cpp:587: rejects native map namespaced tryAt compatibility alias`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:79: rejects native auto-inferred std namespaced vector push compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:246: rejects native std namespaced count without imported helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:269: rejects native std namespaced count map target without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:296: rejects native alias count map target without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:323: rejects native std namespaced capacity map target without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:350: rejects native alias capacity map target without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp:405: rejects native alias capacity array target without helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:856: native rejects direct experimental soa to-aos helper on builtin soa`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1203: native rejects global helper-return soa method shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:1261: native rejects method-like helper-return soa method shadows compatibility`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3589: rejects native canonical namespaced map helpers on experimental map values`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3593: rejects native wrapper map helpers on experimental map values`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3597: rejects native ownership-sensitive experimental map value methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3601: native helper-wrapped inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3605: native helper-wrapped experimental map parameters`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3609: native helper-wrapped experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3613: native helper-wrapped experimental map assignment RHS values`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3617: rejects native canonical namespaced map constructors on explicit experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3621: rejects native canonical namespaced map constructors through explicit experimental map returns`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3625: rejects native canonical namespaced map constructors through explicit experimental map parameters`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3629: native wrapper map constructors on explicit experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3633: native wrapper map constructors through explicit experimental map returns`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3637: native wrapper map constructors through explicit experimental map parameters`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3641: rejects native experimental map variadic constructors`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3645: rejects native experimental map variadic constructor type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3649: native experimental map constructor assignments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3653: native implicit map auto constructor inference`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3657: rejects native inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3661: native block inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3665: native auto block inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3669: rejects native inferred experimental map call receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3673: rejects native experimental map struct fields`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3677: rejects native inferred experimental map struct field constructor expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3681: rejects native helper-wrapped inferred experimental map struct field constructor expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3685: rejects native experimental map method parameter constructor expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3689: rejects native inferred experimental map parameter call expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3693: rejects native inferred experimental map default parameter call expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3697: rejects native helper-wrapped inferred experimental map default parameter call expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3701: native experimental map helper receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3705: native helper-wrapped experimental map helper receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3709: rejects native experimental map method receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3713: rejects native helper-wrapped experimental map method receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3717: native experimental map field assignments`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3721: native dereferenced experimental map storage references`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3725: native helper-wrapped Result.ok experimental map result struct fields`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3729: native helper-wrapped dereferenced Result.ok experimental map result struct fields`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3733: native helper-wrapped experimental map struct storage fields`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3737: native helper-wrapped dereferenced experimental map struct storage fields`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3741: rejects native canonical namespaced map helpers on borrowed experimental map values`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3745: rejects native canonical namespaced map _ref helpers on borrowed experimental map values`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3749: rejects native experimental map methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3753: native borrowed experimental map helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3757: native public borrowed map wrappers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3761: rejects native borrowed experimental map methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3765: native experimental map inserts`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3769: rejects native experimental map ownership-sensitive values`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3773: rejects native canonical namespaced map inserts on explicit experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3777: rejects native builtin canonical map first-growth inserts`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3781: rejects native builtin canonical map repeated-growth inserts`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3785: rejects native builtin canonical map insert overwrites`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3789: native builtin canonical map non-local growth`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3793: native builtin canonical map nested non-local growth`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3797: native builtin canonical map helper-return borrowed method inserts`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3801: native builtin canonical map struct-field initializer`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3805: native builtin canonical map direct insert on helper-return value receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3809: native builtin canonical map method insert on helper-return value receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3813: native builtin canonical map direct insert on borrowed holder field receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3817: rejects native canonical map constructor ownership growth`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3821: native experimental map bracket access`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3825: rejects native experimental map custom comparable struct keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3863: covers native shared vector harness contracts`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3867: rejects native canonical namespaced vector helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3871: native canonical namespaced vector helpers on explicit Vector bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3875: native stdlib wrapper vector helpers on explicit Vector bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3879: rejects native stdlib wrapper vector helper explicit Vector mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3883: native stdlib wrapper vector constructors on explicit Vector bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3887: keeps native stdlib wrapper vector constructor explicit Vector mismatch contract`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3891: native stdlib wrapper vector constructors on inferred auto bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3895: rejects native stdlib wrapper vector constructor auto inference mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3899: rejects native stdlib wrapper vector constructor receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3903: rejects native stdlib wrapper vector helper receiver mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3907: rejects native stdlib wrapper vector method receiver mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3911: rejects native canonical namespaced vector constructor temporaries`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3915: native canonical namespaced vector explicit builtin bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3919: rejects native canonical namespaced vector named-argument temporaries`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3923: native canonical namespaced vector named-argument explicit builtin bindings`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3927: rejects native canonical namespaced vector mutators without imported helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3933: native experimental vector helper runtime contracts`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3937: native experimental vector ownership-sensitive helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3941: native canonical vector helpers on experimental vector receivers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3944: native vector pop empty runtime contract`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3954: native vector index runtime contract`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp:3968: native checked pointer conformance harness for imported .prime helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:98: rejects native map constructor call access expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:342: rejects native string-keyed map constructor access expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:359: rejects native map constructor string binding key access expressions`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:375: rejects native string-keyed map indexing sugar`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:390: rejects native string-keyed map indexing binding key`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp:430: rejects native string-keyed map binding lookup`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:12: rejects native auto-inferred named access helper receiver precedence before lowering`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp:50: rejects native auto-inferred std namespaced access helper compatibility alias precedence`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:12: native bare vector mutator methods reject without imported helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:163: rejects native canonical unknown map helper with canonical diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:427: rejects native map compatibility count call mismatch with canonical templated helper present`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:498: rejects native map compatibility explicit-template count call with non-templated alias helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:534: rejects native map compatibility explicit-template count method with non-templated alias helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:570: rejects native canonical explicit-template map count call with non-templated canonical helper`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp:606: rejects native canonical implicit-template map count call with canonical argument-shape diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:26: rejects retired native stdlib collection shim map at constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:41: rejects retired native stdlib collection shim map at string-key constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:87: rejects retired native stdlib collection shim map at unsafe constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:102: rejects retired native stdlib collection shim map at unsafe string-key constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:149: rejects retired native stdlib collection shim map method access string-key constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:197: rejects retired native stdlib collection shim map method call parity string-key constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:249: rejects retired native stdlib collection shim map single standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:282: rejects retired native stdlib collection shim map pair standalone`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:314: rejects retired native stdlib collection shim map pair standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:347: rejects retired native stdlib collection shim map double standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:380: rejects retired native stdlib collection shim map triple standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:414: rejects retired native stdlib collection shim map quad standalone`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:431: rejects retired native stdlib collection shim map quad standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:482: rejects retired native stdlib collection shim map quint standalone`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:499: rejects retired native stdlib collection shim map quint standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:552: rejects retired native stdlib collection shim map sext standalone`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp:569: rejects retired native stdlib collection shim map sext standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:26: rejects retired native stdlib collection shim map sept standalone`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:43: rejects retired native stdlib collection shim map sept standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:98: rejects retired native stdlib collection shim map oct standalone`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:116: rejects retired native stdlib collection shim map oct standalone string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:173: rejects retired native stdlib collection shim map double`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:204: rejects retired native stdlib collection shim map triple`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:236: rejects retired native stdlib collection shim extended map constructor`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:409: rejects retired native stdlib collection shim map pair string keys`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:441: rejects retired native stdlib collection shim map quad`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:473: rejects retired native stdlib collection shim map quint`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:506: rejects retired native stdlib collection shim map sext`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:541: rejects retired native stdlib collection shim map sept`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp:577: rejects retired native stdlib collection shim map oct`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_shims_vectors.cpp:545: native bare vector mutators compile without imported helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:262: canonical vector discard helpers with owned elements in native backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:266: canonical vector indexed removal helpers with owned elements in native backend`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:270: rejects native vector reserve with non-relocation-trivial elements`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:312: rejects native vector constructor with non-relocation-trivial elements`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp:349: runs native indexed vector removals with ownership semantics`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:265: rejects native vector alias compatibility template forwarding on bool type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:294: rejects native vector alias compatibility template forwarding on non-bool type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:323: rejects native vector alias compatibility template forwarding on struct type mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:356: rejects native vector alias compatibility template forwarding on constructor temporary struct mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:388: rejects native vector alias compatibility template forwarding on method-call temporary struct mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:427: rejects native vector alias compatibility template forwarding on chained method-call temporary struct mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:473: rejects native vector alias compatibility template forwarding on array envelope element mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:503: rejects native vector alias compatibility template forwarding on map envelope mismatch`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:533: rejects native vector alias compatibility template forwarding on map envelope mismatch from call return`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:567: rejects native vector alias compatibility template forwarding on primitive mismatch from call return`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:601: rejects native vector alias compatibility template forwarding when unknown expected meets primitive call return`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:637: rejects native vector alias compatibility template forwarding when unknown expected meets primitive binding`
+- `tests/unit/compile_run/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp:669: rejects native vector alias compatibility template forwarding when unknown expected meets vector envelope binding`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:37: native materializes variadic array packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:65: native materializes variadic borrowed array packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:114: native rejects variadic borrowed array packs with indexed dereference access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:165: native materializes variadic pointer array packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:214: native rejects variadic pointer array packs with indexed dereference access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:265: native materializes variadic scalar reference packs with indexed dereference`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:324: native materializes variadic struct reference packs with indexed field and helper access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:393: native materializes variadic struct pointer packs with indexed field and helper access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:462: native materializes variadic scalar pointer packs with indexed dereference`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp:521: native rejects variadic scalar pointer packs from borrowed pack access`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:705: native reports tuple bracket index diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:776: native reports stdlib tuple make_tuple diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:853: native reports tuple destructuring diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_file_and_struct_variadics.cpp:957: native reports stdlib tuple get index diagnostics`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:27: native rejects variadic pointer vector packs with expression access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:81: native rejects variadic pointer vector packs with indexed dereference statement mutators`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:144: native rejects variadic borrowed vector packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:199: native rejects variadic borrowed vector packs with indexed dereference capacity methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:254: native rejects variadic borrowed vector packs with indexed dereference access helpers`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:308: native rejects variadic borrowed vector packs with indexed dereference statement mutators`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:371: native rejects variadic borrowed soa packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:427: native rejects variadic pointer soa packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:483: native rejects variadic soa packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:518: native rejects variadic map packs with indexed count methods`
+- `tests/unit/compile_run/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp:599: native rejects variadic experimental map packs with indexed canonical count calls`
+- `tests/unit/compile_run/test_compile_run_native_backend_maybe.cpp:127: rejects retired native Maybe mutable helpers with migration diagnostics`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:152: runs vm with string count and indexing`
+- `tests/unit/compile_run/test_compile_run_smoke_argv.cpp:168: runs vm with string literal count`
+- `tests/unit/compile_run/test_compile_run_smoke_core_contracts_and_cli.cpp:397: canonical gfx helpers remain behind private substrate boundary`
+- `tests/unit/compile_run/test_compile_run_smoke_core_contracts_and_cli.cpp:464: primec and primevm usage prefer text transforms and import flags`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:317: string count and indexing in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_smoke_core_demo_scripts.cpp:334: single-quoted strings in C++ emitter`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:7: primec wasm wasi rejects malformed png inputs deterministically`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:276: primec options default to wasm extension for emit kind`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:297: primec options parse wasm profile aliases and validate values`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:339: primec rejects removed type resolver option`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:379: primec options parse benchmark semantic definition validation worker count`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:427: primec options parse benchmark semantic phase counters flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:450: primec options parse benchmark semantic allocation counters flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:473: primec options parse benchmark semantic rss checkpoints flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:496: primec options parse benchmark semantic method-target memoization toggle`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:519: primec options parse benchmark semantic graph-local-auto legacy key shadow flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:542: primec options parse benchmark semantic graph-local-auto legacy side-channel shadow flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:565: primec options parse benchmark semantic graph-local-auto dependency scratch pmr toggle`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_profiles.cpp:588: primec options parse benchmark semantic repeat count flag`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:128: primec wasm wasi runs ppm read for ascii p3 inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:194: primec wasm wasi runs binary p6 ppm inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_core.cpp:266: primec wasm wasi rejects truncated binary ppm reads deterministically`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp:7: primec wasm wasi runs stored sub-filter rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp:86: primec wasm wasi runs stored up-filter rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp:165: primec wasm wasi runs stored average-filter rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp:244: primec wasm wasi runs stored paeth-filter rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp:336: primec wasm wasi runs fixed-huffman backreference rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp:421: primec wasm wasi runs dynamic-huffman literal rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp:501: primec wasm wasi runs dynamic-huffman backreference rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_interlaced.cpp:7: primec wasm wasi runs broader interlaced png decode programs`
+- `tests/unit/compile_run/test_compile_run_smoke_core_wasm_wasi_png_write.cpp:211: primec wasm wasi runs stored rgb png inputs`
+- `tests/unit/compile_run/test_compile_run_text_filters_core_lists.cpp:53: no transforms overrides text transforms`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp:27: collect-diagnostics keeps user wrapper index arg-type diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp:79: collect-diagnostics keeps user wrapper count capacity arg-shape diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp:135: collect-diagnostics keeps user wrapper count capacity arg-shape reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp:190: collect-diagnostics keeps user wrapper count capacity pair extra-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp:245: collect-diagnostics keeps user wrapper count capacity pair missing-arg diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp:297: collect-diagnostics keeps user wrapper count capacity pair missing-arg reverse diagnostics in definition scope`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2548: semantic-product dump keeps provenance handles while ast-semantic keeps syntax`
+- `tests/unit/compile_run/test_compile_run_text_filters_dumps.cpp:2594: pipeline dump surfaces keep inspection order and lowering-facing boundaries`
+- `tests/unit/compile_run/test_compile_run_vm_bounds.cpp:702: vm stdlib panic traps with bounds diagnostic`
+- `tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp:393: runs vm unchecked pointer conformance harness for imported .prime helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:326: canonical vector discard helpers with owned elements in vm backend`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:330: canonical vector indexed removal helpers with owned elements in vm backend`
+- `tests/unit/compile_run/test_compile_run_vm_collections_map_vector_shadows.cpp:397: runs vm indexed vector removals with ownership semantics`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:760: runs vm bare vector mutators without imported helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_shim_maps_reject_quint.cpp:769: rejects vm bare vector mutator methods without imported helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:427: rejects vm vector alias compatibility template forwarding on bool type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:451: rejects vm vector alias compatibility template forwarding on non-bool type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:475: rejects vm vector alias compatibility template forwarding on struct type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:503: rejects vm vector alias compatibility template forwarding on constructor temporary struct mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:530: rejects vm vector alias compatibility template forwarding on method-call temporary struct mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:564: rejects vm vector alias compatibility template forwarding on chained method-call temporary struct mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:605: rejects vm vector alias compatibility template forwarding on array envelope element mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:630: rejects vm vector alias compatibility template forwarding on map envelope mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_bare_map.cpp:655: rejects vm vector alias compatibility template forwarding on map envelope mismatch from call return`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:11: rejects vm vector alias compatibility template forwarding on primitive mismatch from call return`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:40: rejects vm vector alias compatibility template forwarding when unknown expected meets primitive call return`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:71: rejects vm vector alias compatibility template forwarding when unknown expected meets primitive binding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp:98: rejects vm vector alias compatibility template forwarding when unknown expected meets vector envelope binding`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2986: runs vm shared stdlib map conformance harness`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2990: runs vm canonical namespaced map helpers on experimental map values`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2994: runs vm wrapper map helpers on experimental map values`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:2998: runs vm ownership-sensitive experimental map value methods`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3002: runs vm helper-wrapped inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3006: runs vm helper-wrapped experimental map parameters`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3010: runs vm helper-wrapped experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3014: runs vm helper-wrapped experimental map assignment RHS values`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3018: runs vm canonical namespaced map constructors on explicit experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3022: runs vm canonical namespaced map constructors through explicit experimental map returns`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3026: runs vm canonical namespaced map constructors through explicit experimental map parameters`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3030: runs vm wrapper map constructors on explicit experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3034: runs vm wrapper map constructors through explicit experimental map returns`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3038: runs vm wrapper map constructors through explicit experimental map parameters`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3042: runs vm experimental map variadic constructors`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3046: rejects vm experimental map variadic constructor type mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3050: runs vm experimental map constructor assignments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3054: runs vm implicit map auto constructor inference`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3058: runs vm inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3062: runs vm block inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3066: runs vm auto block inferred experimental map returns`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3070: runs vm inferred experimental map call receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3074: runs vm experimental map struct fields`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3078: runs vm inferred experimental map struct fields`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3082: runs vm helper-wrapped inferred experimental map struct fields`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3086: runs vm experimental map method parameters`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3090: runs vm inferred experimental map parameters`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3094: runs vm inferred experimental map default parameters`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3098: runs vm helper-wrapped inferred experimental map default parameters`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3102: runs vm experimental map helper receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3106: runs vm helper-wrapped experimental map helper receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3110: runs vm experimental map method receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3114: runs vm helper-wrapped experimental map method receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3118: runs vm experimental map field assignments`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3122: runs vm helper-wrapped Result.ok experimental map result struct fields`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3126: runs vm dereferenced experimental map storage references`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3130: runs vm helper-wrapped dereferenced Result.ok experimental map result struct fields`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3134: runs vm helper-wrapped experimental map struct storage fields`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3138: runs vm helper-wrapped dereferenced experimental map struct storage fields`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3142: rejects vm canonical namespaced map helpers on borrowed experimental map values`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3146: runs vm canonical namespaced map _ref helpers on borrowed experimental map values`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3150: runs vm experimental map methods`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3154: runs vm borrowed experimental map helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3158: runs vm public borrowed map wrappers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3162: runs vm borrowed experimental map methods`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3166: runs vm experimental map inserts`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3170: runs vm experimental map ownership-sensitive values`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3174: runs vm canonical namespaced map inserts on explicit experimental map bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3178: runs vm builtin canonical map first-growth inserts`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3182: runs vm builtin canonical map repeated-growth inserts`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3186: runs vm builtin canonical map insert overwrites`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3190: runs vm builtin canonical map non-local growth`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3194: runs vm builtin canonical map nested non-local growth`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3198: runs vm builtin canonical map helper-return borrowed method inserts`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3202: runs vm builtin canonical map struct-field initializer`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3206: runs vm builtin canonical map direct insert on helper-return value receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3210: runs vm builtin canonical map method insert on helper-return value receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3214: runs vm builtin canonical map direct insert on borrowed holder field receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3218: rejects vm canonical map constructor ownership growth`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3222: runs vm experimental map bracket access`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3270: runs vm shared stdlib vector conformance harness`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3274: runs vm shared vector conformance harness for stdlib and experimental helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3278: runs vm canonical namespaced vector helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3282: runs vm canonical namespaced vector helpers on explicit Vector bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3286: runs vm stdlib wrapper vector helpers on explicit Vector bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3290: rejects vm stdlib wrapper vector helper explicit Vector mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3294: runs vm stdlib wrapper vector constructors on explicit Vector bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3298: keeps vm stdlib wrapper vector constructor explicit Vector mismatch contract`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3302: runs vm stdlib wrapper vector constructors on inferred auto bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3306: rejects vm stdlib wrapper vector constructor auto inference mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3310: rejects vm stdlib wrapper vector constructor receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3314: rejects vm stdlib wrapper vector helper receiver mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3318: rejects vm stdlib wrapper vector method receiver mismatch`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3322: rejects vm canonical namespaced vector constructor temporaries`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3326: rejects vm canonical namespaced vector explicit builtin bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3330: rejects vm canonical namespaced vector named-argument temporaries`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3334: rejects vm canonical namespaced vector named-argument explicit builtin bindings`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3338: rejects vm canonical namespaced vector mutators without imported helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3344: runs vm experimental vector helper runtime contracts`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3348: runs vm experimental vector ownership-sensitive helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3352: runs vm canonical vector helpers on experimental vector receivers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3356: runs vm vector pop empty runtime contract`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3366: runs vm vector index runtime contract`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp:3380: runs vm checked pointer conformance harness for imported .prime helpers`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:11: runs vm with user wrapper temporary at_unsafe shadow precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:186: runs vm with user wrapper temporary at shadow precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:220: runs vm with user wrapper temporary count capacity shadow precedence`
+- `tests/unit/compile_run/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp:336: runs vm with user wrapper temporary syntax parity shadow precedence`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:92: vm rejects checked memory at out of bounds`
+- `tests/unit/compile_run/test_compile_run_vm_core_runtime.cpp:107: vm rejects dereference after heap free intrinsic`
+- `tests/unit/compile_run/test_compile_run_vm_maybe.cpp:110: rejects retired Maybe mutable helpers with migration diagnostics`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:31: no transforms rejects sugar`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:45: no transforms rejects implicit utf8`
+- `tests/unit/compile_run/test_compile_run_vm_outputs.cpp:2876: cpp and exe diagnostics match cpp-ir and exe-ir (text and json)`
+
+</details>

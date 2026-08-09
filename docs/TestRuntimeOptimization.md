@@ -113,10 +113,12 @@ by the normal queue rather than living only as prose in this doc:
 - **TODO-4708** — measure fixed per-invocation binary
   startup/doctest-registration cost, independent of which cases actually
   run, and estimate its share of total suite runtime.
-- **TODO-4709** — audit `compile_run` for cases whose assertions only
-  check pass/fail rather than actual program output; these are the
-  candidates for downgrading off the full compile-and-execute path (see
-  "Test-pyramid shape" above). Audit only — no migrations in that leaf.
+- **TODO-4709 — RESOLVED (audit) 2026-08-09**: audited `compile_run` for
+  cases whose assertions only check pass/fail rather than actual program
+  output. 1,470 candidates identified (full list in
+  `docs/TODO4709CompileRunAudit.md`). Audit only — no migrations
+  performed, per this leaf's own stop_rule; each migration is separate
+  follow-up work. See the 2026-08-09 log entry below for methodology.
 - **TODO-4710** — check whether compile-pipeline test helpers redundantly
   re-parse the same stdlib `.prime` files per test case, and cache if so.
 - **TODO-4711** — once the above land, tighten CTest `TIMEOUT` values
@@ -397,3 +399,44 @@ execution queue — keep them in sync when a TODO's scope or status changes.
     single further fixable inefficiency - see TODO-4709 (separately
     tracked) for the next real lever if suite runtime becomes a priority
     again.
+- 2026-08-09: **TODO-4709 audit completed** (audit only, no migrations -
+  per its own stop_rule). Scanned all 3,967 `TEST_CASE` bodies across
+  `tests/unit/compile_run/`'s 207 files with a mechanical, heuristic
+  classifier (script not preserved - one-off scratch analysis) looking
+  for the actual discriminator between "compile-time-only" and
+  "needs real execution": **not** whether a test passes `--emit=`
+  (nearly every file in the directory uses `--emit=` somewhere, so that
+  signal turned out to be useless - an earlier, discarded draft of this
+  audit used it and was wrong), but whether the test's `runCommand(...)`
+  check(s) ever get past the *compile* step at all. This codebase
+  consistently uses exit code `2` for compile/semantic rejection
+  (verified across dozens of samples) - a test whose entire body is one
+  `runCommand(...) == 2` check never produces any runtime behavior
+  regardless of which backend was targeted, since the compile itself
+  failed. An earlier heuristic attempt bucketed exit codes `{1, 2, 3}`
+  together as "rejection-like" and was **wrong**: manually verified
+  counter-examples showed exit code `1` is frequently a genuine *computed*
+  program result (e.g. `return(plus(count(values), 1i32))` legitimately
+  evaluating to `1`), and exit code `3` is this codebase's VM
+  runtime-error convention (e.g. an out-of-bounds panic *during*
+  execution, not a compile-time rejection) - both require the full
+  pipeline, they just happen to use small integers. Final classification:
+  - **1,470 SAFE_TO_DOWNGRADE candidates** - single `runCommand(...) == 2`
+    check, nothing else.
+  - **1,727 NEEDS_FULL_PIPELINE** - checks a computed/executed result,
+    multiple `runCommand` calls, or a known program-output-checking
+    helper (`*ProgramRuns`, `runVmCommandOrExpectUnsupported`, etc.).
+  - **767 AMBIGUOUS** - no literal `runCommand(...) == N` pattern found
+    (variable-based comparisons, `CHECK_MESSAGE`, or not really a
+    compile/execute behavior test at all - e.g. several
+    `test_compile_run_examples_docs_locks.cpp` source-inventory-lock
+    cases that don't fit this axis).
+  Full file:line lists for all three buckets are in the new
+  `docs/TODO4709CompileRunAudit.md`. **This is a heuristic triage list,
+  not a certified-safe migration list** - every SAFE-bucket entry still
+  needs an individual read before migrating, since a single-exit-code
+  pattern match can't fully rule out an edge case the heuristic didn't
+  anticipate (as the discarded {1,2,3} attempt demonstrated). No
+  migrations were performed in this leaf, per TODO-4709's stop_rule -
+  that's real, separate follow-up work (each migration its own leaf, to
+  keep correctness verifiable per file).
