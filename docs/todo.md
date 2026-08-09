@@ -10808,6 +10808,39 @@ This file is the live open-work queue for PrimeStruct.
     collection-helper tests green, stop and document the specific
     conflicting test(s) and what guard condition was tried, rather than
     force through a fix that trades one regression for another.
+  - attempted_and_reverted_2026-08-09: tried gating the line-2100 call
+    site behind `isRootMapConstructorReceiverExpr(receiverExpr) ||
+    resolvesBuiltinKeyValueReceiver(receiverExpr) ||
+    resolvesBuiltinVectorReceiver(receiverExpr)` (all three already
+    defined/in-scope in the same function). Verified the perf fix works
+    in isolation: the minimal repro (`abs(a-b)+abs(a-b)+...`, n=16 terms)
+    went from 8.19s to 0.14s, and n=24 terms stayed at 0.14s (confirmed
+    linear, not exponential) - both measured via direct `time ./primec
+    --emit=vm` A/B against a `git stash`-verified baseline. But a full
+    `ctest --parallel 8` regression run showed **30 failing tests**
+    (`ir_pipeline_validation_cases_1341_1350`, ~18 shards across
+    `semantics.calls_flow.collections`, several
+    `compile_run_vm_collections`/`compile_run_imports_operations_and_collections`
+    shards, and `PrimeStruct_vector_surface_traces`) - essentially the
+    same ~25-30-test breakage as the earlier fully-unconditional-removal
+    attempt from the prior session. This means the 3 guard predicates
+    tried here essentially never match on the receivers these tests
+    exercise, i.e. they're not the right discriminator - something about
+    the failing tests' receivers needs the early full `rewriteExpr` to
+    have already run (probably a nested/wrapper-temporary shape that
+    `resolvesBuiltinKeyValueReceiver`/`resolvesBuiltinVectorReceiver`'s
+    `inferBindingTypeForMonomorph`/`inferExprTypeTextForTemplatedVectorFallback`
+    lookups can't see pre-rewrite) before `resolveCalleePath` can resolve
+    them correctly. Reverted cleanly (`git checkout --
+    src/semantics/TemplateMonomorphExpressionRewrite.h`); no trace left
+    in the tree. **Next attempt should**: pick one of the 30 failing
+    shards (e.g. `test_semantics_calls_and_flow_collections_wrapper_temporary_access_resolution.cpp`'s
+    "map wrapper temporary public helper calls validate target
+    classification" case, which failed with `unknown call target:
+    /map/at` in this attempt's run) and trace with `gdb`/print-debugging
+    exactly what about the receiver's pre-rewrite shape the 3 guard
+    predicates fail to recognize, rather than guessing a 4th predicate
+    blind.
 
 - [ ] TODO-5221: re-measure full suite cost distribution after TODO-5220
   lands and triage the new slowest tests
