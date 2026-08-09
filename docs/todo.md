@@ -1593,6 +1593,65 @@ This file is the live open-work queue for PrimeStruct.
     heuristic triage list, not a certified-safe migration list - each
     SAFE-bucket entry still needs an individual read before migrating.
     No migrations performed in this leaf, per its own stop_rule.
+  - migration_attempted_and_abandoned_2026-08-09: user asked to proceed
+    with migrating the 1,470 SAFE candidates. Started a pilot on
+    `test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp`
+    (12 TEST_CASEs, all "compile rejected" style) and found the migration
+    is **not safely automatable at scale**, for two independent reasons
+    discovered while verifying the pilot:
+    1. **Text-based stage classification is unreliable.** The audit's
+       exit-code-2 heuristic can't distinguish a true semantic-validation
+       rejection (reproducible via `Semantics::validate()`) from an
+       IR-lowering/backend-stage rejection (NOT reproducible that way -
+       `Semantics::validate()` never runs IR lowering at all). Concrete
+       counter-example: this pilot file's "native rejects variadic
+       borrowed soa packs..." test expects "template arguments are only
+       supported on templated definitions: /soa", a message that (grep
+       confirms) originates in `src/semantics/TemplateMonomorph*` files -
+       but empirically, `--dump-stage ast-semantic`, `--dump-stage
+       semantic-product`, AND `--dump-stage ir` all succeed (exit 0) on
+       this exact source; only the real `--emit=native` compile step
+       fails. So even a message that *sounds* semantics-owned can only
+       manifest via a later pipeline stage in practice - static text
+       matching (mine, or a smarter version of it) cannot reliably
+       predict this without per-test empirical verification (actually
+       running the source through each candidate stage and comparing),
+       which is itself a process-spawning operation - undermining the
+       original motivation.
+    2. **A meaningful fraction of the audit's target directory can't be
+       verified on this environment at all.** This whole pilot file (and
+       presumably other files under the same `test_compile_run_native_backend_core_*`
+       naming family) is gated behind `#if PRIMESTRUCT_NATIVE_CORE_ENABLED`,
+       which is only `1` on Apple Silicon (`__APPLE__ && __arm64__`) - on
+       this Linux x86_64 build it's `0`, so these TEST_CASEs are compiled
+       out entirely and never run here. Any migration to these files
+       cannot be validated by this session's normal build+test loop at
+       all.
+    3. **Measured the actual achievable win and it's small.** Direct
+       timing: 20 invocations of `./primec` on a trivial
+       rejection source averaged ~5.9ms each (a full compile attempt) /
+       ~3ms each (`--list-transforms`, minimal startup) - the same order
+       of magnitude as TODO-4708's already-measured ~5-9ms test-binary
+       startup cost, not the expensive compile+link cost this TODO
+       originally worried about (these tests never reach codegen at all,
+       so there was never a large per-test cost to save here in the
+       first place). Even migrating all 1,470 SAFE candidates perfectly
+       would save on the order of ~1,470 x ~6ms ≈ **under 10 seconds**
+       off the ~22-minute suite - matching the exact shape of TODO-4708's
+       finding that falsified TODO-4712's premise: a real optimization
+       target that, once actually measured, turns out to be a rounding
+       error.
+    **Decision** (per this session's "measure, then decide" precedent):
+    do not pursue the mass migration. The combination of (a) unreliable
+    automated classification requiring per-test empirical verification,
+    (b) an entire test family unverifiable on this build environment, and
+    (c) a measured ceiling under 10 seconds of savings, means the
+    risk/effort is not justified by the payoff. The audit itself
+    (`docs/TODO4709CompileRunAudit.md`) remains a useful reference for
+    anyone who wants to hand-migrate a handful of specific tests for
+    non-performance reasons (e.g. reducing external-process flakiness in
+    CI), but this is not being pursued further as a runtime-optimization
+    lever.
 
 - [ ] TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
   - owner: ai

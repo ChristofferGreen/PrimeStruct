@@ -113,12 +113,18 @@ by the normal queue rather than living only as prose in this doc:
 - **TODO-4708** — measure fixed per-invocation binary
   startup/doctest-registration cost, independent of which cases actually
   run, and estimate its share of total suite runtime.
-- **TODO-4709 — RESOLVED (audit) 2026-08-09**: audited `compile_run` for
-  cases whose assertions only check pass/fail rather than actual program
-  output. 1,470 candidates identified (full list in
-  `docs/TODO4709CompileRunAudit.md`). Audit only — no migrations
-  performed, per this leaf's own stop_rule; each migration is separate
-  follow-up work. See the 2026-08-09 log entry below for methodology.
+- **TODO-4709 — RESOLVED (audit) 2026-08-09; migration explicitly not
+  pursued**: audited `compile_run` for cases whose assertions only check
+  pass/fail rather than actual program output. 1,470 candidates
+  identified (full list in `docs/TODO4709CompileRunAudit.md`). A pilot
+  migration attempt found the classification isn't reliably automatable
+  (a message that looks semantics-owned can still only manifest via a
+  later pipeline stage in practice) and, more importantly, measured that
+  the actual achievable win is under 10 seconds off the ~22-minute suite
+  - these rejection-only tests never reach codegen, so there was no large
+  per-test cost to save here to begin with. Decided not to pursue mass
+  migration. See the 2026-08-09 log entries below for both the audit
+  methodology and the pilot/measurement that closed this out.
 - **TODO-4710** — check whether compile-pipeline test helpers redundantly
   re-parse the same stdlib `.prime` files per test case, and cache if so.
 - **TODO-4711** — once the above land, tighten CTest `TIMEOUT` values
@@ -440,3 +446,44 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   migrations were performed in this leaf, per TODO-4709's stop_rule -
   that's real, separate follow-up work (each migration its own leaf, to
   keep correctness verifiable per file).
+- 2026-08-09: **Attempted, then explicitly abandoned, migrating TODO-4709's
+  1,470 SAFE candidates.** Piloted on
+  `test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp`
+  (12 rejection-only TEST_CASEs) and found two independent reasons this
+  isn't safely automatable at scale, plus a measurement that closes the
+  question regardless:
+  1. **Stage classification by text alone is unreliable.** A message can
+     sound semantics-owned (grep confirms "template arguments are only
+     supported on templated definitions" originates in
+     `src/semantics/TemplateMonomorph*`) yet still only be reachable via
+     a later pipeline stage in practice - empirically, this pilot's soa
+     test source passes cleanly through `--dump-stage ast-semantic`,
+     `--dump-stage semantic-product`, AND `--dump-stage ir` (all exit 0)
+     and only fails at the real `--emit=native` compile step. Reliably
+     telling these apart needs per-test empirical verification (running
+     each candidate through the actual stages and comparing), which is
+     itself process-spawning work - eroding the point of the migration.
+  2. **A chunk of the audited directory can't be verified here at all.**
+     The pilot file (and the whole `test_compile_run_native_backend_core_*`
+     family, by the same gate) is compiled only when
+     `PRIMESTRUCT_NATIVE_CORE_ENABLED` is `1`, which requires
+     `__APPLE__ && __arm64__` - on this Linux x86_64 build it's `0`, so
+     these TEST_CASEs never run here and any migration to them can't be
+     validated by this session's normal build+test loop.
+  3. **The actual achievable win is small.** Direct timing: 20
+     invocations of `./primec` on a trivial rejection source averaged
+     ~5.9ms each (full attempt) / ~3ms each (`--list-transforms`,
+     minimal) - the same order of magnitude as TODO-4708's already-measured
+     ~5-9ms test-binary startup cost, not the expensive compile+link cost
+     this TODO originally worried about (rejection-only tests never reach
+     codegen, so there was no large per-test cost here to begin with).
+     Even a perfect migration of all 1,470 candidates would save on the
+     order of **under 10 seconds** off the ~22-minute suite.
+  **Decision**: do not pursue the mass migration - same shape of finding
+  as TODO-4708/TODO-4712 (a plausible-sounding optimization target that,
+  once actually measured, turns out to be a rounding error), compounded
+  here by real reliability risk in the automated classification itself.
+  The audit (`docs/TODO4709CompileRunAudit.md`) stays useful as a
+  reference for anyone who wants to hand-migrate a handful of specific
+  tests for non-performance reasons (e.g. reducing external-process
+  flakiness), but this is closed out as a runtime-optimization lever.
