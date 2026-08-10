@@ -6,6 +6,12 @@
 // prove it reproduces the same definition in isolation, and writes a
 // key=value manifest file colocated with the module source.
 //
+// Shares its source-slicing, namespace-wrapping, and hashing logic with
+// include/primec/StdlibSymbolManifest.h (TODO-5227), which the compile
+// pipeline (in a later leaf) uses to re-derive and verify the same slices
+// at compile time - keeping both sides of the manifest contract in sync by
+// construction rather than by convention.
+//
 // Usage:
 //   generate_stdlib_manifest <source.prime> <module-root-path> <output.psmeta>
 //
@@ -17,7 +23,7 @@
 #include "primec/AstPrinter.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
-#include "primec/TextFilterPipeline.h"
+#include "primec/StdlibSymbolManifest.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -47,22 +53,6 @@ bool readFile(const std::string &path, std::string &out) {
   return true;
 }
 
-std::vector<std::string> splitLines(const std::string &text) {
-  std::vector<std::string> lines;
-  lines.emplace_back(); // 1-indexed: lines[0] unused
-  std::string current;
-  for (const char c : text) {
-    if (c == '\n') {
-      lines.push_back(current);
-      current.clear();
-    } else {
-      current.push_back(c);
-    }
-  }
-  lines.push_back(current);
-  return lines;
-}
-
 bool isBlankLine(const std::string &line) {
   return line.find_first_not_of(" \t\r") == std::string::npos;
 }
@@ -75,59 +65,6 @@ bool belongsToModule(const std::string &fullPath, const std::string &moduleRoot)
          fullPath.compare(0, moduleRoot.size(), moduleRoot) == 0 &&
          fullPath[moduleRoot.size()] == '/';
 }
-
-// FNV-1a 64-bit - a stable, dependency-free content hash. Not cryptographic;
-// only needs to detect content drift, per the manifest's purpose.
-uint64_t fnv1a64(const std::string &text) {
-  uint64_t hash = 1469598103934665603ULL;
-  for (const unsigned char c : text) {
-    hash ^= c;
-    hash *= 1099511628211ULL;
-  }
-  return hash;
-}
-
-// Re-wraps an isolated definition slice in the same `namespace X { ... }`
-// nesting it originally appeared under (per Definition::namespacePrefix),
-// so its fullPath resolves identically when reparsed alone. Definitions
-// whose own name is already an absolute `/a/b/c` path ignore the wrapping
-// namespace when computing fullPath (see Parser::makeFullPath), so this is
-// harmless for those too.
-std::string wrapWithNamespace(const std::string &namespacePrefix, const std::string &body) {
-  std::vector<std::string> segments;
-  std::string current;
-  for (const char c : namespacePrefix) {
-    if (c == '/') {
-      if (!current.empty()) {
-        segments.push_back(current);
-        current.clear();
-      }
-    } else {
-      current.push_back(c);
-    }
-  }
-  if (!current.empty()) {
-    segments.push_back(current);
-  }
-
-  std::ostringstream wrapped;
-  for (const std::string &segment : segments) {
-    wrapped << "namespace " << segment << " {\n";
-  }
-  wrapped << body << "\n";
-  for (size_t i = 0; i < segments.size(); ++i) {
-    wrapped << "}\n";
-  }
-  return wrapped.str();
-}
-
-struct SymbolEntry {
-  std::string path;
-  int startLine = 0;
-  int endLine = 0;
-  std::string sourceSlice;
-  uint64_t contentHash = 0;
-};
 
 // Finds the token whose position matches a definition's recorded name
 // position (sourceLine/sourceColumn set by the parser to the name token).
@@ -185,6 +122,13 @@ int findDefinitionStartLine(const std::vector<Token> &tokens, int nameTokenIndex
   return 1;
 }
 
+struct SymbolEntry {
+  std::string path;
+  int startLine = 0;
+  int endLine = 0;
+  uint64_t contentHash = 0;
+};
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -210,10 +154,9 @@ int main(int argc, char **argv) {
   // so slicing must operate on the same filtered text to stay aligned - all
   // line numbers recorded below are filtered-text line numbers, not raw
   // .prime file line numbers.
-  primec::TextFilterPipeline textPipeline;
   std::string source;
   std::string filterError;
-  if (!textPipeline.apply(rawSource, source, filterError)) {
+  if (!primec::applyDefaultStdlibTextFilter(rawSource, source, filterError)) {
     std::cerr << "error: text filter pipeline failed for " << sourcePath
                << ": " << filterError << "\n";
     return 1;
@@ -241,7 +184,7 @@ int main(int argc, char **argv) {
                       return a->sourceLine < b->sourceLine;
                     });
 
-  const std::vector<std::string> lines = splitLines(source);
+  const std::vector<std::string> lines = primec::splitSourceIntoLines(source);
   std::vector<SymbolEntry> entries;
 
   for (const Definition *def : moduleDefs) {
@@ -278,9 +221,14 @@ int main(int argc, char **argv) {
     // Differential check: re-parse the isolated slice (rewrapped in its
     // original namespace nesting, so fullPath resolves the same way) and
     // confirm it produces the *same AST shape* as the whole-file parse -
-    // TODO-5224's acceptance criteria - not just a matching path.
+    // TODO-5224's acceptance criteria - not just a matching path. This uses
+    // exactly the same wrap/reparse/hash steps
+    // extractAndVerifyManifestedSymbolSource will run at compile time
+    // (TODO-5227), so a slice this tool accepts is guaranteed to also
+    // extract and verify successfully later.
     const std::string sliceSource = slice.str();
-    const std::string wrappedSlice = wrapWithNamespace(def->namespacePrefix, sliceSource);
+    const std::string wrappedSlice =
+        primec::wrapDefinitionInNamespace(def->fullPath, sliceSource);
     Lexer sliceLexer(wrappedSlice);
     const std::vector<Token> sliceTokens = sliceLexer.tokenize();
     Parser sliceParser(sliceTokens, true);
@@ -321,13 +269,13 @@ int main(int argc, char **argv) {
     // Content hash: hash the isolated definition's own canonical AST
     // printout, so whitespace/comment differences in the source don't
     // change the hash, per the content-addressed design in
-    // docs/LibrarySymbolManifestLazyImports.md.
+    // docs/LibrarySymbolManifestLazyImports.md. Matches
+    // extractAndVerifyManifestedSymbolSource's hashing exactly.
     SymbolEntry entry;
     entry.path = def->fullPath;
     entry.startLine = startLine;
     entry.endLine = endLine;
-    entry.sourceSlice = sliceSource;
-    entry.contentHash = fnv1a64(slicedCanonical);
+    entry.contentHash = primec::fnv1a64(slicedCanonical);
     entries.push_back(std::move(entry));
   }
 

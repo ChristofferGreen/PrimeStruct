@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
-- TODO-5225: Implement opt-in lazy import expansion with a permanent differential harness | track: library-symbol-manifests | surface: stdlib module manifest generation (src/CompilePipeline.cpp import resolution, new per-module .psmeta sibling files)
+- TODO-5228: Implement the opt-in iterative lazy-expansion algorithm | track: library-symbol-manifests | surface: src/CompilePipeline.cpp import resolution, new opt-in flag
 
 ### Immediate Next 10
 
@@ -11408,24 +11408,102 @@ This file is the live open-work queue for PrimeStruct.
     `python3 scripts/check_vector_surface_traces.py --root .` and a full
     `ctest --parallel 4` regression run, both clean.
 
-- [ ] TODO-5225: Phase 2 - implement opt-in lazy import expansion with a
-  permanent differential harness
+- [x] TODO-5225 (SPLIT, 2026-08-10): Phase 2 - implement opt-in lazy import
+  expansion with a permanent differential harness. Too large a single leaf
+  (manifest-consuming plumbing, the iterative expansion algorithm plus flag
+  wiring, and a full 3-corpus differential harness are independently
+  reviewable and independently risky) - split into TODO-5227 (manifest
+  loading + verified source-slice extraction plumbing, no pipeline
+  behavior change), TODO-5228 (the opt-in iterative expansion algorithm
+  itself, cycle guard, new diagnostic), and TODO-5229 (the differential
+  harness and divergence triage this leaf's stop_rule required). See those
+  for the original scope/acceptance/stop_rule text, carried over unchanged
+  in substance.
+
+- [x] TODO-5227 (RESOLVED): Phase 2a - load stdlib symbol manifests and extract
+  verified source slices
   - owner: ai
   - created_at: 2026-08-10
   - phase: Compiler architecture / import resolution
   - parallel_track: library-symbol-manifests
   - depends_on: TODO-5224
+  - scope: pure plumbing, no compile-pipeline behavior change and no new
+    CLI flag semantics yet. Add a `.psmeta` symbol-manifest reader (the
+    `[symbol]` block format `tools/generate_stdlib_manifest.cpp` writes:
+    `path`/`start_line`/`end_line`/`content_hash`) parallel to the
+    existing `[module]`-block `readStdlibModuleManifest`. Add a source-slice
+    extractor that, given a manifest entry and its module's source file,
+    reproduces the *exact* generation-time steps (raw read ->
+    `TextFilterPipeline::apply` with default options -> split into lines
+    -> slice `[start_line, end_line]`) and then re-verifies the slice's
+    content hash (reparse standalone wrapped in the recorded namespace
+    nesting, print via `AstPrinter`, FNV-1a-64) before returning the text -
+    a mismatch means the module drifted since the manifest was generated
+    and must be a hard error, not a silent stale-slice return. Refactor
+    `tools/generate_stdlib_manifest.cpp` to share this extraction/hashing
+    logic (single source of truth for the slicing algorithm) rather than
+    duplicating it.
+  - implementation_notes: keep this in a small standalone
+    `include/primec/StdlibSymbolManifest.h` / `src/StdlibSymbolManifest.cpp`
+    pair so both the generator tool and (in TODO-5228) the compile
+    pipeline link against the same code, and so the generator's own
+    differential-check machinery and the compile-time verification path
+    cannot silently drift apart.
+  - acceptance: a unit test loads both real manifests
+    (`stdlib/std/image/image.psmeta`, `stdlib/std/gfx/experimental.psmeta`)
+    and, for every entry, extracts and hash-verifies the slice
+    successfully; a second test intentionally edits a manifest's
+    `content_hash` field (in a temp copy) and confirms extraction fails
+    loudly rather than returning the stale/mismatched slice.
+  - stop_rule: do not touch `CompilePipeline.cpp`'s import-expansion
+    control flow or add any new CLI/env-var flag in this leaf - loading
+    and verified extraction only.
+  - resolution_summary (2026-08-10): added
+    `include/primec/StdlibSymbolManifest.h` / `src/StdlibSymbolManifest.cpp`
+    (new file in `PRIMESTRUCT_FRONTEND_SOURCES`, no `CompilePipeline.cpp`
+    changes) providing `readStdlibSymbolManifest` (the `[symbol]`-block
+    reader, mirroring `readStdlibModuleManifest`'s `[module]`-block style
+    and error conventions) and `extractAndVerifyManifestedSymbolSource`
+    (raw read -> `TextFilterPipeline::apply` -> line-slice ->
+    `wrapDefinitionInNamespace` using the fullPath's parent segments as the
+    namespace-nesting guess -> reparse -> `AstPrinter`-canonicalize ->
+    FNV-1a-64 -> compare against the manifest's stored hash, hard error on
+    mismatch). `wrapDefinitionInNamespace` derives the wrap purely from
+    `fullPath` (no stored `namespacePrefix` needed in the manifest) since
+    `Parser::makeFullPath` ignores the wrapping prefix entirely for
+    definitions whose own name is already an absolute `/a/b/c` path, so a
+    parent-segment guess is exact for namespaced definitions and harmless
+    for absolute-named ones either way. Refactored
+    `tools/generate_stdlib_manifest.cpp` to call this shared library
+    instead of its own duplicated slicing/hashing code - regenerating both
+    `stdlib/std/image/image.psmeta` and
+    `stdlib/std/gfx/experimental.psmeta` with the refactored tool produced
+    byte-identical output to what TODO-5224 had generated, confirming the
+    refactor preserved behavior exactly. Added
+    `tests/unit/parser/test_stdlib_symbol_manifest.cpp` (new
+    `primestruct.stdlib_symbol_manifest` suite in `PrimeStruct_parser_tests`):
+    one test loads both real manifests and extracts+hash-verifies every
+    one of their combined 198 symbols successfully; one test tampers a
+    manifest entry's in-memory `content_hash` and confirms extraction
+    fails with an error naming the symbol path rather than returning a
+    stale slice; one test confirms malformed manifests (bad line bounds,
+    missing `[symbol]` header) are rejected. Full `ctest --parallel 4`
+    regression clean.
+
+- [ ] TODO-5228: Phase 2b - implement the opt-in iterative lazy-expansion
+  algorithm
+  - owner: ai
+  - created_at: 2026-08-10
+  - phase: Compiler architecture / import resolution
+  - parallel_track: library-symbol-manifests
+  - depends_on: TODO-5227
   - scope: implement the iterative fixed-point expansion algorithm
     described in `docs/LibrarySymbolManifestLazyImports.md`'s "Design"
     section (parse user source -> collect unresolved names -> slice in
-    the one manifested symbol needed -> rescan for newly-introduced
-    unresolved names -> repeat to a fixed point), gated behind an opt-in
-    env var or CLI flag with today's whole-file-splice behavior remaining
-    the default. Build the permanent differential harness comparing
-    old-vs-new resolved call paths and validation outcomes across the
-    full semantics/ir_pipeline/compile_run corpora, following the same
-    pattern `docs/CompatPathResolutionConsolidation.md`'s Step 1 already
-    proved out.
+    the one manifested symbol needed, via TODO-5227's verified extractor
+    -> rescan for newly-introduced unresolved names -> repeat to a fixed
+    point), gated behind an opt-in env var or CLI flag with today's
+    whole-file-splice behavior remaining the default.
   - implementation_notes: explicit cycle guard required (a
     "currently expanding" set) for mutually-referencing symbols - do not
     rely on accidentally not hitting a cycle in the test corpus. Clear
@@ -11436,10 +11514,27 @@ This file is the live open-work queue for PrimeStruct.
     `import /std/gfx/experimental/*` with light actual usage show
     measurably reduced `calls_visited`/`facts_produced`
     (`--benchmark-semantic-phase-counters`) proportional to usage, not
-    module size; the differential harness runs clean (zero unintended
+    module size, on at least one hand-written repro case per module.
+  - stop_rule: do not flip the default and do not build the full 3-corpus
+    differential harness in this leaf - that is TODO-5229. This leaf's own
+    acceptance is the narrow repro-case measurement only.
+
+- [ ] TODO-5229: Phase 2c - build the lazy-expansion differential harness
+  and triage every divergence
+  - owner: ai
+  - created_at: 2026-08-10
+  - phase: Compiler architecture / import resolution
+  - parallel_track: library-symbol-manifests
+  - depends_on: TODO-5228
+  - scope: build the permanent differential harness comparing
+    old-vs-new resolved call paths and validation outcomes across the
+    full semantics/ir_pipeline/compile_run corpora, following the same
+    pattern `docs/CompatPathResolutionConsolidation.md`'s Step 1 already
+    proved out.
+  - acceptance: the differential harness runs clean (zero unintended
     divergence, or every divergence individually triaged and either
     fixed or pinned as an intentional behavior change) across all three
-    corpora with the flag enabled.
+    corpora with TODO-5228's opt-in flag enabled.
   - stop_rule: every discovered divergence must be individually
     triaged and resolved (fixed or explicitly accepted with a new pinning
     test) before this leaf is considered done - do not ship with known,
@@ -11450,7 +11545,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-08-10
   - phase: Compiler architecture / import resolution
   - parallel_track: library-symbol-manifests
-  - depends_on: TODO-5225
+  - depends_on: TODO-5229
   - scope: once TODO-5225's differential harness reports zero unintended
     divergence across all three corpora, make lazy expansion the default
     import-resolution path; keep the whole-file path available behind a

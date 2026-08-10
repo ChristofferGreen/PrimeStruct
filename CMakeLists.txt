@@ -254,6 +254,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/text_filter/TextFilterPipelinePass.cpp
   src/text_filter/TextFilterPipelineScan.cpp
   src/text_filter/TextFilterPipeline.cpp
+  src/StdlibSymbolManifest.cpp
 )
 
 set(PRIMESTRUCT_IR_SOURCES
@@ -1126,6 +1127,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/parser/test_parser_errors_more_named_args.cpp
     tests/unit/parser/test_parser_errors_more_transforms.cpp
     tests/unit/parser/test_parser_errors_more_transforms_canonical.cpp
+    tests/unit/parser/test_stdlib_symbol_manifest.cpp
     tests/unit/test_execution_parsing.cpp
     tests/unit/test_execution_whitespace.cpp
     tests/unit/test_template_parsing.cpp
@@ -1264,6 +1266,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.parser.errors.named_args
     primestruct.parser.errors.transforms
     primestruct.parser.templates
+    primestruct.stdlib_symbol_manifest
   )
 
   function(primeStructSelectDoctestTarget outVar suite)
