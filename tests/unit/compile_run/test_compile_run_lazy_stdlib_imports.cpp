@@ -119,4 +119,40 @@ main() {
   CHECK(output.find("unknown symbol in imported library /std/image") != std::string::npos);
 }
 
+TEST_CASE("lazy stdlib imports resolve a templated method call on an experimental struct") {
+  // Regression test: TemplateMonomorphMethodTargets.h's GfxError special
+  // case hardcoded the non-experimental /std/gfx/GfxError base path for
+  // why/status/result method calls, so a templated call
+  // (err.result<i32>()) on an experimental GfxError requested
+  // instantiation of a base path that doesn't exist and silently produced
+  // no specialization. This was masked under whole-file splicing (some
+  // other explicit-absolute-path call elsewhere in experimental.prime
+  // happened to trigger the same specialization via the correct path) and
+  // only surfaced once lazy expansion stopped including that unrelated
+  // cover. Fixed to prefer whichever GfxError base path is actually
+  // present.
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int> effects(io_out)]
+main() {
+  [GfxError] err{queueSubmitFailed()}
+  [Result<i32, GfxError>] s{err.result<i32>()}
+  [string] w{Result.why(s)}
+  print_line(w)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("lazy_stdlib_imports_gfx_templated_method.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_lazy_gfx_templated_method").string();
+  const std::string outPath = (testScratchPath("") / "primec_lazy_gfx_templated_method.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath +
+      " --entry /main --experimental-lazy-stdlib-imports";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "queue_submit_failed\n");
+}
+
 TEST_SUITE_END();

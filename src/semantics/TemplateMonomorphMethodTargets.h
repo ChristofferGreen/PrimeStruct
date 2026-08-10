@@ -481,6 +481,21 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (normalizedReceiverLeafName == "GfxError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
        normalizedMethodName == "result")) {
+    // GfxError exists in both /std/gfx and /std/gfx/experimental; prefer
+    // whichever one is actually present in this compilation rather than
+    // hardcoding the non-experimental path. Without this, a method-call-
+    // syntax use of an experimental GfxError's templated result<T>/why/
+    // status requests instantiation of the wrong (non-existent) base path,
+    // silently producing no specialization - normally masked by whole-file
+    // stdlib splicing, where some other explicit-absolute-path call
+    // elsewhere in the same file happens to already have triggered the
+    // needed specialization via the correct path.
+    const std::string experimentalPath =
+        "/std/gfx/experimental/GfxError/" + normalizedMethodName;
+    if (hasDefinitionFamilyPath(experimentalPath)) {
+      pathOut = selectStaticHelperOverloadPath(experimentalPath);
+      return true;
+    }
     pathOut = selectStaticHelperOverloadPath("/std/gfx/GfxError/" + normalizedMethodName);
     return true;
   }
