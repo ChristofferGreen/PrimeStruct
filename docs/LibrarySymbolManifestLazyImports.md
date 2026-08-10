@@ -164,6 +164,89 @@ blocked for lack of it.**
   a process) is the same idea Go/C++ apply across processes via a
   content hash instead.
 
+## Research Literature: the Golden Nugget
+
+Went looking specifically for academic/production-research precedent
+beyond the four mainstream toolchains above, since the "cache keyed by
+content hash" idea in Phase 5 was heading toward reinventing something
+that plausibly already has a name and a track record.
+
+**Unison's content-addressed code model is the golden nugget.** Unison
+identifies every single definition by a cryptographic hash (SHA3-512) of
+its own syntax tree, not by a name+file+version tuple. The practical
+consequence, straight from the language's own documentation: "Unison can
+parse and typecheck definitions once, then store the results in a cache
+which is never invalidated... once anyone has parsed and typechecked a
+definition and added it to the codebase, no one has to do that ever
+again" ([Unison docs](https://www.unison-lang.org/docs/the-big-idea/);
+also see [SoftwareMill's writeup](https://softwaremill.com/trying-out-unison-part-1-code-as-hashes/)
+and the [Hacker News discussion](https://news.ycombinator.com/item?id=22156370)).
+
+This is a strictly better foundation than the plan's original Phase 5
+wording ("cache keyed by content hash plus transitive dependency
+hashes"), for a concrete reason: **content-addressing makes cache
+invalidation a non-question rather than something to get right.** A
+name-based manifest entry ("`/std/image/ImageError/why` currently lives at
+byte range X-Y") can go stale the moment the source changes underneath it
+- exactly the drift risk already flagged for hand-authored manifests
+(mitigated there by auto-generation, but still a live concern for the
+Phase 5 *validated-result* cache, which persists across compiler
+invocations and even across git commits). If the manifest instead maps a
+name to a **content hash** of that definition's own text (not a location),
+and the Phase 5 cache is keyed by that hash directly, a hash mismatch by
+construction means "this is different content" - there is no separate
+"is my cache stale" check to get wrong, because a stale entry is
+definitionally impossible: the same hash always means the same input, and
+a changed input always produces a different hash.
+
+This also cleanly resolves the generic/templated-symbol cache-key
+question from the correction above, rather than needing its own special
+case: **hash the monomorphized instantiation's own resulting content**,
+not some compound "(generic identity, type-argument tuple)" key
+maintained by hand. Two programs that both instantiate `soa<Particle>`
+produce the same instantiated AST, which hashes identically, which
+collides in the cache automatically - no manifest bookkeeping needed to
+know that. This is the same mechanism C++/Rust toolchains approximate via
+mangled-name-based `linkonce_odr`/comdat merging, but content-hashing is
+strictly more general (it doesn't depend on a name-mangling scheme
+agreeing across compilations) and is exactly what a query-memoization
+framework like [Salsa](https://github.com/salsa-rs/salsa) (rustc's own
+incremental-compilation engine, and the direct ancestor of
+rust-analyzer's architecture) already formalizes: "every query is used
+like a function `K → V`... the results of queries are memoized... when
+you make changes to the inputs, the framework intelligently determines
+when to reuse memoized values." Content-hashing a definition's own AST is
+exactly the right shape of `K` for that model - deterministic, versionless,
+and naturally deduplicating instantiations without extra logic.
+
+**Confirms the generic/monomorphization tension is real, not a plan
+weakness to fix away.** Independently found in the literature: "the
+specialization-based semantics of C++ templates rules out the possibility
+of separate compilation" and monomorphization "effectively precludes
+opportunities for separate compilation" (surveyed via
+[Grokipedia's monomorphization overview](https://grokipedia.com/page/Monomorphization)
+and the [Wikipedia article](https://en.wikipedia.org/wiki/Monomorphization),
+with the trade-off further discussed on
+[Lobsters](https://lobste.rs/s/aar0zx/dark_side_inlining_monomorphization)).
+This is a known, accepted, industry-wide trade-off with no clean
+theoretical fix - only the pragmatic mitigation (merge identical
+instantiations after the fact) this plan already adopts. Worth stating
+plainly rather than treating as an open problem: **the plan does not need
+to "solve" separate compilation of generics, only to deduplicate
+identical instantiations after they're produced**, which content-hashing
+does for free.
+
+**Concrete effect on the plan**: Phase 1's manifest should record a
+content hash for each symbol from day one (alongside the file/location
+info needed for slicing), even though Phase 1 itself has no cache to key
+by yet - this costs nothing to add early and removes an entire class of
+staleness bugs from Phase 5 before that phase is ever designed in detail.
+Phase 5's cache key becomes uniformly "content hash of the (possibly
+already-instantiated) definition," with no separate concrete-vs-generic
+branching logic required at the caching layer - the branching only
+existed because the earlier draft tried to key by identity-plus-parameters
+rather than by the result's own content.
+
 ### What this means for the plan
 
 **Caching a validated module interface across invocations is the bigger,
@@ -281,6 +364,14 @@ lazy expansion first, caching after) is load-bearing, not incidental.
 
 - Build the generator (walks a module's top-level definitions via the
   existing parser, emits the symbol table with source-slice locations).
+- **Record a content hash of each symbol's own normalized source/AST
+  alongside its location, even though nothing consumes it yet.** Per the
+  "Research Literature" section above, this is nearly free to add now and
+  removes an entire class of staleness questions from Phase 5 before that
+  phase's design is ever written in detail - Phase 5's cache key becomes
+  "this hash," full stop, with no separate invalidation logic and no
+  concrete-vs-generic branching (a monomorphized instantiation's own
+  content hashes independently of the generic definition it came from).
 - Differential-check the generator itself: for every symbol the generator
   claims exists at location X, confirm re-parsing that exact slice
   produces the same definition the whole-file parse does.
@@ -321,36 +412,31 @@ lazy expansion first, caching after) is load-bearing, not incidental.
 ### Phase 5 - Cross-invocation caching of validated symbols (only after
 Phase 3 proves out)
 
-- See "Precedent in Other Toolchains" below for why this is the
-  higher-leverage lever every mature toolchain surveyed (Go, Rust, C++20
-  modules) actually relies on, and why it was blocked until this plan's
-  manifest exists.
-- **Does not apply uniformly - generic/templated symbols need a different
-  cache key than concrete ones.** A single cached "validated result" per
-  symbol only works for a **concrete (non-generic) definition** - one
-  fixed answer, reusable everywhere. A templated stdlib construct
-  (`Result<T, ImageError>`, `soa<Particle>`) has no single validated
-  result to cache: each distinct type-argument combination monomorphizes
-  to a genuinely different definition. This is the exact same issue
-  TODO-4735 flagged killing its own naive caching attempt
-  ("monomorphized, test-specific symbols baked into `definitions[]`").
-  The fix is a finer cache key, not abandoning caching for generics:
-  - **Concrete symbols**: cache keyed by the symbol's own content hash
-    plus its transitive dependency closure's hashes, exactly as
-    originally scoped.
-  - **Generic/templated symbols**: cache keyed by (generic definition
-    identity, concrete type-argument tuple) - i.e. cache the
-    *instantiation*, not the generic definition alone. This mirrors how
-    C++/Rust toolchains already handle this in practice: LLVM merges
-    identical template instantiations across translation units via
-    `linkonce_odr`/comdat sections, keyed by the mangled name (which
-    encodes the concrete type arguments), not by the uninstantiated
-    template. Two different programs that both instantiate
-    `soa<Particle>` should share one cached monomorphized result; a
-    program instantiating `soa<Enemy>` needs its own separate entry.
+- See "Precedent in Other Toolchains" and "Research Literature: the
+  Golden Nugget" above for why this is the higher-leverage lever every
+  mature toolchain surveyed (Go, Rust, C++20 modules, and Unison's
+  content-addressed model specifically) actually relies on, and why it
+  was blocked until this plan's manifest exists.
+- **Cache key is uniformly a content hash - no concrete-vs-generic
+  branching needed.** Earlier drafts of this phase considered a
+  compound key ("generic definition identity + type-argument tuple") to
+  handle templated stdlib constructs (`Result<T, ImageError>`,
+  `soa<Particle>`) separately from concrete symbols, mirroring the real
+  concern TODO-4735 hit ("monomorphized, test-specific symbols baked
+  into `definitions[]`"). Following Unison's content-addressing model
+  instead resolves this without a special case: hash **the definition's
+  own resulting content** (for a concrete symbol, that's just its
+  source/AST; for a generic instantiation, that's the *already-monomorphized*
+  form, computed once as today's pipeline already does) and cache by that
+  hash directly. Two programs that both instantiate `soa<Particle>`
+  produce identical instantiated content, which hashes identically, which
+  collides in the cache automatically - no manifest bookkeeping about
+  "which type arguments were used" required. A cache hit by construction
+  means "this exact content was already validated"; there is no separate
+  staleness check to get wrong.
 - Reused across every process that imports the same unchanged stdlib
-  symbol (or the same unchanged symbol at the same type-argument
-  instantiation, for generics) - not just within one compile.
+  symbol or produces the same instantiation - not just within one
+  compile.
 - Requires its own correctness-sensitive verification pass (a cache-off
   lane proving identical results, matching the standard this plan and
   TODO-4743/TODO-4735 already hold every change to) - do not treat this

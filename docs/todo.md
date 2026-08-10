@@ -11323,9 +11323,15 @@ This file is the live open-work queue for PrimeStruct.
   - scope: implement the generator decided in TODO-5223's findings -
     walks a stdlib module's top-level definitions via the existing
     parser and emits a symbol table (symbol name -> file + source-slice
-    location). Generate manifests for `/std/image` and
-    `/std/gfx/experimental` first (the two modules already measured as
-    expensive this session - see
+    location **plus a content hash of the symbol's own normalized
+    source/AST**, per the "Research Literature: the Golden Nugget"
+    section added to `docs/LibrarySymbolManifestLazyImports.md` -
+    Unison's content-addressed code model, where a definition's cache key
+    is a hash of its own content rather than a name+location+version
+    tuple, eliminating an entire class of staleness questions before
+    Phase 5's caching work ever needs to be designed). Generate manifests
+    for `/std/image` and `/std/gfx/experimental` first (the two modules
+    already measured as expensive this session - see
     `docs/LibrarySymbolManifestLazyImports.md`'s "Problem, Verified").
     Generated, not hand-authored, per that doc's explicit design
     decision (avoids manifest/source drift).
