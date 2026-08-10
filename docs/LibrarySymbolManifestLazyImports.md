@@ -325,10 +325,32 @@ Phase 3 proves out)
   higher-leverage lever every mature toolchain surveyed (Go, Rust, C++20
   modules) actually relies on, and why it was blocked until this plan's
   manifest exists.
-- Cache each stdlib symbol's *validated* result (not just its raw source
-  slice), keyed by the symbol's own content hash plus its transitive
-  dependency closure's hashes - reused across every process that imports
-  the same unchanged stdlib symbol, not just within one compile.
+- **Does not apply uniformly - generic/templated symbols need a different
+  cache key than concrete ones.** A single cached "validated result" per
+  symbol only works for a **concrete (non-generic) definition** - one
+  fixed answer, reusable everywhere. A templated stdlib construct
+  (`Result<T, ImageError>`, `soa<Particle>`) has no single validated
+  result to cache: each distinct type-argument combination monomorphizes
+  to a genuinely different definition. This is the exact same issue
+  TODO-4735 flagged killing its own naive caching attempt
+  ("monomorphized, test-specific symbols baked into `definitions[]`").
+  The fix is a finer cache key, not abandoning caching for generics:
+  - **Concrete symbols**: cache keyed by the symbol's own content hash
+    plus its transitive dependency closure's hashes, exactly as
+    originally scoped.
+  - **Generic/templated symbols**: cache keyed by (generic definition
+    identity, concrete type-argument tuple) - i.e. cache the
+    *instantiation*, not the generic definition alone. This mirrors how
+    C++/Rust toolchains already handle this in practice: LLVM merges
+    identical template instantiations across translation units via
+    `linkonce_odr`/comdat sections, keyed by the mangled name (which
+    encodes the concrete type arguments), not by the uninstantiated
+    template. Two different programs that both instantiate
+    `soa<Particle>` should share one cached monomorphized result; a
+    program instantiating `soa<Enemy>` needs its own separate entry.
+- Reused across every process that imports the same unchanged stdlib
+  symbol (or the same unchanged symbol at the same type-argument
+  instantiation, for generics) - not just within one compile.
 - Requires its own correctness-sensitive verification pass (a cache-off
   lane proving identical results, matching the standard this plan and
   TODO-4743/TODO-4735 already hold every change to) - do not treat this
