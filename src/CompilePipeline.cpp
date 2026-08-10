@@ -1196,6 +1196,23 @@ bool runCompilePipelineImportStage(const Options &options,
       moduleBuffer << moduleFile.rdbuf();
       for (const std::string &nestedImport : collectStdImportPaths(moduleBuffer.str())) {
         out.sourceStdImports.push_back(nestedImport);
+        // Also emit a literal `import X` statement, not just an internal
+        // file-inclusion hint: whole-file splicing's own success at
+        // resolving bare names/types owned by a transitively-imported
+        // module depends on the parser recording that import path into
+        // Program::imports (Parser::parseImport pushes every literal
+        // `import` statement it sees) - appendStdlibModuleSources's
+        // appendFile does this "for free" for a normally-spliced module
+        // because the module's own header import lines are verbatim part
+        // of the appended text. A lazily-extracted symbol slice never
+        // includes its module's header, so without this, nothing ever
+        // records the nested import and cross-module bare-name/bare-type
+        // resolution silently fails even though the target definition is
+        // present in defMap_.
+        ExpandedSourceBuilder nestedImportBuilder(out.expandedSource);
+        nestedImportBuilder.appendGenerated(
+            "\nimport " + nestedImport + "\n", "<lazy-stdlib-nested-import>");
+        out.source = out.expandedSource.text;
       }
     }
   }
