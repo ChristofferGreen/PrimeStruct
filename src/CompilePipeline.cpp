@@ -954,6 +954,27 @@ bool containsWholeWord(const std::string &text, const std::string &word) {
   return false;
 }
 
+// A fallible struct constructor call (`Window(...)?`) desugars to a call to
+// a factory function named by lowercasing the struct's first letter and
+// appending "Create" (e.g. "Window" -> "windowCreate", confirmed against
+// stdlib/std/gfx/experimental.psmeta's windowCreate/deviceCreate entries).
+// That factory function's name never appears as text anywhere the closure
+// scan looks - the call site only ever spells the struct name - so a purely
+// syntactic scan can't discover it without knowing this convention
+// specifically. Given a factory leaf like "windowCreate", returns the
+// struct name "Window" a call site would actually spell, or empty if
+// `factoryLeaf` doesn't end in "Create" (or is too short to strip it).
+std::string constructorSugarStructLeafName(const std::string &factoryLeaf) {
+  constexpr std::string_view suffix = "Create";
+  if (factoryLeaf.size() <= suffix.size() ||
+      factoryLeaf.compare(factoryLeaf.size() - suffix.size(), suffix.size(), suffix) != 0) {
+    return {};
+  }
+  std::string structName = factoryLeaf.substr(0, factoryLeaf.size() - suffix.size());
+  structName.front() = static_cast<char>(std::toupper(static_cast<unsigned char>(structName.front())));
+  return structName;
+}
+
 std::string manifestEntryLeafName(const std::string &fullPath) {
   const size_t lastSlash = fullPath.find_last_of('/');
   return lastSlash == std::string::npos ? fullPath : fullPath.substr(lastSlash + 1);
@@ -999,7 +1020,12 @@ bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules
           continue;
         }
         const std::string leaf = manifestEntryLeafName(entry.path);
-        if (!containsWholeWord(text, leaf)) {
+        bool matched = containsWholeWord(text, leaf);
+        if (!matched) {
+          const std::string sugarStructLeaf = constructorSugarStructLeafName(leaf);
+          matched = !sugarStructLeaf.empty() && containsWholeWord(text, sugarStructLeaf);
+        }
+        if (!matched) {
           continue;
         }
         std::string extractedText;
