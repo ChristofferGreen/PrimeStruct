@@ -101,6 +101,102 @@ uses to resolve undefined symbols from an archive:
 The validation/lowering stages themselves do not need to change; only the
 text-assembly step feeding them does.
 
+## Precedent in Other Toolchains
+
+Checked this plan against how Go, Rust, C++20 modules, and Python handle
+the same underlying problem (avoiding re-processing a library's full
+source on every import) before committing to implementation. Summary:
+**the plan's lazy-expansion mechanism is well-precedented, but it
+optimizes a different axis than what mature toolchains treat as the
+primary lever - and the manifest this plan introduces is also the exact
+prerequisite that unlocks the primary lever, which TODO-4735 found
+blocked for lack of it.**
+
+- **Go**: closest real-world match to "manifest as compact interface."
+  Each package is compiled exactly **once**, producing "export data" - a
+  compact description of every exported symbol's signature - that
+  importers consult directly, never re-parsing or re-type-checking the
+  imported package's function bodies. Go's speed comes from **caching a
+  compiled interface across every future build**, not from only
+  including the symbols a given importer happens to use - a package
+  compiled once serves unlimited importers at near-zero marginal cost.
+  This is a stronger lever than lazy-inclusion-per-compile: our plan's
+  manifest reduces the cost of any *one* compile by trimming what gets
+  spliced in, but if 100 different `compile_run` test processes each
+  import `/std/image/*` and each use `ImageError.why()`, the plan as
+  designed still re-parses and re-validates that one function 100 times
+  (once per process), because there is still no cross-process cache.
+- **Rust**: closest match to the plan's "lazy expansion" mechanism
+  specifically. Downstream crates get compact per-item metadata (`.rmeta`)
+  for a dependency instead of re-parsing its source, matching Go. More
+  relevantly for this plan: **generic ("templated") items are not
+  monomorphized in the defining crate at all** - the generic IR is
+  carried in the crate metadata, and each concrete instantiation is
+  generated lazily, on demand, in whichever downstream crate first needs
+  that specific type substitution. This is a direct, validating precedent
+  for the plan's "pull in a symbol, discover what it itself needs, expand
+  to a fixed point" design - PrimeStruct's own generic stdlib constructs
+  (`soa<Particle>`, `Result<T, ImageError>`, etc.) are exactly the kind of
+  thing Rust defers this way, and the plan's Design section already
+  matches that shape without having been derived from it.
+- **C++20 modules**: like Go, the primary lever is a precompiled binary
+  module interface (BMI) built once and consumed by every importer
+  without re-lexing/re-parsing the module's source text at all - this is
+  the same "compile once, cache the interface" idea as Go, just
+  materialized as a binary artifact instead of Go's more compact export
+  data. Notably, mainstream C++ module implementations do **not** do
+  per-declaration lazy loading the way this plan's Component 2 does -
+  the whole interface unit's declarations become visible together via
+  the BMI. This suggests the plan's per-symbol granularity is finer than
+  what production compilers typically find necessary; that's not wrong,
+  but it means the "compile once and cache" lever alone (without full
+  per-symbol laziness) would already match how C++ and Go solve this,
+  and would be simpler to implement than the fixed-point expansion loop.
+- **Python**: not a compiled/statically-checked language, so not directly
+  comparable, but relevant as a caching precedent: Python avoids
+  re-executing a module's top-level code on repeated `import` statements
+  via a process-lifetime cache (`sys.modules`) - it solves "don't redo
+  this work twice" with the cheapest possible mechanism (an in-memory
+  dictionary keyed by module name) because its unit of avoidance is a
+  whole process, not a whole toolchain invocation. Not directly
+  applicable to `primec`'s fresh-process-per-compile model, but the
+  general shape (cache keyed by module identity, invalidate never within
+  a process) is the same idea Go/C++ apply across processes via a
+  content hash instead.
+
+### What this means for the plan
+
+**Caching a validated module interface across invocations is the bigger,
+better-precedented lever, and this plan's manifest is the prerequisite
+for it, not a competing alternative.** TODO-4735 already investigated
+exactly this caching approach ("a disk-serialized cache of the validated
+semantic product") and found it blocked for a specific, concrete reason:
+"even `ast-semantic` validation output can't be cached 'for the stdlib
+part' and reused, because there is no stdlib-only validation call to
+cache in the first place - it's validated together with the test source
+in one `Validate()` invocation over the spliced text." Once this plan's
+manifest exists (giving every stdlib symbol an independent, addressable
+identity separate from any particular importer's source), that blocker
+is gone: a natural Phase 5 becomes caching each symbol's *validated*
+result (not just its raw source slice) keyed by the symbol's own content
+hash plus its transitive dependency closure's hashes - much closer to
+Rust's per-item incremental compilation model than a whole-file cache,
+and reusable across every process that imports the same unchanged stdlib
+symbol, not just within one compile.
+
+**Recommendation: keep the plan as scoped (manifest + lazy per-symbol
+expansion), but explicitly note cross-invocation caching as the natural,
+higher-leverage Phase 5** rather than treating "sub-1-second for one
+compile" as the final destination - once symbols are independently
+identifiable, caching their validated form is a comparatively small
+additional step that would benefit *every* compile, not just usage-light
+ones, and matches how every mature toolchain surveyed actually gets this
+class of cost down in production. Do not skip straight to a caching
+phase without the lazy-expansion phases first, though: TODO-4735's own
+finding was that caching cannot be built safely without the module
+boundary this plan's manifest creates - the ordering (manifest and
+lazy expansion first, caching after) is load-bearing, not incidental.
+
 ## Non-Goals (first phase)
 
 - Imports that already name one specific file rather than a module root
@@ -221,6 +317,23 @@ text-assembly step feeding them does.
 
 - Revisit the "stdlib only" non-goal once the mechanism is proven; assess
   whether user-authored library imports would benefit the same way.
+
+### Phase 5 - Cross-invocation caching of validated symbols (only after
+Phase 3 proves out)
+
+- See "Precedent in Other Toolchains" below for why this is the
+  higher-leverage lever every mature toolchain surveyed (Go, Rust, C++20
+  modules) actually relies on, and why it was blocked until this plan's
+  manifest exists.
+- Cache each stdlib symbol's *validated* result (not just its raw source
+  slice), keyed by the symbol's own content hash plus its transitive
+  dependency closure's hashes - reused across every process that imports
+  the same unchanged stdlib symbol, not just within one compile.
+- Requires its own correctness-sensitive verification pass (a cache-off
+  lane proving identical results, matching the standard this plan and
+  TODO-4743/TODO-4735 already hold every change to) - do not treat this
+  as a quick follow-on just because the hard part (the module boundary)
+  is already done by then.
 
 ## Findings
 
