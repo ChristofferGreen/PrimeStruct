@@ -14,6 +14,7 @@
 #include "primec/SemanticsBenchmark.h"
 #include "primec/SourceLocationMapper.h"
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibSymbolManifest.h"
 #include "primec/TextFilterPipeline.h"
 #include "primec/TransformRules.h"
 #include "semantics/TypeResolutionGraph.h"
@@ -633,7 +634,8 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                const std::vector<std::string> &implicitKeys,
                                std::string &source,
                                std::string &error,
-                               ExpandedSource *expandedSource = nullptr) {
+                               ExpandedSource *expandedSource = nullptr,
+                               const std::unordered_set<std::string> &excludedKeys = {}) {
   std::error_code ec;
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
@@ -644,12 +646,18 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
       if (skipMathWildcardStdlibModule && importPath == "/std/math/*" && key == "/std/math") {
         continue;
       }
+      if (excludedKeys.count(key) > 0) {
+        continue;
+      }
       if (queuedKeys.insert(key).second) {
         pendingKeys.push_back(key);
       }
     }
   }
   for (const auto &key : implicitKeys) {
+    if (excludedKeys.count(key) > 0) {
+      continue;
+    }
     if (queuedKeys.insert(key).second) {
       pendingKeys.push_back(key);
     }
@@ -828,6 +836,170 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   return true;
 }
 
+// TODO-5228 (docs/LibrarySymbolManifestLazyImports.md): lazy stdlib import
+// expansion. Resolves a stdlib module root key to its physical .prime
+// source file using the same std/modules.psmeta override and
+// directory-scan-default conventions appendStdlibModuleSources uses above,
+// but only accepts the single-file case (no recursive multi-file directory
+// scan) - sufficient for every module that currently ships a lazy-loadable
+// sibling .psmeta symbol manifest, and a safe thing to decline for modules
+// that don't fit that shape (they simply aren't lazy-eligible, and fall
+// through to the normal whole-file splice unchanged).
+std::optional<std::filesystem::path> resolveSingleFileStdlibModuleSource(
+    const std::vector<std::string> &importPaths, const std::string &key) {
+  std::error_code ec;
+  for (const auto &pathText : importPaths) {
+    std::filesystem::path root(pathText);
+    if (root.filename() != "stdlib") {
+      continue;
+    }
+    if (!std::filesystem::exists(root, ec) || !std::filesystem::is_directory(root, ec)) {
+      continue;
+    }
+
+    StdlibModuleManifest manifest;
+    std::string manifestError;
+    if (readStdlibModuleManifest(root, manifest, manifestError)) {
+      const auto manifestEntry = manifest.sourceFilesByRoot.find(key);
+      if (manifestEntry != manifest.sourceFilesByRoot.end()) {
+        std::filesystem::path resolved = root / manifestEntry->second;
+        if (std::filesystem::exists(resolved, ec) && std::filesystem::is_regular_file(resolved, ec)) {
+          return resolved;
+        }
+      }
+    }
+
+    if (key.size() <= std::string("/std/").size()) {
+      continue;
+    }
+    const std::string relative = key.substr(std::string("/std/").size());
+    const std::filesystem::path moduleRoot = root / "std" / relative;
+
+    std::filesystem::path asFile = moduleRoot;
+    asFile += ".prime";
+    if (std::filesystem::exists(asFile, ec) && std::filesystem::is_regular_file(asFile, ec)) {
+      return asFile;
+    }
+
+    if (std::filesystem::is_directory(moduleRoot, ec)) {
+      std::optional<std::filesystem::path> onlyFile;
+      bool multipleFiles = false;
+      for (const auto &dirEntry : std::filesystem::recursive_directory_iterator(moduleRoot, ec)) {
+        if (ec) {
+          break;
+        }
+        if (!dirEntry.is_regular_file(ec) || dirEntry.path().extension() != ".prime") {
+          continue;
+        }
+        if (onlyFile.has_value()) {
+          multipleFiles = true;
+          break;
+        }
+        onlyFile = dirEntry.path();
+      }
+      if (onlyFile.has_value() && !multipleFiles) {
+        return onlyFile;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<std::filesystem::path> stdlibSymbolManifestPathForSource(
+    const std::filesystem::path &sourceFile) {
+  std::filesystem::path manifestPath = sourceFile;
+  manifestPath.replace_extension(".psmeta");
+  std::error_code ec;
+  if (std::filesystem::exists(manifestPath, ec) && std::filesystem::is_regular_file(manifestPath, ec)) {
+    return manifestPath;
+  }
+  return std::nullopt;
+}
+
+bool isIdentifierChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+}
+
+// Whole-word substring search: true when `word` appears in `text` bounded
+// by non-identifier characters (or the start/end of text) on both sides.
+bool containsWholeWord(const std::string &text, const std::string &word) {
+  if (word.empty()) {
+    return false;
+  }
+  size_t pos = 0;
+  while ((pos = text.find(word, pos)) != std::string::npos) {
+    const bool leftOk = pos == 0 || !isIdentifierChar(text[pos - 1]);
+    const size_t end = pos + word.size();
+    const bool rightOk = end >= text.size() || !isIdentifierChar(text[end]);
+    if (leftOk && rightOk) {
+      return true;
+    }
+    pos += 1;
+  }
+  return false;
+}
+
+std::string manifestEntryLeafName(const std::string &fullPath) {
+  const size_t lastSlash = fullPath.find_last_of('/');
+  return lastSlash == std::string::npos ? fullPath : fullPath.substr(lastSlash + 1);
+}
+
+struct LazyStdlibModule {
+  std::string key;
+  std::filesystem::path sourceFile;
+  std::vector<StdlibSymbolManifestEntry> entries;
+  std::unordered_set<std::string> includedPaths;
+};
+
+// Builds the symbol closure for every lazy-eligible module referenced by
+// `seedText` (typically the user's own expanded source, before any stdlib
+// splicing): a purely syntactic, whole-word scan for each manifest entry's
+// leaf name, recursively re-scanning each newly-included symbol's own
+// extracted body for further references. This never attempts real name
+// resolution, so it can only over-include (splice a symbol that turns out
+// unused) - always safe - never under-include in a way that would produce
+// wrong output; at worst it fails to find a needed symbol and the normal
+// "unknown call target"/"unknown identifier" diagnostic surfaces unchanged,
+// same as it would without this feature.
+struct LazyStdlibExtractedSymbol {
+  const LazyStdlibModule *module = nullptr;
+  std::string text;
+};
+
+bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules,
+                                          const std::string &seedText,
+                                          std::vector<LazyStdlibExtractedSymbol> &extracted,
+                                          std::string &error) {
+  std::deque<std::string> pendingTexts;
+  pendingTexts.push_back(seedText);
+
+  while (!pendingTexts.empty()) {
+    const std::string text = std::move(pendingTexts.front());
+    pendingTexts.pop_front();
+
+    for (LazyStdlibModule &module : modules) {
+      for (const StdlibSymbolManifestEntry &entry : module.entries) {
+        if (module.includedPaths.count(entry.path) > 0) {
+          continue;
+        }
+        const std::string leaf = manifestEntryLeafName(entry.path);
+        if (!containsWholeWord(text, leaf)) {
+          continue;
+        }
+        std::string extractedText;
+        if (!extractAndVerifyManifestedSymbolSource(
+                entry, module.sourceFile.string(), extractedText, error)) {
+          return false;
+        }
+        module.includedPaths.insert(entry.path);
+        extracted.push_back(LazyStdlibExtractedSymbol{&module, extractedText});
+        pendingTexts.push_back(extractedText);
+      }
+    }
+  }
+  return true;
+}
+
 bool isGraphicsImportPath(const std::string &importPath) {
   if (importPath == "/std/gfx/*" || importPath == "/std/gfx") {
     return true;
@@ -873,6 +1045,13 @@ struct CompilePipelineImportStageState {
   std::vector<std::string> sourceImports;
   std::vector<std::string> sourceStdImports;
   std::vector<std::string> implicitStdlibKeys;
+  // TODO-5228: module-root keys that were treated as lazy-eligible (symbol
+  // manifest present, whole-file splice skipped). Used to give a clearer
+  // diagnostic if the closure scan's syntactic heuristic missed a symbol
+  // the program actually needed, instead of the generic downstream
+  // "unknown import path" error that fires when literally nothing from a
+  // wildcard-imported module ended up in the compiled buffer.
+  std::unordered_set<std::string> lazyStdlibModuleKeys;
 };
 
 struct CompilePipelinePreParseStageState {
@@ -901,15 +1080,78 @@ bool runCompilePipelineImportStage(const Options &options,
   out.sourceImports = collectSourceImportPaths(out.source);
   out.sourceStdImports = collectStdImportPaths(out.source);
   out.implicitStdlibKeys = collectImplicitStdlibAutoIncludeKeys(out.source);
+
+  // TODO-5228: identify which stdlib module-root imports are lazy-eligible
+  // (resolve to a single .prime file with a sibling .psmeta symbol
+  // manifest) before the normal whole-file splice runs, so those roots can
+  // be excluded from it entirely.
+  std::vector<LazyStdlibModule> lazyModules;
+  std::unordered_set<std::string> &lazyKeys = out.lazyStdlibModuleKeys;
+  if (options.experimentalLazyStdlibImports) {
+    std::vector<std::string> candidateKeys;
+    for (const auto &importPath : out.sourceStdImports) {
+      for (const auto &key : collectStdlibAutoIncludeKeys(importPath)) {
+        candidateKeys.push_back(key);
+      }
+    }
+    for (const auto &key : out.implicitStdlibKeys) {
+      candidateKeys.push_back(key);
+    }
+    std::unordered_set<std::string> seenCandidateKeys;
+    for (const auto &key : candidateKeys) {
+      if (!seenCandidateKeys.insert(key).second) {
+        continue;
+      }
+      const std::optional<std::filesystem::path> sourceFile =
+          resolveSingleFileStdlibModuleSource(options.importPaths, key);
+      if (!sourceFile.has_value()) {
+        continue;
+      }
+      const std::optional<std::filesystem::path> manifestPath =
+          stdlibSymbolManifestPathForSource(*sourceFile);
+      if (!manifestPath.has_value()) {
+        continue;
+      }
+      LazyStdlibModule module;
+      module.key = key;
+      module.sourceFile = *sourceFile;
+      if (!readStdlibSymbolManifest(manifestPath->string(), module.entries, error)) {
+        diagnosticSink.setSummary(error);
+        return false;
+      }
+      lazyKeys.insert(key);
+      lazyModules.push_back(std::move(module));
+    }
+  }
+
   if (shouldAutoIncludeStdlib(out.source) || !out.implicitStdlibKeys.empty()) {
     if (!appendStdlibModuleSources(options.importPaths,
                                    out.sourceStdImports,
                                    out.implicitStdlibKeys,
                                    out.source,
                                    error,
-                                   &out.expandedSource)) {
+                                   &out.expandedSource,
+                                   lazyKeys)) {
       diagnosticSink.setSummary(error);
       return false;
+    }
+  }
+
+  if (!lazyModules.empty()) {
+    std::vector<LazyStdlibExtractedSymbol> extracted;
+    if (!computeLazyStdlibModuleClosureSource(lazyModules, out.source, extracted, error)) {
+      diagnosticSink.setSummary(error);
+      return false;
+    }
+    if (!extracted.empty()) {
+      ExpandedSourceBuilder sourceBuilder(out.expandedSource);
+      for (const LazyStdlibExtractedSymbol &symbol : extracted) {
+        sourceBuilder.appendGenerated("\n", "<lazy-stdlib-separator>");
+        const std::size_t unitId = sourceBuilder.addUnit(
+            SourceUnitKind::Stdlib, symbol.module->sourceFile.string(), symbol.module->key, 1, 1);
+        sourceBuilder.appendSegment(unitId, symbol.text, 1, 1);
+      }
+      out.source = out.expandedSource.text;
     }
   }
 
@@ -1341,6 +1583,29 @@ bool runCompilePipeline(const Options &options,
                                               semanticProductBuildConfigPtr);
   }
   if (!semanticValidationOk) {
+    // TODO-5228: the closure-scan heuristic that decides which manifested
+    // symbols to splice in is purely syntactic (a whole-word name scan),
+    // so it can miss a symbol the program actually needed. When that
+    // happens, nothing from the lazily-imported module ends up in the
+    // compiled buffer, and the pre-existing "unknown import path: X"
+    // check (which fires whenever a wildcard-imported root has zero
+    // definitions) is what actually surfaces - not the more specific
+    // "unknown call target"/"unknown identifier" a whole-file splice would
+    // have produced. Rewrite it into the clearer, TODO-5228-specific
+    // message the plan calls for, rather than letting a confusing
+    // downstream error stand.
+    for (const std::string &lazyKey : importStage.lazyStdlibModuleKeys) {
+      const std::string unknownImportPrefix = "unknown import path: " + lazyKey;
+      if (error.compare(0, unknownImportPrefix.size(), unknownImportPrefix) == 0) {
+        error = "unknown symbol in imported library " + lazyKey +
+                " (--experimental-lazy-stdlib-imports could not find any "
+                "manifested symbol matching a name referenced by this "
+                "program; disable the flag to see the underlying "
+                "diagnostic, or verify the spelling)";
+        semanticDiagnosticInfo.message = error;
+        break;
+      }
+    }
     if (semanticDiagnosticInfo.message.empty()) {
       semanticDiagnosticInfo.message = error;
     }

@@ -57,15 +57,6 @@ bool isBlankLine(const std::string &line) {
   return line.find_first_not_of(" \t\r") == std::string::npos;
 }
 
-bool belongsToModule(const std::string &fullPath, const std::string &moduleRoot) {
-  if (fullPath == moduleRoot) {
-    return true;
-  }
-  return fullPath.size() > moduleRoot.size() &&
-         fullPath.compare(0, moduleRoot.size(), moduleRoot) == 0 &&
-         fullPath[moduleRoot.size()] == '/';
-}
-
 // Finds the token whose position matches a definition's recorded name
 // position (sourceLine/sourceColumn set by the parser to the name token).
 int findNameTokenIndex(const std::vector<Token> &tokens, const Definition &def) {
@@ -173,11 +164,22 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Every definition here belongs to this module: this parse bypasses
+  // ImportResolver entirely (a plain Lexer/Parser pass over the raw file),
+  // so `import` statements are inert Program::imports entries and cannot
+  // pull in any other module's content - unlike running the module file
+  // through the full compile pipeline, which does expand imports and would
+  // contaminate program.definitions with e.g. /std/math's own definitions.
+  // No moduleRoot-prefix filter is applied: some modules (image.prime, at
+  // least) define a public wrapper surface at absolute paths outside their
+  // own module root (e.g. `/ImageError/status` alongside
+  // `/std/image/ImageError/status`), and those symbols are real,
+  // manifestable, callable API - filtering them out was a bug inherited
+  // from an earlier full-pipeline-based investigation where the
+  // contamination risk was real; it isn't here.
   std::vector<const Definition *> moduleDefs;
   for (const Definition &def : program.definitions) {
-    if (belongsToModule(def.fullPath, moduleRoot)) {
-      moduleDefs.push_back(&def);
-    }
+    moduleDefs.push_back(&def);
   }
   std::stable_sort(moduleDefs.begin(), moduleDefs.end(),
                     [](const Definition *a, const Definition *b) {

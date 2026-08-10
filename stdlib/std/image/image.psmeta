@@ -7,6 +7,42 @@
 # file line numbers.
 
 [symbol]
+path = /ImageError/why
+start_line = 1
+end_line = 8
+content_hash = 2f3e4cef5d8d1d84
+
+[symbol]
+path = /ImageError/status
+start_line = 10
+end_line = 13
+content_hash = 9f46c09682bebd81
+
+[symbol]
+path = /ImageError/read_unsupported
+start_line = 15
+end_line = 18
+content_hash = 1299b2a1dcebe2d9
+
+[symbol]
+path = /ImageError/write_unsupported
+start_line = 20
+end_line = 23
+content_hash = 7d56bb7bb8e9c081
+
+[symbol]
+path = /ImageError/invalid_operation
+start_line = 25
+end_line = 28
+content_hash = 8f96ed4f3683d745
+
+[symbol]
+path = /ImageError/result
+start_line = 30
+end_line = 33
+content_hash = ded75587670f331b
+
+[symbol]
 path = /std/image/ImageError
 start_line = 37
 end_line = 40

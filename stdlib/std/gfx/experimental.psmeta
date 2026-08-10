@@ -169,6 +169,36 @@ end_line = 235
 content_hash = fd325da701569319
 
 [symbol]
+path = /Buffer/readback
+start_line = 238
+end_line = 242
+content_hash = 279e86337f89d5e8
+
+[symbol]
+path = /Buffer/load
+start_line = 244
+end_line = 248
+content_hash = d7e28d6909e6cd2d
+
+[symbol]
+path = /Buffer/store
+start_line = 250
+end_line = 255
+content_hash = d05c44a5a314164b
+
+[symbol]
+path = /Buffer/allocate
+start_line = 257
+end_line = 262
+content_hash = c62e103a41670b2a
+
+[symbol]
+path = /Buffer/upload
+start_line = 264
+end_line = 269
+content_hash = c1d1b9f8cba92059
+
+[symbol]
 path = /std/gfx/experimental/Texture2D
 start_line = 271
 end_line = 276

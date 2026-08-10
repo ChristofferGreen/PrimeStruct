@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
-- TODO-5228: Implement the opt-in iterative lazy-expansion algorithm | track: library-symbol-manifests | surface: src/CompilePipeline.cpp import resolution, new opt-in flag
+- TODO-5229: Build the lazy-expansion differential harness and triage every divergence | track: library-symbol-manifests | surface: differential harness across semantics/ir_pipeline/compile_run corpora
 
 ### Immediate Next 10
 
@@ -11490,8 +11490,8 @@ This file is the live open-work queue for PrimeStruct.
     missing `[symbol]` header) are rejected. Full `ctest --parallel 4`
     regression clean.
 
-- [ ] TODO-5228: Phase 2b - implement the opt-in iterative lazy-expansion
-  algorithm
+- [x] TODO-5228 (RESOLVED): Phase 2b - implement the opt-in iterative
+  lazy-expansion algorithm
   - owner: ai
   - created_at: 2026-08-10
   - phase: Compiler architecture / import resolution
@@ -11518,6 +11518,94 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: do not flip the default and do not build the full 3-corpus
     differential harness in this leaf - that is TODO-5229. This leaf's own
     acceptance is the narrow repro-case measurement only.
+  - resolution_summary (2026-08-10): implemented as a static, syntactic
+    transitive-closure name scan instead of the originally-planned
+    diagnostic-parsing retry loop - chosen after finding that on-failure
+    diagnostics (`formatUnknownCallTarget`) report the bare name as the
+    user wrote it, not a resolved path, making diagnostic-text matching
+    inherently fragile and requiring either brittle string heuristics or
+    invasive `SemanticsValidator` changes (specifically the
+    already-technical-debt-flagged `resolveMethodTarget`, see TODO-4724).
+    The chosen design is provably safe instead: `Options::experimentalLazyStdlibImports`
+    (`--experimental-lazy-stdlib-imports`, default off) triggers, in
+    `runCompilePipelineImportStage` (`src/CompilePipeline.cpp`),
+    `resolveSingleFileStdlibModuleSource` to identify which wildcard-imported
+    module roots resolve to a single `.prime` file with a sibling
+    `.psmeta` manifest; those roots are excluded from the normal
+    whole-file splice (`appendStdlibModuleSources` gained an
+    `excludedKeys` parameter) and instead run through
+    `computeLazyStdlibModuleClosureSource`: a worklist-based whole-word
+    text scan (`containsWholeWord`) that starts from the user's own
+    expanded source, matches manifest entries by leaf name
+    (`manifestEntryLeafName`), extracts+verifies each match via TODO-5227's
+    `extractAndVerifyManifestedSymbolSource`, and recursively re-scans
+    each newly-included symbol's own extracted body for further
+    references - naturally terminating (an `includedPaths` set makes every
+    entry addable at most once, no explicit cycle-guard code needed) and
+    safe by construction (the only failure mode is over-inclusion, which
+    is always harmless - unlike a wrong diagnostic-based guess, which
+    could miss a needed symbol or mask a real error). Extracted symbols
+    are spliced in via `ExpandedSourceBuilder` (one `Stdlib`-kind unit per
+    symbol) so diagnostic source-location mapping stays intact for the
+    spliced text itself (though not perfectly - see limitation below).
+    When a wildcard import ends up with zero manifested symbols matched
+    (nothing referenced anything from that module), the pre-existing
+    "unknown import path: X" check fires with an unhelpful, unlocated
+    message; this is rewritten to the TODO's required
+    "unknown symbol in imported library X" diagnostic in
+    `runCompilePipeline`'s semantic-failure handling.
+  - fixed_along_the_way: `tools/generate_stdlib_manifest.cpp`'s
+    `belongsToModule` fullPath-prefix filter was removed - it was
+    defending against a contamination risk (transitively-imported other
+    modules' definitions) that doesn't actually apply to this tool, since
+    it bypasses `ImportResolver` entirely (a plain `Lexer`/`Parser` pass;
+    `import` statements are inert `Program::imports` entries, never
+    expanded). The filter was incorrectly excluding real, callable public
+    API: `image.prime` defines 6 free-standing wrapper functions at
+    absolute paths outside `/std/image` (e.g. `/ImageError/status`,
+    matching real test usage in
+    `test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp`),
+    and `experimental.prime` has 5 similar indented (non-column-0) ones
+    (`/Buffer/allocate` etc.) that a naive text grep for top-level
+    definitions had also missed. Regenerated both manifests (120->126,
+    78->83 symbols); the generator's own differential check passed for
+    every new entry.
+  - measured_impact: for a hand-written light-usage repro per module
+    (`import /std/image/*` calling only `imageErrorStatus`/`Result.why`;
+    `import /std/gfx/experimental/*` calling only
+    `GfxError.status`/`Result.why`), `--benchmark-semantic-phase-counters`
+    shows `calls_visited` dropping from 4888 to 21 for the image case (a
+    ~232x reduction) with identical, correct program output in both
+    modes - the acceptance bar this leaf required.
+  - known_limitation (real, not yet fixed - flagged for TODO-5229 triage):
+    a templated method called via receiver method-call syntax (e.g.
+    `err.result<i32>()`, calling `/std/gfx/experimental/GfxError/result<T>`)
+    fails with "unknown call target: result" under the lazy flag even
+    though the identical call succeeds with the flag off, and even though
+    `--dump-stage ast` confirms the definition genuinely is present in
+    `program.definitions` after lazy splicing, with an AST shape already
+    proven identical to the whole-file version by TODO-5227's own
+    differential check. Ruled out during investigation: definition
+    absence, AST/namespace-wrap structural mismatch, definition ordering,
+    and missing sibling-method co-presence (splicing `status` alongside
+    `result` didn't help). The non-templated sibling methods (`why`,
+    `status`) on the exact same struct, called the exact same way, work
+    correctly under the flag - this is specific to template methods called
+    via method-call syntax. Root cause not identified (would require
+    instrumenting `SemanticsValidator`'s method-target/monomorphization
+    resolution, which this leaf's design deliberately avoided touching).
+    This directly matches the earlier design-review finding that generics
+    "cannot be used for templates etc" without extra care - TODO-5229's
+    full 3-corpus differential harness is exactly the mechanism that
+    should catch and either fix or precisely characterize this before
+    TODO-5226 can make lazy expansion the default.
+  - verification: new `primestruct.compile.run.lazy_stdlib_imports` suite
+    (`tests/unit/compile_run/test_compile_run_lazy_stdlib_imports.cpp`, 4
+    cases: correct output for both modules' light-usage repros, the
+    calls_visited reduction bound, and the unresolved-symbol diagnostic
+    wording) plus the manifest-generator fix's regeneration, both under a
+    full `ctest --parallel 4` regression - clean (the flag defaults off,
+    so no other existing test's behavior changes).
 
 - [ ] TODO-5229: Phase 2c - build the lazy-expansion differential harness
   and triage every divergence
@@ -11539,6 +11627,13 @@ This file is the live open-work queue for PrimeStruct.
     triaged and resolved (fixed or explicitly accepted with a new pinning
     test) before this leaf is considered done - do not ship with known,
     unexplained differential-harness divergences under the opt-in flag.
+  - known_starting_point: TODO-5228's resolution_summary already found and
+    documented one concrete divergence to triage first - a templated
+    method called via receiver method-call syntax (e.g. `err.result<i32>()`)
+    fails under the lazy flag even though the definition is present with a
+    verified-identical AST shape; root cause not yet identified. This is
+    the first thing this leaf's harness should catch and either explain or
+    fix, not a surprise to rediscover from scratch.
 
 - [ ] TODO-5226: Phase 3 - flip lazy import expansion to the default
   - owner: ai

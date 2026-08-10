@@ -812,6 +812,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/test_compile_run_imports_versions.cpp
     tests/unit/compile_run/test_compile_run_imports_blocks.cpp
     tests/unit/compile_run/test_compile_run_imports_operations.cpp
+    tests/unit/compile_run/test_compile_run_lazy_stdlib_imports.cpp
     tests/unit/compile_run/test_compile_run_native_backend_argv.cpp
     tests/unit/compile_run/test_compile_run_native_backend_core.cpp
     tests/unit/compile_run/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp
@@ -1816,6 +1817,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.compile.run.text_filters
     primestruct.compile.run.bindings
     primestruct.compile.run.examples
+    primestruct.compile.run.lazy_stdlib_imports
   )
   if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     list(APPEND PrimeStructCompileRunSuites
