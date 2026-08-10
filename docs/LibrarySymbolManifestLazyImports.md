@@ -224,4 +224,136 @@ text-assembly step feeding them does.
 
 ## Findings
 
-(Empty - populate during Phase 0.)
+Completed as TODO-5223 (Phase 0 characterization, no production-code
+changes). All measurements below via
+`--benchmark-semantic-phase-counters`, `--dump-stage ast`, and direct
+source reading against the `build-release/primec` binary as of
+2026-08-10.
+
+### Per-module usage ratios
+
+Measured `validation.calls_visited` / `semantic_product_build.facts_produced`
+for a wildcard import of each module with a totally unused `main()`
+(worst case: zero usage, full cost), plus each module's approximate
+source size:
+
+| module | lines | calls_visited (unused) | facts_produced (unused) |
+|---|---|---|---|
+| `/std/image/*` | 2,736 | 4,885 | 26,862 |
+| `/std/gfx/*` | ~660 | 3,125 | 13,034 |
+| `/std/gfx/experimental/*` | ~650 | 3,113 | 12,973 |
+| `/std/collections/*` | 5,913 | 78 | 593 |
+| `/std/math/*` | 942 | 0 | 5 |
+
+`/std/math/*` and (to a lesser extent) `/std/collections/*` are **not**
+next-priority candidates despite `collections` being the largest module
+by line count - see "Existing prior art" below for why math is already
+near-zero, and collections' own wildcard resolution already has a
+narrower special case (`skipExperimentalCollectionsInBaseWildcard`,
+`CompilePipeline.cpp`) that keeps its unused-import cost low relative to
+its size. **`/std/image/*` and `/std/gfx/*`/`/std/gfx/experimental/*`
+remain the highest-value targets** - both because they're the most
+expensive per this table and because a real usage sample (see below)
+shows the used/total ratio for a typical test is extremely lopsided (a
+handful of functions/types out of hundreds of transitively-included
+definitions).
+
+`--dump-stage ast` on an unused `import /std/image/*` shows **784 total
+definitions** get parsed into the AST (image.prime's own definitions plus
+whatever it transitively imports itself). A representative real test
+(`test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp`
+and siblings) references on the order of a handful of `Image`/`ImageError`
+symbols directly - the used-to-total ratio is in the low single-digit
+percent for typical `compile_run` test usage, confirming the Goal
+section's "usage-light, size-heavy" framing is realistic, not a
+worst-case cherry-pick.
+
+### Existing prior art: the math wildcard's hardcoded skip-or-include hack
+
+`CompilePipeline.cpp`'s `shouldSkipMathWildcardStdlibModule` /
+`sourceReferencesNonBuiltinMathSymbols` already implement a coarse version
+of this plan's idea for exactly one module (`/std/math/*`): a lexer-level
+scan of the compilation unit's own source (before stdlib splicing) checks
+whether any token matches a **hardcoded list of math stdlib surface names**
+(`MathStdlibSurfaceNames`, `isMathBuiltinOrConstantName`); if none match,
+the entire math module is skipped rather than spliced in at all. This
+directly validates that conditional module inclusion based on actual
+usage is already a load-bearing production technique in this codebase,
+not a speculative idea - but it also demonstrates the exact anti-pattern
+this plan's manifest design avoids: the surface-name list is **hand-written
+and module-specific**, so it silently goes stale the moment `math.prime`
+gains a new public symbol nobody remembers to add to the list, and the
+technique only works as a binary all-or-nothing switch (skip everything or
+include everything), not partial/symbol-level inclusion. This plan
+generalizes the validated idea (skip work for what isn't used) while fixing
+both weaknesses (auto-generated from source, partial/lazy rather than
+binary).
+
+### Struct/method representation - resolved, simpler than the plan worried
+
+Read `--dump-stage ast` output directly for `/std/image/*`: a struct like
+`ImageError` and each of its associated "methods" (`why`, `status`,
+`read_unsupported`, `result<T>`, etc.) are **already independent top-level
+entries in `program.definitions`**, distinguished only by a shared
+`fullPath` prefix (`/std/image/ImageError`, `/std/image/ImageError/why`,
+`/std/image/ImageError/status`, ...) - there is no special AST-level
+"struct with attached methods" grouping to account for. This resolves the
+risk flagged in the Design section as simpler than feared: **the manifest
+needs no special struct/method entry type** - every definition (bare
+function, struct declaration, or struct-associated method) is manifested
+uniformly, one entry per `fullPath`, exactly like any other symbol. The
+lazy-expansion algorithm pulls in `ImageError`'s struct declaration only
+when something actually needs its field layout (used as a type anywhere -
+not just when explicitly constructed) and pulls in each method
+independently, only when that specific method is actually called.
+
+**One correction to the Design section's wording**: the fixed-point loop
+must scan for unresolved **type names**, not just unresolved **call
+names**. A program can reference `[ImageError]` as a parameter or local
+binding type without ever calling any of its methods, and the struct's own
+field-layout definition still needs to be pulled in for type-checking to
+work at all. "Unresolved name" in the Design section's steps 2-4 should be
+read as covering both call targets and type references from here on.
+
+### Manifest format decision
+
+Read the full `readStdlibModuleManifest` parser
+(`CompilePipeline.cpp:397-465`): `std/modules.psmeta` is a small, strict,
+hand-rolled `[module]`-block INI-style text format (`key = value` pairs,
+`#` comments, explicit "unknown key" rejection for anything not
+recognized). Critically, **most stdlib modules don't have any entry in it
+at all** - `modules.psmeta` today only contains 2 entries total (`/std/gfx`
+and `/std/gfx/experimental`, both narrow file-location overrides for
+module roots whose import path doesn't map cleanly onto a directory scan).
+Every other module (including `/std/image`, `/std/collections`,
+`/std/math`) resolves via the **default directory-scan path**: the import
+root maps to a directory, and `appendStdlibModuleSources` recursively
+walks it, splicing in every `.prime` file found (with one narrow
+special-cased exclusion for `/std/collections`'s experimental-prefixed
+files).
+
+**Decision: do not grow the central `std/modules.psmeta` file.** Centralizing
+per-symbol tables for every stdlib module into one shared file would (a)
+make an already-small, easy-to-read file balloon to thousands of lines
+covering unrelated modules, and (b) require every module's manifest
+regeneration to touch and re-diff the same shared file, which is
+unnecessary merge-conflict and review-noise risk for a purely mechanical,
+auto-generated artifact. Instead: **a new, per-module sibling manifest
+file, colocated with each module's own source** (e.g.
+`stdlib/std/image/image.psmeta` next to `image.prime`, following the
+existing `.psmeta` extension convention for consistency). Keep the same
+simple `key = value` block-based text format `modules.psmeta` already
+uses (no need to introduce a JSON dependency for a format this codebase
+already has a working hand-rolled parser for) - one `[symbol]` block per
+manifested definition, with `path`, `source_file`, and enough position
+information (a byte offset + length pair is simplest and avoids
+line/column recomputation edge cases around multi-line definitions) to
+slice the exact source text for that one symbol.
+
+### Scope confirmation for Phase 1
+
+Per the measurements above, Phase 1 (TODO-5224) should generate manifests
+for `/std/image` and `/std/gfx`/`/std/gfx/experimental` first, exactly as
+originally planned - the data confirms these are the highest-value
+targets and the struct/method representation question that could have
+complicated the generator's design turns out to need no special handling.

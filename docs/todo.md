@@ -11240,7 +11240,7 @@ This file is the live open-work queue for PrimeStruct.
     per-test compile+link work (many distinct translation units across
     hundreds of `compile_run` cases), not a single fixable inefficiency.
 
-- [ ] TODO-5223: Phase 0 - characterize library symbol manifest / lazy
+- [x] TODO-5223 (RESOLVED): Phase 0 - characterize library symbol manifest / lazy
   import expansion design
   - owner: ai
   - created_at: 2026-08-10
@@ -11278,6 +11278,41 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: this is measurement and format-decision work only; do not
     start writing the manifest generator or touching
     `CompilePipeline.cpp`'s import resolution in this leaf.
+  - resolution_summary (2026-08-10): full findings appended to
+    `docs/LibrarySymbolManifestLazyImports.md`'s "Findings" section.
+    Highlights: (1) confirmed `/std/image/*` (2,736 lines, 784
+    transitively-included definitions, 4,885 calls visited / 26,862
+    facts produced when totally unused) and `/std/gfx`/`/std/gfx/experimental`
+    remain the highest-value targets; `/std/collections/*` and
+    `/std/math/*` are lower priority (math is already near-zero cost
+    thanks to existing prior art, collections already has a narrower
+    exclusion special-case keeping its unused cost low relative to its
+    5,913-line size). (2) Found existing, directly relevant prior art:
+    `shouldSkipMathWildcardStdlibModule`/`sourceReferencesNonBuiltinMathSymbols`
+    (`CompilePipeline.cpp`) already implement a coarse, binary
+    skip-or-include-everything version of this idea for the math module
+    specifically, via a **hand-written, hardcoded surface-name list**
+    that can silently drift from the actual source - directly validating
+    the overall direction while confirming why auto-generation (not
+    hand-authoring) is the right call for the new manifest. (3)
+    Struct/method representation risk resolved as simpler than feared:
+    `--dump-stage ast` confirms struct-associated methods are already
+    independent top-level `program.definitions` entries (shared
+    `fullPath` prefix only, no special AST grouping) - the manifest needs
+    no special struct/method entry type, just one uniform entry per
+    definition. Corrected one piece of the Design section's wording along
+    the way: the fixed-point expansion loop must scan for unresolved
+    *type* references too, not just call targets, since a type can be
+    referenced (as a param/local/return type) without ever calling any of
+    its methods. (4) Manifest format decided: do NOT grow the central
+    `std/modules.psmeta` (only 2 entries exist there today, both narrow
+    file-location overrides - most modules use the default
+    directory-scan path and have no entry in it at all); instead use a
+    new per-module sibling manifest file colocated with each module's own
+    source (e.g. `stdlib/std/image/image.psmeta`), keeping the same
+    simple `key = value` block-style text format `modules.psmeta` already
+    uses rather than introducing a JSON dependency. Phase 1 (TODO-5224)
+    can start implementation directly from these findings.
 
 - [ ] TODO-5224: Phase 1 - build the per-module symbol manifest generator
   - owner: ai
