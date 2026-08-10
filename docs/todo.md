@@ -11634,6 +11634,89 @@ This file is the live open-work queue for PrimeStruct.
     verified-identical AST shape; root cause not yet identified. This is
     the first thing this leaf's harness should catch and either explain or
     fix, not a surprise to rediscover from scratch.
+  - progress_2026-08-10: built the harness and used it. Added
+    `lazyStdlibImportsEnabled(options)` (`src/CompilePipeline.cpp`) so the
+    opt-in flag is also forced on by the `PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS`
+    env var - this makes the *entire* existing test corpus double as the
+    differential corpus on demand (both primec-subprocess `compile_run`
+    tests and in-process helpers like `validateProgramThroughCompilePipeline`
+    that build `Options` directly, since neither goes through CLI parsing),
+    the same methodology `docs/CompatPathResolutionConsolidation.md`'s
+    Step 1 used, adapted here since this is an alternate compile-pipeline
+    path rather than a single classifier function with one legacy-vs-new
+    answer per call. Baseline (flag off): `ctest --parallel 4` clean (0
+    failures / 1881 tests) - confirms the harness's own baseline is sound.
+    Forced (`PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS=1`): started at 52
+    failures.
+    - **Fixed** (both real, pre-existing bugs the differential harness
+      exposed, not caused by lazy expansion - see the two commits
+      documenting each): the templated-method GfxError bug (already
+      resolved in TODO-5228's own resolution_summary), and a genuinely new
+      finding - `computeLazyStdlibModuleClosureSource` could independently
+      splice both a struct and one of its own nested methods (declared
+      directly inside the struct body rather than via a reopened
+      `namespace StructName { ... }` block, e.g. `/std/gfx/experimental/Buffer`)
+      as two separate inclusions, producing "duplicate definition" - fixed
+      by dropping any included entry whose line range is nested inside
+      another included entry from the same module. Also found and fixed a
+      real correctness gap orthogonal to those two: a lazy module's own
+      top-level `import` lines (e.g. image.prime's `import /std/math/*`)
+      never got processed at all, since the module's whole-file text is
+      never appended for a lazy module - so anything a spliced symbol's
+      body needed from a sibling stdlib module silently wasn't there.
+      Fixed by seeding those sibling imports into the normal (non-lazy)
+      splice path, but *only* when a cheap pre-check (does the pre-splice
+      seed text reference any of this module's manifested leaf names?)
+      confirms the lazy module will actually contribute something -
+      otherwise a program that imports but never touches a lazy module
+      would pay for its siblings' full inclusion for nothing. This
+      dropped the failure count to 41 and fixed the
+      `primestruct.compile.run.lazy_stdlib_imports` suite's own two
+      regressions (visible only under the forced env var, since the
+      sibling-import seeding measurably raises real-usage cost from ~21 to
+      ~584 `calls_visited` for the original light-usage repro - still an
+      honest ~8.4x reduction versus whole-file splice's ~4888, just less
+      dramatic than the zero-transitive-dependency best case; the suite's
+      threshold and comments were updated to reflect this honestly rather
+      than chase the earlier, incomplete number).
+    - **Not yet fixed - genuine open architectural question, not a quick
+      patch** (41 failures remain, all traced to one of two symptoms):
+      (a) `unknown call target: fileErrorIsEof` - a *bare* (non-method,
+      non-templated, non-namespaced) call from within one stdlib module's
+      own code to a plain function defined in a different, transitively-
+      imported stdlib module (e.g. image.prime's own `ppmSkipComment`
+      calling `/std/file`'s `fileErrorIsEof` bare) fails to resolve even
+      though the target definition is confirmed present in `defMap_` at
+      `buildDefinitionMaps` time (verified via targeted, since-removed
+      debug instrumentation - not a presence problem); (b)
+      `unsupported binding type: ColorRGBA` - the exact same shape of
+      problem for a bare *type* reference instead of a call (gfx/experimental
+      code using `/std/math`'s `ColorRGBA` struct bare). Both symptoms
+      share every property investigated so far: the target *is* present
+      in the compiled buffer and in the relevant lookup structure
+      (`defMap_`)); resolution nonetheless fails; and the identical
+      program succeeds under whole-file splicing even though `program.imports`
+      never literally contains the transitively-needed module's path in
+      *either* mode (ruled out as the differentiator). The working
+      hypothesis is that whole-file splice's success depends on some
+      volume- or content-dependent mechanism not yet identified (not
+      `hasDefinitionFamilyPath`, not `program.imports`-driven aliasing -
+      both were checked directly) - finding it would need instrumenting
+      deeper into `SemanticsHelpersCore.cpp`'s `resolveStructTypePath`/
+      `resolveAdditionalNominalTypePath` and whatever bare-call path
+      resolves non-method, non-templated calls (distinct from
+      `resolveMethodTarget`, which was already ruled out for the
+      GfxError fix). This is a real, unresolved architectural gap, not a
+      one-line fix - the remaining 41 failures cluster into exactly these
+      two symptoms across `semantics.result_helpers`,
+      `semantics.imports`, `compile_run.smoke`, `compile_run.vm_outputs`,
+      and `ir_pipeline.backends_registry`.
+  - stop_rule note: given the above, this leaf is **not** at "zero
+    unintended divergence" and TODO-5226 (flip the default) cannot
+    proceed yet per its own `depends_on`. The two fixed bugs and the
+    harness itself are real, verified, committed progress; the
+    fileErrorIsEof/ColorRGBA-shaped gap is the next concrete thing to
+    solve before this leaf can close.
 
 - [ ] TODO-5226: Phase 3 - flip lazy import expansion to the default
   - owner: ai

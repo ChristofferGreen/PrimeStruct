@@ -836,6 +836,21 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   return true;
 }
 
+// TODO-5229: PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS forces lazy expansion on
+// regardless of Options::experimentalLazyStdlibImports/the CLI flag, so the
+// entire existing test corpus (both primec-subprocess compile_run tests and
+// in-process helpers like validateProgramThroughCompilePipeline that build
+// Options directly) doubles as a differential corpus on demand - the same
+// "existing corpus as differential corpus" methodology
+// docs/CompatPathResolutionConsolidation.md's Step 1 used for its own
+// permanent differential harness, adapted here since lazy import expansion
+// is an alternate compile-pipeline path rather than a single classifier
+// function with one legacy-vs-new answer to compare per call.
+bool lazyStdlibImportsEnabled(const Options &options) {
+  return options.experimentalLazyStdlibImports ||
+         std::getenv("PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS") != nullptr;
+}
+
 // TODO-5228 (docs/LibrarySymbolManifestLazyImports.md): lazy stdlib import
 // expansion. Resolves a stdlib module root key to its physical .prime
 // source file using the same std/modules.psmeta override and
@@ -963,6 +978,7 @@ struct LazyStdlibModule {
 // same as it would without this feature.
 struct LazyStdlibExtractedSymbol {
   const LazyStdlibModule *module = nullptr;
+  const StdlibSymbolManifestEntry *entry = nullptr;
   std::string text;
 };
 
@@ -992,11 +1008,38 @@ bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules
           return false;
         }
         module.includedPaths.insert(entry.path);
-        extracted.push_back(LazyStdlibExtractedSymbol{&module, extractedText});
+        extracted.push_back(LazyStdlibExtractedSymbol{&module, &entry, extractedText});
         pendingTexts.push_back(extractedText);
       }
     }
   }
+
+  // Some modules declare a method directly inside its struct's own body
+  // (rather than via a separate reopened `namespace StructName { ... }`
+  // block) - both the struct entry and the nested method entry are
+  // independently manifested, but the struct's own extracted slice already
+  // contains the nested method's text. Splicing both produces a duplicate
+  // definition, so drop any entry whose [start_line, end_line] range falls
+  // entirely inside another included entry's range from the same module.
+  std::vector<LazyStdlibExtractedSymbol> filtered;
+  filtered.reserve(extracted.size());
+  for (const LazyStdlibExtractedSymbol &candidate : extracted) {
+    bool nested = false;
+    for (const LazyStdlibExtractedSymbol &other : extracted) {
+      if (other.entry == candidate.entry || other.module != candidate.module) {
+        continue;
+      }
+      if (other.entry->startLine <= candidate.entry->startLine &&
+          other.entry->endLine >= candidate.entry->endLine) {
+        nested = true;
+        break;
+      }
+    }
+    if (!nested) {
+      filtered.push_back(candidate);
+    }
+  }
+  extracted = std::move(filtered);
   return true;
 }
 
@@ -1087,7 +1130,7 @@ bool runCompilePipelineImportStage(const Options &options,
   // be excluded from it entirely.
   std::vector<LazyStdlibModule> lazyModules;
   std::unordered_set<std::string> &lazyKeys = out.lazyStdlibModuleKeys;
-  if (options.experimentalLazyStdlibImports) {
+  if (lazyStdlibImportsEnabled(options)) {
     std::vector<std::string> candidateKeys;
     for (const auto &importPath : out.sourceStdImports) {
       for (const auto &key : collectStdlibAutoIncludeKeys(importPath)) {
@@ -1121,6 +1164,39 @@ bool runCompilePipelineImportStage(const Options &options,
       }
       lazyKeys.insert(key);
       lazyModules.push_back(std::move(module));
+    }
+
+    // A lazy module's own top-level `import` lines (e.g. image.prime's
+    // `import /std/math/*`) normally get pulled in as a side effect of
+    // appendStdlibModuleSources appending the whole file and then
+    // recursively scanning it for nested imports. Since a lazy module's
+    // whole-file text is never appended, those transitively-needed sibling
+    // modules must be seeded explicitly here so they still get included
+    // (normally, not lazily - they aren't manifested and don't need to be).
+    // Only seed them for a module that the closure scan will actually draw
+    // from (a cheap pre-check: does the pre-splice seed text reference any
+    // of this module's own manifested leaf names?) - otherwise a program
+    // that merely imports a lazy module without using it would pay for its
+    // sibling modules' full inclusion for no reason, undermining the whole
+    // point of lazy expansion.
+    for (const LazyStdlibModule &module : lazyModules) {
+      const bool moduleLikelyNeeded =
+          std::any_of(module.entries.begin(), module.entries.end(),
+                     [&](const StdlibSymbolManifestEntry &entry) {
+                       return containsWholeWord(out.source, manifestEntryLeafName(entry.path));
+                     });
+      if (!moduleLikelyNeeded) {
+        continue;
+      }
+      std::ifstream moduleFile(module.sourceFile);
+      if (!moduleFile) {
+        continue;
+      }
+      std::ostringstream moduleBuffer;
+      moduleBuffer << moduleFile.rdbuf();
+      for (const std::string &nestedImport : collectStdImportPaths(moduleBuffer.str())) {
+        out.sourceStdImports.push_back(nestedImport);
+      }
     }
   }
 

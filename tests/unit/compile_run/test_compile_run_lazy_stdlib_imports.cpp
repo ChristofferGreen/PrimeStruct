@@ -91,11 +91,19 @@ main() {
 
   // The default whole-file splice visits ~4900 calls for this exact
   // program (the entire /std/image module gets validated regardless of
-  // usage); lazy expansion should stay in the low hundreds for a handful
-  // of referenced symbols. A generous bound keeps this from being a flaky
-  // exact-count assertion while still catching a regression back to
-  // whole-file-splice-equivalent cost.
-  CHECK(callsVisited < 200);
+  // usage). Lazy expansion's own manifested symbols are cheap, but
+  // image.prime's header imports /std/math/*, /std/file/*, and
+  // /std/collections/vector - those aren't manifested, so once any
+  // image.prime symbol is actually used, the fix for TODO-5229's
+  // transitive-import correctness gap (see docs/todo.md) pulls all three
+  // of those sibling modules in via the normal, non-lazy path (~1700
+  // lines combined). That's still a real, substantial reduction (~8.4x)
+  // versus whole-file splice, just less dramatic than lazy expansion's
+  // best case (near-zero) for a program that touches nothing outside the
+  // manifested module itself. A generous bound catches a regression back
+  // to whole-file-splice-equivalent cost without being a flaky
+  // exact-count assertion.
+  CHECK(callsVisited < 700);
 }
 
 TEST_CASE("lazy stdlib imports surface a clear diagnostic when no manifested symbol matches") {
