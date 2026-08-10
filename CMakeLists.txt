@@ -527,6 +527,13 @@ add_executable(primec src/main.cpp)
 target_link_libraries(primec PRIVATE primec_backend_registry_lib primec_ir_lib)
 primestructEnableWarnings(primec)
 
+# Standalone generator for TODO-5224's per-module stdlib symbol manifests -
+# see docs/LibrarySymbolManifestLazyImports.md. Only needs the frontend
+# (Lexer/Parser/Ast/AstPrinter), not the full compile pipeline.
+add_executable(generate_stdlib_manifest tools/generate_stdlib_manifest.cpp)
+target_link_libraries(generate_stdlib_manifest PRIVATE primec_frontend_lib)
+primestructEnableWarnings(generate_stdlib_manifest)
+
 # Precompiled header for primec's own generated-C++ ("--emit=exe") output.
 # See src/GeneratedCppRuntimePreamble.h and ExternalTooling.cpp - this lets
 # the clang++ invocation that compiles each generated program skip

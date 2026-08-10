@@ -120,7 +120,7 @@ bool isStdGfxStructAliasMatch(const std::string &expectedStruct,
 // registered (qualified) layout, so callers must canonicalize to the qualified
 // spelling before storing/using the parameter's structTypeName. Restricted to the
 // rooted-slash and std-ui/std-gfx alias matches specifically - the builtin
-// vector/soa bridging matches intentionally keep the collection's generic
+// vector-to-soa bridging matches intentionally keep the collection's generic
 // backing-type spelling and must not be redirected to a caller's specialized one.
 std::string canonicalStructTypeName(const std::string &expectedStruct,
                                      const std::string &argStruct) {

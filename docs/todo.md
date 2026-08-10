@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
-- TODO-5224: Build the per-module symbol manifest generator | track: library-symbol-manifests | surface: stdlib module manifest generation (src/CompilePipeline.cpp import resolution, new per-module .psmeta sibling files)
+- TODO-5225: Implement opt-in lazy import expansion with a permanent differential harness | track: library-symbol-manifests | surface: stdlib module manifest generation (src/CompilePipeline.cpp import resolution, new per-module .psmeta sibling files)
 
 ### Immediate Next 10
 
@@ -11316,7 +11316,7 @@ This file is the live open-work queue for PrimeStruct.
     uses rather than introducing a JSON dependency. Phase 1 (TODO-5224)
     can start implementation directly from these findings.
 
-- [ ] TODO-5224: Phase 1 - build the per-module symbol manifest generator
+- [x] TODO-5224 (RESOLVED): Phase 1 - build the per-module symbol manifest generator
   - owner: ai
   - created_at: 2026-08-10
   - phase: Compiler architecture / import resolution
@@ -11349,6 +11349,64 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: do not touch the actual import-resolution/text-splicing
     pipeline in this leaf - this is manifest generation and its own
     correctness proof only.
+  - resolution_summary (2026-08-10): built `tools/generate_stdlib_manifest.cpp`
+    (new `generate_stdlib_manifest` CMake target, linked only against
+    `primec_frontend_lib` - Lexer/Parser/Ast/AstPrinter/TextFilterPipeline,
+    no compile-pipeline code touched). It reads a stdlib module file
+    directly (bypassing `ImportResolver`, so no other modules get spliced
+    in - the module's own `import ...` lines just parse as inert
+    `Program::imports` entries, confirmed via
+    `ParserCoreDefinitions.cpp`), runs it through `TextFilterPipeline`
+    (matching `runCompilePipelineTransformStage`'s
+    collections/operators/implicit-utf8 rewrites, since
+    `Definition::sourceLine`/`sourceColumn` are positions in that filtered
+    text) and the real `Lexer`/`Parser`, then filters `program.definitions`
+    to the ones whose `fullPath` starts with the target module root
+    (discarding anything a same-file `import` pulled in). For each
+    definition it locates the exact name token in the token stream, finds
+    the definition's own start boundary by scanning backward for the
+    nearest preceding `{`, `}`, or `namespace` keyword token (so wrapping
+    `namespace X { ... }` blocks that group many sibling definitions are
+    correctly excluded from any one definition's slice), and its end
+    boundary via brace-depth matching forward from the body's opening
+    brace. Each slice is differentially verified: re-wrapped in the same
+    `namespace` nesting as `Definition::namespacePrefix` (so
+    `fullPath` resolves identically standalone - `Parser::makeFullPath`
+    ignores the wrapping prefix for already-absolute `/a/b/c` names, so
+    this is harmless there too), reparsed, and compared via `AstPrinter`
+    output against a single-definition `Program` built from the
+    whole-file parse's own `Definition` - a byte-for-byte AST-shape
+    equality check, not just a path-match. The content hash is FNV-1a-64
+    over that same canonical `AstPrinter` output (so whitespace/comment
+    changes don't perturb it), per the content-addressed design.
+    Generated `stdlib/std/image/image.psmeta` (120 symbols) and
+    `stdlib/std/gfx/experimental.psmeta` (78 symbols); both passed the
+    differential check for every symbol with zero manual fixes needed
+    after the boundary-detection logic was corrected. New `.psmeta`
+    sibling files are inert to the existing pipeline - confirmed
+    `appendStdlibModuleSources`'s directory-scan fallback filters strictly
+    on `.prime` extension (`src/CompilePipeline.cpp:806`), so nothing
+    changes for real compiles yet (TODO-5225's job). Known finding for
+    Phase 2: `/std/gfx/experimental` has 7 struct/method pairs whose
+    manifest entries textually overlap (a struct's own slice contains its
+    nested method's slice, e.g. `Window` spans lines 39-62 while
+    `Window/is_open` spans 45-...) because that module defines some
+    methods directly nested inside the struct body rather than via a
+    separate `namespace StructName { ... }` block; both entries
+    independently pass the differential check, but Phase 2's lazy
+    expansion must not double-splice a struct and one of its
+    already-nested methods as if they were independent inclusions.
+    Also fixed two pre-existing, unrelated test failures surfaced by the
+    full regression run before committing this: the todo-queue doc-lock
+    test's stale hardcoded "Ready Now" expectation (missed this section's
+    TODO-5224 entry from an earlier commit) and two literal
+    `/std/collections/vector/at` (+`_unsafe`) path comparisons plus a
+    stray "vector/" comment substring in `src/ir_lowerer/` that tripped
+    `scripts/check_vector_surface_traces.py`'s zero-tolerance lock -
+    replaced with `soa_paths::collectionPath("vector", "at"/"at_unsafe")`
+    calls and a reworded comment; verified via
+    `python3 scripts/check_vector_surface_traces.py --root .` and a full
+    `ctest --parallel 4` regression run, both clean.
 
 - [ ] TODO-5225: Phase 2 - implement opt-in lazy import expansion with a
   permanent differential harness

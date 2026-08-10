@@ -2051,6 +2051,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "- TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers\n"
                   "- TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation\n"
                   "- TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp\n"
+                  "- TODO-5225: Implement opt-in lazy import expansion with a permanent differential harness | track: library-symbol-manifests | surface: stdlib module manifest generation (src/CompilePipeline.cpp import resolution, new per-module .psmeta sibling files)\n"
                   "\n"
                   "### Immediate Next 10") !=
         std::string::npos);

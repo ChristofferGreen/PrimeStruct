@@ -139,8 +139,8 @@
             *expr.argNames[0] != "values" && *expr.argNames[1] == "values") {
           const std::string namedAccessResolvedPath = resolveExprPath(expr);
           const bool isNamedAtAccess =
-              namedAccessResolvedPath == "/std/collections/vector/at" ||
-              namedAccessResolvedPath == "/std/collections/vector/at_unsafe";
+              namedAccessResolvedPath == primec::soa_paths::collectionPath("vector", "at") ||
+              namedAccessResolvedPath == primec::soa_paths::collectionPath("vector", "at_unsafe");
           if (isNamedAtAccess) {
             Expr reorderedExpr = expr;
             std::swap(reorderedExpr.args[0], reorderedExpr.args[1]);
