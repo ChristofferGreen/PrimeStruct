@@ -77,6 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
+- TODO-5224: Build the per-module symbol manifest generator | track: library-symbol-manifests | surface: stdlib module manifest generation (src/CompilePipeline.cpp import resolution, new per-module .psmeta sibling files)
 
 ### Immediate Next 10
 
@@ -335,6 +336,7 @@ This file is the live open-work queue for PrimeStruct.
 66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
 67. TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
 68. TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
+69. TODO-5224: Build the per-module symbol manifest generator
 
 ### Task Blocks
 
