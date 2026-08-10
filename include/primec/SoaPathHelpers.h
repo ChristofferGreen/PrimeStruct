@@ -9,19 +9,24 @@
 namespace primec::soa_paths {
 
 inline std::string publicSoaFolder() {
-  return std::string("soa");
+  static const std::string value = "soa";
+  return value;
 }
 
 inline std::string legacySoaFolder() {
-  return std::string("soa") + "_" + "vector";
+  static const std::string value = std::string("soa") + "_" + "vector";
+  return value;
 }
 
 inline std::string experimentalSoaFolder() {
-  return std::string("experimental") + "_" + publicSoaFolder() + "_" + "vector";
+  static const std::string value =
+      std::string("experimental") + "_" + publicSoaFolder() + "_" + "vector";
+  return value;
 }
 
 inline std::string soaBackingTypeName() {
-  return std::string("Soa") + "Vector";
+  static const std::string value = std::string("Soa") + "Vector";
+  return value;
 }
 
 inline std::string collectionPath(std::string_view folder,

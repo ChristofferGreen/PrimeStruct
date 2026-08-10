@@ -82,31 +82,23 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   }
 
   auto hasDefinitionFamilyPath = [&](std::string_view path) {
+    // The answer only depends on defMap_/definitionFamilyPathIndex_, both
+    // immutable for the whole validation pass (see
+    // definitionFamilyPathAnswerCache_'s declaration comment) - so this
+    // cache persists across the whole SemanticsValidator instance, not just
+    // the current definition/execution owner like CallTargetResolutionScratch's
+    // arena-scoped caches do.
     const std::string pathText(path);
-    SymbolId pathKey = InvalidSymbolId;
-    if (hasScopedOwner) {
-      pathKey = callTargetResolutionScratch_.keyInterner.intern(path);
+    if (const auto cacheIt = definitionFamilyPathAnswerCache_.find(pathText);
+        cacheIt != definitionFamilyPathAnswerCache_.end()) {
+      return cacheIt->second;
     }
-    if (hasScopedOwner) {
-      if (pathKey != InvalidSymbolId) {
-        if (const auto cacheIt = callTargetResolutionScratch_.definitionFamilyPathCache.find(pathKey);
-            cacheIt != callTargetResolutionScratch_.definitionFamilyPathCache.end()) {
-          return cacheIt->second;
-        }
-      }
-      const bool hasPath = defMap_.count(pathText) > 0 ||
-          definitionFamilyPathIndex().count(pathText) > 0 ||
-          anyDefinitionFamilyPathStartsWith(pathText + "<") ||
-          anyDefinitionFamilyPathStartsWith(pathText + "__t");
-      if (pathKey != InvalidSymbolId) {
-        callTargetResolutionScratch_.definitionFamilyPathCache.emplace(pathKey, hasPath);
-      }
-      return hasPath;
-    }
-    return defMap_.count(pathText) > 0 ||
+    const bool hasPath = defMap_.count(pathText) > 0 ||
         definitionFamilyPathIndex().count(pathText) > 0 ||
         anyDefinitionFamilyPathStartsWith(pathText + "<") ||
         anyDefinitionFamilyPathStartsWith(pathText + "__t");
+    definitionFamilyPathAnswerCache_.emplace(pathText, hasPath);
+    return hasPath;
   };
   auto rootedPathForName = [&](std::string_view name) -> std::string {
     if (!hasScopedOwner) {

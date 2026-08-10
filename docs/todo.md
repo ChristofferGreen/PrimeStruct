@@ -3403,11 +3403,66 @@ This file is the live open-work queue for PrimeStruct.
     empty `main()` (vs ~0.25s with no import), and narrowing to a single
     symbol import made no difference (~4.3s) - confirming (as this TODO
     already found for `/std/image/*`) the cost is inherent to processing
-    the whole imported module, not proportional to actual usage. Did
-    NOT re-attempt a fix, per this TODO's own already-invoked stop_rule -
-    see `docs/TestRuntimeOptimization.md`'s 2026-08-09 log entry for the
-    full re-verification. Noting this here so a future session doesn't
-    mistake the gfx-import symptom for a distinct, new bug.
+    the whole imported module, not proportional to actual usage.
+  - progress_2026-08-10: user explicitly asked to fix this TODO and
+    authorized the large compat-path-resolution consolidation rewrite
+    if needed. Checked `docs/CompatPathResolutionConsolidation.md` first
+    and found **that rewrite already landed** (Steps 0 through 2c all
+    marked Complete, with real commits) in a separate work stream
+    (the `docs/OverloadResolutionPrototype.md` Phase 0 prerequisite)
+    sometime after this TODO's own 2026-08-05 stop_rule invocation -
+    but it didn't fix the gfx/image import slowness, because that cost
+    turned out to live in a different function than what the
+    consolidation targeted (compat-spelling classification, not general
+    call-path resolution). Fresh `gdb` sampling on the gfx-import repro
+    found a real, previously-undiagnosed inefficiency:
+    `SemanticsValidator::resolveCalleePath`'s `hasDefinitionFamilyPath`
+    lambda cached its answer in `CallTargetResolutionScratch` - an arena
+    that gets destroyed and rebuilt every time validation moves to a
+    different definition/execution "owner". But the answer (does a
+    resolved path exist as a definition anywhere in the program) only
+    depends on `defMap_`/`definitionFamilyPathIndex_`, both fully built
+    once and never mutated for the whole validation pass (per the
+    existing comment on `definitionFamilyPathIndex_`) - so every new
+    definition validated was rebuilding identical answers from scratch.
+    Fix: added `definitionFamilyPathAnswerCache_`, a plain
+    `SemanticsValidator`-lifetime-persistent
+    `std::unordered_map<std::string, bool>` (not arena-scoped, not
+    thread_local), and had the lambda consult it directly instead of
+    the per-owner cache. Safe under the opt-in parallel
+    definition-validation worker path too: verified
+    `SemanticsValidatorPassesDefinitions.cpp` constructs a completely
+    separate `SemanticsValidator worker(...)` instance per worker
+    thread (not a shared instance), so there is no cross-thread mutable
+    state to race on. Also memoized the zero-argument
+    `publicSoaFolder()`/`legacySoaFolder()`/`experimentalSoaFolder()`/
+    `soaBackingTypeName()` helpers in `include/primec/SoaPathHelpers.h`
+    with function-local `static const` strings (same pattern as this
+    TODO's 2026-08-05 fixes), since they were rebuilding fixed strings
+    via concatenation on every call.
+    Measured: gfx-import repro (`--dump-stage semantic-product`) went
+    from ~5.2s to ~3.2s (~38%, almost entirely from the cache fix - the
+    soa-folder memoization alone only accounted for ~0.1s of that). The
+    TODO's own original `/std/image/*` case (`--emit=vm`, matching this
+    TODO's historical measurement methodology) went from ~17.5s (this
+    TODO's previously "accepted final state") to ~12.0s - a further
+    ~31% improvement on top of the already-landed 5x. **Still short of
+    the ~2-5s acceptance target** - a fresh profiling round after this
+    fix shows the same diffuse pattern this TODO already characterized
+    (`soa_paths::collectionPath` string-building, generic
+    malloc/memcpy/hashtable-lookup churn, no single dominant function),
+    confirming the fix addressed a real, distinct, previously-missed
+    inefficiency rather than duplicating already-exhausted work, but
+    the underlying diffuse-cost diagnosis and its own stop_rule (no
+    further leaf-level fix without a much larger, differently-scoped
+    rewrite of the whole-program validation model itself, not just
+    compat-path resolution) still stands. Verified via a full
+    `ctest --parallel 4` run: zero new failures beyond the pre-existing,
+    unrelated `PrimeStruct_vector_surface_traces` gate-script failure.
+    Leaving this TODO's checkbox unresolved, consistent with its own
+    2026-08-05 note ("not closing TODO-4743, acceptance target unmet") -
+    this is further real progress on an already-accepted-as-diffuse
+    residual, not a full close.
 - [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
   - owner: ai
   - created_at: 2026-07-27

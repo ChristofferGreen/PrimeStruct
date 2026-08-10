@@ -509,6 +509,22 @@ private:
   // never mutated afterward for the lifetime of a validation pass.
   mutable std::set<std::string> definitionFamilyPathIndex_;
   mutable bool definitionFamilyPathIndexValid_ = false;
+  // hasDefinitionFamilyPath()'s answer for a given resolved path depends only
+  // on defMap_/definitionFamilyPathIndex_, both immutable for the lifetime of
+  // a validation pass (see the comment above) - so the answer is valid for
+  // the whole pass, not just the current definition/execution being
+  // validated. resolveCalleePath()'s per-owner CallTargetResolutionScratch
+  // arena discards its own copy of this cache every time validation moves to
+  // a different definition, which was rebuilding identical answers for every
+  // definition in a program (measured: importing a large stdlib module like
+  // /std/gfx/experimental/* or /std/image/* costs several seconds per
+  // primec invocation purely from this - see docs/todo.md's TODO-4743).
+  // This cache persists for the whole SemanticsValidator instance instead.
+  // Safe under the opt-in parallel definition-validation worker path too:
+  // each worker constructs its own separate SemanticsValidator instance
+  // (SemanticsValidatorPassesDefinitions.cpp), so there is no shared mutable
+  // state across threads.
+  mutable std::unordered_map<std::string, bool> definitionFamilyPathAnswerCache_;
   std::unordered_set<std::string> overloadFamilyBasePaths_;
   std::unordered_map<std::string, std::string> uniqueSpecializationPathByBase_;
   std::unordered_set<std::string> ambiguousSpecializationBasePaths_;

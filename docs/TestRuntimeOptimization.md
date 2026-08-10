@@ -570,3 +570,40 @@ execution queue — keep them in sync when a TODO's scope or status changes.
     work** - always re-verify a "slow" entry standalone before
     investing time in it, since one noisy run's numbers can masquerade
     as a real cost for several subsequent runs.
+- 2026-08-10: User asked to fix TODO-4743 directly and explicitly
+  authorized the large compat-path-resolution consolidation rewrite if
+  it was needed. Checking `docs/CompatPathResolutionConsolidation.md`
+  first found **that rewrite had already landed** (all steps through 2c
+  marked Complete, real commits) in a separate work stream after
+  TODO-4743's own 2026-08-05 stop_rule invocation - but it targeted
+  compat-spelling *classification* specifically, not the general
+  call-path-resolution cost the gfx/image import symptom actually comes
+  from, so it hadn't fixed this. Fresh `gdb` sampling on the gfx-import
+  repro (the same investigation as the previous log entry) found a real,
+  previously-undiagnosed bug: `resolveCalleePath`'s
+  `hasDefinitionFamilyPath` cache lived in a per-definition arena that
+  gets destroyed and rebuilt every time validation moves to a new
+  definition, even though its answer only depends on `defMap_` /
+  `definitionFamilyPathIndex_` - both immutable for the whole validation
+  pass. Every new definition in a large imported module was rebuilding
+  identical answers from scratch. Fixed by making the cache persist for
+  the whole `SemanticsValidator` instance instead (verified safe under
+  the opt-in parallel-worker path: each worker gets its own separate
+  validator instance, confirmed by reading
+  `SemanticsValidatorPassesDefinitions.cpp`, so no cross-thread state to
+  race on). Also memoized 4 zero-argument SOA-path-string helpers with
+  `static const` locals (same pattern as this TODO's earlier fixes).
+  Measured: the gfx-import repro went from ~5.2s to ~3.2s (~38%); the
+  TODO's own original `/std/image/*` case (`--emit=vm`, matching its
+  historical measurement) went from ~17.5s to ~12.0s (~31% further, on
+  top of the already-landed 5x from TODO-4742/4743's earlier work).
+  **Still short of the ~2-5s acceptance target** - a fresh profile after
+  the fix shows the same diffuse pattern already characterized (no
+  single dominant function), confirming this was a real, distinct,
+  previously-missed inefficiency rather than duplicate work, but the
+  underlying diffuse-cost diagnosis and its stop_rule still stand: no
+  further leaf-level fix without a much larger rewrite of the
+  whole-program validation model itself (a different, bigger scope than
+  the compat-path consolidation that already landed). Verified via a
+  full `ctest --parallel 4` run: zero new failures beyond the
+  pre-existing `PrimeStruct_vector_surface_traces` gate-script failure.
