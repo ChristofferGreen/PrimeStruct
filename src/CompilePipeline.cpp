@@ -1243,19 +1243,19 @@ bool runCompilePipelineImportStage(const Options &options,
     }
   }
 
-  if (shouldAutoIncludeStdlib(out.source) || !out.implicitStdlibKeys.empty()) {
-    if (!appendStdlibModuleSources(options.importPaths,
-                                   out.sourceStdImports,
-                                   out.implicitStdlibKeys,
-                                   out.source,
-                                   error,
-                                   &out.expandedSource,
-                                   lazyKeys)) {
-      diagnosticSink.setSummary(error);
-      return false;
-    }
-  }
-
+  // Run the lazy closure scan before appendStdlibModuleSources (rather than
+  // after, which is the more obvious order): appendStdlibModuleSources's
+  // shouldSkipMathWildcardStdlibModule heuristic decides whether to skip
+  // fully including a bare `import /std/math/*` based on whether the
+  // *current* source text references any non-builtin math symbol. A lazily
+  // extracted symbol can itself reference a non-lazy sibling module's type
+  // (e.g. /std/gfx/experimental/Frame/render_pass, pulled in as harmless
+  // over-inclusion by the closure scan, takes a [ColorRGBA] parameter from
+  // /std/math) - if that extraction happens after the math-wildcard-skip
+  // check already ran, the check never sees the ColorRGBA reference and
+  // incorrectly skips including /std/math, leaving ColorRGBA undefined.
+  // Extracting first ensures every heuristic downstream sees the same
+  // source content a whole-file splice would have produced.
   if (!lazyModules.empty()) {
     std::vector<LazyStdlibExtractedSymbol> extracted;
     if (!computeLazyStdlibModuleClosureSource(lazyModules, out.source, extracted, error)) {
@@ -1271,6 +1271,19 @@ bool runCompilePipelineImportStage(const Options &options,
         sourceBuilder.appendSegment(unitId, symbol.text, 1, 1);
       }
       out.source = out.expandedSource.text;
+    }
+  }
+
+  if (shouldAutoIncludeStdlib(out.source) || !out.implicitStdlibKeys.empty()) {
+    if (!appendStdlibModuleSources(options.importPaths,
+                                   out.sourceStdImports,
+                                   out.implicitStdlibKeys,
+                                   out.source,
+                                   error,
+                                   &out.expandedSource,
+                                   lazyKeys)) {
+      diagnosticSink.setSummary(error);
+      return false;
     }
   }
 
