@@ -53,5 +53,11 @@ struct Options {
   bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false;
   bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false;
   std::optional<uint32_t> benchmarkSemanticRepeatCompileCount;
+  // TODO-5228 (docs/LibrarySymbolManifestLazyImports.md): opt-in iterative
+  // lazy stdlib import expansion. When set, a wildcard/module-root import
+  // of a module with a sibling `.psmeta` symbol manifest is spliced in
+  // symbol-by-symbol on demand instead of as a whole file. Default-off;
+  // today's whole-file-splice behavior is unchanged when this is false.
+  bool experimentalLazyStdlibImports = false;
 };
 } // namespace primec

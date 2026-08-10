@@ -726,6 +726,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       }
     } else if (arg == "--benchmark-semantic-no-fact-emission") {
       out.benchmarkSemanticNoFactEmission = true;
+    } else if (arg == "--experimental-lazy-stdlib-imports") {
+      out.experimentalLazyStdlibImports = true;
     } else if (arg == "--benchmark-semantic-phase-counters") {
       out.benchmarkSemanticPhaseCounters = true;
     } else if (arg == "--benchmark-semantic-allocation-counters") {

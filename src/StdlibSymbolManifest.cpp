@@ -268,7 +268,15 @@ bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &ent
     return false;
   }
 
-  outSourceText = sliceSource;
+  // Return the namespace-wrapped form, not the bare slice: a definition
+  // whose own name is a bare identifier (e.g. a struct or method declared
+  // inside `namespace ImageError { ... }`) only resolves to its manifested
+  // fullPath when reparsed with that namespace nesting present. Splicing
+  // the wrapped form makes each symbol independently self-resolving
+  // wherever it's spliced in, matching how re-opening the same `namespace
+  // X { ... }` path across multiple already-spliced stdlib module files
+  // works today.
+  outSourceText = wrapped;
   return true;
 }
 

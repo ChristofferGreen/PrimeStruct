@@ -61,7 +61,10 @@ bool readStdlibSymbolManifest(const std::string &manifestPath,
 // Re-derives a manifested symbol's exact source slice from its module's
 // current source file (raw read -> default text filter -> line slice) and
 // re-verifies its content hash (reparse standalone, print canonical AST,
-// hash) before returning it. Fails loudly on any mismatch.
+// hash) before returning it. Fails loudly on any mismatch. The returned
+// text is namespace-wrapped (matching fullPath's parent segments), so it
+// independently resolves to the same fullPath wherever it's spliced in -
+// callers should not additionally wrap it.
 bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &entry,
                                             const std::string &moduleSourcePath,
                                             std::string &outSourceText,
