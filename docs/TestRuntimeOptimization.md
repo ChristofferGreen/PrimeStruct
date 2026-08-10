@@ -607,3 +607,25 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   the compat-path consolidation that already landed). Verified via a
   full `ctest --parallel 4` run: zero new failures beyond the
   pre-existing `PrimeStruct_vector_surface_traces` gate-script failure.
+- 2026-08-10: User asked for sub-1-second import cost, which TODO-4743's
+  further micro-optimization couldn't reach (confirmed via
+  `--benchmark-semantic-phase-counters`: `import /std/image/*` with an
+  unused `main()` visits 4,885 calls and produces 26,862 facts - the
+  entire imported module gets validated regardless of usage, since
+  `appendStdlibModuleSources` splices whole `.prime` files as text before
+  a single parse+validate pass). A follow-up memoization attempt (caching
+  more `soa_paths::collectionPath`-family string-building) regressed 16
+  tests and was reverted cleanly before committing - not root-caused
+  further, given the modest ~12% win wasn't worth the debugging risk.
+  Agreed on the real architectural fix with the user: per-module symbol
+  manifests (auto-generated, not hand-authored) plus lazy, iterative
+  import expansion (linker-style: resolve a reference, pull in only that
+  symbol's source, discover new unresolved references, repeat to a fixed
+  point) instead of today's whole-file text-splicing. Full plan,
+  design rationale, risks, and a 4-phase TODO chain
+  (TODO-5223 through TODO-5226) are in the new
+  `docs/LibrarySymbolManifestLazyImports.md` - this is a genuinely large
+  compiler feature (new manifest format + generator + restructuring the
+  import-resolution loop from one-shot to iterative), not a leaf-sized
+  fix, and follows the same characterize-first discipline that made
+  `docs/CompatPathResolutionConsolidation.md` succeed.

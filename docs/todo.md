@@ -11239,3 +11239,127 @@ This file is the live open-work queue for PrimeStruct.
     left to change - remaining suite cost in this area is genuine
     per-test compile+link work (many distinct translation units across
     hundreds of `compile_run` cases), not a single fixable inefficiency.
+
+- [ ] TODO-5223: Phase 0 - characterize library symbol manifest / lazy
+  import expansion design
+  - owner: ai
+  - created_at: 2026-08-10
+  - phase: Compiler architecture / import resolution
+  - parallel_track: library-symbol-manifests
+  - depends_on: (none) - direct follow-on from TODO-4743's finding that
+    the residual gfx/image import cost scales with definition count, not
+    a fixable per-call inefficiency; see
+    `docs/LibrarySymbolManifestLazyImports.md` for the full plan
+  - scope: no production-code changes in this leaf. (1) catalog every
+    distinct wildcard/module-root import path across `tests/` and
+    `stdlib/`, measuring actual-referenced-symbols vs. total-symbols per
+    module (via `--benchmark-semantic-phase-counters` or dedicated
+    instrumentation) to size real-world benefit per module and flag any
+    module already near a 1:1 ratio (not worth manifesting first); (2)
+    read how struct-associated helper functions are represented in
+    `program.definitions` (full-path naming, receiver-typed first
+    parameters) to resolve the struct/method manifest-granularity
+    question before designing the entry format; (3) read the full
+    `std/modules.psmeta` parser (`src/CompilePipeline.cpp`, currently
+    only its entry point is characterized) to decide whether the
+    existing manifest format can grow symbol-level fields or needs a
+    sibling file.
+  - implementation_notes: see
+    `docs/LibrarySymbolManifestLazyImports.md`'s "Design" and "Risks"
+    sections for full context before starting - this is characterization
+    work analogous to `docs/CompatPathResolutionConsolidation.md`'s own
+    Step 0, which is the proven-successful template to follow (write the
+    findings/rule-table before writing any implementation).
+  - acceptance: a "Findings" section is appended to
+    `docs/LibrarySymbolManifestLazyImports.md` with the per-module
+    used/total symbol ratios, the struct/method representation answer,
+    and the decided manifest file format - concrete enough that Phase 1
+    (TODO-5224) can start implementation without further investigation.
+  - stop_rule: this is measurement and format-decision work only; do not
+    start writing the manifest generator or touching
+    `CompilePipeline.cpp`'s import resolution in this leaf.
+
+- [ ] TODO-5224: Phase 1 - build the per-module symbol manifest generator
+  - owner: ai
+  - created_at: 2026-08-10
+  - phase: Compiler architecture / import resolution
+  - parallel_track: library-symbol-manifests
+  - depends_on: TODO-5223
+  - scope: implement the generator decided in TODO-5223's findings -
+    walks a stdlib module's top-level definitions via the existing
+    parser and emits a symbol table (symbol name -> file + source-slice
+    location). Generate manifests for `/std/image` and
+    `/std/gfx/experimental` first (the two modules already measured as
+    expensive this session - see
+    `docs/LibrarySymbolManifestLazyImports.md`'s "Problem, Verified").
+    Generated, not hand-authored, per that doc's explicit design
+    decision (avoids manifest/source drift).
+  - implementation_notes: differential-check the generator itself - for
+    every symbol it claims exists at a given location, confirm
+    re-parsing that exact source slice in isolation produces the same
+    `Definition` the whole-file parse does. This is the generator's own
+    correctness gate, independent of the later lazy-expansion work.
+  - acceptance: generated manifests exist for both target modules; a
+    differential test proves every manifested symbol's sliced source
+    parses identically (same AST shape) to how it parses as part of the
+    whole file.
+  - stop_rule: do not touch the actual import-resolution/text-splicing
+    pipeline in this leaf - this is manifest generation and its own
+    correctness proof only.
+
+- [ ] TODO-5225: Phase 2 - implement opt-in lazy import expansion with a
+  permanent differential harness
+  - owner: ai
+  - created_at: 2026-08-10
+  - phase: Compiler architecture / import resolution
+  - parallel_track: library-symbol-manifests
+  - depends_on: TODO-5224
+  - scope: implement the iterative fixed-point expansion algorithm
+    described in `docs/LibrarySymbolManifestLazyImports.md`'s "Design"
+    section (parse user source -> collect unresolved names -> slice in
+    the one manifested symbol needed -> rescan for newly-introduced
+    unresolved names -> repeat to a fixed point), gated behind an opt-in
+    env var or CLI flag with today's whole-file-splice behavior remaining
+    the default. Build the permanent differential harness comparing
+    old-vs-new resolved call paths and validation outcomes across the
+    full semantics/ir_pipeline/compile_run corpora, following the same
+    pattern `docs/CompatPathResolutionConsolidation.md`'s Step 1 already
+    proved out.
+  - implementation_notes: explicit cycle guard required (a
+    "currently expanding" set) for mutually-referencing symbols - do not
+    rely on accidentally not hitting a cycle in the test corpus. Clear
+    "unknown symbol in imported library X" diagnostic required when a
+    name doesn't resolve to any manifested symbol, rather than letting it
+    fall through to a confusing downstream parse error.
+  - acceptance: with the opt-in flag enabled, `import /std/image/*` and
+    `import /std/gfx/experimental/*` with light actual usage show
+    measurably reduced `calls_visited`/`facts_produced`
+    (`--benchmark-semantic-phase-counters`) proportional to usage, not
+    module size; the differential harness runs clean (zero unintended
+    divergence, or every divergence individually triaged and either
+    fixed or pinned as an intentional behavior change) across all three
+    corpora with the flag enabled.
+  - stop_rule: every discovered divergence must be individually
+    triaged and resolved (fixed or explicitly accepted with a new pinning
+    test) before this leaf is considered done - do not ship with known,
+    unexplained differential-harness divergences under the opt-in flag.
+
+- [ ] TODO-5226: Phase 3 - flip lazy import expansion to the default
+  - owner: ai
+  - created_at: 2026-08-10
+  - phase: Compiler architecture / import resolution
+  - parallel_track: library-symbol-manifests
+  - depends_on: TODO-5225
+  - scope: once TODO-5225's differential harness reports zero unintended
+    divergence across all three corpora, make lazy expansion the default
+    import-resolution path; keep the whole-file path available behind a
+    flag as an escape hatch for at least one full session/release before
+    considering removal.
+  - acceptance: re-measure the exact gfx/image cases from
+    `docs/LibrarySymbolManifestLazyImports.md`'s "Problem, Verified"
+    section and confirm sub-1-second cost for light-usage stdlib-heavy
+    programs; full `ctest --parallel <N>` run shows zero new failures
+    beyond pre-existing, independently-confirmed-unrelated ones.
+  - stop_rule: do not remove the whole-file fallback path in this leaf -
+    that is explicitly deferred to give the new default a full
+    session/release of real-world exposure first.
