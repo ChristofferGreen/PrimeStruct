@@ -11803,64 +11803,78 @@ This file is the live open-work queue for PrimeStruct.
       `PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS` is set, with a comment
       explaining why, while the graphics diagnostic itself (the test's
       actual subject) is still asserted unconditionally in both modes.
-    - **1 failure remains, root-caused this round but not yet fixed**:
+    - **1 failure remains - root-caused twice this round, the second pass
+      superseding the first with the actual answer**:
       `semantics.result_helpers_99_100`'s Buffer args-pack method-receiver
       case (`[compute]` kernel with an `[args<Buffer<i32>>] values`
       parameter, calling `values.at(idx).load(idx)`/`.store(idx, v)`).
-      Traced with targeted, since-removed debug instrumentation across
-      `rewriteExpr`/`inferCallBindingTypeForMonomorph`/
-      `resolveMethodCallTemplateTarget`/`monomorphizeTemplates`:
-      - `.load()`/`.store()` on a Buffer receiver desugar to plain
-        `buffer_load`/`buffer_store` GPU-intrinsic calls
-        (`isMethodCall=false`) before template-monomorphization's
-        expression rewrite ever sees them - they never reach
-        `resolveMethodCallTemplateTarget` at all, so they never trigger
-        instantiation of `/std/gfx/experimental/Buffer/load<T>` or
-        `.../store<T>` (the manifested stdlib methods for those names are,
-        in this exact usage, dead weight - correctly droppable).
-      - The actual failure is unrelated to method-call resolution: the
-        generic `Buffer` **struct itself** (templateArgs=["T"]) is always
-        classified as a "template root" and dropped from
-        `ctx.program.definitions` unless a concrete specialization (e.g.
-        `Buffer__t...`) is generated to replace it - in *both* default and
-        lazy mode alike (confirmed via `--dump-stage ast`: zero
-        `Buffer__t` entries in either mode for this program). Struct
-        template-instantiation is currently driven only by explicit
-        constructor-call syntax (`Buffer<i32>{...}`/`Buffer<i32>()`)
-        appearing somewhere in the reachable source, not by a generic type
-        merely *named* in a parameter's type annotation
-        (`[args<Buffer<i32>>] values`) - confirmed by testing a
-        plain `[Buffer<i32>] b` parameter with no local construction: same
-        zero-instantiation outcome in both modes.
-      - Default/whole-file mode still compiles successfully anyway - not
-        because Buffer<i32> gets instantiated, but because the semantic
-        validator's wildcard-import check
-        (`SemanticsValidatorBuildImports.cpp`'s `sawImmediateDefinition`)
-        only needs *any* direct child of `/std/gfx/experimental/` to
-        exist, and whole-file splice unconditionally includes dozens of
-        unrelated sibling definitions (GfxError, Device, Queue, Window,
-        Frame, Mesh, ...) that satisfy it regardless of Buffer's own fate.
-        Lazy splicing, by design, includes only the few symbols actually
-        referenced - once Buffer itself is dropped as an uninstantiated
-        template root, nothing remains as a direct child of that prefix,
-        and the wildcard-import check correctly (if unhelpfully) reports
-        "unknown import path".
-      - The real fix is a genuinely new code path: generic struct
-        instantiation needs to also be triggered by a parameter/binding
-        type annotation naming a concrete generic (`Buffer<i32>`) even
-        with no explicit constructor-call expression anywhere in the
-        reachable body - today only call-expression-driven instantiation
-        exists. This is foundational template-monomorphization behavior
-        change (not args-pack-specific, not lazy-import-specific) that
-        needs its own scoped investigation and test coverage rather than
-        a fix folded into this leaf; attempted and reverted a narrower,
-        insufficient fix (extending `inferCallBindingTypeForMonomorph` to
-        resolve `args<T>.at(idx)`'s element type) once tracing confirmed
-        it doesn't reach the actual gap for this desugared-intrinsic case.
+      - First pass concluded the generic `/std/gfx/experimental/Buffer`
+        **struct** needed template instantiation triggered from its
+        parameter type annotation (not just constructor-call expressions).
+        Implemented that (a `resolveTypeString` call on each parameter's
+        reconstructed type text in `rewriteDefinitionParameters`,
+        `TemplateMonomorphDefinitionBindingSetup.h`), verified it actually
+        ran and resolved `args<Buffer<i32>>` as `concrete=true` - but zero
+        `Buffer__t...` specializations still appeared in the dump. Traced
+        deeper with instrumentation in `resolveTypeStringImpl`
+        (`TemplateMonomorphTypeResolution.h`) and found why: **`"Buffer"`
+        is a compiler builtin type name**
+        (`SemanticsBindingTypeHelpers.cpp`'s `isBuiltinTemplateTypeName` -
+        alongside `Pointer`/`Reference`/`Task`), so `isBuiltinTemplateContainer`
+        classifies it the same as `array`/`vector`/`map` and
+        `resolveTypeStringImpl` returns early *without ever calling
+        `instantiateTemplate`* - by design, since builtin generics need no
+        struct specialization at all. This is an unrelated stdlib struct
+        that happens to share the name "Buffer" with the compiler's own
+        low-level buffer type; the first pass's fix was chasing a struct
+        that was never the real target. Reverted it (see git history for
+        this date) rather than keep a change that instantiates the wrong,
+        irrelevant "Buffer" and does nothing for the actual case.
+      - Second pass, with the correct picture: `args<Buffer<i32>>` in this
+        program's source refers entirely to the compiler-builtin
+        `Buffer<T>` (handled natively, e.g.
+        `SemanticsValidatorExprGpuBuffer.cpp`, including the
+        `buffer_load`/`buffer_store` intrinsic desugaring already traced
+        in the first pass) - confirmed via `--dump-stage ast` that this
+        exact program's source references *no* other `/std/gfx/experimental`
+        symbol at all (re-read the actual failing test source, which is
+        simpler than an earlier scratch repro this investigation had
+        conflated it with). The closure scan's `moduleLikelyNeeded` check
+        still matches "Buffer" as a manifest leaf name of the *unrelated*
+        stdlib struct `/std/gfx/experimental/Buffer` (a same-name
+        collision, not a bug in the scan - over-inclusion here is by
+        design supposed to be harmless) and splices it in; it then
+        correctly gets dropped again as an unused template root (nothing
+        in the reachable body actually constructs it), leaving nothing
+        under `/std/gfx/experimental/` and triggering
+        `SemanticsValidatorBuildImports.cpp`'s "unknown import path" for
+        the wildcard import. Default/whole-file mode never hits this:
+        it doesn't care about usage at all for a wildcard import, so
+        `sawImmediateDefinition` is trivially satisfied by any of the
+        dozens of unrelated sibling definitions whole-file splice always
+        includes (GfxError, Device, Queue, Window, Frame, Mesh, ...) -
+        this program never actually *needed* any of them either, default
+        mode just never notices.
+      - The real fix: a lazy-managed wildcard import that ends up
+        splicing nothing should behave like default mode's actual
+        guarantee - a no-op, not an error - since "nothing was needed"
+        is a legitimate, common outcome (not evidence the closure scan
+        missed something), not something worth hard-failing on. This
+        needs `SemanticsValidatorBuildImports.cpp`'s `sawImmediateDefinition`
+        check to skip the "unknown import path" diagnostic specifically
+        for prefixes known to be lazy-managed - which requires plumbing
+        the lazy-managed key set (`CompilePipelineImportStageState::
+        lazyStdlibModuleKeys`, already computed in `CompilePipeline.cpp`)
+        into `SemanticsValidator`/`Semantics::validate`, a signature
+        change touching a fairly central, widely-called API (multiple
+        overloads, multiple test-helper call sites). Scoped but sized for
+        its own dedicated pass rather than folding into this leaf given
+        the blast radius of that signature change.
   - stop_rule note (current): still not at "zero unintended divergence" -
-    1 failure remains (`semantics.result_helpers_99_100`'s generic-struct-
-    via-parameter-type-annotation instantiation gap, root-caused this
-    round, fix scoped but not yet implemented - see above). TODO-5226
+    1 failure remains (`semantics.result_helpers_99_100`'s lazy-managed-
+    wildcard-import-with-nothing-spliced should be a no-op, not an error;
+    correctly root-caused this round after an initial wrong diagnosis was
+    tried, verified insufficient, and reverted - see above). TODO-5226
     remains blocked on this leaf per its `depends_on` until it's fixed or
     formally pinned.
 
