@@ -1222,11 +1222,21 @@ bool runCompilePipelineImportStage(const Options &options,
     // sibling modules' full inclusion for no reason, undermining the whole
     // point of lazy expansion.
     for (const LazyStdlibModule &module : lazyModules) {
-      const bool moduleLikelyNeeded =
+      bool moduleLikelyNeeded =
           std::any_of(module.entries.begin(), module.entries.end(),
                      [&](const StdlibSymbolManifestEntry &entry) {
                        return containsWholeWord(out.source, manifestEntryLeafName(entry.path));
                      });
+      if (!moduleLikelyNeeded) {
+        // A program can also reopen a lazy module's own namespace path
+        // (`namespace std { namespace image { ... } }`) to declare new,
+        // non-manifested code that still needs that module's transitive
+        // imports - the leaf-name check above only catches usage of an
+        // actual manifested symbol, not this. Treat a textual reopening of
+        // the module's own namespace leaf as needing it too.
+        moduleLikelyNeeded =
+            containsWholeWord(out.source, "namespace " + manifestEntryLeafName(module.key));
+      }
       if (!moduleLikelyNeeded) {
         continue;
       }

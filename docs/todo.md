@@ -11776,8 +11776,8 @@ This file is the live open-work queue for PrimeStruct.
       leaf-name check at all, since nothing it references is a manifested
       symbol of that module - a fundamentally different shape than the
       "extracted symbol needs a sibling module" case already fixed);
-      `semantics.result_helpers_99_100` ("Buffer arg-pack method receivers"
-      - a `[compute]`-annotated function appears to get validated through
+      `semantics.result_helpers_99_100` (the Buffer args-pack method-receiver
+      test case - a `[compute]`-annotated function appears to get validated through
       an isolated sub-pass with its own, much smaller `defMap_` (observed
       2 entries: just `/main` and the compute kernel itself) that doesn't
       carry over the lazily-spliced stdlib symbols the outer program's
