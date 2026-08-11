@@ -11768,14 +11768,17 @@ This file is the live open-work queue for PrimeStruct.
       import path" failure instead of surfacing its own more specific
       diagnostic. All three fixed together (see commit history for this
       date).
-    - **3 failures remain, not yet root-caused**:
-      `semantics.result_helpers_79_80` ("stdlib-owned definitions keep
-      transitive file helper imports visible" - user code that reopens a
-      stdlib module's own namespace path to declare a *new*, non-manifested
-      function isn't recognized by the closure scan's `moduleLikelyNeeded`
-      leaf-name check at all, since nothing it references is a manifested
-      symbol of that module - a fundamentally different shape than the
-      "extracted symbol needs a sibling module" case already fixed);
+    - **Fixed** (a fourth bug found while chasing the tail, dropping 3
+      failures to 2): `semantics.result_helpers_79_80` ("stdlib-owned
+      definitions keep transitive file helper imports visible" - user code
+      that reopens a stdlib module's own namespace path to declare a *new*,
+      non-manifested function wasn't recognized by the closure scan's
+      `moduleLikelyNeeded` leaf-name check at all, since nothing it
+      references is a manifested symbol of that module - a fundamentally
+      different shape than the "extracted symbol needs a sibling module"
+      case fixed earlier in this leaf. Fixed by also treating a textual
+      reopening of the module's own namespace leaf as needing it.
+    - **2 failures remained after that fix, 1 not yet root-caused**:
       `semantics.result_helpers_99_100` (the Buffer args-pack method-receiver
       test case - a `[compute]`-annotated function appears to get validated through
       an isolated sub-pass with its own, much smaller `defMap_` (observed
@@ -11784,14 +11787,43 @@ This file is the live open-work queue for PrimeStruct.
       `defMap_` has - default/whole-file mode presumably works by
       coincidence, since it puts everything in the outer `defMap_`
       unconditionally; not yet traced to the actual isolated-validation
-      code path); and `ir_pipeline.backends_registry`, which fails
-      intermittently with the flag *off* too (seen failing in one clean
-      baseline run and passing in another) - looks pre-existing and
-      flag-independent, not part of this leaf's differential scope, but
-      not yet confirmed via a dedicated flaky-test investigation.
+      code path).
+    - **Root-caused, and believed to be an irreconcilable whitebox-test
+      assumption rather than a bug** (1 failure):
+      `ir_pipeline.backends_registry`'s "compile pipeline preserves
+      semantic product on post-semantics failure" test source imports
+      `/std/gfx/experimental/*` but never uses any symbol from it, and
+      targets `glsl` (unsupported). Under default/whole-file splice this
+      program's semantic validation always *succeeds* (everything gets
+      spliced regardless of usage), so the later graphics-backend-mismatch
+      check is what fails, and the already-built semantic product survives
+      - the test asserts exactly that: `hasSemanticProgram` true, with a
+      populated `entryPath`/`imports`. Under forced-lazy mode this same
+      source's semantic validation genuinely *fails on its own* first
+      (nothing gets spliced for an unused import, independent of the
+      graphics-backend check's fix earlier in this leaf, which
+      appropriately re-prioritizes the graphics diagnostic's *message* in
+      this case) - `semantics.validate` never builds a semantic product
+      for a program it failed to validate, so there is no real product to
+      preserve. Tried moving the graphics check earlier to also carry the
+      already-in-flight local `semanticProgram` forward on this path;
+      confirmed via targeted rebuild that it still comes through empty
+      (default-constructed `entryPath`/`imports`), because
+      `semantics.validate` truly never wrote to it - not a plumbing bug to
+      fix, an unavoidable consequence of the source genuinely failing
+      semantic validation under lazy mode. This looks like a case where
+      the forced-env-var differential technique exercises a precondition
+      (source always semantically validates) that only default/whole-file
+      splice guarantees for an *unused* wildcard import - a legitimate,
+      individually triaged divergence to pin, not a fix to keep chasing.
   - stop_rule note (current): still not at "zero unintended divergence" -
-    3 failures remain (see progress_2026-08-11). TODO-5226 remains blocked
-    on this leaf per its `depends_on`.
+    2 failures remain (`semantics.result_helpers_99_100`'s compute-kernel
+    isolated-defMap gap, not yet root-caused; and
+    `ir_pipeline.backends_registry`'s semantic-product-preservation test,
+    root-caused but understood as a legitimate divergence, not yet
+    formally pinned as accepted). TODO-5226 remains blocked on this leaf
+    per its `depends_on` until
+    either a fix is found or the divergence is formally pinned.
 
 - [ ] TODO-5226: Phase 3 - flip lazy import expansion to the default
   - owner: ai
