@@ -11711,12 +11711,87 @@ This file is the live open-work queue for PrimeStruct.
       two symptoms across `semantics.result_helpers`,
       `semantics.imports`, `compile_run.smoke`, `compile_run.vm_outputs`,
       and `ir_pipeline.backends_registry`.
-  - stop_rule note: given the above, this leaf is **not** at "zero
-    unintended divergence" and TODO-5226 (flip the default) cannot
-    proceed yet per its own `depends_on`. The two fixed bugs and the
-    harness itself are real, verified, committed progress; the
-    fileErrorIsEof/ColorRGBA-shaped gap is the next concrete thing to
-    solve before this leaf can close.
+  - stop_rule note (superseded by progress_2026-08-11 below): given the
+    above, this leaf is **not** at "zero unintended divergence" and
+    TODO-5226 (flip the default) cannot proceed yet per its own
+    `depends_on`. The two fixed bugs and the harness itself are real,
+    verified, committed progress; the fileErrorIsEof/ColorRGBA-shaped gap
+    is the next concrete thing to solve before this leaf can close.
+  - progress_2026-08-11: root-caused and fixed the fileErrorIsEof/ColorRGBA
+    gap from the previous entry (41 failures) and two further bugs found
+    while chasing the tail. Failure count: 41 -> 17 -> 14 -> 6 -> 3.
+    - **Root cause of the bare-call/bare-type gap**: whole-file splice's
+      success (silently) depended on `Program::imports` literally
+      containing the transitively-needed import path -
+      `Parser::parseImport` (`src/parser/ParserCoreDefinitions.cpp`) pushes
+      every literal `import X` statement token it sees into
+      `program.imports`, and a normally-spliced module's own header import
+      lines are part of the verbatim-appended text, so this happens "for
+      free". A lazily-extracted symbol slice never includes its source
+      module's header, so seeding `out.sourceStdImports` alone (an
+      internal file-inclusion hint) was not enough - some downstream
+      cross-module bare-name/bare-type resolution genuinely needs the
+      literal import statement to exist in the parsed source. Fixed by
+      also emitting `\nimport <nestedImport>\n` via
+      `ExpandedSourceBuilder::appendGenerated` alongside the existing
+      internal seeding (17 failures remained after this).
+    - **Constructor-sugar gap**: a fallible struct constructor call
+      (`Window(...)?`) desugars to a call to a factory function named by
+      lowercasing the struct name and appending "Create" (e.g. `Window` ->
+      `windowCreate`), and that factory name never appears as literal text
+      anywhere the closure scan looks (only the struct name is spelled at
+      the call site), so the scan couldn't discover it. Fixed by adding
+      `constructorSugarStructLeafName` and matching on the struct name too
+      (14 failures remained).
+    - **Splice-ordering gap**: `appendStdlibModuleSources`'s
+      `shouldSkipMathWildcardStdlibModule` heuristic decided whether to
+      skip fully including a bare `import /std/math/*` based on whether
+      the *current* source text referenced a non-builtin math symbol at
+      the time it ran - but the closure scan (which can pull in a
+      lazily-extracted symbol referencing a non-lazy sibling module's type,
+      e.g. `/std/gfx/experimental/Frame/render_pass` takes a `[ColorRGBA]`
+      parameter from `/std/math`) ran *after* it, so the heuristic never
+      saw the reference and incorrectly dropped `/std/math`. Fixed by
+      running the closure scan before `appendStdlibModuleSources` instead
+      of after (6 failures remained).
+    - **Diagnostic-priority and queueing gaps** (3 failures remained after
+      this): `appendStdlibModuleSources` queued a lazy-excluded import's
+      own literal sub-path for whole-file inclusion even though its parent
+      key was excluded, producing a spurious "stdlib import requested but
+      matching stdlib modules were not found" for a genuinely nonexistent
+      sub-path instead of the correct "unknown import path"; the TODO-5228
+      diagnostic rewrite used a prefix match that both over-matched that
+      same case and under-matched a wildcard import's actual message
+      spelling (`<key>/*`); and a target/graphics-backend mismatch (e.g.
+      glsl without runtime substrate) on a wildcard-imported-but-unused
+      graphics module was masked by semantic validation's own "unknown
+      import path" failure instead of surfacing its own more specific
+      diagnostic. All three fixed together (see commit history for this
+      date).
+    - **3 failures remain, not yet root-caused**:
+      `semantics.result_helpers_79_80` ("stdlib-owned definitions keep
+      transitive file helper imports visible" - user code that reopens a
+      stdlib module's own namespace path to declare a *new*, non-manifested
+      function isn't recognized by the closure scan's `moduleLikelyNeeded`
+      leaf-name check at all, since nothing it references is a manifested
+      symbol of that module - a fundamentally different shape than the
+      "extracted symbol needs a sibling module" case already fixed);
+      `semantics.result_helpers_99_100` ("Buffer arg-pack method receivers"
+      - a `[compute]`-annotated function appears to get validated through
+      an isolated sub-pass with its own, much smaller `defMap_` (observed
+      2 entries: just `/main` and the compute kernel itself) that doesn't
+      carry over the lazily-spliced stdlib symbols the outer program's
+      `defMap_` has - default/whole-file mode presumably works by
+      coincidence, since it puts everything in the outer `defMap_`
+      unconditionally; not yet traced to the actual isolated-validation
+      code path); and `ir_pipeline.backends_registry`, which fails
+      intermittently with the flag *off* too (seen failing in one clean
+      baseline run and passing in another) - looks pre-existing and
+      flag-independent, not part of this leaf's differential scope, but
+      not yet confirmed via a dedicated flaky-test investigation.
+  - stop_rule note (current): still not at "zero unintended divergence" -
+    3 failures remain (see progress_2026-08-11). TODO-5226 remains blocked
+    on this leaf per its `depends_on`.
 
 - [ ] TODO-5226: Phase 3 - flip lazy import expansion to the default
   - owner: ai
