@@ -642,11 +642,27 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   std::unordered_map<std::string, StdlibModuleManifest> moduleManifestCache;
   const bool skipMathWildcardStdlibModule = shouldSkipMathWildcardStdlibModule(sourceImports, source);
   for (const auto &importPath : sourceImports) {
-    for (const auto &key : collectStdlibAutoIncludeKeys(importPath)) {
+    // collectStdlibAutoIncludeKeys returns the most-specific key first (the
+    // literal import path) followed by progressively shorter ancestor keys
+    // down to the module root. If any ancestor is lazy-excluded, the whole
+    // import path belongs to that lazy module's family and must not be
+    // queued for whole-file inclusion at all - not even via its own
+    // most-specific key. Otherwise a literal sub-path that doesn't happen
+    // to name a real stdlib file (e.g. a typo'd symbol name under a lazy
+    // module) fails the directory scan below and the pipeline reports a
+    // spurious "stdlib import requested but matching stdlib modules were
+    // not found" instead of letting semantic validation produce the
+    // correct "unknown import path" diagnostic for it.
+    const std::vector<std::string> keys = collectStdlibAutoIncludeKeys(importPath);
+    const bool importPathIsLazyExcluded =
+        std::any_of(keys.begin(), keys.end(), [&](const std::string &key) {
+          return excludedKeys.count(key) > 0;
+        });
+    if (importPathIsLazyExcluded) {
+      continue;
+    }
+    for (const auto &key : keys) {
       if (skipMathWildcardStdlibModule && importPath == "/std/math/*" && key == "/std/math") {
-        continue;
-      }
-      if (excludedKeys.count(key) > 0) {
         continue;
       }
       if (queuedKeys.insert(key).second) {
@@ -1715,6 +1731,20 @@ bool runCompilePipeline(const Options &options,
                                               semanticProductBuildConfigPtr);
   }
   if (!semanticValidationOk) {
+    // A target/graphics-backend mismatch (e.g. glsl target without runtime
+    // substrate) takes priority over any semantic failure below, including
+    // the TODO-5228 lazy-import rewrite: it depends only on program.imports
+    // (populated straight from parsing) and would fail regardless of
+    // whether anything in the imported module resolves. Without this,
+    // lazy stdlib import expansion could leave a wildcard-imported,
+    // never-used graphics module with zero spliced definitions, semantic
+    // validation would fail with "unknown import path" first, and the
+    // target mismatch's more specific, actionable diagnostic would never
+    // surface - masked by a confusing downstream error the target-support
+    // check exists specifically to preempt.
+    if (!validateGraphicsBackendSupport(output.program, options, error, &capturedDiagnosticInfo)) {
+      return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+    }
     // TODO-5228: the closure-scan heuristic that decides which manifested
     // symbols to splice in is purely syntactic (a whole-word name scan),
     // so it can miss a symbol the program actually needed. When that
@@ -1727,8 +1757,21 @@ bool runCompilePipeline(const Options &options,
     // message the plan calls for, rather than letting a confusing
     // downstream error stand.
     for (const std::string &lazyKey : importStage.lazyStdlibModuleKeys) {
-      const std::string unknownImportPrefix = "unknown import path: " + lazyKey;
-      if (error.compare(0, unknownImportPrefix.size(), unknownImportPrefix) == 0) {
+      // Exact match only: "unknown import path: " + lazyKey by itself means
+      // the wildcard-imported lazy module produced zero definitions (the
+      // closure scan's syntactic heuristic missed everything the program
+      // needed). A *prefix* match would also catch an unrelated, genuinely
+      // nonexistent sub-path like "/std/gfx/experimental/nope" (which
+      // textually starts with the lazy module's own key but is a real,
+      // distinct "no such import" error the rewrite must not mask). The
+      // diagnostic echoes back the import path exactly as written, so a
+      // wildcard import surfaces as "unknown import path: <key>/*" (with
+      // the literal "/*") rather than bare "<key>" - match both forms, but
+      // nothing else, so a lazy module imported as a bare wildcard still
+      // gets rewritten to the clearer message.
+      const std::string unknownImportMessage = "unknown import path: " + lazyKey;
+      const std::string unknownImportWildcardMessage = unknownImportMessage + "/*";
+      if (error == unknownImportMessage || error == unknownImportWildcardMessage) {
         error = "unknown symbol in imported library " + lazyKey +
                 " (--experimental-lazy-stdlib-imports could not find any "
                 "manifested symbol matching a name referenced by this "
