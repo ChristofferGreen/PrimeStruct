@@ -3267,10 +3267,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("runs vm shared stdlib vector conformance harness") {
-  expectVmSharedStdlibVectorConformanceHarness();
-}
-
 TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental helpers") {
   expectSharedVectorConformanceHarness("vm");
 }

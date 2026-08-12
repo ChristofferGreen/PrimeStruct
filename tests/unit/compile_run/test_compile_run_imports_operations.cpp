@@ -3525,10 +3525,6 @@ TEST_CASE("rejects experimental map bracket access in C++ emitter") {
   expectExperimentalMapIndexConformance("vm");
 }
 
-TEST_CASE("shared vector conformance harness in C++ emitter") {
-  expectSharedVectorConformanceHarness("vm");
-}
-
 TEST_CASE("canonical namespaced vector helpers in C++ emitter") {
   expectCanonicalVectorNamespaceConformance("vm");
 }
