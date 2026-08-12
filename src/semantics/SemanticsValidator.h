@@ -63,7 +63,8 @@ public:
                      bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow = false,
                      bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false,
                      bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false,
-                     std::shared_ptr<const SemanticValidationPlan> validationPlan = nullptr);
+                     std::shared_ptr<const SemanticValidationPlan> validationPlan = nullptr,
+                     const std::unordered_set<std::string> *lazyStdlibModuleKeys = nullptr);
 
   bool run();
   const ValidationCounters &validationCounters() const { return validationCounters_; }
@@ -561,6 +562,18 @@ private:
   std::unordered_set<std::string> effectFreeStructStack_;
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
+  // TODO-5229: stdlib module-root keys the lazy-import closure scan treated
+  // as lazy-managed for this compile (see CompilePipeline.cpp's
+  // CompilePipelineImportStageState::lazyStdlibModuleKeys). A wildcard
+  // import of one of these prefixes producing zero spliced definitions is
+  // not necessarily an error - it can legitimately mean nothing from the
+  // module was actually needed (e.g. a source-level name collides with an
+  // unrelated compiler builtin of the same spelling), which default
+  // whole-file splice never distinguishes from real usage since it always
+  // includes the whole module regardless. Null (the default, used by every
+  // caller outside the compile pipeline) means no such prefixes are known
+  // and the check behaves exactly as before.
+  const std::unordered_set<std::string> *lazyStdlibModuleKeys_ = nullptr;
   std::string entryArgsName_;
   bool allowEntryArgStringUse_ = false;
   const Expr *currentExprContext_ = nullptr;

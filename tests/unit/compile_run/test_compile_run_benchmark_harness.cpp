@@ -3786,7 +3786,8 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
             "                SemanticDiagnosticInfo *diagnosticInfo = nullptr,\n"
             "                bool collectDiagnostics = false,\n"
             "                SemanticProgram *semanticProgramOut = nullptr,\n"
-            "                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr) const;") !=
+            "                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,\n"
+            "                const std::unordered_set<std::string> *lazyStdlibModuleKeys = nullptr) const;") !=
         std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticDisableMethodTargetMemoization") == std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") == std::string::npos);

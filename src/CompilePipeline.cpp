@@ -1738,7 +1738,8 @@ bool runCompilePipeline(const Options &options,
                                               &semanticDiagnosticInfo,
                                               options.collectDiagnostics,
                                               needsSemanticProduct ? &semanticProgram : nullptr,
-                                              semanticProductBuildConfigPtr);
+                                              semanticProductBuildConfigPtr,
+                                              &importStage.lazyStdlibModuleKeys);
   }
   if (!semanticValidationOk) {
     // A target/graphics-backend mismatch (e.g. glsl target without runtime

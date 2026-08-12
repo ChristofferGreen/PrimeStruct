@@ -438,6 +438,19 @@ bool SemanticsValidator::buildImportAliases() {
         if (hasCoveringStdlibWildcardImport(importPath)) {
           continue;
         }
+        // TODO-5229: a lazy-managed stdlib module (see
+        // lazyStdlibModuleKeys_) producing zero spliced definitions is not
+        // necessarily an error - default whole-file splice never
+        // distinguishes "genuinely unused" from "used" for a wildcard
+        // import (it always includes the whole module either way), so an
+        // unused-but-valid wildcard import of a real module is never an
+        // error there. Treat it the same way here instead of hard-failing
+        // just because the closure scan's syntactic matches (if any)
+        // didn't survive - e.g. a source-level name that collides with an
+        // unrelated compiler builtin of the same spelling.
+        if (lazyStdlibModuleKeys_ != nullptr && lazyStdlibModuleKeys_->count(prefix) > 0) {
+          continue;
+        }
         if (!addImportDiagnostic("unknown import path: " + importPath)) {
           return false;
         }

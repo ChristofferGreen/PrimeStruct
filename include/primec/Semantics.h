@@ -5,6 +5,7 @@
 #include "primec/SemanticProduct.h"
 
 #include <cstdint>
+#include <unordered_set>
 #include <vector>
 
 namespace primec {
@@ -45,7 +46,8 @@ public:
                 SemanticDiagnosticInfo *diagnosticInfo = nullptr,
                 bool collectDiagnostics = false,
                 SemanticProgram *semanticProgramOut = nullptr,
-                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr) const;
+                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
+                const std::unordered_set<std::string> *lazyStdlibModuleKeys = nullptr) const;
 };
 
 } // namespace primec

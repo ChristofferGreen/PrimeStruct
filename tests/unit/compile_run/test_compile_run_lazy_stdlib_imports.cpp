@@ -106,7 +106,17 @@ main() {
   CHECK(callsVisited < 700);
 }
 
-TEST_CASE("lazy stdlib imports surface a clear diagnostic when no manifested symbol matches") {
+TEST_CASE("lazy stdlib imports surface the underlying diagnostic when no manifested symbol matches") {
+  // A wildcard import of a lazy-managed module that ends up splicing
+  // nothing behaves like default whole-file splice's own guarantee for an
+  // unused wildcard import: it's not itself an error (see TODO-5229 - a
+  // real stdlib usage simply colliding with an unrelated compiler builtin
+  // of the same spelling is one legitimate way this happens, not evidence
+  // the closure scan missed something). So the call to a genuinely
+  // nonexistent function surfaces its own, more specific "unknown call
+  // target" diagnostic directly, rather than a generic "could not find a
+  // manifested symbol" message manufactured for an import that was never
+  // the actual problem.
   const std::string source = R"(
 import /std/image/*
 
@@ -124,7 +134,7 @@ main() {
                           outPath + " 2>&1";
   CHECK(runCommand(cmd) != 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("unknown symbol in imported library /std/image") != std::string::npos);
+  CHECK(output.find("unknown call target: totallyBogusImageFunctionThatDoesNotExist") != std::string::npos);
 }
 
 TEST_CASE("lazy stdlib imports resolve a templated method call on an experimental struct") {

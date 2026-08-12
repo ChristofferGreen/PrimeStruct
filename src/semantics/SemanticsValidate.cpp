@@ -7521,6 +7521,7 @@ struct SemanticValidationManifestExecutionState {
   semantics::SemanticsValidator::ValidationCounters validationCounters;
   bool validatorPassCompleted = false;
   bool semanticProductPublicationCompleted = false;
+  const std::unordered_set<std::string> *lazyStdlibModuleKeys = nullptr;
 };
 
 bool validateSemanticValidationManifestExecutableShape(std::string &error) {
@@ -7620,7 +7621,9 @@ bool runSemanticValidationManifestValidatorPass(
       state.benchmarkRuntime.disableMethodTargetMemoization,
       state.benchmarkRuntime.graphLocalAutoLegacyKeyShadow,
       state.benchmarkRuntime.graphLocalAutoLegacySideChannelShadow,
-      state.benchmarkRuntime.disableGraphLocalAutoDependencyScratchPmr);
+      state.benchmarkRuntime.disableGraphLocalAutoDependencyScratchPmr,
+      nullptr,
+      state.lazyStdlibModuleKeys);
   try {
     if (!state.validator->run()) {
       return false;
@@ -7856,7 +7859,8 @@ bool runSemanticValidation(Program &program,
                            SemanticProgram *semanticProgramOut,
                            const SemanticProductBuildConfig *semanticProductBuildConfig,
                            const SemanticValidationBenchmarkConfig *benchmarkConfig,
-                           const SemanticValidationBenchmarkObserver *benchmarkObserver) {
+                           const SemanticValidationBenchmarkObserver *benchmarkObserver,
+                           const std::unordered_set<std::string> *lazyStdlibModuleKeys) {
   const auto benchmarkRuntime =
       semantics::makeSemanticValidationBenchmarkRuntime(benchmarkConfig, benchmarkObserver);
 
@@ -7900,6 +7904,7 @@ bool runSemanticValidation(Program &program,
       {},
       false,
       false,
+      lazyStdlibModuleKeys,
   };
   if (!runSemanticValidationManifest(manifestState)) {
     return false;
@@ -7924,7 +7929,8 @@ bool Semantics::validate(Program &program,
                          SemanticDiagnosticInfo *diagnosticInfo,
                          bool collectDiagnostics,
                          SemanticProgram *semanticProgramOut,
-                         const SemanticProductBuildConfig *semanticProductBuildConfig) const {
+                         const SemanticProductBuildConfig *semanticProductBuildConfig,
+                         const std::unordered_set<std::string> *lazyStdlibModuleKeys) const {
   return runSemanticValidation(program,
                                entryPath,
                                error,
@@ -7936,7 +7942,8 @@ bool Semantics::validate(Program &program,
                                semanticProgramOut,
                                semanticProductBuildConfig,
                                nullptr,
-                               nullptr);
+                               nullptr,
+                               lazyStdlibModuleKeys);
 }
 
 bool validateSemanticsForBenchmark(
@@ -7963,7 +7970,8 @@ bool validateSemanticsForBenchmark(
                                semanticProgramOut,
                                semanticProductBuildConfig,
                                &benchmarkConfig,
-                               &benchmarkObserver);
+                               &benchmarkObserver,
+                               nullptr);
 }
 
 bool semantics::computeTypeResolutionReturnSnapshotForTesting(

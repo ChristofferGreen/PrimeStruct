@@ -93,7 +93,8 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
                                        bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
                                        bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr,
-                                       std::shared_ptr<const SemanticValidationPlan> validationPlan)
+                                       std::shared_ptr<const SemanticValidationPlan> validationPlan,
+                                       const std::unordered_set<std::string> *lazyStdlibModuleKeys)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
@@ -106,7 +107,8 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       benchmarkSemanticPhaseCountersEnabled_(benchmarkSemanticPhaseCountersEnabled),
       methodTargetMemoizationEnabled_(!benchmarkSemanticDisableMethodTargetMemoization),
       benchmarkGraphLocalAutoDependencyScratchPmrEnabled_(
-          !benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr) {
+          !benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr),
+      lazyStdlibModuleKeys_(lazyStdlibModuleKeys) {
   if (!validationPlan_) {
     validationPlan_ =
         std::make_shared<SemanticValidationPlan>(
