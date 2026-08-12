@@ -35,6 +35,19 @@ detect_jobs() {
   printf '%s\n' "$jobs"
 }
 
+# Measured 2026-08-12 on a 4-core box, full suite (1881 tests, post
+# lazy-stdlib-import default flip): --parallel 4 (= detect_jobs()) took
+# 1093.4s; --parallel 8 (2x oversubscribed) took 997.7s, ~8.7% faster.
+# Individual test processes got much lighter after the lazy-import flip, so
+# more of the suite's wall time is now process-spawn/IO overhead that
+# oversubscription can hide - unlike compiling (still CPU/memory-bound, not
+# oversubscribed here). Only applied to ctest, not the build's --parallel.
+detect_ctest_jobs() {
+  local jobs
+  jobs="$(detect_jobs)"
+  printf '%s\n' "$((jobs * 2))"
+}
+
 relative_path() {
   local path="$1"
 
@@ -174,7 +187,7 @@ if [[ "$SKIP_TESTS" -eq 1 ]]; then
   exit 0
 fi
 
-DEFAULT_CTEST_JOBS=$(detect_jobs)
+DEFAULT_CTEST_JOBS=$(detect_ctest_jobs)
 CTEST_JOBS="${CTEST_PARALLEL_LEVEL:-$DEFAULT_CTEST_JOBS}"
 set +e
 ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_JOBS"

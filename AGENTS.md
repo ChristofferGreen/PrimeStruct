@@ -116,17 +116,26 @@ build and layout solidify.
 - **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
 - **CTest must run multithreaded:** `ctest`'s own default is `--parallel 1`
   (serial), and `--parallel 0` does **not** mean "auto-detect cores" - it
-  measured as serial too. Always pass an explicit `--parallel <N>` (`N` =
-  detected core count; `scripts/compile.sh` already does this via its
-  `detect_jobs()` helper - prefer it over ad hoc invocations). CMake presets
-  cannot compute a machine's core count themselves (verified: `jobs` is a
-  typed integer field, not a string, so `$env{...}` macro expansion is
-  rejected outright) - `CMakePresets.json` does **not** bake in a fixed
-  parallel count for this reason; a previous fixed `--parallel 8` there was
-  actively wrong on machines with a different core count and has been
-  removed. For ad hoc/IDE use of `ctest --preset release` (or
+  measured as serial too. Always pass an explicit `--parallel <N>` (`N` = 2x
+  detected core count for `ctest`; `scripts/compile.sh` already does this via
+  its `detect_ctest_jobs()` helper - prefer it over ad hoc invocations).
+  Measured 2026-08-12 on a 4-core box, full suite: `--parallel 4` (=
+  physical cores) took 1093.4s; `--parallel 8` (2x oversubscribed) took
+  997.7s, ~8.7% faster - individual test processes got much lighter after
+  the lazy-stdlib-import default flip, so more of the suite's wall time is
+  now process-spawn/IO overhead that oversubscription hides. This is
+  `ctest`-specific (lightweight, many-short-lived-processes workload);
+  `cmake --build` still uses plain physical-core count
+  (`detect_jobs()`/`CMAKE_BUILD_PARALLEL_LEVEL`) since compiling is
+  CPU/memory-bound differently and oversubscribing it risks memory pressure.
+  CMake presets cannot compute a machine's core count themselves (verified:
+  `jobs` is a typed integer field, not a string, so `$env{...}` macro
+  expansion is rejected outright) - `CMakePresets.json` does **not** bake in
+  a fixed parallel count for this reason; a previous fixed `--parallel 8`
+  there was actively wrong on machines with a different core count and has
+  been removed. For ad hoc/IDE use of `ctest --preset release` (or
   `debug`/`relwithdebinfo`), export the real, dynamically-detected value
-  first: `export CTEST_PARALLEL_LEVEL=$(nproc)` (or
+  first: `export CTEST_PARALLEL_LEVEL=$(($(nproc) * 2))` (or
   `CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)` for `cmake --build --preset`) -
   CTest/CMake natively honor these env vars as the parallel level when no
   explicit `--parallel`/`jobs` is given. Never invoke a bare `ctest` (or
