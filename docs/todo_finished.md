@@ -25942,3 +25942,288 @@ real answer.
     `TemplateMonomorphMethodTargets.h`'s own smaller-container scans
     noted in TODO-4743 remain, on the smaller `ctx.helperOverloads`
     container or requiring a different index shape).
+
+- [x] TODO-5229: Phase 2c - build the lazy-expansion differential harness
+  and triage every divergence
+  - owner: ai
+  - created_at: 2026-08-10
+  - phase: Compiler architecture / import resolution
+  - parallel_track: library-symbol-manifests
+  - depends_on: TODO-5228
+  - scope: build the permanent differential harness comparing
+    old-vs-new resolved call paths and validation outcomes across the
+    full semantics/ir_pipeline/compile_run corpora, following the same
+    pattern `docs/CompatPathResolutionConsolidation.md`'s Step 1 already
+    proved out.
+  - acceptance: the differential harness runs clean (zero unintended
+    divergence, or every divergence individually triaged and either
+    fixed or pinned as an intentional behavior change) across all three
+    corpora with TODO-5228's opt-in flag enabled.
+  - stop_rule: every discovered divergence must be individually
+    triaged and resolved (fixed or explicitly accepted with a new pinning
+    test) before this leaf is considered done - do not ship with known,
+    unexplained differential-harness divergences under the opt-in flag.
+  - known_starting_point: TODO-5228's resolution_summary already found and
+    documented one concrete divergence to triage first - a templated
+    method called via receiver method-call syntax (e.g. `err.result<i32>()`)
+    fails under the lazy flag even though the definition is present with a
+    verified-identical AST shape; root cause not yet identified. This is
+    the first thing this leaf's harness should catch and either explain or
+    fix, not a surprise to rediscover from scratch.
+  - progress_2026-08-10: built the harness and used it. Added
+    `lazyStdlibImportsEnabled(options)` (`src/CompilePipeline.cpp`) so the
+    opt-in flag is also forced on by the `PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS`
+    env var - this makes the *entire* existing test corpus double as the
+    differential corpus on demand (both primec-subprocess `compile_run`
+    tests and in-process helpers like `validateProgramThroughCompilePipeline`
+    that build `Options` directly, since neither goes through CLI parsing),
+    the same methodology `docs/CompatPathResolutionConsolidation.md`'s
+    Step 1 used, adapted here since this is an alternate compile-pipeline
+    path rather than a single classifier function with one legacy-vs-new
+    answer per call. Baseline (flag off): `ctest --parallel 4` clean (0
+    failures / 1881 tests) - confirms the harness's own baseline is sound.
+    Forced (`PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS=1`): started at 52
+    failures.
+    - **Fixed** (both real, pre-existing bugs the differential harness
+      exposed, not caused by lazy expansion - see the two commits
+      documenting each): the templated-method GfxError bug (already
+      resolved in TODO-5228's own resolution_summary), and a genuinely new
+      finding - `computeLazyStdlibModuleClosureSource` could independently
+      splice both a struct and one of its own nested methods (declared
+      directly inside the struct body rather than via a reopened
+      `namespace StructName { ... }` block, e.g. `/std/gfx/experimental/Buffer`)
+      as two separate inclusions, producing "duplicate definition" - fixed
+      by dropping any included entry whose line range is nested inside
+      another included entry from the same module. Also found and fixed a
+      real correctness gap orthogonal to those two: a lazy module's own
+      top-level `import` lines (e.g. image.prime's `import /std/math/*`)
+      never got processed at all, since the module's whole-file text is
+      never appended for a lazy module - so anything a spliced symbol's
+      body needed from a sibling stdlib module silently wasn't there.
+      Fixed by seeding those sibling imports into the normal (non-lazy)
+      splice path, but *only* when a cheap pre-check (does the pre-splice
+      seed text reference any of this module's manifested leaf names?)
+      confirms the lazy module will actually contribute something -
+      otherwise a program that imports but never touches a lazy module
+      would pay for its siblings' full inclusion for nothing. This
+      dropped the failure count to 41 and fixed the
+      `primestruct.compile.run.lazy_stdlib_imports` suite's own two
+      regressions (visible only under the forced env var, since the
+      sibling-import seeding measurably raises real-usage cost from ~21 to
+      ~584 `calls_visited` for the original light-usage repro - still an
+      honest ~8.4x reduction versus whole-file splice's ~4888, just less
+      dramatic than the zero-transitive-dependency best case; the suite's
+      threshold and comments were updated to reflect this honestly rather
+      than chase the earlier, incomplete number).
+    - **Not yet fixed - genuine open architectural question, not a quick
+      patch** (41 failures remain, all traced to one of two symptoms):
+      (a) `unknown call target: fileErrorIsEof` - a *bare* (non-method,
+      non-templated, non-namespaced) call from within one stdlib module's
+      own code to a plain function defined in a different, transitively-
+      imported stdlib module (e.g. image.prime's own `ppmSkipComment`
+      calling `/std/file`'s `fileErrorIsEof` bare) fails to resolve even
+      though the target definition is confirmed present in `defMap_` at
+      `buildDefinitionMaps` time (verified via targeted, since-removed
+      debug instrumentation - not a presence problem); (b)
+      `unsupported binding type: ColorRGBA` - the exact same shape of
+      problem for a bare *type* reference instead of a call (gfx/experimental
+      code using `/std/math`'s `ColorRGBA` struct bare). Both symptoms
+      share every property investigated so far: the target *is* present
+      in the compiled buffer and in the relevant lookup structure
+      (`defMap_`)); resolution nonetheless fails; and the identical
+      program succeeds under whole-file splicing even though `program.imports`
+      never literally contains the transitively-needed module's path in
+      *either* mode (ruled out as the differentiator). The working
+      hypothesis is that whole-file splice's success depends on some
+      volume- or content-dependent mechanism not yet identified (not
+      `hasDefinitionFamilyPath`, not `program.imports`-driven aliasing -
+      both were checked directly) - finding it would need instrumenting
+      deeper into `SemanticsHelpersCore.cpp`'s `resolveStructTypePath`/
+      `resolveAdditionalNominalTypePath` and whatever bare-call path
+      resolves non-method, non-templated calls (distinct from
+      `resolveMethodTarget`, which was already ruled out for the
+      GfxError fix). This is a real, unresolved architectural gap, not a
+      one-line fix - the remaining 41 failures cluster into exactly these
+      two symptoms across `semantics.result_helpers`,
+      `semantics.imports`, `compile_run.smoke`, `compile_run.vm_outputs`,
+      and `ir_pipeline.backends_registry`.
+  - stop_rule note (superseded by progress_2026-08-11 below): given the
+    above, this leaf is **not** at "zero unintended divergence" and
+    TODO-5226 (flip the default) cannot proceed yet per its own
+    `depends_on`. The two fixed bugs and the harness itself are real,
+    verified, committed progress; the fileErrorIsEof/ColorRGBA-shaped gap
+    is the next concrete thing to solve before this leaf can close.
+  - progress_2026-08-11: root-caused and fixed the fileErrorIsEof/ColorRGBA
+    gap from the previous entry (41 failures) and two further bugs found
+    while chasing the tail. Failure count: 41 -> 17 -> 14 -> 6 -> 3.
+    - **Root cause of the bare-call/bare-type gap**: whole-file splice's
+      success (silently) depended on `Program::imports` literally
+      containing the transitively-needed import path -
+      `Parser::parseImport` (`src/parser/ParserCoreDefinitions.cpp`) pushes
+      every literal `import X` statement token it sees into
+      `program.imports`, and a normally-spliced module's own header import
+      lines are part of the verbatim-appended text, so this happens "for
+      free". A lazily-extracted symbol slice never includes its source
+      module's header, so seeding `out.sourceStdImports` alone (an
+      internal file-inclusion hint) was not enough - some downstream
+      cross-module bare-name/bare-type resolution genuinely needs the
+      literal import statement to exist in the parsed source. Fixed by
+      also emitting `\nimport <nestedImport>\n` via
+      `ExpandedSourceBuilder::appendGenerated` alongside the existing
+      internal seeding (17 failures remained after this).
+    - **Constructor-sugar gap**: a fallible struct constructor call
+      (`Window(...)?`) desugars to a call to a factory function named by
+      lowercasing the struct name and appending "Create" (e.g. `Window` ->
+      `windowCreate`), and that factory name never appears as literal text
+      anywhere the closure scan looks (only the struct name is spelled at
+      the call site), so the scan couldn't discover it. Fixed by adding
+      `constructorSugarStructLeafName` and matching on the struct name too
+      (14 failures remained).
+    - **Splice-ordering gap**: `appendStdlibModuleSources`'s
+      `shouldSkipMathWildcardStdlibModule` heuristic decided whether to
+      skip fully including a bare `import /std/math/*` based on whether
+      the *current* source text referenced a non-builtin math symbol at
+      the time it ran - but the closure scan (which can pull in a
+      lazily-extracted symbol referencing a non-lazy sibling module's type,
+      e.g. `/std/gfx/experimental/Frame/render_pass` takes a `[ColorRGBA]`
+      parameter from `/std/math`) ran *after* it, so the heuristic never
+      saw the reference and incorrectly dropped `/std/math`. Fixed by
+      running the closure scan before `appendStdlibModuleSources` instead
+      of after (6 failures remained).
+    - **Diagnostic-priority and queueing gaps** (3 failures remained after
+      this): `appendStdlibModuleSources` queued a lazy-excluded import's
+      own literal sub-path for whole-file inclusion even though its parent
+      key was excluded, producing a spurious "stdlib import requested but
+      matching stdlib modules were not found" for a genuinely nonexistent
+      sub-path instead of the correct "unknown import path"; the TODO-5228
+      diagnostic rewrite used a prefix match that both over-matched that
+      same case and under-matched a wildcard import's actual message
+      spelling (`<key>/*`); and a target/graphics-backend mismatch (e.g.
+      glsl without runtime substrate) on a wildcard-imported-but-unused
+      graphics module was masked by semantic validation's own "unknown
+      import path" failure instead of surfacing its own more specific
+      diagnostic. All three fixed together (see commit history for this
+      date).
+    - **Fixed** (a fourth bug found while chasing the tail, dropping 3
+      failures to 2): `semantics.result_helpers_79_80` ("stdlib-owned
+      definitions keep transitive file helper imports visible" - user code
+      that reopens a stdlib module's own namespace path to declare a *new*,
+      non-manifested function wasn't recognized by the closure scan's
+      `moduleLikelyNeeded` leaf-name check at all, since nothing it
+      references is a manifested symbol of that module - a fundamentally
+      different shape than the "extracted symbol needs a sibling module"
+      case fixed earlier in this leaf. Fixed by also treating a textual
+      reopening of the module's own namespace leaf as needing it.
+    - **Pinned as an accepted divergence** (dropped 2 failures to 1):
+      `ir_pipeline.backends_registry`'s "compile pipeline preserves
+      semantic product on post-semantics failure" test source imports
+      `/std/gfx/experimental/*` but never uses any symbol from it, and
+      targets `glsl` (unsupported). Under default/whole-file splice this
+      program's semantic validation always *succeeds* (everything gets
+      spliced regardless of usage), so the later graphics-backend-mismatch
+      check is what fails, and the already-built semantic product survives
+      - the test asserted exactly that: `hasSemanticProgram` true, with a
+      populated `entryPath`/`imports`. Under forced-lazy mode this same
+      source's semantic validation genuinely *fails on its own* first
+      (nothing gets spliced for an unused import), and `semantics.validate`
+      never builds a semantic product for a program it failed to validate
+      - confirmed via a targeted rebuild that tried carrying the
+      already-in-flight local `semanticProgram` forward on this path
+      anyway; it comes through empty (default-constructed), because
+      `semantics.validate` truly never wrote to it. Not a plumbing bug -
+      an unavoidable consequence of the source genuinely failing semantic
+      validation under lazy mode, and a legitimate, individually triaged
+      divergence between the two paths for this specific
+      never-used-import shape. Pinned in the test itself: the
+      product-content assertions are now skipped when
+      `PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS` is set, with a comment
+      explaining why, while the graphics diagnostic itself (the test's
+      actual subject) is still asserted unconditionally in both modes.
+    - **1 failure remains - root-caused twice this round, the second pass
+      superseding the first with the actual answer**:
+      `semantics.result_helpers_99_100`'s Buffer args-pack method-receiver
+      case (`[compute]` kernel with an `[args<Buffer<i32>>] values`
+      parameter, calling `values.at(idx).load(idx)`/`.store(idx, v)`).
+      - First pass concluded the generic `/std/gfx/experimental/Buffer`
+        **struct** needed template instantiation triggered from its
+        parameter type annotation (not just constructor-call expressions).
+        Implemented that (a `resolveTypeString` call on each parameter's
+        reconstructed type text in `rewriteDefinitionParameters`,
+        `TemplateMonomorphDefinitionBindingSetup.h`), verified it actually
+        ran and resolved `args<Buffer<i32>>` as `concrete=true` - but zero
+        `Buffer__t...` specializations still appeared in the dump. Traced
+        deeper with instrumentation in `resolveTypeStringImpl`
+        (`TemplateMonomorphTypeResolution.h`) and found why: **`"Buffer"`
+        is a compiler builtin type name**
+        (`SemanticsBindingTypeHelpers.cpp`'s `isBuiltinTemplateTypeName` -
+        alongside `Pointer`/`Reference`/`Task`), so `isBuiltinTemplateContainer`
+        classifies it the same as `array`/`vector`/`map` and
+        `resolveTypeStringImpl` returns early *without ever calling
+        `instantiateTemplate`* - by design, since builtin generics need no
+        struct specialization at all. This is an unrelated stdlib struct
+        that happens to share the name "Buffer" with the compiler's own
+        low-level buffer type; the first pass's fix was chasing a struct
+        that was never the real target. Reverted it (see git history for
+        this date) rather than keep a change that instantiates the wrong,
+        irrelevant "Buffer" and does nothing for the actual case.
+      - Second pass, with the correct picture: `args<Buffer<i32>>` in this
+        program's source refers entirely to the compiler-builtin
+        `Buffer<T>` (handled natively, e.g.
+        `SemanticsValidatorExprGpuBuffer.cpp`, including the
+        `buffer_load`/`buffer_store` intrinsic desugaring already traced
+        in the first pass) - confirmed via `--dump-stage ast` that this
+        exact program's source references *no* other `/std/gfx/experimental`
+        symbol at all (re-read the actual failing test source, which is
+        simpler than an earlier scratch repro this investigation had
+        conflated it with). The closure scan's `moduleLikelyNeeded` check
+        still matches "Buffer" as a manifest leaf name of the *unrelated*
+        stdlib struct `/std/gfx/experimental/Buffer` (a same-name
+        collision, not a bug in the scan - over-inclusion here is by
+        design supposed to be harmless) and splices it in; it then
+        correctly gets dropped again as an unused template root (nothing
+        in the reachable body actually constructs it), leaving nothing
+        under `/std/gfx/experimental/` and triggering
+        `SemanticsValidatorBuildImports.cpp`'s "unknown import path" for
+        the wildcard import. Default/whole-file mode never hits this:
+        it doesn't care about usage at all for a wildcard import, so
+        `sawImmediateDefinition` is trivially satisfied by any of the
+        dozens of unrelated sibling definitions whole-file splice always
+        includes (GfxError, Device, Queue, Window, Frame, Mesh, ...) -
+        this program never actually *needed* any of them either, default
+        mode just never notices.
+      - The real fix: a lazy-managed wildcard import that ends up
+        splicing nothing should behave like default mode's actual
+        guarantee - a no-op, not an error - since "nothing was needed"
+        is a legitimate, common outcome (not evidence the closure scan
+        missed something), not something worth hard-failing on. This
+        needs `SemanticsValidatorBuildImports.cpp`'s `sawImmediateDefinition`
+        check to skip the "unknown import path" diagnostic specifically
+        for prefixes known to be lazy-managed - which requires plumbing
+        the lazy-managed key set (`CompilePipelineImportStageState::
+        lazyStdlibModuleKeys`, already computed in `CompilePipeline.cpp`)
+        into `SemanticsValidator`/`Semantics::validate`, a signature
+        change touching a fairly central, widely-called API (multiple
+        overloads, multiple test-helper call sites). Scoped but sized for
+        its own dedicated pass rather than folding into this leaf given
+        the blast radius of that signature change.
+  - progress_2026-08-12 (closing): fixed the last failure. Threaded the
+    lazy-managed stdlib module key set
+    (`CompilePipelineImportStageState::lazyStdlibModuleKeys`) through
+    `Semantics::validate` -> `SemanticsValidator` as a new optional,
+    default-null trailing parameter (backward compatible for every other
+    caller - benchmark path, test helpers, etc.), and skip the
+    "unknown import path" diagnostic in `SemanticsValidatorBuildImports.cpp`
+    specifically for those prefixes when nothing was spliced - matching
+    default whole-file splice's actual guarantee that an unused wildcard
+    import is never itself an error. Updated the doc-lock test guarding
+    `Semantics::validate`'s production signature (now includes the new
+    parameter) and the lazy-imports diagnostic test (now checks the more
+    specific "unknown call target" error that surfaces directly once the
+    import itself is no longer treated as the failure - a better message
+    than the old generic rewrite, not just a different one).
+    `ctest --parallel 4` (baseline, flag off): 0/1881 failures.
+    `PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS=1 ctest --parallel 4`: **0/1881
+    failures** - zero unintended divergence achieved (down from 52 at this
+    leaf's start). Acceptance criteria met; TODO-5226 is now unblocked.
+  - finished_at: 2026-08-12
+  - status: done
