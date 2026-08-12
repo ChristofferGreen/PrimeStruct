@@ -727,7 +727,14 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     } else if (arg == "--benchmark-semantic-no-fact-emission") {
       out.benchmarkSemanticNoFactEmission = true;
     } else if (arg == "--experimental-lazy-stdlib-imports") {
+      // Default-on as of TODO-5226; kept accepted as a no-op so existing
+      // invocations that pass it explicitly keep working unchanged.
       out.experimentalLazyStdlibImports = true;
+    } else if (arg == "--whole-file-stdlib-imports") {
+      // TODO-5226 escape hatch: falls back to pre-TODO-5226 whole-file
+      // stdlib splicing, kept available for at least one full
+      // session/release before considering removal.
+      out.experimentalLazyStdlibImports = false;
     } else if (arg == "--benchmark-semantic-phase-counters") {
       out.benchmarkSemanticPhaseCounters = true;
     } else if (arg == "--benchmark-semantic-allocation-counters") {

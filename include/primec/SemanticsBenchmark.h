@@ -2,6 +2,8 @@
 
 #include "primec/Semantics.h"
 
+#include <unordered_set>
+
 namespace primec {
 
 struct SemanticValidationBenchmarkConfig {
@@ -30,6 +32,7 @@ bool validateSemanticsForBenchmark(
     SemanticProgram *semanticProgramOut = nullptr,
     const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
     const SemanticValidationBenchmarkConfig &benchmarkConfig = {},
-    const SemanticValidationBenchmarkObserver &benchmarkObserver = {});
+    const SemanticValidationBenchmarkObserver &benchmarkObserver = {},
+    const std::unordered_set<std::string> *lazyStdlibModuleKeys = nullptr);
 
 } // namespace primec

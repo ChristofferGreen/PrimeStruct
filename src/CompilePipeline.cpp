@@ -1727,7 +1727,8 @@ bool runCompilePipeline(const Options &options,
                                                          needsSemanticProduct ? &semanticProgram : nullptr,
                                                          semanticProductBuildConfigPtr,
                                                          benchmarkConfig,
-                                                         benchmarkObserver);
+                                                         benchmarkObserver,
+                                                         &importStage.lazyStdlibModuleKeys);
   } else {
     semanticValidationOk = semantics.validate(output.program,
                                               options.entryPath,
@@ -1784,10 +1785,10 @@ bool runCompilePipeline(const Options &options,
       const std::string unknownImportWildcardMessage = unknownImportMessage + "/*";
       if (error == unknownImportMessage || error == unknownImportWildcardMessage) {
         error = "unknown symbol in imported library " + lazyKey +
-                " (--experimental-lazy-stdlib-imports could not find any "
+                " (lazy stdlib import expansion could not find any "
                 "manifested symbol matching a name referenced by this "
-                "program; disable the flag to see the underlying "
-                "diagnostic, or verify the spelling)";
+                "program; pass --whole-file-stdlib-imports to see the "
+                "underlying diagnostic, or verify the spelling)";
         semanticDiagnosticInfo.message = error;
         break;
       }

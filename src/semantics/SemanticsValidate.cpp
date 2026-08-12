@@ -7958,7 +7958,8 @@ bool validateSemanticsForBenchmark(
     SemanticProgram *semanticProgramOut,
     const SemanticProductBuildConfig *semanticProductBuildConfig,
     const SemanticValidationBenchmarkConfig &benchmarkConfig,
-    const SemanticValidationBenchmarkObserver &benchmarkObserver) {
+    const SemanticValidationBenchmarkObserver &benchmarkObserver,
+    const std::unordered_set<std::string> *lazyStdlibModuleKeys) {
   return runSemanticValidation(program,
                                entryPath,
                                error,
@@ -7971,7 +7972,7 @@ bool validateSemanticsForBenchmark(
                                semanticProductBuildConfig,
                                &benchmarkConfig,
                                &benchmarkObserver,
-                               nullptr);
+                               lazyStdlibModuleKeys);
 }
 
 bool semantics::computeTypeResolutionReturnSnapshotForTesting(
