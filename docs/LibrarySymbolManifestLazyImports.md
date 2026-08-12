@@ -409,8 +409,21 @@ lazy expansion first, caching after) is load-bearing, not incidental.
 - Revisit the "stdlib only" non-goal once the mechanism is proven; assess
   whether user-authored library imports would benefit the same way.
 
-### Phase 5 - Cross-invocation caching of validated symbols (only after
-Phase 3 proves out)
+### Phase 5 - Cross-invocation caching of validated symbols (deferred
+indefinitely, not queued)
+
+Phase 3 (TODO-5226) has landed and proved out - lazy expansion is now the
+default, verified at 0/1881 differential-harness failures. Phase 5 itself
+was reassessed at that point and deliberately **not** turned into a queued
+TODO: persisting validated compiler state across process boundaries, keyed
+correctly by content hash, invalidated correctly on stdlib changes, safe
+under concurrent test processes racing the same cache - is a large amount
+of new correctness surface for a compiler still stabilizing, where a stale-
+cache bug would be strictly worse than today's "slow but correct" state.
+The design below is kept as reference in case a future session decides the
+tradeoff is worth it, but it is not active work. The path taken instead for
+test-suite runtime was increasing `ctest` parallelism (a much smaller,
+purely-infrastructure change with no compiler-correctness surface).
 
 - See "Precedent in Other Toolchains" and "Research Literature: the
   Golden Nugget" above for why this is the higher-leverage lever every
