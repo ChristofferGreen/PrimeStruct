@@ -118,12 +118,20 @@ build and layout solidify.
   (serial), and `--parallel 0` does **not** mean "auto-detect cores" - it
   measured as serial too. Always pass an explicit `--parallel <N>` (`N` =
   detected core count; `scripts/compile.sh` already does this via its
-  `detect_jobs()` helper). The root `CMakePresets.json` bakes this in for
-  ad hoc/IDE use: `ctest --preset release` (or `debug`/`relwithdebinfo`) runs
-  with `--parallel 8` and `--output-on-failure` automatically, no flags to
-  remember. Never invoke a bare `ctest` (or `ctest --output-on-failure`) with
-  no parallel flag and no preset - that silently falls back to serial
-  execution.
+  `detect_jobs()` helper - prefer it over ad hoc invocations). CMake presets
+  cannot compute a machine's core count themselves (verified: `jobs` is a
+  typed integer field, not a string, so `$env{...}` macro expansion is
+  rejected outright) - `CMakePresets.json` does **not** bake in a fixed
+  parallel count for this reason; a previous fixed `--parallel 8` there was
+  actively wrong on machines with a different core count and has been
+  removed. For ad hoc/IDE use of `ctest --preset release` (or
+  `debug`/`relwithdebinfo`), export the real, dynamically-detected value
+  first: `export CTEST_PARALLEL_LEVEL=$(nproc)` (or
+  `CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)` for `cmake --build --preset`) -
+  CTest/CMake natively honor these env vars as the parallel level when no
+  explicit `--parallel`/`jobs` is given. Never invoke a bare `ctest` (or
+  `ctest --output-on-failure`) with no parallel flag, no `CTEST_PARALLEL_LEVEL`,
+  and no preset - that silently falls back to serial execution.
 - **CTest:** prefer running from `build-release/` via
   `ctest --output-on-failure --parallel <N>`, via the `release` CTest preset
   (`ctest --preset release`), or from the repo root via

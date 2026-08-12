@@ -31,28 +31,28 @@
     }
   ],
   "buildPresets": [
-    { "name": "debug", "configurePreset": "debug", "jobs": 8 },
-    { "name": "release", "configurePreset": "release", "jobs": 8 },
-    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo", "jobs": 8 }
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" }
   ],
   "testPresets": [
     {
       "name": "debug",
       "configurePreset": "debug",
       "output": { "outputOnFailure": true },
-      "execution": { "jobs": 8, "stopOnFailure": false }
+      "execution": { "stopOnFailure": false }
     },
     {
       "name": "release",
       "configurePreset": "release",
       "output": { "outputOnFailure": true },
-      "execution": { "jobs": 8, "stopOnFailure": false }
+      "execution": { "stopOnFailure": false }
     },
     {
       "name": "relwithdebinfo",
       "configurePreset": "relwithdebinfo",
       "output": { "outputOnFailure": true },
-      "execution": { "jobs": 8, "stopOnFailure": false }
+      "execution": { "stopOnFailure": false }
     }
   ]
 }
