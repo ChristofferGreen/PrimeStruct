@@ -77,7 +77,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
-- TODO-5226: Flip lazy import expansion to the default import-resolution path | track: library-symbol-manifests | surface: CompilePipeline.cpp import stage default flag
 
 ### Immediate Next 10
 
@@ -11607,22 +11606,3 @@ This file is the live open-work queue for PrimeStruct.
     full `ctest --parallel 4` regression - clean (the flag defaults off,
     so no other existing test's behavior changes).
 
-- [ ] TODO-5226: Phase 3 - flip lazy import expansion to the default
-  - owner: ai
-  - created_at: 2026-08-10
-  - phase: Compiler architecture / import resolution
-  - parallel_track: library-symbol-manifests
-  - depends_on: TODO-5229
-  - scope: once TODO-5225's differential harness reports zero unintended
-    divergence across all three corpora, make lazy expansion the default
-    import-resolution path; keep the whole-file path available behind a
-    flag as an escape hatch for at least one full session/release before
-    considering removal.
-  - acceptance: re-measure the exact gfx/image cases from
-    `docs/LibrarySymbolManifestLazyImports.md`'s "Problem, Verified"
-    section and confirm sub-1-second cost for light-usage stdlib-heavy
-    programs; full `ctest --parallel <N>` run shows zero new failures
-    beyond pre-existing, independently-confirmed-unrelated ones.
-  - stop_rule: do not remove the whole-file fallback path in this leaf -
-    that is explicitly deferred to give the new default a full
-    session/release of real-world exposure first.
