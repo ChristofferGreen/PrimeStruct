@@ -7,9 +7,36 @@
 #include <array>
 #include <cctype>
 #include <string_view>
+#include <tuple>
+#include <unordered_map>
 #include <utility>
 
 namespace primec::semantics {
+
+namespace {
+
+// TODO-5230: normalizeBindingTypeName / splitTemplateTypeName /
+// splitTopLevelTemplateArgs are pure functions of their string input (no
+// external mutable state) but were previously invoked from scratch on every
+// binding lookup/inference pass, re-splitting and re-allocating substrings
+// of the exact same type-name strings (e.g. "vector<i32>") thousands of
+// times per compile. Memoize them with per-thread caches: definition
+// validation runs multiple SemanticsValidator instances concurrently via
+// std::async (see SemanticsValidatorPassesDefinitions.cpp), so a shared
+// cache would need locking; a thread_local cache instead gives each worker
+// its own memo table with zero synchronization overhead and is trivially
+// safe since the functions are pure.
+thread_local std::unordered_map<std::string, std::string> g_normalizeBindingTypeNameCache;
+thread_local std::unordered_map<std::string, std::tuple<bool, std::string, std::string>>
+    g_splitTemplateTypeNameCache;
+thread_local std::unordered_map<std::string, std::pair<bool, std::vector<std::string>>>
+    g_splitTopLevelTemplateArgsCache;
+
+std::string normalizeBindingTypeNameUncached(const std::string &name);
+bool splitTemplateTypeNameUncached(const std::string &text, std::string &base, std::string &arg);
+bool splitTopLevelTemplateArgsUncached(const std::string &text, std::vector<std::string> &out);
+
+}  // namespace
 
 bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "static";
@@ -176,7 +203,9 @@ std::optional<std::string> findSoftwareNumericType(const std::string &typeName) 
   return std::nullopt;
 }
 
-std::string normalizeBindingTypeName(const std::string &name) {
+namespace {
+
+std::string normalizeBindingTypeNameUncached(const std::string &name) {
   if (name == "int") {
     return "i32";
   }
@@ -228,6 +257,18 @@ std::string normalizeBindingTypeName(const std::string &name) {
     return "Maybe" + name.substr(std::string("/std/maybe/Maybe").size());
   }
   return name;
+}
+
+}  // namespace
+
+std::string normalizeBindingTypeName(const std::string &name) {
+  auto it = g_normalizeBindingTypeNameCache.find(name);
+  if (it != g_normalizeBindingTypeNameCache.end()) {
+    return it->second;
+  }
+  std::string result = normalizeBindingTypeNameUncached(name);
+  g_normalizeBindingTypeNameCache.emplace(name, result);
+  return result;
 }
 
 std::string unwrapReferencePointerTypeText(const std::string &typeText) {
@@ -439,7 +480,9 @@ std::string joinTemplateArgs(const std::vector<std::string> &args) {
   return out;
 }
 
-bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
+namespace {
+
+bool splitTopLevelTemplateArgsUncached(const std::string &text, std::vector<std::string> &out) {
   out.clear();
   int depth = 0;
   size_t start = 0;
@@ -480,7 +523,7 @@ bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string>
   return !out.empty();
 }
 
-bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
+bool splitTemplateTypeNameUncached(const std::string &text, std::string &base, std::string &arg) {
   size_t lt = text.find('<');
   if (lt == std::string::npos) {
     base = text;
@@ -496,6 +539,31 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
   base = text.substr(0, lt);
   arg = text.substr(lt + 1, gt - lt - 1);
   return true;
+}
+
+}  // namespace
+
+bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
+  auto it = g_splitTopLevelTemplateArgsCache.find(text);
+  if (it != g_splitTopLevelTemplateArgsCache.end()) {
+    out = it->second.second;
+    return it->second.first;
+  }
+  bool ok = splitTopLevelTemplateArgsUncached(text, out);
+  g_splitTopLevelTemplateArgsCache.emplace(text, std::make_pair(ok, out));
+  return ok;
+}
+
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
+  auto it = g_splitTemplateTypeNameCache.find(text);
+  if (it != g_splitTemplateTypeNameCache.end()) {
+    base = std::get<1>(it->second);
+    arg = std::get<2>(it->second);
+    return std::get<0>(it->second);
+  }
+  bool ok = splitTemplateTypeNameUncached(text, base, arg);
+  g_splitTemplateTypeNameCache.emplace(text, std::make_tuple(ok, base, arg));
+  return ok;
 }
 
 bool isBuiltinTemplateTypeName(const std::string &name) {

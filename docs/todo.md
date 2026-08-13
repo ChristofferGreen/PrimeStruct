@@ -229,8 +229,16 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4713 tracks the actual algorithmic investigation into why
   `SoaColumnsN` monomorphization cost grows so sharply, profiled to
   implicate the same fragmented compat-path resolution helpers documented
-  in `docs/CompatPathResolutionConsolidation.md`. Full findings log at
-  `docs/TestRuntimeOptimization.md`.
+  in `docs/CompatPathResolutionConsolidation.md`. TODO-4710's original
+  premise (cache stdlib parse results across test PROCESSES) turned out
+  moot - superseded by TODO-5230 (done), which found and fixed the real
+  issue: a single compile invocation using any collection type re-derives
+  the same binding-type-name strings millions of times WITHIN one
+  process via unmemoized pure helpers, memoized 3 of them for a verified
+  ~5.8% instruction-count win, and diagnosed (but did not attempt, as
+  out of leaf scope) the larger remaining cost: `parseBindingInfo` itself
+  re-derived from scratch at ~50 separate validator-pass call sites. Full
+  findings log at `docs/TestRuntimeOptimization.md`.
 - Hidden test failure remediation: 13 of 27 `primestruct.semantics` CTest
   suites had a stale `TOTAL_CASES` in
   `cmake/PrimeStructManagedSemanticsSuites.cmake` that silently capped
@@ -1655,6 +1663,30 @@ This file is the live open-work queue for PrimeStruct.
     lever.
 
 - [ ] TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+  - superseded_2026-08-13: this TODO's entire premise was moot. Every
+    `compile_run` test spawns a fresh `./primec` subprocess (confirmed by
+    TODO-4709's audit), so there is no shared process for a cross-test-run
+    parse cache to live in - "process-local cache keyed on file path +
+    mtime" has nothing to persist across, since each test gets a brand new
+    process. While measuring this premise directly (`--dump-stage`
+    breakdown on a minimal vector-importing compile), found the real,
+    much bigger cost this TODO was gesturing at from the wrong angle: a
+    SINGLE compile invocation that imports `/std/collections/vector/*`
+    and uses it takes ~2.0-2.2s vs ~7-10ms for an otherwise-identical
+    no-import compile - a ~250-300x difference, all CPU-bound (confirmed
+    with `valgrind --tool=callgrind`), not I/O or cold-cache. The
+    redundant work isn't stdlib text re-read across test PROCESSES, it's
+    binding-type-name string parsing (`normalizeBindingTypeName`,
+    `splitTemplateTypeName`, `splitTopLevelTemplateArgs`) re-deriving the
+    same answers from scratch millions of times WITHIN a single process's
+    one compile, with zero memoization. Real tracking entry is now
+    TODO-5230, which fixed the memoizable part of this (verified: 99.99%
+    cache hit rate, ~5.8% total retired-instruction reduction) and
+    documented why the call-VOLUME itself (not the per-call string-parse
+    cost) is the larger remaining piece, requiring deeper restructuring
+    out of scope for a leaf-sized fix. Leaving this TODO open but pointing
+    at TODO-5230 as the actual tracking entry, per the same
+    superseded-but-not-duplicated pattern as TODO-4740 -> TODO-4804.
   - owner: ai
   - created_at: 2026-07-15
   - phase: Test runtime optimization

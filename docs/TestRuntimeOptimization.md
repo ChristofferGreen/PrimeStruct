@@ -629,3 +629,95 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   import-resolution loop from one-shot to iterative), not a leaf-sized
   fix, and follows the same characterize-first discipline that made
   `docs/CompatPathResolutionConsolidation.md` succeed.
+- 2026-08-13: Re-examined TODO-4710's premise (cache stdlib `.prime`
+  parse results across compile-pipeline test runs) and confirmed it's
+  moot: every `compile_run` test spawns a fresh `./primec` subprocess
+  (per TODO-4709's audit), so there's no shared process for a
+  cross-test-run cache to live in. While measuring this, found a much
+  bigger, real issue: a single compile invocation that imports and uses
+  a collection type is dramatically slower than one that doesn't, purely
+  in CPU time. Repro (`build-release/`):
+  ```
+  # no-import baseline
+  time ./primec --emit=vm mini_novec.prime --entry /main   # ~7-10ms
+  # imports /std/collections/vector/*, calls count(v)
+  time ./primec --emit=vm mini_vec.prime --entry /main     # ~2.0-2.2s
+  ```
+  Reran multiple times, consistent; `valgrind --tool=callgrind` confirmed
+  ~100% CPU-bound (13.64B retired instructions), not I/O or cold-cache.
+  Top non-libc self-time entries: `primec::semantics::
+  splitTopLevelTemplateArgs` (~4.3-5.0%), `normalizeBindingTypeName`
+  (~2.9-3.3%), `splitTemplateTypeName` (~2.8-3.2%), `parseBindingInfo`
+  plus several lambda-closure invoke entries (~7-8% combined),
+  `envelope_internal::findNextEnvelopeStart`/`parseNamespaceBlock`
+  (parse-stage text scanning, ~6.5% combined). libc malloc/free/memcpy/
+  strlen/memcmp churn collectively ~25-30% of total instructions.
+  Verified `normalizeBindingTypeName`, `splitTemplateTypeName`, and
+  `splitTopLevelTemplateArgs` (`src/semantics/
+  SemanticsBindingTypeHelpers.cpp`) are pure functions of their string
+  input with no external mutable state - safe to memoize. Added
+  `thread_local unordered_map` caches (thread_local because definition
+  validation runs multiple `SemanticsValidator` instances concurrently
+  via `std::async` for large definition sets - a shared `static` cache
+  would need locking, thread_local needs none and is trivially safe for
+  pure functions). Instrumented with temporary debug counters (removed
+  before landing) to verify the hypothesis directly rather than just
+  assuming: for the `mini_vec.prime` repro, `normalizeBindingTypeName`
+  is called ~2.53 **million** times but only 329 are unique inputs (hit
+  rate 99.99%); `splitTemplateTypeName` ~3.13 million calls / 316
+  unique; `splitTopLevelTemplateArgs` ~971 thousand calls / 97 unique -
+  confirming the redundant-re-derivation hypothesis with real numbers,
+  not guesswork.
+  **Measured result**: `valgrind --tool=callgrind` on byte-identical
+  before/after binaries (same build flags/input/machine) shows total
+  retired instructions dropped from 13,641,584,142 to 12,853,913,354
+  (**-5.78%**), with `splitTopLevelTemplateArgs`'s self-time dropping
+  580.6M -> 166.8M (-71%) and `normalizeBindingTypeName`'s 392.0M ->
+  207.0M (-47%). `splitTemplateTypeName`'s own self-time barely moved
+  (374.9M -> 374.3M) despite a near-100% call-count hit rate - its
+  savings show up as reduced downstream malloc/free/memcpy churn
+  elsewhere in the profile rather than in its own line, suggesting its
+  *inputs* vary more per-call than the other two even though the
+  *outputs* repeat.
+  **Wall-clock did not move measurably** on this session's sandboxed
+  4-core VM (~2.0-2.25s both before and after - within normal ~10%
+  run-to-run noise on this box). The instruction-count win is real,
+  reproducible, and deterministic (callgrind counts instructions, immune
+  to scheduler noise) but too small a share of the ~13B-instruction
+  total to surface above wall-clock variance here. **This falls well
+  short of the hoped-for outcome** (get close to the ~7-10ms no-import
+  baseline) - documenting the honest result rather than a forced number,
+  per this doc's established discipline (see the 2026-08-08 log entry's
+  own finding that a "plausible" perf target can turn out to be much
+  smaller than hoped once actually measured).
+  **Why the win is small despite huge call counts**: each memoized call
+  is already cheap after the fix (one `thread_local unordered_map`
+  lookup, no allocation for short SSO-sized strings) - the dominant
+  remaining cost is the sheer CALL VOLUME itself (2.5+ million calls to
+  derive facts about a 361-line stdlib file plus a 5-line user program),
+  not per-call string-parsing cost. That volume traces to
+  `parseBindingInfo` (`src/semantics/SemanticsHelpersCore.cpp`) being
+  called from ~50 distinct validator-pass call sites across
+  `src/semantics/` (confirmed via `grep -rn "parseBindingInfo("`), each
+  re-deriving `BindingInfo` for the same AST node from scratch across
+  different passes (uninitialized-locals, effect-free, struct-field
+  building, return-kind inference, printability, etc.), compounded by at
+  least one whole-program fixed-point graph-inference loop
+  (`inferUnknownReturnKindsGraph`'s `do { ... } while (changed)` in
+  `SemanticsValidatorInferGraph.cpp`) that re-scans unresolved
+  definitions to a fixed point. Getting materially closer to the
+  no-import baseline would require caching or restructuring at the
+  `parseBindingInfo` level (or higher) - e.g. compute `BindingInfo` once
+  per statement and thread it through instead of re-deriving it at each
+  of ~50 call sites - which is a substantially larger, riskier change
+  (parseBindingInfo takes an `Expr&` plus several context maps/sets by
+  reference, not just a string, so caching by `Expr*` alone risks
+  returning stale results if callers legitimately pass different
+  context) than a leaf-sized memoization, and was left as explicit
+  follow-up rather than attempted this session. Tracked as TODO-5230
+  (done, resolved to this documented limit); TODO-4710 marked
+  superseded pointing here, same pattern as TODO-4740 -> TODO-4804.
+  Verified zero regressions: full `./scripts/compile.sh --release`,
+  1881/1881 passing, wall-clock 1971.99s (within the documented
+  ~1165-1340s baseline range given this session's heavier machine
+  load/oversubscription contention on a 4-core sandbox).
