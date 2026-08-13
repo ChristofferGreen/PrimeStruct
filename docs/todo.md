@@ -77,6 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
+- TODO-5233: Survey allocation-heavy hot paths and design a scoped-per-compile arena allocator | track: compiler-arena-allocator | surface: src/semantics, src/main.cpp, src/primevm_main.cpp, test-harness compile entry points
 
 ### Immediate Next 10
 
@@ -330,6 +331,8 @@ This file is the live open-work queue for PrimeStruct.
 49. TODO-4708: Measure per-shard doctest binary startup/registration overhead
 50. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+51a. TODO-5233: Survey allocation-heavy hot paths and design a scoped-per-compile arena allocator
+51b. TODO-5234: Implement the scoped-per-compile arena allocator
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
@@ -1712,6 +1715,119 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once caching is implemented and measured for one
     representative shard; broader rollout or cache-invalidation edge cases
     are follow-up work if the measured win is significant.
+
+- [ ] TODO-5233: Survey allocation-heavy hot paths and design a scoped-per-compile arena allocator
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-arena-allocator
+  - depends_on: (none)
+  - scope: TODO-5231/5232's post-fix profile of the `mini_vec.prime` repro
+    showed malloc/free-family churn (`_int_malloc`/`_int_free`/`malloc`/
+    `free`/`malloc_consolidate`) still consuming roughly a quarter of
+    retired instructions, spread across parsing, semantics, and IR
+    lowering rather than concentrated in one function - a classic case
+    for a bump/arena allocator instead of chasing individual call sites.
+    Design constraint found while scoping this: `primec`/`primevm` are
+    short-lived, one-shot-compile-then-exit CLI processes, where a global
+    "bump-allocate everything, never free until process exit" override of
+    `operator new`/`operator delete` would be both safe and a large win
+    (the OS reclaims everything at exit anyway). BUT the `semantics` and
+    `ir_pipeline` CTest suites call the same compiler library
+    (`Semantics::validate`, IR lowering) IN-PROCESS across thousands of
+    `TEST_CASE`s within one long-lived doctest binary (confirmed: 47
+    files under `tests/unit/ir_pipeline/` plus several under
+    `tests/unit/semantics/` call these APIs directly, not via a spawned
+    subprocess) - a naive global "never free" override would leak
+    unboundedly across an entire test binary's run instead of just one
+    compile, likely causing multi-GB memory growth or OOM partway through
+    a 1881-test suite run. This leaf is survey/design only: (1) identify
+    every allocation-heavy hot path relevant to a typical compile (AST
+    nodes, `Expr`/`Definition`/`BindingInfo` structures, string
+    concatenation/substring churn in the semantics layer, IR node
+    allocation) via `valgrind --tool=callgrind` on a representative repro,
+    confirming which containers/types dominate allocation COUNT (not just
+    instruction share); (2) identify the actual "one compilation" scope
+    boundary in both the CLI entry points (`src/main.cpp`,
+    `src/primevm_main.cpp`) and the in-process test-harness entry points
+    used by `semantics`/`ir_pipeline` tests (grep for the shared helper
+    that wraps `Semantics::validate`/IR lowering per `TEST_CASE`); (3)
+    write a design doc (new `docs/CompilerArenaAllocator.md` or a section
+    in `docs/TestRuntimeOptimization.md`) proposing a scoped arena that is
+    created at the start of that boundary and reset (not necessarily
+    fully freed - a bump-pointer reset is cheap) at its end, safe for both
+    the "compile once and exit" CLI case and the "compile thousands of
+    times in one process" test-binary case.
+  - implementation_notes: A scoped/RAII arena (construct at compile-scope
+    entry, destructor resets or frees the underlying chunks) integrated via
+    either (a) overriding global `operator new`/`delete` conditionally
+    (checking a thread_local "current arena" pointer, falling back to the
+    system allocator when none is active - safe default for anything
+    outside a compile scope) or (b) a custom allocator type threaded
+    through the hottest containers only (much larger diff, likely not
+    worth it vs. option (a) unless (a) proves infeasible). Look at
+    existing precedent: TODO-4713/TODO-5230's own investigations already
+    identified several of the hot allocation sites in
+    `src/semantics/SemanticsBindingTypeHelpers.cpp` and
+    `SemanticsValidatorInferGraph.cpp`/`SemanticsValidate.cpp` - reuse
+    that profiling rather than re-deriving it from scratch.
+  - acceptance:
+    - A written design (allocation hot-path survey with measured
+      counts/shares, the chosen compile-scope boundary for both CLI and
+      in-process test-harness paths, and the arena integration approach)
+      is recorded, reviewable independent of implementation.
+    - The design explicitly addresses the long-lived-test-binary
+      unbounded-growth risk identified above and states how the chosen
+      approach avoids it.
+  - stop_rule: Do not implement the arena allocator in this leaf - that is
+    TODO-5234. Do not let this survey balloon into a full implementation;
+    if the design work naturally produces a working prototype, that's
+    fine to hand off as a starting point for TODO-5234, but this leaf's
+    own acceptance is the written design, not working code.
+
+- [ ] TODO-5234: Implement the scoped-per-compile arena allocator
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-arena-allocator
+  - depends_on: TODO-5233
+  - scope: Implement TODO-5233's design. Non-negotiable correctness
+    constraint (this is a global-allocator-level change, the blast radius
+    is the entire compiler and every test binary that links it): the
+    `semantics`/`ir_pipeline` CTest suites (thousands of `TEST_CASE`s per
+    long-lived process) must show no unbounded memory growth and no
+    behavior change versus today - verify with an explicit memory-usage
+    measurement (e.g. peak RSS or `/proc/<pid>/status` VmPeak sampled
+    across a full suite run) before/after, not just "tests still pass."
+    Also verify no sanitizer/debug-build incompatibility introduced (check
+    whether this repo's CI or `scripts/compile.sh` debug path uses
+    ASan/UBSan - if so, either make the arena override conditional on a
+    release-only build flag, or confirm it coexists safely, since bump
+    allocators commonly break leak-detector assumptions).
+  - implementation_notes: Follow TODO-5233's chosen design exactly; if
+    reality diverges from the design during implementation (e.g. the
+    proposed compile-scope boundary turns out to be wrong once actually
+    touched), stop and reconcile the design doc rather than silently
+    improvising past it.
+  - acceptance:
+    - `mini_vec.prime` repro and the heavier real collection test from
+      TODO-5232's own verification are re-timed before/after; results
+      recorded in `docs/TestRuntimeOptimization.md` regardless of whether
+      the sub-100ms target from TODO-5232's discussion is actually hit.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+    - Peak memory usage for at least one long-running in-process suite
+      (`semantics` or `ir_pipeline`) is measured before/after and shown
+      not to grow unboundedly.
+  - stop_rule: If the memory-growth verification for the long-lived test
+    binaries shows unbounded or even just significantly-worse peak RSS,
+    do not ship - either fix the reset/scoping logic or fall back to a
+    narrower, provably-safe variant (e.g. arena-only for the CLI binaries
+    via a compile-time `#ifdef`/separate translation unit, leaving the
+    test-binary-linked library on the system allocator) rather than
+    accepting a memory regression for a speed win. A correctness or
+    resource-usage regression here is strictly worse than the current
+    slowness.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai
