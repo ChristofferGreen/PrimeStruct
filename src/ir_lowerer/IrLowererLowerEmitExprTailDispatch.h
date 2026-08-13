@@ -1158,6 +1158,23 @@
                                                                 methodResolvedPath)) {
               return std::nullopt;
             }
+          } else {
+            // A same-path user definition overriding the canonical
+            // /std/collections/vector/at(_unsafe) direct-call helper must
+            // win over the builtin indexed-access fast path below, exactly
+            // like the method-call form just above - otherwise a
+            // struct-returning override's call sites get the builtin
+            // scalar-element access pattern instead of the user's own
+            // body, corrupting the IR for any subsequent struct handling
+            // (see TODO-4804).
+            const Definition *directCallee =
+                resolveTailDispatchDirectHelperDefinition(inlineDispatchExpr);
+            if (directCallee != nullptr &&
+                (!directCallee->statements.empty() ||
+                 directCallee->hasReturnStatement ||
+                 directCallee->returnExpr.has_value())) {
+              return std::nullopt;
+            }
           }
           return ir_lowerer::emitArrayVectorIndexedAccess(
               accessName,

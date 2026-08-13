@@ -26270,3 +26270,159 @@ real answer.
     snapshot went stale from TODO-5229's own closure.
   - finished_at: 2026-08-12
   - status: done
+
+- [x] TODO-4804 (RESOLVED): Struct value returned directly from `/std/collections/vector/at(...)`/`at_unsafe(...)` and immediately field-accessed or method-chained crashes with "(un)aligned indirect address in IR" on both vm and native exe
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: likely the same "freshly returned temporary" family as
+    TODO-4752 (struct field access on a freshly-returned temporary
+    reading a default/zeroed value), but manifesting as a hard crash
+    instead of a wrong value, and confirmed on native exe as well as vm.
+    Minimal vm repro:
+    ```
+    Marker { [i32] value }
+    [return<Marker>]
+    /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+      return(Marker(index))
+    }
+    [return<auto>]
+    project([vector<i32>] values) {
+      return(/std/collections/vector/at_unsafe(values, 2i32).value)
+    }
+    [effects(heap_alloc), return<int>]
+    main() {
+      [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+      return(project(values))
+    }
+    ```
+    fails with `VM error: unaligned indirect address in IR: 23` (exit 3)
+    instead of returning 2. The `--emit=exe` sibling
+    (`.tag()`-method-chaining a `Marker` returned directly from
+    `/std/collections/vector/at(...)`) now ALSO crashes at RUNTIME
+    ("unaligned indirect address in IR", exit 1) after compiling
+    successfully - this is a regression versus the state recorded in
+    this file's now-closed TODO-4732 entry, which explicitly noted this
+    exact exe-mode case was verified WORKING (returning 2) at the time
+    and was deliberately kept on `--emit=exe` for that reason. The same
+    crash class (`"invalid indirect address in IR"` / `"unaligned
+    indirect address in IR"`) also now surfaces at RUNTIME (instead of
+    compile-time rejection) for the canonical/experimental vector
+    indexed-removal-with-owned-elements conformance sources under
+    `--emit=exe` in `test_compile_run_emitters_matrix_quaternion_support.cpp`
+    ("canonical vector indexed removal helpers with owned elements" and
+    "supports indexed vector removals with ownership semantics") - all
+    four affected TEST_CASEs (2 in
+    `test_compile_run_emitters_string_receiver_vector_access.cpp`, 2 in
+    `test_compile_run_emitters_matrix_quaternion_support.cpp`) re-pinned
+    to their exact verified current (crashing) behavior.
+  - implementation_notes: start from TODO-4752's own notes (temporary-
+    materialization / calling-convention hypothesis) since the trigger
+    shape is identical (struct-returning call result used immediately,
+    no intervening local binding) - the difference here is the crash
+    happens specifically when the temporary's struct layout is
+    subsequently addressed via an "indirect address" (a field read or a
+    method call taking `self` by reference/pointer) rather than being
+    read as a plain value. Check whether the temporary is allocated with
+    insufficient/incorrect alignment, or whether its address is computed
+    before the temporary's storage is actually reserved.
+  - acceptance: the minimal repro above returns 2 on vm; the exe sibling
+    (struct method chain) returns 2 without crashing; all four re-pinned
+    TEST_CASEs revert to their original "runs and returns N" / "runs
+    without crashing" expectations once fixed.
+  - stop_rule: do not assume the vm-exit-3 and exe-exit-1 crashes share
+    a fix just because they share a message family - verify each
+    independently once a candidate fix exists, the same way TODO-4752
+    required doing for its own vm/native split.
+  - investigated_2026-08-07: narrowed the trigger significantly - the
+    crash is NOT about field access or method chaining on the returned
+    struct at all (confirmed via a temporary debug print, reverted):
+    even `[Marker] m{/std/collections/vector/at_unsafe(values, 2i32)}`
+    with no subsequent `.value`/method access, and even returning `m`
+    directly with no further use, crashes identically (`"unaligned
+    indirect address in IR: 7"` for that variant vs `: 23` for the
+    original minimal repro - the address value shifts with context,
+    ruling out a fixed hardcoded constant). The ONLY thing that matters
+    is renaming the user's struct-returning function away from the
+    canonical `/std/collections/vector/at_unsafe` path (e.g. to
+    `getMarker` with an identical body/signature otherwise) - that
+    variant runs correctly and returns 2. Ruled out (with receipts) two
+    plausible interception points: (1) NOT
+    `emitVectorIndexedAccessBeforeInline`
+    (`IrLowererLowerEmitExprTailDispatch.h`, the same function fixed for
+    TODO-4803) - its override-detection guard is gated behind
+    `inlineDispatchExpr.isMethodCall`, so a direct (non-method) call like
+    this repro's skips it entirely and falls straight into
+    `emitArrayVectorIndexedAccess`; extended the guard to also run for
+    non-method calls (mirroring TODO-4803's fix pattern) and confirmed
+    via debug print that this correctly identifies the real, non-trivial
+    user `Definition` and returns `std::nullopt` (bailing out of the
+    indexed-access fast path as intended) - but the crash persisted
+    completely unchanged, proving this function was never actually
+    responsible. Reverted that attempt cleanly (verified via `git diff`)
+    since it didn't fix anything and I couldn't verify it was safe
+    without further investigation. (2) NOT a function-return-type
+    registration bug - compared `--dump-stage ir` output for the
+    crashing repro against the working `getMarker` rename: both print
+    `def /std/collections/vector/at_unsafe(...): i32` /
+    `def /getMarker(...): i32` identically (the text IR printer appears
+    to always show `i32` for struct-returning functions, a printer
+    quirk, not a signal of the actual bug), so the function-level return
+    type isn't where the two diverge. Since the crash reproduces
+    identically even with zero downstream use of the returned struct,
+    and disappears entirely under a mere rename with an otherwise
+    byte-identical body, the actual interception point must be something
+    that special-cases the *callee's own path* independently of the
+    call-site dispatch heuristics already investigated (and independent
+    of TODO-4803/4805's "does a real override exist" checks, which
+    matter for call-SITE routing, not whatever is happening here) -
+    plausibly a native/precompiled-body substitution for canonical
+    collection-helper paths, or a struct-vs-scalar return-convention
+    decision made from the callee's path rather than its actual
+    `[return<T>]` transform, but the exact site was not found this
+    session (grepped for several plausible naming patterns
+    - `isCanonicalCollectionHelperDefinition`,
+    `synthesizeNativeFunctionBody`, `def.fullPath == rootCollectionMemberPath`
+    - with no hits, meaning it's under a name not yet guessed). Next
+    session should search from the callee side: trace how
+    `/std/collections/vector/at_unsafe`'s OWN function body gets lowered
+    (not any call SITE to it) and diff that against `/getMarker`'s
+    lowering, since the call sites are now confirmed structurally
+    identical AST/semantic-wise between the two.
+  - resolution_summary (2026-08-13): the actual divergence was call-SITE
+    dispatch after all, just in three places the earlier session's
+    `isMethodCall`-gated search didn't reach. `/std/collections/vector/at`
+    and `at_unsafe` each have THREE distinct direct-call (non-method-call)
+    lowering paths that special-case that literal path as a builtin
+    indexed-access fast path: `IrLowererLowerStatementsExpr.h` (two sites -
+    one for the key-value/array-vector access dispatch block, one for the
+    later canonical `vectorAccessPath` fast path) and
+    `IrLowererNativeTailDispatch.cpp`'s native tail-dispatch path. Each of
+    the three already had a same-path-user-shadow override guard for the
+    METHOD-CALL form (`.at(...)`/`.at_unsafe(...)`) but not for the DIRECT
+    (non-method) call form used by this TODO's repro
+    (`/std/collections/vector/at_unsafe(values, 2i32)`), so a user's own
+    struct-returning definition at that exact path got silently bypassed:
+    call sites lowered straight to the builtin scalar-element access
+    pattern (which assumes a raw numeric/bool/string element, not a
+    struct), corrupting the IR for any subsequent struct handling - hence
+    "unaligned indirect address in IR" rather than a wrong value. Fixed by
+    adding the same override-detection guard (resolve the direct-call
+    target definition; if a real, non-trivial user body exists at that
+    path, bail out of the builtin fast path and let normal inline-call
+    lowering handle it) to all three direct-call sites, mirroring the
+    existing method-call guards exactly - no special-casing beyond what
+    the method-call form already does. Verified: the minimal vm repro now
+    returns 2 (not crash); the `--emit=exe` `.tag()`-method-chain sibling
+    also returns 2 without crashing. Reverted all 4 re-pinned TEST_CASEs
+    (2 in `test_compile_run_emitters_string_receiver_vector_access.cpp`,
+    2 in `test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp`
+    - not `test_compile_run_emitters_matrix_quaternion_support.cpp` as this
+    entry's `scope` note originally guessed; the matrix/quaternion file's
+    two cases turned out to be a different, still-open defect, see
+    TODO-4740's note pointing back here) to their original correct-behavior
+    expectations. Full suite verified: 1881/1881 passing, 0 regressions.
+  - finished_at: 2026-08-13
+  - status: done

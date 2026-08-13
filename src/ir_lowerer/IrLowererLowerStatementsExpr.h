@@ -1459,7 +1459,24 @@
                   semanticProgram,
                   &callResolutionAdapters.semanticProductTargets.semanticIndex)
                   .isKeyValueTarget;
-          if (isKeyValueAccessTarget) {
+          // A same-path user definition overriding the canonical
+          // /std/collections/vector/at(_unsafe) (or bare at/at_unsafe alias)
+          // helper must win over the builtin raw array/vector access below -
+          // otherwise a struct-returning override's call sites get the
+          // builtin scalar-element access pattern instead of the user's own
+          // body, corrupting the IR for any subsequent struct handling (see
+          // TODO-4804).
+          const Definition *directBuiltinAccessOverrideCallee =
+              (accessName == "at" || accessName == "at_unsafe")
+                  ? resolveDirectHelperDefinition(expr)
+                  : nullptr;
+          if (directBuiltinAccessOverrideCallee != nullptr) {
+            if (!emitInlineDefinitionCall(
+                    expr, *directBuiltinAccessOverrideCallee, localsIn, true)) {
+              return false;
+            }
+            return true;
+          } else if (isKeyValueAccessTarget) {
             // Fall through to the key-value access handling further below.
           } else if (isMethodCallTempReceiver && !tempReceiverSupportsBuiltinAccess) {
             // Let normal helper lowering handle method calls on constructor- or
@@ -2199,6 +2216,20 @@
                (vectorAccessPath == "/std/collections/vector/at_unsafe" &&
                 (vectorAccessName = "at_unsafe", true))) &&
               (vectorAccessName == "at" || vectorAccessName == "at_unsafe")) {
+            // A same-path user definition overriding the canonical
+            // /std/collections/vector/at(_unsafe) helper must win over the
+            // native indexed-access fast path below - otherwise a
+            // struct-returning override's call sites get the builtin
+            // scalar-element access pattern instead of the user's own
+            // body, corrupting the IR for any subsequent struct handling
+            // (see TODO-4804). Mirrors the same guard already applied to
+            // the method-call form immediately above.
+            if (const Definition *directVectorAccessCallee =
+                    resolveDirectHelperDefinition(expr);
+                directVectorAccessCallee != nullptr) {
+              return emitInlineDefinitionCall(
+                  expr, *directVectorAccessCallee, localsIn, true);
+            }
             const auto keyValueTargetInfo =
                 resolveKeyValueAccessReceiverInfo(expr, expr.args.front());
             const auto arrayVectorTargetInfo =

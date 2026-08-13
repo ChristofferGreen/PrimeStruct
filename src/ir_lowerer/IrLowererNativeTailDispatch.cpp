@@ -967,6 +967,26 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
+    // A same-path user definition overriding the canonical
+    // /std/collections/vector/at(_unsafe) direct-call helper must win over
+    // the builtin raw array/vector access below, exactly like the
+    // method-call form just above - otherwise a struct-returning
+    // override's call sites get the builtin scalar-element access pattern
+    // instead of the user's own body, corrupting the IR for any
+    // subsequent struct handling (see TODO-4804).
+    if (!expr.isMethodCall &&
+        (accessName == "at" || accessName == "at_unsafe") &&
+        arrayVectorTargetInfo.isVectorTarget &&
+        !arrayVectorTargetInfo.isSoaVector &&
+        !arrayVectorTargetInfo.isKeyValueTarget) {
+      const std::string directResolvedPath =
+          findSemanticProductDirectCallTarget(semanticProgram, expr);
+      if (!directResolvedPath.empty() &&
+          !semanticKeyValueAccessHelperKeepsBuiltinReturn(semanticProgram,
+                                                          directResolvedPath)) {
+        return NativeCallTailDispatchResult::NotHandled;
+      }
+    }
     if (!emitBuiltinArrayAccess(accessName,
                                 expr.args[0],
                                 expr.args[1],

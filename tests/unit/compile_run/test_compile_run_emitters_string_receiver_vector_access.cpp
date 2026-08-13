@@ -311,18 +311,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  // Verified current behavior: compiling the struct-returning
-  // /std/collections/vector/at(...) call chained directly into
-  // .tag() (no intervening local binding) now crashes the native
-  // executable at runtime instead of returning 2 - see the "freshly
-  // returned temporary" crash family tracked by the new TODO filed
-  // alongside this re-pin.
-  const std::string runOutPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_vector_access_struct_method_chain_forwarding_run.txt")
-          .string();
-  CHECK(runCommand(quoteShellArg(exePath) + " > " + quoteShellArg(runOutPath) + " 2>&1") == 1);
-  CHECK(readFile(runOutPath).find("unaligned indirect address in IR") != std::string::npos);
+  CHECK(runCommand(quoteShellArg(exePath)) == 2);
 }
 
 TEST_CASE("C++ emitter keeps canonical vector unsafe access field expression forwarding") {
@@ -349,18 +338,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_unsafe_field_expression_forwarding.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_vector_access_unsafe_field_expression_forwarding_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  // Verified current behavior: this is the same "freshly returned
-  // struct temporary chained directly into a field read" crash family
-  // as the exe-mode sibling test above, manifesting on vm as a lowering
-  // crash (exit 3) instead of the previously-expected exit 2.
-  CHECK(runCommand(compileCmd) == 3);
-  CHECK(readFile(errPath).find("unaligned indirect address in IR") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("keeps canonical direct-call map access struct method chain forwarding in C++ emitter") {
