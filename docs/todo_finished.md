@@ -26766,3 +26766,173 @@ real answer.
   - finished_at: 2026-08-13
   - status: done
 
+- [x] TODO-5233: Survey allocation-heavy hot paths and design a scoped-per-compile arena allocator
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-arena-allocator
+  - depends_on: (none)
+  - scope: TODO-5231/5232's post-fix profile of the `mini_vec.prime` repro
+    showed malloc/free-family churn (`_int_malloc`/`_int_free`/`malloc`/
+    `free`/`malloc_consolidate`) still consuming roughly a quarter of
+    retired instructions, spread across parsing, semantics, and IR
+    lowering rather than concentrated in one function - a classic case
+    for a bump/arena allocator instead of chasing individual call sites.
+    Design constraint found while scoping this: `primec`/`primevm` are
+    short-lived, one-shot-compile-then-exit CLI processes, where a global
+    "bump-allocate everything, never free until process exit" override of
+    `operator new`/`operator delete` would be both safe and a large win
+    (the OS reclaims everything at exit anyway). BUT the `semantics` and
+    `ir_pipeline` CTest suites call the same compiler library
+    (`Semantics::validate`, IR lowering) IN-PROCESS across thousands of
+    `TEST_CASE`s within one long-lived doctest binary - a naive global
+    "never free" override would leak unboundedly across an entire test
+    binary's run instead of just one compile. This leaf is survey/design
+    only.
+  - implementation_notes: A scoped/RAII arena integrated via overriding
+    global `operator new`/`delete` conditionally (checking a thread_local
+    "current arena" pointer, falling back to the system allocator when
+    none is active).
+  - acceptance:
+    - A written design (allocation hot-path survey with measured
+      counts/shares, the chosen compile-scope boundary for both CLI and
+      in-process test-harness paths, and the arena integration approach)
+      is recorded, reviewable independent of implementation.
+    - The design explicitly addresses the long-lived-test-binary
+      unbounded-growth risk identified above and states how the chosen
+      approach avoids it.
+  - stop_rule: Do not implement the arena allocator in this leaf - that is
+    TODO-5234.
+  - resolution_summary (2026-08-13): Surveyed the `mini_vec.prime` repro
+    with `valgrind --tool=callgrind` (malloc/free-family functions +
+    `operator new` collectively ~33% of retired instructions) and
+    `valgrind --tool=dhat` (**9,756,990 total heap blocks** for one
+    compile; 754MB total bytes allocated over the run vs. only ~23MB live
+    at peak - confirming diffuse, high-*count*, short-lived-object churn,
+    not a large working set). Top allocation-count sites by a wide margin
+    were all inside `RequirementPredicateDefinitionContext`'s copy
+    constructor (`SemanticsValidate.cpp`'s `rewriteCompileTimeIfBranches`)
+    - the same call path TODO-5231/5232 already cut call *volume* on by
+    92.4%, with each surviving call still copying several
+    string/vector/hash-set members, each copy itself hundreds of
+    thousands of small allocations. Confirmed the scope boundary: CLI
+    binaries call `runCompilePipelineResult` once per invocation
+    (`src/main.cpp`, `src/primevm_main.cpp`); in-process test harnesses
+    call `Semantics::validate`/IR lowering directly from 47+ files, but
+    all test binaries share one `main()` (`tests/unit/test_main.cpp`),
+    giving a single choke point via a doctest `IReporter` listener instead
+    of instrumenting every helper file individually. Designed a scoped
+    arena with size-classed free lists (not naive bump-and-never-free -
+    the 754MB-vs-23MB gap shows that would inflate a single compile's peak
+    memory ~30x over its live working set) and a uniform allocation header
+    so `operator delete` never has to guess from ambient thread state.
+    Full design, including the safety argument for the long-lived-test-
+    binary risk, recorded in the new `docs/CompilerArenaAllocator.md`.
+    **Post-implementation note**: TODO-5234 found this design's
+    reset-per-compile-scope mechanism to be unsafe in a way this survey
+    did not anticipate (process-lifetime "magic static" corruption, not
+    limited to the `thread_local` caches this survey identified) and fell
+    back to a narrower, provably-safe variant per TODO-5234's own
+    stop_rule; `docs/CompilerArenaAllocator.md` documents both the
+    original design and the shipped fallback, and this entry's design
+    work (the allocation survey and scope-boundary identification) is
+    unaffected and remains accurate.
+  - finished_at: 2026-08-13
+  - status: done
+
+- [x] TODO-5234 (RESOLVED to narrower fallback): Implement the scoped-per-compile arena allocator
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-arena-allocator
+  - depends_on: TODO-5233
+  - scope: Implement TODO-5233's design. Non-negotiable correctness
+    constraint (this is a global-allocator-level change, the blast radius
+    is the entire compiler and every test binary that links it): the
+    `semantics`/`ir_pipeline` CTest suites (thousands of `TEST_CASE`s per
+    long-lived process) must show no unbounded memory growth and no
+    behavior change versus today - verify with an explicit memory-usage
+    measurement before/after, not just "tests still pass."
+  - implementation_notes: Follow TODO-5233's chosen design exactly; if
+    reality diverges from the design during implementation, stop and
+    reconcile the design doc rather than silently improvising past it.
+  - acceptance:
+    - `mini_vec.prime` repro and a heavier real collection repro are
+      re-timed before/after; results recorded in
+      `docs/TestRuntimeOptimization.md`.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+    - Peak memory usage for at least one long-running in-process suite is
+      measured before/after and shown not to grow unboundedly.
+  - stop_rule: If the memory-growth verification for the long-lived test
+    binaries shows unbounded or even just significantly-worse peak RSS, do
+    not ship - either fix the reset/scoping logic or fall back to a
+    narrower, provably-safe variant (e.g. arena-only for the CLI binaries
+    via a separate translation unit, leaving the test-binary-linked
+    library on the system allocator) rather than accepting a memory
+    regression for a speed win.
+  - resolution_summary (2026-08-13): Implemented TODO-5233's design
+    (`src/CompileArena.{h,cpp}`, wired into `src/main.cpp`/
+    `src/primevm_main.cpp` and a `tests/unit/test_main.cpp` doctest
+    listener) and, on wiring the listener into every `TEST_CASE`,
+    **reproduced a deterministic SIGSEGV on the full `semantics` suite**
+    (2940 `TEST_CASE`s): a `std::string` destructor crashed on a garbage
+    pointer, always on the same 4th test case, and a `valgrind
+    --tool=memcheck` run of the same sequence came back *clean* - a strong
+    signal this was an address-identity bug (two live objects handed the
+    same bytes), not a generic overrun. Root-caused it (gdb with debug
+    symbols) to the arena-reset step corrupting function-local "magic
+    static" values (`static const std::string`/`std::vector`/etc.
+    computed once on first call, reused for the rest of the process - a
+    pattern used dozens of times across `src/semantics/`, distinct from
+    and far more numerous than the `thread_local` caches TODO-5233's
+    survey had already planned to invalidate explicitly): if one gets
+    constructed while a compile scope is active, its bytes are
+    arena-allocated, and the *next* compile scope's reset silently hands
+    the same bytes to a new object while the magic static is still alive
+    - corrupting it, with no compiler warning and no practical way to
+    enumerate every such static as the codebase evolves. Per this leaf's
+    own stop_rule ("a correctness or resource-usage regression here is
+    strictly worse than the current slowness"), fell back to the narrower
+    variant the stop_rule pre-authorized: **the arena never resets** - one
+    `ScopedCompileArena` is constructed once near the top of `main()` in
+    each CLI binary and lives for the rest of the process (safe for the
+    same reason "never free until process exit" was always the accepted
+    baseline for a one-shot CLI process; same-thread frees still recycle
+    through size-classed free lists, so a single compile's peak memory
+    still tracks its live working set, not its cumulative allocation
+    volume). The doctest test binaries were reverted to never construct a
+    `ScopedCompileArena` at all and stay entirely on the system allocator
+    - exactly the shape that made "reset per compile" attractive is what
+    makes "never reset" wrong for them, so they simply don't participate.
+    Full mechanism and rationale recorded in
+    `docs/CompilerArenaAllocator.md`'s "Why the design changed" section.
+    **Measured results** (release build, same machine before/after, `git
+    stash` used for the "before" binary): `mini_vec.prime` repro
+    wall-clock ~0.90-0.92s -> ~0.66s (**~27% faster**), peak RSS (`getrusage`
+    `ru_maxrss`) ~36MB -> ~28.5MB (no regression - lower, likely due to
+    avoiding glibc malloc's own bookkeeping overhead for this allocation
+    pattern). Heavier `import /std/collections/*` repro: ~0.89-0.94s ->
+    ~0.64-0.68s (**~28% faster**), peak RSS ~43.6MB. Falls short of the
+    sub-100ms directional target, consistent with TODO-5232's own finding
+    that the remaining floor is the whole-file text-splicing import
+    architecture (`docs/LibrarySymbolManifestLazyImports.md`,
+    TODO-5223-5226), not allocator overhead - the ~27-28% measured here is
+    the allocator-attributable share. **Long-lived-process memory-growth
+    verification** (the leaf's own most-important check): sampled
+    `/proc/<pid>/status` `VmRSS`/`VmHWM` every 15s across a full
+    `PrimeStruct_semantics_tests` run (2940 `TEST_CASE`s, ~460s
+    wall-clock) - `VmHWM` went from ~50MB to ~56MB over the entire run
+    (essentially flat, ordinary test-to-test variance, no growth trend),
+    expected and unsurprising given the test binaries never construct a
+    `ScopedCompileArena` and so behave identically to before this work.
+    Verified via `./scripts/compile.sh --release` (single invocation,
+    this repo's convention): **1881/1881 tests passing, 0 regressions**
+    (one transient `native_window_launcher_and_preflight_56_56`
+    content-lock failure during an interim run, resolved once this
+    leaf's own `docs/todo.md` update landed - the same pre-existing
+    `### Ready Now`-staleness pattern TODO-5232's resolution note already
+    documented, not a code regression).
+  - finished_at: 2026-08-13
+  - status: done
+

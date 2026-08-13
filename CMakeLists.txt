@@ -57,6 +57,7 @@ endfunction()
 
 set(PRIMESTRUCT_SUPPORT_SOURCES
   src/CollectionSpellingClassifier.cpp
+  src/CompileArena.cpp
   src/Diagnostics.cpp
   src/EmitKind.cpp
   src/OptionsParser.cpp

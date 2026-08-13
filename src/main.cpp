@@ -1,4 +1,5 @@
 #include "primec/CliDriver.h"
+#include "primec/CompileArena.h"
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
 #include "primec/EmitKind.h"
@@ -282,6 +283,18 @@ int main(int argc, char **argv) {
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
+  // TODO-5233/TODO-5234: one process-lifetime ScopedCompileArena, entered
+  // once here and never reset - see docs/CompilerArenaAllocator.md for why
+  // it's never reset. For --benchmark-semantic-repeat-count > 1 (a
+  // diagnostic-only flag), this means each repeat's allocations accumulate
+  // in the arena rather than being reclaimed between repeats, so the
+  // RSS-checkpoint machinery below will show memory growing across
+  // repeats for arena-covered allocations - this is expected under a
+  // "never free until process exit" allocator (the same characterization
+  // this design always used to justify the CLI-only scope), not a leak,
+  // and is called out explicitly here since it's the one place in this
+  // binary where that trade-off is directly observable.
+  primec::ScopedCompileArena compileArenaScope;
   primec::CompilePipelineOutput pipelineOutput;
   BenchmarkSemanticRepeatLeakCheck repeatLeakCheck;
   const uint32_t repeatCount = options.benchmarkSemanticRepeatCompileCount.value_or(1u);

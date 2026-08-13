@@ -1,4 +1,5 @@
 #include "primec/CliDriver.h"
+#include "primec/CompileArena.h"
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
 #include "primec/IrBackendProfiles.h"
@@ -453,6 +454,11 @@ int main(int argc, char **argv) {
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
+  // TODO-5233/TODO-5234: see the matching comment in src/main.cpp. primevm
+  // is a one-shot compile-then-run process, so a single scope spanning the
+  // compile plus the VM execution that follows is sufficient - no repeat
+  // loop to reset between iterations of here.
+  primec::ScopedCompileArena compileArenaScope;
   primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
   primec::CompilePipelineResult pipelineResult =
