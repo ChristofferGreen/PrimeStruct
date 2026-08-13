@@ -5,6 +5,22 @@ option(PRIMESTRUCT_BUILD_TESTS "Build PrimeStruct tests" ON)
 option(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE
        "Enable ThreadSanitizer instrumentation and semantics smoke target"
        OFF)
+# TODO-5237: fast general-purpose allocator for the primec/primevm CLI
+# binaries only (see docs/TestRuntimeOptimization.md's TODO-5237 entry and
+# docs/CompilerArenaAllocator.md's "TODO-5237" section for the full
+# evaluation/measurement writeup). Defaults ON but is auto-detected, not
+# required: find_package(mimalloc CONFIG QUIET) below degrades to a no-op
+# (system allocator, unchanged behavior) with only a STATUS message on an
+# environment that doesn't have mimalloc's CMake config package installed,
+# so this default is safe even on machines that never installed
+# libmimalloc-dev. Deliberately does not touch the test binaries - unlike
+# src/CompileArena.cpp's arena, mimalloc has no long-lived-process reset
+# hazard (it still honors real free()), so linking it into the test
+# binaries too is a plausible, lower-risk future follow-up, just not one
+# this leaf verified.
+option(PRIMESTRUCT_USE_MIMALLOC
+       "Link primec/primevm against mimalloc (via find_package(mimalloc)) if available"
+       ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -37,6 +53,27 @@ if(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE)
   endif()
   add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
   add_link_options(-fsanitize=thread)
+endif()
+
+# TODO-5237: resolve mimalloc once, up front, so both primec's and
+# primevm's add_executable blocks below can conditionally link it. Uses
+# mimalloc's own upstream CMake config package (find_package CONFIG, not
+# FetchContent/vendoring) - see docs/CompilerArenaAllocator.md's TODO-5237
+# section for why: this environment has no general internet access for
+# FetchContent, but ships (or can apt-install) libmimalloc-dev, which
+# provides a proper CMake config package exporting an imported `mimalloc`
+# target. QUIET so an environment without the package configures cleanly
+# with no error - PRIMESTRUCT_USE_MIMALLOC only requests linking it when
+# available, it does not require it.
+set(PRIMESTRUCT_MIMALLOC_LINKED FALSE)
+if(PRIMESTRUCT_USE_MIMALLOC)
+  find_package(mimalloc CONFIG QUIET)
+  if(mimalloc_FOUND)
+    set(PRIMESTRUCT_MIMALLOC_LINKED TRUE)
+    message(STATUS "PrimeStruct: PRIMESTRUCT_USE_MIMALLOC=ON and mimalloc found - linking primec/primevm against mimalloc")
+  else()
+    message(STATUS "PrimeStruct: PRIMESTRUCT_USE_MIMALLOC=ON but mimalloc was not found via find_package(mimalloc CONFIG) - primec/primevm will use the system allocator (install libmimalloc-dev, or a mimalloc build exporting a CMake config package, to enable this)")
+  endif()
 endif()
 
 function(primestructEnableWarnings targetName)
@@ -527,6 +564,9 @@ target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_li
 
 add_executable(primec src/main.cpp)
 target_link_libraries(primec PRIVATE primec_backend_registry_lib primec_ir_lib)
+if(PRIMESTRUCT_MIMALLOC_LINKED)
+  target_link_libraries(primec PRIVATE mimalloc)
+endif()
 primestructEnableWarnings(primec)
 
 # Standalone generator for TODO-5224's per-module stdlib symbol manifests -
@@ -562,6 +602,9 @@ endif()
 
 add_executable(primevm src/primevm_main.cpp)
 target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)
+if(PRIMESTRUCT_MIMALLOC_LINKED)
+  target_link_libraries(primevm PRIVATE mimalloc)
+endif()
 primestructEnableWarnings(primevm)
 
 if(PRIMESTRUCT_BUILD_TESTS)

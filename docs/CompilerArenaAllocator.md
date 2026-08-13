@@ -478,3 +478,204 @@ rolled back (not yet designed; a first-pass checkpoint/rollback sketch
 during this investigation did not survive that specific case, see the git
 history for this leaf for the reasoning). Either is a substantially larger
 effort than this leaf's budget.
+
+## TODO-5237: mimalloc evaluation - shipped, composes with the arena
+
+Status: implemented and shipped. `primec`/`primevm` now additionally link
+against [mimalloc](https://github.com/microsoft/mimalloc) when it's
+available at configure time (`PRIMESTRUCT_USE_MIMALLOC` CMake option,
+default `ON`, resolved via `find_package(mimalloc CONFIG QUIET)` in
+`CMakeLists.txt`). This is purely additive to the TODO-5234 arena above -
+neither replaces the other, and both remain independently toggleable. Test
+binaries are unchanged (system allocator only); see "Scope: CLI only"
+below for why.
+
+### Motivation
+
+TODO-5233/5234's own profiling asked "how do we make this workload's
+malloc/free pattern cheaper" and answered with a custom arena. This leaf
+asks the question the arena's own design writeup left open: how much of
+the *remaining* malloc/free cost (the arena's own chunk-sourcing calls,
+its large/over-aligned/other-thread fallback path, and anything a future
+`SystemHeapScope` forces to the system heap) is "glibc ptmalloc is
+comparatively slow for this workload" rather than "needs arena/reset
+semantics specifically"? Unlike the reset-per-scope arena design
+(TODO-5235), a general-purpose allocator swap has no long-lived-process
+hazard at all - it still honors real `free()` on every call, so there is
+no analog of the magic-static corruption class that sank the reset
+design. This makes it a strictly lower-risk lever to pull.
+
+### Environment check: can a fast allocator be added cleanly?
+
+Per this leaf's own `implementation_notes`, checked before writing any
+code:
+
+- **General internet access for `FetchContent`**: not reliably available.
+  `curl https://github.com` through this environment's pre-configured
+  proxy returns HTTP 400, so vendoring mimalloc's or jemalloc's source via
+  `FetchContent_Declare(... GIT_REPOSITORY https://github.com/...)` is not
+  a safe bet to work, let alone reproduce identically in whatever
+  environment eventually builds this repo for real (CI, a contributor's
+  machine, etc.) - exactly the "fragile vendoring hack" the TODO's
+  `implementation_notes` said to avoid forcing.
+- **System packages**: both are available and installed cleanly via `apt`
+  (`archive.ubuntu.com` *is* reachable through this environment's proxy,
+  unlike `github.com` - the two "is there internet access" checks the
+  TODO asked for gave different answers depending on which host):
+  `libmimalloc-dev` (mimalloc 2.1.2) and `libjemalloc-dev` (jemalloc
+  5.3.0) both installed with `apt-get install -y libjemalloc-dev
+  libmimalloc-dev` with zero errors, pulling in `libmimalloc2.0`/
+  `libjemalloc2` as needed. Critically, `libmimalloc-dev` ships its own
+  upstream CMake config package
+  (`/usr/lib/x86_64-linux-gnu/cmake/mimalloc/mimalloc-config.cmake`,
+  exporting an imported `mimalloc` target) - `find_package(mimalloc
+  CONFIG QUIET)` resolves it with no custom `Find*.cmake` module and no
+  hand-written vendoring of any kind, the cleanest of the options the
+  TODO's `implementation_notes` listed as acceptable.
+- Chose **mimalloc over jemalloc** per the TODO's own steer ("usually the
+  simpler integration") - confirmed here specifically by the CMake config
+  package: jemalloc's Debian/Ubuntu package does not ship one (only
+  headers + a bare `.so`), so integrating it cleanly would need a
+  hand-written `find_library`/`find_path` module, more surface for
+  environment-specific breakage than mimalloc's ready-made config
+  package.
+
+Because a system package (not `FetchContent`) is the clean path here,
+`PRIMESTRUCT_USE_MIMALLOC` defaults `ON` but the detection is a soft
+`find_package(... QUIET)`, not a hard requirement: an environment that
+never installed `libmimalloc-dev` configures with a `STATUS` message and
+otherwise builds byte-identical to before this leaf (system allocator,
+no link dependency added, no error). This is the same "auto-detect,
+degrade gracefully" shape as this file's existing `PRIMESTRUCT_CLANGXX_FOR_PCH`
+optional-tool pattern in `CMakeLists.txt`, not a new precedent.
+
+### Scope: CLI only
+
+Only `primec` and `primevm` (`add_executable(primec ...)`/
+`add_executable(primevm ...)` in `CMakeLists.txt`) link `mimalloc` when
+found. The doctest test binaries (`PrimeStruct_semantics_tests` and
+friends) are untouched, matching this TODO's own scope note: unlike the
+arena, mimalloc has no fundamental long-lived-process hazard (it always
+honors real `free()`, so nothing the tests do could be silently reclaimed
+out from under a live object the way an arena reset could), so linking it
+into the test binaries too is a plausible, *lower-risk* future follow-up
+- just one this leaf didn't measure and so isn't claiming here.
+
+### How it composes with the arena
+
+`src/CompileArena.cpp`'s allocator calls `std::malloc`/`std::free`
+directly for two things: sourcing new chunks
+(`CompileArena::Chunk`/`data` buffers, `allocateChunk()`) and its
+fallback path for allocations the arena itself doesn't serve (large
+(`>4096`-byte) or over-aligned requests, allocations made while a
+`SystemHeapScope` is active, or allocations on a thread that never
+entered a `ScopedCompileArena` scope - see `systemAllocate()`). Linking
+`mimalloc` replaces glibc's `malloc`/`free`/`calloc`/`realloc` symbols
+process-wide via mimalloc's own symbol interposition (the standard way
+mimalloc's shared library integrates - no source changes to
+`CompileArena.cpp` were needed), so both of those paths transparently
+become mimalloc-backed rather than glibc-ptmalloc-backed. The two
+mechanisms don't compete for the same allocations: the arena's own
+size-classed free lists still serve the hot path (small, default-aligned,
+same-thread allocations while a compile scope is active) exactly as
+before; mimalloc only ever sees what the arena itself hands off to
+`std::malloc`/`std::free`. This is why the measurements below show mimalloc
+composing additively with the arena rather than one making the other
+redundant.
+
+### Measurements
+
+Same two standard repros used throughout TODO-5230-5236
+(`import /std/collections/vector/*` + one `count()` call for
+`mini_vec.prime`; `import /std/collections/*` for the heavier
+`heavy_collections.prime`), release build, `--emit=vm`, same machine, 5
+runs each (wall-clock via shell `time`, not `valgrind` - this leaf is
+measuring end-to-end CLI latency, not instruction/allocation counts, since
+TODO-5233's dhat/callgrind survey already characterized those and nothing
+about the allocation *pattern* changes here, only which allocator serves
+it):
+
+| Configuration | `mini_vec.prime` (avg of 5) | `heavy_collections.prime` (avg of 5) |
+| --- | --- | --- |
+| (a) shipped state: system malloc fallback + TODO-5234 arena | 0.820s | 0.762s |
+| (b) system malloc only, arena disabled (allocator-only baseline) | 0.931s | 0.919s |
+| (c) mimalloc + arena composed | **0.772s** | **0.746s** |
+| (c') mimalloc alone, arena disabled | 0.821s | 0.765s |
+
+(Baseline (b) was produced by temporarily commenting out `src/main.cpp`'s
+`ScopedCompileArena` construction and building in a throwaway
+`build-noarena/` directory - the same technique the TODO's own
+`implementation_notes` anticipated ("temporarily no-op it for this
+measurement only, reverting after"); the change was reverted via `git
+checkout` before anything was committed, verified via `git diff`/`git
+status` showing `src/main.cpp` clean afterward.)
+
+Relative to (b), the "pure system allocator" floor:
+- **(a) arena alone: ~12% faster** (`mini_vec`) **/ ~17% faster** (`heavy`)
+- **(c') mimalloc alone: ~12% faster** (`mini_vec`) **/ ~17% faster**
+  (`heavy`) - essentially the *same* magnitude of win as the arena alone,
+  despite the two mechanisms working completely differently (one avoids
+  glibc's allocator entirely for the hot path via a bump/free-list arena;
+  the other keeps using `malloc`/`free` calls but with a faster
+  implementation behind them). This is a genuinely useful answer to this
+  leaf's own motivating question above: a meaningful share of
+  TODO-5233's originally-measured malloc/free cost really was "glibc
+  ptmalloc is comparatively slow for this workload," not solely
+  "needs arena/reset semantics."
+- **(c) composed: ~17-19% faster** - noticeably better than either alone,
+  confirming the two mechanisms are additive rather than redundant (per
+  the "how it composes" reasoning above): composed beats arena-alone (a)
+  by a further **~6%** (`mini_vec`) / **~2%** (`heavy`).
+
+The final shipped `build-release` binary (arena + mimalloc, built via the
+committed `CMakeLists.txt` changes, `PRIMESTRUCT_USE_MIMALLOC` at its
+default `ON`) was re-measured directly (not just the throwaway
+measurement build used for the table above) as a sanity check: `mini_vec.prime`
+~0.72-0.73s, `heavy_collections.prime` ~0.71-0.73s across 5 runs each -
+consistent with configuration (c) above (small remaining variance is
+ordinary run-to-run machine-load noise on this session's shared sandbox,
+not a build-configuration difference).
+
+### Recommendation
+
+**Use both together** (mimalloc linked in addition to, not instead of,
+the TODO-5234 arena) - this is what's shipped. Reasoning:
+
+- Composing them measurably beats either alone (above), so "replace the
+  arena with mimalloc" would leave a real, measured win on the table for
+  no offsetting benefit - mimalloc composing with the arena carries none
+  of the arena's own correctness risk (see "How it composes" - the two
+  don't interact at the allocation-serving level, they just chain at the
+  `std::malloc`/`std::free` boundary).
+- Adding mimalloc carries essentially none of the TODO-5235 magic-static
+  hazard class: it never invalidates or reclaims memory out from under a
+  still-live object mid-process, which is the entire mechanism that hazard
+  class depended on. This holds regardless of whether the arena
+  ever gets its reset-per-scope design revisited in the future (a
+  mimalloc-backed `std::malloc` fallback is exactly as safe under a
+  reset-capable arena as it is under today's never-reset one, since
+  mimalloc itself never resets anything - only the arena's own bump
+  cursor would, and that logic is unchanged by this leaf).
+- The measured win (~17-19% faster than pure system malloc, ~2-6%
+  faster than the arena alone) is real but, consistent with this whole
+  investigation chain's own findings (TODO-5232, TODO-5233/5234), still
+  falls well short of the sub-100ms directional target - the remaining
+  floor continues to be the whole-file text-splicing import architecture
+  (`docs/LibrarySymbolManifestLazyImports.md`), not allocator overhead.
+  Documenting this honestly rather than overselling a leaf-sized
+  allocator swap as closing that larger gap.
+- Kept as an auto-detected, gracefully-degrading CMake option
+  (`PRIMESTRUCT_USE_MIMALLOC`, default `ON`) rather than a hard
+  dependency, so this recommendation costs nothing on an environment that
+  doesn't have `libmimalloc-dev` installed - it just silently doesn't
+  apply there, exactly this TODO's own stop_rule ("if the win doesn't
+  justify a new build dependency, document that and stop" - here the win
+  clearly does justify it, but only conditionally, so the CMake wiring
+  reflects that conditionality rather than forcing it).
+- Test binaries were deliberately left unchanged (see "Scope: CLI only")
+  - not because linking mimalloc into them would be unsafe (it wouldn't
+    be, per the reasoning above), but because this leaf's acceptance
+    criteria and time budget only covered measuring the CLI binaries, and
+    per this leaf's own stop_rule, extending scope beyond what was
+    actually measured is exactly the kind of unverified claim the rest of
+    this investigation chain has consistently avoided making.

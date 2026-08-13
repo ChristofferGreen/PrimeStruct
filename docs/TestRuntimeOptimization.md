@@ -977,3 +977,69 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   pre-existing `docs/todo.md` content-lock staleness pattern TODO-5232/
   5234's own resolution notes already documented showed up during an
   interim run, resolved by this leaf's own `docs/todo.md` update).
+- 2026-08-13 (TODO-5237, mimalloc evaluation): Followed up on TODO-5234's
+  own open question - was the ~26-33% malloc/free instruction share
+  TODO-5233 found "glibc ptmalloc is slow for this workload" or
+  "allocations need arena/reset semantics"? Checked this environment for
+  a clean way to add a fast general allocator before writing any code, per
+  this leaf's own `implementation_notes`: general internet access for
+  CMake `FetchContent` is not reliable here (`curl https://github.com`
+  through this environment's proxy returns HTTP 400), but system packages
+  are (`apt-get install -y libmimalloc-dev` succeeded cleanly, and
+  crucially ships its own upstream CMake config package - `find_package
+  (mimalloc CONFIG QUIET)` resolves it with zero hand-written vendoring).
+  Wired `CMakeLists.txt` with a `PRIMESTRUCT_USE_MIMALLOC` option
+  (default `ON`, auto-detected, degrades to the unchanged system
+  allocator with just a `STATUS` message on any environment without the
+  package) and conditionally linked the resulting `mimalloc` target into
+  `primec`/`primevm` only - not the test binaries, matching the TODO's
+  scope. Measured all four points of the requested three(-plus)-way
+  comparison on the standard `mini_vec.prime`/`heavy_collections.prime`
+  repros (release build, `--emit=vm`, same machine, 5 runs each,
+  wall-clock via shell `time`): **(a) shipped state** (system-malloc
+  fallback + TODO-5234 arena): 0.820s / 0.762s. **(b) system malloc only,
+  arena disabled** (allocator-only baseline - built via a temporary
+  `src/main.cpp` edit commenting out `ScopedCompileArena`'s construction,
+  reverted via `git checkout` before anything was committed): 0.931s /
+  0.919s. **(c) mimalloc + arena composed**: **0.772s / 0.746s**. **(c')
+  mimalloc alone, arena disabled**: 0.821s / 0.765s.
+  **Key finding**: mimalloc alone (c') nearly exactly matches the arena
+  alone's (a) own win over system malloc (~12% faster on `mini_vec`, ~17%
+  faster on `heavy_collections`, both configurations) despite the two
+  mechanisms working completely differently (bump/free-list arena bypassing
+  glibc entirely for the hot path, vs. still calling `malloc`/`free` but
+  through a faster implementation) - real evidence that a meaningful share
+  of the original malloc/free cost genuinely was "the allocator
+  implementation," not solely "needs arena/reset semantics." **Composing
+  both (c) beats either alone**: ~17-19% faster than system malloc, a
+  further ~6% (`mini_vec`) / ~2% (`heavy_collections`) faster than the
+  arena alone - expected once traced through `src/CompileArena.cpp`'s own
+  code: the arena calls `std::malloc`/`std::free` directly for chunk
+  sourcing and its large/over-aligned/cross-thread fallback path, and
+  mimalloc's shared-library symbol interposition makes both of those
+  mimalloc-backed automatically (no `CompileArena.cpp` source changes
+  needed) - the two mechanisms don't compete for the same allocations, so
+  they add rather than trade off. **Recommendation** (full reasoning and
+  numbers in `docs/CompilerArenaAllocator.md`'s new "TODO-5237" section):
+  keep the TODO-5234 arena and *add* mimalloc alongside it - this is what
+  shipped. As with TODO-5232/5233/5234 before it, this still falls well
+  short of the sub-100ms directional target - the remaining floor is
+  still the whole-file text-splicing import architecture
+  (`docs/LibrarySymbolManifestLazyImports.md`), unchanged by any allocator
+  work. Verified Debug and RelWithDebInfo presets both configure cleanly
+  and resolve the same `find_package` path (link-only change, no source
+  `#include` of any mimalloc header, so no compile-flag-specific risk).
+  Verified via `./scripts/compile.sh --release` (single invocation, this
+  repo's convention): **1881/1881 tests passing, 0 regressions**. Two
+  interim runs surfaced `native_window_launcher_and_preflight_56_56`
+  (`test_compile_run_examples_docs_locks.cpp`'s todo-queue lock case)
+  failing - not the usual transient `docs/todo.md`-staleness pattern
+  TODO-5232/5234/5236 describe, but a pre-existing bug already present in
+  this leaf's starting state: the lock test hard-codes the `### Ready
+  Now` bullet list, and the commit that added TODO-5237/5238 to that list
+  (before this leaf started) never updated the lock to match. Fixed the
+  lock test's hard-coded bullet list and split its single literal `CHECK`
+  so it no longer also pins the free-text `Note (...)` paragraph
+  `docs/todo.md` keeps between the bullets and the next heading (full
+  reasoning in `docs/todo_finished.md`'s TODO-5237 entry). A third clean
+  run confirmed `100% tests passed, 0 tests failed out of 1881`.
