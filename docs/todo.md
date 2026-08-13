@@ -76,7 +76,12 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
-- TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
+- TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets | track: compiler-arena-allocator | surface: src/semantics magic statics, src/CompileArena.cpp override boundary
+- TODO-5236: Reduce redundant per-compile allocation volume (RequirementPredicateDefinitionContext) | track: compiler-allocation-volume | surface: src/semantics RequirementPredicateDefinitionContext
+
+Note (2026-08-13): `TODO-4714` was removed from this list - it is already
+resolved and recorded in `docs/todo_finished.md`; this list had drifted
+stale relative to that.
 
 ### Immediate Next 10
 
@@ -330,6 +335,8 @@ This file is the live open-work queue for PrimeStruct.
 49. TODO-4708: Measure per-shard doctest binary startup/registration overhead
 50. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+51a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
+51b. TODO-5236: Reduce redundant per-compile allocation volume (RequirementPredicateDefinitionContext)
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
@@ -1712,6 +1719,130 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once caching is implemented and measured for one
     representative shard; broader rollout or cache-invalidation edge cases
     are follow-up work if the measured win is significant.
+
+- [ ] TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-arena-allocator
+  - depends_on: (none)
+  - scope: TODO-5234's original design (arena reset at every compile
+    scope, including once per doctest `TEST_CASE` in the long-lived
+    `semantics`/`ir_pipeline` binaries) crashed with deterministic memory
+    corruption when wired into the real `semantics` suite. Root cause:
+    dozens of places in `src/semantics/` use function-local
+    `static const std::string`/`static const std::vector<...>` ("magic
+    statics") computed once on first call and reused across all later
+    calls/compiles within the same process. When those statics were
+    allocated from the arena and the arena later reset (handing that
+    memory to a new object) while the static was still alive and expected
+    to hold its original value, the static's bytes got silently
+    corrupted. TODO-5234 shipped the safe fallback instead (arena never
+    resets, one per CLI process, test binaries untouched) per its own
+    stop_rule, leaving the bigger win (arena resets usable inside the
+    long-lived `semantics`/`ir_pipeline` test binaries too, which
+    dominate the suite's total wall-clock) on the table. This leaf: find
+    every such magic-static in the arena's reachable call graph (grep for
+    `static const std::string`/`static const std::vector` inside
+    functions under `src/semantics/`, cross-reference against what
+    TODO-5234's crash reproduction actually hit first), and fix them -
+    most likely by allocating magic statics from the system allocator
+    explicitly regardless of whether an arena is currently active (e.g. a
+    small helper/wrapper that bypasses the thread_local "current arena"
+    check for values with process lifetime), since a magic static's whole
+    point is to outlive any single compile scope and must never live in
+    memory that gets reset.
+  - implementation_notes: `docs/CompilerArenaAllocator.md` and
+    `src/CompileArena.cpp`'s file comment (from TODO-5234) document the
+    override mechanism (thread_local "current arena" pointer checked by a
+    conditional `operator new`/`operator delete` override) - the fix here
+    is almost certainly at that override's boundary (an explicit
+    "allocate from the system heap, not the current arena" escape hatch),
+    not a per-magic-static rewrite of dozens of call sites individually,
+    if a general mechanism can be found. Verify by re-running exactly the
+    reproduction TODO-5234 used to hit the crash (full `semantics` suite
+    with reset-per-TEST_CASE arena wiring re-enabled) - it must pass
+    clean before considering this fixed, not just "no longer crashes on
+    the first few cases."
+  - acceptance:
+    - The magic-static corruption is fixed with a documented, general
+      mechanism (not a handful of individually patched call sites that
+      leave the same hazard for the next magic static someone adds).
+    - Full `semantics` and `ir_pipeline` CTest suites pass clean with
+      reset-per-compile-scope arena wiring enabled (i.e. TODO-5234's
+      original, more ambitious design is actually turned on and
+      verified, not just no-longer-crashing on a partial run).
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+    - Peak memory usage for a full `semantics` or `ir_pipeline` suite run
+      is measured before/after (same VmHWM-sampling methodology TODO-5234
+      used) and confirmed flat/bounded, not just "didn't obviously
+      explode."
+  - stop_rule: Do not ship a mechanism that only happens to dodge the
+    specific magic statics TODO-5234's crash reproduction hit - grep
+    exhaustively for the pattern across all of `src/semantics/` (and
+    `src/ir_lowerer/`, `src/parser/` if the arena's reachable call graph
+    extends there) and argue the fix covers all of them, or explicitly
+    document which are out of scope and why. If a fully general fix isn't
+    achievable safely within budget, leave this open with honest notes
+    rather than re-attempting the reset-per-compile design with only a
+    partial fix - a second corruption bug shipped here would be worse
+    than staying on TODO-5234's current safe (CLI-only, never-reset)
+    fallback.
+
+- [ ] TODO-5236: Reduce redundant per-compile allocation volume (RequirementPredicateDefinitionContext and similar copy-heavy hot paths)
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-allocation-volume
+  - depends_on: (none)
+  - scope: TODO-5233's `valgrind --tool=dhat` survey found the deeper
+    story behind the malloc/free churn TODO-5234's arena was built to
+    absorb: **9.76 million heap allocations** for one compile of the
+    tiny `mini_vec.prime` repro (361 reachable lines of stdlib source
+    plus a 5-line program), dominated by
+    `RequirementPredicateDefinitionContext`'s copy constructor. That is a
+    genuine algorithmic/data-flow redundancy independent of allocator
+    strategy - an arena makes each of those 9.76M allocations cheap, but
+    doing 9.76M of anything for a 5-line program is still the wrong
+    complexity class, in the same family as TODO-5232's O(N^2)
+    `makeCompileTimeIfRequirementContext` finding. Profile with
+    `valgrind --tool=dhat` (or callgrind with a caller/callee tree, see
+    TODO-5232's methodology) specifically on
+    `RequirementPredicateDefinitionContext` construction/copying: find
+    where it's being copied instead of referenced or moved, whether it's
+    being rebuilt from scratch redundantly across a loop (the same shape
+    as TODO-5232's fix), and fix the actual redundancy - not just make
+    the copies cheaper.
+  - implementation_notes: `RequirementPredicateDefinitionContext` lives
+    somewhere under `src/semantics/` (grep for its definition and every
+    constructor/copy call site). Cross-reference against TODO-5232's
+    `makeCompileTimeIfRequirementContext`/`rewriteCompileTimeIfBranches`
+    fix - this may be a sibling instance of the same "rebuild a
+    program-wide context object inside a per-definition loop" pattern
+    that TODO-5232 fixed for one call path but not others, or it may be
+    an unrelated hot path. Determine which before proposing a fix.
+  - acceptance:
+    - A documented explanation of why `RequirementPredicateDefinitionContext`
+      gets constructed/copied ~9.76 million times (or whatever the
+      up-to-date count is once TODO-5232/5234's other fixes are
+      accounted for) for the `mini_vec.prime` repro, and a fix that
+      brings that count down by addressing the actual redundancy (not a
+      cache/memoization band-aid unless the object is proven to be a pure
+      function of stable inputs the way TODO-5230's string helpers were).
+    - Before/after allocation-count and wall-clock measurements for
+      `mini_vec.prime` and the heavier real collection test used in prior
+      TODOs, recorded in `docs/TestRuntimeOptimization.md`.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+  - stop_rule: Do not fix this by adding a cache/memoization layer around
+    `RequirementPredicateDefinitionContext` construction unless you can
+    show its inputs are actually stable/pure across the calls being
+    deduplicated (the same correctness bar TODO-5232's stop_rule set for
+    its own cache-vs-worklist decision) - if the object's copies are
+    legitimately each needed with different inputs, the fix is
+    eliminating the redundant WORK that produces those differing inputs
+    upstream (worklist/reuse restructuring), not caching a moving target.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai
