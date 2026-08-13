@@ -77,6 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers | track: hidden-test-failures-collections | surface: SemanticsValidatorExprCollectionAccess.cpp / SemanticsValidatorExprNamedArgumentBuiltins.cpp
+- TODO-5231: Characterize parseBindingInfo call-volume redundancy | track: test-runtime-bindinginfo-redundancy | surface: SemanticsValidatorInferGraph.cpp / parseBindingInfo call sites
 
 ### Immediate Next 10
 
@@ -332,6 +333,8 @@ This file is the live open-work queue for PrimeStruct.
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
+53a. TODO-5231: Characterize parseBindingInfo call-volume redundancy across the fixed-point inference loop
+53b. TODO-5232: Fix parseBindingInfo call-volume redundancy to bring collection-type compiles under 100ms
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
 55. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
 56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
@@ -1712,6 +1715,108 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once caching is implemented and measured for one
     representative shard; broader rollout or cache-invalidation edge cases
     are follow-up work if the measured win is significant.
+
+- [ ] TODO-5231: Characterize parseBindingInfo call-volume redundancy across the fixed-point inference loop
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-bindinginfo-redundancy
+  - depends_on: TODO-5230
+  - scope: TODO-5230 memoized the pure string-parsing helpers
+    `parseBindingInfo` calls internally and got a real but small win
+    (~5.8% retired-instruction reduction, no measurable wall-clock
+    change) - it explicitly stopped short of the larger question: WHY is
+    `parseBindingInfo` itself invoked millions of times for a 361-line
+    stdlib file plus a 5-line program in the first place? TODO-5230's
+    resolution_summary names two suspects: (1) ~50 distinct
+    `parseBindingInfo` call sites across `src/semantics/` validator
+    passes, each potentially re-deriving `BindingInfo` for the same AST
+    node independently within one pass, and (2) at least one whole-program
+    fixed-point loop -
+    `inferUnknownReturnKindsGraph`'s `do { ... } while (changed)` in
+    `SemanticsValidatorInferGraph.cpp` - that re-scans unresolved
+    definitions to convergence, potentially re-deriving binding info for
+    already-stable nodes on every pass instead of only re-visiting nodes
+    whose dependencies actually changed. Instrument (temporary debug
+    counters/logging, removed before landing, same method TODO-5230 used)
+    to answer: how many total `parseBindingInfo` calls does the
+    `mini_vec.prime` repro from `docs/TestRuntimeOptimization.md` trigger,
+    how many are for the same `(Expr*, params/locals context)` within one
+    validator pass, how many passes does the fixed-point loop actually
+    run before converging, and does per-pass redundant-node revisitation
+    account for the bulk of the volume or do the ~50 call sites each
+    contribute independently even within a single pass. This is a
+    measurement-only leaf, matching TODO-4708's precedent.
+  - implementation_notes: `src/semantics/SemanticsValidatorInferGraph.cpp`
+    for the fixed-point loop; grep `parseBindingInfo(` across
+    `src/semantics/` for the ~50 call sites. Consider counting by call
+    site (file:line) as well as by unique `(Expr*, context)` pair, since
+    the fix shape in TODO-5232 depends on which pattern actually
+    dominates.
+  - acceptance:
+    - A recorded call-count breakdown (total calls, unique
+      `Expr`/context pairs, fixed-point pass count, per-call-site
+      contribution) for the `mini_vec.prime` repro is added to
+      `docs/TestRuntimeOptimization.md`.
+    - A clear conclusion on which redundancy pattern dominates (worklist-
+      shaped fixed-point re-visitation vs. cross-call-site duplication
+      within one pass vs. both), to directly inform TODO-5232's approach.
+  - stop_rule: Stop once the measurement and conclusion are recorded; do
+    not implement the fix in this leaf - that is TODO-5232.
+
+- [ ] TODO-5232: Fix parseBindingInfo call-volume redundancy to bring collection-type compiles under 100ms
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-bindinginfo-redundancy
+  - depends_on: TODO-5231
+  - scope: Using TODO-5231's measured redundancy shape, implement the
+    appropriate fix: if the fixed-point loop in
+    `inferUnknownReturnKindsGraph` (or a similar loop elsewhere) is
+    re-visiting already-converged nodes every pass, restructure it into a
+    worklist algorithm that only re-processes a node when something it
+    depends on actually changed. If cross-call-site duplication within a
+    single pass dominates instead, cache `BindingInfo` per
+    `(Expr*, context fingerprint)` for the lifetime of one validator pass,
+    with a cache key/invalidation scheme that is provably correct given
+    `params`/`locals` are passed by mutable reference (not just "usually
+    right" - get this reviewed against real counter-examples the way
+    TODO-5230's own investigation caught the exit-code-2/3 false-positive
+    pattern in TODO-4709). Both patterns may be present and both may need
+    fixing.
+  - implementation_notes: this is real algorithm/data-flow work, not a
+    drop-in memoization - budget for it accordingly. Reference target:
+    `docs/TestRuntimeOptimization.md`'s reasoned estimate that a
+    well-optimized compile of the `mini_vec.prime` repro (361 lines of
+    reachable stdlib source, a few dozen reachable definitions) should
+    cost roughly the no-import baseline (~14-60ms) plus a modest,
+    ~linear-in-source-size increment - i.e. comfortably under 100ms, not
+    a hard requirement to hit exactly but the order of magnitude to aim
+    for. Verify the win generalizes beyond the minimal repro by also
+    timing at least one heavier real `compile_run` collection test
+    (e.g. one of the `vm_collections_collections_newly_exposed_*` shards
+    from the cost-tail analysis in TODO-4804's neighborhood work).
+  - acceptance:
+    - The `mini_vec.prime` repro's `--emit=vm` compile time drops from
+      ~2.0-2.2s to a documented, substantially-under-1s result (target:
+      under 100ms; document whatever is actually achieved if the target
+      isn't fully met, per this session's "measure, then decide"
+      precedent - do not force a number).
+    - At least one heavier real collection-using `compile_run` test's
+      wall-clock time is measured before/after to confirm the fix
+      generalizes beyond the minimal repro.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+    - Full suite wall-clock time before/after is recorded in
+      `docs/TestRuntimeOptimization.md`.
+  - stop_rule: Do not ship a fix whose correctness relies on "the cache
+    key is probably unique enough" without a concrete argument or test
+    demonstrating it - a wrong-answer bug from a bad cache key would be
+    far worse than the current slowness. If the fully-general fix proves
+    too risky within budget, a narrower but *provably correct* partial
+    fix (e.g. worklist-only, leaving cross-call-site caching for a further
+    follow-up) is an acceptable, honestly-documented stopping point -
+    same discipline as TODO-5230's own stop point.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai
