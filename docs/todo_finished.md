@@ -26936,3 +26936,105 @@ real answer.
   - finished_at: 2026-08-13
   - status: done
 
+- [x] TODO-5236: Reduce redundant per-compile allocation volume (RequirementPredicateDefinitionContext and similar copy-heavy hot paths)
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-allocation-volume
+  - depends_on: (none)
+  - scope: TODO-5233's `valgrind --tool=dhat` survey found the deeper
+    story behind the malloc/free churn TODO-5234's arena was built to
+    absorb: **9.76 million heap allocations** for one compile of the
+    tiny `mini_vec.prime` repro (361 reachable lines of stdlib source
+    plus a 5-line program), dominated by
+    `RequirementPredicateDefinitionContext`'s copy constructor. That is a
+    genuine algorithmic/data-flow redundancy independent of allocator
+    strategy - an arena makes each of those 9.76M allocations cheap, but
+    doing 9.76M of anything for a 5-line program is still the wrong
+    complexity class, in the same family as TODO-5232's O(N^2)
+    `makeCompileTimeIfRequirementContext` finding. Profile with
+    `valgrind --tool=dhat` (or callgrind with a caller/callee tree, see
+    TODO-5232's methodology) specifically on
+    `RequirementPredicateDefinitionContext` construction/copying: find
+    where it's being copied instead of referenced or moved, whether it's
+    being rebuilt from scratch redundantly across a loop (the same shape
+    as TODO-5232's fix), and fix the actual redundancy - not just make
+    the copies cheaper.
+  - implementation_notes: `RequirementPredicateDefinitionContext` lives
+    somewhere under `src/semantics/` (grep for its definition and every
+    constructor/copy call site). Cross-reference against TODO-5232's
+    `makeCompileTimeIfRequirementContext`/`rewriteCompileTimeIfBranches`
+    fix - this may be a sibling instance of the same "rebuild a
+    program-wide context object inside a per-definition loop" pattern
+    that TODO-5232 fixed for one call path but not others, or it may be
+    an unrelated hot path. Determine which before proposing a fix.
+  - acceptance:
+    - A documented explanation of why `RequirementPredicateDefinitionContext`
+      gets constructed/copied ~9.76 million times (or whatever the
+      up-to-date count is once TODO-5232/5234's other fixes are
+      accounted for) for the `mini_vec.prime` repro, and a fix that
+      brings that count down by addressing the actual redundancy (not a
+      cache/memoization band-aid unless the object is proven to be a pure
+      function of stable inputs the way TODO-5230's string helpers were).
+    - Before/after allocation-count and wall-clock measurements for
+      `mini_vec.prime` and the heavier real collection test used in prior
+      TODOs, recorded in `docs/TestRuntimeOptimization.md`.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+  - stop_rule: Do not fix this by adding a cache/memoization layer around
+    `RequirementPredicateDefinitionContext` construction unless you can
+    show its inputs are actually stable/pure across the calls being
+    deduplicated (the same correctness bar TODO-5232's stop_rule set for
+    its own cache-vs-worklist decision) - if the object's copies are
+    legitimately each needed with different inputs, the fix is
+    eliminating the redundant WORK that produces those differing inputs
+    upstream (worklist/reuse restructuring), not caching a moving target.
+  - resolution_summary (2026-08-13): Profiled specifically (dhat +
+    tracing the call graph, cross-referenced against TODO-5232's fix
+    shape) and found this IS a sibling instance of the exact same
+    "rebuild/copy a program-wide context object across a per-node loop"
+    pattern, one level deeper than TODO-5232's own fix: `rewriteCompileTimeIfBranches`
+    already built its `RequirementPredicateDefinitionContext` exactly once
+    per `Definition` (`makeCompileTimeIfRequirementContext`, cheap), but
+    then passed that context **by value** into
+    `rewriteCompileTimeIfStatements`/`rewriteCompileTimeIfStatement`
+    (`src/semantics/SemanticsValidate.cpp`) - functions that recurse over
+    *every* statement and expression node in a definition's body looking
+    for `ct_if` envelopes, not just the ones that turn out to contain one.
+    Every node in that recursive tree walk therefore copied the full
+    context (several strings/vectors/hash-sets) even though its contents
+    are read-only for that walk except at the single point a `ct_if`
+    actually resolves (where `structNames` needs updating for the selected
+    branch's nested statements, done via `context.structNames = structNames;`
+    on the by-value copy). Fixed by changing both functions to take
+    `const RequirementPredicateDefinitionContext &` and making exactly one
+    explicit local copy, only inside the `ct_if`-decided branch, right
+    before the mutation that needs it - **eliminating the redundant WORK
+    upstream** (matching the stop_rule's required shape) rather than
+    caching anything, since the context's field values genuinely don't
+    need copying for the vast majority of the tree walk.
+    **Measured result** (release build, same machine before/after via
+    `git stash` of just this fix, with TODO-5234/5235's arena present and
+    identical in both configurations so the measurement isolates this
+    fix's own effect): `mini_vec.prime` repro - **allocation count
+    9,756,990 -> 5,579,238 blocks (-42.8%)**, **total bytes allocated
+    754.9MB -> 376.7MB (-50.1%)** (`valgrind --tool=dhat`; the "before"
+    number matches TODO-5233's originally-measured baseline exactly,
+    confirming repro/methodology alignment); wall-clock ~0.82-0.89s ->
+    ~0.74-0.77s (**~10-12% faster**). Heavier `import /std/collections/*`
+    repro: wall-clock ~0.855-0.867s -> ~0.79-0.84s (**~5-8% faster** - a
+    smaller relative share since more of that repro's total compile time
+    falls outside the compile-time-if tree walk this fix touches). Peak
+    live memory (dhat's `t-gmax`) was unchanged (22.96MB both
+    configurations), as expected: this eliminates transient churn, not
+    live working set. Full mechanism, reasoning, and measurements
+    recorded in `docs/TestRuntimeOptimization.md`'s matching 2026-08-13
+    log entry. Verified via `./scripts/compile.sh --release` (single
+    invocation, this repo's convention): **1881/1881 tests passing, 0
+    regressions** (the same pre-existing `docs/todo.md` content-lock
+    staleness pattern TODO-5232/5234's own resolution notes already
+    documented showed up during an interim run, resolved by this leaf's
+    own `docs/todo.md` update).
+  - finished_at: 2026-08-13
+  - status: done
+

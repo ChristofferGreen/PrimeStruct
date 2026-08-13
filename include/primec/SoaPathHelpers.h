@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #pragma once
 
+#include "primec/CompileArena.h"
 #include "primec/StdlibCollectionPaths.h"
 
 #include <string>
@@ -8,24 +9,30 @@
 
 namespace primec::soa_paths {
 
+// TODO-5235: built via systemHeapValue() so these magic statics' backing
+// memory is never arena-allocated, regardless of whether any individual
+// value happens to fit in std::string's small-string-optimization buffer
+// today - see docs/CompilerArenaAllocator.md.
 inline std::string publicSoaFolder() {
-  static const std::string value = "soa";
+  static const std::string value = primec::systemHeapValue([] { return std::string("soa"); });
   return value;
 }
 
 inline std::string legacySoaFolder() {
-  static const std::string value = std::string("soa") + "_" + "vector";
+  static const std::string value =
+      primec::systemHeapValue([] { return std::string("soa") + "_" + "vector"; });
   return value;
 }
 
 inline std::string experimentalSoaFolder() {
-  static const std::string value =
-      std::string("experimental") + "_" + publicSoaFolder() + "_" + "vector";
+  static const std::string value = primec::systemHeapValue(
+      [] { return std::string("experimental") + "_" + publicSoaFolder() + "_" + "vector"; });
   return value;
 }
 
 inline std::string soaBackingTypeName() {
-  static const std::string value = std::string("Soa") + "Vector";
+  static const std::string value =
+      primec::systemHeapValue([] { return std::string("Soa") + "Vector"; });
   return value;
 }
 

@@ -5,40 +5,41 @@
 #include <cstdlib>
 #include <new>
 
-// TODO-5233/TODO-5234: see docs/CompilerArenaAllocator.md for the design
-// this implements and, importantly, for why it looks like *less* than the
-// original design: an earlier iteration reset the arena's free lists/bump
-// cursor at every new compile scope (so a long-lived test binary's arena
-// wouldn't grow across thousands of TEST_CASEs) and cleared a handful of
-// known thread_local caches at the same moment to keep them from outliving
-// the reset. That reset step turned out to be unsafe in a way the survey
-// didn't anticipate: this codebase has many function-local `static const`
-// ("magic static") values - std::string/vector constants computed once on
-// first call and reused for the rest of the process - that are NOT limited
-// to the handful of caches found by grepping for `thread_local`. If one of
-// those gets constructed while a compile scope is active, its backing bytes
-// are arena-allocated; the *next* compile scope's reset then silently hands
-// those exact bytes to a brand new object while the magic static is still
-// alive and expected to be readable - corrupting it. This was caught empirically
-// (not just reasoned about): wiring every TEST_CASE into its own reset
-// scope reproducibly corrupted an unrelated static a few TEST_CASEs later,
-// with a wrong-looking-but-not-crashing pointer value being the first
-// symptom - exactly the "looks valid but wrong" failure mode the design's
-// original safety notes warned resets could cause, just from a broader
-// class of static than anticipated. Enumerating and registering *every*
-// such static across the codebase to survive a reset is impractical (new
-// ones get added routinely with no compiler warning if missed), so per
-// TODO-5234's stop_rule this fell back to the narrower, provably-safe
-// variant instead of trying to chase that down further: the arena never
-// resets. It is entered exactly once per process on the CLI binaries
-// (primec/primevm) and simply grows for the process's remaining lifetime,
-// which is safe for exactly the reason a "never free" allocator is safe for
-// a one-shot compile-then-exit process (the OS reclaims everything at
-// exit). Test binaries never enter a compile scope at all and stay on the
-// system allocator - seeing the same thousands-of-TEST_CASEs-per-process
-// shape that made "reset per compile" attractive in the first place is
-// exactly what makes "never reset" wrong for them, so they simply don't
-// participate.
+// TODO-5233/TODO-5234/TODO-5235: see docs/CompilerArenaAllocator.md for the
+// full design history. Short version: an earlier iteration (TODO-5234)
+// reset the arena's free lists/bump cursor at every new compile scope (so a
+// long-lived test binary's arena wouldn't grow across thousands of
+// TEST_CASEs), and that reset step reproducibly corrupted function-local
+// `static const` ("magic static") values - std::string/vector constants
+// computed once on first call and reused for the rest of the process. If
+// one of those got constructed while a compile scope was active, its
+// backing bytes were arena-allocated; the *next* scope's reset then
+// silently handed those exact bytes to a brand new object while the magic
+// static was still alive and expected to be readable - corrupting it.
+// TODO-5234 fell back to a never-reset arena (CLI binaries only, test
+// binaries entirely on the system allocator) rather than ship that.
+//
+// TODO-5235 closes the gap with two general escape hatches instead of
+// enumerating every magic static's fix individually:
+//
+//   - SystemHeapScope (and the systemHeapValue() convenience wrapper in the
+//     header): forces allocations on the current thread to the system heap
+//     regardless of whether a compile scope is active. Every known magic
+//     static under src/semantics, src/ir_lowerer, and src/parser now builds
+//     its value inside one of these, so its backing memory is never arena
+//     memory in the first place and a reset can never invalidate it.
+//   - registerArenaResetCallback(): for the handful of *known*,
+//     intentionally-persistent thread_local caches (as opposed to
+//     unenumerable magic statics) - normalizeBindingTypeName's cache,
+//     findStdlibSurfaceMetadataByResolvedPath's cache, SourceLocationMapper's
+//     cached-mapper-by-address - registers a callback that clears the cache
+//     on every reset, so no cached entry can dangle into memory the reset
+//     just reclaimed.
+//
+// With both in place, resets are safe again: the arena now resets whenever
+// the outermost ScopedCompileArena on a thread is destroyed, which CLI
+// binaries do once (at process exit - a no-op in practice) and test
+// binaries do once per TEST_CASE (see tests/unit/test_main.cpp's listener).
 
 namespace primec {
 namespace {
@@ -96,6 +97,26 @@ public:
     auto *node = static_cast<FreeNode *>(block);
     node->next = freeLists_[classIndex];
     freeLists_[classIndex] = node;
+  }
+
+  // Rewinds every chunk's bump cursor back to empty and clears the free
+  // lists, so the next allocation reuses the same backing chunks from
+  // scratch. Chunks themselves are never unmapped/freed here - only their
+  // "used" bookkeeping resets - which is what keeps repeated resets across
+  // thousands of TEST_CASEs from re-doing the malloc/free-family chunk
+  // growth work each time. Safe to call only when nothing still alive
+  // references arena memory from the scope that's ending - see
+  // SystemHeapScope/registerArenaResetCallback in the header for how the
+  // two remaining hazard classes (magic statics, persistent thread_local
+  // caches) are kept out of arena memory in the first place.
+  void reset() {
+    for (Chunk *chunk = firstChunk_; chunk != nullptr; chunk = chunk->next) {
+      chunk->used = 0;
+    }
+    currentChunk_ = firstChunk_;
+    for (FreeNode *&head : freeLists_) {
+      head = nullptr;
+    }
   }
 
 private:
@@ -171,6 +192,30 @@ private:
 thread_local CompileArena *tls_arena = nullptr;
 thread_local int tls_scopeDepth = 0;
 
+// SystemHeapScope's nesting depth on the current thread. While > 0,
+// arenaAllocate() always falls through to the system heap regardless of
+// tls_scopeDepth - see the file comment and CompileArena.h for why this
+// exists (the general escape hatch for magic statics).
+thread_local int tls_forceSystemHeap = 0;
+
+// Fixed-capacity registry of reset callbacks (see registerArenaResetCallback
+// in the header). A plain array, not a std::vector: registrations happen
+// from namespace-scope static initializers, i.e. before main() and
+// certainly before any ScopedCompileArena exists, but using any container
+// that itself allocates would reintroduce exactly the kind of
+// static-initialization-order/bootstrapping hazard this file already works
+// around elsewhere (see currentThreadArena()'s comment). The known
+// registrants (three, as of TODO-5235) are far below this capacity.
+constexpr int kMaxArenaResetCallbacks = 32;
+void (*g_arenaResetCallbacks[kMaxArenaResetCallbacks])() = {};
+int g_arenaResetCallbackCount = 0;
+
+void runArenaResetCallbacks() {
+  for (int i = 0; i < g_arenaResetCallbackCount; ++i) {
+    g_arenaResetCallbacks[i]();
+  }
+}
+
 CompileArena &currentThreadArena() {
   if (tls_arena == nullptr) {
     // Deliberately bypass the overridden global operator new here (plain
@@ -211,7 +256,7 @@ void *systemAllocate(std::size_t size) {
 
 void *arenaAllocate(std::size_t size) {
   const int classIndex = classIndexForPayload(size);
-  if (classIndex < 0 || tls_scopeDepth == 0) {
+  if (classIndex < 0 || tls_scopeDepth == 0 || tls_forceSystemHeap > 0) {
     return systemAllocate(size);
   }
   CompileArena &arena = currentThreadArena();
@@ -320,6 +365,30 @@ ScopedCompileArena::ScopedCompileArena() {
 
 ScopedCompileArena::~ScopedCompileArena() {
   --tls_scopeDepth;
+  if (tls_scopeDepth == 0 && tls_arena != nullptr) {
+    // Order matters: clear the registered thread_local caches first (their
+    // destructors/clear() calls may still touch arena memory from the scope
+    // that's ending), then rewind the arena itself. Nothing else may still
+    // reference arena memory from this scope at this point - magic statics
+    // never lived in arena memory to begin with (SystemHeapScope), and
+    // these are the only other known class of cross-scope-persistent state.
+    runArenaResetCallbacks();
+    tls_arena->reset();
+  }
+}
+
+SystemHeapScope::SystemHeapScope() {
+  ++tls_forceSystemHeap;
+}
+
+SystemHeapScope::~SystemHeapScope() {
+  --tls_forceSystemHeap;
+}
+
+void registerArenaResetCallback(void (*callback)()) {
+  if (g_arenaResetCallbackCount < kMaxArenaResetCallbacks) {
+    g_arenaResetCallbacks[g_arenaResetCallbackCount++] = callback;
+  }
 }
 
 } // namespace primec

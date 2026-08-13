@@ -1,6 +1,7 @@
 #include "primec/IrPreparation.h"
 
 #include "primec/AstMemory.h"
+#include "primec/CompileArena.h"
 #include "primec/IrBackendProfiles.h"
 #include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
@@ -57,7 +58,11 @@ bool validateRuntimeReflectionBackendSupport(const SemanticProgram &semanticProg
 } // namespace
 
 const std::vector<IrPreparationPhaseManifestEntry> &irPreparationPhaseManifest() {
-  static const std::vector<IrPreparationPhaseManifestEntry> Manifest = {
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::vector<IrPreparationPhaseManifestEntry> Manifest =
+      primec::systemHeapValue([]() -> std::vector<IrPreparationPhaseManifestEntry> {
+      return {
       {"semantic-product-preflight",
        IrPreparationPhaseOwnership::CompilePipelineAstAndSemanticProduct,
        IrPreparationPhaseOwnership::CompilePipelineAstAndSemanticProduct,
@@ -106,7 +111,8 @@ const std::vector<IrPreparationPhaseManifestEntry> &irPreparationPhaseManifest()
        "validated IR module and lowered AST body storage",
        "releases lowered AST bodies after IR preparation; downstream consumers must use IR, semantic product facts, and source maps",
        "heap benchmarking, CLI/backend output, and VM/native/IR emit paths"},
-  };
+      };
+      });
   return Manifest;
 }
 

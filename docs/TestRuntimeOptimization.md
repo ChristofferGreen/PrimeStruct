@@ -921,3 +921,59 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   enough to pass - resized to still catch a *further* regression from
   here), rather than leaving a stale pre-TODO-5230 baseline in place or
   silently loosening the check indefinitely.
+- 2026-08-13: TODO-5235 (left open, partial progress) + TODO-5236
+  (resolved). TODO-5235 built a general escape hatch
+  (`primec::SystemHeapScope`/`systemHeapValue()`/
+  `registerArenaResetCallback()` in `primec/CompileArena.h`) for the
+  magic-static/arena-reset hazard TODO-5234 hit, fixed every magic static
+  and thread_local cache found by it, and re-attempted TODO-5234's
+  reset-per-`TEST_CASE` design under it. Three consecutive
+  fix-rebuild-rerun-the-full-suite rounds each found a *different* class
+  or location of the same hazard (see `docs/CompilerArenaAllocator.md`'s
+  new "TODO-5235" section for the full account), the last of which
+  surfaced more unverified candidates than it resolved - the opposite of
+  convergence. Per this leaf's own stop_rule, reverted the reset wiring
+  and left `tests/unit/test_main.cpp` on the system allocator exactly as
+  TODO-5234 shipped it (no wall-clock change for `semantics`/
+  `ir_pipeline`); the escape hatch and every fix found along the way
+  remain in place as they're unconditionally safe.
+  **TODO-5236** profiled `RequirementPredicateDefinitionContext`
+  specifically (the dominant allocation-count site TODO-5233's dhat
+  survey found) and found the actual redundancy: `rewriteCompileTimeIfBranches`'s
+  `RequirementPredicateDefinitionContext` was being passed **by value**
+  into `rewriteCompileTimeIfStatements`/`rewriteCompileTimeIfStatement`,
+  which are called once per AST statement/expression node across the
+  *entire* recursive tree walk that looks for `ct_if` envelopes anywhere
+  in a definition's body - not just where one is found. Since the context's
+  contents are read-only for that walk except at the single point a `ct_if`
+  actually resolves (where `structNames` needs updating for the selected
+  branch's nested statements), the fix was to take `context` by `const&` in
+  both functions and make exactly one explicit local copy, only inside the
+  `ct_if`-decided branch, right before the mutation that needs it -
+  eliminating a full-struct copy (several strings/vectors/hash-sets) per
+  AST node system-wide down to one copy per actually-resolved compile-time
+  conditional. This is the same "eliminate the redundant work upstream
+  instead of caching a moving target" shape TODO-5232's own stop_rule
+  required, not a memoization band-aid - the context's field values
+  genuinely don't need copying for the vast majority of the tree walk.
+  **Measured result** (release build, same machine before/after via `git
+  stash` of just this fix, arena from TODO-5234/5235 present and identical
+  in both configurations so it isolates this fix's own effect):
+  `mini_vec.prime` repro - **allocation count 9,756,990 -> 5,579,238 blocks
+  (-42.8%)**, **total bytes allocated 754.9MB -> 376.7MB (-50.1%)**
+  (`valgrind --tool=dhat`, matching TODO-5233's exact baseline numbers on
+  the "before" build, confirming the repro and methodology line up);
+  wall-clock ~0.82-0.89s -> ~0.74-0.77s (**~10-12% faster**). Heavier
+  `import /std/collections/*` repro: wall-clock ~0.855-0.867s ->
+  ~0.79-0.84s (**~5-8% faster** - a smaller relative share since this
+  repro's total compile does proportionally more work outside the
+  compile-time-if tree walk). Peak live memory (dhat's `t-gmax`) was
+  unchanged (22.96MB in both configurations) since this fix only reduces
+  *transient* allocation churn, not the live working set - consistent with
+  TODO-5233's own finding that the 754MB-vs-23MB gap was almost entirely
+  short-lived churn rather than a large working set. Verified via
+  `./scripts/compile.sh --release` (single invocation, this repo's
+  convention): **1881/1881 tests passing, 0 regressions** (the same
+  pre-existing `docs/todo.md` content-lock staleness pattern TODO-5232/
+  5234's own resolution notes already documented showed up during an
+  interim run, resolved by this leaf's own `docs/todo.md` update).

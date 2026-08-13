@@ -77,11 +77,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
 - TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets | track: compiler-arena-allocator | surface: src/semantics magic statics, src/CompileArena.cpp override boundary
-- TODO-5236: Reduce redundant per-compile allocation volume (RequirementPredicateDefinitionContext) | track: compiler-allocation-volume | surface: src/semantics RequirementPredicateDefinitionContext
-
-Note (2026-08-13): `TODO-4714` was removed from this list - it is already
-resolved and recorded in `docs/todo_finished.md`; this list had drifted
-stale relative to that.
 
 ### Immediate Next 10
 
@@ -336,7 +331,6 @@ stale relative to that.
 50. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 51a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
-51b. TODO-5236: Reduce redundant per-compile allocation volume (RequirementPredicateDefinitionContext)
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
@@ -1789,60 +1783,52 @@ stale relative to that.
     partial fix - a second corruption bug shipped here would be worse
     than staying on TODO-5234's current safe (CLI-only, never-reset)
     fallback.
-
-- [ ] TODO-5236: Reduce redundant per-compile allocation volume (RequirementPredicateDefinitionContext and similar copy-heavy hot paths)
-  - owner: ai
-  - created_at: 2026-08-13
-  - phase: Test runtime optimization
-  - parallel_track: compiler-allocation-volume
-  - depends_on: (none)
-  - scope: TODO-5233's `valgrind --tool=dhat` survey found the deeper
-    story behind the malloc/free churn TODO-5234's arena was built to
-    absorb: **9.76 million heap allocations** for one compile of the
-    tiny `mini_vec.prime` repro (361 reachable lines of stdlib source
-    plus a 5-line program), dominated by
-    `RequirementPredicateDefinitionContext`'s copy constructor. That is a
-    genuine algorithmic/data-flow redundancy independent of allocator
-    strategy - an arena makes each of those 9.76M allocations cheap, but
-    doing 9.76M of anything for a 5-line program is still the wrong
-    complexity class, in the same family as TODO-5232's O(N^2)
-    `makeCompileTimeIfRequirementContext` finding. Profile with
-    `valgrind --tool=dhat` (or callgrind with a caller/callee tree, see
-    TODO-5232's methodology) specifically on
-    `RequirementPredicateDefinitionContext` construction/copying: find
-    where it's being copied instead of referenced or moved, whether it's
-    being rebuilt from scratch redundantly across a loop (the same shape
-    as TODO-5232's fix), and fix the actual redundancy - not just make
-    the copies cheaper.
-  - implementation_notes: `RequirementPredicateDefinitionContext` lives
-    somewhere under `src/semantics/` (grep for its definition and every
-    constructor/copy call site). Cross-reference against TODO-5232's
-    `makeCompileTimeIfRequirementContext`/`rewriteCompileTimeIfBranches`
-    fix - this may be a sibling instance of the same "rebuild a
-    program-wide context object inside a per-definition loop" pattern
-    that TODO-5232 fixed for one call path but not others, or it may be
-    an unrelated hot path. Determine which before proposing a fix.
-  - acceptance:
-    - A documented explanation of why `RequirementPredicateDefinitionContext`
-      gets constructed/copied ~9.76 million times (or whatever the
-      up-to-date count is once TODO-5232/5234's other fixes are
-      accounted for) for the `mini_vec.prime` repro, and a fix that
-      brings that count down by addressing the actual redundancy (not a
-      cache/memoization band-aid unless the object is proven to be a pure
-      function of stable inputs the way TODO-5230's string helpers were).
-    - Before/after allocation-count and wall-clock measurements for
-      `mini_vec.prime` and the heavier real collection test used in prior
-      TODOs, recorded in `docs/TestRuntimeOptimization.md`.
-    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
-      zero regressions.
-  - stop_rule: Do not fix this by adding a cache/memoization layer around
-    `RequirementPredicateDefinitionContext` construction unless you can
-    show its inputs are actually stable/pure across the calls being
-    deduplicated (the same correctness bar TODO-5232's stop_rule set for
-    its own cache-vs-worklist decision) - if the object's copies are
-    legitimately each needed with different inputs, the fix is
-    eliminating the redundant WORK that produces those differing inputs
-    upstream (worklist/reuse restructuring), not caching a moving target.
+  - investigation_notes (2026-08-13, left open per stop_rule): Built the
+    general escape hatch (`primec::SystemHeapScope`/`systemHeapValue()`/
+    `registerArenaResetCallback()` in `include/primec/CompileArena.h` /
+    `src/CompileArena.cpp`) and re-attempted TODO-5234's reset-per-
+    `TEST_CASE` design under it (`tests/unit/test_main.cpp`'s doctest
+    `IReporter` listener). Three consecutive fix-rebuild-rerun-the-full-
+    suite rounds each found a genuinely different magic static or hazard
+    class than the last:
+    (1) magic statics under `src/semantics/` per the TODO's suggested
+    scope - fixed by wrapping each in `systemHeapValue()`;
+    (2) `std::unordered_map::clear()` destroys elements but not the map's
+    own bucket-array buffer, so the three known thread_local caches
+    (`SemanticsBindingTypeHelpers.cpp`, `StdlibSurfaceRegistry.cpp`,
+    `SourceLocationMapper.cpp`) still corrupted, since only their
+    declaration point (not every later mutation/rehash) had been wrapped -
+    fixed by wrapping every mutating call site;
+    (3) a magic static in `src/TransformRegistry.cpp`, entirely outside
+    the three directories (`src/semantics`, `src/ir_lowerer`,
+    `src/parser`) the TODO's `implementation_notes` suggested searching,
+    and of a custom struct type the original grep pattern (literal
+    `std::string`/`std::vector`/etc. spellings) would never have matched.
+    Broadening the search to all of `src/`+`include/` and to custom struct
+    types surfaced five more unverified candidates
+    (`IrPreparation.cpp`, `SemanticProduct.cpp`, `TempPaths.cpp`,
+    `SoaPathHelpers.h`, `IrBackends.cpp`) in one pass - more than the
+    previous two rounds combined, the opposite of the search converging.
+    Full reasoning, the crash signatures, and the debugging methodology
+    (temporary `fprintf` instrumentation plus a poison-on-reset build) are
+    recorded in `docs/CompilerArenaAllocator.md`'s new "TODO-5235" section.
+    Per this leaf's own stop_rule, stopped re-attempting the reset design
+    on the strength of "fixed every crash found so far" and reverted
+    `tests/unit/test_main.cpp` to not construct a `ScopedCompileArena` at
+    all - exactly TODO-5234's shipped state, zero wall-clock change for
+    `semantics`/`ir_pipeline`. The escape hatch mechanism and all six
+    magic-static/cache fixes found along the way remain in place (verified
+    safe independent of whether resets are ever turned back on - they only
+    change which allocator a given allocation uses, never when memory gets
+    reclaimed), so a future attempt starts measurably further along:
+    a documented, reusable mechanism, six known-and-fixed files, and a
+    concrete list of what a higher-confidence next attempt would need (an
+    exhaustiveness-verification step - e.g. poison-on-reset run as a
+    one-time full-suite audit rather than fixing crashes one at a time -
+    or a structurally different design that doesn't require enumerating
+    every magic static at all). Verified via
+    `./scripts/compile.sh --release`: 1881/1881 tests passing with the
+    reverted (no-reset) state, 0 regressions from this leaf.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai

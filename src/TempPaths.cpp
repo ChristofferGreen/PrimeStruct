@@ -1,5 +1,7 @@
 #include "primec/TempPaths.h"
 
+#include "primec/CompileArena.h"
+
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -60,7 +62,9 @@ void ensureDirectoryExists(const std::filesystem::path &dir) {
 } // namespace
 
 std::filesystem::path primecTempRoot() {
-  static const std::filesystem::path root = [] {
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::filesystem::path root = primec::systemHeapValue([] {
     std::error_code ec;
     std::filesystem::path baseDir = std::filesystem::temp_directory_path(ec);
     if (ec || baseDir.empty()) {
@@ -69,7 +73,7 @@ std::filesystem::path primecTempRoot() {
     std::filesystem::path rootDir = baseDir / "primec";
     ensureDirectoryExists(rootDir);
     return rootDir;
-  }();
+  });
   ensureDirectoryExists(root);
   return root;
 }

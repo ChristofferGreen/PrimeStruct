@@ -56,14 +56,16 @@ std::string templateMonomorphPublicSoaHelperPrefix(bool leadingSlash = true) {
 std::string templateMonomorphExperimentalSoaHelperPrefix() {
   // Zero-argument pure function - memoize instead of recomputing on every
   // call (this is on the hot per-expression-node monomorphization path).
-  static const std::string prefix = [] {
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::string prefix = primec::systemHeapValue([] {
     std::string result = experimentalSoaStorageTypePath(true);
     const size_t lastSlash = result.find_last_of('/');
     if (lastSlash != std::string::npos) {
       result.erase(lastSlash + 1);
     }
     return result;
-  }();
+  });
   return prefix;
 }
 

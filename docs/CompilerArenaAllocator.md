@@ -323,3 +323,158 @@ this invariant is safe for is exactly the class that entered it: one-shot,
 compile-then-exit CLI processes. The class of binaries it would be unsafe
 for - long-lived processes making the same allocations thousands of times
 per run - simply never enters it.
+
+## TODO-5235: attempting per-TEST_CASE resets again, and why it's still off
+
+TODO-5235 set out to close the gap above (the CLI-only, never-reset arena
+gives zero benefit to the `semantics`/`ir_pipeline` test binaries, which
+dominate the suite's total wall-clock, since they never construct a
+`ScopedCompileArena` at all). It built a general escape hatch and then
+re-attempted TODO-5234's original reset-per-`TEST_CASE` design under it.
+**The escape hatch is real, generally useful, and has shipped** (see below).
+**The reset-per-`TEST_CASE` wiring has not** - it was built, tested, found
+to still corrupt memory via a *different* magic static than TODO-5234 hit,
+fixed, retested, found to corrupt memory via yet another one outside the
+directories the TODO scoped the search to, fixed, retested, found a fourth
+class of hazard (below), and was then reverted per this leaf's own
+`stop_rule` rather than continuing to chase individual crashes indefinitely.
+`tests/unit/test_main.cpp` still does not construct a `ScopedCompileArena`,
+exactly as TODO-5234 shipped it.
+
+### The escape hatch that did ship
+
+`primec::SystemHeapScope` (RAII) and `primec::systemHeapValue()` (a
+convenience wrapper for building a value under it) force allocations on the
+calling thread to the system heap even while a compile scope is active,
+via a `thread_local` `tls_forceSystemHeap` depth counter checked by
+`arenaAllocate()` alongside the existing `tls_scopeDepth == 0` check.
+`primec::registerArenaResetCallback()` registers a callback (stored in a
+fixed-capacity array to avoid any static-initialization-order/bootstrapping
+hazard in the registry itself) that `ScopedCompileArena`'s destructor runs,
+along with resetting the arena, whenever the outermost scope on a thread
+ends. Both are declared in `include/primec/CompileArena.h` and implemented
+in `src/CompileArena.cpp`. **These are unconditionally safe regardless of
+whether resets are ever turned on for a given binary** - they change *where*
+specific allocations land, not *when* anything gets reclaimed - so they
+shipped even though the reset wiring they were built to support did not.
+
+Every magic static and thread_local cache found during this investigation
+was fixed using them, and stays fixed (harmless, no behavior change, since
+the CLI binaries' arena never resets regardless):
+
+- Every function-local `static const std::string`/`std::vector<...>`/
+  `std::unordered_set<...>` with a non-trivial (heap-allocating) initializer
+  found by grepping `src/semantics`, `src/ir_lowerer`, and `src/parser`
+  (per the TODO's original scope) - wrapped in `systemHeapValue()` at its
+  declaration. Default-constructed statics (e.g. `static const
+  std::unordered_set<std::string> emptyStructTypes;`) were left alone:
+  empty containers don't heap-allocate in libstdc++, so they're already
+  harmless.
+- The same pattern found by broadening the grep to *all* of `src/` and
+  `include/` after the first fix round's crash reproduction landed in
+  `src/TransformRegistry.cpp` - a file the TODO's suggested search scope
+  did not cover: `TransformRegistry.cpp`'s `defaultTransformRegistry()`,
+  `IrPreparation.cpp`'s phase manifest, `SemanticProduct.cpp`'s fact-family
+  table, `TempPaths.cpp`'s temp-root path, `SoaPathHelpers.h`'s four
+  path-fragment helpers, and `IrBackends.cpp`'s eight backend singletons.
+- Three `thread_local` *caches* (as opposed to magic statics - these are
+  known, enumerable, and intentionally persist across many calls within a
+  scope: `SemanticsBindingTypeHelpers.cpp`'s three memoization caches,
+  `StdlibSurfaceRegistry.cpp`'s resolved-path cache, and
+  `SourceLocationMapper.cpp`'s cached-mapper-by-address) got both a
+  `registerArenaResetCallback()`-registered `.clear()` *and* -
+  critically, and non-obviously - `SystemHeapScope` wrapped around every
+  *mutation* (not just the cache's declaration point). See the next
+  section for why the mutation-site wrapping turned out to be required.
+
+### What each fix-and-retest round actually found
+
+**Round 1** (the reset design as TODO-5234 first tried it, retried under
+the new escape hatch): crashed on the 4th-5th `TEST_CASE`, reading garbage
+through a `std::string`'s internals inside `SemanticsValidate.cpp` - the
+same failure signature TODO-5234's own writeup already described almost
+verbatim. Root cause: exactly the known-magic-static class the escape hatch
+was built for, in files this leaf's fix pass hadn't reached yet.
+Fixed by wrapping every magic static found by the TODO's suggested grep
+scope (`src/semantics`, `src/ir_lowerer`, `src/parser`).
+
+**Round 2**: crashed again, earlier (2nd-3rd `TEST_CASE`), inside
+`splitTopLevelTemplateArgs` - one of the exact functions whose
+memoization cache *had already been* wrapped in a
+`registerArenaResetCallback()`-registered `.clear()`. Debug instrumentation
+(`fprintf` at each reset, and a temporary "poison the reclaimed bytes with
+`0xEE` on reset" build) confirmed the read was of poisoned (i.e.
+already-reset) memory, and that the clear callback *was* running correctly.
+The actual mechanism: `std::unordered_map::clear()` destroys elements but
+does **not** deallocate the map's own bucket-array buffer. That buffer was
+allocated from the arena the first time (or any later rehash-triggering
+insert) the cache was populated *while a compile scope was active* - which
+is always, since these caches only ever get populated from inside a
+compile. A `.clear()`-only fix leaves that live, still-referenced buffer in
+arena memory, and the next reset reclaims it anyway. Fixed by wrapping
+every *mutating* call site (not just the cache's own declaration) of all
+three known thread_local caches in `SystemHeapScope`, so the bucket array's
+every (re)allocation - not just its first one - lands on the system heap.
+
+**Round 3**: crashed again, later (test ~82), inside `findTransform()`
+reading a `TransformRegistry`'s (a custom struct type, not a bare
+`std::string`/`std::vector`) transform-name table. Root cause: a magic
+static in `src/TransformRegistry.cpp`, a file outside the three directories
+(`src/semantics`, `src/ir_lowerer`, `src/parser`) the TODO's own
+`implementation_notes` suggested searching. Broadening the grep to all of
+`src/` and `include/` (and to custom struct types, not just literal
+`std::string`/`std::vector`/etc. spellings - the original grep pattern
+missed `TransformRegistry` entirely because it isn't a standard-library
+container type) turned up five more candidate files
+(`IrPreparation.cpp`, `SemanticProduct.cpp`, `TempPaths.cpp`,
+`SoaPathHelpers.h`, `IrBackends.cpp`) that hadn't been crash-confirmed yet.
+All were fixed defensively rather than waiting for each to crash
+individually.
+
+### Why this stayed off: the stop_rule, applied honestly
+
+Three consecutive rounds each found a **different class or location** of
+the same underlying hazard, and each was only found by running the full
+suite and waiting for a segfault - there is no compiler warning, static
+analyzer, or test that flags "this magic static's first construction can
+happen inside a compile scope." Round 3's broadened grep (all of `src/` and
+`include/`, custom struct types included) surfaced *more* unverified
+candidates than the previous two rounds combined, which is the opposite of
+convergence: each round should shrink the remaining unknown surface if the
+search were actually approaching exhaustive, and instead each one revealed
+that the true surface was larger than previously scoped. This is precisely
+the risk TODO-5234's own writeup already flagged in the abstract ("there is
+no practical way to enumerate every static that might get lazily
+constructed inside a compile scope, forever, as the codebase evolves") -
+now demonstrated empirically, three times, rather than just reasoned about
+once.
+
+TODO-5235's own `stop_rule` is explicit about exactly this situation: ship
+the general mechanism and whatever instances it demonstrably fixes, but do
+**not** re-enable resets on the strength of "found and fixed every crash I
+happened to hit so far," and do not keep chasing individual crashes
+indefinitely - a fourth corruption bug shipped here would be strictly worse
+than staying on the current safe, slower baseline. `tests/unit/test_main.cpp`
+therefore still does not construct a `ScopedCompileArena`; the
+`semantics`/`ir_pipeline` test binaries still run entirely on the system
+allocator, with no wall-clock change from this leaf. The escape hatch and
+every magic static/cache fix found along the way remain in place - a future
+attempt starts with a measurably smaller remaining surface (six additional
+files/patterns now known and fixed pre-emptively) and a documented, reusable
+mechanism, rather than starting from zero.
+
+### If this is picked up again
+
+A higher-confidence path than more grep-and-fix rounds would likely need
+either (a) a mechanical way to verify exhaustiveness - e.g. an
+instrumented arena build that poisons reclaimed bytes on every reset (used
+ad hoc for round 2's diagnosis above) run under the *full* suite as a
+one-time audit, with any resulting crash treated as a required fix before
+resets could ship, or (b) a structurally different design that doesn't
+require finding every magic static at all - e.g. never physically
+reclaiming memory (defeats the purpose) or a checkpoint/generation scheme
+proven safe against statics first-touched inside the very scope being
+rolled back (not yet designed; a first-pass checkpoint/rollback sketch
+during this investigation did not survive that specific case, see the git
+history for this leaf for the reasoning). Either is a substantially larger
+effort than this leaf's budget.

@@ -1,5 +1,6 @@
 #include "primec/IrBackends.h"
 
+#include "primec/CompileArena.h"
 #include "primec/ExternalTooling.h"
 #include "primec/IrBackendProfiles.h"
 #include "primec/IrSerializer.h"
@@ -511,6 +512,12 @@ public:
 };
 
 const std::array<const IrBackend *, 8> &registeredBackends() {
+  // TODO-5235: SystemHeapScope active for the whole block, since several
+  // static locals below are constructed together (only on the first call -
+  // a plain, non-static guard so it doesn't itself become a magic static)
+  // and their addresses are taken into the Backends array - see
+  // docs/CompilerArenaAllocator.md.
+  const primec::SystemHeapScope systemHeapGuardForBackendStatics;
   static const VmIrBackend VmBackend;
   static const NativeIrBackend NativeBackend;
   static const SerializeIrBackend IrBackendImpl;

@@ -1,5 +1,7 @@
 #include "primec/TransformRegistry.h"
 
+#include "primec/CompileArena.h"
+
 #include <span>
 
 namespace {
@@ -53,7 +55,12 @@ std::span<const TransformInfo> TransformRegistry::list() const {
 }
 
 const TransformRegistry &defaultTransformRegistry() {
-  static const TransformRegistry registry = buildDefaultTransformRegistry();
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory (a custom-struct-typed static, found by broadening the grep
+  // beyond src/semantics/src/ir_lowerer/src/parser after this exact static
+  // caused a reset-corruption crash inside findTransform()) is never
+  // arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const TransformRegistry registry = primec::systemHeapValue(&buildDefaultTransformRegistry);
   return registry;
 }
 

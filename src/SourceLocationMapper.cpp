@@ -1,5 +1,7 @@
 #include "primec/SourceLocationMapper.h"
 
+#include "primec/CompileArena.h"
+
 #include <algorithm>
 #include <limits>
 #include <tuple>
@@ -428,8 +430,33 @@ namespace {
 thread_local const ExpandedSource *g_cachedSource = nullptr;
 thread_local std::optional<SourceLocationMapper> g_cachedMapper;
 
+// TODO-5235: this cache is thread_local and intentionally persists across
+// many calls within one compile scope, but its entries may be
+// arena-allocated during that scope. Register a reset callback that clears
+// it on every arena reset (i.e. every TEST_CASE boundary in the doctest
+// binaries) so no cached entry can dangle into memory the reset just
+// reclaimed - see docs/CompilerArenaAllocator.md. This also incidentally
+// closes a pre-existing, unrelated staleness risk: without this, a new
+// compile's ExpandedSource could in principle be allocated at the same
+// address as a previous compile's (now-destroyed) one, causing a false
+// cache hit; resetting on every compile scope boundary means that can never
+// happen either.
+void clearSourceLocationMapperCache() {
+  g_cachedMapper.reset();
+  g_cachedSource = nullptr;
+}
+
+[[maybe_unused]] const bool kSourceLocationMapperCacheRegistered =
+    (registerArenaResetCallback(&clearSourceLocationMapperCache), true);
+
 const SourceLocationMapper &cachedMapperFor(const ExpandedSource &source) {
   if (g_cachedSource != &source || !g_cachedMapper.has_value()) {
+    // TODO-5235: SystemHeapScope around the mutation, not just at
+    // declaration - the cached mapper's own internal buffers must never be
+    // arena memory, since this cache intentionally survives across many
+    // calls within (and, via the reset callback above, across) a compile
+    // scope. See docs/CompilerArenaAllocator.md.
+    SystemHeapScope systemHeapGuard;
     g_cachedMapper.emplace(source);
     g_cachedSource = &source;
   }

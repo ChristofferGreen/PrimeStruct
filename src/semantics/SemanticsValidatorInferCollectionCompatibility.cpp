@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/CompileArena.h"
 #include "primec/StdlibSurfaceRegistry.h"
 #include "primec/StdlibCollectionPaths.h"
 
@@ -406,7 +407,10 @@ std::string SemanticsValidator::preferredCanonicalExperimentalVectorHelperTarget
 }
 
 std::string_view SemanticsValidator::rootedVectorHelperPrefix() const {
-  static const std::string Prefix = "/" + std::string("vector") + "/";
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::string Prefix =
+      primec::systemHeapValue([] { return "/" + std::string("vector") + "/"; });
   return Prefix;
 }
 

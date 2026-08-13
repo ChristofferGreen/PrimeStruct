@@ -3,6 +3,7 @@
 #include "CondensationDag.h"
 #include "SemanticsHelpers.h"
 #include "TypeResolutionGraphPreparation.h"
+#include "primec/CompileArena.h"
 #include "primec/StdlibCollectionPaths.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
@@ -853,7 +854,11 @@ std::string_view typeResolutionGraphInvalidationPropagationName(
 
 const std::vector<TypeResolutionGraphInvalidationContract> &
 typeResolutionGraphInvalidationContracts() {
-  static const std::vector<TypeResolutionGraphInvalidationContract> Contracts = {
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::vector<TypeResolutionGraphInvalidationContract> Contracts =
+      primec::systemHeapValue([]() -> std::vector<TypeResolutionGraphInvalidationContract> {
+      return {
       {TypeResolutionGraphInvalidationEditFamily::LocalBinding,
        "local_binding",
        TypeResolutionGraphInvalidationPropagation::DefinitionLocal,
@@ -890,7 +895,8 @@ typeResolutionGraphInvalidationContracts() {
        "method call_constraint nodes and receiver-derived helper-family selections",
        "dependent method targets, binding/result facts, and helper-routing queries",
        "method-target, receiver-binding, and helper-family diagnostics at dependent sites"},
-  };
+      };
+      });
   return Contracts;
 }
 

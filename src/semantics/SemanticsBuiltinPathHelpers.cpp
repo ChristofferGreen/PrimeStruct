@@ -3,6 +3,7 @@
 
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/CollectionSpellingClassifier.h"
+#include "primec/CompileArena.h"
 #include "primec/SoaPathHelpers.h"
 #include "primec/StdlibCollectionPaths.h"
 #include "primec/StdlibSurfaceRegistry.h"
@@ -400,13 +401,15 @@ std::string experimentalSoaStorageTypePath(bool leadingSlash) {
   // per-expression-node monomorphization recursion, so memoize both
   // outcomes instead of rebuilding the string via concatenation on every
   // call.
-  static const std::string unrooted = [] {
+  // TODO-5235: built via systemHeapValue() so these magic statics' backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::string unrooted = primec::systemHeapValue([] {
     std::string path = experimentalCollectionMemberRootLocal(
         internalSoaCollectionTypeName());
     path += experimentalSoaStorageTypeName();
     return path;
-  }();
-  static const std::string rooted = "/" + unrooted;
+  });
+  static const std::string rooted = primec::systemHeapValue([] { return "/" + unrooted; });
   return leadingSlash ? rooted : unrooted;
 }
 

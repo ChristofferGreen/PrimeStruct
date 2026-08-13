@@ -2,6 +2,7 @@
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/CompileArena.h"
 #include "primec/StdlibCollectionPaths.h"
 
 #include <array>
@@ -35,6 +36,21 @@ thread_local std::unordered_map<std::string, std::pair<bool, std::vector<std::st
 std::string normalizeBindingTypeNameUncached(const std::string &name);
 bool splitTemplateTypeNameUncached(const std::string &text, std::string &base, std::string &arg);
 bool splitTopLevelTemplateArgsUncached(const std::string &text, std::vector<std::string> &out);
+
+// TODO-5235: these caches are thread_local and intentionally persist across
+// many calls within one compile scope, but their entries may be
+// arena-allocated during that scope. Register a reset callback that clears
+// them on every arena reset (i.e. every TEST_CASE boundary in the doctest
+// binaries) so no cached entry can dangle into memory the reset just
+// reclaimed - see docs/CompilerArenaAllocator.md.
+void clearBindingTypeHelperCaches() {
+  g_normalizeBindingTypeNameCache.clear();
+  g_splitTemplateTypeNameCache.clear();
+  g_splitTopLevelTemplateArgsCache.clear();
+}
+
+[[maybe_unused]] const bool kBindingTypeHelperCachesRegistered =
+    (primec::registerArenaResetCallback(&clearBindingTypeHelperCaches), true);
 
 }  // namespace
 
@@ -267,7 +283,18 @@ std::string normalizeBindingTypeName(const std::string &name) {
     return it->second;
   }
   std::string result = normalizeBindingTypeNameUncached(name);
-  g_normalizeBindingTypeNameCache.emplace(name, result);
+  {
+    // TODO-5235: SystemHeapScope here, not just at the cache's declaration -
+    // .clear() destroys elements but NOT the unordered_map's own
+    // bucket-array buffer, and a subsequent insert can trigger a rehash
+    // that reallocates that buffer at any time, not just on first use.
+    // Every mutation of a cache that outlives a single compile scope must
+    // be wrapped, or its bucket array (and the strings stored in it) can
+    // still end up in arena memory that a later reset reclaims out from
+    // under it. See docs/CompilerArenaAllocator.md.
+    primec::SystemHeapScope systemHeapGuard;
+    g_normalizeBindingTypeNameCache.emplace(name, result);
+  }
   return result;
 }
 
@@ -550,7 +577,13 @@ bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string>
     return it->second.first;
   }
   bool ok = splitTopLevelTemplateArgsUncached(text, out);
-  g_splitTopLevelTemplateArgsCache.emplace(text, std::make_pair(ok, out));
+  {
+    // TODO-5235: see normalizeBindingTypeName's matching comment above -
+    // the cache's own bucket-array buffer needs system-heap allocation on
+    // every mutation, not just at declaration.
+    primec::SystemHeapScope systemHeapGuard;
+    g_splitTopLevelTemplateArgsCache.emplace(text, std::make_pair(ok, out));
+  }
   return ok;
 }
 
@@ -562,7 +595,13 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
     return std::get<0>(it->second);
   }
   bool ok = splitTemplateTypeNameUncached(text, base, arg);
-  g_splitTemplateTypeNameCache.emplace(text, std::make_tuple(ok, base, arg));
+  {
+    // TODO-5235: see normalizeBindingTypeName's matching comment above -
+    // the cache's own bucket-array buffer needs system-heap allocation on
+    // every mutation, not just at declaration.
+    primec::SystemHeapScope systemHeapGuard;
+    g_splitTemplateTypeNameCache.emplace(text, std::make_tuple(ok, base, arg));
+  }
   return ok;
 }
 

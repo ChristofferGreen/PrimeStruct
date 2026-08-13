@@ -1,3 +1,4 @@
+#include "primec/CompileArena.h"
 #include "primec/SemanticValidationPlan.h"
 
 #include <string_view>
@@ -14,7 +15,11 @@ std::vector<std::string> copyImportPaths(const std::vector<std::string> &paths) 
 } // namespace
 
 const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassManifest() {
-  static const std::vector<SemanticValidationPassManifestEntry> Manifest = {
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::vector<SemanticValidationPassManifestEntry> Manifest =
+      primec::systemHeapValue([]() -> std::vector<SemanticValidationPassManifestEntry> {
+      return {
       {"semantic-transform-rules",
        SemanticValidationPassId::SemanticTransformRules,
        SemanticValidationPassKind::CoreCanonicalization,
@@ -239,7 +244,8 @@ const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassMa
        SemanticValidationPassAction::PublishesFacts,
        false,
        "publish immutable semantic-product facts after successful validation"},
-  };
+      };
+      });
   return Manifest;
 }
 

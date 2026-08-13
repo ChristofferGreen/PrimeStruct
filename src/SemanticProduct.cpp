@@ -1,5 +1,7 @@
 #include "primec/SemanticProduct.h"
 
+#include "primec/CompileArena.h"
+
 #include <algorithm>
 #include <limits>
 #include <sstream>
@@ -190,7 +192,11 @@ bool semanticProgramPublishedStorageFrozen(const SemanticProgram &semanticProgra
 }
 
 const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos() {
-  static const std::vector<SemanticProgramFactFamilyInfo> Families = {
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::vector<SemanticProgramFactFamilyInfo> Families =
+      primec::systemHeapValue([]() -> std::vector<SemanticProgramFactFamilyInfo> {
+      return {
       {"sourceImports",
        SemanticProgramFactOwnership::AstProvenance,
        "syntax-owned import spelling retained for provenance"},
@@ -266,7 +272,8 @@ const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos
       {"onErrorFacts",
        SemanticProgramFactOwnership::SemanticProduct,
        "published on_error facts"},
-  };
+      };
+      });
   return Families;
 }
 

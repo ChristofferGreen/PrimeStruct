@@ -2105,10 +2105,16 @@ bool rewriteExpr(Expr &expr,
         const size_t genericSuffix = leaf.find("__t");
         const std::string leafBase =
             genericSuffix == std::string::npos ? leaf : leaf.substr(0, genericSuffix);
-        static const std::unordered_set<std::string> kCollectionHelperLeafNames = {
-            "at", "at_unsafe", "count", "capacity", "contains", "tryAt",
-            "insert", "push", "remove_at", "remove_swap", "get", "to_aos",
-            "ref_ref", "map", "vector"};
+        // TODO-5235: built via systemHeapValue() so this magic static's
+        // backing memory is never arena-allocated - see
+        // docs/CompilerArenaAllocator.md.
+        static const std::unordered_set<std::string> kCollectionHelperLeafNames =
+            primec::systemHeapValue([] {
+              return std::unordered_set<std::string>{
+                  "at", "at_unsafe", "count", "capacity", "contains", "tryAt",
+                  "insert", "push", "remove_at", "remove_swap", "get", "to_aos",
+                  "ref_ref", "map", "vector"};
+            });
         return kCollectionHelperLeafNames.count(leafBase) > 0;
       };
       // A plain scan (no rewriting) for a collection-constructor-shaped call

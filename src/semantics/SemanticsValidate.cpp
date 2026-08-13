@@ -1,5 +1,6 @@
 // soa-surface-audit: exempt
 #include <cstdio>
+#include "primec/CompileArena.h"
 #include "primec/Semantics.h"
 #include "primec/SemanticsBenchmark.h"
 #include "primec/SemanticValidationPlan.h"
@@ -5329,8 +5330,11 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
 
   Expr &target = expr.args.front();
   if (target.kind == Expr::Kind::Call && !target.isBinding) {
-    static const std::string fieldRefPrefix =
-        collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "soaFieldViewRef");
+    // TODO-5235: built via systemHeapValue() so this magic static's backing
+    // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+    static const std::string fieldRefPrefix = primec::systemHeapValue([] {
+      return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "soaFieldViewRef");
+    });
     if (semantics::isExperimentalSoaFieldViewReadHelperPath(target.name) &&
         target.args.size() == 2 && !target.templateArgs.empty()) {
       Expr refCall;
@@ -5367,14 +5371,20 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
     return;
   }
 
-  static const std::string getPrefix =
-      collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVectorGet");
-  static const std::string refPrefix =
-      collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVectorRef");
-  static const std::string fieldReadPrefix =
-      collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "soaFieldViewRead");
-  static const std::string fieldRefPrefix =
-      collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "soaFieldViewRef");
+  // TODO-5235: built via systemHeapValue() so these magic statics' backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::string getPrefix = primec::systemHeapValue([] {
+    return collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVectorGet");
+  });
+  static const std::string refPrefix = primec::systemHeapValue([] {
+    return collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVectorRef");
+  });
+  static const std::string fieldReadPrefix = primec::systemHeapValue([] {
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "soaFieldViewRead");
+  });
+  static const std::string fieldRefPrefix = primec::systemHeapValue([] {
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "soaFieldViewRef");
+  });
   auto rewriteSamePathSoaGetCarrierToRef = [](std::string &path) -> bool {
     const size_t specializationSuffix = path.find("__t");
     const std::string specializationText =
@@ -7338,7 +7348,7 @@ bool materializeCompileTimeIfGeneratedStructs(
 }
 
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
-                                    semantics::RequirementPredicateDefinitionContext context,
+                                    const semantics::RequirementPredicateDefinitionContext &context,
                                     const std::string &definitionPath,
                                     std::unordered_set<std::string> &structNames,
                                     std::vector<Definition> &generatedDefinitions,
@@ -7354,7 +7364,7 @@ bool rewriteCompileTimeIfExpression(
 
 bool rewriteCompileTimeIfStatement(Expr &stmt,
                                    std::vector<Expr> &out,
-                                   semantics::RequirementPredicateDefinitionContext context,
+                                   const semantics::RequirementPredicateDefinitionContext &context,
                                    const std::string &definitionPath,
                                    std::unordered_set<std::string> &structNames,
                                    std::vector<Definition> &generatedDefinitions,
@@ -7389,10 +7399,16 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
                                                 error)) {
     return false;
   }
-  context.structNames = structNames;
+  // TODO-5236: only copy `context` here, at the one call site that actually
+  // needs a mutated (updated structNames) copy for the selected branch's
+  // nested statements - not on every statement in every definition. See
+  // this function's and rewriteCompileTimeIfStatements'/
+  // rewriteCompileTimeIfBranches' comments for the profiling and reasoning.
+  semantics::RequirementPredicateDefinitionContext updatedContext = context;
+  updatedContext.structNames = structNames;
   if (!rewriteCompileTimeIfStatements(
           selected,
-          context,
+          updatedContext,
           definitionPath,
           structNames,
           generatedDefinitions,
@@ -7455,7 +7471,7 @@ bool rewriteCompileTimeIfExpression(
 }
 
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
-                                    semantics::RequirementPredicateDefinitionContext context,
+                                    const semantics::RequirementPredicateDefinitionContext &context,
                                     const std::string &definitionPath,
                                     std::unordered_set<std::string> &structNames,
                                     std::vector<Definition> &generatedDefinitions,
