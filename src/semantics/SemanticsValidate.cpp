@@ -6860,37 +6860,34 @@ void addCompileTimeIfImportAlias(
   }
 }
 
-semantics::RequirementPredicateDefinitionContext
-makeCompileTimeIfRequirementContext(
+// Facts derived from *every* definition in the program (as a potential
+// requirement-predicate "candidate": callable signature, struct field, or
+// struct trait). These facts depend only on `program.definitions` and the
+// `structNames`/`importAliases` state as of the start of
+// `rewriteCompileTimeIfBranches`'s definitions loop - NOT on which
+// definition is currently being processed. `structNames` does grow during
+// that loop (ct_if branch resolution inserts freshly-generated, per-
+// definition-nested struct paths - see the `structNames.insert(...)` call
+// in the branch-selection helper below), but every path it gains is a
+// synthesized nested path that is never itself a member of
+// `program.definitions` at the time these facts are computed (generated
+// definitions are only merged into `program.definitions` after the whole
+// loop finishes), so `structNames.count(candidate.fullPath)` for every
+// `candidate` here is unaffected by those later insertions. That makes
+// this candidate-facts computation safe to hoist out of the per-definition
+// loop and compute exactly once instead of once per definition - see
+// TODO-5232 for the measured redundancy this eliminates.
+struct CompileTimeIfCandidateFacts {
+  std::vector<semantics::RequirementPredicateDefinitionContext::CallableFact> callables;
+  std::vector<semantics::RequirementPredicateDefinitionContext::StructFieldFact> structFields;
+  std::vector<semantics::RequirementPredicateDefinitionContext::StructTraitFact> structTraits;
+};
+
+CompileTimeIfCandidateFacts buildCompileTimeIfCandidateFacts(
     const Program &program,
-    const Definition &definition,
     const std::unordered_set<std::string> &structNames,
-    const std::unordered_set<std::string> &sumNames,
     const std::unordered_map<std::string, std::string> &importAliases) {
-  semantics::RequirementPredicateDefinitionContext context;
-  context.definitionPath = definition.fullPath;
-  context.namespacePrefix = definition.namespacePrefix;
-  context.templateArgs = definition.templateArgs;
-  context.structNames = structNames;
-  context.sumNames = sumNames;
-  context.importAliases = importAliases;
-
-  for (const Expr &param : definition.parameters) {
-    semantics::BindingInfo binding;
-    std::optional<std::string> restrictType;
-    std::string ignoredError;
-    if (semantics::parseBindingInfo(param,
-                                    definition.namespacePrefix,
-                                    structNames,
-                                    importAliases,
-                                    binding,
-                                    restrictType,
-                                    ignoredError)) {
-      context.params.push_back(
-          semantics::ParameterInfo{param.name, binding, nullptr});
-    }
-  }
-
+  CompileTimeIfCandidateFacts facts;
   for (const Definition &candidate : program.definitions) {
     semantics::RequirementPredicateDefinitionContext::CallableFact callable;
     callable.fullPath = candidate.fullPath;
@@ -6929,7 +6926,7 @@ makeCompileTimeIfRequirementContext(
       callable.parameterTypes.push_back(compileTimeIfBindingTypeText(binding));
     }
     if (!callable.returnType.empty() && paramsOk) {
-      context.callables.push_back(std::move(callable));
+      facts.callables.push_back(std::move(callable));
     }
 
     if (structNames.count(candidate.fullPath) == 0) {
@@ -6948,7 +6945,7 @@ makeCompileTimeIfRequirementContext(
         trait.structPath = candidate.fullPath;
         trait.traitName = traitName;
         trait.isPrivate = isTransformNamed(candidate.transforms, "private");
-        context.structTraits.push_back(std::move(trait));
+        facts.structTraits.push_back(std::move(trait));
       }
     }
     for (const Expr &stmt : candidate.statements) {
@@ -6973,9 +6970,46 @@ makeCompileTimeIfRequirementContext(
       field.fieldName = stmt.name;
       field.typeText = compileTimeIfBindingTypeText(binding);
       field.isPrivate = isTransformNamed(stmt.transforms, "private");
-      context.structFields.push_back(std::move(field));
+      facts.structFields.push_back(std::move(field));
     }
   }
+  return facts;
+}
+
+semantics::RequirementPredicateDefinitionContext
+makeCompileTimeIfRequirementContext(
+    const Definition &definition,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_set<std::string> &sumNames,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const CompileTimeIfCandidateFacts &candidateFacts) {
+  semantics::RequirementPredicateDefinitionContext context;
+  context.definitionPath = definition.fullPath;
+  context.namespacePrefix = definition.namespacePrefix;
+  context.templateArgs = definition.templateArgs;
+  context.structNames = structNames;
+  context.sumNames = sumNames;
+  context.importAliases = importAliases;
+
+  for (const Expr &param : definition.parameters) {
+    semantics::BindingInfo binding;
+    std::optional<std::string> restrictType;
+    std::string ignoredError;
+    if (semantics::parseBindingInfo(param,
+                                    definition.namespacePrefix,
+                                    structNames,
+                                    importAliases,
+                                    binding,
+                                    restrictType,
+                                    ignoredError)) {
+      context.params.push_back(
+          semantics::ParameterInfo{param.name, binding, nullptr});
+    }
+  }
+
+  context.callables = candidateFacts.callables;
+  context.structFields = candidateFacts.structFields;
+  context.structTraits = candidateFacts.structTraits;
 
   return context;
 }
@@ -7468,14 +7502,17 @@ bool rewriteCompileTimeIfBranches(Program &program,
     }
   }
 
+  const CompileTimeIfCandidateFacts candidateFacts =
+      buildCompileTimeIfCandidateFacts(program, structNames, importAliases);
+
   std::vector<Definition> generatedDefinitions;
   for (Definition &definition : program.definitions) {
     semantics::RequirementPredicateDefinitionContext context =
-        makeCompileTimeIfRequirementContext(program,
-                                            definition,
+        makeCompileTimeIfRequirementContext(definition,
                                             structNames,
                                             sumNames,
-                                            importAliases);
+                                            importAliases,
+                                            candidateFacts);
     if (!rewriteCompileTimeIfStatements(
             definition.statements,
             context,

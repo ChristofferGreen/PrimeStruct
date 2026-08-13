@@ -26557,3 +26557,212 @@ real answer.
     contention than the box the baseline was measured on).
   - finished_at: 2026-08-13
   - status: done
+
+- [x] TODO-5231: Characterize parseBindingInfo call-volume redundancy across the fixed-point inference loop
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-bindinginfo-redundancy
+  - depends_on: TODO-5230
+  - scope: TODO-5230 memoized the pure string-parsing helpers
+    `parseBindingInfo` calls internally and got a real but small win
+    (~5.8% retired-instruction reduction, no measurable wall-clock
+    change) - it explicitly stopped short of the larger question: WHY is
+    `parseBindingInfo` itself invoked millions of times for a 361-line
+    stdlib file plus a 5-line program in the first place? TODO-5230's
+    resolution_summary names two suspects: (1) ~50 distinct
+    `parseBindingInfo` call sites across `src/semantics/` validator
+    passes, each potentially re-deriving `BindingInfo` for the same AST
+    node independently within one pass, and (2) at least one whole-program
+    fixed-point loop -
+    `inferUnknownReturnKindsGraph`'s `do { ... } while (changed)` in
+    `SemanticsValidatorInferGraph.cpp` - that re-scans unresolved
+    definitions to convergence, potentially re-deriving binding info for
+    already-stable nodes on every pass instead of only re-visiting nodes
+    whose dependencies actually changed. Instrument (temporary debug
+    counters/logging, removed before landing, same method TODO-5230 used)
+    to answer: how many total `parseBindingInfo` calls does the
+    `mini_vec.prime` repro from `docs/TestRuntimeOptimization.md` trigger,
+    how many are for the same `(Expr*, params/locals context)` within one
+    validator pass, how many passes does the fixed-point loop actually
+    run before converging, and does per-pass redundant-node revisitation
+    account for the bulk of the volume or do the ~50 call sites each
+    contribute independently even within a single pass. This is a
+    measurement-only leaf, matching TODO-4708's precedent.
+  - implementation_notes: `src/semantics/SemanticsValidatorInferGraph.cpp`
+    for the fixed-point loop; grep `parseBindingInfo(` across
+    `src/semantics/` for the ~50 call sites. Consider counting by call
+    site (file:line) as well as by unique `(Expr*, context)` pair, since
+    the fix shape in TODO-5232 depends on which pattern actually
+    dominates.
+  - acceptance:
+    - A recorded call-count breakdown (total calls, unique
+      `Expr`/context pairs, fixed-point pass count, per-call-site
+      contribution) for the `mini_vec.prime` repro is added to
+      `docs/TestRuntimeOptimization.md`.
+    - A clear conclusion on which redundancy pattern dominates (worklist-
+      shaped fixed-point re-visitation vs. cross-call-site duplication
+      within one pass vs. both), to directly inform TODO-5232's approach.
+  - stop_rule: Stop once the measurement and conclusion are recorded; do
+    not implement the fix in this leaf - that is TODO-5232.
+  - resolution_summary (2026-08-13): Instrumented `parseBindingInfo`
+    (`src/semantics/SemanticsHelpersCore.cpp`, temporary mutex-protected
+    counters since concurrent `std::async` validator workers exist) to
+    record total calls, unique `Expr*` pointers, unique `Expr*`+context
+    fingerprints, and per-call-site attribution via
+    `__builtin_return_address(0)` resolved with `dladdr`/`addr2line`
+    against a `-rdynamic -g1` instrumented build; added a separate pass
+    counter to `inferUnknownReturnKindsGraph`'s fixed-point loop. All
+    instrumentation removed before landing (see TODO-5232's commit). For
+    the `mini_vec.prime` repro: **`inferUnknownReturnKindsGraph` runs only
+    4 fixed-point passes** - not the dominant cost, ruling out the
+    worklist-shaped-revisitation hypothesis as the primary driver.
+    **`parseBindingInfo` is called 804,142 times but touches only 3,211
+    unique `Expr*` pointers** (9,596 unique `Expr*`+context
+    fingerprints) - each `Expr*` re-parsed ~250 times on average.
+    Call-site attribution found **two call sites account for 744,672 of
+    the 804,142 calls (92.6%)**, both inside
+    `makeCompileTimeIfRequirementContext` in `SemanticsValidate.cpp`.
+    Reading the function found the root cause: `rewriteCompileTimeIfBranches`
+    loops over every `Definition` in `program.definitions` and, for each
+    one, calls `makeCompileTimeIfRequirementContext`, which itself loops
+    over all of `program.definitions` again to build requirement-predicate
+    facts (`callables`/`structFields`/`structTraits`), re-deriving
+    `BindingInfo` for every parameter and struct field of every candidate
+    definition from scratch on every one of the N outer iterations - an
+    **O(N^2) redundant-recomputation bug** inside a single function, not
+    diffuse ~50-call-site duplication and not a fixed-point-loop problem.
+    Conclusion for TODO-5232: fix the O(N^2) loop nesting (hoist the
+    candidate-facts computation out of the per-definition loop); the
+    fixed-point loop needs no change, and a general `Expr*`-keyed cache
+    across all ~50 call sites is unnecessary (and carries the correctness
+    risk TODO-5230 already flagged) given one nesting bug explains 92.6%
+    of the call volume. Full breakdown recorded in
+    `docs/TestRuntimeOptimization.md`'s matching 2026-08-13 log entry.
+  - finished_at: 2026-08-13
+  - status: done
+
+- [x] TODO-5232 (RESOLVED to documented limit): Fix parseBindingInfo call-volume redundancy to bring collection-type compiles under 100ms
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-bindinginfo-redundancy
+  - depends_on: TODO-5231
+  - scope: Using TODO-5231's measured redundancy shape, implement the
+    appropriate fix: if the fixed-point loop in
+    `inferUnknownReturnKindsGraph` (or a similar loop elsewhere) is
+    re-visiting already-converged nodes every pass, restructure it into a
+    worklist algorithm that only re-processes a node when something it
+    depends on actually changed. If cross-call-site duplication within a
+    single pass dominates instead, cache `BindingInfo` per
+    `(Expr*, context fingerprint)` for the lifetime of one validator pass,
+    with a cache key/invalidation scheme that is provably correct given
+    `params`/`locals` are passed by mutable reference (not just "usually
+    right" - get this reviewed against real counter-examples the way
+    TODO-5230's own investigation caught the exit-code-2/3 false-positive
+    pattern in TODO-4709). Both patterns may be present and both may need
+    fixing.
+  - implementation_notes: this is real algorithm/data-flow work, not a
+    drop-in memoization - budget for it accordingly. Reference target:
+    `docs/TestRuntimeOptimization.md`'s reasoned estimate that a
+    well-optimized compile of the `mini_vec.prime` repro (361 lines of
+    reachable stdlib source, a few dozen reachable definitions) should
+    cost roughly the no-import baseline (~14-60ms) plus a modest,
+    ~linear-in-source-size increment - i.e. comfortably under 100ms, not
+    a hard requirement to hit exactly but the order of magnitude to aim
+    for. Verify the win generalizes beyond the minimal repro by also
+    timing at least one heavier real `compile_run` collection test
+    (e.g. one of the `vm_collections_collections_newly_exposed_*` shards
+    from the cost-tail analysis in TODO-4804's neighborhood work).
+  - acceptance:
+    - The `mini_vec.prime` repro's `--emit=vm` compile time drops from
+      ~2.0-2.2s to a documented, substantially-under-1s result (target:
+      under 100ms; document whatever is actually achieved if the target
+      isn't fully met, per this session's "measure, then decide"
+      precedent - do not force a number).
+    - At least one heavier real collection-using `compile_run` test's
+      wall-clock time is measured before/after to confirm the fix
+      generalizes beyond the minimal repro.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+    - Full suite wall-clock time before/after is recorded in
+      `docs/TestRuntimeOptimization.md`.
+  - stop_rule: Do not ship a fix whose correctness relies on "the cache
+    key is probably unique enough" without a concrete argument or test
+    demonstrating it - a wrong-answer bug from a bad cache key would be
+    far worse than the current slowness. If the fully-general fix proves
+    too risky within budget, a narrower but *provably correct* partial
+    fix (e.g. worklist-only, leaving cross-call-site caching for a further
+    follow-up) is an acceptable, honestly-documented stopping point -
+    same discipline as TODO-5230's own stop point.
+  - resolution_summary (2026-08-13): Split
+    `makeCompileTimeIfRequirementContext` (`src/semantics/
+    SemanticsValidate.cpp`) into a new `buildCompileTimeIfCandidateFacts`
+    (the expensive per-candidate loop over `program.definitions`,
+    extracted verbatim, computing `callables`/`structFields`/
+    `structTraits`) and a lean per-definition context builder that copies
+    the precomputed facts and adds only the current definition's own
+    `params`/`definitionPath`/`namespacePrefix`/`templateArgs`.
+    `rewriteCompileTimeIfBranches` now calls
+    `buildCompileTimeIfCandidateFacts` exactly once, before its
+    per-definition loop, instead of once per definition - eliminating the
+    O(N^2) nesting TODO-5231 found. **Correctness argument** (required
+    per this TODO's stop_rule): the candidate-facts loop's only external
+    mutable input is `structNames`, which does grow during the
+    per-definition loop (ct_if branch resolution inserts freshly-generated,
+    definition-nested struct paths). Read every insertion site: every path
+    added mid-loop is a synthesized nested path
+    (`definitionPath + "/" + generatedName`, `isNested = true`), and
+    generated definitions are merged into `program.definitions` itself
+    only *after* the entire per-definition loop finishes. Since the
+    candidate-facts loop iterates only over `program.definitions`, and the
+    only place `structNames` growth could matter to that loop is the
+    membership test `structNames.count(candidate.fullPath)` for
+    `candidate` drawn from `program.definitions`, and no such `candidate`
+    can ever have a `fullPath` equal to a path inserted mid-loop (mid-loop
+    insertions were never members of `program.definitions`, and the loop
+    already rejects true duplicate paths via its own "duplicate
+    branch-local generated struct path" error before insertion) - the
+    candidate-facts loop's output is provably identical whether computed
+    once before the per-definition loop or freshly inside every iteration.
+    This was verified by reading every mutation site of the set the hoist
+    depends on, not assumed.
+    **Measured result**: `mini_vec.prime` repro - `parseBindingInfo` calls
+    dropped 804,142 -> 60,972 (**-92.4%**, ~13.2x fewer calls); wall-clock
+    (release build, `--emit=vm`, same machine) dropped from ~2.06-2.12s to
+    ~1.26-1.28s (**~40% faster**); `valgrind --tool=callgrind` total
+    retired instructions dropped from 13,641,584,142 (TODO-5230's
+    baseline measurement) to 7,896,698,452 (**-42.1%**). A heavier repro
+    modeled on `tests/unit/compile_run/
+    test_compile_run_vector_conformance_sources.h`'s
+    `makeVectorHelperSurfaceConformanceSource` pattern, importing the
+    whole `/std/collections/*` module, went from ~2.39-2.44s to
+    ~1.60-1.70s (**~31% faster**), confirming the fix generalizes beyond
+    the minimal repro.
+    **Falls short of the <100ms target.** A fresh `callgrind_annotate`
+    after the fix shows the profile is now dominated by costs unrelated
+    to `parseBindingInfo`/requirement-predicate context building: libc
+    malloc/free/malloc_consolidate collectively ~26% of retired
+    instructions, and parse-stage whole-file text scanning
+    (`envelope_internal::findNextEnvelopeStart`,
+    `envelope_internal::parseNamespaceBlock`,
+    `findMatchingCloseWithComments`) collectively ~13% - both tied to the
+    already-documented whole-file text-splicing import architecture
+    (`appendStdlibModuleSources` splices entire `.prime` files as text
+    before a single parse+validate pass) that
+    `docs/TestRuntimeOptimization.md`'s 2026-08-10 log entry already
+    scoped as a separate, larger architectural fix
+    (`docs/LibrarySymbolManifestLazyImports.md`, TODO-5223 through
+    TODO-5226 - lazy, iterative import expansion). That work is out of
+    scope here; this leaf specifically targeted the
+    `parseBindingInfo`/requirement-predicate-context redundancy TODO-5230
+    identified and TODO-5231 characterized, and that redundancy is now
+    fixed to this leaf's stop_rule (a provably-correct hoist of the one
+    nested-loop bug responsible for 92.6% of TODO-5231's measured call
+    volume), with the remainder honestly attributed to the
+    separately-tracked import architecture rather than forced further.
+    Verified via `./scripts/compile.sh --release` (single invocation,
+    this repo's convention): **1881/1881 tests passing, 0 regressions**.
+  - finished_at: 2026-08-13
+  - status: done
+

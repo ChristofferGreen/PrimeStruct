@@ -721,3 +721,132 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   1881/1881 passing, wall-clock 1971.99s (within the documented
   ~1165-1340s baseline range given this session's heavier machine
   load/oversubscription contention on a 4-core sandbox).
+- 2026-08-13 (TODO-5231, characterization): Instrumented `parseBindingInfo`
+  (`src/semantics/SemanticsHelpersCore.cpp`) with a temporary
+  `thread_local`-free debug counter (mutex-protected, since large
+  definition sets validate via concurrent `std::async` workers) recording
+  total call count, unique `Expr*` pointers touched, unique
+  `(Expr*, namespacePrefix, structTypes.size(), importAliases.size(),
+  additionalNominalTypes.size(), compileTimeTypeLocals.size())` context
+  fingerprints, and `__builtin_return_address(0)` per call site (resolved
+  via `dladdr`/`addr2line` against a `-rdynamic -g1` instrumented build),
+  plus a separate counter in `inferUnknownReturnKindsGraph`'s
+  `do { ... } while (changed)` loop (`SemanticsValidatorInferGraph.cpp`)
+  counting fixed-point passes. Removed before landing (see TODO-5232's
+  commit for the only surviving code change). For the `mini_vec.prime`
+  repro (`import /std/collections/vector/*` + one `count(v)` call,
+  reconstructed per this doc's 2026-08-13 entry above since the earlier
+  session didn't check the repro file itself into the repo):
+  **`inferUnknownReturnKindsGraph` runs only 4 fixed-point passes total**
+  for this repro - nowhere near "millions" and not the dominant cost.
+  **`parseBindingInfo` is called 804,142 times, touching only 3,211
+  unique `Expr*` pointers (9,596 unique `Expr*`+context fingerprints)** -
+  i.e. the average `Expr*` is re-parsed ~250 times. Call-site attribution
+  (by caller return address) showed **two call sites alone account for
+  744,672 of the 804,142 calls (92.6%)**: both inside
+  `makeCompileTimeIfRequirementContext` in `SemanticsValidate.cpp`
+  (`src/semantics/SemanticsValidate.cpp`, formerly lines 6882 and 6919).
+  Reading the surrounding function found the root cause:
+  `rewriteCompileTimeIfBranches` loops over every `Definition` in
+  `program.definitions` (`N` definitions - stdlib pulls in ~50-100 for
+  this repro) and, for **each one**, calls
+  `makeCompileTimeIfRequirementContext(program, definition, ...)`, which
+  **itself loops over all of `program.definitions` again** (`for (const
+  Definition &candidate : program.definitions)`) to build `callables`/
+  `structFields`/`structTraits` requirement-predicate facts - re-deriving
+  `BindingInfo` for every parameter and struct-binding field of every
+  candidate definition, from scratch, on every one of the `N` outer
+  iterations. This is an **O(N^2) redundant-recomputation bug**, not a
+  worklist-shaped fixed-point-loop problem and not diffuse ~50-call-site
+  duplication - a single nested-loop structure inside one function
+  accounts for the overwhelming majority of call volume. Conclusion for
+  TODO-5232: fix the O(N^2) loop nesting (hoist the candidate-facts
+  computation out of the per-definition loop), not the fixed-point loop
+  (already cheap) and not a general `Expr*`-keyed cache across all ~50
+  call sites (unnecessary given one nesting bug explains 92.6% of calls,
+  and would carry the correctness risk TODO-5230 flagged without needing
+  to be taken on).
+- 2026-08-13 (TODO-5232, fix): Split
+  `makeCompileTimeIfRequirementContext` into a new
+  `buildCompileTimeIfCandidateFacts(program, structNames, importAliases)`
+  (the expensive per-candidate loop, extracted verbatim) and a lean
+  per-definition context builder that copies the precomputed facts and
+  adds only the current definition's own `params`/`definitionPath`/
+  `namespacePrefix`/`templateArgs`. `rewriteCompileTimeIfBranches` now
+  calls `buildCompileTimeIfCandidateFacts` exactly once, before its
+  per-definition loop, instead of once per definition.
+  **Correctness argument** (required before shipping, per TODO-5232's
+  stop_rule): the candidate-facts loop's only external mutable input is
+  `structNames`, which *does* grow during the per-definition loop (ct_if
+  branch resolution inserts freshly-generated, definition-nested struct
+  paths via `structNames.insert(generated.fullPath)` in the branch-
+  selection helper). This looked at first like it could make hoisting
+  unsafe - a later definition's candidate facts might need to see structs
+  generated while processing an earlier definition. Read every insertion
+  site: every path added to `structNames` during the loop is a freshly
+  synthesized *nested* path (`definitionPath + "/" + generatedName`,
+  marked `isNested = true`), and generated definitions are only merged
+  into `program.definitions` itself *after* the entire per-definition
+  loop finishes (`program.definitions.insert(...)` runs once, at the very
+  end of `rewriteCompileTimeIfBranches`). Since the candidate-facts loop
+  iterates only over `program.definitions` and the sole place growth of
+  `structNames` matters to that loop is the membership test
+  `structNames.count(candidate.fullPath)` for `candidate` drawn from
+  `program.definitions`, and no candidate's `fullPath` can ever equal a
+  path inserted mid-loop (mid-loop insertions are synthesized nested paths
+  that were never members of `program.definitions` to begin with, and the
+  loop itself already rejects true duplicates via the `duplicate
+  branch-local generated struct path` error before insertion) - the
+  candidate-facts loop's output is **provably identical** regardless of
+  whether it runs once before the per-definition loop or freshly inside
+  every iteration. This is not "probably fine": every mutation site of the
+  set this hoist depends on was read and traced to confirm it cannot alter
+  the specific membership queries the hoisted computation performs.
+  **Measured result**: `mini_vec.prime` repro - `parseBindingInfo` calls
+  dropped 804,142 -> 60,972 (**-92.4%**, ~13.2x fewer calls); wall-clock
+  (release build, `--emit=vm`, same machine, byte-identical binary
+  before/after aside from this change) dropped from ~2.06-2.12s to
+  ~1.26-1.28s (**~40% faster**); `valgrind --tool=callgrind` total
+  retired instructions dropped from 13,641,584,142 (TODO-5230's baseline
+  measurement, same repro, same machine class) to 7,896,698,452
+  (**-42.1%**). A heavier, more realistic repro modeled on
+  `tests/unit/compile_run/test_compile_run_vector_conformance_sources.h`'s
+  `makeVectorHelperSurfaceConformanceSource` pattern but importing the
+  whole `/std/collections/*` module (not just `vector`) went from
+  ~2.39-2.44s to ~1.60-1.70s (**~31% faster**), confirming the fix
+  generalizes beyond the minimal repro rather than being an artifact of
+  its specific shape.
+  **Falls short of the <100ms target.** A fresh `callgrind_annotate` after
+  the fix shows the profile is now dominated by costs unrelated to
+  `parseBindingInfo`/requirement-predicate context building: libc
+  malloc/free/malloc_consolidate collectively ~26% of retired
+  instructions, and parse-stage whole-file text scanning
+  (`envelope_internal::findNextEnvelopeStart`,
+  `envelope_internal::parseNamespaceBlock`,
+  `findMatchingCloseWithComments`) collectively ~13% - both tied to the
+  already-documented whole-file text-splicing import architecture
+  (`appendStdlibModuleSources` splices entire `.prime` files as text
+  before a single parse+validate pass, so the whole stdlib gets
+  parsed/scanned regardless of how much of it is actually used) that the
+  2026-08-10 log entry above already scoped as a separate, larger
+  architectural fix (`docs/LibrarySymbolManifestLazyImports.md`,
+  TODO-5223 through TODO-5226 - lazy, iterative import expansion). That
+  work is out of scope for TODO-5232, which targeted specifically the
+  `parseBindingInfo`/requirement-predicate-context redundancy TODO-5230
+  identified and TODO-5231 characterized - and that specific redundancy
+  is now fixed to the extent this leaf's stop_rule calls for (a
+  provably-correct hoist of the one nested-loop bug that accounted for
+  92.6% of the call volume TODO-5231 measured), with the remainder
+  honestly attributed to the separately-tracked import architecture
+  rather than forced further within this leaf.
+  Verified via `./scripts/compile.sh --release` (single invocation, this
+  repo's convention): **1881/1881 tests passing, 0 regressions**,
+  full-suite wall-clock 1102.55s (within the documented baseline range
+  given normal machine-load variance on this session's 4-core sandbox).
+  A mid-session run surfaced one transient failure
+  (`...native_window_launcher_and_preflight_56_56`, a docs-content-lock
+  test) caused by TODO-5231/5232 themselves being listed in `### Ready
+  Now` in `docs/todo.md` before this entry moved them to
+  `docs/todo_finished.md` - not a code regression; it passed again once
+  `docs/todo.md` was updated to its final state below, and the clean
+  1881/1881 run above was taken after that update.
