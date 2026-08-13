@@ -76,7 +76,15 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
-- TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets | track: compiler-arena-allocator | surface: src/semantics magic statics, src/CompileArena.cpp override boundary
+- TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena | track: compiler-allocator-swap | surface: CMakeLists.txt, primec/primevm link config
+- TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling | track: compiler-allocation-volume | surface: src/semantics, src/ir_lowerer, src/parser
+
+Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
+of TODO-5237/5238 - its own investigation trended away from convergence
+(each fix round found a new corruption class rather than closing out the
+known set), so the lower-risk allocator-swap and direct-redundancy-mining
+lines are being tried first. TODO-5235's task block remains open below for
+whoever picks it back up.
 
 ### Immediate Next 10
 
@@ -331,6 +339,8 @@ This file is the live open-work queue for PrimeStruct.
 50. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 51a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
+51b. TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
+51c. TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
@@ -1829,6 +1839,120 @@ This file is the live open-work queue for PrimeStruct.
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
+
+- [ ] TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-allocator-swap
+  - depends_on: (none)
+  - scope: TODO-5233/5234's `valgrind --tool=dhat` profiling found
+    malloc/free-family functions at roughly a quarter to a third of
+    retired instructions for a tiny compile. TODO-5234 addressed this
+    with a custom bump/free-list arena, but the more ambitious
+    reset-per-compile-scope version of that design proved unsafe
+    (TODO-5235: an open-ended class of function-local "magic static"
+    memory-corruption hazards, three rounds of fixes each finding a new,
+    previously-unknown corruption site in a different part of the
+    codebase, trending away from convergence rather than toward it) and
+    was reverted, leaving only the safe-but-limited CLI-process-lifetime
+    variant shipped. This leaf asks a different question first: how much
+    of that malloc/free cost is actually "the system allocator (glibc
+    ptmalloc) is comparatively slow for this workload" rather than
+    "individual allocations need arena/reset semantics to be cheap"? A
+    drop-in swap to a fast general-purpose allocator (mimalloc or
+    jemalloc) still honors real `free()` calls - nothing is reset out
+    from under a live object, so the entire magic-static hazard class
+    TODO-5235 hit is structurally impossible with this approach - it just
+    makes the existing malloc/free pattern cheaper via better small-object
+    paths, thread-local caching, and reduced fragmentation. Link `primec`/
+    `primevm` (and, if safe/beneficial, the test binaries too - unlike the
+    arena, there is no long-lived-process hazard here since real frees
+    still happen) against mimalloc (or jemalloc) via CMake, either as a
+    static link or `LD_PRELOAD`-style override, and measure the
+    before/after difference on the standard repros used throughout this
+    investigation chain.
+  - implementation_notes: mimalloc is usually the simpler integration
+    (single-header-friendly, permissive license, widely used) - check
+    what's available/vendorable in this environment before assuming
+    network access to fetch a new dependency; if neither mimalloc nor
+    jemalloc can be added cleanly (e.g. no internet access for
+    FetchContent, no system package), document that constraint and stop
+    rather than force a fragile vendoring hack. This is intentionally
+    scoped as evaluate-and-measure, not "ship unconditionally" - if the
+    win is negligible, that is itself a useful, documented answer (the
+    same "measure, then decide" precedent used throughout this chain).
+  - acceptance:
+    - `mini_vec.prime` and the heavier real collection test repros (same
+      ones used in TODO-5230 through TODO-5236) are re-timed with the
+      alternate allocator linked in, compared against both the current
+      shipped-arena baseline and a no-arena/system-allocator baseline, so
+      the three-way comparison (system malloc vs. custom arena vs.
+      fast general allocator) is clear.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      the alternate allocator linked in, with zero regressions.
+    - A clear recommendation is recorded in
+      `docs/TestRuntimeOptimization.md`/`docs/CompilerArenaAllocator.md`:
+      keep the custom arena, replace it with the fast allocator, use both
+      together (fast allocator as the arena's underlying chunk source,
+      if that composes cleanly), or neither, with the reasoning and
+      numbers behind the recommendation.
+  - stop_rule: This is evaluation, not a mandate to ship a new dependency
+    - if the environment can't cleanly vendor/link one, or the measured
+      win doesn't justify a new build dependency, document that and stop.
+      Do not remove or destabilize the TODO-5234 arena (which is already
+      shipped, safe, and measured) while doing this evaluation - it can
+      be replaced later in a follow-up if this leaf recommends it, but
+      this leaf itself should not leave the tree in a broken or
+      regressed state either way.
+
+- [ ] TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-allocation-volume
+  - depends_on: (none)
+  - scope: TODO-5232 and TODO-5236 each independently found and fixed a
+    genuine algorithmic redundancy (O(N^2) re-scanning in
+    `makeCompileTimeIfRequirementContext`; `RequirementPredicateDefinitionContext`
+    passed by value through a recursive per-node AST walk) using
+    `valgrind --tool=dhat`/`callgrind` profiling of the standard
+    `mini_vec.prime` repro - both with zero allocator-level risk, unlike
+    the arena-reset line of work (TODO-5235). This leaf continues that
+    same direct approach: re-profile the repro (and the heavier real
+    collection test) with `dhat` now that TODO-5236's fix has landed,
+    identify the next-largest remaining allocation-count contributor(s),
+    and fix the actual redundancy the same way - not a cache/memoization
+    band-aid unless the object's inputs are provably stable/pure across
+    the calls being deduplicated (same bar TODO-5230/5232/5236 held
+    themselves to). Repeat for as many rounds as remain productive within
+    a reasonable session budget; this is exploratory/open-ended by nature
+    (unlike TODO-5237, which has a bounded scope), so use judgment on
+    when diminishing returns make further rounds not worth it, and
+    document that judgment rather than stopping silently.
+  - implementation_notes: Look for the same two shapes that already paid
+    off: (a) an object passed by value into a recursive/loop context where
+    it's mostly read-only, (b) a program-wide fact-gathering pass
+    re-triggered redundantly inside a per-definition or per-node loop
+    instead of computed once. `src/semantics/` is where all three prior
+    fixes in this chain landed; check whether similar patterns exist in
+    `src/ir_lowerer/` or `src/parser/` too, since dhat will show if
+    allocation hot spots have moved there once the semantics-layer
+    redundancy is squeezed down.
+  - acceptance:
+    - At least one more genuine redundant-allocation/redundant-work
+      pattern identified and fixed (or a documented finding that none
+      remain above the noise floor, if that's what the profiling shows).
+    - Before/after allocation-count and wall-clock measurements for both
+      standard repros, recorded in `docs/TestRuntimeOptimization.md`.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions after each individual fix.
+  - stop_rule: Same correctness bar as every leaf in this chain - no
+    caching without a provable purity argument, no speculative
+    "probably fine" fixes. If dhat profiling shows the remaining
+    allocation volume is legitimately necessary (each allocation
+    corresponds to genuinely distinct, non-redundant work), stop and
+    document that finding rather than manufacturing a fix.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai
