@@ -76,6 +76,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
+- TODO-5243: Investigate soa_paths overhead in a compile that never uses SoA | track: compiler-soa-path-overhead | surface: src/semantics soa_paths call sites
+- TODO-5244: Replace runtime string-concatenation path matching with precomputed comparisons | track: compiler-path-string-churn | surface: resolveCalleePath, stdlibSurfaceMatchesSpelling, soa_paths
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
 of TODO-5237/5238 - its own investigation trended away from convergence
@@ -346,8 +348,8 @@ import-cost characterization and fix) have also since resolved - see
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 51a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
 51b. TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
-51c. TODO-5241: Characterize the whole-file text-splicing import architecture's contribution to compile cost
-51d. TODO-5242: Fix whole-file splicing inefficiency found by TODO-5241
+51c. TODO-5243: Investigate soa_paths overhead in a compile that never uses SoA
+51d. TODO-5244: Replace runtime string-concatenation path matching with precomputed comparisons
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
@@ -1846,6 +1848,107 @@ import-cost characterization and fix) have also since resolved - see
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
+
+- [ ] TODO-5243: Investigate soa_paths overhead in a compile that never uses SoA
+  - owner: ai
+  - created_at: 2026-08-14
+  - phase: Test runtime optimization
+  - parallel_track: compiler-soa-path-overhead
+  - depends_on: (none)
+  - scope: Fresh `valgrind --tool=callgrind` profiling of the standard
+    `mini_vec.prime` repro (imports `/std/collections/vector/*` only,
+    never touches SoA/`SoaVector`) AFTER TODO-5242's fix - repro now at
+    847,206,768 total retired instructions, ~120-134ms wall-clock, vs. a
+    ~5-6ms no-import baseline - shows `primec::soa_paths::*` functions
+    consuming roughly 11% combined:
+    `primec::soa_paths::collectionPath` (6.89%),
+    `primec::soa_paths::canonicalizeLegacySoaRefHelperPath` (1.26%),
+    `primec::soa_paths::legacySoaFolder` (1.14%),
+    `primec::soa_paths::isLegacyOrCanonicalSoaHelperPath` (0.92%),
+    `primec::semantics::isCanonicalStdlibSoaHelperPath` (0.91%). This is
+    suspicious on its face: a program that never imports or references
+    SoA should not be paying meaningful cost for SoA-specific path
+    classification. Likely shape (matches this chain's repeated pattern):
+    a generic "is this call/symbol a vector/map/soa helper path" dispatch
+    that unconditionally checks all known collection kinds for every
+    candidate call/symbol, rather than narrowing to only the kinds
+    actually imported/reachable in the current compile. Find the call
+    site(s) that invoke these `soa_paths` functions for a program with no
+    SoA usage (grep for `soa_paths::collectionPath`/`isCanonicalStdlibSoaHelperPath`
+    call sites, likely in `src/semantics/` method/call resolution code)
+    and determine whether the check can be skipped entirely when no SoA
+    import is present, or made cheaper (e.g. comparing against a
+    precomputed set/prefix instead of building/canonicalizing path
+    strings per call).
+  - implementation_notes: Read `docs/CollectionDecoupling.md` if it
+    exists/is relevant - this repo has an active initiative
+    (TODO-4656 and neighbors) to move collection-specific knowledge out of
+    hardcoded C++ classifiers into stdlib declarations, which may already
+    be tracking a related structural issue. Don't duplicate that
+    initiative's scope; this leaf is specifically about the redundant-work
+    angle (running SoA classification when nothing SoA-related is in
+    play), not the broader decoupling architecture.
+  - acceptance:
+    - A clear explanation of why SoA path-classification functions run
+      for a compile with zero SoA usage, recorded in
+      `docs/TestRuntimeOptimization.md`.
+    - Either a fix that eliminates the unnecessary work (with before/after
+      instruction-count and wall-clock measurements) or, if the check
+      turns out to be genuinely necessary for correctness reasons not
+      obvious from the profile alone, a documented explanation of why -
+      per this chain's "measure, then decide" precedent.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions if a fix is shipped.
+  - stop_rule: Same correctness discipline as every leaf in this chain -
+    no speculative "probably safe to skip" shortcuts around SoA
+    classification without verifying it doesn't silently change dispatch
+    for programs that DO use SoA (re-run the SoA-specific test files,
+    not just the full generic suite, as an extra check given this
+    touches method/path classification logic).
+
+- [ ] TODO-5244: Replace runtime string-concatenation path matching with precomputed comparisons
+  - owner: ai
+  - created_at: 2026-08-14
+  - phase: Test runtime optimization
+  - parallel_track: compiler-path-string-churn
+  - depends_on: (none)
+  - scope: The same post-TODO-5242 profile of `mini_vec.prime` shows
+    generic string/allocation churn still dominating overall cost:
+    `operator new` (8.21%), `std::string::append` (8.11%),
+    `memcpy` (7.54%), `memcmp` (4.00%), `strlen` (3.42%),
+    `std::_Hash_bytes` (3.39%), `std::string::operator+` (2.92%),
+    `operator delete` (2.82%) - roughly 30%+ combined, consistent with
+    call/symbol-resolution code building candidate path strings at
+    runtime (e.g. `somePrefix + methodName` style concatenation) for
+    comparison against known stdlib surface paths, rather than comparing
+    against precomputed literals/`string_view`s without allocating. Find
+    the hot call sites building these strings (start from
+    `resolveCalleePath`, `stdlibSurfaceMatchesSpelling`,
+    `resolveStdlibSurfaceMemberName`, and the `soa_paths::*` functions
+    named in TODO-5243, all visible in the same profile at 1-8% each) and
+    determine whether the concatenation-then-compare pattern can become a
+    direct comparison (e.g. compare `methodName` against a suffix after a
+    known prefix via `string_view` slicing, or a `std::string_view`-keyed
+    lookup table built once) instead of allocating a new string per
+    candidate check.
+  - implementation_notes: This may overlap with what TODO-5243 finds
+    (both point at the same call/symbol-resolution hot path from
+    different angles - path CLASSIFICATION cost vs. path CONSTRUCTION
+    cost) - coordinate/sequence with that leaf rather than duplicating
+    investigation, and note in this leaf's resolution whether the fixes
+    ended up being the same change.
+  - acceptance:
+    - At least one concrete site where string concatenation is replaced
+      by a non-allocating comparison, with before/after instruction-count
+      measurements showing the relevant string/malloc functions' share
+      dropping.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+  - stop_rule: No caching without a provable purity argument (same bar as
+    the rest of this chain). If the concatenation is already effectively
+    unavoidable given how the surface-matching data is structured (e.g.
+    genuinely dynamic prefixes that can't be precomputed), document that
+    and stop rather than force a fix.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai
