@@ -96,6 +96,11 @@ sibling instances of that same pattern) have also since resolved - see
 `docs/todo_finished.md`. TODO-5245 (the stdlib surface registry's
 `matchesAny()`/`findStdlibSurfaceMetadataBySpelling()` O(N) lookup
 structure) has also since resolved - see `docs/todo_finished.md`.
+TODO-5246 (a redundant `SemanticProductIndex` by-value lambda-capture
+copy found via fresh post-TODO-5245 profiling, plus a second-round
+diffuse-cost check) has also since resolved and closes out this
+investigation chain's actively-productive leaves - see
+`docs/todo_finished.md`.
 
 ### Immediate Next 10
 
@@ -1851,49 +1856,6 @@ structure) has also since resolved - see `docs/todo_finished.md`.
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
-
-- [ ] TODO-5246: Continue profiling remaining allocation/hash/memcmp churn after TODO-5245
-  - owner: ai
-  - created_at: 2026-08-14
-  - phase: Test runtime optimization
-  - parallel_track: compiler-allocation-volume
-  - depends_on: TODO-5245
-  - scope: After TODO-5245's fix (or its documented non-fix, if the
-    registry turns out too small to matter), re-profile `mini_vec.prime`
-    fresh and continue this chain's established pattern: find the
-    now-dominant hot spot(s), determine if they represent genuine
-    redundant/avoidable work or legitimately-necessary per-call cost, and
-    fix or document accordingly. TODO-5244's profile named `operator new`
-    (9.82%) as the single largest remaining named entry post-TODO-5243 -
-    that's plausibly irreducible per-call allocation rather than a bug,
-    but verify rather than assume (e.g. check whether any of those
-    allocations are for objects that could be stack-allocated, reused
-    across calls via a pool, or avoided entirely via a different data
-    representation, versus genuinely one-per-distinct-object allocation
-    that has no redundancy to remove).
-  - implementation_notes: This is intentionally open-ended, matching
-    TODO-5238's precedent - use judgment on diminishing returns. This
-    chain (TODO-5230 through TODO-5245) has already delivered a ~96%+
-    cumulative instruction-count reduction and ~20-25x wall-clock
-    speedup on the standard repro; each additional leaf's realistic
-    ceiling shrinks as the easy/structural wins get exhausted. It's fine
-    for this leaf to conclude "remaining cost is legitimate, no further
-    productive fix found" - that is a valid, honest outcome, not a
-    failure, and would be a reasonable point to close out this
-    investigation chain's active leaves (while leaving the door open for
-    a future session with a different angle, e.g. profiling under a
-    different repro shape than the standard minimal one used throughout).
-  - acceptance:
-    - Either at least one more genuine redundant-work fix (with
-      before/after measurements), or a clear, honest documented
-      conclusion that remaining cost is legitimate/necessary and further
-      leaves in this exact vein are not expected to be productive.
-    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
-      zero regressions if a fix is shipped.
-  - stop_rule: Same correctness discipline as every leaf in this chain -
-    no speculative fixes, no caching without a provable purity argument.
-    If this leaf concludes the chain has hit its practical floor, say so
-    plainly in the resolution_summary rather than manufacturing scope.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai

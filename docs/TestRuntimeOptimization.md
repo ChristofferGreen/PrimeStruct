@@ -1705,3 +1705,138 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   1881**, with particular attention paid to call/symbol-resolution
   correctness given this leaf touches a dispatch structure directly -
   no regressions, and both repros' VM exit codes matched before/after.
+- 2026-08-14 (TODO-5246): Re-profiled `mini_vec.prime` fresh after
+  TODO-5245 (`valgrind --tool=callgrind`, no prior-session numbers
+  assumed): 532,200,352 retired instructions (close to but not identical
+  to TODO-5245's own reported 545,830,081 - within expected
+  machine/build noise, same pattern every leaf in this chain has noted).
+  Confirmed `operator new` is still the single largest named entry
+  (10.05% self, 53,468,715 instructions) - per this TODO's explicit
+  instruction, used `callgrind_annotate --tree=both` caller attribution
+  instead of treating that as a dead end. Found it genuinely diffuse at
+  the top level (hundreds of distinct call sites, largest single caller
+  only ~1.1% of the 10.05%), but one caller stood out on inspection:
+  `primec::ir_lowerer::SemanticProductIndex::SemanticProductIndex(...
+  const&)` - the **copy constructor** of an 8-`unordered_map` struct
+  (`onErrorFactsByDefinitionId`, `returnFactsByDefinitionId`,
+  `localAutoFactsByExpr`, `queryFactsByExpr`, `tryFactsByExpr`,
+  `collectionSpecializationsByExpr`, `arrayExtentFactsByExpr`,
+  `bindingFactsByExpr`) - fed operator new 69,064 times from a single
+  call path, at 0.63% of total instructions just for the `new` calls
+  inside those copies (more once the map-node copy work itself is
+  counted). Traced the two call sites: (1)
+  `IrLowererBindingTypeHelpers.cpp`'s `makeBindingTypeAdapters()` built
+  the index once via `buildSemanticProductIndex()` and then captured it
+  **by value** in six separate lambdas (`bindingKind`,
+  `hasExplicitBindingTypeTransform`, `isStringBinding`,
+  `isFileErrorBinding`, `bindingValueKind`, `setReferenceArrayInfo`) -
+  six full copies of the same index every time this function runs
+  (confirmed via callgrind call counts: called 12x in this repro, so 12
+  builds + 72 by-value lambda copies of the same per-call index); (2)
+  `IrLowererCallResolution.cpp`'s `makeResolveCallPathFromScope()` built
+  a `SemanticProductTargetAdapter` (which embeds this same index) and
+  likewise captured it **by value** in its returned closure. Neither
+  copy was structurally necessary: both `SemanticProgram` (the source
+  data) and the freshly-built index in these functions already outlive
+  every lambda that uses them, and this exact "build once, share via
+  `std::shared_ptr`, capture the cheap-to-copy pointer instead of the
+  expensive-to-copy value" pattern was **already established elsewhere
+  in the same codebase** (`IrLowererStringLiteralHelpers.cpp`,
+  `IrLowererCountAccessHelpers.cpp`, `IrLowererNativeTailDispatch.cpp`,
+  `IrLowererInlineNativeCallDispatch.cpp` all already wrap
+  `SemanticProductIndex` in a `shared_ptr` before capturing it in a
+  closure) - this is category (iii) from this TODO's own framing, "a
+  temporary that's constructed and immediately copied when a move or
+  reference would do," not a cache/memoization band-aid: no new value
+  gets stored or reused across distinct calls, the same already-built
+  object just stops being needlessly duplicated within a single call.
+  **Fix**: changed both call sites to build the index/adapter once via
+  `std::make_shared<const SemanticProductIndex>(...)` /
+  `std::make_shared<const SemanticProductTargetAdapter>(...)` and
+  capture the `shared_ptr` by value in each lambda (a cheap refcount
+  bump) instead of the underlying struct, dereferencing at each use
+  site. Purely mechanical - no behavior change, no return-value changes
+  for any input. **Measured result** (release build, same machine
+  before/after via `git stash`/rebuild of just this fix against this
+  session's starting commit `3216f75`; `valgrind --tool=callgrind`,
+  `./primec --emit=vm <file> --entry /main`, no `-o` so the VM actually
+  executes): `mini_vec.prime` - **532,200,352 -> 526,748,775 retired
+  instructions (-1.02%)**; `heavy_collections.prime` (`import
+  /std/collections/*`) - **2,608,838,421 -> 2,597,859,921 (-0.42%)**.
+  Both repros' VM execution results verified identical before/after
+  (exit code 3 unchanged). Directly confirmed the targeted cost moved:
+  `SemanticProductIndex`'s copy-constructor self-cost dropped from
+  1,366,684 (0.26%) to 184,272 (0.03%) instructions in `mini_vec.prime`
+  or in the heavier repro from 2,451,416 (0.09%) to 330,528 (0.01%) -
+  an ~86.5% reduction in exactly the targeted cost in both repros, and
+  `operator new`'s own self-cost dropped from 53,468,715 (10.05%) to
+  50,562,906 (9.60%). Wall-clock (7 interleaved runs each for
+  `mini_vec.prime`, 5 for `heavy_collections.prime`): `mini_vec.prime`
+  before ~0.086-0.096s (median ~0.089s) -> after ~0.091-0.100s (median
+  ~0.093s), noise-dominated with no clear directional signal at this
+  timescale (matches this chain's repeated observation that sub-1.5%
+  instruction-count changes are smaller than this machine's run-to-run
+  noise band); `heavy_collections.prime` before ~0.370-0.381s (median
+  ~0.371s) -> after ~0.367-0.385s (median ~0.367s), a small
+  directionally-consistent improvement roughly matching the -0.42%
+  instruction-count change. **Second-round check**: re-examined the
+  post-fix `operator new` caller landscape (`--tree=both` again) and
+  confirmed it is now clearly and thoroughly diffuse - the single
+  largest remaining caller is only ~1.1% of the 9.60% total (string
+  concatenation in `resolveCalleePath`'s helper lambdas, already
+  characterized and left alone by TODO-5243/5244 as genuinely
+  per-`Expr`-dependent), with hundreds of other call sites each
+  contributing a fraction of a percent. Also examined
+  `makeBuiltinCollectionDispatchResolvers()` (13 `std::function`
+  members, itself a plausible-looking allocation-heavy construct) as a
+  second candidate: confirmed via call-count profiling it is only
+  actually invoked ~3,027 times total across its ~15 call sites in this
+  repro (not the ~42,378 total instructions its *callees* summed to, an
+  easy number to misread) - each call site serves a genuinely distinct
+  semantic-inference purpose (return-kind inference, struct-return
+  inference, collection-compatibility checks, mutation-borrow checks,
+  method-call resolution), so this is legitimately-varying per-context
+  setup work, not a duplicate recomputation of the same query; making
+  its resolvers lazy would require restructuring dispatch across ~20
+  files for a currently-small (~1-2% of total) return, out of proportion
+  for this leaf. **This leaf found and fixed one genuine, provably-safe
+  redundant-copy bug** (not a repeat of TODO-5243/5244's string-rebuild
+  pattern, and not TODO-5245's complexity-class-fix shape either - a
+  distinct third failure mode: an already-shared-elsewhere pattern that
+  simply hadn't been applied consistently at two call sites) and,
+  following through on a second round per this TODO's own instructions,
+  confirmed the remaining `operator new` cost and the
+  `makeBuiltinCollectionDispatchResolvers` construct are both
+  genuinely diffuse/necessary rather than further redundant work.
+  **Cumulative chain progress** (session start -> now, `mini_vec.prime`,
+  `valgrind --tool=callgrind` retired instructions): 13,641,584,142 ->
+  **526,748,775 (-96.1% from session start, ~25.9x faster)**;
+  wall-clock ~2.0-2.2s -> **~0.086-0.100s**, still straddling rather than
+  confidently beneath the <100ms directional target at this measurement
+  noise band, unchanged in character from TODO-5244/5245's own
+  reporting. **Recommendation: this leaf closes out the
+  TODO-5230-5246 "measure with callgrind, find redundant work, fix it"
+  investigation chain's actively-productive leaves.** The remaining
+  ~90% of instructions are spread across hundreds of distinct,
+  individually-small call sites doing genuinely different work
+  (parsing, string handling, symbol interning, semantic dispatch, VM
+  allocation) with no single or small-number-of-fixes remaining that
+  would move the needle the way the early leaves (arena allocator,
+  mimalloc, splice-fetch fix, envelope-rescan fix) did - this is the
+  "diffuse cost, no dominant hot spot" floor this chain's own log has
+  been converging on since TODO-5241. A concrete, different-shaped next
+  lead for a future session, if the <100ms target is still wanted with
+  confidence rather than as a noise-band coin flip: this repro's ~90ms
+  wall-clock floor is dominated by fixed per-process cost (dynamic
+  linking, VM init, ~5-6ms no-import floor per TODO-4710's baseline)
+  that scales with process count, not instruction count - a
+  fundamentally different repro shape (e.g. a persistent-process/batch
+  mode, or amortizing startup across many compiles in one process, akin
+  to a compiler daemon) would be the next lever, not further
+  single-process instruction-count hunting under the standard minimal
+  repro this whole chain has used. That is a larger architectural
+  change than any leaf in this chain, consistent with this TODO's own
+  framing that closing out the active leaves here is an honest, valid
+  outcome. Verified via `./scripts/compile.sh --release` (single
+  invocation, this repo's convention): **100% tests passed, 0 tests
+  failed out of 1881**.

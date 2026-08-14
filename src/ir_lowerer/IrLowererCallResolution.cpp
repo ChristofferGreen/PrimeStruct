@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
+#include <memory>
 #include <optional>
 #include <string_view>
 
@@ -780,10 +781,16 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram) {
-  const SemanticProductTargetAdapter semanticTargets =
-      buildSemanticProductTargetAdapter(semanticProgram);
+  // Share the built adapter (which owns a potentially large multi-map
+  // SemanticProductIndex) via shared_ptr rather than capturing it by value -
+  // a by-value capture here copy-constructed the full index into the
+  // closure on every call to this function. Same pattern as the shared_ptr
+  // captures already used for SemanticProductIndex elsewhere in ir_lowerer
+  // (e.g. IrLowererStringLiteralHelpers.cpp, IrLowererNativeTailDispatch.cpp).
+  const auto semanticTargets =
+      std::make_shared<const SemanticProductTargetAdapter>(buildSemanticProductTargetAdapter(semanticProgram));
   return [defMap, importAliases, semanticProgram, semanticTargets](const Expr &expr) {
-    const SemanticProductMeaningContext semanticMeaning{&semanticTargets};
+    const SemanticProductMeaningContext semanticMeaning{semanticTargets.get()};
     if (!expr.isMethodCall) {
       SemanticProductCallTarget bridgeTarget;
       if (lookupSemanticProductCallTarget(semanticMeaning,

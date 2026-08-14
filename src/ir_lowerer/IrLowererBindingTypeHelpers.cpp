@@ -10,6 +10,7 @@
 #include "primec/SoaPathHelpers.h"
 
 #include <cctype>
+#include <memory>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -1396,18 +1397,27 @@ bool exprUsesRawBuiltinSoaVectorLayout(const Expr &expr) {
 
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram) {
   BindingTypeAdapters adapters;
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  // Build the (potentially large) semantic-product index once and share it by
+  // pointer across every adapter closure below via a shared_ptr - the same
+  // pattern already used for this type in IrLowererStringLiteralHelpers.cpp,
+  // IrLowererCountAccessHelpers.cpp, IrLowererNativeTailDispatch.cpp, and
+  // IrLowererInlineNativeCallDispatch.cpp. Capturing the index itself by
+  // value in each of the six lambdas below (as before) copy-constructed the
+  // full multi-map index (up to 8 unordered_maps) once per lambda - a
+  // shared_ptr capture is a cheap refcount bump instead.
+  const auto semanticIndex =
+      std::make_shared<const SemanticProductIndex>(buildSemanticProductIndex(semanticProgram));
   adapters.isBindingMutable = [](const Expr &expr) {
     return ir_lowerer::isBindingMutable(expr);
   };
   adapters.bindingKind = [semanticProgram, semanticIndex](const Expr &expr) {
     if (const SemanticProgramCollectionSpecialization *collectionFact =
-            findSemanticProductCollectionSpecialization(semanticIndex, expr);
+            findSemanticProductCollectionSpecialization(*semanticIndex, expr);
         collectionFact != nullptr) {
       return bindingKindFromCollectionSpecialization(semanticProgram, *collectionFact);
     }
     if (const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFact(semanticIndex, expr);
+            findSemanticProductBindingFact(*semanticIndex, expr);
         bindingFact != nullptr) {
       const std::string bindingTypeText =
           resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
@@ -1422,13 +1432,13 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   };
   adapters.hasExplicitBindingTypeTransform = [semanticProgram, semanticIndex](const Expr &expr) {
     if (const SemanticProgramLocalAutoFact *localAutoFact =
-            findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr);
+            findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, expr);
         localAutoFact != nullptr) {
       return false;
     }
     if (requiresSemanticBindingFact(semanticProgram, expr)) {
       const SemanticProgramBindingFact *bindingFact =
-          findSemanticProductBindingFact(semanticIndex, expr);
+          findSemanticProductBindingFact(*semanticIndex, expr);
       if (bindingFact == nullptr ||
           resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact).empty()) {
         return false;
@@ -1439,7 +1449,7 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   };
   adapters.isStringBinding = [semanticProgram, semanticIndex](const Expr &expr) {
     if (const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFact(semanticIndex, expr);
+            findSemanticProductBindingFact(*semanticIndex, expr);
         bindingFact != nullptr) {
       const std::string bindingTypeText =
           resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
@@ -1454,7 +1464,7 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   };
   adapters.isFileErrorBinding = [semanticProgram, semanticIndex](const Expr &expr) {
     if (const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFact(semanticIndex, expr);
+            findSemanticProductBindingFact(*semanticIndex, expr);
         bindingFact != nullptr) {
       const std::string bindingTypeText =
           resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
@@ -1469,12 +1479,12 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   };
   adapters.bindingValueKind = [semanticProgram, semanticIndex](const Expr &expr, LocalInfo::Kind kind) {
     if (const SemanticProgramCollectionSpecialization *collectionFact =
-            findSemanticProductCollectionSpecialization(semanticIndex, expr);
+            findSemanticProductCollectionSpecialization(*semanticIndex, expr);
         collectionFact != nullptr) {
       return bindingValueKindFromCollectionSpecialization(semanticProgram, *collectionFact);
     }
     if (const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFact(semanticIndex, expr);
+            findSemanticProductBindingFact(*semanticIndex, expr);
         bindingFact != nullptr) {
       const std::string bindingTypeText =
           resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
@@ -1489,13 +1499,13 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   };
   adapters.setReferenceArrayInfo = [semanticProgram, semanticIndex](const Expr &expr, LocalInfo &info) {
     if (const SemanticProgramCollectionSpecialization *collectionFact =
-            findSemanticProductCollectionSpecialization(semanticIndex, expr);
+            findSemanticProductCollectionSpecialization(*semanticIndex, expr);
         collectionFact != nullptr) {
       setReferenceCollectionInfoFromSpecialization(semanticProgram, *collectionFact, info);
       return;
     }
     if (const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFact(semanticIndex, expr);
+            findSemanticProductBindingFact(*semanticIndex, expr);
         bindingFact != nullptr) {
       const std::string bindingTypeText =
           resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
