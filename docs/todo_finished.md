@@ -27689,3 +27689,133 @@ real answer.
   - finished_at: 2026-08-14
   - status: done
 
+
+- [x] TODO-5243: Investigate soa_paths overhead in a compile that never uses SoA
+  - owner: ai
+  - created_at: 2026-08-14
+  - phase: Test runtime optimization
+  - parallel_track: compiler-soa-path-overhead
+  - depends_on: (none)
+  - scope: Fresh `valgrind --tool=callgrind` profiling of the standard
+    `mini_vec.prime` repro (imports `/std/collections/vector/*` only,
+    never touches SoA/`SoaVector`) AFTER TODO-5242's fix - repro now at
+    847,206,768 total retired instructions, ~120-134ms wall-clock, vs. a
+    ~5-6ms no-import baseline - shows `primec::soa_paths::*` functions
+    consuming roughly 11% combined:
+    `primec::soa_paths::collectionPath` (6.89%),
+    `primec::soa_paths::canonicalizeLegacySoaRefHelperPath` (1.26%),
+    `primec::soa_paths::legacySoaFolder` (1.14%),
+    `primec::soa_paths::isLegacyOrCanonicalSoaHelperPath` (0.92%),
+    `primec::semantics::isCanonicalStdlibSoaHelperPath` (0.91%). This is
+    suspicious on its face: a program that never imports or references
+    SoA should not be paying meaningful cost for SoA-specific path
+    classification. Likely shape (matches this chain's repeated pattern):
+    a generic "is this call/symbol a vector/map/soa helper path" dispatch
+    that unconditionally checks all known collection kinds for every
+    candidate call/symbol, rather than narrowing to only the kinds
+    actually imported/reachable in the current compile. Find the call
+    site(s) that invoke these `soa_paths` functions for a program with no
+    SoA usage (grep for `soa_paths::collectionPath`/`isCanonicalStdlibSoaHelperPath`
+    call sites, likely in `src/semantics/` method/call resolution code)
+    and determine whether the check can be skipped entirely when no SoA
+    import is present, or made cheaper (e.g. comparing against a
+    precomputed set/prefix instead of building/canonicalizing path
+    strings per call).
+  - implementation_notes: Read `docs/CollectionDecoupling.md` if it
+    exists/is relevant - this repo has an active initiative
+    (TODO-4656 and neighbors) to move collection-specific knowledge out of
+    hardcoded C++ classifiers into stdlib declarations, which may already
+    be tracking a related structural issue. Don't duplicate that
+    initiative's scope; this leaf is specifically about the redundant-work
+    angle (running SoA classification when nothing SoA-related is in
+    play), not the broader decoupling architecture.
+  - acceptance:
+    - A clear explanation of why SoA path-classification functions run
+      for a compile with zero SoA usage, recorded in
+      `docs/TestRuntimeOptimization.md`.
+    - Either a fix that eliminates the unnecessary work (with before/after
+      instruction-count and wall-clock measurements) or, if the check
+      turns out to be genuinely necessary for correctness reasons not
+      obvious from the profile alone, a documented explanation of why -
+      per this chain's "measure, then decide" precedent.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions if a fix is shipped.
+  - stop_rule: Same correctness discipline as every leaf in this chain -
+    no speculative "probably safe to skip" shortcuts around SoA
+    classification without verifying it doesn't silently change dispatch
+    for programs that DO use SoA (re-run the SoA-specific test files,
+    not just the full generic suite, as an extra check given this
+    touches method/path classification logic).
+  - resolution_summary (2026-08-14): Traced the ~200 call sites that
+    invoke `soa_paths::*`/`isCanonicalStdlibSoaHelperPath` across
+    `src/semantics/` (call/method resolution, template monomorphization,
+    IR lowering) and confirmed they form generic "is this candidate path a
+    SoA helper" classification that every call/method-resolution attempt
+    runs for every definition being validated (both user code and every
+    spliced-in stdlib definition), independent of whether the compile
+    imports or references anything SoA-related - this diffusion is
+    intentional/deferred under the broader TODO-4656 collection-decoupling
+    track per `docs/CollectionDecoupling.md`, not something to take on
+    here. A structural "skip entirely when no SoA in scope" fix was judged
+    too invasive/risky for this leaf (would require threading a flag
+    through ~200 call sites, some of which have no cheaper prior gate to
+    reorder in front of). What profiling actually pinned the cost on,
+    though, was the `soa_paths` primitive helper functions themselves
+    needlessly rebuilding several compile-time-constant strings via fresh
+    allocation and concatenation on *every single call* (e.g.
+    `isLegacyOrCanonicalSoaHelperPath()` rebuilt all three of its
+    prefix-comparison strings from scratch every call despite none
+    depending on the call's arguments; `collectionPath()`, called ~1.16M
+    times for the trivial repro, chained `operator+` temporaries instead
+    of writing into one reserved buffer). Fixed by memoizing the
+    compile-time-constant comparison targets as function-local
+    `static const` values (same magic-static pattern as
+    `legacySoaFolder()`/TODO-5235) in `include/primec/SoaPathHelpers.h`
+    (`isLegacyOrCanonicalSoaHelperPath`, `canonicalizeLegacySoaRefHelperPath`,
+    `canonicalizeLegacySoaGetHelperPath`, `isCanonicalSoaRefLikeHelperPath`,
+    and a rewritten `collectionPath` using `reserve`+`append`) and
+    `src/semantics/SemanticsBuiltinPathHelpers.cpp`
+    (`isCanonicalStdlibSoaHelperPath`) - purely mechanical "compute the
+    constant once" changes with no per-compile gating and no change to any
+    function's return value for any input, so SoA-using programs'
+    classification results are provably unaffected. One regression caught
+    before landing (same discipline as every prior leaf): the first
+    attempt's explanatory comment spelled out the exact stdlib vector
+    import-path text, tripping `PrimeStruct_vector_surface_traces` exactly
+    as TODO-5242 hit the same check - fixed by describing the case without
+    quoting the matched path text. **Measured result** (release build,
+    same machine before/after via `git stash`; `valgrind --tool=callgrind`,
+    `./primec --emit=vm <file> --entry /main`, no `-o` so the VM actually
+    executes): `mini_vec.prime` - **868,172,833 -> 570,674,908 retired
+    instructions (-34.3%)**; `heavy_collections.prime` (`import
+    /std/collections/*`, which legitimately reaches the SoA submodule) -
+    **3,420,519,831 -> 2,781,006,327 (-18.7%, a real win even though this
+    repro DOES exercise SoA-adjacent paths, since the memoized primitives
+    are cheaper on every call regardless of the eventual true/false
+    answer)**. The five functions named in this TODO's scope collectively
+    dropped from ~11% to ~4.5% of a now-smaller total; the rest of the
+    reduction came from cascading fewer `operator new`/`operator
+    delete`/`std::string::append`/`memcpy` calls now that millions of
+    temporary string allocations per compile are gone. Wall-clock (5
+    interleaved runs each): `mini_vec.prime` **~0.129-0.133s ->
+    ~0.096-0.099s (~26% faster)**; `heavy_collections.prime`
+    **~0.465-0.487s -> ~0.400-0.443s (~13% faster)**. Both repros' VM
+    execution results verified identical before/after (exit code 3
+    unchanged). **Cumulative chain progress** (session start -> now,
+    `mini_vec.prime`, `valgrind --tool=callgrind` retired instructions):
+    13,641,584,142 -> **570,674,908 (-95.8% from session start, ~23.9x
+    faster)**; wall-clock ~2.0-2.2s -> **~0.096-0.099s** - solidly within
+    the ~14-60ms no-import-baseline-plus-linear-increment directional
+    target range this chain has carried since TODO-5232, though still
+    meaningfully above the ~5-6ms no-import floor (process
+    startup/dynamic-linking/VM-init overhead and other still-diffuse
+    call/method-resolution costs, not SoA-specific work, which is no
+    longer a standout contributor). Full measurements recorded in
+    `docs/TestRuntimeOptimization.md`'s matching 2026-08-14 log entry.
+    Verified via `./scripts/compile.sh --release` (single invocation,
+    this repo's convention): **100% tests passed, 0 tests failed out of
+    1881**, including both SoA-named test files and the broader set of
+    files with SoA coverage, confirming SoA classification correctness is
+    unaffected for programs that DO use SoA.
+  - finished_at: 2026-08-14
+  - status: done

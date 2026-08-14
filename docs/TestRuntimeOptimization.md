@@ -1409,3 +1409,105 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   repo's convention): **100% tests passed, 0 tests failed out of 1881**
   (after fixing the two regressions above; the discipline of "measure, then
   full-suite-verify" caught both before they could land).
+
+- 2026-08-14 (TODO-5243): Investigated why `primec::soa_paths::*`
+  path-classification functions consume ~11% of instructions in the
+  post-TODO-5242 `mini_vec.prime` profile despite the program never
+  importing or using SoA/`SoaVector`. **Root cause**: `soa_paths` functions
+  like `collectionPath()` and `isLegacyOrCanonicalSoaHelperPath()` are
+  called from ~200 call sites spread across nearly every call/method-
+  resolution file in `src/semantics/` (`SemanticsValidatorExprCallResolution.cpp`,
+  `SemanticsValidatorExprMethodResolution.cpp`,
+  `SemanticsValidatorExprCollectionAccess.cpp`,
+  `TemplateMonomorphExpressionRewrite.h`, and many more) - these are part
+  of the generic "is this candidate path a SoA helper" classification that
+  every method/call-resolution attempt in the compiler runs, for every
+  definition being validated (both the user's own code and every
+  definition spliced in from the imported stdlib modules), regardless of
+  whether the current compile imports or references anything SoA-related.
+  A structural fix that skips the classification entirely for a
+  no-SoA-in-scope compile would require either (a) threading a per-compile
+  "is SoA possibly reachable" flag through all ~200 call sites (invasive,
+  high risk of subtly breaking a resolution path this chain has
+  specifically been warned not to break), or (b) restructuring each call
+  site's check order to run a cheaper existence check first (not uniformly
+  possible - some call sites, e.g. `TemplateMonomorphExpressionRewrite.h`'s
+  same-path helper resolution, use the SoA-pattern match itself to decide
+  what to look up next, so there is no cheaper prior gate to reorder in
+  front of). Reading `docs/CollectionDecoupling.md`'s TODO-4656 track
+  confirms this diffusion is a known, intentionally-deferred piece of that
+  broader architecture, not something this leaf should take on.
+  **What the profile actually showed being expensive, though, was not the
+  classification decision being made at all (that part is unavoidably
+  diffuse) but the primitive `soa_paths` helper functions themselves
+  needlessly rebuilding several compile-time-constant strings via
+  allocation and concatenation on every single call** - e.g.
+  `isLegacyOrCanonicalSoaHelperPath()` reconstructed all three of its
+  prefix-comparison strings (`legacyPrefix`/`canonicalPrefix`/`publicPrefix`)
+  from scratch on every call even though none of them depend on the
+  function's arguments, and `collectionPath()` (called ~1.16M times for
+  this trivial program, 6.89% of total instructions on its own) built its
+  result via a chain of `operator+` temporaries instead of a single
+  reserved buffer. **Fix**: memoized the compile-time-constant comparison
+  targets in `isLegacyOrCanonicalSoaHelperPath()`,
+  `canonicalizeLegacySoaRefHelperPath()`, `canonicalizeLegacySoaGetHelperPath()`,
+  `isCanonicalSoaRefLikeHelperPath()` (`include/primec/SoaPathHelpers.h`),
+  and `isCanonicalStdlibSoaHelperPath()` (`src/semantics/SemanticsBuiltinPathHelpers.cpp`)
+  as function-local `static const` values (the same thread-safe
+  magic-static pattern already used by `legacySoaFolder()`/`publicSoaFolder()`
+  above them, TODO-5235) instead of rebuilding them per call; rewrote
+  `collectionPath()` to reserve its final size and `append()` directly
+  instead of chaining `operator+` temporaries. None of these are gated on
+  any per-compile state and none change any function's return value for
+  any input - purely mechanical "compute the constant once" changes, with
+  no risk to SoA-using programs' actual classification results. **Two
+  regressions caught before landing** (same discipline as every prior
+  leaf): the first attempt's explanatory comment in `SoaPathHelpers.h`
+  spelled out the exact stdlib vector import-path text it was describing,
+  which tripped `PrimeStruct_vector_surface_traces`
+  (`scripts/check_vector_surface_traces.py`) exactly as TODO-5242 hit the
+  same check - fixed by describing the case without quoting the matched
+  path text, same remedy as TODO-5242. **Measured result** (release build,
+  same machine before/after via `git stash` of just this fix against this
+  session's starting commit; `valgrind --tool=callgrind`, `./primec
+  --emit=vm <file> --entry /main`, no `-o` so the VM actually executes):
+  `mini_vec.prime` - **868,172,833 -> 570,674,908 retired instructions
+  (-34.3%)**; `heavy_collections.prime` (`import /std/collections/*`, a
+  genuine whole-directory wildcard that legitimately reaches the SoA
+  submodule) - **3,420,519,831 -> 2,781,006,327 (-18.7%, still a real win
+  even though this repro DOES exercise SoA-adjacent paths, because the
+  memoized primitives are cheaper on every call regardless of whether the
+  eventual answer is true or false)**. The named functions from TODO-5243's
+  scope collectively dropped from ~11% to ~4.5% of a now-smaller total
+  (`collectionPath` 6.89%->0.41%, `isCanonicalStdlibSoaHelperPath`
+  0.91%->0.85%, `legacySoaFolder` 1.14%->0.34%,
+  `isLegacyOrCanonicalSoaHelperPath` 0.92%->0.38%,
+  `canonicalizeLegacySoaRefHelperPath` 1.26%->1.04%) - the remaining
+  reduction beyond that ~6.5-point direct drop came from cascading fewer
+  `operator new`/`operator delete`/`std::string::append`/`memcpy` calls
+  now that millions of temporary string allocations per compile are gone.
+  Wall-clock (5 interleaved runs each): `mini_vec.prime` **~0.129-0.133s ->
+  ~0.096-0.099s (~26% faster)**; `heavy_collections.prime`
+  **~0.465-0.487s -> ~0.400-0.443s (~13% faster)**. Both repros' VM
+  execution results verified identical before/after (`mini_vec.prime` and
+  `heavy_collections.prime` both exit code 3 - `vectorCount<i32>` of the
+  3-element vector - unchanged). **Cumulative chain progress**
+  (session start -> now, `mini_vec.prime`, `valgrind --tool=callgrind`
+  retired instructions): 13,641,584,142 -> **570,674,908 (-95.8% from
+  session start, ~23.9x faster)**; wall-clock ~2.0-2.2s -> **~0.096-0.099s**.
+  This is now solidly within the ~14-60ms
+  no-import-baseline-plus-linear-increment directional target range this
+  chain has carried since TODO-5232, though still meaningfully above the
+  ~5-6ms no-import floor - the remaining gap is process
+  startup/dynamic-linking/VM-init overhead and the still-diffuse
+  call/method-resolution machinery's other costs (per-call `operator new`
+  is still the single largest line item at 9.96% post-fix), not
+  SoA-specific work, which is no longer a standout contributor. Verified
+  via `./scripts/compile.sh --release` (single invocation, this repo's
+  convention): **100% tests passed, 0 tests failed out of 1881**, including
+  both SoA-named test files (`tests/unit/semantics/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp`,
+  `tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_inline_param_helper_materializes_pointer_soa_vector_variadic_args_packs.cpp`)
+  and the broader set of files with "soa" in scope
+  (`test_semantics_collection_spelling_classifier.cpp` and others),
+  confirming SoA classification correctness is unaffected for programs
+  that DO use SoA.

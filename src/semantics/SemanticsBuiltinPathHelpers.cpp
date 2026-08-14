@@ -931,9 +931,15 @@ bool isCanonicalStdlibSoaHelperPath(std::string_view path, std::string_view help
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  const std::string compatibilityPrefix =
+  // TODO-5243: compatibilityPrefix/publicPrefix are compile-time constants
+  // (they don't depend on `path`/`helperName`), but this function is
+  // called from ~50 call sites across call/method resolution for every
+  // candidate considered, including for compiles with zero SoA usage
+  // where the answer is always false - profiling showed these two
+  // rebuilt via string concatenation on every call. Precompute once.
+  static const std::string compatibilityPrefix =
       compatibilitySoaHelperTargetPath("") + "/";
-  const std::string publicPrefix = publicSoaHelperTargetPath("") + "/";
+  static const std::string publicPrefix = publicSoaHelperTargetPath("") + "/";
   return (canonicalPath.rfind(compatibilityPrefix, 0) == 0 ||
           canonicalPath.rfind(publicPrefix, 0) == 0) &&
          isLegacyOrCanonicalSoaHelperPath(canonicalPath, helperName);

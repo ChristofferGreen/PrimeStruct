@@ -76,7 +76,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
-- TODO-5243: Investigate soa_paths overhead in a compile that never uses SoA | track: compiler-soa-path-overhead | surface: src/semantics soa_paths call sites
 - TODO-5244: Replace runtime string-concatenation path matching with precomputed comparisons | track: compiler-path-string-churn | surface: resolveCalleePath, stdlibSurfaceMatchesSpelling, soa_paths
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
@@ -348,7 +347,6 @@ import-cost characterization and fix) have also since resolved - see
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 51a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
 51b. TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
-51c. TODO-5243: Investigate soa_paths overhead in a compile that never uses SoA
 51d. TODO-5244: Replace runtime string-concatenation path matching with precomputed comparisons
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
@@ -1848,63 +1846,6 @@ import-cost characterization and fix) have also since resolved - see
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
-
-- [ ] TODO-5243: Investigate soa_paths overhead in a compile that never uses SoA
-  - owner: ai
-  - created_at: 2026-08-14
-  - phase: Test runtime optimization
-  - parallel_track: compiler-soa-path-overhead
-  - depends_on: (none)
-  - scope: Fresh `valgrind --tool=callgrind` profiling of the standard
-    `mini_vec.prime` repro (imports `/std/collections/vector/*` only,
-    never touches SoA/`SoaVector`) AFTER TODO-5242's fix - repro now at
-    847,206,768 total retired instructions, ~120-134ms wall-clock, vs. a
-    ~5-6ms no-import baseline - shows `primec::soa_paths::*` functions
-    consuming roughly 11% combined:
-    `primec::soa_paths::collectionPath` (6.89%),
-    `primec::soa_paths::canonicalizeLegacySoaRefHelperPath` (1.26%),
-    `primec::soa_paths::legacySoaFolder` (1.14%),
-    `primec::soa_paths::isLegacyOrCanonicalSoaHelperPath` (0.92%),
-    `primec::semantics::isCanonicalStdlibSoaHelperPath` (0.91%). This is
-    suspicious on its face: a program that never imports or references
-    SoA should not be paying meaningful cost for SoA-specific path
-    classification. Likely shape (matches this chain's repeated pattern):
-    a generic "is this call/symbol a vector/map/soa helper path" dispatch
-    that unconditionally checks all known collection kinds for every
-    candidate call/symbol, rather than narrowing to only the kinds
-    actually imported/reachable in the current compile. Find the call
-    site(s) that invoke these `soa_paths` functions for a program with no
-    SoA usage (grep for `soa_paths::collectionPath`/`isCanonicalStdlibSoaHelperPath`
-    call sites, likely in `src/semantics/` method/call resolution code)
-    and determine whether the check can be skipped entirely when no SoA
-    import is present, or made cheaper (e.g. comparing against a
-    precomputed set/prefix instead of building/canonicalizing path
-    strings per call).
-  - implementation_notes: Read `docs/CollectionDecoupling.md` if it
-    exists/is relevant - this repo has an active initiative
-    (TODO-4656 and neighbors) to move collection-specific knowledge out of
-    hardcoded C++ classifiers into stdlib declarations, which may already
-    be tracking a related structural issue. Don't duplicate that
-    initiative's scope; this leaf is specifically about the redundant-work
-    angle (running SoA classification when nothing SoA-related is in
-    play), not the broader decoupling architecture.
-  - acceptance:
-    - A clear explanation of why SoA path-classification functions run
-      for a compile with zero SoA usage, recorded in
-      `docs/TestRuntimeOptimization.md`.
-    - Either a fix that eliminates the unnecessary work (with before/after
-      instruction-count and wall-clock measurements) or, if the check
-      turns out to be genuinely necessary for correctness reasons not
-      obvious from the profile alone, a documented explanation of why -
-      per this chain's "measure, then decide" precedent.
-    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
-      zero regressions if a fix is shipped.
-  - stop_rule: Same correctness discipline as every leaf in this chain -
-    no speculative "probably safe to skip" shortcuts around SoA
-    classification without verifying it doesn't silently change dispatch
-    for programs that DO use SoA (re-run the SoA-specific test files,
-    not just the full generic suite, as an extra check given this
-    touches method/path classification logic).
 
 - [ ] TODO-5244: Replace runtime string-concatenation path matching with precomputed comparisons
   - owner: ai

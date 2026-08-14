@@ -38,10 +38,24 @@ inline std::string soaBackingTypeName() {
 
 inline std::string collectionPath(std::string_view folder,
                                   std::string_view helperName = {}) {
-  std::string path = "/" + std::string("std") + "/" + "collections" + "/" +
-                     std::string(folder);
+  // TODO-5243: this is called ~1.16M times for a `mini_vec.prime`-sized
+  // program that never touches SoA (6.89% of total instructions in that
+  // profile), from every call/method-resolution candidate check across the
+  // whole compile, not just SoA-specific ones. The previous body built the
+  // "/std/collections/" prefix via a chain of operator+ on separate string
+  // literals (each an implicit temporary std::string construction) and then
+  // a second concatenation for the optional helper suffix - reserve the
+  // final size up front and append directly instead, so this is one
+  // allocation instead of several, with byte-identical output.
+  static constexpr std::string_view kPrefix = "/std/collections/";
+  std::string path;
+  path.reserve(kPrefix.size() + folder.size() +
+               (helperName.empty() ? 0 : helperName.size() + 1));
+  path.append(kPrefix);
+  path.append(folder);
   if (!helperName.empty()) {
-    path += "/" + std::string(helperName);
+    path.push_back('/');
+    path.append(helperName);
   }
   return path;
 }
@@ -70,10 +84,14 @@ inline std::string stripTemplateSpecializationSuffix(std::string_view path) {
 
 inline std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
   std::string canonicalPath = stripTemplateSpecializationSuffix(path);
-  if (canonicalPath == "/" + legacySoaFolder() + "/ref") {
+  // TODO-5243: same fix as isLegacyOrCanonicalSoaHelperPath() below - these
+  // two comparison targets are compile-time constants, precompute once.
+  static const std::string refPath = "/" + legacySoaFolder() + "/ref";
+  static const std::string refRefPath = "/" + legacySoaFolder() + "/ref_ref";
+  if (canonicalPath == refPath) {
     return collectionPath(legacySoaFolder(), "ref");
   }
-  if (canonicalPath == "/" + legacySoaFolder() + "/ref_ref") {
+  if (canonicalPath == refRefPath) {
     return collectionPath(legacySoaFolder(), "ref_ref");
   }
   return canonicalPath;
@@ -81,10 +99,12 @@ inline std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
 
 inline std::string canonicalizeLegacySoaGetHelperPath(std::string_view path) {
   const std::string canonicalPath = canonicalizeLegacySoaRefHelperPath(path);
-  if (canonicalPath == "/" + legacySoaFolder() + "/get") {
+  static const std::string getPath = "/" + legacySoaFolder() + "/get";
+  static const std::string getRefPath = "/" + legacySoaFolder() + "/get_ref";
+  if (canonicalPath == getPath) {
     return collectionPath(legacySoaFolder(), "get");
   }
-  if (canonicalPath == "/" + legacySoaFolder() + "/get_ref") {
+  if (canonicalPath == getRefPath) {
     return collectionPath(legacySoaFolder(), "get_ref");
   }
   return canonicalPath;
@@ -92,9 +112,25 @@ inline std::string canonicalizeLegacySoaGetHelperPath(std::string_view path) {
 
 inline bool isLegacyOrCanonicalSoaHelperPath(std::string_view path,
                                              std::string_view helperName) {
-  const std::string legacyPrefix = "/" + legacySoaFolder() + "/";
-  const std::string canonicalPrefix = collectionPath(legacySoaFolder()) + "/";
-  const std::string publicPrefix = collectionPath(publicSoaFolder()) + "/";
+  // TODO-5243: these three prefixes are compile-time constants (they never
+  // depend on anything per-call or per-compile), but this function is
+  // called from ~200 call sites throughout call/method resolution for
+  // every candidate path considered - including for compiles that never
+  // touch SoA at all, where every call here is doomed to return false.
+  // Profiling a program with zero SoA usage (importing only the plain
+  // collections vector submodule) showed this rebuilding all three
+  // prefix strings via allocation+concatenation on every single call
+  // (millions of calls for a trivial program), collectively costing ~11%
+  // of total instructions across this function and the sibling
+  // soa_paths::* helpers it and isCanonicalStdlibSoaHelperPath call.
+  // Building them once as function-local statics (thread-safe magic
+  // statics, same pattern already used by legacySoaFolder()/etc. above)
+  // turns the hot no-match path into pure string_view comparisons with no
+  // allocation, while leaving every branch's actual match semantics
+  // byte-for-byte identical.
+  static const std::string legacyPrefix = "/" + legacySoaFolder() + "/";
+  static const std::string canonicalPrefix = collectionPath(legacySoaFolder()) + "/";
+  static const std::string publicPrefix = collectionPath(publicSoaFolder()) + "/";
   if (path.starts_with(legacyPrefix)) {
     return path.substr(legacyPrefix.size()) == helperName;
   }
@@ -108,10 +144,15 @@ inline bool isLegacyOrCanonicalSoaHelperPath(std::string_view path,
 }
 
 inline bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
-  return path == collectionPath(legacySoaFolder(), "ref") ||
-         path == collectionPath(legacySoaFolder(), "ref_ref") ||
-         path == collectionPath(publicSoaFolder(), "ref") ||
-         path == collectionPath(publicSoaFolder(), "ref_ref");
+  // TODO-5243: precompute the four (compile-time-constant) comparison
+  // targets once instead of rebuilding all four via concatenation on every
+  // call - same fix as the sibling helpers above.
+  static const std::string legacyRef = collectionPath(legacySoaFolder(), "ref");
+  static const std::string legacyRefRef = collectionPath(legacySoaFolder(), "ref_ref");
+  static const std::string publicRef = collectionPath(publicSoaFolder(), "ref");
+  static const std::string publicRefRef = collectionPath(publicSoaFolder(), "ref_ref");
+  return path == legacyRef || path == legacyRefRef || path == publicRef ||
+         path == publicRefRef;
 }
 
 inline bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
