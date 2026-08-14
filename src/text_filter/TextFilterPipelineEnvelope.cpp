@@ -22,23 +22,60 @@ bool applyPerEnvelope(const std::string &input,
 
 namespace {
 
-bool applyFilterToChunk(const std::string &input,
-                        std::string &output,
-                        std::string &error,
-                        const std::string *filter) {
-  if (filter == nullptr || filter->empty()) {
+// Applies each filter in `filterSequence` to `input` in order, threading each
+// filter's output into the next filter's input - i.e. exactly the same
+// per-filter sequential composition the caller used to get by driving N
+// separate top-to-bottom envelope-structure walks (one per filter). Doing
+// that composition here, chunk-locally, instead of one envelope walk per
+// filter is safe because a leaf chunk's filtered text never depends on any
+// other chunk's content - only the order filters are applied *to this one
+// chunk* matters, and that order (filterSequence's order) is unchanged.
+bool applyFiltersToChunk(const std::string &input,
+                         std::string &output,
+                         std::string &error,
+                         const std::vector<std::string> &filterSequence) {
+  if (filterSequence.empty()) {
     output = input;
     return true;
   }
-  TextFilterOptions passOptions;
-  passOptions.enabledFilters = {*filter};
-  return applyPass(input, output, error, passOptions);
+  std::string current = input;
+  for (const auto &filter : filterSequence) {
+    if (filter.empty()) {
+      continue;
+    }
+    TextFilterOptions passOptions;
+    passOptions.enabledFilters = {filter};
+    std::string next;
+    if (!applyPass(current, next, error, passOptions)) {
+      return false;
+    }
+    current.swap(next);
+  }
+  output = std::move(current);
+  return true;
 }
 
+// Walks the envelope/namespace/definition structure of `input` exactly once,
+// applying every filter in `filterSequence` (in order) to each leaf chunk of
+// plain code found along the way. `activeFilters` is the filter set that
+// governs envelope-inheritance decisions (which envelope bodies keep
+// `filterSequence` verbatim, i.e. recursion happens via a further
+// same-shaped combined pass, vs which envelope bodies declare an
+// independent filter set - "explicit"/rule-selected - vs `activeFilters`
+// and so get diverted through the full `applyPerEnvelope` driver instead).
+// This function used to be driven once *per individual filter*, from
+// `applyPerEnvelope`'s loop - each such call independently re-ran the full
+// `findNextEnvelopeStart`/`parseNamespaceBlock`/`parseDefinitionBlock`
+// structural scan of the same text, even though none of that structural
+// scan logic ever looks at which filter is active. Folding the filter loop
+// down into the (cheap, per-chunk) `applyFiltersToChunk` call below,
+// instead of looping the whole structural walk, keeps the exact same
+// per-chunk filter application order while performing the walk itself only
+// once per distinct filter *set* instead of once per filter.
 bool applyPerEnvelopeFilterPass(const std::string &input,
                                 std::string &output,
                                 std::string &error,
-                                const std::string &filter,
+                                const std::vector<std::string> &filterSequence,
                                 const std::vector<std::string> &activeFilters,
                                 const std::vector<TextTransformRule> &rules,
                                 bool suppressLeadingOverride,
@@ -53,7 +90,6 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
   const int targetBodyDepth = suppressLeadingOverride ? 1 : 0;
   std::vector<envelope_internal::NamespaceBlock> namespaceStack;
   std::vector<envelope_internal::DefinitionBlock> definitionStack;
-  const bool filterActive = envelope_internal::containsFilterName(activeFilters, filter);
   while (scanPos < input.size()) {
     size_t listStart = findNextTransformListStart(input, scanPos);
     size_t envelopeStart = envelope_internal::findNextEnvelopeStart(input, scanPos, targetBodyDepth);
@@ -139,7 +175,7 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
     }
     std::string chunk = input.substr(pos, envelopeStartPos - pos);
     std::string filteredChunk;
-    if (!applyFilterToChunk(chunk, filteredChunk, error, filterActive ? &filter : nullptr)) {
+    if (!applyFiltersToChunk(chunk, filteredChunk, error, filterSequence)) {
       return false;
     }
     output.append(filteredChunk);
@@ -164,7 +200,7 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
       if (!applyPerEnvelopeFilterPass(envelope,
                                       filteredEnvelope,
                                       error,
-                                      filter,
+                                      filterSequence,
                                       envelopeFilters,
                                       rules,
                                       true,
@@ -197,7 +233,7 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
   }
   std::string tail = input.substr(pos);
   std::string filteredTail;
-  if (!applyFilterToChunk(tail, filteredTail, error, filterActive ? &filter : nullptr)) {
+  if (!applyFiltersToChunk(tail, filteredTail, error, filterSequence)) {
     return false;
   }
   output.append(filteredTail);
@@ -220,7 +256,7 @@ bool applyPerEnvelope(const std::string &input,
     return applyPerEnvelopeFilterPass(input,
                                       output,
                                       error,
-                                      std::string(),
+                                      activeFilters,
                                       activeFilters,
                                       rules,
                                       suppressLeadingOverride,
@@ -229,19 +265,40 @@ bool applyPerEnvelope(const std::string &input,
                                       true,
                                       baseFilters);
   }
+  // Apply the filter list in rounds instead of one filter at a time. Every
+  // filter already known about when a round starts is applied to every leaf
+  // chunk, in order, inside a *single* envelope-structure walk (see
+  // `applyPerEnvelopeFilterPass`'s own comment) - this preserves the exact
+  // same per-chunk filter ordering as the old one-filter-per-walk loop
+  // (each chunk still sees filter[0], then filter[1], then filter[2], ...,
+  // in the same order, and chunks don't interact), it just stops re-running
+  // the (filter-independent) structural scan once per filter. A later round
+  // only ever runs if a leading `[filterName]<...>` transform-list
+  // annotation at the very start of the (already-filtered) text reveals a
+  // filter not yet applied - the same rare, dynamic-discovery case the
+  // original loop supported - and even then, only the newly discovered
+  // filters run in that next round; already-applied filters are never
+  // reapplied.
   std::unordered_set<std::string> applied;
   std::string current = input;
   bool allowExplicitRecursion = true;
-  for (size_t i = 0; i < activeFilters.size(); ++i) {
-    const std::string &filter = activeFilters[i];
-    if (!applied.insert(filter).second) {
+  size_t consideredCount = 0;
+  while (consideredCount < activeFilters.size()) {
+    std::vector<std::string> roundFilters;
+    for (size_t i = consideredCount; i < activeFilters.size(); ++i) {
+      if (applied.insert(activeFilters[i]).second) {
+        roundFilters.push_back(activeFilters[i]);
+      }
+    }
+    consideredCount = activeFilters.size();
+    if (roundFilters.empty()) {
       continue;
     }
     std::string next;
     if (!applyPerEnvelopeFilterPass(current,
                                     next,
                                     error,
-                                    filter,
+                                    roundFilters,
                                     activeFilters,
                                     rules,
                                     suppressLeadingOverride,

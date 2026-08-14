@@ -1143,3 +1143,144 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   `./scripts/compile.sh --release` (single invocation, this repo's
   convention, run after TODO-5237's mimalloc-by-default change had already
   landed on this branch): **100% tests passed, 0 tests failed out of 1881**.
+- 2026-08-14 (TODO-5239, characterize envelope-parsing/text-transform cost):
+  Re-profiled `mini_vec.prime` with `valgrind --tool=callgrind` at the
+  post-TODO-5238 baseline (4,770,140,374 retired instructions this session -
+  matches the previously-recorded 4,791,446,809 within normal run-to-run
+  noise) and found the hot-spot landscape had shifted entirely out of
+  `src/semantics` and into PARSING: `primec::envelope_internal::findNextEnvelopeStart`
+  (8.72%), `primec::envelope_internal::(anonymous namespace)::parseNamespaceBlock`
+  (8.67%), `primec::findMatchingCloseWithComments` (4.32%), plus generic
+  string scanning (`memcmp`, `memcpy`) plausibly downstream of the same
+  pattern - roughly 20%+ combined. Added temporary debug counters
+  (`g_filterPassCalls`/`g_findNextEnvelopeStartCalls`, guarded by a
+  `PRIMESTRUCT_TODO5239_DEBUG_COUNTERS` macro, removed before landing) around
+  `applyPerEnvelope`'s per-filter driving loop in
+  `src/text_filter/TextFilterPipelineEnvelope.cpp` and re-ran `mini_vec.prime`.
+  **Result: exactly four identical full-tree passes**, one per default text
+  filter (`collections`, `operators`, `implicit-utf8`, `implicit-i32` -
+  `include/primec/Options.h`'s `Options::textFilters` default), each
+  independently re-walking the same (~279-285KB, post-import-splicing)
+  spliced source text from scratch:
+  ```
+  [TODO-5239] top-level pass for filter='collections'    (input len=278816): applyPerEnvelopeFilterPass calls=1663, findNextEnvelopeStart calls=6048
+  [TODO-5239] top-level pass for filter='operators'      (input len=278816): applyPerEnvelopeFilterPass calls=1663, findNextEnvelopeStart calls=6048
+  [TODO-5239] top-level pass for filter='implicit-utf8'  (input len=284651): applyPerEnvelopeFilterPass calls=1663, findNextEnvelopeStart calls=6048
+  [TODO-5239] top-level pass for filter='implicit-i32'   (input len=284651): applyPerEnvelopeFilterPass calls=1663, findNextEnvelopeStart calls=6048
+  ```
+  Read every structural-scan function involved
+  (`findNextEnvelopeStart`/`parseNamespaceBlock`/`parseDefinitionBlock`/
+  `advanceNamespaceScan`/`advanceDefinitionScan`, all in
+  `src/text_filter/TextFilterPipelineEnvelopeHelpers.cpp`) and confirmed
+  **none of them take a filter-identity parameter or consult which filter is
+  active** - envelope/namespace/definition boundary discovery is a pure
+  function of the source text and body-depth, entirely independent of which
+  of the 4 filters is currently being driven. The recursion-decision logic
+  inside `applyPerEnvelopeFilterPass` (`inheritsFilters =
+  filtersEqual(envelopeFilters, activeFilters)`) is likewise
+  filter-identity-independent, since `activeFilters` (the *full* configured
+  list) is passed unchanged on every outer-loop iteration - so the entire
+  recursive tree shape (which envelope bodies inherit the active filter set
+  vs. divert through explicit-filter recursion) is identical across all 4
+  passes too, not just the leaf-level structural scanning. The only
+  filter-dependent step is the leaf-chunk text transform
+  (`applyFilterToChunk` -> `applyPass`), and `applyPass` itself already
+  supports combining *all* enabled filters into a single linear character
+  scan (it checks `options.hasFilter("collections")`,
+  `options.hasFilter("operators")`, `options.hasFilter("implicit-utf8")`,
+  `options.hasFilter("implicit-i32")` independently within one pass) - a
+  capability that turned out to be dead code in production, since
+  `applyFilterToChunk` always constructed `passOptions.enabledFilters =
+  {*filter}` (exactly one filter) and nothing else in the codebase ever
+  called `applyPass` with more than one filter enabled at once. **Root
+  cause, matching this chain's established "same shape of bug in a
+  different subsystem" pattern (TODO-5232, TODO-5236, TODO-5238)**:
+  `applyPerEnvelope`'s "apply each configured filter" loop treats *one
+  filter* as the unit of *one structural walk*, so N configured filters (4
+  by default) means N full top-to-bottom re-walks of the entire spliced
+  source text, even though the walk's own control flow never depends on
+  which filter is active - a genuinely redundant re-scan, not necessary
+  work. This directly informed TODO-5240's fix: fold the "one filter" loop
+  down into the (per-leaf-chunk, cheap) text-transform step instead of
+  looping the whole structural walk once per filter.
+- 2026-08-14 (TODO-5240, fix the envelope-parsing/text-transform
+  redundancy): Restructured `src/text_filter/TextFilterPipelineEnvelope.cpp`
+  so the envelope/namespace/definition structural walk happens once per
+  distinct *filter set* instead of once per individual filter.
+  `applyPerEnvelopeFilterPass`'s single `filter` (`std::string`) parameter
+  became `filterSequence` (`std::vector<std::string>`), and its leaf-chunk
+  call site now goes through a new `applyFiltersToChunk` helper that applies
+  every filter in `filterSequence` to that one chunk, in order, threading
+  each filter's output into the next filter's input as its input - exactly
+  the same per-chunk filter-application order the old code produced by
+  re-walking the whole tree once per filter, just computed without
+  re-running the (filter-independent) structural scan each time.
+  `applyPerEnvelope`'s outer driver changed from a strict "one filter per
+  round" loop to an "every not-yet-applied filter per round" loop (tracked
+  via the same pre-existing `applied` set), so the pre-existing (rare)
+  dynamic filter-discovery mechanism - a leading `[filterName]<...>`
+  transform-list annotation at the very start of the file revealing a
+  filter not in the originally configured set - still works exactly as
+  before: already-applied filters are never reapplied, and only genuinely
+  new filters get folded into a further round. **Correctness argument (a
+  control-flow restructuring, not a cache - no scanned input is assumed
+  stable and reused across calls)**: a leaf chunk's filtered output never
+  depends on any other chunk's content (each `applyPass` call is chunk-local
+  with no shared/global state), so the final concatenated output is
+  invariant under reordering *which chunk* is processed first; the only
+  order that can affect correctness is *which filter* is applied first *to
+  a given chunk*, and that per-chunk filter order (`activeFilters`' original
+  order, e.g. `collections` then `operators` then `implicit-utf8` then
+  `implicit-i32`) is completely unchanged by this restructuring - each chunk
+  still sees filter[0] applied, then filter[1] applied to filter[0]'s
+  output, then filter[2], etc., byte-for-byte identically to before, just
+  without 3 other filters' worth of *other chunks* and structural-scan work
+  happening in between. The envelope-recursion decision logic itself
+  (`inheritsFilters`, `filtersEqual(envelopeFilters, activeFilters)`) was
+  already proven filter-identity-independent in TODO-5239's own
+  investigation, so recursing with the full `filterSequence` in one
+  combined pass instead of one filter per recursive-descent round changes
+  nothing about which envelopes inherit the active filter set vs. divert
+  through explicit-filter (rule-selected or transform-list-declared)
+  recursion. Verified both standard repros produce identical VM execution
+  results before and after the fix (`mini_vec.prime` and
+  `heavy_collections.prime` both `--emit=vm --entry /main`, no `-o`, so the
+  VM actually runs `main` end to end: both exit with code 3 -
+  `vectorCount<i32>` of the 3-element `vector<i32>(1i32, 2i32, 3i32)` -
+  matching before and after in both configurations).
+  **Measured result** (release build, same machine before/after via `git
+  stash` of just this fix against this session's starting commit `fe3e5df`,
+  mimalloc from TODO-5237 and the arena from TODO-5234 present and identical
+  in both configurations so they isolate this fix's own effect;
+  `valgrind --tool=callgrind`): `mini_vec.prime` - **4,770,140,374 ->
+  3,539,199,913 retired instructions (-25.8%)**; `heavy_collections.prime`
+  (`import /std/collections/*`) - **4,650,139,744 -> 3,420,156,943
+  (-26.4%)**, a slightly larger relative win, consistent with this fix
+  scaling with the amount of spliced-in stdlib source text (more text ->
+  proportionally more structural-scan work eliminated per filter no longer
+  re-walked). Wall-clock (5 interleaved runs each, `./primec --emit=vm
+  <file> --entry /main`, no `-o` so the VM actually executes): `mini_vec.prime`
+  **~0.744-0.79s -> ~0.58-0.60s (~22% faster)**; `heavy_collections.prime`
+  **~0.717-0.77s -> ~0.57-0.62s (~20% faster)**. `callgrind_annotate`
+  confirms the two named hot functions collapsed roughly to the expected
+  ~1/4 share (4 passes -> 1 pass): `findNextEnvelopeStart` 8.72% -> 2.88%,
+  `parseNamespaceBlock` 8.67% -> 2.86% of total post-fix instructions - the
+  redundant re-scan this leaf targeted is gone. The post-fix profile's new
+  top contributors (`memcpy`/`operator new`/`memcmp`/string `append`,
+  `soa_paths::collectionPath`, `applyPass` itself) are unrelated,
+  already-legitimate work spread across the rest of the pipeline, not a new
+  concentration this leaf could have also fixed cheaply. **Cumulative chain
+  progress** (session start -> now, `mini_vec.prime`, `valgrind --tool=callgrind`
+  retired instructions): 13,641,584,142 -> **3,539,199,913 (-74.1% from
+  session start)**; wall-clock ~2.0-2.2s -> **~0.58-0.60s**. This remains
+  well above the ~14-60ms no-import-baseline-plus-linear-increment
+  directional target this chain has carried since TODO-5232 - stated
+  honestly per this chain's own precedent, not glossed over. The remaining
+  floor is most plausibly the whole-file text-splicing import architecture
+  itself (`docs/LibrarySymbolManifestLazyImports.md`, unchanged by any leaf
+  in this chain so far), plus whatever costs the post-fix profile's new,
+  more-diffuse top contributors represent - a natural target for a further
+  round of profiling in a future session, per this chain's own repeated
+  "measure, then decide" pattern. Verified via `./scripts/compile.sh
+  --release` (single invocation, this repo's convention): **100% tests
+  passed, 0 tests failed out of 1881**.
