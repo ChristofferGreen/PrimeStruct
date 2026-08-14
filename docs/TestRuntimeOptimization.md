@@ -1511,3 +1511,98 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   (`test_semantics_collection_spelling_classifier.cpp` and others),
   confirming SoA classification correctness is unaffected for programs
   that DO use SoA.
+
+- 2026-08-14 (TODO-5244): Took a fresh `valgrind --tool=callgrind` profile
+  of `mini_vec.prime` on top of TODO-5243's landed fix (starting point:
+  556,323,644 retired instructions - close to, but not identical to,
+  TODO-5243's reported post-fix 570,674,908, within expected
+  machine/build noise for this size of repro) to look for remaining
+  instances of TODO-5243's exact pattern (compile-time-constant strings
+  rebuilt via allocation/concatenation on every call) in hot functions
+  outside the five `soa_paths`/`isCanonicalStdlibSoaHelperPath` functions
+  TODO-5243 already fixed. **Found three sibling functions in the same
+  file (`include/primec/SoaPathHelpers.h`) that TODO-5243 did not touch,
+  still exhibiting the identical pattern**:
+  `isExperimentalColumnarVectorSpecializedTypePath()` (1.00% of total
+  instructions on its own - the single largest individually-named
+  string-rebuild offender left in the profile) rebuilt three
+  compile-time-constant prefix strings (`specializedPrefix`,
+  `specializedPrefixNoSlash`, `specializedPrefixBare`) via
+  `collectionPath()`/concatenation on every call;
+  `isExperimentalColumnarVectorTypePath()` rebuilt `typePrefix`/
+  `typePrefixWithSlash` plus, inside its `matchesTypePrefix` lambda,
+  two further concatenations per prefix per call (6 rebuilds/call across
+  its 3 invocations); `isExperimentalSoaRefLikeHelperPath()` rebuilt its
+  three comparison targets (two `collectionPath()` calls plus a
+  `collection_paths::memberPath()` call) every time. None of these
+  values depend on the call's arguments - all are pure functions of the
+  process-lifetime-constant `publicSoaFolder()`/`soaBackingTypeName()`/
+  `experimentalSoaFolder()` builders. **Fix**: memoized all of these as
+  function-local `static const` values, the same magic-static pattern
+  TODO-5243 (and TODO-5235 before it) already established in this exact
+  file - purely mechanical "compute the constant once" changes, no return
+  value changes for any input, no per-compile gating.
+  **Also checked** the other functions the TODO-5244 task description
+  named as leads (`resolveCalleePath` in
+  `src/semantics/SemanticsValidatorBuildCallResolution.cpp`,
+  `stdlibSurfaceMatchesSpelling`/`resolveStdlibSurfaceMemberName` in
+  `src/StdlibSurfaceRegistry.cpp`) and confirmed they are **not** this
+  pattern: `resolveCalleePath` already routes its per-call work through
+  `callTargetResolutionScratch_`'s arena-scoped caches (built out across
+  several prior leaves in this chain, e.g. TODO-4742/4743), and its
+  remaining cost is genuinely per-`Expr`-dependent path construction, not
+  a rebuildable constant. `stdlibSurfaceMatchesSpelling`/
+  `resolveStdlibSurfaceMemberName` and their shared `matchesAny()`
+  helper already operate purely on `std::string_view`/`std::span`
+  comparisons with zero allocation - their cost is an O(N) linear scan
+  over the ~50-100-entry stdlib surface `Registry` per query (the same
+  kind of diffuse "generic classification predicate runs for every
+  candidate" shape TODO-5243's investigation already characterized and
+  explicitly deferred to the broader TODO-4656 collection-decoupling
+  track), not redundant string construction.
+  **Measured result** (release build, same machine before/after via
+  `git stash`/rebuild of just this fix against this session's starting
+  commit `dff2d0d`; `valgrind --tool=callgrind`, `./primec --emit=vm
+  <file> --entry /main`, no `-o` so the VM actually executes):
+  `mini_vec.prime` - **556,323,644 -> 544,212,452 retired instructions
+  (-2.18%)**; `heavy_collections.prime` (`import /std/collections/*`,
+  which reaches the SoA submodule and legitimately exercises these
+  `isExperimental*` predicates with real, non-degenerate SoA candidate
+  paths) - **2,780,685,855 -> 2,709,610,711 (-2.56%)**. Both repros' VM
+  execution results verified identical before/after (exit code 3
+  unchanged). Wall-clock (7 interleaved runs each for `mini_vec.prime`,
+  5 for `heavy_collections.prime`): `mini_vec.prime` before ~0.0928-
+  0.0980s (median ~0.0968s), after ~0.0907-0.0989s (median ~0.0923s) -
+  a small, directionally-consistent improvement but within this range's
+  run-to-run noise band, consistent with a 2.18% instruction-count
+  change being a small fraction of fixed per-process overhead (dynamic
+  linking, VM init) at this timescale; `heavy_collections.prime` before
+  ~0.3894-0.4002s (median ~0.3947s), after ~0.3809-0.4083s (median
+  ~0.3873s) - similarly small and noise-adjacent. **This leaf's fix is a
+  real, provably-correct, small win, not a game-changer**: the dominant
+  costs in the post-TODO-5243 profile have moved on from the
+  string-concatenation pattern to diffuse allocation/hashing/scanning
+  machinery - `operator new` (9.82%), `__memcmp_avx2_movbe` (6.16%),
+  `std::_Hash_bytes` (5.32%), `__memcpy_avx_unaligned_erms` (4.46%), and
+  `std::find` over a `span<string_view>` (4.00%, this is `matchesAny()`'s
+  O(N) registry scan called from `stdlibSurfaceMatchesSpelling`/
+  `resolveStdlibSurfaceMemberName`/etc.) collectively account for ~30% of
+  total instructions and are **not** the compile-time-constant-string
+  pattern this leaf and TODO-5243 targeted - they represent legitimately
+  varying per-call allocation (new `Expr`/binding/scratch state that
+  differs call to call) and O(N) linear classification scans over the
+  stdlib surface registry. **A follow-up leaf's most promising lead is
+  the O(N) registry-scan family** (`matchesAny`, `findStdlibSurfaceMetadata*`
+  non-cached variants, the `std::find` show above) - turning the ~50-100-
+  entry `Registry` linear scans into a precomputed hash/prefix index
+  keyed by canonical path would be the next TODO-4742-shaped win, though
+  it's a larger structural change than this leaf's scope. **Cumulative
+  chain progress** (session start -> now, `mini_vec.prime`, `valgrind
+  --tool=callgrind` retired instructions): 13,641,584,142 ->
+  **544,212,452 (-96.0% from session start, ~25.1x faster)**; wall-clock
+  ~2.0-2.2s -> **~0.090-0.099s (median ~0.092s)**. Still not confidently
+  and consistently under the <100ms target given measurement noise at
+  this scale (individual runs range 0.090-0.099s, straddling the 100ms
+  line), though the median and most runs now land under it. Verified via
+  `./scripts/compile.sh --release` (single invocation, this repo's
+  convention): **100% tests passed, 0 tests failed out of 1881**.

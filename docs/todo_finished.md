@@ -27819,3 +27819,140 @@ real answer.
     unaffected for programs that DO use SoA.
   - finished_at: 2026-08-14
   - status: done
+
+- [x] TODO-5244: Replace runtime string-concatenation path matching with precomputed comparisons
+  - owner: ai
+  - created_at: 2026-08-14
+  - phase: Test runtime optimization
+  - parallel_track: compiler-path-string-churn
+  - depends_on: (none)
+  - scope: The same post-TODO-5242 profile of `mini_vec.prime` shows
+    generic string/allocation churn still dominating overall cost:
+    `operator new` (8.21%), `std::string::append` (8.11%),
+    `memcpy` (7.54%), `memcmp` (4.00%), `strlen` (3.42%),
+    `std::_Hash_bytes` (3.39%), `std::string::operator+` (2.92%),
+    `operator delete` (2.82%) - roughly 30%+ combined, consistent with
+    call/symbol-resolution code building candidate path strings at
+    runtime (e.g. `somePrefix + methodName` style concatenation) for
+    comparison against known stdlib surface paths, rather than comparing
+    against precomputed literals/`string_view`s without allocating. Find
+    the hot call sites building these strings (start from
+    `resolveCalleePath`, `stdlibSurfaceMatchesSpelling`,
+    `resolveStdlibSurfaceMemberName`, and the `soa_paths::*` functions
+    named in TODO-5243, all visible in the same profile at 1-8% each) and
+    determine whether the concatenation-then-compare pattern can become a
+    direct comparison (e.g. compare `methodName` against a suffix after a
+    known prefix via `string_view` slicing, or a `std::string_view`-keyed
+    lookup table built once) instead of allocating a new string per
+    candidate check.
+  - implementation_notes: This may overlap with what TODO-5243 finds
+    (both point at the same call/symbol-resolution hot path from
+    different angles - path CLASSIFICATION cost vs. path CONSTRUCTION
+    cost) - coordinate/sequence with that leaf rather than duplicating
+    investigation, and note in this leaf's resolution whether the fixes
+    ended up being the same change.
+  - acceptance:
+    - At least one concrete site where string concatenation is replaced
+      by a non-allocating comparison, with before/after instruction-count
+      measurements showing the relevant string/malloc functions' share
+      dropping.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+  - stop_rule: No caching without a provable purity argument (same bar as
+    the rest of this chain). If the concatenation is already effectively
+    unavoidable given how the surface-matching data is structured (e.g.
+    genuinely dynamic prefixes that can't be precomputed), document that
+    and stop rather than force a fix.
+  - resolution_summary (2026-08-14): TODO-5243 landed first and already
+    fixed the specific five functions this TODO's task description named
+    from a stale pre-5243 profile (`collectionPath`,
+    `isLegacyOrCanonicalSoaHelperPath`,
+    `canonicalizeLegacySoaRefHelperPath`, `isCanonicalSoaRefLikeHelperPath`,
+    `isCanonicalStdlibSoaHelperPath`), so this leaf re-profiled fresh
+    (`mini_vec.prime`, 556,323,644 retired instructions post-TODO-5243,
+    close to but not identical to TODO-5243's own reported 570,674,908 -
+    within expected machine/build noise) and looked for *remaining*
+    instances of the same rebuild-a-constant-string-per-call pattern
+    rather than repeating TODO-5243's work. **Found three sibling
+    functions in the same file TODO-5243 fixed
+    (`include/primec/SoaPathHelpers.h`) that TODO-5243's scope didn't
+    cover**: `isExperimentalColumnarVectorSpecializedTypePath()` (1.00%
+    of total instructions alone - the single largest remaining
+    individually-named string-rebuild offender in the profile),
+    `isExperimentalColumnarVectorTypePath()`, and
+    `isExperimentalSoaRefLikeHelperPath()` - all rebuilt multiple
+    compile-time-constant prefix/comparison strings via
+    `collectionPath()`/`memberPath()`/raw concatenation on every single
+    call despite depending on nothing but process-lifetime-constant
+    folder/type-name builders. **Fix**: memoized all of them as
+    function-local `static const` values, the exact magic-static pattern
+    TODO-5243 (and TODO-5235 before it) already established in this file
+    - purely mechanical, no return-value changes for any input, no
+      per-compile gating. **Also explicitly checked** the other leads
+    named in this TODO's original scope
+    (`resolveCalleePath` in `SemanticsValidatorBuildCallResolution.cpp`,
+    `stdlibSurfaceMatchesSpelling`/`resolveStdlibSurfaceMemberName` in
+    `StdlibSurfaceRegistry.cpp`) and confirmed neither is this pattern:
+    `resolveCalleePath` already routes through
+    `callTargetResolutionScratch_`'s arena-scoped caches from earlier
+    leaves in this chain and its remaining cost is genuinely
+    per-`Expr`-dependent; `stdlibSurfaceMatchesSpelling`/
+    `resolveStdlibSurfaceMemberName`/`matchesAny` already operate purely
+    on non-allocating `string_view`/`span` comparisons - their cost is an
+    O(N) linear scan over the stdlib surface `Registry` (~50-100
+    entries) per query, the same diffuse "generic classification runs
+    for every candidate" shape TODO-5243 already characterized and
+    deferred to the broader TODO-4656 collection-decoupling track, not
+    redundant string construction, so left alone per this TODO's own
+    stop_rule against forcing a fix onto an already-non-allocating cost
+    center. **Measured result** (release build, same machine before/after
+    via `git stash`/rebuild of just this fix against this session's
+    starting commit `dff2d0d`; `valgrind --tool=callgrind`, `./primec
+    --emit=vm <file> --entry /main`, no `-o` so the VM actually executes):
+    `mini_vec.prime` - **556,323,644 -> 544,212,452 retired instructions
+    (-2.18%)**; `heavy_collections.prime` (`import /std/collections/*`,
+    which reaches the SoA submodule and exercises these `isExperimental*`
+    predicates with real, non-degenerate SoA candidate paths) -
+    **2,780,685,855 -> 2,709,610,711 (-2.56%)**. Both repros' VM execution
+    results verified identical before/after (exit code 3 unchanged).
+    Wall-clock (7 interleaved runs each for `mini_vec.prime`, 5 for
+    `heavy_collections.prime`): `mini_vec.prime` before ~0.0928-0.0980s
+    (median ~0.0968s) -> after ~0.0907-0.0989s (median ~0.0923s), a
+    small directionally-consistent improvement within this range's
+    run-to-run noise band; `heavy_collections.prime` before
+    ~0.3894-0.4002s (median ~0.3947s) -> after ~0.3809-0.4083s (median
+    ~0.3873s), similarly small and noise-adjacent - consistent with a
+    ~2.2-2.6% instruction-count change being a small fraction of fixed
+    per-process overhead at this timescale. **This is a real,
+    provably-correct, but modest win**, not a repeat of TODO-5243's
+    34%/76% swings - the low-hanging fruit for this exact pattern is now
+    exhausted in `soa_paths`. **New hot-spot landscape for a follow-up
+    leaf** (post-fix profile, `mini_vec.prime`): `operator new` (9.82%),
+    `__memcmp_avx2_movbe` (6.16%), `std::_Hash_bytes` (5.32%),
+    `__memcpy_avx_unaligned_erms` (4.46%), and a `std::find` over
+    `span<string_view>` (4.00%, this is `matchesAny()`'s O(N) registry
+    scan) collectively ~30% of total instructions - none of this is the
+    string-concatenation pattern; it is legitimately-varying per-call
+    allocation (new `Expr`/binding/scratch state) plus O(N) linear
+    classification scans over the stdlib surface registry. **The most
+    promising next lead is the registry-scan family**
+    (`matchesAny`/`findStdlibSurfaceMetadata*` uncached variants) -
+    replacing the ~50-100-entry linear `Registry` scan with a precomputed
+    hash/prefix index keyed by canonical path would be a TODO-4742-shaped
+    structural win, but is a larger change than this leaf's scope, so
+    named here as a lead rather than attempted. **Cumulative chain
+    progress** (session start -> now, `mini_vec.prime`, `valgrind
+    --tool=callgrind` retired instructions): 13,641,584,142 ->
+    **544,212,452 (-96.0% from session start, ~25.1x faster)**;
+    wall-clock ~2.0-2.2s -> **~0.090-0.099s (median ~0.092s)**. Still not
+    confidently and consistently under the <100ms target given
+    measurement noise at this scale (individual runs range 0.090-0.099s,
+    straddling the 100ms line), though the median and most runs now land
+    under it - the <100ms target is close but not yet a settled fact,
+    and the diffuse `operator new`/hash/registry-scan costs identified
+    above are the honest next lever, not further string-concatenation
+    hunting. Verified via `./scripts/compile.sh --release` (single
+    invocation, this repo's convention): **100% tests passed, 0 tests
+    failed out of 1881**.
+  - finished_at: 2026-08-14
+  - status: done

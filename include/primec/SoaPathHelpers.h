@@ -157,36 +157,58 @@ inline bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
 
 inline bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   const std::string canonicalPath = stripGeneratedSpecializationSuffix(path);
-  return canonicalPath == collectionPath(experimentalSoaFolder(), "soaVectorRef") ||
-         canonicalPath == collectionPath(experimentalSoaFolder(), "soaVectorRefRef") ||
-         canonicalPath == collection_paths::memberPath(
-                              collection_paths::kInternalSoaStorageFolder, "soaColumnRef");
+  // TODO-5244: same fix as the soa_paths helpers above (TODO-5243) - these
+  // three comparison targets are compile-time constants, precompute once
+  // instead of rebuilding them (two collectionPath() concatenations plus a
+  // memberPath() concatenation) on every single call.
+  static const std::string soaVectorRefPath = collectionPath(experimentalSoaFolder(), "soaVectorRef");
+  static const std::string soaVectorRefRefPath = collectionPath(experimentalSoaFolder(), "soaVectorRefRef");
+  static const std::string soaColumnRefPath = collection_paths::memberPath(
+      collection_paths::kInternalSoaStorageFolder, "soaColumnRef");
+  return canonicalPath == soaVectorRefPath || canonicalPath == soaVectorRefRefPath ||
+         canonicalPath == soaColumnRefPath;
 }
 
 inline bool isExperimentalColumnarVectorSpecializedTypePath(std::string_view path) {
-  const std::string specializedPrefix =
+  // TODO-5244: same fix as isLegacyOrCanonicalSoaHelperPath()/etc. above
+  // (TODO-5243) - these three prefixes are compile-time constants, but this
+  // function is called from the same broad "is this a SoA-related path"
+  // classification fan-out as its already-fixed siblings and was rebuilding
+  // all three via allocation+concatenation on every call (1.00% of total
+  // instructions on its own in a zero-SoA-usage profile). Precompute once.
+  static const std::string specializedPrefix =
       collectionPath(publicSoaFolder(), soaBackingTypeName() + "__");
-  const std::string specializedPrefixNoSlash = specializedPrefix.substr(1);
-  const std::string specializedPrefixBare = soaBackingTypeName() + "__";
+  static const std::string specializedPrefixNoSlash = specializedPrefix.substr(1);
+  static const std::string specializedPrefixBare = soaBackingTypeName() + "__";
   return path.starts_with(specializedPrefix) ||
          path.starts_with(specializedPrefixNoSlash) ||
          path.starts_with(specializedPrefixBare);
 }
 
 inline bool isExperimentalColumnarVectorTypePath(std::string_view path) {
-  const std::string typePrefix =
+  // TODO-5244: same fix - typePrefix/typePrefixWithSlash and each
+  // matchesTypePrefix() prefix pair are all compile-time constants,
+  // precompute once instead of rebuilding on every call.
+  static const std::string typePrefix =
       std::string("std") + "/" + "collections" + "/" +
       publicSoaFolder() + "/" + soaBackingTypeName();
-  const std::string typePrefixWithSlash = "/" + typePrefix;
-  const auto matchesTypePrefix = [&](std::string_view prefix) {
-    const std::string templatePrefix = std::string(prefix) + "<";
-    const std::string specializedPrefix = std::string(prefix) + "__";
-    return path == prefix ||
-           path.rfind(std::string_view(templatePrefix), 0) == 0 ||
-           path.rfind(std::string_view(specializedPrefix), 0) == 0;
-  };
-  return matchesTypePrefix(soaBackingTypeName()) || matchesTypePrefix(typePrefix) ||
-         matchesTypePrefix(typePrefixWithSlash) ||
+  static const std::string typePrefixWithSlash = "/" + typePrefix;
+  static const std::string backingTypeTemplatePrefix = soaBackingTypeName() + "<";
+  static const std::string backingTypeSpecializedPrefix = soaBackingTypeName() + "__";
+  static const std::string typePrefixTemplatePrefix = typePrefix + "<";
+  static const std::string typePrefixSpecializedPrefix = typePrefix + "__";
+  static const std::string typePrefixWithSlashTemplatePrefix = typePrefixWithSlash + "<";
+  static const std::string typePrefixWithSlashSpecializedPrefix = typePrefixWithSlash + "__";
+  const bool matchesBackingType = path == soaBackingTypeName() ||
+      path.rfind(std::string_view(backingTypeTemplatePrefix), 0) == 0 ||
+      path.rfind(std::string_view(backingTypeSpecializedPrefix), 0) == 0;
+  const bool matchesTypePrefix = path == typePrefix ||
+      path.rfind(std::string_view(typePrefixTemplatePrefix), 0) == 0 ||
+      path.rfind(std::string_view(typePrefixSpecializedPrefix), 0) == 0;
+  const bool matchesTypePrefixWithSlash = path == typePrefixWithSlash ||
+      path.rfind(std::string_view(typePrefixWithSlashTemplatePrefix), 0) == 0 ||
+      path.rfind(std::string_view(typePrefixWithSlashSpecializedPrefix), 0) == 0;
+  return matchesBackingType || matchesTypePrefix || matchesTypePrefixWithSlash ||
          isExperimentalColumnarVectorSpecializedTypePath(path);
 }
 
