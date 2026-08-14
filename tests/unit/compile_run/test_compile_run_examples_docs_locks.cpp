@@ -2058,8 +2058,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "- TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery\n"
                   "- TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution\n"
                   "- TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers\n"
-                  "- TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation\n"
-                  "- TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling | track: compiler-allocation-volume | surface: src/semantics, src/ir_lowerer, src/parser\n") !=
+                  "- TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation\n") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10") != std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==

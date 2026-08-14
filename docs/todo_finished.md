@@ -27175,3 +27175,121 @@ real answer.
   - finished_at: 2026-08-13
   - status: done
 
+- [x] TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling
+  - owner: ai
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-allocation-volume
+  - depends_on: (none)
+  - scope: TODO-5232 and TODO-5236 each independently found and fixed a
+    genuine algorithmic redundancy (O(N^2) re-scanning in
+    `makeCompileTimeIfRequirementContext`; `RequirementPredicateDefinitionContext`
+    passed by value through a recursive per-node AST walk) using
+    `valgrind --tool=dhat`/`callgrind` profiling of the standard
+    `mini_vec.prime` repro - both with zero allocator-level risk, unlike
+    the arena-reset line of work (TODO-5235). This leaf continues that
+    same direct approach: re-profile the repro (and the heavier real
+    collection test) with `dhat` now that TODO-5236's fix has landed,
+    identify the next-largest remaining allocation-count contributor(s),
+    and fix the actual redundancy the same way - not a cache/memoization
+    band-aid unless the object's inputs are provably stable/pure across
+    the calls being deduplicated (same bar TODO-5230/5232/5236 held
+    themselves to). Repeat for as many rounds as remain productive within
+    a reasonable session budget; this is exploratory/open-ended by nature
+    (unlike TODO-5237, which has a bounded scope), so use judgment on
+    when diminishing returns make further rounds not worth it, and
+    document that judgment rather than stopping silently.
+  - implementation_notes: Look for the same two shapes that already paid
+    off: (a) an object passed by value into a recursive/loop context where
+    it's mostly read-only, (b) a program-wide fact-gathering pass
+    re-triggered redundantly inside a per-definition or per-node loop
+    instead of computed once. `src/semantics/` is where all three prior
+    fixes in this chain landed; check whether similar patterns exist in
+    `src/ir_lowerer/` or `src/parser/` too, since dhat will show if
+    allocation hot spots have moved there once the semantics-layer
+    redundancy is squeezed down.
+  - acceptance:
+    - At least one more genuine redundant-allocation/redundant-work
+      pattern identified and fixed (or a documented finding that none
+      remain above the noise floor, if that's what the profiling shows).
+    - Before/after allocation-count and wall-clock measurements for both
+      standard repros, recorded in `docs/TestRuntimeOptimization.md`.
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions after each individual fix.
+  - stop_rule: Same correctness bar as every leaf in this chain - no
+    caching without a provable purity argument, no speculative
+    "probably fine" fixes. If dhat profiling shows the remaining
+    allocation volume is legitimately necessary (each allocation
+    corresponds to genuinely distinct, non-redundant work), stop and
+    document that finding rather than manufacturing a fix.
+  - resolution_summary (2026-08-14): Profiled the post-TODO-5236 build with
+    `valgrind --tool=dhat` on `mini_vec.prime` and found the next-largest
+    remaining allocation-count contributor was one layer shallower than
+    TODO-5236's own fix, inside the same `rewriteCompileTimeIfBranches`
+    call path: `makeCompileTimeIfRequirementContext` deep-copies
+    `structNames`/`sumNames`/`importAliases` and the whole-program
+    `candidateFacts` (callables/structFields/structTraits) into a fresh
+    `RequirementPredicateDefinitionContext`, **unconditionally, once per
+    `Definition`** - even though (per TODO-5236's own fix) that context is
+    only ever read inside `evaluateCompileTimeIfDecision`, which only runs
+    when a `ct_if` envelope is actually found. The entire
+    `/std/collections/*` stdlib module contains zero `ct_if` usages
+    (confirmed via `grep`), so for both standard repros every one of these
+    per-definition context builds, across hundreds of spliced-in stdlib
+    definitions, was pure waste. Fixed by adding `LazyCompileTimeIfContext`
+    (`src/semantics/SemanticsValidate.cpp`) - a wrapper holding only
+    pointers to the build inputs until `.get()` triggers the same build as
+    before, called only at the two `evaluateCompileTimeIfDecision` call
+    sites that ever read it - threaded through
+    `rewriteCompileTimeIfStatements`/`rewriteCompileTimeIfStatement`/
+    `rewriteCompileTimeIfExpression` in place of the eager `const
+    RequirementPredicateDefinitionContext&`. This eliminates the redundant
+    WORK upstream (the unconditional build for definitions containing no
+    `ct_if`), the same shape this leaf's own stop_rule required, not a
+    cache - each definition that does need a context still gets exactly
+    one freshly-built one, identical to before.
+    **Measured result** (isolated clean-checkout before/after binaries,
+    both built `-DPRIMESTRUCT_USE_MIMALLOC=OFF` to isolate this fix's own
+    effect from TODO-5237 landing in parallel): `mini_vec.prime` - **dhat
+    allocation count 5,658,083 -> 4,983,933 blocks (-11.9%)**, bytes 380.1MB
+    -> 319.2MB (-16.0%); `heavy_stdlib.prime` (`/std/collections/*` import)
+    - **9,273,056 -> 8,591,848 blocks (-7.3%)**, bytes 539.1MB -> 477.6MB
+    (-11.4%), a smaller relative share consistent with TODO-5236's own
+    finding that the heavier repro spends proportionally more of its
+    compile outside the compile-time-if tree walk. `callgrind` retired
+    instructions for `mini_vec.prime`: 4,939,848,139 -> 4,814,403,312
+    (-2.5%). Wall-clock was within measurement noise for both repros
+    (~0.6-0.9s either way) - stated plainly rather than glossed over: the
+    TODO-5234 arena (and TODO-5237's mimalloc, composed with it) already
+    make individual allocations cheap enough that this allocation-count
+    reduction, while real, no longer moves wall-clock measurably. Checked
+    `src/ir_lowerer/` and `src/parser/` per this leaf's own scope (not
+    just `src/semantics/`, where all three prior fixes in this chain
+    landed): bucketing the post-fix `mini_vec.prime` dhat profile by
+    subsystem, `src/semantics` still dominates at 87.9% of blocks,
+    `parser`/lexer/envelope-splicing at 3.7%, `src/ir_lowerer` at 4.2% -
+    the data says semantics is still where the volume lives, it's just no
+    longer concentrated in one fixable call path (largest remaining
+    individual sites - `envelope_internal` text scanning,
+    `hasExperimentalGfxImportedDefinitionPath`'s per-call string copy,
+    `inferQueryExprTypeText`'s string concatenation - each under 1% of the
+    remaining total). **Stopped after this one round**: chasing any of
+    those sub-1%-each sites individually would be materially higher effort
+    (each a different function/subsystem, no shared root cause the way
+    `RequirementPredicateDefinitionContext` was across two rounds) for a
+    fraction of this round's already-modest wall-clock return, against
+    this chain's correctness-first discipline - a documented
+    diminishing-returns judgment call per this leaf's own acceptance
+    criteria, not a silent stop. Full mechanism and measurements recorded
+    in `docs/TestRuntimeOptimization.md`'s matching 2026-08-14 log entry.
+    Verified via `./scripts/compile.sh --release` (single invocation, this
+    repo's convention, run on top of TODO-5237's already-landed
+    mimalloc-by-default change): **100% tests passed, 0 tests failed out
+    of 1881**. Also updated
+    `tests/unit/compile_run/test_compile_run_examples_docs_locks.cpp`'s
+    hard-coded `### Ready Now` bullet-list literal to drop this leaf's own
+    now-finished TODO-5238 line, matching TODO-5237's own precedent for
+    keeping that lock test's exact-content check in sync with `docs/todo.md`.
+  - finished_at: 2026-08-14
+  - status: done
+

@@ -7024,6 +7024,64 @@ makeCompileTimeIfRequirementContext(
   return context;
 }
 
+// TODO-5238: `makeCompileTimeIfRequirementContext` deep-copies several
+// program-wide structures into a fresh `RequirementPredicateDefinitionContext`
+// (structNames/sumNames/importAliases sets/maps plus the candidateFacts
+// callables/structFields/structTraits vectors) - real, non-trivial work
+// (unordered_set/map node allocations, string/vector copies). Profiling with
+// `valgrind --tool=dhat` post-TODO-5236 found this construction happening
+// *eagerly*, once per `Definition` in `rewriteCompileTimeIfBranches`'
+// definitions loop, even though `context` is only ever actually read inside
+// `evaluateCompileTimeIfDecision` - which only runs for a `ct_if` envelope,
+// and the overwhelming majority of definitions (all of them, for programs
+// with no `ct_if` usage anywhere, e.g. the entire `/std/collections/*`
+// module) contain zero. `LazyCompileTimeIfContext` defers the actual build to
+// first use: it stores only pointers to the program-wide inputs (no copies)
+// until `get()` is called, which happens exactly at the two call sites that
+// dereference `context` today (`evaluateCompileTimeIfDecision`'s two call
+// sites) - same build, same result, just skipped entirely for definitions
+// whose statement/expression tree never contains a `ct_if`. The
+// already-resolved-branch case (`rewriteCompileTimeIfStatement`'s
+// `updatedContext`) uses the second constructor to wrap an already-built
+// context with no extra work, matching today's behavior exactly for that
+// path (which already pays this cost once per resolved `ct_if`, not once per
+// AST node - unaffected by this change).
+class LazyCompileTimeIfContext {
+public:
+  LazyCompileTimeIfContext(
+      const Definition &definition,
+      const std::unordered_set<std::string> &structNames,
+      const std::unordered_set<std::string> &sumNames,
+      const std::unordered_map<std::string, std::string> &importAliases,
+      const CompileTimeIfCandidateFacts &candidateFacts)
+      : definition_(&definition),
+        structNames_(&structNames),
+        sumNames_(&sumNames),
+        importAliases_(&importAliases),
+        candidateFacts_(&candidateFacts) {}
+
+  explicit LazyCompileTimeIfContext(
+      semantics::RequirementPredicateDefinitionContext built)
+      : built_(std::move(built)) {}
+
+  const semantics::RequirementPredicateDefinitionContext &get() const {
+    if (!built_.has_value()) {
+      built_ = makeCompileTimeIfRequirementContext(
+          *definition_, *structNames_, *sumNames_, *importAliases_,
+          *candidateFacts_);
+    }
+    return *built_;
+  }
+
+private:
+  const Definition *definition_ = nullptr;
+  const std::unordered_set<std::string> *structNames_ = nullptr;
+  const std::unordered_set<std::string> *sumNames_ = nullptr;
+  const std::unordered_map<std::string, std::string> *importAliases_ = nullptr;
+  const CompileTimeIfCandidateFacts *candidateFacts_ = nullptr;
+  mutable std::optional<semantics::RequirementPredicateDefinitionContext> built_;
+};
+
 bool isCompileTimeIfEnvelope(const Expr &expr, std::string_view expectedName) {
   return expr.kind == Expr::Kind::Call && expr.name == expectedName &&
          expr.hasBodyArguments;
@@ -7099,7 +7157,7 @@ std::string formatCompileTimeIfPredicateDiagnostic(
 
 bool evaluateCompileTimeIfDecision(
     const Expr &stmt,
-    const semantics::RequirementPredicateDefinitionContext &context,
+    const LazyCompileTimeIfContext &lazyContext,
     const std::string &definitionPath,
     bool allowDeferred,
     CompileTimeIfDecision &decision,
@@ -7115,6 +7173,10 @@ bool evaluateCompileTimeIfDecision(
     error = formatCompileTimeIfConditionShapeDiagnostic(stmt, definitionPath);
     return false;
   }
+  // This is the only point in the whole tree walk that actually needs the
+  // (expensive to build) context - see LazyCompileTimeIfContext's comment.
+  const semantics::RequirementPredicateDefinitionContext &context =
+      lazyContext.get();
   semantics::RequirementPredicateFactDraft fact =
       semantics::buildRequirementPredicateFactDraft(conditionText,
                                                     stmt.sourceLine,
@@ -7348,7 +7410,7 @@ bool materializeCompileTimeIfGeneratedStructs(
 }
 
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
-                                    const semantics::RequirementPredicateDefinitionContext &context,
+                                    const LazyCompileTimeIfContext &context,
                                     const std::string &definitionPath,
                                     std::unordered_set<std::string> &structNames,
                                     std::vector<Definition> &generatedDefinitions,
@@ -7357,14 +7419,14 @@ bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
 
 bool rewriteCompileTimeIfExpression(
     Expr &expr,
-    const semantics::RequirementPredicateDefinitionContext &context,
+    const LazyCompileTimeIfContext &context,
     const std::string &definitionPath,
     bool allowDeferred,
     std::string &error);
 
 bool rewriteCompileTimeIfStatement(Expr &stmt,
                                    std::vector<Expr> &out,
-                                   const semantics::RequirementPredicateDefinitionContext &context,
+                                   const LazyCompileTimeIfContext &context,
                                    const std::string &definitionPath,
                                    std::unordered_set<std::string> &structNames,
                                    std::vector<Definition> &generatedDefinitions,
@@ -7404,11 +7466,18 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
   // nested statements - not on every statement in every definition. See
   // this function's and rewriteCompileTimeIfStatements'/
   // rewriteCompileTimeIfBranches' comments for the profiling and reasoning.
-  semantics::RequirementPredicateDefinitionContext updatedContext = context;
+  // TODO-5238: `context.get()` here is guaranteed already-built (this branch
+  // only runs once `evaluateCompileTimeIfDecision` above already forced the
+  // build), so this is exactly the same one copy as before - wrapped in a
+  // LazyCompileTimeIfContext so the nested walk keeps the same "build only if
+  // a further nested ct_if is found" laziness (there usually isn't one).
+  semantics::RequirementPredicateDefinitionContext updatedContext =
+      context.get();
   updatedContext.structNames = structNames;
+  LazyCompileTimeIfContext updatedLazyContext(std::move(updatedContext));
   if (!rewriteCompileTimeIfStatements(
           selected,
-          updatedContext,
+          updatedLazyContext,
           definitionPath,
           structNames,
           generatedDefinitions,
@@ -7424,7 +7493,7 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
 
 bool rewriteCompileTimeIfExpression(
     Expr &expr,
-    const semantics::RequirementPredicateDefinitionContext &context,
+    const LazyCompileTimeIfContext &context,
     const std::string &definitionPath,
     bool allowDeferred,
     std::string &error) {
@@ -7471,7 +7540,7 @@ bool rewriteCompileTimeIfExpression(
 }
 
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
-                                    const semantics::RequirementPredicateDefinitionContext &context,
+                                    const LazyCompileTimeIfContext &context,
                                     const std::string &definitionPath,
                                     std::unordered_set<std::string> &structNames,
                                     std::vector<Definition> &generatedDefinitions,
@@ -7523,12 +7592,17 @@ bool rewriteCompileTimeIfBranches(Program &program,
 
   std::vector<Definition> generatedDefinitions;
   for (Definition &definition : program.definitions) {
-    semantics::RequirementPredicateDefinitionContext context =
-        makeCompileTimeIfRequirementContext(definition,
-                                            structNames,
-                                            sumNames,
-                                            importAliases,
-                                            candidateFacts);
+    // TODO-5238: this used to eagerly call `makeCompileTimeIfRequirementContext`
+    // (a deep copy of structNames/sumNames/importAliases/candidateFacts) for
+    // *every* definition, regardless of whether that definition's body
+    // contains a `ct_if` anywhere. `LazyCompileTimeIfContext` defers that
+    // build to first actual use - see its comment above
+    // `makeCompileTimeIfRequirementContext` for the profiling and reasoning.
+    LazyCompileTimeIfContext context(definition,
+                                     structNames,
+                                     sumNames,
+                                     importAliases,
+                                     candidateFacts);
     if (!rewriteCompileTimeIfStatements(
             definition.statements,
             context,

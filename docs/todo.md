@@ -76,7 +76,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
-- TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling | track: compiler-allocation-volume | surface: src/semantics, src/ir_lowerer, src/parser
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
 of TODO-5237/5238 - its own investigation trended away from convergence
@@ -85,7 +84,9 @@ known set), so the lower-risk allocator-swap and direct-redundancy-mining
 lines are being tried first. TODO-5235's task block remains open below for
 whoever picks it back up. TODO-5237 (the allocator-swap line) has since
 resolved - see `docs/todo_finished.md` - and mimalloc now ships linked
-into `primec`/`primevm` alongside the TODO-5234 arena.
+into `primec`/`primevm` alongside the TODO-5234 arena. TODO-5238 (the
+direct-redundancy-mining line) has also since resolved - see
+`docs/todo_finished.md`.
 
 ### Immediate Next 10
 
@@ -341,7 +342,6 @@ into `primec`/`primevm` alongside the TODO-5234 arena.
 51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
 51a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
 51b. TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
-51c. TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling
 52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
 53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
 54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
@@ -1840,54 +1840,6 @@ into `primec`/`primevm` alongside the TODO-5234 arena.
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
-
-- [ ] TODO-5238: Continue mining redundant-allocation/redundant-work patterns (post-5236) via dhat profiling
-  - owner: ai
-  - created_at: 2026-08-13
-  - phase: Test runtime optimization
-  - parallel_track: compiler-allocation-volume
-  - depends_on: (none)
-  - scope: TODO-5232 and TODO-5236 each independently found and fixed a
-    genuine algorithmic redundancy (O(N^2) re-scanning in
-    `makeCompileTimeIfRequirementContext`; `RequirementPredicateDefinitionContext`
-    passed by value through a recursive per-node AST walk) using
-    `valgrind --tool=dhat`/`callgrind` profiling of the standard
-    `mini_vec.prime` repro - both with zero allocator-level risk, unlike
-    the arena-reset line of work (TODO-5235). This leaf continues that
-    same direct approach: re-profile the repro (and the heavier real
-    collection test) with `dhat` now that TODO-5236's fix has landed,
-    identify the next-largest remaining allocation-count contributor(s),
-    and fix the actual redundancy the same way - not a cache/memoization
-    band-aid unless the object's inputs are provably stable/pure across
-    the calls being deduplicated (same bar TODO-5230/5232/5236 held
-    themselves to). Repeat for as many rounds as remain productive within
-    a reasonable session budget; this is exploratory/open-ended by nature
-    (unlike TODO-5237, which has a bounded scope), so use judgment on
-    when diminishing returns make further rounds not worth it, and
-    document that judgment rather than stopping silently.
-  - implementation_notes: Look for the same two shapes that already paid
-    off: (a) an object passed by value into a recursive/loop context where
-    it's mostly read-only, (b) a program-wide fact-gathering pass
-    re-triggered redundantly inside a per-definition or per-node loop
-    instead of computed once. `src/semantics/` is where all three prior
-    fixes in this chain landed; check whether similar patterns exist in
-    `src/ir_lowerer/` or `src/parser/` too, since dhat will show if
-    allocation hot spots have moved there once the semantics-layer
-    redundancy is squeezed down.
-  - acceptance:
-    - At least one more genuine redundant-allocation/redundant-work
-      pattern identified and fixed (or a documented finding that none
-      remain above the noise floor, if that's what the profiling shows).
-    - Before/after allocation-count and wall-clock measurements for both
-      standard repros, recorded in `docs/TestRuntimeOptimization.md`.
-    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
-      zero regressions after each individual fix.
-  - stop_rule: Same correctness bar as every leaf in this chain - no
-    caching without a provable purity argument, no speculative
-    "probably fine" fixes. If dhat profiling shows the remaining
-    allocation volume is legitimately necessary (each allocation
-    corresponds to genuinely distinct, non-redundant work), stop and
-    document that finding rather than manufacturing a fix.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai

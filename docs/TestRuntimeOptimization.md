@@ -1043,3 +1043,103 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   `docs/todo.md` keeps between the bullets and the next heading (full
   reasoning in `docs/todo_finished.md`'s TODO-5237 entry). A third clean
   run confirmed `100% tests passed, 0 tests failed out of 1881`.
+- 2026-08-14 (TODO-5238, continued allocation-redundancy mining): Re-profiled
+  `mini_vec.prime` with `valgrind --tool=dhat` on a build with TODO-5236's fix
+  present, to find the next-largest remaining allocation-count contributor.
+  The single dominant site was still inside `rewriteCompileTimeIfBranches`
+  (several `dhat` entries totaling ~600K+ of the run's 5.66M blocks) - but
+  this time one level shallower than TODO-5236's own fix: `makeCompileTimeIfRequirementContext`
+  deep-copies `structNames`/`sumNames`/`importAliases` (`unordered_set`/`unordered_map`,
+  real node-allocation-per-element churn) plus `candidateFacts.callables`/
+  `structFields`/`structTraits` into a fresh `RequirementPredicateDefinitionContext`
+  - **once per `Definition` in the whole program**, unconditionally, before
+  even looking at that definition's body. Traced every consumer of the
+  resulting `context` (TODO-5236 already made the recursive walk take it by
+  `const&`) and confirmed it is read in exactly one place:
+  `evaluateCompileTimeIfDecision`, called only when a `ct_if` envelope is
+  actually found while walking a definition's statements/expressions. The
+  entire `/std/collections/*` stdlib module contains **zero** `ct_if` usages
+  (confirmed via `grep -rn ct_if stdlib/std/collections/`), so for
+  `mini_vec.prime` and `heavy_stdlib.prime` alike, every one of these
+  per-definition context builds across the hundreds of spliced-in stdlib
+  definitions was pure waste - the context was built, then walked past
+  without ever being read, for every single definition.
+  **Fix**: added `LazyCompileTimeIfContext` (`src/semantics/SemanticsValidate.cpp`,
+  next to `makeCompileTimeIfRequirementContext`) - a small wrapper that
+  stores only pointers to the build inputs (`definition`, `structNames`,
+  `sumNames`, `importAliases`, `candidateFacts`; no copies) until `.get()`
+  is called, which performs the exact same `makeCompileTimeIfRequirementContext`
+  build as before, cached for the lifetime of that one wrapper instance.
+  Threaded this type through `rewriteCompileTimeIfStatements`/
+  `rewriteCompileTimeIfStatement`/`rewriteCompileTimeIfExpression`/
+  `evaluateCompileTimeIfDecision` in place of the eager
+  `const RequirementPredicateDefinitionContext&`, calling `.get()` only at
+  the two `evaluateCompileTimeIfDecision` call sites (the only two places
+  that ever read it). The already-resolved-branch path
+  (`rewriteCompileTimeIfStatement`'s `updatedContext`, which mutates
+  `structNames` for the selected branch's nested statements) uses a second
+  constructor that wraps an already-built context directly, so that path's
+  cost is unchanged from TODO-5236's fix - this only removes the *eager,
+  unconditional* build for definitions that turn out to contain no `ct_if`
+  at all, same shape as TODO-5232's stop_rule required ("eliminate the
+  redundant work upstream," not caching a moving target - nothing here is
+  memoized across different definitions or repeated calls, each definition
+  that does need a context still gets exactly one freshly-built one, same
+  as before).
+  **Correctness argument**: `LazyCompileTimeIfContext::get()` calls the
+  exact same `makeCompileTimeIfRequirementContext` function with the exact
+  same arguments that were passed eagerly before, and is guaranteed to be
+  called before `context` is ever dereferenced (both call sites are inside
+  `evaluateCompileTimeIfDecision`, which receives `lazyContext.get()`
+  directly, not the wrapper). No control-flow path reads `context`'s fields
+  without going through `.get()` first - verified by grepping every use of
+  the `context`/`updatedContext` identifiers in the touched functions.
+  **Measured result**: isolated clean-checkout before/after binaries (base
+  commit `4aabeb8` vs. this fix, both built `-DPRIMESTRUCT_USE_MIMALLOC=OFF`
+  to isolate this fix's own effect from TODO-5237's unrelated allocator
+  work landing in parallel) via `valgrind --tool=dhat`: `mini_vec.prime` -
+  **5,658,083 -> 4,983,933 blocks (-11.9%)**, **380.1MB -> 319.2MB bytes
+  (-16.0%)**. `heavy_stdlib.prime` (`/std/collections/*` import, matching
+  the `makeVectorHelperSurfaceConformanceSource` heavier-repro shape used
+  throughout this chain) - **9,273,056 -> 8,591,848 blocks (-7.3%)**,
+  539.1MB -> 477.6MB bytes (-11.4%) - a smaller relative share than
+  `mini_vec`, consistent with TODO-5236's own finding that the heavier
+  repro spends proportionally more of its total compile outside the
+  compile-time-if tree walk this fix touches. `valgrind --tool=callgrind`
+  total retired instructions for `mini_vec.prime`: 4,939,848,139 ->
+  4,814,403,312 (**-2.5%**). Wall-clock for both repros was **within
+  measurement noise** (~0.6-0.9s either way, repeated interleaved runs) -
+  expected and worth stating plainly rather than papering over: TODO-5234's
+  arena (and now TODO-5237's mimalloc, composed with it) already made
+  individual allocations cheap, so a further allocation-*count* reduction
+  of this size no longer moves wall-clock measurably, even though the
+  underlying redundant work (and its real, measured instruction-count cost)
+  is genuinely gone. This mirrors TODO-5232's own honest attribution
+  pattern of the remaining floor being elsewhere, just one layer further:
+  first "the allocator absorbs it," now "the allocator absorbs it so
+  completely that the count itself stops being the wall-clock bottleneck."
+  **Round 2 check** (dhat on the post-fix build): re-ran the allocation-site
+  breakdown and found the profile is now genuinely diffuse - the former
+  single dominant site is gone, and the largest remaining individual sites
+  (`envelope_internal::parseIdentifier`/`findNextEnvelopeStart` text
+  scanning, `hasExperimentalGfxImportedDefinitionPath`'s per-call string
+  copy, `SemanticsValidator::inferQueryExprTypeText`'s string
+  concatenation) each account for well under 1% of the remaining 4.98M
+  blocks (~15K-35K blocks apiece). Bucketing the full post-fix `mini_vec.prime`
+  dhat profile by subsystem: `src/semantics` still dominates at **87.9%** of
+  blocks, `parser`/lexer/envelope-splicing at 3.7%, `src/ir_lowerer` at
+  4.2% - so per the task's own instruction to let the data decide rather
+  than assume, `ir_lowerer` and `parser` were checked and are genuinely not
+  where the remaining volume lives for this repro; `semantics` still is,
+  just no longer concentrated in one fixable call path. **Stopping here for
+  this session**: chasing any of these sub-1%-each sites individually would
+  be materially higher effort (each is a different function/subsystem, no
+  shared root cause the way `RequirementPredicateDefinitionContext` was
+  across two rounds) for a fraction of this round's already-modest
+  wall-clock return, and multiplies the surface area for a subtle
+  correctness mistake - against the discipline this whole chain has held to.
+  This is a documented diminishing-returns judgment call per the task's own
+  acceptance criteria, not a silent stop. Verified via
+  `./scripts/compile.sh --release` (single invocation, this repo's
+  convention, run after TODO-5237's mimalloc-by-default change had already
+  landed on this branch): **100% tests passed, 0 tests failed out of 1881**.
