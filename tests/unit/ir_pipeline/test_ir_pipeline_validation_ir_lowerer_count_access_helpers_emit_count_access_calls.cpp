@@ -722,6 +722,11 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   callExpr.name = "count";
   callExpr.args = {targetName};
   callExpr.argNames.clear();
+  // namespacePrefix reflects enclosing namespace context (populated for
+  // every call parsed inside any `namespace` block), not call-site
+  // qualification - a bare `count(values)` written inside a namespace,
+  // over a plain Name receiver, must be emitted the same way as the
+  // identical unprefixed call tested above, not deferred/rejected.
   callExpr.namespacePrefix = "/std/collections/vector";
   dynamicCountEmitExprCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
@@ -744,9 +749,12 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
-  CHECK(dynamicCountEmitExprCalls == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(dynamicCountEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
   callExpr.namespacePrefix.clear();
 
   instructions.clear();
@@ -884,8 +892,14 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
+  // A bare `count` call's namespacePrefix reflects the enclosing
+  // definition's namespace context (populated for every call parsed inside
+  // any `namespace` block), not whether the call was written with an
+  // explicit qualification - that only shows up in `.name` (see the two
+  // `/std/collections/vector/count`-style cases below). A namespace-context
+  // prefix must not change classification for a plain Name receiver.
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(isArrayCountCall(countEntry, locals));
+  CHECK(isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
@@ -999,8 +1013,12 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  // See the matching case in "ir lowerer count access helpers build count
+  // classifier adapters" above: namespacePrefix reflects enclosing
+  // namespace context, not call-site qualification, and must not change
+  // classification for a bare `count` call over a plain Name receiver.
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
+  CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
@@ -1109,9 +1127,16 @@ TEST_CASE("ir lowerer count access helpers classify canonical counts and defer v
   callExpr.name = "/std/collections/vector/count__ti32";
   CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
 
+  // TODO-5247: a bare `count(argv)` call's namespacePrefix reflects the
+  // enclosing definition's namespace context (populated for every call
+  // parsed inside any `namespace` block), not call-site qualification -
+  // it still resolves via the entry-args target the same as the unprefixed
+  // case above. Only field-access/method receivers keep the stricter,
+  // namespace-gated classification (see isUnqualifiedCollectionBuiltinName
+  // in IrLowererCountAccessClassifiers.cpp).
   callExpr.name = "count";
   callExpr.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.isMethodCall = true;
   CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.isMethodCall = false;

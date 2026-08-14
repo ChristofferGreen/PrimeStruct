@@ -214,10 +214,36 @@ bool isUnqualifiedCollectionBuiltinName(const Expr &expr, const char *name) {
   if (expr.kind != Expr::Kind::Call || name == nullptr || expr.name != name) {
     return false;
   }
-  if (!expr.namespacePrefix.empty() || expr.name.find('/') != std::string::npos) {
+  if (expr.name.find('/') != std::string::npos) {
     return false;
   }
-  return true;
+  if (expr.namespacePrefix.empty()) {
+    return true;
+  }
+  // TODO-5247: `expr.namespacePrefix` reflects the *enclosing definition's*
+  // namespace context (populated for every call parsed inside any
+  // `namespace` block, see ParserExpr.cpp), not whether the user wrote an
+  // explicitly-qualified call at this call site. Rejecting unconditionally
+  // on a non-empty namespacePrefix misclassified a genuinely bare
+  // `count(arrayParam)`/`capacity(arrayParam)` call made from inside a
+  // `namespace` block as "qualified", silently falling through to a broken
+  // fallback that crashed the VM ("unaligned indirect address in IR")
+  // instead of the correct builtin handling.
+  //
+  // However, a blanket relaxation (accepting any non-empty namespacePrefix)
+  // was tried and reverted: it also matched calls like `count(self.field)`
+  // - a struct-field-access receiver, not a plain local/parameter - and
+  // those rely on a *different*, already-correct code path elsewhere
+  // (struct-field-aware count resolution) that this early classification
+  // must not shadow; doing so corrupted real stdlib UI/scene output
+  // (zeroed-out layout geometry) rather than just failing to build.
+  //
+  // So: only treat the namespace-context prefix as irrelevant when the
+  // receiver is a single, bare `Name` argument (a plain local or
+  // parameter, e.g. `count(values)`) - never for a field access, method
+  // receiver, or any other expression shape, which must keep going through
+  // their own dedicated classification paths unchanged.
+  return expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Name;
 }
 
 } // namespace primec::ir_lowerer::count_access_detail

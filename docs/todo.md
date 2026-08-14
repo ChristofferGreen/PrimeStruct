@@ -179,15 +179,19 @@ investigation chain's actively-productive leaves - see
   first conservative view-escape diagnostic (rejecting a slice of a local
   array returned or stored into a struct field, while passing it to a
   callee that does not store/return it stays accepted). TODO-4610 added the
-  first read-only forward cursor traversal API (`Cursor<T>`, `start`,
-  `limit`, `read`, `advance` for `vector<T>`, as a plain generic stdlib
-  struct/functions with no new compiler builtin recognition; `array<T>`
-  cursor support did not carry over cleanly - see TODO-4610's outcome notes
-  in `docs/todo_finished.md` - and remains open for a follow-up). TODO-4611
-  and TODO-4612 remain from the agreed backlog in
-  `docs/SafeArrayExtentViews.md`: reverse cursor traversal with
-  `reverse_limit(...)` boundaries, and style-aligned examples once the
-  surface is specified.
+  first read-only forward cursor traversal API (`Cursor<T>`, plus
+  `startVector`/`limitVector`/`readVector` and `startArray`/`limitArray`/
+  `readArray` for `vector<T>` and `array<T>` respectively, `advance`/
+  `cursorEqual`/`cursorNotEqual` shared, all as plain generic stdlib
+  struct/functions with no new compiler builtin recognition). TODO-5247
+  found and fixed a real compiler bug uncovered while adding `array<T>`
+  support - `count(...)`/`capacity(...)` on a bare local/parameter inside a
+  `namespace` block were misclassified due to conflating a call's inherited
+  namespace context with explicit call-site qualification - see its outcome
+  notes in `docs/todo_finished.md`. TODO-4611 and TODO-4612 remain from the
+  agreed backlog in `docs/SafeArrayExtentViews.md`: reverse cursor
+  traversal with `reverse_limit(...)` boundaries, and style-aligned
+  examples once the surface is specified.
 - Collections naming and surface-manifest retirement: remove the
   `experimental_*` and `internal_*` module-naming layers from
   `stdlib/std/collections` and retire `stdlib/std/collections/surfaces.psmeta`.
@@ -390,24 +394,31 @@ investigation chain's actively-productive leaves - see
     `reverse_start(values)` as the last readable position or
     `reverse_limit(values)` when empty, and `reverse_limit(values)` as the
     one-before-first exclusive traversal boundary.
-  - implementation_notes: TODO-4610 shipped `Cursor<T>` (no `Capability`
-    type parameter - deferred, matching how `slice(...)` also shipped
-    without the full `Slice<T, Capability>` view model) as a plain generic
-    struct in `stdlib/std/cursor/cursor.prime`, with `start<T>`/`limit<T>`/
-    `read<T>`/`advance<T>` for `vector<T>` only - `array<T>` cursor support
-    did not carry over cleanly (the `Pointer<array<T>>` + `dereference(...)`
-    pattern that works for `vector<T>` hits a VM-level "unaligned indirect
-    address" failure for `array<T>`, a separate backend gap; see TODO-4610's
-    outcome notes in `docs/todo_finished.md`). Add `reverse_start`,
-    `reverse_limit`, and `retreat` to the same file, following the same
-    `Pointer<vector<T>>` + `dereference(...)`-into-a-local-before-indexing
-    pattern `read<T>` already uses (indexing directly through a stored
-    `Reference`/`Pointer<vector<T>>>` struct field is not reliable yet -
-    TODO-4610 added a bounded-recursion guard that turns that pattern's
-    prior infinite-recursion crash into a clean diagnostic, but did not fix
-    the underlying misclassification). Keep `last(values)` as an
-    element-oriented helper returning `Maybe<Cursor<T>>` if it is exposed in
-    this leaf.
+  - implementation_notes: TODO-4610/TODO-5247 shipped `Cursor<T>` (no
+    `Capability` type parameter - deferred, matching how `slice(...)` also
+    shipped without the full `Slice<T, Capability>` view model) as a plain
+    generic struct `{ position: i32 }` in `stdlib/std/cursor/cursor.prime`,
+    covering both `vector<T>` and `array<T>`. The owning collection is kept
+    as an explicit parameter alongside the cursor rather than stored inside
+    it (`readVector<T>(values, cursor)`/`readArray<T>(values, cursor)`, not
+    `read<T>(cursor)`) - storing a `Pointer<vector<T>>`/`Pointer<array<T>>`
+    inside the cursor and dereferencing it on every read was tried first
+    and abandoned: indexing/counting an `array<T>` reached through that
+    kind of pointer indirection loses the compiler's static extent fact for
+    it (`array<T>` carries no runtime length field), and indexing through a
+    stored `Reference`/`Pointer<vector<T>>>` struct field hit a separate
+    infinite-recursion compiler bug (also fixed by TODO-4610, converted to
+    a clean diagnostic, but the underlying misclassification for that
+    specific pattern was not fixed). Add `reverseStartVector<T>`/
+    `reverseStartArray<T>`, `reverseLimitVector<T>`/`reverseLimitArray<T>`,
+    and `retreat<T>` to the same file, following the naming/parameter-shape
+    convention the forward functions already use (separate `Array`/`Vector`
+    suffixed functions, not a single overloaded name - overload resolution
+    across `array<T>`/`vector<T>` receivers for the same generic function
+    name was tried and hit an unrelated "no viable overload" gap; see
+    TODO-4610's outcome notes in `docs/todo_finished.md`). Keep
+    `last(values)` as an element-oriented helper returning `Maybe<Cursor<T>>`
+    if it is exposed in this leaf.
   - acceptance:
     - A reverse `while(it != reverse_limit(values))` loop over `vector<int>`
       visits every element exactly once in reverse order.

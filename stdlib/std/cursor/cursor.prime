@@ -1,7 +1,18 @@
-// TODO-4610: first, conservative forward cursor traversal API for vector<T>.
-// Cursor<T> is a plain generic struct - no compiler-side builtin recognition
-// is needed, it rides the same generic struct/generic function machinery
-// every other stdlib collection type already uses.
+// TODO-4610/TODO-5247: read-only forward cursor traversal API for array<T>
+// and vector<T>. Cursor<T> is a plain generic struct - no compiler-side
+// builtin recognition is needed, it rides the same generic struct/generic
+// function machinery every other stdlib collection type already uses.
+//
+// Cursor<T> intentionally holds only a position, not a pointer/reference
+// back to its owning collection: an earlier design captured a
+// Pointer<vector<T>>/Pointer<array<T>> inside the cursor and dereferenced
+// it on every read, but indexing or counting an array<T> reached through
+// that kind of pointer indirection loses the compiler's static extent
+// fact for it and fails (`array<T>` carries no runtime length field the
+// way `vector<T>` does). Keeping the owning collection as an explicit
+// parameter alongside the cursor - read(values, it) rather than read(it) -
+// sidesteps that gap entirely and keeps both array and vector traversal on
+// the same, well-supported "ordinary parameter" indexing path.
 import /std/collections/*
 
 namespace std {
@@ -9,36 +20,54 @@ namespace cursor {
 
 [public struct]
 Cursor<T>() {
-  [public Pointer<vector<T>>] owner
   [public i32] position
 }
 
 [public return<Cursor<T>>]
-start<T>([vector<T>] values) {
-  [Cursor<T>] result{Cursor<T>{location(values), 0i32}}
+startArray<T>([array<T>] values) {
+  [Cursor<T>] result{Cursor<T>{0i32}}
+  return(result)
+}
+
+[public return<Cursor<T>>]
+startVector<T>([vector<T>] values) {
+  [Cursor<T>] result{Cursor<T>{0i32}}
   return(result)
 }
 
 // One-past-final exclusive traversal boundary, matching the invariant
 // start(values) <= cursor < limit(values). Not the last element.
 [public return<Cursor<T>>]
-limit<T>([vector<T>] values) {
-  [Cursor<T>] result{Cursor<T>{location(values), count(values)}}
+limitArray<T>([array<T>] values) {
+  [Cursor<T>] result{Cursor<T>{count(values)}}
+  return(result)
+}
+
+[public return<Cursor<T>>]
+limitVector<T>([vector<T>] values) {
+  [Cursor<T>] result{Cursor<T>{count(values)}}
   return(result)
 }
 
 [public return<T>]
-read<T>([Cursor<T>] cursor) {
-  [vector<T>] owner{dereference(cursor.owner)}
-  if(cursor.position < 0i32 || cursor.position >= count(owner)) {
+readArray<T>([array<T>] values, [Cursor<T>] cursor) {
+  if(cursor.position < 0i32 || cursor.position >= count(values)) {
     panic(cursor.position)
   }
-  return(owner[cursor.position])
+  return(values[cursor.position])
+}
+
+[public return<T>]
+readVector<T>([vector<T>] values, [Cursor<T>] cursor) {
+  if(cursor.position < 0i32 || cursor.position >= count(values)) {
+    panic(cursor.position)
+  }
+  return(values[cursor.position])
 }
 
 [public return<Cursor<T>>]
 advance<T>([Cursor<T>] cursor) {
-  [Cursor<T>] result{Cursor<T>{cursor.owner, cursor.position + 1i32}}
+  [Cursor<T>] result{Cursor<T>{cursor.position + 1i32}}
   return(result)
 }
 

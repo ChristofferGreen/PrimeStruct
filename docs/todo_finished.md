@@ -6,6 +6,112 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 14, 2026)**
+- [x] TODO-5247: Fix namespace-context count()/capacity() misclassification and add array<T> cursor support
+  - owner: ai
+  - created_at: 2026-08-14
+  - finished_at: 2026-08-14
+  - phase: Safe array extents and views
+  - parallel_track: cursor-array-support
+  - depends_on: TODO-4610
+  - scope: Originally scoped as "fix the VM's unaligned-indirect-address
+    failure for `Pointer<array<T>>` + `dereference(...)`" - investigation
+    found a different, more fixable root cause and the scope shifted
+    accordingly (see outcome).
+  - outcome:
+    - The `Pointer<array<T>>` + `dereference(...)` addressing failure
+      turned out to be a symptom, not the root cause: `array<T>` has no
+      runtime length field (unlike `vector<T>`, which stores count/
+      capacity), so any `count(...)`/indexing on an array value reached
+      through pointer indirection has no way to recover its extent - a
+      real, deeper architectural gap, not a quick fix. Abandoned that
+      approach entirely rather than build on it.
+    - Redesigned `Cursor<T>` (in `stdlib/std/cursor/cursor.prime`) to hold
+      only `{ position: i32 }`, with the owning collection passed as an
+      explicit parameter alongside the cursor
+      (`readVector<T>(values, cursor)`/`readArray<T>(values, cursor)`
+      rather than `read<T>(cursor)`) instead of a stored
+      `Pointer<vector<T>>`/`Pointer<array<T>>`. This sidesteps the extent
+      problem entirely for both collection kinds, since indexing/counting
+      an ordinary parameter (not one reached through a pointer/struct
+      field) is the well-supported, already-tested path. Added
+      `startArray<T>`/`limitArray<T>`/`readArray<T>` alongside the
+      existing `startVector<T>`/`limitVector<T>`/`readVector<T>`
+      (renamed from the original `start<T>`/`limit<T>`/`read<T>` -
+      generic overloading of a single name across `array<T>`/`vector<T>`
+      receivers hit a separate "no viable overload" gap, not investigated
+      further); `advance<T>`/`cursorEqual<T>`/`cursorNotEqual<T>` stayed
+      shared since they only touch `position`.
+    - While building the `array<T>` path this way, found and fixed a real,
+      separate, previously-unknown compiler bug:
+      `isUnqualifiedCollectionBuiltinName` (used to classify bare
+      `count(...)`/`capacity(...)` calls) rejected any call whose
+      `expr.namespacePrefix` was non-empty - but `namespacePrefix` reflects
+      the *enclosing definition's* namespace context (populated for every
+      call parsed inside any `namespace` block, see `ParserExpr.cpp`), not
+      whether the user wrote an explicit qualification at that call site
+      (that's what `expr.name.find('/')` already checks, separately). This
+      meant a genuinely bare `count(arrayParam)` written inside any
+      `namespace` block - which is every stdlib file - was silently
+      misclassified and fell through to a broken fallback that crashed the
+      VM with `unaligned indirect address in IR`.
+    - **First attempt (reverted): too broad.** Removing the namespace
+      check from both existing copies of `isUnqualifiedCollectionBuiltinName`
+      (`IrLowererCountAccessClassifiers.cpp` and
+      `IrLowererSetupTypeCollectionHelpers.cpp`, the latter also used by
+      `push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap` and by
+      `rebuildScopedCollectionHelperPath`'s scoped-name resolution) fixed
+      the array-count case but corrupted real, already-working stdlib UI
+      code (`primestruct.compile.run.vm.core.core_01a` and
+      `core_newly_exposed` shards): `count(self.someVectorField)` calls
+      (a struct-field-access receiver, not a plain local/parameter) inside
+      `stdlib/std/ui/*.prime` started returning zeroed layout geometry
+      instead of real values - a genuine correctness regression, not just
+      a stale test assumption, confirmed by diffing against an unmodified
+      baseline and by instrumented tracing of the real failing case
+      (`count(self.nodeParentIds)` inside `namespace UiScene`).
+    - **Final fix: narrowed to only the count_access_detail copy, and only
+      for a plain Name receiver.** Left
+      `IrLowererSetupTypeCollectionHelpers.cpp`'s copy (and everything that
+      depends on it, including the field-access/scoped-path machinery)
+      completely untouched. In
+      `IrLowererCountAccessClassifiers.cpp`'s copy (used solely for
+      count/capacity classification), the namespace-context prefix is now
+      ignored only when the receiver is a single bare `Name` argument (a
+      plain local or parameter, e.g. `count(values)`) - never for a field
+      access, method receiver, or any other expression shape, which keep
+      going through their existing, correct classification unchanged.
+      Verified via targeted instrumentation that this exact narrower
+      condition is what distinguishes the two cases in the real failing
+      inputs, then verified both the array-cursor case and the full
+      previously-regressed UI/scene shard range pass together.
+  - validation:
+    - Extended `test_compile_run_vm_cursor.cpp` with `array<T>` VM+native
+      forward-traversal-sum, read-at-limit, and a dedicated regression test
+      (`count(argv)` inside a nested `namespace` block returning the
+      correct count) - 9/9 cursor tests passing.
+    - Updated 4 pre-existing unit-test assertions in
+      `test_ir_pipeline_validation_ir_lowerer_count_access_helpers_emit_count_access_calls.cpp`
+      that had hard-coded the old (incorrect) namespace-prefix-means-
+      qualified assumption for plain-Name receivers - all with comments
+      explaining why the corrected expectation is now `true`/`Emitted`
+      rather than `false`/`NotHandled`.
+    - Full `./scripts/compile.sh --release` gate green after the narrowed
+      fix, including the specific previously-regressed
+      `vm_core_core_01a_*`, `vm_core_core_newly_exposed_*`, and
+      `emitters_cpp_collection_access_and_alias_forwarding_*` shards
+      re-run individually to confirm the regression is gone, not just
+      papered over by a different failure elsewhere.
+  - stop_rule: Stopped once `array<T>` forward cursor traversal worked
+    end-to-end (VM + native) with no regressions anywhere in the full
+    release gate. Left the broader "explicit qualification vs enclosing
+    namespace context" conflation as it exists in the *other* copy of
+    `isUnqualifiedCollectionBuiltinName` (push/pop/etc.) and in
+    `rebuildScopedCollectionHelperPath` unexamined - fixing those was not
+    needed for this leaf's acceptance criteria and carries the same
+    regression risk demonstrated above; a future leaf should treat that as
+    its own careful, dedicated investigation rather than assume this fix's
+    narrow pattern generalizes safely.
+
 - [x] TODO-4610: Add forward cursor traversal API
   - owner: ai
   - created_at: 2026-05-27
