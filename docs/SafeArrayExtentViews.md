@@ -8,7 +8,15 @@ own leaves. The first contract-form `require(...)` runtime slice is
 implemented: value comparisons over integer parameters and
 `count(parameter)` for array/vector/string parameters lower to a
 deterministic call-boundary precondition check when they cannot be proven at
-compile time. Parser support for `require<...>` is still pending.
+compile time. Parser support for `require<...>` is still pending. A first
+read-only forward cursor (`Cursor<T>`, `start`/`limit`/`read`/`advance`,
+matching the "Cursors And Pointer Arithmetic" section below) is now
+implemented for `vector<T>` as an ordinary generic stdlib type in
+`stdlib/std/cursor/cursor.prime` - see TODO-4610 in `docs/todo_finished.md`.
+It ships without the `Capability` type parameter sketched below (deferred,
+matching how `slice(...)` also shipped without the full `Slice<T,
+Capability>` view model) and does not yet cover `array<T>` (a separate
+backend gap) or reverse traversal (TODO-4611).
 
 This note records the current PrimeStruct design direction after reviewing John
 Nagle's "Safe arrays and pointers for C through compatible additions to the

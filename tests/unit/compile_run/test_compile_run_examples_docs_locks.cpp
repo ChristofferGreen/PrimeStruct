@@ -2053,8 +2053,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   // to changes that don't affect the actual queue content this check
   // cares about (see TODO-5237's resolution in docs/todo_finished.md).
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics\n"
-                  "- TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal\n"
+                  "- TODO-4611: Add reverse cursor traversal API | track: cursor-reverse-traversal | surface: reverse cursor traversal\n"
                   "- TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery\n"
                   "- TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution\n"
                   "- TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers\n"
@@ -2174,16 +2173,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  completed the non-null safe pointer optionality model. TODO-4606 specified the capability-parameterized\n"
                   "  reference/slice view model in the normative docs. TODO-4607 published the\n"
                   "  initial semantic-product array extent facts, and TODO-4608 added the first\n"
-                  "  checked read-only array slice construction surface. TODO-4609 through\n"
-                  "  TODO-4612") !=
+                  "  checked read-only array slice construction surface. TODO-4609 added the\n"
+                  "  first conservative view-escape diagnostic") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4609: Reject escaping local array slices\n"
-                  "2. TODO-4610: Add forward cursor traversal API\n"
-                  "3. TODO-4611: Add reverse cursor traversal API\n"
-                  "4. TODO-4612: Add safe extent and cursor code examples\n"
-                  "5. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n"
-                  "6. TODO-4638: Move `compile_run` test shard into subdirectory\n") !=
+                  "1. TODO-4611: Add reverse cursor traversal API\n"
+                  "2. TODO-4612: Add safe extent and cursor code examples\n"
+                  "3. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n"
+                  "4. TODO-4638: Move `compile_run` test shard into subdirectory\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2191,7 +2188,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4613: Retire semantic-validator private source locks") ==
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
-                  "- [ ] TODO-4609: Reject escaping local array slices") !=
+                  "- [ ] TODO-4611: Add reverse cursor traversal API") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4607: Publish initial array extent facts") ==
         std::string::npos);

@@ -6398,22 +6398,22 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     importAliases.emplace(remainder, importPath);
   }
 
-  auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
+  auto rewriteExpr = [&](auto &self, Expr &expr, bool isStructFieldContext) -> bool {
     if (expr.isLambda) {
       for (auto &arg : expr.bodyArguments) {
-        if (!self(self, arg)) {
+        if (!self(self, arg, isStructFieldContext)) {
           return false;
         }
       }
       return true;
     }
     for (auto &arg : expr.args) {
-      if (!self(self, arg)) {
+      if (!self(self, arg, isStructFieldContext)) {
         return false;
       }
     }
     for (auto &arg : expr.bodyArguments) {
-      if (!self(self, arg)) {
+      if (!self(self, arg, isStructFieldContext)) {
         return false;
       }
     }
@@ -6447,6 +6447,14 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     if (!info.typeTemplateArg.empty()) {
       if (normalizedType != "vector" &&
           normalizedType != semantics::internalSoaCollectionTypeName()) {
+        // A struct field with a templated type other than vector or soa, and no
+        // initializer is a required constructor argument, exactly like a
+        // bare non-templated field (e.g. `[i32] fieldCount`) - only bindings
+        // outside struct field lists need an initializer to be well-formed,
+        // since they have no later constructor call to supply the value.
+        if (isStructFieldContext) {
+          return true;
+        }
         error = "omitted initializer requires vector or soa type: " + info.typeName;
         return false;
       }
@@ -6490,25 +6498,26 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     if (isSumDefinition) {
       continue;
     }
+    const bool isStructFieldContext = structNames.count(def.fullPath) > 0;
     for (auto &stmt : def.statements) {
-      if (!rewriteExpr(rewriteExpr, stmt)) {
+      if (!rewriteExpr(rewriteExpr, stmt, isStructFieldContext)) {
         return false;
       }
     }
     if (def.returnExpr.has_value()) {
-      if (!rewriteExpr(rewriteExpr, *def.returnExpr)) {
+      if (!rewriteExpr(rewriteExpr, *def.returnExpr, false)) {
         return false;
       }
     }
   }
   for (auto &exec : program.executions) {
     for (auto &arg : exec.arguments) {
-      if (!rewriteExpr(rewriteExpr, arg)) {
+      if (!rewriteExpr(rewriteExpr, arg, false)) {
         return false;
       }
     }
     for (auto &arg : exec.bodyArguments) {
-      if (!rewriteExpr(rewriteExpr, arg)) {
+      if (!rewriteExpr(rewriteExpr, arg, false)) {
         return false;
       }
     }

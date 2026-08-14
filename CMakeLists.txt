@@ -963,6 +963,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/test_compile_run_vm_core_file_helpers.cpp
     tests/unit/compile_run/test_compile_run_vm_core_gfx_helpers.cpp
     tests/unit/compile_run/test_compile_run_vm_core_variadics.cpp
+    tests/unit/compile_run/test_compile_run_vm_cursor.cpp
     tests/unit/compile_run/test_compile_run_vm_collections.cpp
     tests/unit/compile_run/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp
     tests/unit/compile_run/test_compile_run_vm_collections_core_aliases.cpp
@@ -1846,6 +1847,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.compile.run.vm.core
     primestruct.compile.run.vm.collections
     primestruct.compile.run.vm.bounds
+    primestruct.compile.run.vm.cursor
     primestruct.compile.run.vm.maps
     primestruct.compile.run.vm.math
     primestruct.compile.run.vm.outputs
@@ -1920,6 +1922,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     elseif(suite STREQUAL "primestruct.compile.run.vm.bounds")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
                                  SOURCE_FILE "*test_compile_run_vm_bounds.cpp")
+    elseif(suite STREQUAL "primestruct.compile.run.vm.cursor")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "forward_traversal"
+                                 SOURCE_FILE "*test_compile_run_vm_cursor.cpp")
     elseif(suite STREQUAL "primestruct.compile.run.vm.maps")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "map_helpers"
                                  SOURCE_FILE "*test_compile_run_vm_maps.cpp")

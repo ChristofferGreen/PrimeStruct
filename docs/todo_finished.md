@@ -6,6 +6,100 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 14, 2026)**
+- [x] TODO-4610: Add forward cursor traversal API
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-08-14
+  - phase: Safe array extents and views
+  - parallel_track: cursor-forward-traversal
+  - depends_on: TODO-4608
+  - scope: Added the first read-only forward cursor traversal API using
+    `start(values)` as the first position and `limit(values)` as the
+    one-past-final exclusive traversal boundary.
+  - outcome:
+    - Added `Cursor<T>` (no `Capability` type parameter - deferred, matching
+      how `slice(...)` also shipped without the full `Slice<T, Capability>`
+      view model from `docs/SafeArrayExtentViews.md`) plus `start<T>`,
+      `limit<T>`, `read<T>`, `advance<T>`, `cursorEqual<T>`,
+      `cursorNotEqual<T>` as an ordinary generic stdlib struct and generic
+      functions in `stdlib/std/cursor/cursor.prime` - confirmed via a
+      pre-implementation research spike that this rides the same generic
+      struct/function machinery every other stdlib collection type already
+      uses, requiring zero new compiler-side builtin recognition (unlike
+      `slice(...)`, which needed bespoke semantics + IR-lowering code).
+      `Cursor<T>` holds a `Pointer<vector<T>>` owner field and an `i32`
+      position; `read<T>` dereferences the pointer into a local `vector<T>`
+      binding before indexing (bounds-checked against `count(...)`, panics
+      out of range) rather than indexing through the stored field directly.
+    - **Scope narrowed to `vector<T>` only**: the task's stated scope covered
+      "arrays and vectors", but `array<T>` cursor support does not carry
+      over cleanly - the same `Pointer<array<T>>` + `dereference(...)`
+      pattern that works for `vector<T>` fails at the VM level with
+      "unaligned indirect address in IR", a separate backend gap (arrays are
+      represented differently from vectors at that layer). Left open for
+      TODO-4611 or a dedicated follow-up rather than expanding this leaf's
+      already-large scope further.
+    - Comparisons use explicit `cursorEqual<T>`/`cursorNotEqual<T>` calls
+      rather than `==`/`!=` operator sugar: plain `!=` sugar is not wired to
+      reflection-generated `NotEqual` helpers at all (only `==` is, per
+      `docs/PrimeStruct.md`), and `[struct reflect generate(Equal,
+      NotEqual)]` itself does not work on a *generic* struct today (hit
+      `template arguments required for /Pair` on a minimal `Pair<T>` spike)
+      - both pre-existing, unrelated gaps, left unfixed. "Compatible
+        provenance" for the acceptance bullet is enforced at the type level
+      (`Cursor<i32>` vs `Cursor<f32>` are different monomorphizations and
+      fail to type-check against each other with a deterministic argument
+      type mismatch diagnostic) plus a position-field comparison; raw
+      `Pointer<T>` identity comparison is not supported by the compiler
+      (`comparisons require numeric, bool, or string operands`), so
+      same-type cursors over different owning collections are not
+      distinguished by pointer identity in this first, conservative pass.
+    - Two underlying compiler bugs were found and fixed while building this
+      (user-approved scope widening, not sidestepped):
+      1. **Infinite-recursion crash**: indexing through a struct-field
+         access chain into a `Reference`/`Pointer<vector<T>>` field (e.g.
+         `h.owner[h.position]`) triggered unbounded mutual recursion between
+         `validateExpr` and `validateExprLateUnknownTargetFallbacks`
+         (`SemanticsValidatorExprLateUnknownTargetFallbacks.cpp`) - each
+         rewrite attempt reconstructs a fresh copy of the receiver, so
+         pointer-identity cycle detection can't catch it. Fixed with a
+         bounded thread-local recursion-depth guard (32) around the whole
+         function that fails closed with a clean `"unknown call target: ..."`
+         diagnostic instead of hanging/crashing once exceeded. This does
+         not fix the underlying misclassification (indexing through that
+         exact field-chain shape still isn't supported), only converts the
+         crash into a deterministic diagnostic.
+      2. **Struct fields couldn't be "required, no default" for a templated
+         non-vector/soa type** (`Pointer<T>`, `Reference<T>`, or any generic
+         user type): `rewriteOmittedStructInitializers`
+         (`SemanticsValidate.cpp`) unconditionally rejected any templated
+         field with a fully-omitted initializer unless the type was
+         `vector`/`soa`, with no path for "this is a required constructor
+         argument" (the same shape non-templated fields like `[i32]
+         fieldCount` already support). Fixed by threading a
+         `isStructFieldContext` flag through the rewrite walk so the
+         omission is only an error outside struct field declarations, where
+         it has no later constructor call to supply the value.
+  - validation:
+    - Added 5 focused `compile.run.vm.cursor` e2e tests (new suite/shard):
+      VM and native forward-traversal sum over `vector<i32>` (visits all 4
+      elements, doesn't skip the last), `read(limit(values))` failing
+      deterministically, unrelated-element-type comparison rejected at
+      compile time, and the field-chain-recursion regression guard.
+    - Added 2 focused semantics unit tests in
+      `test_semantics_bindings_struct_defaults.cpp` for the required-field
+      fix (positive: struct field with omitted `Pointer<T>` initializer now
+      accepted; regression: an ordinary non-struct-field binding with the
+      same shape is still rejected).
+    - Full `./scripts/compile.sh --release` gate: 1886/1886 passing, 0
+      failures (verified after updating the stale `docs/todo.md`-content
+      lock test in `test_compile_run_examples_docs_locks.cpp` to match this
+      completion).
+  - stop_rule: Stopped after read-only forward traversal worked end to end
+    for `vector<T>` and was covered; did not add `array<T>` cursor support
+    (separate backend gap, noted above), reverse traversal, or writable
+    cursors in this leaf.
+
 - [x] TODO-4609: Reject escaping local array slices
   - owner: ai
   - created_at: 2026-05-27

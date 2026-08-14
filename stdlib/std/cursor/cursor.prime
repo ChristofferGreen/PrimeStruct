@@ -1,0 +1,56 @@
+// TODO-4610: first, conservative forward cursor traversal API for vector<T>.
+// Cursor<T> is a plain generic struct - no compiler-side builtin recognition
+// is needed, it rides the same generic struct/generic function machinery
+// every other stdlib collection type already uses.
+import /std/collections/*
+
+namespace std {
+namespace cursor {
+
+[public struct]
+Cursor<T>() {
+  [public Pointer<vector<T>>] owner
+  [public i32] position
+}
+
+[public return<Cursor<T>>]
+start<T>([vector<T>] values) {
+  [Cursor<T>] result{Cursor<T>{location(values), 0i32}}
+  return(result)
+}
+
+// One-past-final exclusive traversal boundary, matching the invariant
+// start(values) <= cursor < limit(values). Not the last element.
+[public return<Cursor<T>>]
+limit<T>([vector<T>] values) {
+  [Cursor<T>] result{Cursor<T>{location(values), count(values)}}
+  return(result)
+}
+
+[public return<T>]
+read<T>([Cursor<T>] cursor) {
+  [vector<T>] owner{dereference(cursor.owner)}
+  if(cursor.position < 0i32 || cursor.position >= count(owner)) {
+    panic(cursor.position)
+  }
+  return(owner[cursor.position])
+}
+
+[public return<Cursor<T>>]
+advance<T>([Cursor<T>] cursor) {
+  [Cursor<T>] result{Cursor<T>{cursor.owner, cursor.position + 1i32}}
+  return(result)
+}
+
+[public return<bool>]
+cursorEqual<T>([Cursor<T>] left, [Cursor<T>] right) {
+  return(left.position == right.position)
+}
+
+[public return<bool>]
+cursorNotEqual<T>([Cursor<T>] left, [Cursor<T>] right) {
+  return(left.position != right.position)
+}
+
+}
+}

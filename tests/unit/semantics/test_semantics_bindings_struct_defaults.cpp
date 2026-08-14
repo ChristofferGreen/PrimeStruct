@@ -56,6 +56,54 @@ main() {
   CHECK(error.find("omitted initializer requires struct type") != std::string::npos);
 }
 
+TEST_CASE("struct field omits initializer for a non-vector/soa templated type") {
+  // TODO-4610 fix: a struct field with a templated type (e.g. Pointer<T>)
+  // and no initializer is a required constructor argument, exactly like a
+  // bare non-templated field - the omitted-initializer sugar-expansion pass
+  // (which only knows how to synthesize an empty-collection default for
+  // vector/soa) must leave it alone rather than reject it, since it is never
+  // going to be sugar-expanded in the first place.
+  const std::string source = R"(
+[struct]
+Holder {
+  [Pointer<i32>] value
+}
+
+[return<int>]
+makeHolder([Pointer<i32>] p) {
+  [Holder] holder{Holder{p}}
+  return(dereference(holder.value))
+}
+
+[return<int>]
+main() {
+  [i32 mut] target{42i32}
+  return(makeHolder(location(target)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("non-struct binding still rejects an omitted templated initializer") {
+  // Regression guard: the TODO-4610 fix only relaxes the check for struct
+  // field declarations - an ordinary local binding with a templated,
+  // non-vector/soa type and no initializer at all must still be rejected,
+  // since there is no later constructor call to supply its value.
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] target{42i32}
+  [Pointer<i32>] value
+  return(dereference(value))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("omitted initializer requires") != std::string::npos);
+}
+
 TEST_CASE("omitted initializer rejects effectful Create") {
   const std::string source = R"(
 [struct]
