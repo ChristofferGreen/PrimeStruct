@@ -76,7 +76,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
-- TODO-5245: Convert stdlib surface registry's matchesAny() O(N) linear scan to O(1)/O(log N) lookup | track: compiler-registry-lookup-complexity | surface: StdlibSurfaceRegistry matchesAny()
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
 of TODO-5237/5238 - its own investigation trended away from convergence
@@ -94,7 +93,9 @@ import-cost characterization and fix) have also since resolved - see
 `docs/todo_finished.md`. TODO-5243 (the SoA path-classification
 compile-time-constant-string memoization) and TODO-5244 (the remaining
 sibling instances of that same pattern) have also since resolved - see
-`docs/todo_finished.md`.
+`docs/todo_finished.md`. TODO-5245 (the stdlib surface registry's
+`matchesAny()`/`findStdlibSurfaceMetadataBySpelling()` O(N) lookup
+structure) has also since resolved - see `docs/todo_finished.md`.
 
 ### Immediate Next 10
 
@@ -1850,63 +1851,6 @@ sibling instances of that same pattern) have also since resolved - see
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
-
-- [ ] TODO-5245: Convert stdlib surface registry's matchesAny() O(N) linear scan to O(1)/O(log N) lookup
-  - owner: ai
-  - created_at: 2026-08-14
-  - phase: Test runtime optimization
-  - parallel_track: compiler-registry-lookup-complexity
-  - depends_on: (none)
-  - scope: TODO-5244's post-fix profile of `mini_vec.prime` (544,212,452
-    retired instructions, median wall-clock ~0.092s, straddling but not
-    confidently under the session's <100ms directional target) identified
-    a specific, already-diagnosed structural cost: a `span<string_view>`
-    linear scan inside the stdlib surface registry's `matchesAny()`
-    (~4.00% of total instructions), plausibly the driver behind
-    still-hot `memcmp`/`std::_Hash_bytes`/`memcpy` entries in the same
-    profile (6.16%/5.32%/4.46%) if those are called from within/around
-    the same scan. Unlike the earlier string-concatenation-churn leaves
-    (TODO-5243/5244), this is a genuine complexity-class issue (O(N) per
-    lookup against the registry's member count) rather than redundant
-    work on an otherwise-O(1) operation - the fix shape is different:
-    build a proper O(1) (hash-map keyed on the matched spelling/path) or
-    O(log N) (sorted + binary search) lookup structure, built once
-    (ideally at registry-construction time, not per-call), instead of
-    scanning linearly on every `matchesAny()` call.
-  - implementation_notes: Find `matchesAny()` (grep across
-    `src/`/`include/primec/` - likely in or near
-    `StdlibSurfaceRegistry.cpp`/`.h`, given TODO-5244's ruled-out lead on
-    `resolveStdlibSurfaceMemberName` pointed at the same subsystem).
-    Understand what it's actually matching (spellings? paths? both?) and
-    whether the registry's contents are fixed/known at construction time
-    (likely yes, given it's built from parsed stdlib surface metadata) -
-    if so, a `std::unordered_map`/`unordered_set` (or a sorted vector +
-    binary search, if insertion order or iteration matters elsewhere)
-    built once when the registry is constructed, queried in O(1)/O(log N)
-    thereafter, is the natural fix. Profile with
-    `valgrind --tool=callgrind` before/after to confirm the `memcmp`/
-    `hash_bytes`/`memcpy` entries actually move with this fix (they may
-    be unrelated - don't assume, verify).
-  - acceptance:
-    - `matchesAny()` (or its replacement) resolves membership in
-      O(1)/O(log N) instead of O(N), verified by reading the
-      implementation, not just improved timing (a small registry could
-      show a small win even with an O(N) bug still present).
-    - Before/after instruction-count and wall-clock measurements for
-      `mini_vec.prime` and the heavier real collection-test repro,
-      recorded in `docs/TestRuntimeOptimization.md`.
-    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
-      zero regressions.
-  - stop_rule: If the registry's actual member count is small enough
-    that O(N) vs O(1) is genuinely in the noise (e.g. single-digit
-    entries), and building a hash structure would add complexity for no
-    measurable win, document that finding and don't force the change -
-    same "measure, then decide" precedent as the rest of this chain. Do
-    not change matching SEMANTICS while optimizing the lookup structure
-    (e.g. if `matchesAny()` currently does partial/prefix matching, not
-    exact matching, a hash-map exact-match replacement would silently
-    change behavior - verify what kind of match it performs before
-    picking a data structure).
 
 - [ ] TODO-5246: Continue profiling remaining allocation/hash/memcmp churn after TODO-5245
   - owner: ai

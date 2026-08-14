@@ -1606,3 +1606,102 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   line), though the median and most runs now land under it. Verified via
   `./scripts/compile.sh --release` (single invocation, this repo's
   convention): **100% tests passed, 0 tests failed out of 1881**.
+
+- 2026-08-14 (TODO-5245): Confirmed the lead TODO-5244 left named -
+  `matchesAny()` (`src/StdlibSurfaceRegistry.cpp`), `bool matchesAny(
+  std::span<const std::string_view> spellings, std::string_view
+  spelling) { return std::find(spellings.begin(), spellings.end(),
+  spelling) != spellings.end(); }` - is a pure **exact** `string_view`
+  equality scan (verified by reading it and every call site; never
+  partial/prefix/substring), so a hash-based O(1) replacement is valid
+  and cannot change any match result. Read every caller and found the
+  actual complexity-class bug is *two* levels of nested linear scan, not
+  one: `findStdlibSurfaceMetadataBySpelling()` ran `std::find_if` over
+  the whole stdlib surface `Registry` (only **11 entries** - confirmed
+  via `const std::array<StdlibSurfaceMetadata, 11> Registry`, so the
+  outer scan alone was never the bottleneck), calling
+  `stdlibSurfaceMatchesSpelling()` as the predicate for every entry,
+  which itself runs up to 3 `matchesAny()` scans (`importAliasSpellings`,
+  `compatibilitySpellings`, `loweringSpellings`) each up to ~10-30 items
+  (derived once at static-init time from parsed stdlib `.prime` source
+  files via `deriveCollectionsSurfaces()`, e.g. `vector.prime` alone has
+  27 `[public` functions) - true cost is O(Registry.size() *
+  spellings-per-entry), and `--tree=both` callgrind attribution showed
+  `stdlibSurfaceMatchesSpelling` feeding `std::find` **304,382 times**
+  from `findStdlibSurfaceMetadataBySpelling`'s **107,082 calls** in a
+  single trivial-repro compile. A second, smaller instance of the same
+  shape: `resolveMetadataMemberName()`/`matchesResolvedRootedMemberPath()`
+  each ran `matchesAny(metadata.memberNames, ...)` (up to ~27 items for
+  vector) on every call, called ~45,000 times directly (plus more via
+  `matchesResolvedSurfaceMemberPath`/`findStdlibSurfaceMetadataByResolvedPathUncached`).
+  All of this data (`Registry` and every span it points into) is fixed,
+  immutable, process-lifetime data by the time `main()` starts running
+  semantics - confirmed no `StdlibSurfaceMetadata` is ever constructed
+  anywhere outside `Registry` itself (checked every call site under
+  `src/` and `tests/`), so a pointer-identity-keyed cache is safe. **Fix**:
+  added two function-local-static (thread-safe magic-static init,
+  built once, read-only afterward - safe for the opt-in parallel
+  definition-validation worker path per the existing
+  `g_resolvedPathCache` precedent) lookup structures in
+  `src/StdlibSurfaceRegistry.cpp`: `stdlibSurfaceSpellingIndex()`, an
+  `unordered_map<string_view, const StdlibSurfaceMetadata*>` built once
+  from every entry's `canonicalPath`/`importAliasSpellings`/
+  `compatibilitySpellings`/`loweringSpellings` via `try_emplace` in
+  `Registry` order (preserving `std::find_if`'s "first entry wins for a
+  spelling shared across entries" semantics exactly, not just for
+  typical non-overlapping inputs), now used directly by
+  `findStdlibSurfaceMetadataBySpelling()`; and
+  `stdlibSurfaceMemberNameSet()`, an `unordered_map<const
+  StdlibSurfaceMetadata*, unordered_set<string_view>>` keyed by each
+  entry's address, used by `resolveMetadataMemberName()` and
+  `matchesResolvedRootedMemberPath()` (the latter's signature changed
+  from taking a raw `memberNames` span to taking the owning `metadata`
+  reference, since every call site was already passing
+  `metadata.memberNames` anyway). `matchesAny()` itself and
+  `stdlibSurfaceMatchesSpelling()` are left unchanged and still used
+  directly (e.g. by `matchesResolvedSurfaceMemberPath`,
+  `isStdlibSurfaceMemberName`, `isStdlibSurfaceStatementMemberName`) -
+  those remaining call sites test one specific metadata's own small
+  span (2-30 items) once per call, not the O(Registry * spans) pattern,
+  so per this TODO's stop_rule they were left alone as genuinely-small-N
+  cost centers not worth the added complexity of threading the memoized
+  sets through every remaining call site. **Measured result** (release
+  build, same machine before/after via `git stash`/rebuild of just this
+  fix against this session's starting commit `20d9df6`;
+  `valgrind --tool=callgrind`, `./primec --emit=vm <file> --entry
+  /main`, no `-o` so the VM actually executes): `mini_vec.prime` -
+  **558,086,218 -> 545,830,081 retired instructions (-2.20%)**;
+  `heavy_collections.prime` (`import /std/collections/*`) -
+  **2,709,743,149 -> 2,609,255,036 (-3.71%)**. Both repros' VM execution
+  results verified identical before/after (exit code 3 unchanged).
+  Wall-clock (7 interleaved runs each for `mini_vec.prime`, 5 for
+  `heavy_collections.prime`): `mini_vec.prime` before ~0.0921-0.1047s
+  (median ~0.0943s) -> after ~0.0910-0.1100s (median ~0.0971s), noise-
+  dominated at this timescale with no clear directional signal (a ~2.2%
+  instruction-count change is a small fraction of fixed per-process
+  overhead here); `heavy_collections.prime` before ~0.3701-0.3863s
+  (median ~0.3782s) -> after ~0.3603-0.3888s (median ~0.3740s), a small
+  directionally-consistent improvement roughly matching the -3.71%
+  instruction-count change. **This is a genuine, provably-correct
+  complexity-class fix** (O(Registry.size() * spellings-per-entry) and
+  O(memberNames-per-entry) linear scans, called hundreds of thousands of
+  times combined in a trivial repro, replaced with O(1) hash lookups
+  built once) rather than a redundant-work fix like TODO-5243/5244, but
+  its measured win is modest because `Registry`'s actual size (11
+  entries) and per-entry span sizes (2-30 items) were never astronomically
+  large - the O(N) scans were real waste, just waste bounded by a small
+  constant, so removing it yields a real but not dramatic instruction-count
+  drop. **Cumulative chain progress** (session start -> now,
+  `mini_vec.prime`, `valgrind --tool=callgrind` retired instructions):
+  13,641,584,142 -> **545,830,081 (-96.0% from session start, ~25.0x
+  faster)**; wall-clock ~2.0-2.2s -> still ~0.091-0.110s at this
+  timescale, indistinguishable from the pre-fix range within run-to-run
+  noise - the <100ms target remains close-but-not-settled, as it has
+  been since TODO-5244, and this leaf's win is real in the profiler but
+  too small relative to fixed per-process overhead (dynamic linking, VM
+  init, ~5-6ms no-import floor) to move the wall-clock needle on its
+  own. Verified via `./scripts/compile.sh --release` (single invocation,
+  this repo's convention): **100% tests passed, 0 tests failed out of
+  1881**, with particular attention paid to call/symbol-resolution
+  correctness given this leaf touches a dispatch structure directly -
+  no regressions, and both repros' VM exit codes matched before/after.

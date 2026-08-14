@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace primec {
@@ -924,6 +925,65 @@ bool matchesAny(std::span<const std::string_view> spellings, std::string_view sp
   return std::find(spellings.begin(), spellings.end(), spelling) != spellings.end();
 }
 
+// TODO-5245: Registry (11 entries) is fixed, immutable, process-lifetime
+// data, and every spelling that stdlibSurfaceMatchesSpelling() can match
+// against (canonicalPath, importAliasSpellings, compatibilitySpellings,
+// loweringSpellings) is likewise fixed once deriveCollectionsSurfaces() has
+// run at static-init time. findStdlibSurfaceMetadataBySpelling() was
+// previously an O(Registry.size() * spellings-per-entry) linear scan
+// (std::find_if over 11 entries, each running up to 3 matchesAny() linear
+// scans over spans of up to ~20-30 spellings) called ~100K+ times in a
+// single compile of even a trivial repro - a genuine complexity-class cost,
+// not per-call-varying work. Building this index once and querying it in
+// O(1) thereafter preserves EXACT match semantics (matchesAny/
+// stdlibSurfaceMatchesSpelling are already pure exact string_view equality,
+// never partial/prefix/substring matching - verified by reading both) while
+// eliminating the repeated linear scans. try_emplace (rather than
+// operator[]/insert) is essential for correctness here: it preserves the
+// original std::find_if's "first entry in Registry order wins" semantics
+// for any spelling that (in principle) appears under more than one
+// registry entry, matching stdlibSurfaceMatchesSpelling()'s behavior
+// exactly for every input, not just typical ones.
+const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> &stdlibSurfaceSpellingIndex() {
+  static const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> index = [] {
+    std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> built;
+    auto insertAll = [&](std::span<const std::string_view> spellings, const StdlibSurfaceMetadata *metadata) {
+      for (const std::string_view spelling : spellings) {
+        built.try_emplace(spelling, metadata);
+      }
+    };
+    for (const StdlibSurfaceMetadata &metadata : Registry) {
+      built.try_emplace(metadata.canonicalPath, &metadata);
+      insertAll(metadata.importAliasSpellings, &metadata);
+      insertAll(metadata.compatibilitySpellings, &metadata);
+      insertAll(metadata.loweringSpellings, &metadata);
+    }
+    return built;
+  }();
+  return index;
+}
+
+// TODO-5245: same rationale as stdlibSurfaceSpellingIndex() above, but for
+// metadata.memberNames - resolveMetadataMemberName()/
+// matchesResolvedRootedMemberPath() each ran an O(memberNames.size())
+// matchesAny() scan (up to ~27 entries for vector's helper surface) on
+// every call, tens of thousands of times per compile. Keyed by the
+// metadata's address, which is stable and unique because every
+// StdlibSurfaceMetadata instance that ever reaches this code is a
+// reference/pointer into the single static Registry array (verified: no
+// StdlibSurfaceMetadata is constructed anywhere else in the codebase).
+const std::unordered_set<std::string_view> &stdlibSurfaceMemberNameSet(const StdlibSurfaceMetadata &metadata) {
+  static const std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> cache = [] {
+    std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> built;
+    for (const StdlibSurfaceMetadata &entry : Registry) {
+      built.emplace(&entry,
+                    std::unordered_set<std::string_view>(entry.memberNames.begin(), entry.memberNames.end()));
+    }
+    return built;
+  }();
+  return cache.at(&metadata);
+}
+
 std::string_view stripResolvedPathSpecializationSuffix(std::string_view path) {
   // Both "__t..." and "__ov..." markers require a literal "__" - skip the
   // two substring rfind scans entirely for the common case of a path with
@@ -951,7 +1011,7 @@ std::string_view stripResolvedPathSpecializationSuffix(std::string_view path) {
 
 bool matchesResolvedRootedMemberPath(std::string_view path,
                                      std::string_view rootPath,
-                                     std::span<const std::string_view> memberNames) {
+                                     const StdlibSurfaceMetadata &metadata) {
   if (rootPath.empty() || path.size() <= rootPath.size() || !path.starts_with(rootPath) ||
       path[rootPath.size()] != '/') {
     return false;
@@ -961,19 +1021,19 @@ bool matchesResolvedRootedMemberPath(std::string_view path,
   if (memberName.empty() || memberName.find('/') != std::string_view::npos) {
     return false;
   }
-  return matchesAny(memberNames, memberName);
+  return stdlibSurfaceMemberNameSet(metadata).contains(memberName);
 }
 
 bool matchesResolvedSurfaceMemberPath(const StdlibSurfaceMetadata &metadata,
                                       std::string_view path) {
   if (stdlibSurfaceMatchesSpelling(metadata, path) ||
-      matchesResolvedRootedMemberPath(path, metadata.canonicalPath, metadata.memberNames)) {
+      matchesResolvedRootedMemberPath(path, metadata.canonicalPath, metadata)) {
     return true;
   }
   return std::any_of(metadata.importAliasSpellings.begin(),
                      metadata.importAliasSpellings.end(),
                      [&](std::string_view aliasSpelling) {
-                       return matchesResolvedRootedMemberPath(path, aliasSpelling, metadata.memberNames);
+                       return matchesResolvedRootedMemberPath(path, aliasSpelling, metadata);
                      });
 }
 
@@ -984,7 +1044,7 @@ std::string_view pathLeaf(std::string_view path) {
 
 std::string_view resolveMetadataMemberName(const StdlibSurfaceMetadata &metadata,
                                            std::string_view memberName) {
-  if (matchesAny(metadata.memberNames, memberName)) {
+  if (stdlibSurfaceMemberNameSet(metadata).contains(memberName)) {
     return memberName;
   }
   const auto it = std::find_if(metadata.memberAliases.begin(),
@@ -1004,7 +1064,7 @@ std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metad
       metadata.shape != StdlibSurfaceShape::ErrorFamily) {
     return resolveMetadataMemberName(metadata, memberName);
   }
-  if (matchesAny(metadata.memberNames, memberName)) {
+  if (stdlibSurfaceMemberNameSet(metadata).contains(memberName)) {
     return memberName;
   }
   return {};
@@ -1173,11 +1233,18 @@ std::string findCompatibilitySpelling(StdlibSurfaceId id, std::string_view membe
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_view spelling) {
-  const auto it = std::find_if(
-      Registry.begin(), Registry.end(), [spelling](const StdlibSurfaceMetadata &metadata) {
-        return stdlibSurfaceMatchesSpelling(metadata, spelling);
-      });
-  return it == Registry.end() ? nullptr : &*it;
+  // TODO-5245: O(1) hash lookup against the precomputed spelling index
+  // instead of an O(Registry.size()) scan that itself ran up to 3
+  // O(spellings-per-entry) linear scans (via stdlibSurfaceMatchesSpelling's
+  // matchesAny() calls) per entry. stdlibSurfaceSpellingIndex() is built to
+  // match stdlibSurfaceMatchesSpelling()'s exact semantics (canonicalPath
+  // OR importAliasSpellings OR compatibilitySpellings OR loweringSpellings,
+  // first Registry-order match wins for any spelling shared across
+  // entries), so this returns byte-identical results to the old linear
+  // scan for every input.
+  const auto &index = stdlibSurfaceSpellingIndex();
+  const auto it = index.find(spelling);
+  return it == index.end() ? nullptr : it->second;
 }
 
 namespace {
@@ -1205,14 +1272,14 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPathUncached(std
         if (metadata.shape == StdlibSurfaceShape::ConstructorFamily) {
           return false;
         }
-        if (matchesResolvedRootedMemberPath(normalizedPath, metadata.canonicalPath, metadata.memberNames)) {
+        if (matchesResolvedRootedMemberPath(normalizedPath, metadata.canonicalPath, metadata)) {
           return true;
         }
         return std::any_of(metadata.importAliasSpellings.begin(),
                            metadata.importAliasSpellings.end(),
                            [&](std::string_view aliasSpelling) {
                              return matchesResolvedRootedMemberPath(
-                                 normalizedPath, aliasSpelling, metadata.memberNames);
+                                 normalizedPath, aliasSpelling, metadata);
                            });
       });
   return it == Registry.end() ? nullptr : &*it;
