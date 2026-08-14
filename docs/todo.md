@@ -76,7 +76,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
-- TODO-5241: Characterize the whole-file text-splicing import architecture's contribution to compile cost | track: compiler-import-splicing-cost | surface: ImportResolver whole-file splicing
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
 of TODO-5237/5238 - its own investigation trended away from convergence
@@ -89,6 +88,8 @@ into `primec`/`primevm` alongside the TODO-5234 arena. TODO-5238 (the
 direct-redundancy-mining line) has also since resolved - see
 `docs/todo_finished.md`. TODO-5239/5240 (the envelope-parsing-redundancy
 line that followed) have also since resolved - see
+`docs/todo_finished.md`. TODO-5241/5242 (the whole-file text-splicing
+import-cost characterization and fix) have also since resolved - see
 `docs/todo_finished.md`.
 
 ### Immediate Next 10
@@ -1845,96 +1846,6 @@ line that followed) have also since resolved - see
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
-
-- [ ] TODO-5241: Characterize the whole-file text-splicing import architecture's contribution to compile cost
-  - owner: ai
-  - created_at: 2026-08-14
-  - phase: Test runtime optimization
-  - parallel_track: compiler-import-splicing-cost
-  - depends_on: TODO-5240
-  - scope: TODO-5230 through TODO-5240's chain of fixes cut the standard
-    `mini_vec.prime` repro from 13,641,584,142 retired instructions /
-    ~2.0-2.2s wall-clock (session start) to 3,539,199,913 instructions /
-    ~0.58-0.60s (-74.1% instructions, ~3.5x faster) - all genuine
-    algorithmic redundancy fixes (memoization of pure functions, O(N^2)
-    elimination, pass-by-reference, lazy context construction, and most
-    recently a 4x redundant envelope-structural-rescan in TODO-5240),
-    each individually profiled, verified, and full-suite-tested. This is
-    still well above the session's directional target (~14-60ms, based on
-    the repro's actual ~500-600 reachable lines of stdlib source). Per
-    TODO-5240's own resolution_summary, the remaining cost floor is
-    "most plausibly the whole-file text-splicing import architecture
-    itself" - the mechanism that takes the program's imports and produces
-    the ~280KB spliced source text TODO-5240's fix was scanning 4x-then-1x
-    over. This leaf: profile (`valgrind --tool=callgrind`/`--tool=dhat`)
-    specifically what produces that ~280KB spliced text for a repro that
-    only imports `/std/collections/vector/*` (~361 reachable lines plus
-    ~170 more transitively via `buffer_checked`/`buffer_unchecked`/`panic`
-    - nowhere near 280KB of source). Find: is the whole-file splicer
-    pulling in far more than the lazy-import mechanism (TODO-5223-5229)
-    should have narrowed it to - i.e. is this leaf actually exposing a
-    regression/gap in the lazy-import work rather than a new cost class?
-    Or is 280KB genuinely the necessary spliced size for reasons specific
-    to how splicing works (e.g. duplicated boilerplate/wrapper text
-    injected per-import, or the whole file being spliced rather than just
-    the reachable symbols within it)? Read `docs/LibrarySymbolManifestLazyImports.md`
-    first for the existing design/history of the lazy-import mechanism
-    before assuming this is new territory - this may already be a
-    partially-understood gap, not a fresh discovery.
-  - implementation_notes: Find the whole-file splicing code (grep for
-    "splice"/"spliced" across `src/`, likely in `src/ImportResolver.cpp`
-    or a related file) and instrument/profile it directly: what's the
-    actual byte size of source text fed into the 4 text-filter passes for
-    the `mini_vec.prime` repro, and where does that size come from (grep
-    for what gets concatenated/spliced - whole files vs. reachable
-    symbol subsets)?
-  - acceptance:
-    - A recorded breakdown of what the ~280KB spliced text actually
-      contains for the `mini_vec.prime` repro (source: which files, how
-      much of each, whether it's whole-file or symbol-subset splicing)
-      is added to `docs/TestRuntimeOptimization.md`.
-    - A clear conclusion: is this a lazy-import gap/regression (fixable
-      by making splicing respect the same reachable-symbol boundary lazy
-      imports already established), a genuine architectural cost with a
-      different fix shape, or not worth pursuing further - directly
-      informing TODO-5242's scope (or closing this line of investigation
-      if the finding says so).
-  - stop_rule: Stop once the measurement and conclusion are recorded; do
-    not implement a fix in this leaf - that is TODO-5242. If the
-    splicing turns out to already be minimal/necessary and the remaining
-    cost floor is genuinely elsewhere (e.g. process startup, dynamic
-    linking, or something not addressable without a much larger
-    architecture change), document that honestly and say so plainly
-    rather than manufacturing a next leaf - this chain has run ten
-    fix-leaves (TODO-5230-5240) off diminishing-but-real returns, and
-    it's fine for this one to be the leaf that says "this is close to the
-    practical floor" if the data supports that.
-
-- [ ] TODO-5242: Fix whole-file splicing inefficiency found by TODO-5241 (scope TBD by TODO-5241's findings)
-  - owner: ai
-  - created_at: 2026-08-14
-  - phase: Test runtime optimization
-  - parallel_track: compiler-import-splicing-cost
-  - depends_on: TODO-5241
-  - scope: To be filled in by whoever picks up TODO-5241's conclusion -
-    do not start this leaf until TODO-5241's `resolution_summary` names a
-    concrete, scoped fix target. If TODO-5241 concludes there is nothing
-    more worth fixing here, close this leaf with a pointer back to
-    TODO-5241's conclusion rather than inventing scope.
-  - implementation_notes: (fill in from TODO-5241's findings)
-  - acceptance:
-    - `mini_vec.prime` and the heavier real collection-test repro used
-      throughout this chain are re-timed and re-profiled before/after,
-      recorded in `docs/TestRuntimeOptimization.md`.
-    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
-      zero regressions.
-  - stop_rule: Same correctness discipline as every leaf in this chain -
-    no caching without a provable purity argument, no speculative fixes,
-    and if this touches the lazy-import mechanism (TODO-5223-5229), be
-    especially careful not to reintroduce the whole-file-splice
-    correctness fallback's purpose (check
-    `docs/LibrarySymbolManifestLazyImports.md` for why the escape hatch
-    exists before removing or narrowing anything it depends on).
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai

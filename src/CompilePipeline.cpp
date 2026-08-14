@@ -640,19 +640,56 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
   std::unordered_map<std::string, StdlibModuleManifest> moduleManifestCache;
+  // TODO-5241/5242: collectStdlibAutoIncludeKeys returns the most-specific
+  // key first (the literal import path, with any trailing wildcard suffix
+  // trimmed) followed by progressively shorter ancestor keys down to the
+  // module root. Those ancestor keys are needed for the lazy-exclusion check
+  // just below (if ANY ancestor belongs to a lazy-excluded module family,
+  // the whole import path must not be queued for whole-file inclusion at
+  // all), but they must NOT all be queued for *actual splicing*
+  // unconditionally - only as a fallback for the case where the
+  // most-specific key doesn't resolve to a real file/directory (e.g. a
+  // typo'd sub-path, where letting the ancestor directory scan run produces
+  // a better "unknown import path" diagnostic downstream than a spurious
+  // "stdlib import requested but matching stdlib modules were not found"
+  // error). Queuing every ancestor unconditionally meant any single-file
+  // collections submodule import (vector, buffer_checked, map, ...) - each
+  // of which resolves cleanly on its own to its own one file - ALSO spliced
+  // in the entire parent collections directory: 237KB of unrelated
+  // soa_storage.prime alone, on every one of those submodule imports. See
+  // docs/TestRuntimeOptimization.md's TODO-5241 entry for the measured
+  // breakdown. `fallbackKeyOf` records each key's immediate broader ancestor
+  // (keys[i] -> keys[i+1]); a key is only actually enqueued when its more
+  // specific sibling turns out not to resolve to anything (see the
+  // `keyResolved` tracking in the resolve loop below).
+  //
+  // `applyMathSkip` must only be true for the top-level sourceImports loop:
+  // shouldSkipMathWildcardStdlibModule decides based on the *user's own*
+  // source text, not any particular stdlib file's text, so it must never
+  // suppress a math import discovered while scanning a stdlib file's own
+  // nested imports (e.g. gfx.prime's own `/std/math/*` import, needed for
+  // gfx.prime's own use of math types regardless of whether the user's
+  // program textually mentions math symbols itself).
+  std::unordered_map<std::string, std::string> fallbackKeyOf;
   const bool skipMathWildcardStdlibModule = shouldSkipMathWildcardStdlibModule(sourceImports, source);
+  auto queueKeyChain = [&](const std::vector<std::string> &keys, const std::string &importPath,
+                           bool applyMathSkip) {
+    for (std::size_t i = 0; i + 1 < keys.size(); ++i) {
+      fallbackKeyOf.emplace(keys[i], keys[i + 1]);
+    }
+    if (keys.empty()) {
+      return;
+    }
+    const std::string &mostSpecific = keys.front();
+    if (applyMathSkip && skipMathWildcardStdlibModule && importPath == "/std/math/*" &&
+        mostSpecific == "/std/math") {
+      return;
+    }
+    if (queuedKeys.insert(mostSpecific).second) {
+      pendingKeys.push_back(mostSpecific);
+    }
+  };
   for (const auto &importPath : sourceImports) {
-    // collectStdlibAutoIncludeKeys returns the most-specific key first (the
-    // literal import path) followed by progressively shorter ancestor keys
-    // down to the module root. If any ancestor is lazy-excluded, the whole
-    // import path belongs to that lazy module's family and must not be
-    // queued for whole-file inclusion at all - not even via its own
-    // most-specific key. Otherwise a literal sub-path that doesn't happen
-    // to name a real stdlib file (e.g. a typo'd symbol name under a lazy
-    // module) fails the directory scan below and the pipeline reports a
-    // spurious "stdlib import requested but matching stdlib modules were
-    // not found" instead of letting semantic validation produce the
-    // correct "unknown import path" diagnostic for it.
     const std::vector<std::string> keys = collectStdlibAutoIncludeKeys(importPath);
     const bool importPathIsLazyExcluded =
         std::any_of(keys.begin(), keys.end(), [&](const std::string &key) {
@@ -661,14 +698,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
     if (importPathIsLazyExcluded) {
       continue;
     }
-    for (const auto &key : keys) {
-      if (skipMathWildcardStdlibModule && importPath == "/std/math/*" && key == "/std/math") {
-        continue;
-      }
-      if (queuedKeys.insert(key).second) {
-        pendingKeys.push_back(key);
-      }
-    }
+    queueKeyChain(keys, importPath, /*applyMathSkip=*/true);
   }
   for (const auto &key : implicitKeys) {
     if (excludedKeys.count(key) > 0) {
@@ -715,6 +745,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
     if (!processedKeys.insert(key).second) {
       continue;
     }
+    bool keyResolved = false;
 
     for (const auto &pathText : importPaths) {
       std::filesystem::path root(pathText);
@@ -790,16 +821,20 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
 
         const std::vector<std::string> nestedImports = collectStdImportPaths(contents);
         for (const auto &nestedImport : nestedImports) {
-          for (const auto &nestedKey : collectStdlibAutoIncludeKeys(nestedImport)) {
-            if (queuedKeys.insert(nestedKey).second) {
-              pendingKeys.push_back(nestedKey);
-            }
-          }
+          // Same most-specific-key-only queuing as the top-level sourceImports
+          // loop above (see TODO-5241/5242 comment there) - a stdlib file's
+          // own nested imports must not unconditionally drag in their
+          // ancestor module directory either. applyMathSkip is false here:
+          // the math-wildcard skip decision is about the user's own source,
+          // never about what a stdlib file the user didn't write imports.
+          queueKeyChain(collectStdlibAutoIncludeKeys(nestedImport), nestedImport,
+                       /*applyMathSkip=*/false);
         }
         return true;
       };
 
       if (appendSpecificFile || std::filesystem::is_regular_file(moduleRoot, ec)) {
+        keyResolved = true;
         if (moduleRoot.extension() == ".prime" && !appendFile(moduleRoot)) {
           return false;
         }
@@ -809,6 +844,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
       if (!std::filesystem::is_directory(moduleRoot, ec)) {
         continue;
       }
+      keyResolved = true;
 
       const bool skipExperimentalCollectionsInBaseWildcard =
           (key == "/std/collections");
@@ -839,6 +875,12 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         if (!appendFile(entry.path())) {
           return false;
         }
+      }
+    }
+    if (!keyResolved) {
+      const auto fallback = fallbackKeyOf.find(key);
+      if (fallback != fallbackKeyOf.end() && queuedKeys.insert(fallback->second).second) {
+        pendingKeys.push_back(fallback->second);
       }
     }
   }

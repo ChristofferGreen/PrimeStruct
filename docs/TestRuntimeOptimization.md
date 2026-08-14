@@ -1284,3 +1284,128 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   "measure, then decide" pattern. Verified via `./scripts/compile.sh
   --release` (single invocation, this repo's convention): **100% tests
   passed, 0 tests failed out of 1881**.
+
+- 2026-08-14 (TODO-5241): Characterized what actually produces the ~280KB
+  spliced source text TODO-5240 was scanning. Instrumented
+  `appendStdlibModuleSources` (`src/CompilePipeline.cpp`) directly (a
+  temporary `PRIMESTRUCT_DEBUG_SPLICE`-gated stderr trace of every file it
+  appends, removed before landing) and ran it against `mini_vec.prime`
+  (`import /std/collections/vector/*`). **Exact breakdown of the 278,648
+  bytes** (matches `wc -c` on the files below to the byte): `vector.prime`
+  (10,791B, the one file the program actually needs) plus, appended under a
+  *second*, broader key, the **entire rest of the `/std/collections`
+  directory** it does not need: `soa.prime` (7,897B), `errors.prime`
+  (3,808B), `buffer_unchecked.prime` (1,538B), `buffer_checked.prime`
+  (1,730B, already reachable from `vector.prime`'s own imports and
+  redundantly re-included here), `soa_storage.prime` (**237,406B - 85% of
+  the total on its own**), `equality.prime` (877B), `map.prime` (14,260B),
+  plus `panic.prime` (341B, genuinely needed transitively). **Root cause,
+  read directly in `appendStdlibModuleSources`**: `collectStdlibAutoIncludeKeys`
+  turns an import path into a list of keys - the literal path first, then
+  progressively shorter ancestor keys up to the module root (e.g.
+  `/std/collections/vector/*` -> `["/std/collections/vector",
+  "/std/collections"]`). That ancestor list exists so the lazy-exclusion
+  check (TODO-5223-5229) can correctly see "does *any* ancestor of this
+  import belong to a lazy-managed module" - but the same list was *also*
+  being fed, unconditionally and in full, into the actual splice queue.
+  The specific key resolves cleanly on its own (`vector.prime` exists as a
+  real file), but the *ancestor* key ALSO got queued and independently
+  resolved to a full recursive directory scan of `/std/collections` - the
+  same directory-scan path that runs for an explicit `import
+  /std/collections/*`. Every collections submodule import (`vector`,
+  `buffer_checked`, `buffer_unchecked`, `map`, `soa`, `soa_storage`,
+  `equality`, `errors`) produces exactly this two-key list and therefore
+  triggers exactly this full-directory pull, regardless of what the
+  submodule itself actually imports. **Conclusion: (a) - a genuine, fixable
+  gap**, not an architectural necessity and not a lazy-import-mechanism
+  regression proper (TODO-5223-5229's lazy manifest/closure-scan machinery
+  is untouched and correct where it applies - `/std/collections` has no
+  per-symbol `.psmeta` manifest, so it was never lazy-eligible in the first
+  place); the bug is in the older, non-lazy whole-file splicer's own key
+  fan-out, which was pulling in far more than the reachable-file boundary
+  a *file-scoped* (non-wildcard-directory) submodule import should have.
+  Confirmed this is not new territory by reading
+  `docs/LibrarySymbolManifestLazyImports.md`'s Non-Goals section first: it
+  already flags that "imports that already name one specific file... are
+  not the primary target - they already reasonably scope to one file's
+  worth of text" - `/std/collections/vector/*` is exactly that
+  already-scoped case, and the whole-file splicer was violating its own
+  stated non-goal by pulling in the ancestor directory anyway.
+  resolution_summary: confirmed via direct instrumentation of
+  `appendStdlibModuleSources` that the ~280KB figure is 10,791B of actually
+  needed `vector.prime` plus 267,857B of unrelated sibling-file content
+  (dominated by `soa_storage.prime`'s 237,406B) pulled in solely because
+  the ancestor key `/std/collections` gets queued for full-directory
+  splicing unconditionally alongside the already-resolving specific key
+  `/std/collections/vector`, for every collections submodule import. This
+  is conclusion (a): a concrete, scoped, fixable gap in the whole-file
+  splicer's key fan-out (not the lazy-import mechanism itself, which is
+  unaffected and correct). Fix target for TODO-5242: only queue an
+  ancestor key as a fallback when the more specific key fails to resolve to
+  a real file/directory, not unconditionally.
+
+- 2026-08-14 (TODO-5242): Implemented TODO-5241's fix in
+  `appendStdlibModuleSources` (`src/CompilePipeline.cpp`). Changed the key
+  queuing at both sites that call `collectStdlibAutoIncludeKeys` (the
+  top-level `sourceImports` loop, and the nested-import discovery inside
+  `appendFile` for imports found within an already-spliced stdlib file) to
+  enqueue only the most-specific key up front, recording the
+  more-specific-to-ancestor edges in a `fallbackKeyOf` map. Added a
+  `keyResolved` flag to the per-key resolve loop, set when the key maps to
+  a real file (manifest-declared or the existing `.prime`-suffix fallback)
+  or an existing directory; only when a key resolves to *nothing* across
+  every configured stdlib root does its immediate ancestor (if any) get
+  enqueued as a fallback - preserving the existing "let the directory scan
+  produce a clean diagnostic for a typo'd sub-path" behavior the ancestor
+  list was originally also serving, without paying for it on every
+  successful resolution. The lazy-exclusion check itself
+  (`importPathIsLazyExcluded`, TODO-5223-5229's escape hatch) is untouched
+  - it still inspects the full ancestor chain before any queuing decision,
+  so a lazy-managed module family is still correctly excluded from
+  whole-file splicing entirely, exactly as before.
+  **Two regressions caught by the full suite on the first pass, both
+  fixed before landing** (both real, not test flakiness - this chain's
+  discipline held): (1) the math-wildcard skip check
+  (`shouldSkipMathWildcardStdlibModule`, evaluated once against the *user's
+  own* source text) was being applied identically at the nested-import
+  discovery site too via a shared helper lambda, which wrongly suppressed a
+  stdlib file's own `/std/math/*` import (e.g. `gfx.prime`'s own math
+  dependency for `ColorRGBA`) whenever the *user's* program didn't
+  textually mention a math symbol - fixed by adding an `applyMathSkip`
+  parameter to the shared helper, true only at the top-level call site.
+  Caught by `test_ir_pipeline_conversions_numbers.cpp`'s packed-error-struct
+  Result-combinator test and a `compile_run` VM-core sibling, both
+  importing `/std/gfx/*` with no direct math usage of their own. (2) an
+  explanatory code comment for this fix quoted the literal import-path
+  string, which tripped `PrimeStruct_vector_surface_traces`'s production-code
+  scan (`scripts/check_vector_surface_traces.py`) for hardcoded vector
+  stdlib paths in `src/`/`include/` - fixed by rewording the comment to
+  describe the case without spelling out the exact matched path text.
+  **Measured result** (release build, same machine before/after via `git
+  stash` of just this fix against this session's starting commit `bc55814`;
+  `valgrind --tool=callgrind`): `mini_vec.prime` - **3,539,690,008 ->
+  847,206,768 retired instructions (-76.1%)**; `heavy_collections.prime`
+  (`import /std/collections/*`, a genuine whole-directory wildcard that
+  still correctly needs the full directory scan) - **3,420,141,657 ->
+  3,420,143,005 (unchanged, as expected - confirms the fix is scoped to the
+  actually-wasteful case and doesn't touch the legitimately-necessary
+  one)**. Wall-clock (5 interleaved runs each, `./primec --emit=vm <file>
+  --entry /main`, no `-o` so the VM actually executes): `mini_vec.prime`
+  **~0.478-0.49s -> ~0.122-0.127s (~74% faster)**; `heavy_collections.prime`
+  **~0.462-0.492s -> ~0.467-0.479s (unchanged, within run-to-run noise, as
+  expected)**. Both repros' VM execution results verified identical
+  before/after (`mini_vec.prime` and `heavy_collections.prime` both exit
+  code 3 - `vectorCount<i32>` of the 3-element vector - unchanged).
+  **Cumulative chain progress** (session start -> now, `mini_vec.prime`,
+  `valgrind --tool=callgrind` retired instructions): 13,641,584,142 ->
+  **847,206,768 (-93.8% from session start, ~16.1x faster)**; wall-clock
+  ~2.0-2.2s -> **~0.122-0.127s**. This is now within range of the
+  ~14-60ms no-import-baseline-plus-linear-increment directional target
+  this chain has carried since TODO-5232 (the remaining gap is process
+  startup/dynamic-linking/VM-init overhead plus the genuinely-needed
+  ~14KB of vector/buffer/panic source, not further splicing waste - a
+  reasonable point to consider this chain's primary lever exhausted).
+  Verified via `./scripts/compile.sh --release` (single invocation, this
+  repo's convention): **100% tests passed, 0 tests failed out of 1881**
+  (after fixing the two regressions above; the discipline of "measure, then
+  full-suite-verify" caught both before they could land).
