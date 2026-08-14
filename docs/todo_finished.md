@@ -5,6 +5,49 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (August 14, 2026)**
+- [x] TODO-4609: Reject escaping local array slices
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-08-14
+  - phase: Safe array extents and views
+  - parallel_track: array-slice-escape-diagnostics
+  - depends_on: TODO-4608
+  - scope: Added the first conservative view lifetime diagnostic by rejecting
+    a slice of a local array owner that escapes through return or a stored
+    struct field.
+  - outcome:
+    - Added `SemanticsValidator::resolveEscapingArraySliceRoot` (new file
+      `SemanticsValidatorExprArraySliceEscapes.cpp`) - a conservative, lexical
+      check matching the direct `slice(receiver, start, end)` call shape
+      (mirroring how other view-escape checks in the validator, e.g.
+      `isStandaloneSoaRefCall`, match by expression shape rather than
+      tracking aliases through intermediate bindings) and confirming the
+      receiver name resolves to a local (non-parameter) binding.
+    - Wired the check into `validateReturnStatement`
+      (`SemanticsValidatorStatementReturns.cpp`) alongside the existing
+      soa-ref/field-view return-escape diagnostics, emitting
+      `"slice escapes via return (owner: <name>)"`.
+    - Wired the same check into
+      `validateExprResolvedStructConstructorCall`
+      (`SemanticsValidatorExprStructConstructors.cpp`)'s per-field argument
+      loop, emitting `"slice escapes via field <field> (owner: <name>)"`.
+    - Passing a slice to a callee parameter remains accepted (no check added
+      on ordinary call-argument passing), since a callee that merely reads
+      the slice does not extend its lifetime.
+  - validation:
+    - Added 3 focused `compile.run.vm.bounds` e2e tests: return-escape
+      rejection, struct-field-escape rejection, and an allowed
+      pass-to-callee-that-doesn't-store-or-return-it case (verifies
+      `count(window) == 2` end to end).
+    - Full `./scripts/compile.sh --release` gate: 1881/1881 passing, 0
+      failures (includes the 3 new cases; confirmed no regressions).
+  - stop_rule: Stopped after local-owner slice escape via return and stored
+    field were rejected and covered; did not add assignment-to-outer-binding
+    escape tracking or any alias/dataflow analysis through intermediate
+    bindings, matching the "conservative and lexical" scope of this leaf -
+    left for a follow-up if ever needed.
+
 **Todo Completion (July 3, 2026) — TODO-4682**
 
 Root cause was semantics-side, not the lowerer: the "even-count map

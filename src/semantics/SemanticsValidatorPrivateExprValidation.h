@@ -128,6 +128,10 @@
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        const std::string &sinkName,
                                        const Expr &rhsExpr);
+  bool resolveEscapingArraySliceRoot(const std::vector<ParameterInfo> &params,
+                                     const std::unordered_map<std::string, BindingInfo> &locals,
+                                     const Expr &expr,
+                                     std::string &rootOut);
   struct ExprResultFileBuiltinContext {
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
     std::function<bool(const Expr &)> isStringExpr;

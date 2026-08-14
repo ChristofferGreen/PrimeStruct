@@ -84,6 +84,17 @@ build and layout solidify.
   outside the struct should use an explicit `self` parameter if they want method-call sugar.
 
 ## Build/test workflow
+- **TL;DR (read this before running any test command):** to validate a
+  change, run exactly one command at a time: `./scripts/compile.sh --release`.
+  Do not run raw `PrimeStruct_*_tests` binaries directly in `build-debug/` as
+  your default validation - they are slow (serial, unsharded, debug-optimized,
+  and compile-run suites shell out to `primec` per case) and easy to mistake
+  for a hang. Do not launch more than one heavy build/test command
+  (`compile.sh`, `cmake --build`, `ctest`, any `PrimeStruct_*_tests` binary) in
+  parallel, even across separate background tool calls - see the non-negotiable
+  RAM rule below. The rest of this section gives the narrower exceptions (deep
+  debugging, focused reruns); when unsure, default back to the one command
+  above.
 - Prefer compiling the project and running tests in release mode via `./scripts/compile.sh --release`; use debug builds only when deeper debugging is needed.
 - Default validation gate: run `./scripts/compile.sh --release` first and keep routine test verification in `build-release/`. Do not switch to `build-debug/` just to rerun ordinary failures faster; only do that when you specifically need debugger-oriented investigation or debug-only instrumentation.
 - **Primary entry:** `./scripts/compile.sh --release` (Release build in `build-release`, runs all tests).

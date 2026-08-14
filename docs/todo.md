@@ -70,7 +70,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics
 - TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal
 - TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
@@ -176,11 +175,13 @@ investigation chain's actively-productive leaves - see
   completed the non-null safe pointer optionality model. TODO-4606 specified the capability-parameterized
   reference/slice view model in the normative docs. TODO-4607 published the
   initial semantic-product array extent facts, and TODO-4608 added the first
-  checked read-only array slice construction surface. TODO-4609 through
+  checked read-only array slice construction surface. TODO-4609 added the
+  first conservative view-escape diagnostic (rejecting a slice of a local
+  array returned or stored into a struct field, while passing it to a
+  callee that does not store/return it stays accepted). TODO-4610 through
   TODO-4612 remain from the agreed backlog in `docs/SafeArrayExtentViews.md`:
-  conservative view escapes, cursor traversal with
-  `limit(...)` / `reverse_limit(...)` boundaries, and style-aligned examples
-  once the surface is specified.
+  cursor traversal with `limit(...)` / `reverse_limit(...)` boundaries, and
+  style-aligned examples once the surface is specified.
 - Collections naming and surface-manifest retirement: remove the
   `experimental_*` and `internal_*` module-naming layers from
   `stdlib/std/collections` and retire `stdlib/std/collections/surfaces.psmeta`.
@@ -303,20 +304,19 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-1. TODO-4609: Reject escaping local array slices
-2. TODO-4610: Add forward cursor traversal API
-3. TODO-4611: Add reverse cursor traversal API
-4. TODO-4612: Add safe extent and cursor code examples
-5. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-6. TODO-4638: Move `compile_run` test shard into subdirectory
-7. TODO-4639: Move `semantics` test shard into subdirectory
-8. TODO-4640: Move remaining test shards into subdirectories
-9. TODO-4641: Group `include/primec/` headers by pipeline stage
-10. TODO-4642: Consolidate loose top-level `src/` files into directories
-11. TODO-4643: Fix 8 duplicate test names across files
-12. TODO-4644: Rewrite 53 overlong test names (>120 chars)
-13. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
-14. TODO-4646: Tighten 12 vague/short test names
+1. TODO-4610: Add forward cursor traversal API
+2. TODO-4611: Add reverse cursor traversal API
+3. TODO-4612: Add safe extent and cursor code examples
+4. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+5. TODO-4638: Move `compile_run` test shard into subdirectory
+6. TODO-4639: Move `semantics` test shard into subdirectory
+7. TODO-4640: Move remaining test shards into subdirectories
+8. TODO-4641: Group `include/primec/` headers by pipeline stage
+9. TODO-4642: Consolidate loose top-level `src/` files into directories
+10. TODO-4643: Fix 8 duplicate test names across files
+11. TODO-4644: Rewrite 53 overlong test names (>120 chars)
+12. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
+13. TODO-4646: Tighten 12 vague/short test names
 15. TODO-4647: Rename 63 opaque shard files with topic suffixes
 16. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
 17. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
@@ -374,27 +374,6 @@ investigation chain's actively-productive leaves - see
 69. TODO-5224: Build the per-module symbol manifest generator
 
 ### Task Blocks
-
-- [ ] TODO-4609: Reject escaping local array slices
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - parallel_track: array-slice-escape-diagnostics
-  - depends_on: TODO-4608
-  - scope: Add the first conservative view lifetime diagnostic by rejecting a
-    slice or reference view that escapes a local array owner through return,
-    stored field, or longer-lived binding.
-  - implementation_notes: Start with semantic validation around slice
-    construction, return validation, and binding lifetime/provenance facts. Use
-    lexical scope rather than non-lexical lifetime inference.
-  - acceptance:
-    - Returning a slice of a local array is rejected with a deterministic
-      diagnostic naming the view and owner.
-    - Passing a slice to a callee that does not store or return it remains
-      accepted.
-    - Tests document that the first checker is conservative and lexical.
-  - stop_rule: Stop once local-owner slice escape is rejected and covered; do
-    not add disjoint mutable slice analysis in this leaf.
 
 - [ ] TODO-4610: Add forward cursor traversal API
   - owner: ai
