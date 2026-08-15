@@ -6,6 +6,81 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-5252: Fix flaky "type resolution graph snapshot honors budget env vars" test
+  - owner: ai
+  - created_at: 2026-08-15
+  - finished_at: 2026-08-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-flake-fixes
+  - depends_on: (none)
+  - scope: This session's `./scripts/compile.sh --release` gate hit two
+    different one-off failures on two separate runs, each passing cleanly
+    both in isolation and on a subsequent full rerun -
+    `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_57_57`
+    and
+    `PrimeStruct_primestruct_semantics_type_resolution_graph_type_resolution_graph_1_10`.
+    Investigate and fix any genuine root cause found, rather than treating
+    both as unavoidable noise.
+  - outcome:
+    - Root-caused and fixed the `type_resolution_graph` case:
+      `tests/unit/semantics/test_semantics_type_resolution_graph.cpp`'s
+      "type resolution graph snapshot honors budget env vars" test measures
+      how long a graph build takes once, then re-runs the identical build
+      with the budget env vars set to `measuredMillis + 1` and asserts the
+      second run does NOT exceed that budget. A 1ms margin between two
+      separate measurements of the same operation is not reliably stable
+      under real scheduling jitter (parallel CTest load, container CPU
+      throttling) - the second run only needs to be marginally slower than
+      the first, for reasons having nothing to do with the over-budget flag
+      logic the test exists to check, for this to spuriously fail. Widened
+      the margin to a fixed 250ms (the tested source is a single trivial
+      function; the true build should always land in low single-digit
+      milliseconds even on a slow machine, so 250ms stays comfortably
+      meaningful for the over/under-budget assertions while absorbing
+      realistic jitter). Grepped for the same fragile-margin shape
+      elsewhere (`MS_MAX`, `OverBudget`, `Millis + 1`) and found no other
+      instances - this was the only test with this pattern.
+    - Could not reliably re-identify the `native_window_launcher_and_preflight`
+      case: CTest's `_57_57` suffix is a positional index into the
+      `--order-by=file` listing of all `test_compile_run_examples_*.cpp`
+      cases combined, and this session added several new `TEST_CASE`s to
+      that same glob (the TODO-5248/5249/5250 doc-example locks) between
+      the original failing run and the investigation, shifting every
+      later case's index. Re-deriving index 57 against the *current* test
+      list resolves to an unrelated docs-lock test
+      ("todo queue and skipped doctest debt stay source locked"), which is
+      almost certainly not the test that actually failed originally - the
+      index just no longer refers to the same logical case. Read through
+      `test_compile_run_examples_native_launcher.cpp`'s tests (the shard's
+      namesake) directly instead: they all mock out `primec`/`xcrun`/
+      `launchctl` with instant-exit shell scripts and assert on captured
+      stdout/stderr text, with no wall-clock waits or timing budgets - nothing
+      in that file matches an obvious timing-flake shape the way the
+      type-resolution-graph budget test did. Without a reproduction or a
+      captured failure message from the original run (the managed block in
+      `docs/failing_tests.md` only retains the single failing test name, not
+      its output, and gets overwritten by each subsequent run), there isn't
+      enough signal to pin down a specific fix here - left as unresolved,
+      flagged for whoever next reproduces it to capture the actual
+      assertion/output before it gets overwritten again.
+  - validation:
+    - `tests/unit/semantics/test_semantics_type_resolution_graph.cpp`'s
+      budget test re-run standalone after the fix: still passes (verifies
+      the fix didn't just widen the margin into meaninglessness - the
+      over-budget-at-zero-budget assertions in the first half of the test
+      are unchanged and still exercise the flag logic for real).
+    - Full `./scripts/compile.sh --release` gate: 100% tests passed, 0
+      failed - including one full run specifically aimed at reproducing
+      the original flakes, which came back 100% green on its own (both
+      flakes are rare - roughly 2 of 6 full runs this session hit one,
+      never both at once).
+  - stop_rule: Fixed the one flake with an identifiable, fixable root
+    cause; documented the investigation dead-end on the other rather than
+    guessing at a fix without evidence. If the native-window-launcher flake
+    recurs, capture its actual output before rerunning anything (it will
+    otherwise be overwritten) and file a fresh, better-scoped TODO from
+    that evidence.
+
 - [x] TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters
   - owner: ai
   - created_at: 2026-08-15

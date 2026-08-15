@@ -276,8 +276,20 @@ main() {
     buildMillis = snapshot.buildMillis;
   }
 
-  const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX", std::to_string(prepareMillis + 1u));
-  const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX", std::to_string(buildMillis + 1u));
+  // A tight +1ms margin over the first measurement flakes under real system
+  // scheduling jitter (parallel CTest load, container CPU throttling, etc.):
+  // the second run only needs to be marginally slower than the first for
+  // this test to spuriously fail even though the over-budget flag logic
+  // itself is working correctly. This test's purpose is exercising that
+  // flag logic, not precisely benchmarking a near-instant single-function
+  // graph build, so a generous fixed margin keeps the check meaningful
+  // (the source is small enough that the true build should always land
+  // comfortably within tens of milliseconds) without being timing-fragile.
+  constexpr uint64_t kOverBudgetMarginMillis = 250u;
+  const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX",
+                                   std::to_string(prepareMillis + kOverBudgetMarginMillis));
+  const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX",
+                                 std::to_string(buildMillis + kOverBudgetMarginMillis));
 
   std::string error;
   primec::semantics::TypeResolutionGraphSnapshot snapshot;
