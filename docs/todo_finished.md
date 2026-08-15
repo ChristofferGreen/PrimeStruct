@@ -6,6 +6,71 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-4612: Add safe extent and cursor code examples
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-08-15
+  - phase: Safe array extents and views
+  - depends_on: TODO-4604, TODO-4605, TODO-4606, TODO-4608, TODO-4610,
+    TODO-4611
+  - scope: Added runnable, style-aligned examples to `docs/CodeExamples.md`
+    for the safe-array extent and cursor surfaces implemented so far.
+  - outcome:
+    - Added a new `## Safe Extents And Cursor Examples` section to
+      `docs/CodeExamples.md` with four examples verified against the
+      current release toolchain: a runtime extent contract
+      (`require(count(values) > 0)`), a checked slice loop (`slice(...)` +
+      `count(window)`), a forward cursor loop (`startVector`/`limitVector`/
+      `readVector`/`advance`/`cursorNotEqual`), and a reverse cursor loop
+      (`reverseStartVector`/`reverseLimitVector`/`retreat`).
+    - The `require(...)` example uses the actually-supported comparison
+      shape (`count(param) > 0`, one `count(...)` operand against a
+      literal) - a two-sided `count(dst) == count(src)` comparison, closer
+      to the design doc's own sketch, was tried first and rejected by the
+      compiler (`invalid requirement predicate` routing it through the
+      compile-time `type_equals` machinery instead of the runtime-contract
+      path), so the example was adjusted to the verified-working form
+      rather than shipping a non-compiling "verified" example.
+    - Added two explicitly-marked "Proposed" sketches for surfaces that do
+      not compile with the current toolchain and were confirmed by direct
+      compiler testing to still fail: `Maybe<Pointer<T>>` optional-pointer
+      allocation (`alloc<T>` still returns a bare `Pointer<T>`, and
+      `Maybe<Pointer<T>>` construction itself does not lower - "stale
+      semantic-product sum initializer type metadata") and
+      `Reference<T, Capability>`/`Slice<T, Capability>` capability views
+      (`Reference<T>` still only accepts one template argument - "Reference
+      requires a template argument"). Each sketch names exactly which part
+      of the syntax does not work yet.
+    - Updated `docs/SafeArrayExtentViews.md`'s status paragraph, which had
+      gone stale after TODO-4611/TODO-5247 landed (it still said `array<T>`
+      cursor support and reverse traversal were unimplemented); it now
+      points at the new `docs/CodeExamples.md` section too.
+  - validation:
+    - Added `"safe extent and cursor docs examples stay documented and
+      executable"` to `test_compile_run_examples_docs.cpp`: locks the exact
+      required snippets from both docs, and separately compiles+runs the
+      four verified examples' exact source on both VM and native, checking
+      the documented return values (41, 16, 31, 106).
+    - Noted but did not fix: `primestruct.compile.run.examples`'s CTest
+      sharding (`SOURCE_FILE "*test_compile_run_examples_*.cpp"` with fixed
+      `FIRST`/`LAST` ranges totaling 68) was already stale before this
+      change - the real case count across matching files is 125, so cases
+      69+ (including this leaf's own new test case) are not exercised by
+      the official CTest gate today. This is the same drift bug class
+      documented at length in `docs/failing_tests.md` for other suites
+      (TODO-4720 tracks auditing the remaining non-semantics suite files);
+      expanding this leaf to fix it was out of scope, so the new test was
+      verified with a direct, unsharded binary run instead
+      (`--test-case="safe extent and cursor docs examples..."`, 36/36
+      assertions passing) and left for that broader effort to pick up.
+    - Full `./scripts/compile.sh --release` gate: no failing CTest cases
+      (consistent with the pre-existing sharding gap above - it was
+      already not failing, just not exercising the new case).
+  - stop_rule: Stopped once the example section and source-lock coverage
+    were added and verified for the implemented surfaces; did not implement
+    `Maybe<Pointer<T>>`/capability-parameterized views, and did not attempt
+    to fix the pre-existing CTest sharding drift for this suite.
+
 - [x] TODO-4611: Add reverse cursor traversal API
   - owner: ai
   - created_at: 2026-05-27

@@ -816,6 +816,197 @@ Current note:
 - The explicit constructor form `vector<T>{...}` remains valid, but docs no
   longer need it as a fallback for the readable vector loop example.
 
+## Safe Extents And Cursor Examples
+
+These examples cover the safe-array-extent and cursor surfaces from
+`docs/SafeArrayExtentViews.md`. Some of that design note's syntax is not
+implemented yet; each example below says explicitly whether it is verified
+against the current release toolchain or is proposed syntax that does not
+compile today.
+
+### Runtime Extent Contract
+
+`require(...)` is the runtime-capable contract form: the compiler proves the
+predicate statically when it can, and otherwise lowers a deterministic
+call-boundary check. This is verified against the current release toolchain.
+
+```prime
+[return<int> require(count(values) > 0)]
+first_value([array<i32>] values) {
+  return(values[0i32])
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(41i32, 7i32)}
+  return(first_value(values))
+}
+```
+
+Why this is good:
+- The precondition is stated once, next to the signature, instead of as a
+  manual `if` check inside the body.
+- Callers that cannot prove `count(values) > 0` statically still get a
+  deterministic runtime check instead of undefined behavior.
+- `values[0i32]` inside the body can rely on the contract already holding.
+
+### Checked Slice Loop
+
+`slice(values, start, end)` is checked read-only view construction: an
+out-of-range literal range is a compile-time diagnostic, and a range that
+depends on runtime values gets a single construction-time bounds check. This
+is verified against the current release toolchain.
+
+```prime
+[return<int>]
+sum_window([array<i32>] values, [i32] start, [i32] end) {
+  [array<i32>] window{slice(values, start, end)}
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < count(window)) {
+    total = total + window[i]
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
+  return(sum_window(values, 1i32, 3i32))
+}
+```
+
+Why this is good:
+- `slice(...)` names the checked view construction step separately from the
+  loop that reads it.
+- `count(window)` bounds the loop against the slice's own extent, not the
+  original array's, so the loop stays correct if the slice range changes.
+- The out-of-range case fails at construction, not partway through the loop.
+
+### Forward Cursor Loop
+
+`Cursor<T>` (`stdlib/std/cursor/cursor.prime`) is the first read-only forward
+traversal API for `array<T>` and `vector<T>`. The cursor holds only a
+position; the owning collection is always passed alongside it, which is what
+lets the same cursor type cover both collection kinds. This is verified
+against the current release toolchain.
+
+```prime
+import /std/cursor/*
+
+[return<int>]
+sum_forward([vector<i32>] values) {
+  [Cursor<i32> mut] it{startVector<i32>(values)}
+  [Cursor<i32>] lim{limitVector<i32>(values)}
+  [i32 mut] total{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    total = total + readVector<i32>(values, it)
+    it = advance<i32>(it)
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32, 11i32)}
+  return(sum_forward(values))
+}
+```
+
+Why this is good:
+- `limitVector(values)` is the one-past-final exclusive boundary, so the loop
+  never reads past the last element and never skips it.
+- `cursorNotEqual` makes the stopping condition symmetric with the starting
+  condition instead of a separate index comparison.
+- The same shape works for `array<T>` with `startArray`/`limitArray`/
+  `readArray` instead of the `Vector`-suffixed functions.
+
+### Reverse Cursor Loop
+
+`reverseStartVector`/`reverseStartArray`, `reverseLimitVector`/
+`reverseLimitArray`, and `retreat` mirror the forward cursor shape for
+reverse traversal. `reverse_start` is the last readable position and
+`reverse_limit` is a fixed one-before-first sentinel, so an empty collection
+naturally produces zero loop iterations. This is verified against the
+current release toolchain.
+
+```prime
+import /std/collections/*
+import /std/cursor/*
+
+[return<int>]
+sum_reverse([vector<i32>] values) {
+  [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
+  [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
+  [i32 mut] total{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    total = total + readVector<i32>(values, it)
+    it = retreat<i32>(it)
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 100i32)}
+  return(sum_reverse(values))
+}
+```
+
+Why this is good:
+- `reverseLimitVector` never needs a separate empty-collection check: for an
+  empty vector, `reverse_start` and `reverse_limit` already land on the same
+  position.
+- `retreat` is the direct mirror of `advance`, so the loop body stays
+  structurally identical to the forward version above.
+- Reusing `readVector`/`cursorNotEqual` from the forward examples keeps the
+  reverse traversal from introducing a second reading/comparison surface.
+
+### Proposed: Optional Pointer
+
+`docs/SafeArrayExtentViews.md` specifies `Maybe<Pointer<T>>` as the safe
+result type for allocation that can fail, instead of treating a null pointer
+as an ordinary `Pointer<T>` value. This is proposed syntax and does not
+compile with the current toolchain: the built-in heap intrinsics still
+return a bare `Pointer<T>`, and `Maybe<Pointer<T>>` construction itself does
+not lower correctly yet.
+
+```prime
+[return<Maybe<Pointer<i32>>> effects(heap_alloc)]
+try_alloc_slot() {
+  // sketch only - alloc still returns a bare Pointer<T> today
+  return(some<Pointer<i32>>(alloc<i32>(1i32)))
+}
+```
+
+### Proposed: Capability-Parameterized View
+
+`docs/SafeArrayExtentViews.md` specifies `Reference<T, Capability>` and
+`Slice<T, Capability>` sharing one underlying view model, with the
+capability parameter carrying read/write/escape authority. This is proposed
+syntax and does not compile with the current toolchain: `Reference<T>` only
+accepts one template argument today, and `slice(...)` returns a plain
+`array<T>` rather than a `Slice<T, Capability>` view.
+
+```prime
+[return<int>]
+sum_read_only([Reference<array<i32>, Read>] values) {
+  // sketch only - Reference<T> does not accept a Capability argument yet
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < count(values)) {
+    total = total + values[i]
+    i = i + 1i32
+  }
+  return(total)
+}
+```
+
 ## Intentional Diagnostic Examples
 
 These examples are intentionally invalid. Use them to show language rules that

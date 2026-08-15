@@ -9,14 +9,22 @@ implemented: value comparisons over integer parameters and
 `count(parameter)` for array/vector/string parameters lower to a
 deterministic call-boundary precondition check when they cannot be proven at
 compile time. Parser support for `require<...>` is still pending. A first
-read-only forward cursor (`Cursor<T>`, `start`/`limit`/`read`/`advance`,
-matching the "Cursors And Pointer Arithmetic" section below) is now
-implemented for `vector<T>` as an ordinary generic stdlib type in
-`stdlib/std/cursor/cursor.prime` - see TODO-4610 in `docs/todo_finished.md`.
-It ships without the `Capability` type parameter sketched below (deferred,
-matching how `slice(...)` also shipped without the full `Slice<T,
-Capability>` view model) and does not yet cover `array<T>` (a separate
-backend gap) or reverse traversal (TODO-4611).
+read-only forward cursor (`Cursor<T>`, matching the "Cursors And Pointer
+Arithmetic" section below) is now implemented for both `array<T>` and
+`vector<T>` as an ordinary generic stdlib type in
+`stdlib/std/cursor/cursor.prime` - see TODO-4610/TODO-5247 in
+`docs/todo_finished.md`. It ships without the `Capability` type parameter
+sketched below (deferred, matching how `slice(...)` also shipped without
+the full `Slice<T, Capability>` view model), and the owning collection is
+kept as an explicit parameter alongside the cursor
+(`readVector`/`readArray` take the collection plus the cursor) rather than
+stored inside it. Reverse traversal (`reverseStartVector`/`reverseStartArray`,
+`reverseLimitVector`/`reverseLimitArray`, `retreat`) is also implemented -
+see TODO-4611 in `docs/todo_finished.md`. `docs/CodeExamples.md`'s "Safe
+Extents And Cursor Examples" section has runnable examples for the
+implemented surfaces plus explicitly-marked proposed syntax for the
+capability-parameterized view and optional-pointer sketches below that are
+not implemented yet.
 
 This note records the current PrimeStruct design direction after reviewing John
 Nagle's "Safe arrays and pointers for C through compatible additions to the

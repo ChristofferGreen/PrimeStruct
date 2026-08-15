@@ -2144,7 +2144,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4612: Add safe extent and cursor code examples\n"
                   "- TODO-4637: Move `ir_pipeline` test shard into subdirectory") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
@@ -2175,9 +2174,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  first conservative view-escape diagnostic") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4612: Add safe extent and cursor code examples\n"
-                  "2. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n"
-                  "3. TODO-4638: Move `compile_run` test shard into subdirectory\n") !=
+                  "1. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n"
+                  "2. TODO-4638: Move `compile_run` test shard into subdirectory\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2185,7 +2183,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4613: Retire semantic-validator private source locks") ==
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
-                  "- [ ] TODO-4612: Add safe extent and cursor code examples") !=
+                  "- [x] TODO-4635: Derive the collection surface registry "
+                  "from stdlib declarations") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4607: Publish initial array extent facts") ==
         std::string::npos);

@@ -493,5 +493,147 @@ TEST_CASE("spinning cube shared source reflects current profile support") {
   CHECK(metalErr.find("Usage: primec") != std::string::npos);
 }
 
+TEST_CASE("safe extent and cursor docs examples stay documented and executable") {
+  // TODO-4612: the four verified examples below must stay byte-identical
+  // (modulo surrounding markdown fences) with docs/CodeExamples.md's "Safe
+  // Extents And Cursor Examples" section, and must keep compiling and
+  // returning the documented result on both backends.
+  auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
+    std::filesystem::path path = std::filesystem::path("..") / "docs" / name;
+    if (!std::filesystem::exists(path)) {
+      path = std::filesystem::current_path() / "docs" / name;
+    }
+    return path;
+  };
+
+  const std::filesystem::path codeExamplesPath = resolveDocPath("CodeExamples.md");
+  const std::filesystem::path safeExtentsPath = resolveDocPath("SafeArrayExtentViews.md");
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
+  REQUIRE(std::filesystem::exists(safeExtentsPath));
+
+  const std::string codeExamples = readFile(codeExamplesPath.string());
+  const std::string safeExtentsDoc = readFile(safeExtentsPath.string());
+
+  const std::vector<std::string> requiredCodeExampleSnippets = {
+      "## Safe Extents And Cursor Examples",
+      "### Runtime Extent Contract",
+      "[return<int> require(count(values) > 0)]",
+      "### Checked Slice Loop",
+      "[array<i32>] window{slice(values, start, end)}",
+      "### Forward Cursor Loop",
+      "[Cursor<i32> mut] it{startVector<i32>(values)}",
+      "### Reverse Cursor Loop",
+      "[Cursor<i32> mut] it{reverseStartVector<i32>(values)}",
+      "### Proposed: Optional Pointer",
+      "return(some<Pointer<i32>>(alloc<i32>(1i32)))",
+      "### Proposed: Capability-Parameterized View",
+      "[Reference<array<i32>, Read>] values"};
+  for (const std::string &snippet : requiredCodeExampleSnippets) {
+    CAPTURE(snippet);
+    CHECK(codeExamples.find(snippet) != std::string::npos);
+  }
+  CHECK(safeExtentsDoc.find("read-only forward cursor (`Cursor<T>`, "
+                            "matching the \"Cursors And Pointer\n"
+                            "Arithmetic\" section below) is now implemented "
+                            "for both `array<T>` and\n"
+                            "`vector<T>`") != std::string::npos);
+
+  auto runVmAndNative = [](const std::string &stem, const std::string &source,
+                          int expectedExit) {
+    CAPTURE(stem);
+    const std::string srcPath = writeTemp(stem + ".prime", source);
+    const std::string runVmCmd =
+        "./primec --emit=vm " + srcPath + " --entry /main";
+    CHECK(runCommand(runVmCmd) == expectedExit);
+
+    const std::string nativePath = (testScratchPath("") / ("primec_" + stem)).string();
+    const std::string compileNativeCmd =
+        "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+    CHECK(runCommand(compileNativeCmd) == 0);
+    CHECK(runCommand(nativePath) == expectedExit);
+  };
+
+  runVmAndNative("docs_safe_extents_require_contract", R"(
+[return<int> require(count(values) > 0)]
+first_value([array<i32>] values) {
+  return(values[0i32])
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(41i32, 7i32)}
+  return(first_value(values))
+}
+)", 41);
+
+  runVmAndNative("docs_safe_extents_slice_loop", R"(
+[return<int>]
+sum_window([array<i32>] values, [i32] start, [i32] end) {
+  [array<i32>] window{slice(values, start, end)}
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < count(window)) {
+    total = total + window[i]
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
+  return(sum_window(values, 1i32, 3i32))
+}
+)", 16);
+
+  runVmAndNative("docs_safe_extents_forward_cursor", R"(
+import /std/cursor/*
+
+[return<int>]
+sum_forward([vector<i32>] values) {
+  [Cursor<i32> mut] it{startVector<i32>(values)}
+  [Cursor<i32>] lim{limitVector<i32>(values)}
+  [i32 mut] total{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    total = total + readVector<i32>(values, it)
+    it = advance<i32>(it)
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32, 11i32)}
+  return(sum_forward(values))
+}
+)", 31);
+
+  runVmAndNative("docs_safe_extents_reverse_cursor", R"(
+import /std/collections/*
+import /std/cursor/*
+
+[return<int>]
+sum_reverse([vector<i32>] values) {
+  [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
+  [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
+  [i32 mut] total{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    total = total + readVector<i32>(values, it)
+    it = retreat<i32>(it)
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 100i32)}
+  return(sum_reverse(values))
+}
+)", 106);
+}
 
 TEST_SUITE_END();

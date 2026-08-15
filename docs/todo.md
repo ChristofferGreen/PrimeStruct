@@ -102,7 +102,6 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-4612: Add safe extent and cursor code examples
 - TODO-4637: Move `ir_pipeline` test shard into subdirectory
 - TODO-4708: Measure per-shard doctest binary startup/registration overhead
 - TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
@@ -189,9 +188,14 @@ investigation chain's actively-productive leaves - see
   notes in `docs/todo_finished.md`. TODO-4611 added reverse read-only
   cursor traversal (`reverseStartVector`/`reverseStartArray`,
   `reverseLimitVector`/`reverseLimitArray`, `retreat`, same shared
-  `Cursor<T>`/`cursorEqual`/`cursorNotEqual`). TODO-4612 remains from the
-  agreed backlog in `docs/SafeArrayExtentViews.md`: style-aligned examples
-  once the surface is specified.
+  `Cursor<T>`/`cursorEqual`/`cursorNotEqual`). TODO-4612 added
+  runnable style-aligned examples to `docs/CodeExamples.md` for the
+  implemented surfaces (runtime extent contracts, checked slices, forward
+  and reverse cursor loops), plus explicitly-marked proposed-syntax
+  sketches for the still-unimplemented `Maybe<Pointer<T>>` and
+  capability-parameterized view surfaces, closing out the "Safe array
+  extents and views" phase's original backlog from
+  `docs/SafeArrayExtentViews.md`.
 - Collections naming and surface-manifest retirement: remove the
   `experimental_*` and `internal_*` module-naming layers from
   `stdlib/std/collections` and retire `stdlib/std/collections/surfaces.psmeta`.
@@ -314,9 +318,8 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-1. TODO-4612: Add safe extent and cursor code examples
-2. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-3. TODO-4638: Move `compile_run` test shard into subdirectory
+1. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+2. TODO-4638: Move `compile_run` test shard into subdirectory
 5. TODO-4639: Move `semantics` test shard into subdirectory
 6. TODO-4640: Move remaining test shards into subdirectories
 7. TODO-4641: Group `include/primec/` headers by pipeline stage
@@ -382,37 +385,6 @@ investigation chain's actively-productive leaves - see
 69. TODO-5224: Build the per-module symbol manifest generator
 
 ### Task Blocks
-
-- [ ] TODO-4612: Add safe extent and cursor code examples
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - depends_on: TODO-4604, TODO-4605, TODO-4606, TODO-4608, TODO-4610,
-    TODO-4611
-  - scope: Add runnable, style-aligned examples to `docs/CodeExamples.md` for
-    the agreed safe-array extent and cursor surfaces after their normative
-    spelling is specified.
-  - implementation_notes: Cover the smallest useful set: a contract-form
-    `require(...)` example that proves-or-checks an extent relationship,
-    `Maybe<Pointer<T>>` optional-pointer handling, a
-    `Reference<T, Capability>`/`Slice<T, Capability>` example, a checked slice
-    loop, a forward cursor loop using `limit(values)`, and a reverse cursor
-    loop using `reverse_limit(values)`. Keep examples minimal and runnable
-    with the current compiler before treating them as style guidance.
-  - acceptance:
-    - `docs/CodeExamples.md` contains user-facing examples for safe extent
-      contracts, optional pointers, capability views, checked slices, and
-      forward/reverse cursor loops.
-    - Examples use the readable surface form and naming guidance from
-      `docs/CodeExamples.md`.
-    - Source-lock coverage proves the examples stay aligned with
-      `docs/SafeArrayExtentViews.md` and the relevant normative
-      `docs/PrimeStruct.md` sections.
-    - The new examples compile or are explicitly marked as proposed syntax
-      until the corresponding implementation leaves land.
-  - stop_rule: Stop once the example guide and source-lock coverage are
-    updated; do not implement missing language features in this leaf.
-
 
 - [x] TODO-4635: Derive the collection surface registry from stdlib declarations
   - owner: ai
