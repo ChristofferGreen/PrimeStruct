@@ -70,7 +70,7 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery
+- TODO-4686: Detect [collection_type]/[key_value_type] struct declarations generically | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry struct-annotation scanning
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
@@ -247,7 +247,19 @@ investigation chain's actively-productive leaves - see
   declarations) complete: TODO-4662 through TODO-4667 done. Phase 3
   (generic slot layout): TODO-4668 and TODO-4669 done. Remaining: TODO-4670
   (remove old alias branches when ready), TODO-4671 (cleanup dead helpers).
-  Full design document at `docs/CollectionDecoupling.md`.
+  Full design document at `docs/CollectionDecoupling.md`. A separate
+  registry-generalization track (`phase: Collection decoupling — Phase 1`
+  on its own task blocks, not to be confused with the manifest-extension
+  Phase 1 above) works through `StdlibSurfaceRegistry.cpp`'s remaining
+  hardcoded collection-file/struct-name knowledge: TODO-4685 replaced the
+  hardcoded `vector.prime`/`map.prime`/`soa.prime` file lookups with a
+  directory scan over `stdlib/std/collections/` (found already implemented
+  when picked up - `listStdlibCollectionFiles()`/
+  `findInStdlibCollectionFileList()` - no code change needed, only
+  `docs/todo.md` bookkeeping was stale). TODO-4686 through TODO-4689 remain:
+  generic `[collection_type]`/`[key_value_type]` struct detection, derived
+  canonicalPath/bridgeKey/prefix, folding the 3 hand-written derivation
+  blocks into one loop, and dynamically-sized registry storage.
 - Test runtime optimization: get the test suite fast and hang-proof (no
   test should ever exceed 30s; most should run under 5s). Triggered by
   discovering an unsharded `calls_flow.collections` invocation left
@@ -340,7 +352,7 @@ investigation chain's actively-productive leaves - see
 24. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
 25. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
 26. TODO-4684: Spike a minimal zero-C++ collection type (done, see docs/todo_finished.md)
-27. TODO-4685: Directory-scan discovery of collection .prime files
+27. TODO-4685: Directory-scan discovery of collection .prime files (done, see docs/todo_finished.md)
 28. TODO-4686: Generic `[collection_type]`/`[key_value_type]` struct detection
 29. TODO-4687: Generic canonicalPath/bridgeKey/prefix derivation + override syntax
 30. TODO-4688: Fold `deriveCollectionsSurfaces()`'s 3 blocks into one loop
@@ -1001,26 +1013,6 @@ investigation chain's actively-productive leaves - see
     - Invalid pair calls keep their current diagnostics
     - Release map/conformance/lock suites green
   - stop_rule: pair signatures deleted and suites green
-
-- [ ] TODO-4685: Generalize collection .prime file discovery to a directory scan
-  - owner: ai
-  - created_at: 2026-07-06
-  - phase: Collection decoupling — Phase 1
-  - parallel_track: collection-decoupling-registry
-  - depends_on: TODO-4684 (done, see docs/todo_finished.md)
-  - scope: Replace the 3 hardcoded findStdlibCollectionFilePath("vector.prime"
-    | "map.prime" | "soa.prime") call sites in src/StdlibSurfaceRegistry.cpp
-    with a directory scan over the resolved stdlib/std/collections/
-    directory, returning the list of *.prime files to consider. Keep
-    deriveCollectionsSurfaces()'s 3 blocks temporarily filtering that list
-    down to today's 3 names (no behavior change yet).
-  - acceptance:
-    - No hardcoded filename string literals remain for locating collection
-      .prime files; the file list is produced by directory enumeration.
-    - Registry contents are byte-identical to before the change.
-    - Release tests pass.
-  - stop_rule: Stop once directory-scan discovery lands with identical
-    output; do not yet change struct-declaration detection or derivation.
 
 - [ ] TODO-4686: Detect [collection_type]/[key_value_type] struct declarations generically
   - owner: ai

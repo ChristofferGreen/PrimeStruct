@@ -6,6 +6,55 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-4685: Generalize collection .prime file discovery to a directory scan
+  - owner: ai
+  - created_at: 2026-07-06
+  - finished_at: 2026-08-15
+  - phase: Collection decoupling — Phase 1
+  - parallel_track: collection-decoupling-registry
+  - depends_on: TODO-4684 (done, see above)
+  - scope: Replace the 3 hardcoded `findStdlibCollectionFilePath("vector.prime"
+    | "map.prime" | "soa.prime")` call sites in `src/StdlibSurfaceRegistry.cpp`
+    with a directory scan over the resolved `stdlib/std/collections/`
+    directory, returning the list of `*.prime` files to consider. Keep
+    `deriveCollectionsSurfaces()`'s 3 blocks temporarily filtering that list
+    down to today's 3 names (no behavior change yet).
+  - outcome:
+    - **Found already fully implemented when picked up - no code change was
+      needed**, only this documentation bookkeeping (`docs/todo.md` had
+      gone stale). `src/StdlibSurfaceRegistry.cpp` already has
+      `listStdlibCollectionFiles()` (a genuine, sorted, non-recursive
+      `std::filesystem::directory_iterator` scan over
+      `stdlib/std/collections/`, with an explanatory comment already citing
+      TODO-4685) and `findInStdlibCollectionFileList()` (looks up a
+      filename within that already-discovered list). All 3 blocks in
+      `deriveCollectionsSurfaces()` (vector/map/soa) call
+      `findInStdlibCollectionFileList(collectionFiles, "vector.prime")` etc.
+      against the scanned list, exactly matching the task's target end
+      state: `findStdlibCollectionFilePath` (the old hardcoded-lookup
+      function named in this task's own scope text) no longer exists
+      anywhere in the codebase.
+    - The 3 filename literals (`"vector.prime"`/`"map.prime"`/
+      `"soa.prime"`) remain as post-discovery filter keys, matching the
+      scope's explicit instruction to keep them for now ("no behavior
+      change yet") - TODO-4686/4687 are the follow-up leaves that replace
+      that filtering with generic struct-annotation detection.
+  - validation:
+    - No dedicated unit test exists for `listStdlibCollectionFiles`/
+      `findInStdlibCollectionFileList` specifically (neither function is
+      declared in a public/testing header today), but this task's
+      acceptance criteria did not require adding one (unlike TODO-4686,
+      which explicitly does) - correctness is exercised transitively by
+      every collection-dependent test in the suite via
+      `CollectionsSurfaces`, and adding new test infrastructure for
+      already-shipped, already-covered code was out of scope for closing
+      out this leaf.
+    - Full `./scripts/compile.sh --release` gate: no failing CTest cases.
+  - stop_rule: Confirmed the acceptance criteria (no hardcoded file-locating
+    literals, directory-enumeration-produced file list, release tests
+    green) were already met; did not touch struct-declaration detection or
+    derivation, which remain TODO-4686/4687.
+
 - [x] TODO-4612: Add safe extent and cursor code examples
   - owner: ai
   - created_at: 2026-05-27
