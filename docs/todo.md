@@ -74,6 +74,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
+- TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type | track: safe-views-slice-capability | surface: /std/collections slice(...) builtin + new Slice<T, Capability> view type
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
 of TODO-5237/5238 - its own investigation trended away from convergence
@@ -125,6 +126,7 @@ investigation chain's actively-productive leaves - see
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
+- TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters (locals, struct fields, return types)
 
 ### Priority Lanes
 
@@ -420,6 +422,8 @@ investigation chain's actively-productive leaves - see
 69. TODO-5224: Build the per-module symbol manifest generator
 70. TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation (done, see docs/todo_finished.md)
 71. TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views (done, see docs/todo_finished.md)
+72. TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type
+73. TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters
 
 ### Task Blocks
 
@@ -11591,4 +11595,136 @@ investigation chain's actively-productive leaves - see
     wording) plus the manifest-generator fix's regeneration, both under a
     full `ctest --parallel 4` regression - clean (the flag defaults off,
     so no other existing test's behavior changes).
+
+- [ ] TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type
+  - owner: ai
+  - created_at: 2026-08-15
+  - phase: Safe array extents and capability views
+  - parallel_track: safe-views-slice-capability
+  - depends_on: TODO-5249
+  - scope: Per `docs/SafeArrayExtentViews.md`, `Slice<T, Capability>` shares
+    the same view model as `Reference<T, Capability>` (TODO-5249) but with a
+    runtime `count` instead of a statically-one element count. Today
+    `slice(values, start, end)` (TODO-4608) returns a plain `array<T>` with
+    no capability tag. This leaf: (1) makes `Slice<T, Capability>` a real,
+    nameable type distinct from `array<T>` (minimally: pointer + count,
+    per the design doc's `View<T, Capability>` sketch - a fat-pointer-style
+    runtime value, not scalar-replaced), (2) changes `slice(...)`'s return
+    type to `Slice<T, Read>` (the checked read-only view it already is) and
+    `count(...)`/indexing to work against it the same way they do against
+    `array<T>` today, and (3) adds a `slice_mut(...)` checked-write
+    constructor returning `Slice<T, Write>` (or `ReadWrite`), rejecting a
+    mutating operation through a `Read`-capability slice at compile time,
+    mirroring TODO-5249's `Reference<T, Capability>` enforcement. Scope
+    this to `Slice<T, Capability>` as a function-parameter-and-local-return
+    value surface only if that is what proves tractable during
+    implementation - TODO-5249 found that extending Reference/Pointer
+    arity assumptions beyond parameters touches dozens of unaudited
+    consumer sites across the IR lowerer and emitter; expect `Slice<T,
+    Capability>` (a genuinely new runtime representation, not just a second
+    template argument on an existing type) to have at least that much
+    surface, if not more, since every existing `slice(...)`/`array<T>`
+    call site that currently treats the result as a plain array needs
+    auditing. If full replacement of `slice(...)`'s return type proves too
+    broad to land safely in one leaf, ship `Slice<T, Capability>` as a new,
+    additively-introduced type with its own constructor (e.g.
+    `checked_slice(...)`) instead of changing `slice(...)`'s existing
+    signature, and file the migration of `slice(...)` itself as a narrower
+    follow-up once the new type is proven - do not risk a broad,
+    unverified change to `slice(...)`'s return type the way TODO-5249's
+    investigation flagged as the wrong tradeoff for Reference/Pointer.
+  - implementation_notes: Read `docs/SafeArrayExtentViews.md`'s "View
+    Representation" section (the `View<T, Capability> { pointer, count }`
+    sketch) and TODO-4608's existing `slice(...)` implementation first.
+    `Reference<T, Capability>`'s `BindingInfo.typeCapabilityArg` field and
+    the `Read`/`Write`/`ReadWrite` validation plus mut-consistency check in
+    `SemanticsHelpersCore.cpp` (`src/semantics/SemanticsHelpersCore.cpp`,
+    search "TODO-5249") are directly reusable for `Slice<T, Capability>`'s
+    own capability argument, but `Slice<T, Capability>` also needs a new
+    runtime value shape (pointer + count) that `Reference<T, Capability>`
+    did not, since `Reference<T, Capability>` reused the existing scalar
+    `Pointer<T>`/`Reference<T>` representation unchanged.
+  - acceptance:
+    - `Slice<T, Capability>` exists as a real, distinct type (not `array<T>`
+      aliased) with a runtime `count`.
+    - At least one construction path (whether `slice(...)`'s own return
+      type changes, or a new `checked_slice(...)`-style constructor) is
+      verified compiling and running correctly on both VM and exe backends.
+    - A mutating operation attempted through a `Read`-capability slice is
+      rejected with a clear diagnostic at compile time.
+    - `docs/CodeExamples.md` gains a verified example demonstrating the
+      shipped construction path, with a locked compile-run test case.
+    - Release gate (`./scripts/compile.sh --release`) green, no regressions.
+  - stop_rule: Stop once a working, verified `Slice<T, Capability>`
+    construction-and-read path exists with capability enforcement, a locked
+    test, and a doc example - do not also expand `Reference`/`Pointer`
+    capability support to non-parameter contexts in this pass (that is
+    TODO-5251).
+
+- [ ] TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters
+  - owner: ai
+  - created_at: 2026-08-15
+  - phase: Safe array extents and capability views
+  - parallel_track: safe-views-capability-non-parameter
+  - depends_on: TODO-5249
+  - scope: TODO-5249 made `Reference<T, Capability>`/`Pointer<T, Capability>`
+    work correctly for function parameters only, via an opt-in
+    `allowCapabilityArg` flag on `parseBindingInfo` (default `false`) that
+    makes every other binding context (local bindings, struct fields,
+    return types, method receivers) fail closed with a clear "only
+    supported for function parameters today" diagnostic. That leaf's
+    investigation found the reason: relaxing the semantics-level arity
+    check alone let a local `Reference<T, Capability>` binding compile
+    cleanly while silently producing wrong, backend-inconsistent runtime
+    values (VM and native disagreed, and both were wrong), because roughly
+    90 independent `"Reference"`/`"Pointer"` consumer sites across
+    `src/ir_lowerer/` and `src/emitter/` (struct layout, method resolution,
+    count/access classification, return-kind inference, packed-arg/lambda
+    capture, uninitialized-storage inference, and more) each assume exactly
+    one template argument and were never audited for a second. This leaf
+    audits and fixes those sites - or as many as prove tractable in one
+    pass, expanding `allowCapabilityArg` (or removing it in favor of always
+    allowing 2 args once every consumer is verified safe) for each context
+    proven correct - to extend real `Reference<T, Capability>`/`Pointer<T,
+    Capability>` support to local bindings first (the most immediately
+    useful non-parameter context, per TODO-5249's own doc-example
+    discussion), then struct fields and return types if time and risk
+    allow. Do not attempt to fix all ~90 sites in one sweep if that proves
+    too risky to verify - land and verify one context (e.g. local bindings)
+    at a time, the same discipline TODO-5249 itself used to stay safe, and
+    file remaining contexts as further follow-up TODOs rather than
+    expanding this leaf's scope or shipping unverified fixes.
+  - implementation_notes: Start from the specific bug TODO-5249 found and
+    fixed one instance of: `IrLowererBindingTypeHelpers.cpp`'s
+    `bindingValueKindFromTransforms` (search "TODO-5249" in that file) is
+    the pattern to replicate - each of the ~90 sites found via `grep -rn
+    '"Reference"' src/ir_lowerer/*.cpp src/emitter/*.cpp` needs individual
+    judgment about whether relaxing its arity check to accept 2 template
+    arguments (using only the first, T) is safe, since some of the 90
+    matches are unrelated arity assumptions on different constructs.
+    Build a minimal local-binding repro exercising both read and write
+    through a capability-tagged binding (like TODO-5249's own investigation
+    repros) and use it to empirically find every site that needs fixing,
+    the same way TODO-5249's `IrLowererStatementBindingHelpers.cpp`/
+    `bindingValueKindFromTransforms` gap was found - via a wrong-runtime-
+    value repro, not by reading code alone.
+  - acceptance:
+    - At least local bindings (`[Reference<T, Capability> mut] x{...}`)
+      compile and run correctly - consistently between VM and exe backends
+      - for both read and write access, with the same capability
+        enforcement TODO-5249 shipped for parameters.
+    - The `allowCapabilityArg` opt-in for whichever contexts are extended
+      is removed or widened accordingly; any context not extended in this
+      pass keeps the existing fail-closed diagnostic (do not regress the
+      fail-closed behavior for contexts not fixed).
+    - A new compile-run test locks the fixed context(s), covering both
+      backends and a wrong-runtime-value regression case (not just a
+      compiles-without-error check).
+    - Release gate (`./scripts/compile.sh --release`) green, no
+      regressions, including no new backend-inconsistent runtime values for
+      any existing single-argument `Reference<T>`/`Pointer<T>` usage.
+  - stop_rule: Stop once at least local bindings are verified correct and
+    consistent across backends, with a locked regression test; file struct
+    fields, return types, and any remaining consumer sites as further
+    follow-up TODOs rather than continuing to expand this leaf's scope.
 
