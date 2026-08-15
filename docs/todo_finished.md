@@ -5,6 +5,52 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (August 15, 2026)**
+- [x] TODO-4611: Add reverse cursor traversal API
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-08-15
+  - phase: Safe array extents and views
+  - parallel_track: cursor-reverse-traversal
+  - depends_on: TODO-4610
+  - scope: Added reverse read-only cursor traversal using
+    `reverse_start(values)` as the last readable position (or
+    `reverse_limit(values)` when empty), and `reverse_limit(values)` as the
+    one-before-first exclusive traversal boundary.
+  - outcome:
+    - Added `reverseStartVector<T>`/`reverseStartArray<T>`,
+      `reverseLimitVector<T>`/`reverseLimitArray<T>`, and `retreat<T>` to
+      `stdlib/std/cursor/cursor.prime`, following the exact
+      naming/parameter-shape convention the forward functions (TODO-4610/
+      TODO-5247) already established: separate `Array`/`Vector`-suffixed
+      functions (not one overloaded name - overload resolution across
+      `array<T>`/`vector<T>` receivers for a shared name was already known
+      to hit a gap), owning collection passed as an explicit parameter
+      alongside the cursor rather than stored inside it.
+    - `reverseStartVector<T>`/`reverseStartArray<T>` return
+      `Cursor<T>{count(values) - 1}` and `reverseLimitVector<T>`/
+      `reverseLimitArray<T>` return the fixed sentinel `Cursor<T>{-1}` -
+      for an empty collection `count(values) - 1 == -1` too, so
+      `reverse_start(values) == reverse_limit(values)` and the traversal
+      loop naturally executes zero iterations with no separate empty
+      check. `retreat<T>` decrements `position`; reads reuse the existing
+      `readVector<T>`/`readArray<T>` bounds check unchanged (rejects
+      `position < 0`, which the reverse-limit sentinel `-1` always hits).
+      `advance<T>`/`cursorEqual<T>`/`cursorNotEqual<T>` are shared
+      unchanged between forward and reverse traversal since they only
+      touch `position`.
+  - validation:
+    - Added 5 focused `compile.run.vm.cursor` tests: VM+native reverse-sum
+      over `vector<i32>` (visits every element exactly once in reverse
+      order), reverse-sum over `array<i32>`, empty-vector zero-iterations,
+      and `read(reverse_limit(values))` failing deterministically - suite
+      now 14/14 passing (9 forward + 5 reverse).
+    - Full `./scripts/compile.sh --release` gate: no failing CTest cases.
+  - stop_rule: Stopped once read-only reverse traversal worked end-to-end
+    for `vector<T>` and `array<T>` with no regressions; did not add
+    writable cursors, `last(values)`, or other iterator categories in this
+    leaf.
+
 **Todo Completion (August 14, 2026)**
 - [x] TODO-5247: Fix namespace-context count()/capacity() misclassification and add array<T> cursor support
   - owner: ai

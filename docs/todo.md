@@ -70,7 +70,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4611: Add reverse cursor traversal API | track: cursor-reverse-traversal | surface: reverse cursor traversal
 - TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
@@ -103,7 +102,6 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
 - TODO-4637: Move `ir_pipeline` test shard into subdirectory
 - TODO-4708: Measure per-shard doctest binary startup/registration overhead
@@ -188,10 +186,12 @@ investigation chain's actively-productive leaves - see
   support - `count(...)`/`capacity(...)` on a bare local/parameter inside a
   `namespace` block were misclassified due to conflating a call's inherited
   namespace context with explicit call-site qualification - see its outcome
-  notes in `docs/todo_finished.md`. TODO-4611 and TODO-4612 remain from the
-  agreed backlog in `docs/SafeArrayExtentViews.md`: reverse cursor
-  traversal with `reverse_limit(...)` boundaries, and style-aligned
-  examples once the surface is specified.
+  notes in `docs/todo_finished.md`. TODO-4611 added reverse read-only
+  cursor traversal (`reverseStartVector`/`reverseStartArray`,
+  `reverseLimitVector`/`reverseLimitArray`, `retreat`, same shared
+  `Cursor<T>`/`cursorEqual`/`cursorNotEqual`). TODO-4612 remains from the
+  agreed backlog in `docs/SafeArrayExtentViews.md`: style-aligned examples
+  once the surface is specified.
 - Collections naming and surface-manifest retirement: remove the
   `experimental_*` and `internal_*` module-naming layers from
   `stdlib/std/collections` and retire `stdlib/std/collections/surfaces.psmeta`.
@@ -314,10 +314,9 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-1. TODO-4611: Add reverse cursor traversal API
-2. TODO-4612: Add safe extent and cursor code examples
-3. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-4. TODO-4638: Move `compile_run` test shard into subdirectory
+1. TODO-4612: Add safe extent and cursor code examples
+2. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+3. TODO-4638: Move `compile_run` test shard into subdirectory
 5. TODO-4639: Move `semantics` test shard into subdirectory
 6. TODO-4640: Move remaining test shards into subdirectories
 7. TODO-4641: Group `include/primec/` headers by pipeline stage
@@ -383,51 +382,6 @@ investigation chain's actively-productive leaves - see
 69. TODO-5224: Build the per-module symbol manifest generator
 
 ### Task Blocks
-
-- [ ] TODO-4611: Add reverse cursor traversal API
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - parallel_track: cursor-reverse-traversal
-  - depends_on: TODO-4610
-  - scope: Add reverse read-only cursor traversal using
-    `reverse_start(values)` as the last readable position or
-    `reverse_limit(values)` when empty, and `reverse_limit(values)` as the
-    one-before-first exclusive traversal boundary.
-  - implementation_notes: TODO-4610/TODO-5247 shipped `Cursor<T>` (no
-    `Capability` type parameter - deferred, matching how `slice(...)` also
-    shipped without the full `Slice<T, Capability>` view model) as a plain
-    generic struct `{ position: i32 }` in `stdlib/std/cursor/cursor.prime`,
-    covering both `vector<T>` and `array<T>`. The owning collection is kept
-    as an explicit parameter alongside the cursor rather than stored inside
-    it (`readVector<T>(values, cursor)`/`readArray<T>(values, cursor)`, not
-    `read<T>(cursor)`) - storing a `Pointer<vector<T>>`/`Pointer<array<T>>`
-    inside the cursor and dereferencing it on every read was tried first
-    and abandoned: indexing/counting an `array<T>` reached through that
-    kind of pointer indirection loses the compiler's static extent fact for
-    it (`array<T>` carries no runtime length field), and indexing through a
-    stored `Reference`/`Pointer<vector<T>>>` struct field hit a separate
-    infinite-recursion compiler bug (also fixed by TODO-4610, converted to
-    a clean diagnostic, but the underlying misclassification for that
-    specific pattern was not fixed). Add `reverseStartVector<T>`/
-    `reverseStartArray<T>`, `reverseLimitVector<T>`/`reverseLimitArray<T>`,
-    and `retreat<T>` to the same file, following the naming/parameter-shape
-    convention the forward functions already use (separate `Array`/`Vector`
-    suffixed functions, not a single overloaded name - overload resolution
-    across `array<T>`/`vector<T>` receivers for the same generic function
-    name was tried and hit an unrelated "no viable overload" gap; see
-    TODO-4610's outcome notes in `docs/todo_finished.md`). Keep
-    `last(values)` as an element-oriented helper returning `Maybe<Cursor<T>>`
-    if it is exposed in this leaf.
-  - acceptance:
-    - A reverse `while(it != reverse_limit(values))` loop over `vector<int>`
-      visits every element exactly once in reverse order.
-    - Empty arrays/vectors produce `reverse_start(values) == reverse_limit(values)`
-      and execute zero loop iterations.
-    - `read(reverse_limit(values))` is rejected or fails deterministically.
-  - stop_rule: Stop once read-only reverse traversal is implemented and
-    covered for arrays and vectors; leave writable cursors and advanced
-    iterator categories to later leaves.
 
 - [ ] TODO-4612: Add safe extent and cursor code examples
   - owner: ai

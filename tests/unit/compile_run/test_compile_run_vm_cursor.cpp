@@ -280,4 +280,154 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("vm reverse cursor traversal visits a vector in reverse order exactly once each") {
+  // TODO-4611: while(it != reverse_limit(values)) must visit every
+  // element exactly once, in reverse order.
+  const std::string source = R"(
+import /std/collections/*
+import /std/cursor/*
+
+[return<int>]
+sum_reverse_vector([vector<i32>] values) {
+  [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
+  [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
+  [i32 mut] total{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    total = total + readVector<i32>(values, it)
+    it = retreat<i32>(it)
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 100i32)}
+  return(sum_reverse_vector(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_cursor_reverse_sum_vector.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 106);
+}
+
+TEST_CASE("native reverse cursor traversal visits a vector in reverse order exactly once each") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/cursor/*
+
+[return<int>]
+sum_reverse_vector([vector<i32>] values) {
+  [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
+  [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
+  [i32 mut] total{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    total = total + readVector<i32>(values, it)
+    it = retreat<i32>(it)
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 100i32)}
+  return(sum_reverse_vector(values))
+}
+)";
+  const std::string srcPath = writeTemp("native_cursor_reverse_sum_vector.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_native_cursor_reverse_sum_vector").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 106);
+}
+
+TEST_CASE("vm reverse cursor traversal visits an array in reverse order exactly once each") {
+  const std::string source = R"(
+import /std/cursor/*
+
+[return<int>]
+sum_reverse_array([array<i32>] values) {
+  [Cursor<i32> mut] it{reverseStartArray<i32>(values)}
+  [Cursor<i32>] lim{reverseLimitArray<i32>(values)}
+  [i32 mut] total{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    total = total + readArray<i32>(values, it)
+    it = retreat<i32>(it)
+  }
+
+  return(total)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32, 100i32)}
+  return(sum_reverse_array(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_cursor_reverse_sum_array.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 106);
+}
+
+TEST_CASE("empty vector reverse traversal produces zero iterations") {
+  // TODO-4611 acceptance: empty collections produce
+  // reverse_start(values) == reverse_limit(values) and execute zero loop
+  // iterations.
+  const std::string source = R"(
+import /std/collections/*
+import /std/cursor/*
+
+[return<int>]
+count_reverse_iterations([vector<i32>] values) {
+  [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
+  [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
+  [i32 mut] iterations{0i32}
+
+  while(cursorNotEqual<i32>(it, lim)) {
+    iterations = iterations + 1i32
+    it = retreat<i32>(it)
+  }
+
+  return(iterations)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>()}
+  return(count_reverse_iterations(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_cursor_reverse_empty_vector.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
+TEST_CASE("reading at reverse_limit fails deterministically") {
+  // TODO-4611 acceptance: read(reverse_limit(values)) is rejected or
+  // fails deterministically.
+  const std::string source = R"(
+import /std/collections/*
+import /std/cursor/*
+
+[return<int>]
+readAtReverseLimit([vector<i32>] values) {
+  [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
+  return(readVector<i32>(values, lim))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32)}
+  return(readAtReverseLimit(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_cursor_read_at_reverse_limit.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) != 0);
+}
+
 TEST_SUITE_END();

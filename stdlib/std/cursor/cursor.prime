@@ -71,6 +71,43 @@ advance<T>([Cursor<T>] cursor) {
   return(result)
 }
 
+// TODO-4611: reverse read-only traversal. Mirrors the forward shape:
+// reverse_limit(values) < cursor <= reverse_start(values), stepping down
+// via retreat. reverse_start(values) is the last readable position, or
+// the same one-before-first sentinel as reverse_limit(values) when empty
+// (count(values) - 1 == -1 in both cases), so an empty collection produces
+// zero loop iterations without a separate empty-check.
+[public return<Cursor<T>>]
+reverseStartArray<T>([array<T>] values) {
+  [Cursor<T>] result{Cursor<T>{count(values) - 1i32}}
+  return(result)
+}
+
+[public return<Cursor<T>>]
+reverseStartVector<T>([vector<T>] values) {
+  [Cursor<T>] result{Cursor<T>{count(values) - 1i32}}
+  return(result)
+}
+
+// One-before-first exclusive traversal boundary, never itself readable.
+[public return<Cursor<T>>]
+reverseLimitArray<T>([array<T>] values) {
+  [Cursor<T>] result{Cursor<T>{-1i32}}
+  return(result)
+}
+
+[public return<Cursor<T>>]
+reverseLimitVector<T>([vector<T>] values) {
+  [Cursor<T>] result{Cursor<T>{-1i32}}
+  return(result)
+}
+
+[public return<Cursor<T>>]
+retreat<T>([Cursor<T>] cursor) {
+  [Cursor<T>] result{Cursor<T>{cursor.position - 1i32}}
+  return(result)
+}
+
 [public return<bool>]
 cursorEqual<T>([Cursor<T>] left, [Cursor<T>] right) {
   return(left.position == right.position)
