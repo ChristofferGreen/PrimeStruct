@@ -499,6 +499,11 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
     return true;
   }
 
+  if ((name.text == "pick" || name.text == "block") && transforms.empty()) {
+    pos_ = savedPos;
+    return true;
+  }
+
   if (!match(TokenKind::LParen)) {
     pos_ = savedPos;
     return true;

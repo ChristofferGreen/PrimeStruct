@@ -6,6 +6,87 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-5253: Fix `pick(...)`/`block(){...}` silently vanishing when used as a bare statement
+  - owner: ai
+  - created_at: 2026-08-15
+  - finished_at: 2026-08-15
+  - phase: Correctness bug sweep
+  - parallel_track: parser-nested-definition-ambiguity
+  - depends_on: (none)
+  - scope: While investigating whether other known bugs/flakes existed in
+    the project, found that `pick(value) { none {...} some(v) {...} }`
+    used as a bare statement (not wrapped in `return(...)` or a binding
+    initializer) silently compiled with its arm bodies never executing -
+    `--dump-stage ast` showed the entire `pick(...)` construct vanish from
+    `main()`'s statement list and reappear as two unrelated top-level
+    definitions (`/main/pick(value)` and `/main/pick/some(v)`). Investigate
+    and fix the root cause, and check for the same shape of bug elsewhere.
+  - outcome:
+    - Root cause: `Parser::tryParseNestedDefinition` (called at the top of
+      every statement inside a definition body, before the general
+      call-statement path) uses `isDefinitionSignature` to decide whether
+      `name(args) { body }` at statement position is a nested function
+      definition rather than a call-with-body-block statement.
+      `isDefinitionSignature` treats a parenthesized list of bare
+      identifiers (no `[Type]` prefix) as a plausible identifier-only
+      parameter list - which is exactly what `pick(value)` and `block()`
+      look like syntactically, since `value` is a bare identifier and
+      `block()`'s parameter list is empty (trivially "identifiers only").
+      So both got misparsed as brand-new top-level nested definitions
+      (`/main/pick(value)`, and recursively `/main/pick/some(v)` for the
+      payload arm, since arms have the same bare-identifier-parameter
+      shape) instead of being kept as statements inside `main()`. Nothing
+      in `main()`'s body ever referenced these synthesized definitions, so
+      they were simply dead code - the pick/block statement's side effects
+      never ran. This only affected the *statement* position:
+      `return(pick(...) {...})` and other expression contexts parse
+      `pick(...)`/`block(){...}` through the ordinary expression-call path
+      (`ParserExpr.cpp`), which never calls `tryParseNestedDefinition`, so
+      those were always correct - explaining why this had gone unnoticed
+      despite `pick`/`block` being well-exercised in expression position.
+    - Fix: in `tryParseNestedDefinition`
+      (`src/parser/ParserCoreDefinitionBodies.cpp`), added a guard
+      alongside the existing `"repeat"` special case that bails out
+      (restores `pos_`, reports `parsed=false`) for `name.text ==
+      "pick"`/`"block"` whenever the statement has no transforms, letting
+      the normal call-with-body-block statement path handle them. Scoped
+      to `transforms.empty()` rather than reusing the `"repeat"` case's
+      `!hasReturnTransform && !hasNoReturnDefinitionTransform` condition,
+      because `[on_error<...>] block(){...}` intentionally relies on
+      `block` becoming a nested definition (for effect-tracking) even
+      without a `return`/no-return-definition transform - reusing the
+      broader condition would have broken that existing, tested behavior
+      (`"statement block on_error reports block return requirement"`).
+    - Checked for the same misparse shape on other builtin body-block call
+      names (`if`/`while`/`for`/`loop`/`match`/`ct_if`): all are already
+      intercepted earlier in the statement-parsing chain (dedicated sugar
+      parsing before `tryParseNestedDefinition` is ever reached), so only
+      `pick` and `block` were actually reachable through this path.
+  - validation:
+    - New minimal repros for both: a bare `pick(value) { none {...}
+      some(v) {...} }` and a bare `block(){ assign(result, 5i32) }`,
+      confirmed via `--dump-stage ast` that the statement now stays inside
+      `main()`'s body (no more synthesized top-level definitions) and via
+      `--emit=vm` that the arm/block body actually executes.
+    - Added `"runs vm with pick used as a bare statement"`
+      (`tests/unit/compile_run/test_compile_run_vm_maybe.cpp`) and
+      `"native pick used as a bare statement"`
+      (`tests/unit/compile_run/test_compile_run_native_backend_maybe.cpp`),
+      each asserting the correct arm's payload flows through to the
+      return value (5, not the sentinel -99 or 0 a silently-skipped
+      statement would produce).
+    - Added `"block used as a bare statement runs its side effects"`
+      (`tests/unit/compile_run/test_compile_run_imports_blocks.cpp`),
+      VM + native, same shape.
+    - `PrimeStruct_parser_tests`: 500/500 passed.
+    - `PrimeStruct_semantics_tests` (`*pick*`,`*block*` filter, includes
+      the `on_error`/`block` regression case above): 98/98 passed.
+    - `PrimeStruct_compile_run_tests` full run: passed (see below).
+  - stop_rule: Fixed both instances of the misparse reachable through this
+    code path (`pick`, `block`); the other body-block builtins are
+    provably unreachable through it due to earlier dedicated sugar
+    parsing, so no further sweep is needed here.
+
 - [x] TODO-5252: Fix flaky "type resolution graph snapshot honors budget env vars" test
   - owner: ai
   - created_at: 2026-08-15

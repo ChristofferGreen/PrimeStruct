@@ -56,6 +56,30 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with pick used as a bare statement") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32>] value{[some] 5i32}
+  [i32 mut] result{-99i32}
+  pick(value) {
+    none {
+      assign(result, -1i32)
+    }
+    some(v) {
+      assign(result, v)
+    }
+  }
+  return(result)
+}
+)";
+  const std::string srcPath = writeTemp("vm_maybe_pick_bare_statement.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
 TEST_CASE("runs vm with Maybe none and helper methods") {
   const std::string source = R"(
 import /std/maybe/*

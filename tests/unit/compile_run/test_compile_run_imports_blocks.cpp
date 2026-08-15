@@ -73,6 +73,29 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
+TEST_CASE("block used as a bare statement runs its side effects") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  block(){
+    assign(result, 5i32)
+  }
+  return(result)
+}
+)";
+  const std::string srcPath = writeTemp("compile_block_bare_statement.prime", source);
+  const std::string nativePath =
+      (testScratchPath("") / "primec_block_bare_statement_native").string();
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 5);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 5);
+}
+
 TEST_CASE("block expression return value") {
   const std::string source = R"(
 [return<int>]
