@@ -80,6 +80,57 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
+TEST_CASE("runs vm with mutable pick arm binding assigned through") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32> mut] value{[some] 5i32}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      assign(v, plus(v, 1i32))
+      return(v)
+    }
+  })
+}
+)";
+  const std::string srcPath = writeTemp("vm_maybe_pick_mutable_arm.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
+TEST_CASE("rejects assignment through an immutable pick arm binding") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32>] value{[some] 5i32}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      assign(v, plus(v, 1i32))
+      return(v)
+    }
+  })
+}
+)";
+  const std::string srcPath = writeTemp("vm_maybe_pick_immutable_arm.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "vm_maybe_pick_immutable_arm.err").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runCmd) != 0);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
 TEST_CASE("runs vm with Maybe none and helper methods") {
   const std::string source = R"(
 import /std/maybe/*

@@ -2426,6 +2426,14 @@
       return true;
     };
 
+    auto isMutableLocalExpr = [](const Expr &candidate, const LocalMap &localsIn) -> bool {
+      if (candidate.kind != Expr::Kind::Name) {
+        return false;
+      }
+      auto it = localsIn.find(candidate.name);
+      return it != localsIn.end() && it->second.isMutable;
+    };
+
     auto makePickPayloadLocalInfo =
         [&](const Definition &sumDef,
             const SumVariant &variant,
@@ -2464,11 +2472,13 @@
             const SumVariant &variant,
             const Expr &binderExpr,
             int32_t sumPtrLocal,
-            LocalMap &branchLocals) -> bool {
+            LocalMap &branchLocals,
+            bool isMutable) -> bool {
       LocalInfo payloadInfo;
       if (!makePickPayloadLocalInfo(sumDef, variant, payloadInfo)) {
         return false;
       }
+      payloadInfo.isMutable = isMutable;
       payloadInfo.index = nextLocal++;
       if (!payloadInfo.structTypeName.empty()) {
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
@@ -2832,8 +2842,12 @@
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = valueLocals;
         if (payloadArm &&
-            !bindPickPayload(
-                *sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
+            !bindPickPayload(*sumDef,
+                             *variant,
+                             arm.args.front(),
+                             sumPtrLocal,
+                             branchLocals,
+                             isMutableLocalExpr(expr.args.front(), valueLocals))) {
           return LoweredSumPickEmitResult::Error;
         }
         const Expr *valueExpr = findPickArmValueExpr(arm);
@@ -2924,8 +2938,12 @@
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = localsIn;
         if (payloadArm &&
-            !bindPickPayload(
-                *sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
+            !bindPickPayload(*sumDef,
+                             *variant,
+                             arm.args.front(),
+                             sumPtrLocal,
+                             branchLocals,
+                             isMutableLocalExpr(stmt.args.front(), localsIn))) {
           return LoweredSumPickEmitResult::Error;
         }
         for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {

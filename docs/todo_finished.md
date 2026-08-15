@@ -6,6 +6,76 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-5254: Fix pick-arm payload bindings always rejecting assignment
+  - owner: ai
+  - created_at: 2026-08-15
+  - finished_at: 2026-08-15
+  - phase: Correctness bug sweep
+  - parallel_track: parser-nested-definition-ambiguity
+  - depends_on: (none)
+  - scope: TODO-5249's investigation notes documented a general
+    pick-arm-binding mutability gap: `pick(value) { some(v) {
+    assign(v, ...) } }` unconditionally rejected the assignment with
+    "assign target must be a mutable binding", even when `value` itself
+    was declared `mut`. `payloadBindingForVariant`
+    (`src/semantics/SemanticsValidatorExprPick.cpp`), the single helper
+    that constructs the `BindingInfo` for every `pick` arm's payload
+    binder across all 4 call sites (expression pick, both
+    return-kind/type-text inference helpers, and statement pick), never
+    set `isMutable` - it defaulted false unconditionally, with no syntax
+    existing to override it. Fix and check whether a matching gap exists
+    in the IR lowerer (semantics only *validates* the assignment; the
+    lowerer has to actually treat the local as writable too).
+  - outcome:
+    - Design choice: rather than invent new syntax for opting a specific
+      arm binder into mutability (the payload binder position only
+      parses a bare identifier today - `some(v)`, no room for a `[T mut]`
+      qualifier without a parser change), the arm binding's mutability
+      now mirrors the scrutinee's mutability - `pick(value) { some(v)
+      { assign(v, ...) } }` is writable exactly when `value` was declared
+      `[... mut]`. This matches how the rest of the language treats
+      derived/aliased bindings and needed no new syntax.
+    - Semantics fix: added `SemanticsValidator::isMutableBindingExpr`
+      (declared in `SemanticsValidatorPrivateCore.h`, defined in
+      `SemanticsValidatorExprPick.cpp`) - looks up whether a `Name`-kind
+      expr resolves to a mutable parameter or local, mirroring the
+      existing (private-to-a-different-file) `isMutableBinding` lambda in
+      `SemanticsValidatorExprMutationBorrows.cpp`. `payloadBindingForVariant`
+      gained an `isMutable` parameter (default `false`, preserving
+      existing behavior for any caller that doesn't have a scrutinee to
+      check); all 4 call sites (`validatePickExpr`,
+      `inferPickExprReturnKind`, `inferPickExprTypeText`,
+      `validatePickStatement`) now compute the scrutinee's mutability
+      once via `isMutableBindingExpr` and thread it through.
+    - IR lowerer fix (found by testing end-to-end after the semantics
+      fix alone: it passed validation but then failed at IR lowering with
+      "assign target must be mutable: v" - `LocalInfo::isMutable`, the
+      lowerer's own independent copy of this flag, has to be set too):
+      added `isMutableLocalExpr` and threaded an `isMutable` parameter
+      through `bindPickPayload` in `IrLowererLowerSumHelpers.h`, computed
+      from the scrutinee at both of its call sites (the pick-expression
+      lowering path and `tryEmitPickStatement`, the bare-statement path
+      TODO-5253 fixed earlier in this same session).
+  - validation:
+    - New minimal repros: mutable scrutinee with an arm that does
+      `assign(v, plus(v, 1i32))` (both `return(pick(...) {...})` and
+      bare-statement `pick(...) {...}` forms) now compile and run
+      correctly on both `--emit=vm` and `--emit=native`, returning the
+      mutated value; the same repro with an *immutable* scrutinee still
+      correctly rejects with "assign target must be a mutable binding".
+    - Added `"runs vm with mutable pick arm binding assigned through"`
+      and `"rejects assignment through an immutable pick arm binding"`
+      (`tests/unit/compile_run/test_compile_run_vm_maybe.cpp`), plus
+      `"native runs with mutable pick arm binding assigned through"`
+      (`tests/unit/compile_run/test_compile_run_native_backend_maybe.cpp`).
+    - `PrimeStruct_semantics_tests` + `PrimeStruct_parser_tests` (parallel
+      ctest, 497 shard tests): 100% passed.
+    - `PrimeStruct_compile_run_tests`, pick/Maybe-filtered (20 cases):
+      100% passed.
+  - stop_rule: Closed the documented gap without adding new syntax, by
+    reusing the scrutinee's declared mutability; both backends verified
+    end to end, not just semantics validation.
+
 - [x] TODO-5253: Fix `pick(...)`/`block(){...}` silently vanishing when used as a bare statement
   - owner: ai
   - created_at: 2026-08-15

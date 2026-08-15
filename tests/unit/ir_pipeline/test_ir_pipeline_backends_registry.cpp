@@ -1457,8 +1457,8 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
   CHECK(source.find("\"pick arm\"") != std::string::npos);
   CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)") !=
         std::string::npos);
-  CHECK(source.find("*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals") !=
-        std::string::npos);
+  CHECK(source.find("bindPickPayload(*sumDef,") != std::string::npos);
+  CHECK(source.find("isMutableLocalExpr(") != std::string::npos);
   const size_t aggregateResolverPos =
       source.find("resolveSemanticProductPickAggregateResultStructPath");
   REQUIRE(aggregateResolverPos != std::string::npos);

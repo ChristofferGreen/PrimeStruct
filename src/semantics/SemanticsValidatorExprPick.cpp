@@ -17,12 +17,13 @@ struct PickArm {
   bool hasPayloadBinder = false;
 };
 
-BindingInfo payloadBindingForVariant(const SumVariant &variant) {
+BindingInfo payloadBindingForVariant(const SumVariant &variant, bool isMutable = false) {
   BindingInfo binding;
   binding.typeName = variant.payloadType;
   if (!variant.payloadTemplateArgs.empty()) {
     binding.typeTemplateArg = joinTemplateArgs(variant.payloadTemplateArgs);
   }
+  binding.isMutable = isMutable;
   return binding;
 }
 
@@ -226,6 +227,20 @@ bool SemanticsValidator::resolveStatusOnlyResultTypeTextForPickTarget(
   return false;
 }
 
+bool SemanticsValidator::isMutableBindingExpr(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr) const {
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
+    return paramBinding->isMutable;
+  }
+  auto localIt = locals.find(expr.name);
+  return localIt != locals.end() && localIt->second.isMutable;
+}
+
 bool SemanticsValidator::validatePickExpr(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -265,6 +280,7 @@ bool SemanticsValidator::validatePickExpr(
     }
     return failPickDiagnostic(target, "pick target requires sum value");
   }
+  const bool targetIsMutable = isMutableBindingExpr(params, locals, target);
 
   std::vector<PickArm> arms;
   arms.reserve(expr.bodyArguments.size());
@@ -335,7 +351,7 @@ bool SemanticsValidator::validatePickExpr(
     if (arm.hasPayloadBinder) {
       insertLocalBinding(branchLocals,
                          arm.binderName,
-                         payloadBindingForVariant(*arm.variant));
+                         payloadBindingForVariant(*arm.variant, targetIsMutable));
     }
 
     const Expr *valueExpr = nullptr;
@@ -432,6 +448,7 @@ ReturnKind SemanticsValidator::inferPickExprReturnKind(
   if (sumDef == nullptr) {
     return ReturnKind::Unknown;
   }
+  const bool targetIsMutable = isMutableBindingExpr(params, locals, expr.args.front());
 
   std::optional<ReturnKind> combinedKind;
   for (const Expr &arm : expr.bodyArguments) {
@@ -452,7 +469,7 @@ ReturnKind SemanticsValidator::inferPickExprReturnKind(
     if (payloadArm) {
       insertLocalBinding(branchLocals,
                          arm.args.front().name,
-                         payloadBindingForVariant(*variant));
+                         payloadBindingForVariant(*variant, targetIsMutable));
     }
 
     const Expr *valueExpr = nullptr;
@@ -531,6 +548,7 @@ bool SemanticsValidator::inferPickExprTypeText(
   if (sumDef == nullptr) {
     return false;
   }
+  const bool targetIsMutable = isMutableBindingExpr(params, locals, expr.args.front());
 
   auto resolveStructPathForTypeText = [&](const std::string &typeText) {
     const std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -602,7 +620,7 @@ bool SemanticsValidator::inferPickExprTypeText(
     if (payloadArm) {
       insertLocalBinding(branchLocals,
                          arm.args.front().name,
-                         payloadBindingForVariant(*variant));
+                         payloadBindingForVariant(*variant, targetIsMutable));
     }
 
     const Expr *valueExpr = nullptr;
@@ -764,6 +782,7 @@ bool SemanticsValidator::validatePickStatement(
     return failPickStatementDiagnostic(stmt.args.front(),
                                        "pick target requires sum value");
   }
+  const bool targetIsMutable = isMutableBindingExpr(params, locals, stmt.args.front());
 
   std::unordered_set<std::string> seenVariants;
   for (const Expr &arm : stmt.bodyArguments) {
@@ -833,7 +852,7 @@ bool SemanticsValidator::validatePickStatement(
     if (payloadArm) {
       insertLocalBinding(branchLocals,
                          arm.args.front().name,
-                         payloadBindingForVariant(*variant));
+                         payloadBindingForVariant(*variant, targetIsMutable));
     }
 
     std::vector<BorrowLivenessRange> livenessRanges;

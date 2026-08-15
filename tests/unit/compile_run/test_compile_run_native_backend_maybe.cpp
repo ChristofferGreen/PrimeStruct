@@ -63,6 +63,34 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("native runs with mutable pick arm binding assigned through") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32> mut] value{[some] 5i32}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      assign(v, plus(v, 1i32))
+      return(v)
+    }
+  })
+}
+)";
+  const std::string srcPath = writeTemp("native_maybe_pick_mutable_arm.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_maybe_pick_mutable_arm_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("native pick used as a bare statement") {
   const std::string source = R"(
 import /std/maybe/*
