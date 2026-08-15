@@ -60,20 +60,43 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
       captured failure message from the original run (the managed block in
       `docs/failing_tests.md` only retains the single failing test name, not
       its output, and gets overwritten by each subsequent run), there isn't
-      enough signal to pin down a specific fix here - left as unresolved,
-      flagged for whoever next reproduces it to capture the actual
-      assertion/output before it gets overwritten again.
+      enough signal to pin down a specific fix here.
+    - Follow-up (same day): ran the full release `ctest --parallel 8` gate
+      four more times back to back specifically trying to reproduce this -
+      all four came back 100% green (`0 tests failed out of 1884`), and a
+      full line-by-line read of all 6 `TEST_CASE`s in
+      `test_compile_run_examples_native_launcher.cpp` (not just the one
+      guessed at in the first investigation pass) found nothing fragile:
+      every case mocks `primec`/`xcrun`/`launchctl` with instant-exit shell
+      scripts, asserts on captured stdout/stderr text or exit codes, and
+      none waits on wall-clock time, a port, or any other contested
+      resource. Given four consecutive clean full-gate runs (this failure's
+      observed rate earlier in the session was roughly 1-in-3) plus no
+      identifiable fragility anywhere in the shard's namesake file, the
+      most likely explanation is a one-off environmental condition at the
+      moment of the original failure (this session separately hit and
+      recovered from an accidental concurrent `compile.sh --release`
+      invocation racing on the same `build-release` directory earlier the
+      same day, which is exactly the kind of transient corruption that
+      would produce a single unrepeatable failure) rather than a
+      deterministic bug in this test or the code it exercises. Concluding
+      the investigation here rather than continuing to spend full 10-minute
+      release-gate runs chasing a failure that no longer reproduces and
+      that code review doesn't explain - if it recurs, the priority is
+      capturing its actual assertion output before the managed
+      `docs/failing_tests.md` block gets overwritten, since that is the one
+      piece of evidence neither investigation pass had.
   - validation:
     - `tests/unit/semantics/test_semantics_type_resolution_graph.cpp`'s
       budget test re-run standalone after the fix: still passes (verifies
       the fix didn't just widen the margin into meaninglessness - the
       over-budget-at-zero-budget assertions in the first half of the test
       are unchanged and still exercise the flag logic for real).
-    - Full `./scripts/compile.sh --release` gate: 100% tests passed, 0
-      failed - including one full run specifically aimed at reproducing
-      the original flakes, which came back 100% green on its own (both
-      flakes are rare - roughly 2 of 6 full runs this session hit one,
-      never both at once).
+    - Full release gate run five times total across both investigation
+      passes specifically aimed at reproducing the original flakes (one
+      via `./scripts/compile.sh --release`, four via direct `ctest
+      --parallel 8` against the already-built `build-release` tree): every
+      run came back 100% green, `0 tests failed out of 1884`.
   - stop_rule: Fixed the one flake with an identifiable, fixable root
     cause; documented the investigation dead-end on the other rather than
     guessing at a fix without evidence. If the native-window-launcher flake
