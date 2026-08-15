@@ -6,6 +6,124 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters
+  - owner: ai
+  - created_at: 2026-08-15
+  - finished_at: 2026-08-15
+  - phase: Safe array extents and capability views
+  - parallel_track: safe-views-capability-non-parameter
+  - depends_on: TODO-5249
+  - scope: TODO-5249 scoped `Reference<T, Capability>`/`Pointer<T,
+    Capability>` to function parameters only, since an earlier attempt at
+    local-binding support silently miscompiled (compiled cleanly, ran to
+    a wrong value, inconsistent between backends). Extend real support to
+    at least local bindings, root-causing that wrong-value bug rather than
+    just re-enabling the same broken path.
+  - outcome:
+    - Root cause, found via VM-instruction-level `fprintf` tracing
+      (temporarily added to `VmExecutionKernel.cpp`'s `LoadLocal`/
+      `StoreLocal`/`LoadIndirect` cases, then removed): a local
+      `[Reference<int, Read>] ref{location(value)}` compiled without error
+      and ran to completion, but the `dereference(ref)` call's
+      `LoadIndirect` instruction never executed at all - the emitted code
+      silently treated the plain scalar reference as an "aggregate
+      pointer" (the fast path used for `Reference<SomeStruct>`, which skips
+      the indirection because struct-shaped pointees are handled
+      differently) and returned the raw stored address instead of the
+      value it pointed to.
+    - Traced to `IrLowererStatementBindingHelpers.cpp`'s
+      `inferStatementBindingTypeInfo`: when a binding has an explicit type
+      annotation (`hasExplicitType`), the function reconstructs a type-text
+      string by joining ALL of the type transform's template arguments with
+      commas - correct for `map<K, V>`, wrong for `Reference<T,
+      Capability>`, since the capability marker is not part of the pointee
+      type. For `[Reference<int, Read>] ref{...}` this produced the literal
+      string `"Reference<int, Read>"`, which was fed whole to
+      `populateBindingTypeInfoFromTypeText`; its inner
+      `splitTemplateTypeName` split off `"Reference"` as the base but left
+      `"int, Read"` as one unsplit argument string, which then got assigned
+      directly as `info.structTypeName` (a "pointee struct type" field) -
+      making `isAggregatePointerLikeLocal` think the reference pointed to a
+      struct type literally named `"int, Read"`, which is exactly what
+      flips `dereference` into the aggregate (no-`LoadIndirect`) path.
+    - Fix: before reconstructing the joined type text, truncate the
+      template-argument list to just the first entry (`T`) whenever the
+      transform's normalized base name is `Reference`, `Pointer`, or
+      `array` (the `array` case also catches `Slice<T, Capability>`
+      locals, TODO-5250, since it normalizes to `array` via the
+      `normalizeCollectionBindingTypeName`/`normalizeBindingTypeName`
+      `"Slice"` -> `"array"` mapping but keeps its raw AST transform name
+      `"Slice"` at this point in the pipeline).
+    - Getting to this bug required first re-threading
+      `allowCapabilityArg=true` through the same 6 semantics-side
+      `parseBindingInfo` call sites the earlier, reverted attempt had
+      found (`SemanticsValidatorStatementBindings.cpp`,
+      `SemanticsValidatorInferDefinition.cpp`,
+      `SemanticsValidatorPassesEffectFree.cpp`,
+      `SemanticsValidatorPassesUninitialized.cpp` x3, and
+      `SemanticsValidatorSnapshots.cpp`'s `inferBindingForLocals`) - but
+      this time a 7th site was also found and fixed:
+      `SemanticsValidatorSnapshotLocals.cpp` has its own, independent
+      `inferBindingForLocals` lambda inside `forEachLocalAwareSnapshotCall`
+      (a duplicate of the one in `SemanticsValidatorSnapshots.cpp`, not a
+      shared helper) that was intermittently causing the "dereference"
+      call's own semantic-product query fact to publish an empty result
+      type - fixing it made every one of dozens of repeated
+      `inferQueryExprTypeText` invocations (traced via temporary tracing in
+      `SemanticsValidatorInferCollectionReturnInference.cpp`) consistently
+      succeed instead of alternating between correct and empty results
+      depending on which pass ran the lookup. Both this fact-publication
+      bug and the aggregate-pointer-detection bug had to be fixed together
+      before local `Reference<T, Capability>` worked end to end - fixing
+      only one still produced compiling-but-wrong results.
+    - `Slice<T, Capability>` locals (TODO-5250's desugared-to-`array<T>`
+      design) benefited from the same fixes for free: the previously-hit
+      "missing semantic-product array extent fact" error (traced in
+      TODO-5250's write-up to the TODO-4607 array-extent-fact subsystem)
+      turned out to depend on the same semantic-product binding-fact
+      publication chain, not a separate bug needing its own fix.
+    - Updated the `Slice<T, Capability>`/`Reference<T, Capability>`
+      "only supported for function parameters today" diagnostics to
+      "...function parameters and local bindings today", and updated
+      `docs/CodeExamples.md`'s two capability-parameter examples'
+      intro text accordingly (struct fields and return types remain
+      unaudited and still rejected).
+    - Two of the compile-run tests written during TODO-5249/TODO-5250 that
+      had locked in the old "local binding rejected" diagnostic were
+      replaced with tests asserting the now-correct local-binding
+      behavior (construct, read, write, and mutation-through-`Read`
+      rejection), rather than deleted, since local-binding support is now
+      a real, tested surface.
+  - validation:
+    - `tests/unit/compile_run/test_compile_run_vm_reference_capability.cpp`
+      gained 3 new cases (Read local binding on both backends, ReadWrite
+      mut local binding on both backends, mutation-through-Read-local
+      rejection), replacing the old rejection-only case; 10 cases total,
+      all passing.
+    - `tests/unit/compile_run/test_compile_run_vm_slice_capability.cpp`
+      gained the equivalent 3 cases for `Slice<T, Capability>` locals; 11
+      cases total, all passing.
+    - Full `./scripts/compile.sh --release` gate, run three times over the
+      course of this investigation: two runs each surfaced one different,
+      unrelated flaky test (`native_window_launcher_and_preflight_57_57`,
+      then `type_resolution_graph_type_resolution_graph_1_10`), each
+      confirmed to pass cleanly when run in isolation and to pass on a
+      subsequent clean full run - both match the known cross-test-case
+      pollution class tracked by TODO-4707, not regressions from this
+      change. The final clean run: 100% tests passed, 0 failed.
+    - All temporary `fprintf` debug instrumentation (in
+      `VmExecutionKernel.cpp`,
+      `SemanticsValidatorInferCollectionReturnInference.cpp`, and
+      `IrLowererOperatorMemoryPointerHelpers.cpp`) was removed via `git
+      checkout` before the final validation pass, verified via `grep -c
+      "fprintf(stderr"` returning 0 in all three files.
+  - stop_rule: Local bindings for both `Reference<T, Capability>`/
+    `Pointer<T, Capability>` and `Slice<T, Capability>` are verified
+    correct and consistent across both backends (read and write, including
+    capability-mismatch and mutation-through-Read rejection), with locked
+    regression tests; struct fields, return types, and method receivers
+    remain out of scope and not yet filed as follow-up TODOs.
+
 - [x] TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type
   - owner: ai
   - created_at: 2026-08-15

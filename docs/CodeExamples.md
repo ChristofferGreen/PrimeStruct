@@ -1023,10 +1023,10 @@ Capability>` as a function parameter type is verified against the current
 release toolchain, with `Read`/`Write`/`ReadWrite` capability markers
 checked against the binding's own `mut` declaration at compile time (a
 `Read` reference cannot be `mut`, and a `Write`/`ReadWrite` reference must
-be). This is currently scoped to function parameters only: using the
-two-argument form on a local binding, struct field, or return type is
+be). This is verified for both function parameters and local bindings;
+using the two-argument form on a struct field or return type is still
 rejected with a clear diagnostic rather than silently miscompiled, since
-those other binding contexts have not been audited yet.
+those contexts have not been audited yet.
 
 ```prime
 [return<int>]
@@ -1065,8 +1065,8 @@ representation `slice(...)` (TODO-4608) already produces - so a caller
 constructs the value with ordinary `slice(...)` into a plain `[array<T>]`
 local and passes it to a `Slice<T, Capability>`-typed parameter; no new
 construction syntax is needed. This is verified against the current
-release toolchain, scoped to function parameters only for the same reason
-as `Reference<T, Capability>` above.
+release toolchain for both function parameters and local bindings, for
+the same reason as `Reference<T, Capability>` above.
 
 ```prime
 [return<int>]

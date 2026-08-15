@@ -125,7 +125,6 @@ investigation chain's actively-productive leaves - see
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
-- TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters (locals, struct fields, return types)
 
 ### Priority Lanes
 
@@ -222,13 +221,17 @@ investigation chain's actively-productive leaves - see
   Reference/Pointer's: `Slice<T, Capability>` desugars to `array<T>` (the
   exact representation `slice(...)` already produces), so no new runtime
   shape or arity fan-out was needed - see its outcome notes in
-  `docs/todo_finished.md`. TODO-5251 (extending capability support to local
-  bindings, struct fields, and return types) was attempted and reverted in
-  the same session: it needs at least two independent subsystems audited
-  (general binding/value-kind resolution, and the TODO-4607 array-extent-
-  fact publication machinery) plus a still-unidentified IR-lowerer bug in
-  Reference/Pointer's dereference-read path, so it remains open with
-  detailed findings in its own task block.
+  `docs/todo_finished.md`. TODO-5251 extended capability support to local
+  bindings for both `Reference<T, Capability>`/`Pointer<T, Capability>` and
+  `Slice<T, Capability>`, root-causing the wrong-runtime-value bug an
+  earlier attempt in the same session had reverted on: the IR lowerer's
+  explicit-binding-type-text reconstruction joined a 2-argument capability
+  form's template arguments into one comma-joined string
+  ("Reference<int, Read>") and fed that whole blob to the pointee/struct
+  type resolver, which made the binding look like an aggregate pointer and
+  silently skip the dereference read - see its outcome notes in
+  `docs/todo_finished.md`. Struct fields and return types remain
+  unaudited and out of scope.
 - Collections naming and surface-manifest retirement: remove the
   `experimental_*` and `internal_*` module-naming layers from
   `stdlib/std/collections` and retire `stdlib/std/collections/surfaces.psmeta`.
@@ -431,7 +434,7 @@ investigation chain's actively-productive leaves - see
 70. TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation (done, see docs/todo_finished.md)
 71. TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views (done, see docs/todo_finished.md)
 72. TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type (done, see docs/todo_finished.md)
-73. TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters
+73. TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters (done, see docs/todo_finished.md)
 
 ### Task Blocks
 
@@ -11604,109 +11607,4 @@ investigation chain's actively-productive leaves - see
     full `ctest --parallel 4` regression - clean (the flag defaults off,
     so no other existing test's behavior changes).
 
-
-- [ ] TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters
-  - owner: ai
-  - created_at: 2026-08-15
-  - phase: Safe array extents and capability views
-  - parallel_track: safe-views-capability-non-parameter
-  - depends_on: TODO-5249
-  - scope: TODO-5249 made `Reference<T, Capability>`/`Pointer<T, Capability>`
-    work correctly for function parameters only, via an opt-in
-    `allowCapabilityArg` flag on `parseBindingInfo` (default `false`) that
-    makes every other binding context (local bindings, struct fields,
-    return types, method receivers) fail closed with a clear "only
-    supported for function parameters today" diagnostic. That leaf's
-    investigation found the reason: relaxing the semantics-level arity
-    check alone let a local `Reference<T, Capability>` binding compile
-    cleanly while silently producing wrong, backend-inconsistent runtime
-    values (VM and native disagreed, and both were wrong), because roughly
-    90 independent `"Reference"`/`"Pointer"` consumer sites across
-    `src/ir_lowerer/` and `src/emitter/` (struct layout, method resolution,
-    count/access classification, return-kind inference, packed-arg/lambda
-    capture, uninitialized-storage inference, and more) each assume exactly
-    one template argument and were never audited for a second. This leaf
-    audits and fixes those sites - or as many as prove tractable in one
-    pass, expanding `allowCapabilityArg` (or removing it in favor of always
-    allowing 2 args once every consumer is verified safe) for each context
-    proven correct - to extend real `Reference<T, Capability>`/`Pointer<T,
-    Capability>` support to local bindings first (the most immediately
-    useful non-parameter context, per TODO-5249's own doc-example
-    discussion), then struct fields and return types if time and risk
-    allow. Do not attempt to fix all ~90 sites in one sweep if that proves
-    too risky to verify - land and verify one context (e.g. local bindings)
-    at a time, the same discipline TODO-5249 itself used to stay safe, and
-    file remaining contexts as further follow-up TODOs rather than
-    expanding this leaf's scope or shipping unverified fixes.
-  - implementation_notes: Start from the specific bug TODO-5249 found and
-    fixed one instance of: `IrLowererBindingTypeHelpers.cpp`'s
-    `bindingValueKindFromTransforms` (search "TODO-5249" in that file) is
-    the pattern to replicate - each of the ~90 sites found via `grep -rn
-    '"Reference"' src/ir_lowerer/*.cpp src/emitter/*.cpp` needs individual
-    judgment about whether relaxing its arity check to accept 2 template
-    arguments (using only the first, T) is safe, since some of the 90
-    matches are unrelated arity assumptions on different constructs.
-    Build a minimal local-binding repro exercising both read and write
-    through a capability-tagged binding (like TODO-5249's own investigation
-    repros) and use it to empirically find every site that needs fixing,
-    the same way TODO-5249's `IrLowererStatementBindingHelpers.cpp`/
-    `bindingValueKindFromTransforms` gap was found - via a wrong-runtime-
-    value repro, not by reading code alone.
-  - attempted_and_reverted (2026-08-15, during TODO-5250's session): tried
-    enabling `allowCapabilityArg=true` at every `parseBindingInfo` call site
-    that processes local (`stmt`) bindings, to see how far a local
-    `Reference<T, Capability>` would get. Confirmed 6 distinct semantics-side
-    call sites all need the flag before compilation gets past semantics at
-    all: `SemanticsValidatorStatementBindings.cpp` (the primary statement
-    binding validator), `SemanticsValidatorInferDefinition.cpp`,
-    `SemanticsValidatorPassesEffectFree.cpp`,
-    `SemanticsValidatorPassesUninitialized.cpp` (3 separate call sites), and
-    `SemanticsValidatorSnapshots.cpp`'s `inferBindingForLocals` (which feeds
-    semantic-product binding-fact publication - skipping it produces
-    "missing semantic-product binding fact" at IR-lowering time instead of a
-    semantics diagnostic). Even after enabling all 6 plus the existing
-    `bindingValueKindFromTransforms` arity fix, a local `[Reference<int,
-    Read>] ref{location(value)}`/`[Reference<int, ReadWrite> mut]` still
-    silently compiled to the wrong runtime value (0 on both backends,
-    consistently this time, but still wrong - expected 4/42) - deeper gaps
-    remain unidentified in the IR lowerer's dereference/assign operand-kind
-    resolution. Separately, a local `[Slice<T, Capability>]` (which
-    desugars to `array<T>` - see TODO-5250) hit a *different* failure after
-    the same 6 semantics sites were enabled: "missing semantic-product array
-    extent fact", tracing into the TODO-4607 array-extent-fact publication
-    subsystem (`SemanticsValidatorSnapshots.cpp`'s
-    `arrayExtentFactSnapshotForSemanticProduct`/`collectStaticArrayExtentsForBindings`
-    and the ir_lowerer's parallel `collectArrayExtentExpressionsForBindings`/
-    `validateSemanticProductArrayExtentCoverage`) - a second, independent
-    subsystem with its own binding-shape assumptions, not yet audited.
-    Reverted all 6 semantics-side call-site changes (kept `git diff`-clean)
-    rather than ship an incomplete, still-silently-wrong local-binding path;
-    the fail-closed "only supported for function parameters today"
-    diagnostic remains in effect for both `Reference<T, Capability>` and
-    `Slice<T, Capability>` locals. Whoever picks this back up should expect
-    at least two independent subsystems (general binding/value-kind
-    resolution, and array-extent-fact publication) to need auditing, not
-    just the ~90 `"Reference"`/`"Pointer"` sites originally estimated - and
-    should budget for finding a *third* remaining bug in the IR lowerer's
-    Reference/Pointer dereference-read path before local Reference/Pointer
-    bindings can be trusted correct.
-  - acceptance:
-    - At least local bindings (`[Reference<T, Capability> mut] x{...}`)
-      compile and run correctly - consistently between VM and exe backends
-      - for both read and write access, with the same capability
-        enforcement TODO-5249 shipped for parameters.
-    - The `allowCapabilityArg` opt-in for whichever contexts are extended
-      is removed or widened accordingly; any context not extended in this
-      pass keeps the existing fail-closed diagnostic (do not regress the
-      fail-closed behavior for contexts not fixed).
-    - A new compile-run test locks the fixed context(s), covering both
-      backends and a wrong-runtime-value regression case (not just a
-      compiles-without-error check).
-    - Release gate (`./scripts/compile.sh --release`) green, no
-      regressions, including no new backend-inconsistent runtime values for
-      any existing single-argument `Reference<T>`/`Pointer<T>` usage.
-  - stop_rule: Stop once at least local bindings are verified correct and
-    consistent across backends, with a locked regression test; file struct
-    fields, return types, and any remaining consumer sites as further
-    follow-up TODOs rather than continuing to expand this leaf's scope.
 

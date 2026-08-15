@@ -285,7 +285,7 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     const std::string bindingLookupNamespace =
         !def.fullPath.empty() ? def.fullPath : def.namespacePrefix;
     if (!parseBindingInfo(stmt, bindingLookupNamespace, structNames_, importAliases_, info, restrictType, error_,
-                          &sumNames_)) {
+                          &sumNames_, nullptr, /*allowCapabilityArg=*/true)) {
       return false;
     }
     const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);

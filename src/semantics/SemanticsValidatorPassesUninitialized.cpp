@@ -142,7 +142,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
                               restrictType,
                               error,
                               &sumNames_,
-                              &currentValidationState_.compileTimeTypeLocals)) {
+                              &currentValidationState_.compileTimeTypeLocals,
+                              /*allowCapabilityArg=*/true)) {
           return false;
         }
         const std::string normalizedType = normalizeBindingTypeName(info.typeName);
@@ -372,7 +373,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
                               restrictType,
                               error,
                               &sumNames_,
-                              &currentValidationState_.compileTimeTypeLocals)) {
+                              &currentValidationState_.compileTimeTypeLocals,
+                              /*allowCapabilityArg=*/true)) {
           return error;
         }
         const std::string normalizedType = normalizeBindingTypeName(info.typeName);
@@ -504,7 +506,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
                             restrictType,
                             error,
                             &sumNames_,
-                            &currentValidationState_.compileTimeTypeLocals)) {
+                            &currentValidationState_.compileTimeTypeLocals,
+                            /*allowCapabilityArg=*/true)) {
         return {error, false};
       }
       const std::string normalizedType = normalizeBindingTypeName(info.typeName);

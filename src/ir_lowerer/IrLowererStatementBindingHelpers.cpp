@@ -1050,6 +1050,27 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     std::string explicitTypeName;
     std::vector<std::string> explicitTemplateArgs;
     if (extractFirstBindingTypeTransform(stmt, explicitTypeName, explicitTemplateArgs)) {
+      // TODO-5251: Reference<T, Capability>/Pointer<T, Capability>/
+      // Slice<T, Capability> carry an optional capability marker as a
+      // second template argument that is not part of the underlying
+      // type identity (see SemanticsHelpersCore.cpp's typeCapabilityArg
+      // handling). Reconstructing "Reference<int, Read>" here and feeding
+      // it whole to populateBindingTypeInfoFromTypeText below caused the
+      // unsplit "int, Read" text to be treated as a single (bogus)
+      // pointee/struct type - drop the capability argument before
+      // rebuilding the text, matching every other reconstruction of this
+      // text elsewhere in the compiler.
+      const std::string normalizedExplicitTypeName =
+          normalizeCollectionBindingTypeName(explicitTypeName);
+      if ((normalizedExplicitTypeName == "Reference" || normalizedExplicitTypeName == "Pointer" ||
+           normalizedExplicitTypeName == "array") &&
+          explicitTemplateArgs.size() > 1) {
+        // "array" here also catches Slice<T, Capability> (TODO-5250), which
+        // normalizes to "array" but keeps its raw AST transform name
+        // "Slice" - normalizeCollectionBindingTypeName maps it before this
+        // check runs.
+        explicitTemplateArgs.resize(1);
+      }
       std::string explicitTypeText = explicitTypeName;
       if (!explicitTemplateArgs.empty()) {
         explicitTypeText += "<" + joinTemplateArgsText(explicitTemplateArgs) + ">";

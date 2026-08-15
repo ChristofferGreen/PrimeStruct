@@ -332,11 +332,12 @@ bool parseBindingInfo(const Expr &expr,
       // Slice-specific handling (see normalizeBindingTypeName/
       // normalizeCollectionBindingTypeName's "Slice" -> "array" mapping).
       // Capability is tracked the same way as Reference<T, Capability>
-      // (TODO-5249) and, like that leaf, is scoped to function parameters
-      // only until local/field/return-type contexts are audited.
+      // (TODO-5249). TODO-5251 extended real support to local bindings
+      // (verified end to end, both backends); struct fields and return
+      // types remain unaudited.
       if (!allowCapabilityArg) {
         error = "Slice<T, Capability> is only supported for function "
-                "parameters today (TODO-5250)";
+                "parameters and local bindings today (TODO-5250/TODO-5251)";
         return false;
       }
       if (transformTemplateArgs.size() != 2) {
@@ -373,7 +374,7 @@ bool parseBindingInfo(const Expr &expr,
       if (transformTemplateArgs.size() == 2 && !allowCapabilityArg) {
         error = transformName +
                 "<T, Capability> is only supported for function parameters "
-                "today (TODO-5249)";
+                "and local bindings today (TODO-5249/TODO-5251)";
         return false;
       }
       if (transformTemplateArgs.size() != 1 &&

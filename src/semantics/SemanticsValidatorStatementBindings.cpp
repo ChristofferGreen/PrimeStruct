@@ -352,7 +352,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                         restrictType,
                         error_,
                         &sumNames_,
-                        &currentValidationState_.compileTimeTypeLocals)) {
+                        &currentValidationState_.compileTimeTypeLocals,
+                        // TODO-5251: local bindings are the first
+                        // non-parameter context being extended real
+                        // Reference/Pointer/Slice capability support.
+                        /*allowCapabilityArg=*/true)) {
     return false;
   }
   std::string parsedSoaElementType;

@@ -270,7 +270,7 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
     if (!withPreservedError([&]() {
           return parseBindingInfo(
               bindingExpr, namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_,
-              &sumNames_);
+              &sumNames_, nullptr, /*allowCapabilityArg=*/true);
         })) {
       return false;
     }

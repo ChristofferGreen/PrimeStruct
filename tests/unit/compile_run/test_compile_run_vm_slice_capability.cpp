@@ -182,24 +182,75 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects capability-parameterized slice on a local binding") {
+TEST_CASE("runs vm with Read-capability slice local binding") {
+  // TODO-5251: local bindings now get real capability support - see the
+  // matching Reference<T, Capability> test in
+  // test_compile_run_vm_reference_capability.cpp for the root cause.
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
+  [Slice<i32, Read>] window{slice(values, 1i32, 3i32)}
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < count(window)) {
+    total = total + window[i]
+    i = i + 1i32
+  }
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("vm_slice_capability_local_binding_read.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 16);
+
+  const std::string nativePath =
+      (testScratchPath("") / "primec_slice_capability_local_binding_read").string();
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 16);
+}
+
+TEST_CASE("runs vm with ReadWrite-capability mut slice local binding") {
   const std::string source = R"(
 [return<int>]
 main() {
   [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  [Slice<i32, Read>] window{slice(values, 0i32, 2i32)}
-  return(count(window))
+  [Slice<i32, ReadWrite> mut] window{slice(values, 0i32, 2i32)}
+  window[0i32] = 99i32
+  return(window[0i32])
 }
 )";
-  const std::string srcPath = writeTemp("vm_slice_capability_local_binding_rejected.prime", source);
+  const std::string srcPath = writeTemp("vm_slice_capability_local_binding_readwrite.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 99);
+
+  const std::string nativePath =
+      (testScratchPath("") / "primec_slice_capability_local_binding_readwrite").string();
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 99);
+}
+
+TEST_CASE("rejects mutation through a Read-capability slice local binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32)}
+  [Slice<i32, Read>] window{slice(values, 0i32, 2i32)}
+  window[0i32] = 99i32
+  return(window[0i32])
+}
+)";
+  const std::string srcPath = writeTemp("vm_slice_capability_local_binding_read_assign_rejected.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_slice_capability_local_binding_err.txt").string();
+      (testScratchPath("") / "primec_slice_capability_local_binding_read_assign_err.txt").string();
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "Slice<T, Capability> is only supported for function parameters today") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("assign target must be a mutable binding") != std::string::npos);
 }
 
 TEST_CASE("plain array parameters and locals are unaffected by Slice recognition") {

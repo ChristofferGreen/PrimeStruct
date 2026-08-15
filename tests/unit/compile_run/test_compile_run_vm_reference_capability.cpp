@@ -144,7 +144,15 @@ main() {
   CHECK(readFile(errPath).find("unknown Reference capability: Bogus") != std::string::npos);
 }
 
-TEST_CASE("rejects capability-parameterized reference on a local binding") {
+TEST_CASE("runs vm with Read-capability reference local binding") {
+  // TODO-5251: local bindings (not just function parameters) now get real
+  // capability support - the wrong-value/silent-miscompile gaps that made
+  // TODO-5249 scope this out have been root-caused and fixed:
+  // IrLowererStatementBindingHelpers.cpp's explicit-type-text reconstruction
+  // used to join Reference<T, Capability>'s two template arguments into one
+  // string ("int, Read") and feed that whole blob to the struct-type
+  // resolver as if it were the pointee type, which made the local look like
+  // an aggregate pointer and skip the dereference read entirely.
   const std::string source = R"(
 [return<int>]
 main() {
@@ -153,15 +161,57 @@ main() {
   return(dereference(ref))
 }
 )";
-  const std::string srcPath = writeTemp("vm_reference_capability_local_binding_rejected.prime", source);
+  const std::string srcPath = writeTemp("vm_reference_capability_local_binding_read.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 4);
+
+  const std::string nativePath =
+      (testScratchPath("") / "primec_reference_capability_local_binding_read").string();
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 4);
+}
+
+TEST_CASE("runs vm with ReadWrite-capability mut reference local binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [int mut] value{4}
+  [Reference<int, ReadWrite> mut] ref{location(value)}
+  assign(dereference(ref), 9)
+  return(dereference(ref))
+}
+)";
+  const std::string srcPath = writeTemp("vm_reference_capability_local_binding_readwrite.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 9);
+
+  const std::string nativePath =
+      (testScratchPath("") / "primec_reference_capability_local_binding_readwrite").string();
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 9);
+}
+
+TEST_CASE("rejects mutation through a Read-capability reference local binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [int mut] value{4}
+  [Reference<int, Read>] ref{location(value)}
+  assign(dereference(ref), 9i32)
+  return(dereference(ref))
+}
+)";
+  const std::string srcPath = writeTemp("vm_reference_capability_local_binding_read_assign_rejected.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_reference_capability_local_binding_err.txt").string();
+      (testScratchPath("") / "primec_reference_capability_local_binding_read_assign_err.txt").string();
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "Reference<T, Capability> is only supported for function parameters today") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("assign target must be a mutable binding") != std::string::npos);
 }
 
 TEST_CASE("plain single-argument Reference and Pointer parameters are unaffected") {
