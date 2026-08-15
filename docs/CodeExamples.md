@@ -967,22 +967,52 @@ Why this is good:
 - Reusing `readVector`/`cursorNotEqual` from the forward examples keeps the
   reverse traversal from introducing a second reading/comparison surface.
 
-### Proposed: Optional Pointer
+### Optional Pointer
 
 `docs/SafeArrayExtentViews.md` specifies `Maybe<Pointer<T>>` as the safe
 result type for allocation that can fail, instead of treating a null pointer
-as an ordinary `Pointer<T>` value. This is proposed syntax and does not
-compile with the current toolchain: the built-in heap intrinsics still
-return a bare `Pointer<T>`, and `Maybe<Pointer<T>>` construction itself does
-not lower correctly yet.
+as an ordinary `Pointer<T>` value. `some<Pointer<T>>(...)` wraps an
+already-allocated pointer; the built-in heap intrinsics themselves still
+return a bare `Pointer<T>` (widening their own signature to return
+`Maybe<Pointer<T>>` directly is tracked separately, if still needed, once a
+concrete caller needs it). This is verified against the current release
+toolchain.
 
 ```prime
+import /std/maybe/*
+
 [return<Maybe<Pointer<i32>>> effects(heap_alloc)]
-try_alloc_slot() {
-  // sketch only - alloc still returns a bare Pointer<T> today
-  return(some<Pointer<i32>>(alloc<i32>(1i32)))
+try_alloc_slot([i32] initial) {
+  [mut] slot{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(slot), initial)
+  return(some<Pointer<i32>>(slot))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Maybe<Pointer<i32>>] slot{try_alloc_slot(42i32)}
+  return(pick(slot) {
+    none {
+      return(-1i32)
+    }
+    some(ptr) {
+      [i32] value{dereference(ptr)}
+      /std/intrinsics/memory/free(ptr)
+      return(value)
+    }
+  })
 }
 ```
+
+Why this is good:
+- The caller's `pick(slot) { none { ... } some(ptr) { ... } }` makes the
+  allocation-failure path an explicit branch instead of a pointer the caller
+  might forget to null-check.
+- `some<Pointer<i32>>(...)` wraps the pointer once, right where it's
+  produced, so the fallible result travels with the value from the start.
+- `ptr` inside the `some` arm is a real `Pointer<i32>` (not a raw address),
+  so `dereference(ptr)` and `free(ptr)` work exactly as they would on a
+  directly-bound pointer.
 
 ### Proposed: Capability-Parameterized View
 

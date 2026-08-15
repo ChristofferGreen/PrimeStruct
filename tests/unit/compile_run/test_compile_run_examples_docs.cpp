@@ -494,10 +494,12 @@ TEST_CASE("spinning cube shared source reflects current profile support") {
 }
 
 TEST_CASE("safe extent and cursor docs examples stay documented and executable") {
-  // TODO-4612: the four verified examples below must stay byte-identical
-  // (modulo surrounding markdown fences) with docs/CodeExamples.md's "Safe
-  // Extents And Cursor Examples" section, and must keep compiling and
-  // returning the documented result on both backends.
+  // TODO-4612 added the first four verified examples below; TODO-5248
+  // promoted "Optional Pointer" out of the "Proposed" sketches into a fifth
+  // verified one. All five must stay byte-identical (modulo surrounding
+  // markdown fences) with docs/CodeExamples.md's "Safe Extents And Cursor
+  // Examples" section, and must keep compiling and returning the documented
+  // result on both backends.
   auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
     std::filesystem::path path = std::filesystem::path("..") / "docs" / name;
     if (!std::filesystem::exists(path)) {
@@ -524,8 +526,8 @@ TEST_CASE("safe extent and cursor docs examples stay documented and executable")
       "[Cursor<i32> mut] it{startVector<i32>(values)}",
       "### Reverse Cursor Loop",
       "[Cursor<i32> mut] it{reverseStartVector<i32>(values)}",
-      "### Proposed: Optional Pointer",
-      "return(some<Pointer<i32>>(alloc<i32>(1i32)))",
+      "### Optional Pointer",
+      "return(some<Pointer<i32>>(slot))",
       "### Proposed: Capability-Parameterized View",
       "[Reference<array<i32>, Read>] values"};
   for (const std::string &snippet : requiredCodeExampleSnippets) {
@@ -634,6 +636,32 @@ main() {
   return(sum_reverse(values))
 }
 )", 106);
+
+  runVmAndNative("docs_safe_extents_optional_pointer", R"(
+import /std/maybe/*
+
+[return<Maybe<Pointer<i32>>> effects(heap_alloc)]
+try_alloc_slot([i32] initial) {
+  [mut] slot{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(slot), initial)
+  return(some<Pointer<i32>>(slot))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Maybe<Pointer<i32>>] slot{try_alloc_slot(42i32)}
+  return(pick(slot) {
+    none {
+      return(-1i32)
+    }
+    some(ptr) {
+      [i32] value{dereference(ptr)}
+      /std/intrinsics/memory/free(ptr)
+      return(value)
+    }
+  })
+}
+)", 42);
 }
 
 TEST_SUITE_END();

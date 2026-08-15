@@ -13,6 +13,12 @@
       std::string structPath;
       int32_t slotCount = 1;
       bool isAggregate = false;
+      // TODO-5248: Pointer<T>/Reference<T> payloads (e.g. Maybe<Pointer<T>>)
+      // store as a single Int64 address slot (valueKind above), but reading
+      // the payload back out (pick binding) needs the pointee element type
+      // to reconstruct a proper Kind::Pointer local, not just a raw Int64.
+      bool isPointerLike = false;
+      std::string pointerElementTypeText;
     };
 
     enum class LoweredSumPickEmitResult {
@@ -185,8 +191,43 @@
              joinTemplateArgsText(variant.payloadTemplateArgs) + ">";
     };
 
-    auto sumPayloadKind = [&](const SumVariant &variant) {
-      return valueKindFromTypeName(sumPayloadTypeText(variant));
+    // TODO-5248: Pointer<T>/Reference<T> sum payloads (e.g. Maybe<Pointer<T>>)
+    // have no struct definition to resolve and no scalar ValueKind of their
+    // own; store them as a single Int64-sized address slot, the same
+    // physical representation valueKindFromTypeName already gives File
+    // handles. Scoped to this file's payload-shape resolution so it doesn't
+    // change valueKindFromTypeName's widely-shared behavior elsewhere.
+    auto splitPointerLikePayloadTypeText = [](const std::string &typeText,
+                                              std::string &elementTypeTextOut) {
+      const std::string normalized = trimTemplateTypeText(typeText);
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(normalized, base, arg)) {
+        return false;
+      }
+      const std::string trimmedBase = trimTemplateTypeText(base);
+      if (trimmedBase != "Pointer" && trimmedBase != "/Pointer" &&
+          trimmedBase != "Reference" && trimmedBase != "/Reference") {
+        return false;
+      }
+      elementTypeTextOut = trimTemplateTypeText(arg);
+      return true;
+    };
+
+    auto pointerLikePayloadValueKind = [&](const std::string &typeText) {
+      std::string elementTypeText;
+      if (!splitPointerLikePayloadTypeText(typeText, elementTypeText)) {
+        return LocalInfo::ValueKind::Unknown;
+      }
+      return LocalInfo::ValueKind::Int64;
+    };
+
+    auto valueKindOrPointerLikeFromTypeName = [&](const std::string &typeText) {
+      const LocalInfo::ValueKind kind = valueKindFromTypeName(typeText);
+      if (kind != LocalInfo::ValueKind::Unknown) {
+        return kind;
+      }
+      return pointerLikePayloadValueKind(typeText);
     };
 
     auto applyStdlibResultSumInfoToLocal =
@@ -230,13 +271,22 @@
         infoOut.slotCount = 0;
         return true;
       }
-      infoOut.valueKind = sumPayloadKind(variant);
+      const std::string payloadTypeText = sumPayloadTypeText(variant);
+      std::string pointerElementTypeText;
+      if (splitPointerLikePayloadTypeText(payloadTypeText, pointerElementTypeText)) {
+        infoOut.valueKind = LocalInfo::ValueKind::Int64;
+        infoOut.isPointerLike = true;
+        infoOut.pointerElementTypeText = std::move(pointerElementTypeText);
+        infoOut.slotCount = 1;
+        return true;
+      }
+      infoOut.valueKind = valueKindFromTypeName(payloadTypeText);
       if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
         infoOut.slotCount = 1;
         return true;
       }
       std::string payloadStructPath;
-      if (!resolveStructTypeName(sumPayloadTypeText(variant),
+      if (!resolveStructTypeName(payloadTypeText,
                                  sumDef.namespacePrefix,
                                  payloadStructPath)) {
         return false;
@@ -262,6 +312,14 @@
       }
       const std::string payloadTypeText =
           trimTemplateTypeText(publishedVariant.payloadTypeText);
+      std::string pointerElementTypeText;
+      if (splitPointerLikePayloadTypeText(payloadTypeText, pointerElementTypeText)) {
+        infoOut.valueKind = LocalInfo::ValueKind::Int64;
+        infoOut.isPointerLike = true;
+        infoOut.pointerElementTypeText = std::move(pointerElementTypeText);
+        infoOut.slotCount = 1;
+        return true;
+      }
       infoOut.valueKind = valueKindFromTypeName(payloadTypeText);
       if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
         infoOut.slotCount = 1;
@@ -710,7 +768,7 @@
           if (normalizedTypeText.empty()) {
             return false;
           }
-          const LocalInfo::ValueKind valueKind = valueKindFromTypeName(normalizedTypeText);
+          const LocalInfo::ValueKind valueKind = valueKindOrPointerLikeFromTypeName(normalizedTypeText);
           if (valueKind != LocalInfo::ValueKind::Unknown) {
             initializerKindOut = valueKind;
             return true;
@@ -2381,6 +2439,18 @@
         return false;
       }
       payloadInfoOut = {};
+      if (payloadStorage.isPointerLike) {
+        payloadInfoOut.kind = LocalInfo::Kind::Pointer;
+        payloadInfoOut.valueKind = valueKindFromTypeName(payloadStorage.pointerElementTypeText);
+        std::string pointerElementStructPath;
+        if (payloadInfoOut.valueKind == LocalInfo::ValueKind::Unknown &&
+            resolveStructTypeName(payloadStorage.pointerElementTypeText,
+                                  sumDef.namespacePrefix,
+                                  pointerElementStructPath)) {
+          payloadInfoOut.structTypeName = std::move(pointerElementStructPath);
+        }
+        return true;
+      }
       payloadInfoOut.kind = LocalInfo::Kind::Value;
       payloadInfoOut.valueKind =
           payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadStorage.valueKind;
@@ -2580,7 +2650,7 @@
         if (normalizedTypeText.empty()) {
           return false;
         }
-        if (valueKindFromTypeName(normalizedTypeText) != LocalInfo::ValueKind::Unknown) {
+        if (valueKindOrPointerLikeFromTypeName(normalizedTypeText) != LocalInfo::ValueKind::Unknown) {
           return true;
         }
 

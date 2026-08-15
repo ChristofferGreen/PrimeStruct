@@ -6,6 +6,89 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation
+  - owner: ai
+  - created_at: 2026-08-15
+  - finished_at: 2026-08-15
+  - phase: Safe array extents and capability views
+  - parallel_track: safe-views-maybe-pointer
+  - depends_on: TODO-4612
+  - scope: TODO-4612's "Proposed: Optional Pointer" doc sketch
+    (`docs/CodeExamples.md`) showed `try_alloc_slot` returning
+    `Maybe<Pointer<i32>>` via `some<Pointer<i32>>(alloc<i32>(1i32))`, marked
+    non-compiling. Root-cause why `Maybe<T>` construction stales when `T` is
+    itself a generic instantiation (`Pointer<i32>`), and fix it so
+    `Maybe<Pointer<T>>` constructs, compiles, and runs correctly end to end
+    (VM and native/exe backends).
+  - outcome:
+    - Root cause: the generic sum-lowering machinery in
+      `src/ir_lowerer/IrLowererLowerSumHelpers.h` resolves every sum
+      payload's storage shape as either a scalar `LocalInfo::ValueKind`
+      (`valueKindFromTypeName`) or a resolved stdlib struct path
+      (`resolveStructTypeName`) - there was no third option for a
+      `Pointer<T>`/`Reference<T>` payload, which is neither: it has no
+      scalar `ValueKind` of its own and isn't a stdlib struct `Definition`.
+      Every payload-shape resolver (construction, read-back, pick binding)
+      independently fell through both branches for `Pointer<i32>` and
+      surfaced as "stale semantic-product sum initializer type metadata"
+      the moment construction was attempted.
+    - Fix, scoped entirely to `IrLowererLowerSumHelpers.h` (did not touch
+      the shared, 284-call-site `valueKindFromTypeName` helper used well
+      beyond sum lowering, to avoid repeating this session's earlier
+      TODO-5247 lesson about broad blast radius): added a
+      `splitPointerLikePayloadTypeText` helper that recognizes
+      `Pointer<T>`/`Reference<T>` payload type text and extracts `T`;
+      `LoweredSumPayloadStorageInfo` gained `isPointerLike`/
+      `pointerElementTypeText` fields; `resolveSumPayloadStorageInfo` and
+      `resolvePublishedSumPayloadStorageInfo` now store such payloads as a
+      single `Int64` address slot (the same physical representation
+      `valueKindFromTypeName` already gives `File` handles); and
+      `makePickPayloadLocalInfo` now restores the payload's true
+      `LocalInfo::Kind::Pointer` identity (with the pointee's `ValueKind`/
+      struct path) when a `pick` arm binds it back out, instead of leaving
+      it a raw `Kind::Value` Int64 that `dereference`/`free` would reject.
+    - Debugging note kept for future sum-lowering work: while isolating
+      this, found and confirmed (via `git stash` against the unmodified
+      baseline) that `pick(localVar) { ... }` used as a bare statement with
+      plain assignment in its arms (rather than `return(pick(...) {...})`)
+      silently executes neither arm for ANY sum payload type, not just
+      pointers - reproduced identically for `Maybe<i32>`. Pre-existing,
+      unrelated to this fix, and out of scope; not filed as a new TODO
+      since every existing `pick` usage in the codebase and stdlib already
+      uses the working `return(pick(...) {...})` form.
+    - Also confirmed a second, separate pre-existing limit: `assign(...)`
+      through a pointer bound by a `pick` arm (`some(ptr) {
+      assign(dereference(ptr), ...) }`) is rejected with "assign target
+      must be a mutable binding", identically for `Maybe<i32>`'s plain
+      `v` binding - a general pick-arm-binding mutability gap, not a
+      pointer-specific one, so the shipped doc example writes through the
+      pointer before wrapping it in `Maybe`, then only reads through the
+      `pick` binding.
+    - `docs/CodeExamples.md`'s "Proposed: Optional Pointer" section was
+      renamed to "Optional Pointer" and its sketch replaced with a verified,
+      compiling, running example (construct via `try_alloc_slot`, `pick` to
+      read `none`/`some`, `dereference`/`free` the bound pointer).
+  - validation:
+    - New minimal repros compiled and run directly against `primec` on both
+      `--emit=vm` and `--emit=native` during investigation, isolating the
+      construction failure, then the pick-binding `Kind::Pointer` gap.
+    - `tests/unit/compile_run/test_compile_run_examples_docs.cpp`'s "safe
+      extent and cursor docs examples stay documented and executable" test
+      extended with a fifth `runVmAndNative` case locking the doc's exact
+      "Optional Pointer" example, compiling and running it on both VM and
+      native backends with the documented result (42).
+    - Full `./scripts/compile.sh --release` gate: 100% tests passed, 0
+      failed out of 1882. (Two individual `ir_pipeline` doctest cases - `ir
+      lowerer supports map method calls` and `semantics validate publishes
+      module artifacts in import order` - failed when the debug
+      `PrimeStruct_backend_ir_tests` binary was run standalone during
+      investigation; `git stash` confirmed both reproduce identically on
+      the unmodified baseline, so they predate and are unrelated to this
+      change. They did not reappear in the release-gate CTest run.)
+  - stop_rule: `Maybe<Pointer<T>>` construction/return/read works end to
+    end with a locked test and doc example; did not start TODO-5249 in the
+    same pass, per this task's own stop rule.
+
 - [x] TODO-4685: Generalize collection .prime file discovery to a directory scan
   - owner: ai
   - created_at: 2026-07-06
