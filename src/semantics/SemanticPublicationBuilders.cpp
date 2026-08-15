@@ -1069,7 +1069,9 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
                          binding,
                          restrictType,
                          parseError,
-                         &context.sumNames)) {
+                         &context.sumNames,
+                         nullptr,
+                         /*allowCapabilityArg=*/true)) {
       context.params.push_back(ParameterInfo{param.name, std::move(binding), nullptr});
     }
   }
@@ -1110,7 +1112,9 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
                               binding,
                               restrictType,
                               parseError,
-                              &context.sumNames)) {
+                              &context.sumNames,
+                              nullptr,
+                              /*allowCapabilityArg=*/true)) {
           paramsOk = false;
           break;
         }

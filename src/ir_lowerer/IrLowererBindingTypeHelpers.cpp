@@ -1592,7 +1592,10 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
     sawTypeTransform = true;
     const std::string normalizedName = normalizeCollectionBindingTypeName(transform.name);
     if (normalizedName == "Pointer" || normalizedName == "Reference") {
-      if (transform.templateArgs.size() == 1) {
+      // TODO-5249: an optional second template argument names a capability
+      // marker (Reference<T, Capability>/Pointer<T, Capability>); only the
+      // first argument (T) determines the value kind.
+      if (transform.templateArgs.size() == 1 || transform.templateArgs.size() == 2) {
         return valueKindFromTypeName(unwrapTopLevelUninitializedTypeText(transform.templateArgs.front()));
       }
       return LocalInfo::ValueKind::Unknown;

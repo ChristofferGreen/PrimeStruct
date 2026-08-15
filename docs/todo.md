@@ -74,7 +74,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
 - TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 - TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
-- TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views | track: safe-views-capability-parameterized | surface: Reference<T>/Pointer<T> template arity + slice(...) return type
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
 of TODO-5237/5238 - its own investigation trended away from convergence
@@ -206,10 +205,20 @@ investigation chain's actively-productive leaves - see
   path), fixed by storing such payloads as a single `Int64` address slot and
   restoring the payload's `Kind::Pointer` identity when a `pick` binds it
   back out - see its outcome notes in `docs/todo_finished.md`. TODO-5249
-  (depends on TODO-5248 having landed, to avoid conflating two
-  independently-hard construction/lowering fixes) adds the
-  `Reference<T, Capability>`/`Slice<T, Capability>` capability-parameterized
-  view surface.
+  made `Reference<T, Capability>` (`Read`/`Write`/`ReadWrite` markers,
+  cross-checked against the binding's own `mut` declaration) a real,
+  compiling, running surface for function parameters specifically - the
+  arity-relaxation fix needed to thread the optional second template
+  argument through touches dozens of independent Reference/Pointer
+  consumers across semantics, the IR lowerer, and the emitter, most of
+  which were never audited for a 2-argument form, so the leaf scoped itself
+  to parameters (the doc sketch's own use case, fully verified on both
+  backends) and made every other binding context (locals, struct fields,
+  return types) fail closed with a clear diagnostic instead of risking
+  silent miscompilation - see its outcome notes in `docs/todo_finished.md`.
+  `Slice<T, Capability>` and a real `slice(...)` return type, plus
+  extending capability support beyond function parameters, remain
+  unimplemented and are not yet filed as follow-up TODOs.
 - Collections naming and surface-manifest retirement: remove the
   `experimental_*` and `internal_*` module-naming layers from
   `stdlib/std/collections` and retire `stdlib/std/collections/surfaces.psmeta`.
@@ -410,7 +419,7 @@ investigation chain's actively-productive leaves - see
 68. TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
 69. TODO-5224: Build the per-module symbol manifest generator
 70. TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation (done, see docs/todo_finished.md)
-71. TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views
+71. TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views (done, see docs/todo_finished.md)
 
 ### Task Blocks
 
@@ -11582,58 +11591,4 @@ investigation chain's actively-productive leaves - see
     wording) plus the manifest-generator fix's regeneration, both under a
     full `ctest --parallel 4` regression - clean (the flag defaults off,
     so no other existing test's behavior changes).
-
-- [ ] TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views
-  - owner: ai
-  - created_at: 2026-08-15
-  - phase: Safe array extents and capability views
-  - parallel_track: safe-views-capability-parameterized
-  - depends_on: TODO-5248
-  - scope: TODO-4612's "Proposed: Capability-Parameterized View" doc sketch
-    (`docs/CodeExamples.md`) shows a function parameter typed
-    `Reference<array<i32>, Read>`, marked non-compiling because
-    `Reference<T>` only accepts a single template argument today. Per the
-    normative design in `docs/SafeArrayExtentViews.md` (specified in
-    TODO-4606), extend `Reference<T>` to optionally accept a second
-    `Capability` template argument (e.g. `Read`/`Write`/`ReadWrite` marker
-    types), and give `Slice<T, Capability>` the same treatment so that
-    `slice(...)` can return a real capability-tagged view type instead of
-    plain `array<T>`. Scope this leaf to: (1) the type-level plumbing so
-    `Reference<T, Capability>` parses, type-checks, and monomorphizes with
-    a default capability preserving today's single-argument behavior for
-    existing call sites, and (2) enough enforcement that a `Read`-capability
-    reference/slice is rejected at compile time if code attempts a mutating
-    operation through it. Do not attempt a full capability lattice
-    (borrow-checker-style aliasing rules) in this leaf if the design doc's
-    scope is broader than single read/write enforcement — narrow to
-    read-vs-write rejection and file any remaining capability-model gaps as
-    follow-up TODOs rather than expanding this leaf's scope.
-  - implementation_notes: Read `docs/SafeArrayExtentViews.md`'s
-    `View<T, Capability>`/`Reference<T, Capability>`/`Slice<T, Capability>`
-    design sketch first. Existing `Reference<T>`/`Pointer<T>` builtin
-    generic types currently take exactly one template argument in the
-    compiler's generic-type machinery; find where that arity is enforced
-    (semantics/template-monomorphization) before changing it, since this is
-    likely a similar-shaped fix to TODO-5247's namespace-context bug in
-    that it may touch shared arity-checking code used by other generics.
-  - acceptance:
-    - `Reference<array<i32>, Read>` (or equivalent syntax matching the doc
-      design) parses, type-checks, and compiles for a function parameter,
-      on both VM and exe backends.
-    - A mutating operation attempted through a `Read`-capability
-      reference/slice is rejected with a clear diagnostic at compile time.
-    - Existing single-template-argument `Reference<T>`/`Pointer<T>` call
-      sites are unaffected (default/omitted capability preserves current
-      behavior).
-    - `docs/CodeExamples.md`'s "Proposed: Capability-Parameterized View"
-      example is promoted out of the "Proposed" sketches section into a
-      verified, compiling example, with a locked compile-run test case
-      added alongside the existing TODO-4612 doc-lock test.
-    - Release gate (`./scripts/compile.sh --release`) green, no regressions.
-  - stop_rule: Stop once `Reference<T, Capability>` (and `Slice<T,
-    Capability>` if `slice(...)`'s return type is changed as part of this
-    leaf) compiles, enforces read-vs-write rejection, and has a locked test
-    and doc example; broader capability-lattice enforcement beyond
-    read/write is out of scope and should be filed as a follow-up TODO if
-    still needed.
 

@@ -6938,7 +6938,10 @@ CompileTimeIfCandidateFacts buildCompileTimeIfCandidateFacts(
                                        importAliases,
                                        binding,
                                        restrictType,
-                                       ignoredError)) {
+                                       ignoredError,
+                                       nullptr,
+                                       nullptr,
+                                       /*allowCapabilityArg=*/true)) {
         paramsOk = false;
         break;
       }
@@ -7020,7 +7023,10 @@ makeCompileTimeIfRequirementContext(
                                     importAliases,
                                     binding,
                                     restrictType,
-                                    ignoredError)) {
+                                    ignoredError,
+                                    nullptr,
+                                    nullptr,
+                                    /*allowCapabilityArg=*/true)) {
       context.params.push_back(
           semantics::ParameterInfo{param.name, binding, nullptr});
     }

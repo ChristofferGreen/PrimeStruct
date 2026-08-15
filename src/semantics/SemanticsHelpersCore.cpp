@@ -136,7 +136,8 @@ bool parseBindingInfo(const Expr &expr,
                       std::optional<std::string> &restrictTypeOut,
                       std::string &error,
                       const std::unordered_set<std::string> *additionalNominalTypes,
-                      const std::unordered_map<std::string, std::string> *compileTimeTypeLocals) {
+                      const std::unordered_map<std::string, std::string> *compileTimeTypeLocals,
+                      bool allowCapabilityArg) {
   std::string typeName;
   bool typeHasTemplate = false;
   std::optional<std::string> restrictType;
@@ -320,9 +321,21 @@ bool parseBindingInfo(const Expr &expr,
         return false;
       }
     }
-    if (transformName == "Pointer") {
-      if (transformTemplateArgs.size() != 1) {
-        error = "Pointer requires a template argument";
+    if (transformName == "Pointer" || transformName == "Reference") {
+      // TODO-5249: an optional second template argument names a capability
+      // marker (Read/Write/ReadWrite) - Reference<T, Capability>/
+      // Pointer<T, Capability>. It is validated and recorded separately in
+      // info.typeCapabilityArg; info.typeTemplateArg keeps carrying only T,
+      // unchanged, so every existing single-argument consumer is unaffected.
+      if (transformTemplateArgs.size() == 2 && !allowCapabilityArg) {
+        error = transformName +
+                "<T, Capability> is only supported for function parameters "
+                "today (TODO-5249)";
+        return false;
+      }
+      if (transformTemplateArgs.size() != 1 &&
+          !(allowCapabilityArg && transformTemplateArgs.size() == 2)) {
+        error = transformName + " requires a template argument";
         return false;
       }
       if (!transform.arguments.empty()) {
@@ -333,23 +346,14 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      typeName = transformName;
-      typeHasTemplate = true;
-      info.typeTemplateArg = transformTemplateArgs.front();
-      continue;
-    }
-    if (transformName == "Reference") {
-      if (transformTemplateArgs.size() != 1) {
-        error = "Reference requires a template argument";
-        return false;
-      }
-      if (!transform.arguments.empty()) {
-        error = "binding transforms do not take arguments";
-        return false;
-      }
-      if (!typeName.empty()) {
-        error = "binding requires exactly one type";
-        return false;
+      if (transformTemplateArgs.size() == 2) {
+        const std::string &capability = transformTemplateArgs.back();
+        if (capability != "Read" && capability != "Write" && capability != "ReadWrite") {
+          error = "unknown " + transformName + " capability: " + capability +
+                  " (expected Read, Write, or ReadWrite)";
+          return false;
+        }
+        info.typeCapabilityArg = capability;
       }
       typeName = transformName;
       typeHasTemplate = true;
@@ -432,6 +436,26 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
     info.typeTemplateArg = namespacePrefix;
+  }
+  if ((typeName == "Pointer" || typeName == "Reference") && !info.typeCapabilityArg.empty()) {
+    // TODO-5249: cross-check the capability annotation against the binding's
+    // actual mutability. A Read view must not also be declared mut, and a
+    // Write/ReadWrite view is meaningless without mut (nothing else in this
+    // function's binding-info would ever let a write through it). This is
+    // the whole of this leaf's compile-time enforcement: it rejects mutating
+    // through a Read-capability binding by rejecting the contradictory
+    // declaration up front, on top of the existing mutable-binding check
+    // that already rejects any write attempted through a non-mut binding.
+    if (info.typeCapabilityArg == "Read" && info.isMutable) {
+      error = typeName + "<" + info.typeTemplateArg + ", Read> binding cannot be mut";
+      return false;
+    }
+    if ((info.typeCapabilityArg == "Write" || info.typeCapabilityArg == "ReadWrite") &&
+        !info.isMutable) {
+      error = typeName + "<" + info.typeTemplateArg + ", " + info.typeCapabilityArg +
+              "> binding requires mut";
+      return false;
+    }
   }
   restrictTypeOut = restrictType;
   std::string fullType = typeName;

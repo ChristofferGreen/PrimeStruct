@@ -31,6 +31,12 @@ enum class ReturnKind {
 struct BindingInfo {
   std::string typeName;
   std::string typeTemplateArg;
+  // TODO-5249: optional second template argument on Reference<T, Capability>/
+  // Pointer<T, Capability> (e.g. "Read"/"Write"/"ReadWrite"). Empty when the
+  // binding used the plain single-argument form. Kept as a separate field
+  // (rather than folded into typeTemplateArg) so the ~127 existing consumers
+  // of typeTemplateArg see no behavior change.
+  std::string typeCapabilityArg;
   bool isMutable = false;
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
@@ -219,7 +225,16 @@ bool parseBindingInfo(const Expr &expr,
                       std::optional<std::string> &restrictTypeOut,
                       std::string &error,
                       const std::unordered_set<std::string> *additionalNominalTypes = nullptr,
-                      const std::unordered_map<std::string, std::string> *compileTimeTypeLocals = nullptr);
+                      const std::unordered_map<std::string, std::string> *compileTimeTypeLocals = nullptr,
+                      // TODO-5249: the Reference<T, Capability>/Pointer<T, Capability>
+                      // second template argument is only verified correct for function
+                      // parameter bindings today - the IR lowerer and emitter have many
+                      // other Reference/Pointer consumers (locals, struct fields, return
+                      // types, method receivers) that were not audited for a 2-argument
+                      // form and can silently miscompile it. Default false (reject) so
+                      // every existing call site fails closed; only the confirmed
+                      // parameter-binding call sites opt in.
+                      bool allowCapabilityArg = false);
 bool isEffectName(const std::string &text);
 bool validateEffectsTransform(const Transform &transform,
                               const std::string &context,

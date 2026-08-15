@@ -6,6 +6,96 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views
+  - owner: ai
+  - created_at: 2026-08-15
+  - finished_at: 2026-08-15
+  - phase: Safe array extents and capability views
+  - parallel_track: safe-views-capability-parameterized
+  - depends_on: TODO-5248
+  - scope: TODO-4612's "Proposed: Capability-Parameterized View" doc sketch
+    showed a function parameter typed `Reference<array<i32>, Read>`, marked
+    non-compiling because `Reference<T>` only accepted one template
+    argument. Extend `Reference<T>`/`Pointer<T>` to optionally accept a
+    second `Capability` template argument, with enough enforcement that a
+    `Read`-capability reference is rejected at compile time for a mutating
+    operation.
+  - outcome:
+    - `BindingInfo` gained a `typeCapabilityArg` field alongside the
+      existing `typeTemplateArg`, kept deliberately separate so every
+      existing single-argument consumer of `typeTemplateArg` (127 call
+      sites) sees no behavior change. `SemanticsHelpersCore.cpp`'s shared
+      `parseBindingInfo` (used for both parameters and local bindings) now
+      accepts a 2-argument `Reference<T, Capability>`/`Pointer<T,
+      Capability>` form, validates the capability is `Read`/`Write`/
+      `ReadWrite`, and cross-checks it against the binding's own `mut`
+      declaration: a `Read` binding cannot be `mut`, and a `Write`/
+      `ReadWrite` binding must be. Mutation-through-a-non-mut-binding was
+      already rejected by the pre-existing general mutable-binding check
+      ("assign target must be a mutable binding"), so `Read` enforcement
+      falls directly out of that plus the new consistency check - no new
+      write-tracking machinery was needed.
+    - Investigation found the real risk was much larger than the type-level
+      parsing: relaxing the semantics-level arity check alone let
+      `Reference<T, Capability>` used as a *local* binding compile cleanly
+      but silently produce the **wrong runtime value**, inconsistently
+      between backends (VM returned 0, native returned 48, for a case that
+      should have returned 9) - not an error, a real correctness bug. Root
+      cause: dozens of independent Reference/Pointer consumers across
+      `src/ir_lowerer/` and `src/emitter/` (struct layout, method
+      resolution, count/access classification, return-kind inference,
+      packed-arg/lambda capture, uninitialized-storage inference, and
+      more - roughly 90 call sites matched a `"Reference"`/`"Pointer"`
+      arity check in a `grep`) independently assume exactly one template
+      argument and were never audited for a second one; fixing all of them
+      safely was not achievable in this leaf without repeating the
+      regression risk this session already hit once on TODO-5247's first,
+      overly-broad attempt.
+    - Resolution: scoped real support to **function parameters only** -
+      the doc sketch's own use case, and the one context proven correct on
+      both backends (found and fixed one genuine gap along the way:
+      `IrLowererBindingTypeHelpers.cpp`'s `bindingValueKindFromTransforms`
+      also needed the arity relax, since it separately re-derives a
+      binding's `ValueKind` from raw transforms). `parseBindingInfo` gained
+      an `allowCapabilityArg` parameter defaulting to `false`, so every one
+      of its ~20 existing call sites fails closed by default; only the 5
+      confirmed function-parameter call sites (`SemanticPublicationBuilders.cpp`
+      x2, `SemanticsValidate.cpp` x2, `SemanticsValidatorBuildParameters.cpp`)
+      opt in. A 2-argument capability form used on a local binding, struct
+      field, or return type is now rejected with a clear diagnostic
+      ("Reference<T, Capability> is only supported for function parameters
+      today (TODO-5249)") instead of silently miscompiling - fail closed
+      rather than fail silent, consistent with this session's established
+      pattern (the bounded recursion-depth guard from TODO-4610, the
+      narrow namespace-context fix from TODO-5247).
+    - `docs/CodeExamples.md`'s "Proposed: Capability-Parameterized View"
+      was renamed to "Capability-Parameterized Reference Parameter" and
+      promoted to a verified, compiling, running example, with an explicit
+      note that non-parameter contexts and `Slice<T, Capability>`/
+      `slice(...)` remain out of scope.
+  - validation:
+    - New dedicated suite `tests/unit/compile_run/test_compile_run_vm_reference_capability.cpp`
+      (8 cases): the doc example's read-only sum on both VM and native
+      backends, a `ReadWrite mut` parameter that actually mutates through
+      the reference, `Read+mut` rejection, `Write` without `mut` rejection,
+      mutation attempted through a `Read` parameter rejection, an unknown
+      capability name rejection, a local-binding capability-form rejection
+      (locking in the fail-closed behavior), and confirmation that plain
+      single-argument `Reference<T>` is unaffected.
+    - `tests/unit/compile_run/test_compile_run_examples_docs.cpp`'s "safe
+      extent and cursor docs examples stay documented and executable" test
+      extended with a sixth `runVmAndNative` case locking the doc's exact
+      "Capability-Parameterized Reference Parameter" example (result 6) on
+      both backends.
+    - Full `./scripts/compile.sh --release` gate, run cleanly by itself
+      (after an earlier accidental duplicate concurrent run was identified
+      and stopped): 100% tests passed, 0 failed.
+  - stop_rule: `Reference<T, Capability>` compiles and enforces
+    read-vs-write rejection for function parameters, with a locked test and
+    doc example; `Slice<T, Capability>`, `slice(...)`'s return type, and
+    capability support for non-parameter binding contexts are out of scope
+    and not yet filed as follow-up TODOs.
+
 - [x] TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation
   - owner: ai
   - created_at: 2026-08-15

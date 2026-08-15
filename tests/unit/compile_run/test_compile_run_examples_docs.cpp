@@ -496,10 +496,12 @@ TEST_CASE("spinning cube shared source reflects current profile support") {
 TEST_CASE("safe extent and cursor docs examples stay documented and executable") {
   // TODO-4612 added the first four verified examples below; TODO-5248
   // promoted "Optional Pointer" out of the "Proposed" sketches into a fifth
-  // verified one. All five must stay byte-identical (modulo surrounding
-  // markdown fences) with docs/CodeExamples.md's "Safe Extents And Cursor
-  // Examples" section, and must keep compiling and returning the documented
-  // result on both backends.
+  // verified one, and TODO-5249 promoted "Capability-Parameterized View"
+  // into a sixth (function-parameter usage only - see its own text for the
+  // still-out-of-scope contexts). All six must stay byte-identical (modulo
+  // surrounding markdown fences) with docs/CodeExamples.md's "Safe Extents
+  // And Cursor Examples" section, and must keep compiling and returning the
+  // documented result on both backends.
   auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
     std::filesystem::path path = std::filesystem::path("..") / "docs" / name;
     if (!std::filesystem::exists(path)) {
@@ -528,7 +530,7 @@ TEST_CASE("safe extent and cursor docs examples stay documented and executable")
       "[Cursor<i32> mut] it{reverseStartVector<i32>(values)}",
       "### Optional Pointer",
       "return(some<Pointer<i32>>(slot))",
-      "### Proposed: Capability-Parameterized View",
+      "### Capability-Parameterized Reference Parameter",
       "[Reference<array<i32>, Read>] values"};
   for (const std::string &snippet : requiredCodeExampleSnippets) {
     CAPTURE(snippet);
@@ -662,6 +664,25 @@ main() {
   })
 }
 )", 42);
+
+  runVmAndNative("docs_safe_extents_capability_reference_param", R"(
+[return<int>]
+sum_read_only([Reference<array<i32>, Read>] values) {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < count(values)) {
+    total = total + values[i]
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(sum_read_only(values))
+}
+)", 6);
 }
 
 TEST_SUITE_END();

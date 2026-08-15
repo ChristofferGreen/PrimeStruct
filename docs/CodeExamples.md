@@ -1014,19 +1014,24 @@ Why this is good:
   so `dereference(ptr)` and `free(ptr)` work exactly as they would on a
   directly-bound pointer.
 
-### Proposed: Capability-Parameterized View
+### Capability-Parameterized Reference Parameter
 
 `docs/SafeArrayExtentViews.md` specifies `Reference<T, Capability>` and
 `Slice<T, Capability>` sharing one underlying view model, with the
-capability parameter carrying read/write/escape authority. This is proposed
-syntax and does not compile with the current toolchain: `Reference<T>` only
-accepts one template argument today, and `slice(...)` returns a plain
-`array<T>` rather than a `Slice<T, Capability>` view.
+capability parameter carrying read/write/escape authority. `Reference<T,
+Capability>` as a function parameter type is verified against the current
+release toolchain, with `Read`/`Write`/`ReadWrite` capability markers
+checked against the binding's own `mut` declaration at compile time (a
+`Read` reference cannot be `mut`, and a `Write`/`ReadWrite` reference must
+be). This is currently scoped to function parameters only: using the
+two-argument form on a local binding, struct field, or return type is
+rejected with a clear diagnostic rather than silently miscompiled, since
+those other binding contexts have not been audited yet. `Slice<T,
+Capability>` and a `slice(...)` return type change remain unimplemented.
 
 ```prime
 [return<int>]
 sum_read_only([Reference<array<i32>, Read>] values) {
-  // sketch only - Reference<T> does not accept a Capability argument yet
   [i32 mut] total{0i32}
   [i32 mut] i{0i32}
   while(i < count(values)) {
@@ -1035,7 +1040,22 @@ sum_read_only([Reference<array<i32>, Read>] values) {
   }
   return(total)
 }
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(sum_read_only(values))
+}
 ```
+
+Why this is good:
+- The `Read` capability documents at the call boundary that
+  `sum_read_only` cannot write through `values`, and the compiler rejects a
+  contradictory `mut` declaration on the same binding rather than trusting
+  the name alone.
+- The parameter's element type (`array<i32>`) is completely ordinary; the
+  capability is metadata layered on top of the existing `Reference<T>`
+  surface, not a new value representation callers need to learn.
 
 ## Intentional Diagnostic Examples
 
