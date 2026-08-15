@@ -1346,6 +1346,11 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
   if (name == "args") {
     return "array";
   }
+  // TODO-5250: Slice<T, Capability> desugars to array<T> - see the matching
+  // comment in SemanticsBindingTypeHelpers.cpp's normalizeBindingTypeName.
+  if (name == "Slice") {
+    return "array";
+  }
   return name;
 }
 

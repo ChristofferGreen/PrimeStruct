@@ -247,6 +247,14 @@ std::string normalizeBindingTypeNameUncached(const std::string &name) {
   if (name == "array") {
     return "array";
   }
+  // TODO-5250: Slice<T, Capability> desugars to array<T> at the binding-type
+  // level (same physical representation `slice(...)` already produces), so
+  // every existing array<T> consumer sees ordinary "array" and needs no
+  // Slice-specific handling. The Capability argument is tracked separately
+  // (BindingInfo::typeCapabilityArg), not through this normalized name.
+  if (name == "Slice") {
+    return "array";
+  }
   if (name == "Buffer" || name == "std/gfx/Buffer" || name == "/std/gfx/Buffer" ||
       name == "std/gfx/experimental/Buffer" || name == "/std/gfx/experimental/Buffer") {
     return "Buffer";

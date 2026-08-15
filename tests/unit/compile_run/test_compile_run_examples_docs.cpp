@@ -496,12 +496,14 @@ TEST_CASE("spinning cube shared source reflects current profile support") {
 TEST_CASE("safe extent and cursor docs examples stay documented and executable") {
   // TODO-4612 added the first four verified examples below; TODO-5248
   // promoted "Optional Pointer" out of the "Proposed" sketches into a fifth
-  // verified one, and TODO-5249 promoted "Capability-Parameterized View"
-  // into a sixth (function-parameter usage only - see its own text for the
-  // still-out-of-scope contexts). All six must stay byte-identical (modulo
-  // surrounding markdown fences) with docs/CodeExamples.md's "Safe Extents
-  // And Cursor Examples" section, and must keep compiling and returning the
-  // documented result on both backends.
+  // verified one, TODO-5249 promoted "Capability-Parameterized View" into a
+  // sixth (function-parameter usage only - see its own text for the
+  // still-out-of-scope contexts), and TODO-5250 added a seventh
+  // ("Capability-Parameterized Slice Parameter", also function-parameter
+  // only). All seven must stay byte-identical (modulo surrounding markdown
+  // fences) with docs/CodeExamples.md's "Safe Extents And Cursor Examples"
+  // section, and must keep compiling and returning the documented result on
+  // both backends.
   auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
     std::filesystem::path path = std::filesystem::path("..") / "docs" / name;
     if (!std::filesystem::exists(path)) {
@@ -531,7 +533,9 @@ TEST_CASE("safe extent and cursor docs examples stay documented and executable")
       "### Optional Pointer",
       "return(some<Pointer<i32>>(slot))",
       "### Capability-Parameterized Reference Parameter",
-      "[Reference<array<i32>, Read>] values"};
+      "[Reference<array<i32>, Read>] values",
+      "### Capability-Parameterized Slice Parameter",
+      "sum_window([Slice<i32, Read>] window)"};
   for (const std::string &snippet : requiredCodeExampleSnippets) {
     CAPTURE(snippet);
     CHECK(codeExamples.find(snippet) != std::string::npos);
@@ -683,6 +687,26 @@ main() {
   return(sum_read_only(values))
 }
 )", 6);
+
+  runVmAndNative("docs_safe_extents_capability_slice_param", R"(
+[return<int>]
+sum_window([Slice<i32, Read>] window) {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < count(window)) {
+    total = total + window[i]
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
+  [array<i32>] window{slice(values, 1i32, 3i32)}
+  return(sum_window(window))
+}
+)", 16);
 }
 
 TEST_SUITE_END();

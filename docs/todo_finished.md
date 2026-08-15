@@ -6,6 +6,102 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 15, 2026)**
+- [x] TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type
+  - owner: ai
+  - created_at: 2026-08-15
+  - finished_at: 2026-08-15
+  - phase: Safe array extents and capability views
+  - parallel_track: safe-views-slice-capability
+  - depends_on: TODO-5249
+  - scope: `Slice<T, Capability>` shares `Reference<T, Capability>`'s
+    (TODO-5249) view model but with a runtime `count` instead of a
+    statically-one element count; `slice(...)` (TODO-4608) returned a plain
+    `array<T>` with no capability tag. Give `Slice<T, Capability>` a real
+    construction-and-read path, with a mutating operation through a
+    `Read`-capability slice rejected at compile time.
+  - outcome:
+    - Investigation of `slice(...)`'s existing IR lowering
+      (`src/ir_lowerer/IrLowererLowerEmitExpr.h`) found it already
+      heap-allocates a new buffer with a `count` header slot and copies the
+      sliced range into it - i.e. `slice(...)`'s result is *already*
+      physically the `{ pointer, count }` view shape the design doc
+      describes, under the `array<T>` name. This meant `Slice<T,
+      Capability>` did not need a new runtime representation at all: it was
+      implemented as a semantics-level *desugaring* to `array<T>`, not a
+      distinct physical type (a deliberate departure from this task's own
+      original "not `array<T>` aliased" acceptance line, superseded by the
+      scope's own explicit permission to trade completeness for safety).
+      `parseBindingInfo` (`src/semantics/SemanticsHelpersCore.cpp`) gained a
+      `Slice` transform block requiring exactly 2 template arguments
+      (`T`, `Capability`), validating the capability name, and setting
+      `typeName = "array"` (not `"Slice"`) with the capability recorded
+      separately in `BindingInfo::typeCapabilityArg` - reusing TODO-5249's
+      `Read`-cannot-be-`mut`/`Write`-`ReadWrite`-must-be-`mut` consistency
+      check verbatim (generalized off a new `capabilitySourceTypeName`
+      field so diagnostics still say "Slice" rather than "array").
+    - Because the desugared type is exactly `array<T>`, `slice(...)` did
+      not need to change at all: a caller builds the value with the
+      existing checked `slice(...)` into a plain `[array<T>]` local and
+      passes it directly to a `Slice<T, Capability>`-typed parameter - no
+      new constructor function needed. `count(...)`/indexing on the
+      parameter are the exact same array operations, and mutation-through-
+      a-non-mut-binding rejection ("assign target must be a mutable
+      binding") already applied for free, the same free-enforcement
+      insight TODO-5249 found for `Reference<T, Capability>`.
+    - The one required new fix: `normalizeCollectionBindingTypeName`
+      (`src/ir_lowerer/IrLowererBindingTypeHelpers.cpp`) and
+      `normalizeBindingTypeName` (`src/semantics/SemanticsBindingTypeHelpers.cpp`)
+      both gained a `"Slice" -> "array"` mapping. Both functions are the
+      canonicalization chokepoint essentially every array-typed-binding
+      consumer in the IR lowerer and emitter already routes through (unlike
+      `Reference`/`Pointer`, which have no equivalent chokepoint - that
+      asymmetry is *why* TODO-5249 needed to scope down to parameters via
+      an explicit allowlist, while `Slice` only needed this one mapping
+      plus the parameter-scoping guard for defense in depth). Grepping for
+      direct `transform.name == "array"` raw-AST comparisons (the pattern
+      that broke `Reference`/`Pointer` locals) found zero matches anywhere
+      in `src/ir_lowerer/` or `src/emitter/`, confirming array-typed
+      bindings don't have that failure mode.
+    - Scoped to function parameters only, matching TODO-5249's
+      `allowCapabilityArg` opt-in exactly (same 5 call sites); a local
+      `[Slice<T, Capability>]` is rejected with a clear diagnostic
+      ("Slice<T, Capability> is only supported for function parameters
+      today (TODO-5250)") rather than silently miscompiled - see TODO-5251
+      for why local-binding support was attempted and reverted in the same
+      session (a different, unrelated "missing semantic-product array
+      extent fact" gap in the TODO-4607 array-extent-fact subsystem, not
+      yet audited for `Slice`-desugared bindings).
+    - `docs/CodeExamples.md`'s "Proposed: Capability-Parameterized View"
+      intro paragraph was trimmed (the `Slice`/`slice(...)` caveat no
+      longer applies), and a new "Capability-Parameterized Slice Parameter"
+      subsection was added alongside TODO-5249's "Capability-Parameterized
+      Reference Parameter".
+  - validation:
+    - New dedicated suite `tests/unit/compile_run/test_compile_run_vm_slice_capability.cpp`
+      (9 cases): the doc example's read-only windowed sum on both VM and
+      native backends, a `ReadWrite mut` parameter that actually mutates
+      through the slice, `Read+mut` rejection, `Write` without `mut`
+      rejection, mutation attempted through a `Read` parameter rejection,
+      an unknown capability name rejection, a single-template-argument
+      `Slice<T>` rejection (capability is mandatory, unlike
+      `Reference<T>`/`Pointer<T>` where it's optional), a local-binding
+      rejection (locking the fail-closed scope), and confirmation that
+      plain `array<T>` parameters/locals are unaffected.
+    - `tests/unit/compile_run/test_compile_run_examples_docs.cpp`'s "safe
+      extent and cursor docs examples stay documented and executable" test
+      extended with a seventh `runVmAndNative` case locking the doc's exact
+      "Capability-Parameterized Slice Parameter" example (result 16) on
+      both backends.
+    - Full `./scripts/compile.sh --release` gate: 100% tests passed, 0
+      failed.
+  - stop_rule: A working, verified `Slice<T, Capability>` construction-and-
+    read path exists (via desugaring to `array<T>`, not a new distinct
+    representation) with capability enforcement, a locked test, and a doc
+    example, scoped to function parameters; did not expand
+    `Reference`/`Pointer` capability support to non-parameter contexts in
+    this pass (that remains TODO-5251, whose own investigation happened
+    in this session but did not land).
+
 - [x] TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views
   - owner: ai
   - created_at: 2026-08-15

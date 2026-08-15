@@ -1026,8 +1026,7 @@ checked against the binding's own `mut` declaration at compile time (a
 be). This is currently scoped to function parameters only: using the
 two-argument form on a local binding, struct field, or return type is
 rejected with a clear diagnostic rather than silently miscompiled, since
-those other binding contexts have not been audited yet. `Slice<T,
-Capability>` and a `slice(...)` return type change remain unimplemented.
+those other binding contexts have not been audited yet.
 
 ```prime
 [return<int>]
@@ -1056,6 +1055,47 @@ Why this is good:
 - The parameter's element type (`array<i32>`) is completely ordinary; the
   capability is metadata layered on top of the existing `Reference<T>`
   surface, not a new value representation callers need to learn.
+
+### Capability-Parameterized Slice Parameter
+
+`Slice<T, Capability>` shares `Reference<T, Capability>`'s view model but
+with a runtime `count` instead of a statically-one element count.
+`Slice<T, Capability>` desugars to `array<T>` - the exact runtime
+representation `slice(...)` (TODO-4608) already produces - so a caller
+constructs the value with ordinary `slice(...)` into a plain `[array<T>]`
+local and passes it to a `Slice<T, Capability>`-typed parameter; no new
+construction syntax is needed. This is verified against the current
+release toolchain, scoped to function parameters only for the same reason
+as `Reference<T, Capability>` above.
+
+```prime
+[return<int>]
+sum_window([Slice<i32, Read>] window) {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < count(window)) {
+    total = total + window[i]
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
+  [array<i32>] window{slice(values, 1i32, 3i32)}
+  return(sum_window(window))
+}
+```
+
+Why this is good:
+- `window` is built once with the existing checked `slice(...)` call, and
+  the `Read` capability at the parameter boundary documents (and enforces)
+  that `sum_window` cannot write through it, the same as the `Reference<T,
+  Capability>` example above.
+- Because `Slice<T, Capability>` desugars to `array<T>`, `count(window)`
+  and `window[i]` are the exact same operations already used on plain
+  arrays - no new indexing or length surface to learn.
 
 ## Intentional Diagnostic Examples
 
