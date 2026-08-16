@@ -262,8 +262,8 @@ investigation chain's actively-productive leaves - see
   `docs/FileLayoutRestructuring.md`.
 - Test name quality: improve test file and test case naming across the
   suite. Rename 63 opaque letter-suffixed shard files to topic-descriptive
-  names (TODO-4647). Fix 8 duplicate test names (TODO-4643, done, see
-  `docs/todo_finished.md`). Rewrite 53
+  names (TODO-4647, done, see `docs/todo_finished.md`). Fix 8 duplicate
+  test names (TODO-4643, done, see `docs/todo_finished.md`). Rewrite 53
   overlong names (TODO-4644, done, see `docs/todo_finished.md`). Drop
   ~740 redundant `compiles and runs`
   prefixes (TODO-4645, done, see `docs/todo_finished.md`). Tighten 12
@@ -370,7 +370,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-15. TODO-4647: Rename 63 opaque shard files with topic suffixes
 16. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
 17. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
 18. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
@@ -469,31 +468,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-- [ ] TODO-4647: Rename 63 opaque shard files with topic suffixes
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: Test name quality
-  - parallel_track: test-shard-renames
-  - depends_on: (none)
-  - scope: Rename 63 test files that use opaque letter suffixes (`_a.cpp`,
-    `_b.cpp`, ...) to use topic-descriptive suffixes instead. Each suffix
-    should describe the content cluster in that shard. Update CMake source
-    lists to match.
-  - implementation_notes: There are 19 base names with shard splits. The
-    largest is `test_compile_run_text_filters_diagnostics` with 22 shards.
-    For each base name, read the test names in each shard, identify the
-    topic cluster, and assign a short topic suffix (max 30 chars). Use
-    `git mv` to preserve history. See `docs/FileLayoutRestructuring.md`
-    for the full shard inventory.
-  - acceptance:
-    - No `_[a-z].cpp` or `_[a-z].h` files remain in `tests/unit/`.
-    - All shard suffixes are topic-descriptive (e.g., `_argument_shape`,
-      `_wrapper_methods`, `_png_read_filters`).
-    - CMake source lists reflect new paths.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once all shard files are renamed and tests pass; do
-    not change test names or test logic in this leaf.
 
 - [ ] TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
   - owner: ai

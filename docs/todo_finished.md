@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4647: Rename 63 opaque shard files with topic suffixes
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: Test name quality
+  - parallel_track: test-shard-renames
+  - depends_on: (none)
+  - scope: Rename 63 test files that use opaque letter suffixes (`_a.cpp`,
+    `_b.cpp`, ...) to use topic-descriptive suffixes instead. Each suffix
+    should describe the content cluster in that shard. Update CMake source
+    lists to match.
+  - implementation_notes: There are 19 base names with shard splits. The
+    largest is `test_compile_run_text_filters_diagnostics` with 22 shards.
+    For each base name, read the test names in each shard, identify the
+    topic cluster, and assign a short topic suffix (max 30 chars). Use
+    `git mv` to preserve history. See `docs/FileLayoutRestructuring.md`
+    for the full shard inventory.
+  - acceptance:
+    - No `_[a-z].cpp` or `_[a-z].h` files remain in `tests/unit/`.
+    - All shard suffixes are topic-descriptive (e.g., `_argument_shape`,
+      `_wrapper_methods`, `_png_read_filters`).
+    - CMake source lists reflect new paths.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once all shard files are renamed and tests pass; do
+    not change test names or test logic in this leaf.
+  - finished_2026-08-16: already fully done by prior work - `find
+    tests/unit -type f \( -name "*.cpp" -o -name "*.h" \) | grep -E
+    '_[a-z]\.(cpp|h)$'` returns zero matches. No code changes needed;
+    only `docs/todo.md` bookkeeping (including the "Execution Queue"
+    pinned snapshot string in `test_compile_run_examples_docs_locks.cpp`,
+    updated again for the same reason as the prior TODOs' notes).
+
 - [x] TODO-4646: Tighten 12 vague/short test names
   - owner: ai
   - created_at: 2026-06-11
