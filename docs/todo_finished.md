@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4644: Rewrite 53 overlong test names (>120 chars)
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: Test name quality
+  - parallel_track: test-name-overlong
+  - depends_on: TODO-4643
+  - scope: Rewrite all 53 test names longer than 120 characters to focus
+    on the behavior being verified, not the internal mechanism. Target max
+    80 characters per name. See `tests/TEST_INVENTORY.md` for the full
+    list.
+  - implementation_notes: The longest names embed entire diagnostic
+    descriptions. Rewrite each to answer "what does this prove?" rather
+    than describing internal paths.
+  - acceptance:
+    - `rg -U 'TEST_CASE\(\s*"([^"]{120,})"' tests/unit/` returns empty.
+    - All rewritten names are specific enough to identify the failure
+      without reading the test body.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once all names are under 120 characters and tests pass.
+  - finished_2026-08-16: the original "53" count was stale - only 9 names
+    were still 120+ characters (other test-name-quality work since this
+    TODO was filed had already fixed the rest). Rewrote all 9, mostly
+    trimming redundant qualifiers while keeping each name's distinguishing
+    content (e.g. "primec collect-diagnostics keeps user wrapper method
+    count capacity pair missing-arg diagnostics with reversed call order"
+    (121 chars) -> "primec diagnostics keep wrapper count/capacity
+    missing-arg pair, reversed call" (78 chars)); 8 of the 9 were
+    `primec`/`primevm` diagnostic-shape pairs in
+    `test_compile_run_text_filters_diagnostics_wrapper_*.cpp`, the 9th a
+    semantics rejection-case name. Verified `rg -U 'TEST_CASE\(\s*"([^"]{120,})"'
+    tests/unit/` now returns empty and no duplicate names were
+    introduced. Updated the `docs/todo.md` "Execution Queue" pinned
+    snapshot string in `test_compile_run_examples_docs_locks.cpp` again
+    (same reason as TODO-4641/4642's notes). Verified via
+    `./scripts/compile.sh --release`: 1958 CTest cases, 0 failures.
+
 - [x] TODO-4642: Consolidate loose top-level `src/` files into directories
   - owner: ai
   - created_at: 2026-06-11

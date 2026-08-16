@@ -55,7 +55,7 @@ main() {
 }
 
 TEST_CASE(
-    "primec collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics with count-arg mismatch") {
+    "primec diagnostics keep wrapper count/capacity mixed-shape, count-arg mismatch") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -110,7 +110,7 @@ main() {
 }
 
 TEST_CASE(
-    "primevm collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics with capacity-arg mismatch") {
+    "primevm diagnostics keep wrapper count/capacity mixed-shape, capacity mismatch") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {

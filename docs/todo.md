@@ -264,7 +264,8 @@ investigation chain's actively-productive leaves - see
   suite. Rename 63 opaque letter-suffixed shard files to topic-descriptive
   names (TODO-4647). Fix 8 duplicate test names (TODO-4643, done, see
   `docs/todo_finished.md`). Rewrite 53
-  overlong names (TODO-4644). Drop ~740 redundant `compiles and runs`
+  overlong names (TODO-4644, done, see `docs/todo_finished.md`). Drop
+  ~740 redundant `compiles and runs`
   prefixes (TODO-4645). Tighten 12 vague short names (TODO-4646). Full
   analysis at `docs/FileLayoutRestructuring.md`.
 - Oversized file refactoring: split files that are too large for
@@ -368,7 +369,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-11. TODO-4644: Rewrite 53 overlong test names (>120 chars)
 12. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
 13. TODO-4646: Tighten 12 vague/short test names
 15. TODO-4647: Rename 63 opaque shard files with topic suffixes
@@ -470,26 +470,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-- [ ] TODO-4644: Rewrite 53 overlong test names (>120 chars)
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: Test name quality
-  - parallel_track: test-name-overlong
-  - depends_on: TODO-4643
-  - scope: Rewrite all 53 test names longer than 120 characters to focus
-    on the behavior being verified, not the internal mechanism. Target max
-    80 characters per name. See `tests/TEST_INVENTORY.md` for the full
-    list.
-  - implementation_notes: The longest names embed entire diagnostic
-    descriptions. Rewrite each to answer "what does this prove?" rather
-    than describing internal paths.
-  - acceptance:
-    - `rg -U 'TEST_CASE\(\s*"([^"]{120,})"' tests/unit/` returns empty.
-    - All rewritten names are specific enough to identify the failure
-      without reading the test body.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once all names are under 120 characters and tests pass.
 
 - [ ] TODO-4645: Drop `compiles and runs` prefix from ~740 test names
   - owner: ai

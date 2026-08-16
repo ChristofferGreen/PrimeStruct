@@ -371,7 +371,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("vector namespaced alias rejects compatibility template forwarding for struct mismatch from chained method-call temporary") {
+TEST_CASE("vector namespaced alias rejects chained-temp struct-mismatch compat forwarding") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
