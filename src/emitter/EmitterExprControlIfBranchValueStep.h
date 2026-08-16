@@ -4,7 +4,7 @@
 #include <string>
 
 #include "EmitterExprControlIfBranchBodyStep.h"
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::emitter {
 

@@ -9,10 +9,10 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/FrontendSyntax.h"
+#include "primec/frontend/FrontendSyntax.h"
 
 #include <sstream>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

@@ -11,7 +11,7 @@
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererVectorRecordLayoutHelpers.h"
-#include "primec/SoaPathHelpers.h"
+#include "primec/ir/SoaPathHelpers.h"
 
 #include <algorithm>
 #include <cstring>
@@ -19,7 +19,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 namespace {

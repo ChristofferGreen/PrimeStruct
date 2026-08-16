@@ -10,14 +10,14 @@
 #include <utility>
 #include <vector>
 
-#include "primec/CompilePipeline.h"
-#include "primec/EmitKind.h"
-#include "primec/IrBackends.h"
-#include "primec/IrLowerer.h"
-#include "primec/IrPreparation.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/Semantics.h"
+#include "primec/pipeline/CompilePipeline.h"
+#include "primec/support/EmitKind.h"
+#include "primec/backend/IrBackends.h"
+#include "primec/ir/IrLowerer.h"
+#include "primec/ir/IrPreparation.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/semantics/Semantics.h"
 #include "primec/testing/TestScratch.h"
 
 namespace {

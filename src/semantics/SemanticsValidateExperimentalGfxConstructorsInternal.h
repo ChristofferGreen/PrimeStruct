@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primec/Semantics.h"
+#include "primec/semantics/Semantics.h"
 
 #include <string>
 #include <unordered_map>

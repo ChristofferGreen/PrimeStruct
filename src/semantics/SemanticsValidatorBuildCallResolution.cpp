@@ -1,7 +1,7 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
-#include "primec/CollectionSpellingClassifier.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 #include <cctype>
 #include <string_view>
@@ -364,7 +364,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   if (!expr.namespacePrefix.empty()) {
     const std::string normalizedPrefix = normalizedPrefixPath(expr.namespacePrefix);
     // Removed-name membership delegates to the single authoritative sets
-    // in primec/CollectionSpellingClassifier.h (decision D2).
+    // in primec/support/CollectionSpellingClassifier.h (decision D2).
     auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
       return classifierRemovedVectorCompatibilityHelper(helperName);
     };

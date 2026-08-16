@@ -1,8 +1,8 @@
-#include "primec/OptionsParser.h"
+#include "primec/support/OptionsParser.h"
 
-#include "primec/EmitKind.h"
-#include "primec/Options.h"
-#include "primec/TransformRegistry.h"
+#include "primec/support/EmitKind.h"
+#include "primec/support/Options.h"
+#include "primec/support/TransformRegistry.h"
 
 #include <cctype>
 #include <filesystem>

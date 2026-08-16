@@ -3,8 +3,8 @@
 #include "CondensationDag.h"
 #include "SemanticsHelpers.h"
 #include "TypeResolutionGraphPreparation.h"
-#include "primec/CompileArena.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/support/CompileArena.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
 #include <algorithm>

@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "primec/Ast.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/ast/Ast.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 namespace primec {
 struct SemanticProgram;

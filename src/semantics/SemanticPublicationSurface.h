@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SemanticsHelpers.h"
-#include "primec/Semantics.h"
+#include "primec/semantics/Semantics.h"
 
 #include <cstdint>
 #include <string>

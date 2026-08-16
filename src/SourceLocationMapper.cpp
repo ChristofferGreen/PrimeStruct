@@ -1,6 +1,6 @@
-#include "primec/SourceLocationMapper.h"
+#include "primec/support/SourceLocationMapper.h"
 
-#include "primec/CompileArena.h"
+#include "primec/support/CompileArena.h"
 
 #include <algorithm>
 #include <limits>

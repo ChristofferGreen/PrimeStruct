@@ -1,4 +1,4 @@
-#include "primec/TextFilterPipeline.h"
+#include "primec/support/TextFilterPipeline.h"
 
 #include "TextFilterPipelineInternal.h"
 

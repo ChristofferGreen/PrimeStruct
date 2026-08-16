@@ -3,8 +3,8 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
-#include "primec/StdlibCollectionPaths.h"
-#include "primec/StringLiteral.h"
+#include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/frontend/StringLiteral.h"
 
 #include <algorithm>
 #include <array>

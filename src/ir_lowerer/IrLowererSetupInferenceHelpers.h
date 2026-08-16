@@ -4,7 +4,7 @@
 #include <string>
 
 #include "IrLowererSharedTypes.h"
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec {
 struct SemanticProgram;

@@ -1,12 +1,12 @@
 #include <cstdio>
 #include "SemanticsHelpers.h"
-#include "primec/CollectionSpellingClassifier.h"
-#include "primec/CompileArena.h"
+#include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/CompileArena.h"
 #include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
-#include "primec/Ast.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/ast/Ast.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 

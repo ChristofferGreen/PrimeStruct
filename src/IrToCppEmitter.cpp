@@ -1,7 +1,7 @@
-#include "primec/IrToCppEmitter.h"
+#include "primec/backend/IrToCppEmitter.h"
 
 #include "IrToCppEmitterInternal.h"
-#include "primec/Ir.h"
+#include "primec/ir/Ir.h"
 
 #include <algorithm>
 #include <cstddef>

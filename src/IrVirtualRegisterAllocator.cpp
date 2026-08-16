@@ -1,4 +1,4 @@
-#include "primec/IrVirtualRegisterAllocator.h"
+#include "primec/ir/IrVirtualRegisterAllocator.h"
 
 #include <algorithm>
 #include <cstddef>

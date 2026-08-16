@@ -14,7 +14,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::ir_lowerer {
 

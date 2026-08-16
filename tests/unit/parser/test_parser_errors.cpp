@@ -1,5 +1,5 @@
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
 
 #include "third_party/doctest.h"
 

@@ -1,9 +1,9 @@
 #include "third_party/doctest.h"
 
-#include "primec/SemanticValidationPlan.h"
-#include "primec/SemanticsDefinitionPartitioner.h"
-#include "primec/SemanticsDefinitionPrepass.h"
-#include "primec/SemanticProduct.h"
+#include "primec/semantics/SemanticValidationPlan.h"
+#include "primec/semantics/SemanticsDefinitionPartitioner.h"
+#include "primec/semantics/SemanticsDefinitionPrepass.h"
+#include "primec/frontend/SemanticProduct.h"
 
 #include <algorithm>
 #include <string>

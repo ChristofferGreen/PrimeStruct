@@ -1,4 +1,4 @@
-#include "primec/SemanticsDefinitionPartitioner.h"
+#include "primec/semantics/SemanticsDefinitionPartitioner.h"
 
 namespace primec::semantics {
 

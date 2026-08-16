@@ -1,7 +1,7 @@
-#include "primec/VmDebugDap.h"
+#include "primec/runtime/VmDebugDap.h"
 
 #include "VmDebugDapProtocol.h"
-#include "primec/VmDebugAdapter.h"
+#include "primec/runtime/VmDebugAdapter.h"
 
 #include <cstdint>
 #include <optional>

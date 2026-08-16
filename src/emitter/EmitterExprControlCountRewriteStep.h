@@ -5,8 +5,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "primec/Ast.h"
-#include "primec/Emitter.h"
+#include "primec/ast/Ast.h"
+#include "primec/backend/Emitter.h"
 
 namespace primec::emitter {
 

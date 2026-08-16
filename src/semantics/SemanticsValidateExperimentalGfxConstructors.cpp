@@ -2,7 +2,7 @@
 
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateExperimentalGfxConstructorsInternal.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <cstddef>
 #include <optional>

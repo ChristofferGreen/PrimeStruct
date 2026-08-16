@@ -2,11 +2,11 @@
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
-#include "primec/CollectionSpellingClassifier.h"
-#include "primec/CompileArena.h"
-#include "primec/SoaPathHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/CompileArena.h"
+#include "primec/ir/SoaPathHelpers.h"
+#include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <array>
 #include <string_view>
@@ -17,7 +17,7 @@ namespace primec::semantics {
 namespace {
 
 // Removed-name membership delegates to the single authoritative sets in
-// primec/CollectionSpellingClassifier.h (decision D2).
+// primec/support/CollectionSpellingClassifier.h (decision D2).
 bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
   return classifierRemovedVectorCompatibilityHelper(helperName);
 }

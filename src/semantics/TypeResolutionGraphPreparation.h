@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::semantics {
 

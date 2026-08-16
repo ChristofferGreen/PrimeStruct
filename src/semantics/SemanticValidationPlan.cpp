@@ -1,5 +1,5 @@
-#include "primec/CompileArena.h"
-#include "primec/SemanticValidationPlan.h"
+#include "primec/support/CompileArena.h"
+#include "primec/semantics/SemanticValidationPlan.h"
 
 #include <string_view>
 #include <unordered_set>

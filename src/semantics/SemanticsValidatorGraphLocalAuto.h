@@ -2,7 +2,7 @@
 
 #include "SemanticPublicationSurface.h"
 
-#include "primec/SymbolInterner.h"
+#include "primec/frontend/SymbolInterner.h"
 
 #include <cstddef>
 #include <string>

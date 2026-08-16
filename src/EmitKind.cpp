@@ -1,4 +1,4 @@
-#include "primec/EmitKind.h"
+#include "primec/support/EmitKind.h"
 
 namespace primec {
 namespace {

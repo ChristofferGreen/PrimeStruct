@@ -690,8 +690,8 @@ TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
 }
 
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
-#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_count_fallback_01.h"
-#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_count_fallback_02.h"
+#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_count_fallback_direct_call.h"
+#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_count_fallback_reordered_wrapped_receiver.h"
 }
 
 TEST_SUITE_END();

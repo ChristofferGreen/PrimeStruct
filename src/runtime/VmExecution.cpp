@@ -2,7 +2,7 @@
 
 #include "VmHeapHelpers.h"
 #include "VmIoHelpers.h"
-#include "primec/VmExecutionKernel.h"
+#include "primec/runtime/VmExecutionKernel.h"
 
 #include <string>
 #include <string_view>

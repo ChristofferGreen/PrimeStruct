@@ -1,0 +1,24 @@
+#pragma once
+
+#include <string>
+
+#include "primec/ir/Ir.h"
+
+namespace primec {
+
+enum class IrValidationTarget {
+  Any,
+  Vm,
+  Native,
+  Glsl,
+  Wasm,
+  WasmBrowser,
+};
+
+bool validateIrModule(const IrModule &module, IrValidationTarget target, std::string &error);
+
+inline bool validateIrModule(const IrModule &module, std::string &error) {
+  return validateIrModule(module, IrValidationTarget::Any, error);
+}
+
+} // namespace primec

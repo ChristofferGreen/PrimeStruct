@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <optional>
 
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::semantics {
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IrLowererSharedTypes.h"
-#include "primec/Ir.h"
+#include "primec/ir/Ir.h"
 
 namespace primec::ir_lowerer {
 

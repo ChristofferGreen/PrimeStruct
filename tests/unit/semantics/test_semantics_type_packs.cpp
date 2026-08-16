@@ -1,6 +1,6 @@
 #include "third_party/doctest.h"
 
-#include "primec/SemanticProduct.h"
+#include "primec/frontend/SemanticProduct.h"
 
 #include <string>
 

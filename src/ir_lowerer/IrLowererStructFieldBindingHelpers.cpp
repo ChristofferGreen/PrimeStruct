@@ -10,7 +10,7 @@
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructReturnPathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

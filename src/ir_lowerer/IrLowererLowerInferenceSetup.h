@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererCountAccessHelpers.h"

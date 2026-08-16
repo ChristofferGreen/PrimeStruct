@@ -1,4 +1,4 @@
-#include "primec/ExternalTooling.h"
+#include "primec/support/ExternalTooling.h"
 
 #include <string>
 #include <vector>

@@ -1,4 +1,4 @@
-#include "primec/Lexer.h"
+#include "primec/frontend/Lexer.h"
 
 #include <cctype>
 

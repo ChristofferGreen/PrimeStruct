@@ -7,7 +7,7 @@
 #include "IrLowererLowerLocalsSetup.h"
 #include "IrLowererRecursionAnalysis.h"
 #include "IrLowererSetupMathHelpers.h"
-#include "primec/SourceLocationMapper.h"
+#include "primec/support/SourceLocationMapper.h"
 
 #include <algorithm>
 

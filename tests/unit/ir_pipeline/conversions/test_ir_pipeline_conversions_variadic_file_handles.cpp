@@ -4,11 +4,11 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/Ast.h"
-#include "primec/Ir.h"
-#include "primec/IrLowerer.h"
-#include "primec/IrSerializer.h"
-#include "primec/Vm.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
+#include "primec/ir/IrLowerer.h"
+#include "primec/ir/IrSerializer.h"
+#include "primec/runtime/Vm.h"
 #include "../test_ir_pipeline_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");

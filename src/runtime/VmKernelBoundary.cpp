@@ -1,4 +1,4 @@
-#include "primec/VmKernelBoundary.h"
+#include "primec/runtime/VmKernelBoundary.h"
 
 #include "VmNumericHelpers.h"
 

@@ -2,7 +2,7 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/Vm.h"
+#include "primec/runtime/Vm.h"
 #include "test_ir_pipeline_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.pointers");

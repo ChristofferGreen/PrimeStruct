@@ -1,4 +1,4 @@
-#include "primec/IrVirtualRegisterSpillInsertion.h"
+#include "primec/ir/IrVirtualRegisterSpillInsertion.h"
 
 #include <algorithm>
 #include <optional>

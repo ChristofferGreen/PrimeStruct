@@ -1,4 +1,4 @@
-#include "primec/IrVirtualRegisterScheduler.h"
+#include "primec/ir/IrVirtualRegisterScheduler.h"
 
 #include <algorithm>
 #include <optional>

@@ -1,0 +1,134 @@
+#pragma once
+
+#include "primec/ast/Ast.h"
+#include "primec/support/Diagnostics.h"
+#include "primec/frontend/ExpandedSource.h"
+#include "primec/support/Options.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/semantics/Semantics.h"
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <variant>
+#include <vector>
+
+namespace primec {
+
+enum class CompilePipelineErrorStage {
+  None,
+  Import,
+  Transform,
+  Parse,
+  UnsupportedDumpStage,
+  Semantic,
+};
+
+using CompilePipelineDiagnosticInfo = DiagnosticSinkReport;
+
+enum class CompilePipelineSemanticProductDecision {
+  RequireForConsumingPath,
+  SkipForAstSemanticDump,
+  SkipForNonConsumingPath,
+  ForcedOnForBenchmark,
+  ForcedOffForBenchmark,
+};
+
+struct CompilePipelineFailure {
+  CompilePipelineErrorStage stage = CompilePipelineErrorStage::None;
+  std::string message;
+  CompilePipelineDiagnosticInfo diagnosticInfo;
+};
+
+struct CompilePipelineBenchmarkConfig {
+  std::optional<bool> forceSemanticProduct;
+  bool semanticNoFactEmission = false;
+  bool semanticFactFamiliesSpecified = false;
+  std::vector<std::string> semanticFactFamilies;
+  bool semanticTwoChunkDefinitionValidation = false;
+  std::optional<uint32_t> semanticDefinitionValidationWorkerCount;
+  bool semanticPhaseCounters = false;
+  bool semanticAllocationCounters = false;
+  bool semanticRssCheckpoints = false;
+  bool semanticDisableMethodTargetMemoization = false;
+  bool semanticGraphLocalAutoLegacyKeyShadow = false;
+  bool semanticGraphLocalAutoLegacySideChannelShadow = false;
+  bool semanticDisableGraphLocalAutoDependencyScratchPmr = false;
+};
+
+struct CompilePipelineRunConfig {
+  bool skipSemanticProductForNonConsumingPath = false;
+  const CompilePipelineBenchmarkConfig *benchmark = nullptr;
+};
+
+struct CompilePipelineOutput {
+  Program program;
+  SemanticProgram semanticProgram;
+  bool hasSemanticProgram = false;
+  CompilePipelineSemanticProductDecision semanticProductDecision =
+      CompilePipelineSemanticProductDecision::RequireForConsumingPath;
+  bool semanticProductRequested = false;
+  bool semanticProductBuilt = false;
+  SemanticPhaseCounters semanticPhaseCounters;
+  bool hasSemanticPhaseCounters = false;
+  ExpandedSource expandedSource;
+  std::string filteredSource;
+  std::string dumpOutput;
+  bool hasDumpOutput = false;
+  CompilePipelineFailure failure;
+  bool hasFailure = false;
+};
+
+struct CompilePipelineSuccessResult {
+  CompilePipelineOutput output;
+};
+
+struct CompilePipelineFailureResult {
+  Program program;
+  SemanticProgram semanticProgram;
+  bool hasSemanticProgram = false;
+  CompilePipelineSemanticProductDecision semanticProductDecision =
+      CompilePipelineSemanticProductDecision::RequireForConsumingPath;
+  bool semanticProductRequested = false;
+  bool semanticProductBuilt = false;
+  SemanticPhaseCounters semanticPhaseCounters;
+  bool hasSemanticPhaseCounters = false;
+  ExpandedSource expandedSource;
+  std::string filteredSource;
+  std::string dumpOutput;
+  bool hasDumpOutput = false;
+  CompilePipelineFailure failure;
+};
+
+using CompilePipelineResult =
+    std::variant<CompilePipelineSuccessResult, CompilePipelineFailureResult>;
+
+void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths);
+
+bool runCompilePipeline(const Options &options,
+                        CompilePipelineOutput &output,
+                        CompilePipelineErrorStage &errorStage,
+                        std::string &error,
+                        CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
+
+bool runCompilePipeline(const Options &options,
+                        const CompilePipelineRunConfig &runConfig,
+                        CompilePipelineOutput &output,
+                        CompilePipelineErrorStage &errorStage,
+                        std::string &error,
+                        CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
+
+CompilePipelineResult runCompilePipelineResult(
+    const Options &options,
+    CompilePipelineErrorStage &errorStage,
+    std::string &error,
+    CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
+
+CompilePipelineResult runCompilePipelineResult(
+    const Options &options,
+    const CompilePipelineRunConfig &runConfig,
+    CompilePipelineErrorStage &errorStage,
+    std::string &error,
+    CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
+
+} // namespace primec

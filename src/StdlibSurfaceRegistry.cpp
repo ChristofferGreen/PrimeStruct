@@ -1,7 +1,7 @@
 // collection-surface-audit: exempt
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
-#include "primec/CompileArena.h"
+#include "primec/support/CompileArena.h"
 
 #include <algorithm>
 #include <array>

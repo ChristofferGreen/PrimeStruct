@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primec/ProcessRunner.h"
+#include "primec/support/ProcessRunner.h"
 
 #include <filesystem>
 #include <optional>

@@ -2,7 +2,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 
 #include "IrLowererSetupTypeCollectionHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

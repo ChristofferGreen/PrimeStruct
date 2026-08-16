@@ -1,4 +1,4 @@
-#include "primec/SemanticValidationResult.h"
+#include "primec/semantics/SemanticValidationResult.h"
 
 #include <utility>
 

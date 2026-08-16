@@ -1,6 +1,6 @@
-#include "primec/TransformRegistry.h"
+#include "primec/support/TransformRegistry.h"
 
-#include "primec/CompileArena.h"
+#include "primec/support/CompileArena.h"
 
 #include <span>
 

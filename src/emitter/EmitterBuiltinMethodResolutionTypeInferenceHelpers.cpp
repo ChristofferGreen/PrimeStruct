@@ -6,7 +6,7 @@
 #include "EmitterCollectionSurfaceMetadata.h"
 
 #include <functional>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::emitter {
 namespace {

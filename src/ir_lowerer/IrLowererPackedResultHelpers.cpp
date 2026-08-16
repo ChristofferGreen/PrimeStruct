@@ -8,7 +8,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 

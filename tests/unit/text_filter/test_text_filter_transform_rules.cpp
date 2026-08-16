@@ -1,7 +1,7 @@
-#include "primec/Ast.h"
-#include "primec/TextFilterPipeline.h"
-#include "primec/TransformRegistry.h"
-#include "primec/TransformRules.h"
+#include "primec/ast/Ast.h"
+#include "primec/support/TextFilterPipeline.h"
+#include "primec/support/TransformRegistry.h"
+#include "primec/support/TransformRules.h"
 
 #include "third_party/doctest.h"
 

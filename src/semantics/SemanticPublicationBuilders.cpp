@@ -3,8 +3,8 @@
 
 #include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
 #include <cctype>

@@ -11,7 +11,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/SemanticProduct.h"
+#include "primec/frontend/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 

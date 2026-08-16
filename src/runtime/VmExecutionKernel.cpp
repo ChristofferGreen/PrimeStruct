@@ -1,8 +1,8 @@
-#include "primec/VmExecutionKernel.h"
+#include "primec/runtime/VmExecutionKernel.h"
 
 #include "VmControlFlowOpcodeShared.h"
 #include "VmExecutionNumeric.h"
-#include "primec/VmKernelBoundary.h"
+#include "primec/runtime/VmKernelBoundary.h"
 
 #include <algorithm>
 #include <utility>

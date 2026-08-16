@@ -1,6 +1,6 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 

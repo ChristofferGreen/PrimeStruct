@@ -1,6 +1,6 @@
 #include "../test_compile_run_helpers.h"
 
-#include "primec/IrSerializer.h"
+#include "primec/ir/IrSerializer.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.outputs");
 

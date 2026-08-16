@@ -1011,7 +1011,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   set(PrimeStructCompileRunTestSources)
   foreach(source IN LISTS PrimeStructBackendAllTestSources)
-    if (source MATCHES "^tests/unit/compile_run/test_compile_run_.*\\.cpp$")
+    if (source MATCHES "^tests/unit/compile_run/.*test_compile_run_.*\\.cpp$")
       list(APPEND PrimeStructCompileRunTestSources "${source}")
     endif()
   endforeach()

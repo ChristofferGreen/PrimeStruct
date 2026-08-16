@@ -1,4 +1,4 @@
-#include "primec/VmDebugAdapter.h"
+#include "primec/runtime/VmDebugAdapter.h"
 
 #include <optional>
 #include <string>

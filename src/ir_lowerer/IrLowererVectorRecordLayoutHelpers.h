@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "IrLowererStructTypeHelpers.h"
-#include "primec/Ir.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/Ir.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

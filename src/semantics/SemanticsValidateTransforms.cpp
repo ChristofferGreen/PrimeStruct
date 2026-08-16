@@ -2,7 +2,7 @@
 
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateTransformsInternal.h"
-#include "primec/TransformRegistry.h"
+#include "primec/support/TransformRegistry.h"
 
 #include <algorithm>
 #include <cstdint>

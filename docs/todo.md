@@ -256,7 +256,7 @@ investigation chain's actively-productive leaves - see
   top-level `src/` directory (~20 loose files). Phase 1 moves test shards
   into subdirectories mirroring source module structure (TODO-4637 through
   TODO-4640, done, see `docs/todo_finished.md`). Phase 2 groups headers by
-  pipeline stage (TODO-4641). Phase 3
+  pipeline stage (TODO-4641, done, see `docs/todo_finished.md`). Phase 3
   consolidates loose src files (TODO-4642). Full design document at
   `docs/FileLayoutRestructuring.md`.
 - Test name quality: improve test file and test case naming across the
@@ -367,7 +367,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-7. TODO-4641: Group `include/primec/` headers by pipeline stage
 9. TODO-4642: Consolidate loose top-level `src/` files into directories
 11. TODO-4644: Rewrite 53 overlong test names (>120 chars)
 12. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
@@ -472,31 +471,6 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
 
-
-
-- [ ] TODO-4641: Group `include/primec/` headers by pipeline stage
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: File layout restructuring
-  - parallel_track: include-layout
-  - depends_on: TODO-4637, TODO-4638, TODO-4639, TODO-4640
-  - scope: Move the 67 flat headers in `include/primec/` into subdirectories
-    by pipeline stage: `ast/`, `frontend/`, `semantics/`, `ir/`, `backend/`,
-    `runtime/`, `support/`, `pipeline/`. Update all `#include` paths in
-    `src/` and `tests/`. Update `scripts/include_layer_allowlist.txt` and
-    `scripts/check_include_layers.py` if needed.
-  - implementation_notes: This phase has the widest blast radius. Move
-    headers last so test files are already settled. Use `git mv` and update
-    includes with a find-and-replace pass. Verify the include layer checker
-    still passes.
-  - acceptance:
-    - No headers remain at the `include/primec/` root (except possibly a
-      convenience umbrella header).
-    - All `#include` paths in `src/` and `tests/` resolve correctly.
-    - `scripts/check_include_layers.py` passes.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once all headers are grouped and the include layer
-    checker passes; do not restructure header contents in this leaf.
 
 - [ ] TODO-4642: Consolidate loose top-level `src/` files into directories
   - owner: ai

@@ -1,8 +1,8 @@
 #include "ImportResolverInternal.h"
 #include "ExpandedSourceBuilder.h"
 
-#include "primec/ImportResolver.h"
-#include "primec/ProcessRunner.h"
+#include "primec/frontend/ImportResolver.h"
+#include "primec/support/ProcessRunner.h"
 
 #include <algorithm>
 #include <cctype>

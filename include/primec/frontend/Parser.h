@@ -1,0 +1,196 @@
+#pragma once
+
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+#include "primec/ast/Ast.h"
+#include "primec/frontend/Token.h"
+
+namespace primec {
+
+class Parser {
+public:
+  struct ErrorInfo {
+    std::string message;
+    int line = 0;
+    int column = 0;
+  };
+
+  explicit Parser(std::vector<Token> tokens, bool allowSurfaceSyntax = true);
+
+  bool parse(Program &program,
+             std::string &error,
+             ErrorInfo *errorInfo = nullptr,
+             std::vector<ErrorInfo> *errorInfos = nullptr);
+  bool parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error, ErrorInfo *errorInfo = nullptr);
+
+private:
+  bool parseImport(Program &program);
+  bool parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs);
+  bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
+  bool parseTransformList(std::vector<Transform> &out);
+  bool parseTemplateList(std::vector<std::string> &out,
+                         std::vector<TemplateArgument> *detailsOut = nullptr);
+  bool parseTemplateArgument(std::string &out, TemplateArgument *detailOut);
+  bool parseTemplateParameterList(std::vector<std::string> &out,
+                                  std::vector<bool> &outIsPack);
+  bool parseTypeName(std::string &out);
+  bool parseParameterList(std::vector<Expr> &out,
+                          const std::string &namespacePrefix,
+                          std::vector<std::string> *implicitTemplateArgsOut = nullptr,
+                          std::vector<bool> *implicitTemplateArgIsPackOut = nullptr);
+  bool parseParameterBinding(Expr &out,
+                             const std::string &namespacePrefix,
+                             std::vector<std::string> *implicitTemplateArgsOut = nullptr,
+                             std::vector<bool> *implicitTemplateArgIsPackOut = nullptr);
+  bool parseCallArgumentList(std::vector<Expr> &out,
+                             std::vector<std::optional<std::string>> &argNames,
+                             const std::string &namespacePrefix);
+  bool parseBindingInitializerList(std::vector<Expr> &out,
+                                   std::vector<std::optional<std::string>> &argNames,
+                                   const std::string &namespacePrefix);
+  bool tryParseBraceConstructorArgumentList(std::vector<Expr> &out,
+                                            std::vector<std::optional<std::string>> &argNames,
+                                            const std::string &namespacePrefix);
+  bool parseBraceExprList(std::vector<Expr> &out,
+                          const std::string &namespacePrefix,
+                          bool allowSingleBranchIfStatement);
+  bool parseValueBlock(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool normalizeValueBlock(std::vector<Expr> &body);
+  bool validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames);
+  bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
+  bool parseLambdaCaptureList(std::vector<std::string> &captures);
+  bool tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, bool &parsed);
+  bool tryParseIfStatementSugar(Expr &out,
+                                const std::string &namespacePrefix,
+                                bool &parsed,
+                                bool allowSingleBranchIfStatement);
+  bool tryParseNestedDefinition(std::vector<Definition> &defs,
+                                const std::vector<Transform> &transforms,
+                                const std::string &parentPath,
+                                bool &parsed);
+  bool isCopyConstructorShorthandSignature() const;
+  bool parseCopyConstructorShorthand(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool definitionHasReturnBeforeClose() const;
+  bool isDefinitionSignature(bool *paramsAreIdentifiers) const;
+  bool isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const;
+  bool parseDefinitionBody(Definition &def, bool allowNoReturn, std::vector<Definition> &defs);
+  bool parseExpr(Expr &expr, const std::string &namespacePrefix);
+  bool finalizeBindingInitializer(Expr &binding);
+  bool allowMathBareName(const std::string &name) const;
+  bool isBuiltinNameForArguments(const std::string &name) const;
+
+  struct ArgumentLabelGuard {
+    explicit ArgumentLabelGuard(Parser &parser) : parser_(parser), previous_(parser_.allowArgumentLabels_) {
+      parser_.allowArgumentLabels_ = true;
+    }
+    ~ArgumentLabelGuard() { parser_.allowArgumentLabels_ = previous_; }
+    ArgumentLabelGuard(const ArgumentLabelGuard &) = delete;
+    ArgumentLabelGuard &operator=(const ArgumentLabelGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
+
+  struct BareBindingGuard {
+    explicit BareBindingGuard(Parser &parser, bool enabled)
+        : parser_(parser), previous_(parser_.allowBareBindings_) {
+      parser_.allowBareBindings_ = enabled;
+    }
+    ~BareBindingGuard() { parser_.allowBareBindings_ = previous_; }
+    BareBindingGuard(const BareBindingGuard &) = delete;
+    BareBindingGuard &operator=(const BareBindingGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
+
+  struct SeparatorWhitespaceGuard {
+    SeparatorWhitespaceGuard(Parser &parser, bool enabled)
+        : parser_(parser), previous_(parser_.allowSeparatorWhitespace_) {
+      parser_.allowSeparatorWhitespace_ = enabled;
+    }
+    ~SeparatorWhitespaceGuard() { parser_.allowSeparatorWhitespace_ = previous_; }
+    SeparatorWhitespaceGuard(const SeparatorWhitespaceGuard &) = delete;
+    SeparatorWhitespaceGuard &operator=(const SeparatorWhitespaceGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
+
+  bool tryParseLoopFormAfterName(Expr &out,
+                                 const std::string &namespacePrefix,
+                                 const std::string &keyword,
+                                 const std::vector<Transform> &transforms,
+                                 bool &parsed);
+
+  struct BraceListGuard {
+    BraceListGuard(Parser &parser, bool allowBindings, bool allowReturn)
+        : parser_(parser),
+          prevAllowBindings_(parser_.allowBraceBindings_),
+          prevAllowReturn_(parser_.allowBraceReturn_) {
+      parser_.allowBraceBindings_ = allowBindings;
+      parser_.allowBraceReturn_ = allowReturn;
+    }
+    ~BraceListGuard() {
+      parser_.allowBraceBindings_ = prevAllowBindings_;
+      parser_.allowBraceReturn_ = prevAllowReturn_;
+    }
+    BraceListGuard(const BraceListGuard &) = delete;
+    BraceListGuard &operator=(const BraceListGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool prevAllowBindings_;
+    bool prevAllowReturn_;
+  };
+
+  struct SingleBranchIfGuard {
+    explicit SingleBranchIfGuard(Parser &parser, bool enabled)
+        : parser_(parser), previous_(parser_.allowSingleBranchIfStatementBlocks_) {
+      parser_.allowSingleBranchIfStatementBlocks_ = enabled;
+    }
+    ~SingleBranchIfGuard() { parser_.allowSingleBranchIfStatementBlocks_ = previous_; }
+    SingleBranchIfGuard(const SingleBranchIfGuard &) = delete;
+    SingleBranchIfGuard &operator=(const SingleBranchIfGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
+
+  std::string currentNamespacePrefix() const;
+  std::string makeFullPath(const std::string &name, const std::string &prefix) const;
+
+  void skipComments();
+  bool match(TokenKind kind);
+  bool expect(TokenKind kind, const std::string &message);
+  Token consume(TokenKind kind, const std::string &message);
+  bool fail(const std::string &message);
+  void recoverToTopLevel(size_t startPos);
+
+  std::vector<Token> tokens_;
+  size_t pos_ = 0;
+  std::vector<std::string> namespaceStack_;
+  std::string *error_ = nullptr;
+  bool *returnTracker_ = nullptr;
+  bool returnsVoidContext_ = false;
+  bool allowImplicitVoidReturn_ = false;
+  bool allowArgumentLabels_ = false;
+  bool allowBareBindings_ = false;
+  bool allowSeparatorWhitespace_ = true;
+  bool allowBraceBindings_ = true;
+  bool allowBraceReturn_ = true;
+  bool allowSingleBranchIfStatementBlocks_ = false;
+  bool mathImportAll_ = false;
+  std::unordered_set<std::string> mathImports_;
+  bool allowSurfaceSyntax_ = true;
+  ErrorInfo lastErrorInfo_;
+  std::vector<ErrorInfo> *errorInfos_ = nullptr;
+};
+
+} // namespace primec

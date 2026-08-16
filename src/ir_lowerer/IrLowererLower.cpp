@@ -1,7 +1,7 @@
-#include "primec/IrLowerer.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/StringLiteral.h"
+#include "primec/ir/IrLowerer.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/frontend/StringLiteral.h"
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"

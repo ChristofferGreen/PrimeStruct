@@ -1,11 +1,11 @@
-#include "primec/IrPreparation.h"
+#include "primec/ir/IrPreparation.h"
 
-#include "primec/AstMemory.h"
-#include "primec/CompileArena.h"
-#include "primec/IrBackendProfiles.h"
-#include "primec/IrInliner.h"
-#include "primec/IrLowerer.h"
-#include "primec/IrValidation.h"
+#include "primec/ast/AstMemory.h"
+#include "primec/support/CompileArena.h"
+#include "primec/backend/IrBackendProfiles.h"
+#include "primec/ir/IrInliner.h"
+#include "primec/ir/IrLowerer.h"
+#include "primec/ir/IrValidation.h"
 
 #include <cstdlib>
 #include <iostream>

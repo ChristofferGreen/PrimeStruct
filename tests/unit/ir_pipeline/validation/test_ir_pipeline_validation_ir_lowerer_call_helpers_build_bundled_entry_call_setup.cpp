@@ -1,5 +1,5 @@
 #include "test_ir_pipeline_validation_helpers.h"
-#include "primec/FrontendSyntax.h"
+#include "primec/frontend/FrontendSyntax.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 

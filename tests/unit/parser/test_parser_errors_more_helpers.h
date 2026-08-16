@@ -1,8 +1,8 @@
 #pragma once
 
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/Semantics.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/semantics/Semantics.h"
 
 #include "third_party/doctest.h"
 

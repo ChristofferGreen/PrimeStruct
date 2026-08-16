@@ -1,4 +1,4 @@
-#include "primec/Vm.h"
+#include "primec/runtime/Vm.h"
 
 #include "VmControlFlowOpcodeShared.h"
 #include "VmHeapHelpers.h"

@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::glsl_emitter {
 

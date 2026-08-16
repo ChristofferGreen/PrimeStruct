@@ -1,9 +1,9 @@
-#include "primec/Parser.h"
+#include "primec/frontend/Parser.h"
 
 #include "ParserHelpers.h"
 
-#include "primec/StringLiteral.h"
-#include "primec/TransformRegistry.h"
+#include "primec/frontend/StringLiteral.h"
+#include "primec/support/TransformRegistry.h"
 
 #include <sstream>
 #include <utility>

@@ -2,7 +2,7 @@
 #pragma once
 
 // Removed/retired name membership delegates to the single authoritative
-// sets in primec/CollectionSpellingClassifier.h (decision D2 in
+// sets in primec/support/CollectionSpellingClassifier.h (decision D2 in
 // docs/CompatPathResolutionConsolidation.md).
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return classifierRemovedVectorCompatibilityHelper(helperName);

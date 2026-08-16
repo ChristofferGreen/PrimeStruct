@@ -12,7 +12,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/SoaPathHelpers.h"
+#include "primec/ir/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer {
 

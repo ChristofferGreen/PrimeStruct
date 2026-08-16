@@ -5,9 +5,9 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
-#include "primec/AstCallPathHelpers.h"
-#include "primec/SoaPathHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ast/AstCallPathHelpers.h"
+#include "primec/ir/SoaPathHelpers.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer::count_access_detail {
 

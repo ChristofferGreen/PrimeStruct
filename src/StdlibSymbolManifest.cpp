@@ -1,10 +1,10 @@
-#include "primec/StdlibSymbolManifest.h"
+#include "primec/frontend/StdlibSymbolManifest.h"
 
-#include "primec/Ast.h"
-#include "primec/AstPrinter.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/TextFilterPipeline.h"
+#include "primec/ast/Ast.h"
+#include "primec/ast/AstPrinter.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/support/TextFilterPipeline.h"
 
 #include <algorithm>
 #include <cctype>

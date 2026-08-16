@@ -1,7 +1,7 @@
 #include "TextFilterPipelineInternal.h"
 
 #include "TextFilterHelpers.h"
-#include "primec/TransformRegistry.h"
+#include "primec/support/TransformRegistry.h"
 
 #include <cctype>
 

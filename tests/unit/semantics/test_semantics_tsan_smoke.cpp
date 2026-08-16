@@ -1,8 +1,8 @@
 #include "third_party/doctest.h"
 
-#include "primec/SemanticProduct.h"
-#include "primec/Semantics.h"
-#include "primec/SemanticsBenchmark.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/semantics/Semantics.h"
+#include "primec/semantics/SemanticsBenchmark.h"
 
 #include <array>
 #include <cstddef>

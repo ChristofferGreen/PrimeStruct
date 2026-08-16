@@ -3,9 +3,9 @@
 #include <string>
 #include <string_view>
 
-#include "primec/Ast.h"
-#include "primec/SemanticProduct.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/ast/Ast.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 

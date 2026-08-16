@@ -9,10 +9,10 @@
 #include <string_view>
 #include <vector>
 
-#include "primec/CompilePipeline.h"
-#include "primec/EmitKind.h"
-#include "primec/IrBackends.h"
-#include "primec/IrPreparation.h"
+#include "primec/pipeline/CompilePipeline.h"
+#include "primec/support/EmitKind.h"
+#include "primec/backend/IrBackends.h"
+#include "primec/ir/IrPreparation.h"
 #include "primec/testing/TestScratch.h"
 
 namespace primec::testing {

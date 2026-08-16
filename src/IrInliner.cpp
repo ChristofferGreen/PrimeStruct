@@ -1,4 +1,4 @@
-#include "primec/IrInliner.h"
+#include "primec/ir/IrInliner.h"
 
 #include <algorithm>
 #include <cstdint>

@@ -1,4 +1,4 @@
-#include "primec/AstMemory.h"
+#include "primec/ast/AstMemory.h"
 
 #include <optional>
 #include <string>

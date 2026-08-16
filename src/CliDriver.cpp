@@ -1,6 +1,6 @@
-#include "primec/CliDriver.h"
+#include "primec/pipeline/CliDriver.h"
 
-#include "primec/Diagnostics.h"
+#include "primec/support/Diagnostics.h"
 
 #include <algorithm>
 #include <ostream>

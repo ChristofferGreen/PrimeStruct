@@ -15,7 +15,7 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/WasmEmitter.h"
+#include "primec/backend/WasmEmitter.h"
 #include "primec/testing/TestScratch.h"
 
 namespace ir_pipeline_wasm_test {

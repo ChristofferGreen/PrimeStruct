@@ -3735,9 +3735,9 @@ TEST_CASE("semantic memory ci artifact wrapper ignores stale reports on benchmar
 
 TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
-  const std::filesystem::path semanticsHeaderPath = repoRoot / "include" / "primec" / "Semantics.h";
+  const std::filesystem::path semanticsHeaderPath = repoRoot / "include" / "primec" / "semantics" / "Semantics.h";
   const std::filesystem::path semanticsBenchmarkHeaderPath =
-      repoRoot / "include" / "primec" / "SemanticsBenchmark.h";
+      repoRoot / "include" / "primec" / "semantics" / "SemanticsBenchmark.h";
   const std::filesystem::path benchmarkOrchestrationHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidationBenchmarkOrchestration.h";
   const std::filesystem::path benchmarkOrchestrationSourcePath =
@@ -3749,7 +3749,7 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   const std::filesystem::path semanticsValidatePath =
       repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   const std::filesystem::path pipelineHeaderPath =
-      repoRoot / "include" / "primec" / "CompilePipeline.h";
+      repoRoot / "include" / "primec" / "pipeline" / "CompilePipeline.h";
   const std::filesystem::path pipelinePath = repoRoot / "src" / "CompilePipeline.cpp";
   const std::string semanticsHeader = readFile(semanticsHeaderPath.string());
   const std::string semanticsBenchmarkHeader = readFile(semanticsBenchmarkHeaderPath.string());

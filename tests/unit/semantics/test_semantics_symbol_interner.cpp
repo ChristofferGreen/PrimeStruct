@@ -1,6 +1,6 @@
 #include "third_party/doctest.h"
 
-#include "primec/SymbolInterner.h"
+#include "primec/frontend/SymbolInterner.h"
 
 #include <algorithm>
 #include <array>

@@ -809,7 +809,7 @@ TEST_CASE("vm numeric opcode helpers source delegation stays stable") {
   const std::filesystem::path vmKernelBoundaryPath =
       repoRoot / "src" / "runtime" / "VmKernelBoundary.cpp";
   const std::filesystem::path vmKernelBoundaryHeaderPath =
-      repoRoot / "include" / "primec" / "VmKernelBoundary.h";
+      repoRoot / "include" / "primec" / "runtime" / "VmKernelBoundary.h";
   REQUIRE(std::filesystem::exists(vmExecutionNumericPath));
   REQUIRE(std::filesystem::exists(vmDebugNumericPath));
   REQUIRE(std::filesystem::exists(vmNumericSharedPath));
@@ -837,7 +837,7 @@ TEST_CASE("vm numeric opcode helpers source delegation stays stable") {
   CHECK(vmNumericSharedHeaderSource.find("enum class VmNumericOpcodeResult") != std::string::npos);
   CHECK(vmNumericSharedHeaderSource.find("handleSharedVmNumericOpcode(") != std::string::npos);
 
-  CHECK(vmNumericSharedSource.find("#include \"primec/VmKernelBoundary.h\"") !=
+  CHECK(vmNumericSharedSource.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=
         std::string::npos);
   CHECK(vmNumericSharedSource.find("executePureNumericOpcode(inst, stack, error)") !=
         std::string::npos);
@@ -887,7 +887,7 @@ TEST_CASE("vm control flow opcode helpers source delegation stays stable") {
   const std::string vmControlFlowSharedSource = readText(vmControlFlowSharedPath);
   const std::string vmControlFlowSharedHeaderSource = readText(vmControlFlowSharedHeaderPath);
 
-  CHECK(vmExecutionSource.find("#include \"primec/VmExecutionKernel.h\"") !=
+  CHECK(vmExecutionSource.find("#include \"primec/runtime/VmExecutionKernel.h\"") !=
         std::string::npos);
   CHECK(vmExecutionSource.find("executeVmKernel(module, host, result, error)") !=
         std::string::npos);
@@ -4232,7 +4232,7 @@ TEST_CASE("lowerer import aliases are delegated to frontend syntax helpers") {
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path frontendSyntaxHeaderPath =
-      repoRoot / "include" / "primec" / "FrontendSyntax.h";
+      repoRoot / "include" / "primec" / "frontend" / "FrontendSyntax.h";
   const std::filesystem::path frontendSyntaxSourcePath = repoRoot / "src" / "FrontendSyntax.cpp";
   const std::filesystem::path lowerImportsStructsSetupSourcePath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerImportsStructsSetup.cpp";
@@ -4259,7 +4259,7 @@ TEST_CASE("lowerer import aliases are delegated to frontend syntax helpers") {
   CHECK(frontendSyntaxSource.find("isSyntaxWildcardImportPath(importPath, wildcardPrefix)") !=
         std::string::npos);
   CHECK(cmake.find("src/FrontendSyntax.cpp") != std::string::npos);
-  CHECK(lowerImportsStructsSetupSource.find("#include \"primec/FrontendSyntax.h\"") !=
+  CHECK(lowerImportsStructsSetupSource.find("#include \"primec/frontend/FrontendSyntax.h\"") !=
         std::string::npos);
   CHECK(lowerImportsStructsSetupSource.find("primec::buildSyntaxImportAliases(") !=
         std::string::npos);

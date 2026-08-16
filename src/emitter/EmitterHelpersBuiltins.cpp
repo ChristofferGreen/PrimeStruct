@@ -3,7 +3,7 @@
 #include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
 
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <utility>
 

@@ -4,8 +4,8 @@
 #include <string_view>
 #include <vector>
 
-#include "primec/Ast.h"
-#include "primec/Token.h"
+#include "primec/ast/Ast.h"
+#include "primec/frontend/Token.h"
 
 namespace primec::parser {
 

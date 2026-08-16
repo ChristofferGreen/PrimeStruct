@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "EmitterCollectionSurfaceMetadata.h"
-#include "primec/Emitter.h"
+#include "primec/backend/Emitter.h"
 
 namespace primec::emitter {
 

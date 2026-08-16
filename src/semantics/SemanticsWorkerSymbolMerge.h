@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SemanticPublicationSurface.h"
-#include "primec/SemanticsDefinitionPrepass.h"
+#include "primec/semantics/SemanticsDefinitionPrepass.h"
 
 namespace primec::semantics {
 

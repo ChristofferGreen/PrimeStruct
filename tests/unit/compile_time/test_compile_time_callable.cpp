@@ -1,5 +1,5 @@
-#include "primec/CompileTimeCallable.h"
-#include "primec/SemanticProduct.h"
+#include "primec/frontend/CompileTimeCallable.h"
+#include "primec/frontend/SemanticProduct.h"
 
 #include <cstdint>
 #include <string>

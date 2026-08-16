@@ -1,6 +1,6 @@
 #include "IrLowererInlinePackedArgs.h"
 
-#include "primec/Diagnostics.h"
+#include "primec/support/Diagnostics.h"
 
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"

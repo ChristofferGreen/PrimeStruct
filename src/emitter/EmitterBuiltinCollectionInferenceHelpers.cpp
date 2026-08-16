@@ -4,7 +4,7 @@
 #include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
 #include "../semantics/SemanticsHelpers.h"
-#include "primec/AstCallPathHelpers.h"
+#include "primec/ast/AstCallPathHelpers.h"
 
 namespace primec::emitter {
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SemanticPublicationSurface.h"
-#include "primec/Semantics.h"
+#include "primec/semantics/Semantics.h"
 
 #include <string>
 

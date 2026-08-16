@@ -1,7 +1,7 @@
 #include "IrLowererLowerReturnEmitStage.h"
 
-#include "primec/SoaPathHelpers.h"
-#include "primec/SourceLocationMapper.h"
+#include "primec/ir/SoaPathHelpers.h"
+#include "primec/support/SourceLocationMapper.h"
 
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"

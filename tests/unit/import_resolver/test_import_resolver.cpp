@@ -1,8 +1,8 @@
 #include "test_import_resolver_helpers.h"
 
-#include "primec/CompilePipeline.h"
-#include "primec/CliDriver.h"
-#include "primec/SourceLocationMapper.h"
+#include "primec/pipeline/CompilePipeline.h"
+#include "primec/pipeline/CliDriver.h"
+#include "primec/support/SourceLocationMapper.h"
 
 #include <algorithm>
 #include <string>

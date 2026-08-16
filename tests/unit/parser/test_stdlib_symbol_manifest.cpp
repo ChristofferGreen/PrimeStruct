@@ -1,4 +1,4 @@
-#include "primec/StdlibSymbolManifest.h"
+#include "primec/frontend/StdlibSymbolManifest.h"
 
 #include "third_party/doctest.h"
 

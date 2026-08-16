@@ -3,7 +3,7 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/CompilePipeline.h"
+#include "primec/pipeline/CompilePipeline.h"
 #include "test_ir_pipeline_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.type_resolution_parity");

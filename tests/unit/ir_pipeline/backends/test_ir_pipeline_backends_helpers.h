@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "primec/Ir.h"
+#include "primec/ir/Ir.h"
 
 static inline primec::IrModule makeReturnI32Module(int32_t value) {
   primec::IrModule module;

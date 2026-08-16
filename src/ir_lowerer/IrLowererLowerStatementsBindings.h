@@ -552,7 +552,7 @@
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
       auto applyWrappedStdlibResultSumBindingInfo = [&]() {
         if (info.kind != LocalInfo::Kind::Reference &&
             info.kind != LocalInfo::Kind::Pointer) {

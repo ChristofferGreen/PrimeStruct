@@ -1,6 +1,6 @@
 #include "ImportResolverInternal.h"
 
-#include "primec/TempPaths.h"
+#include "primec/support/TempPaths.h"
 
 #include <algorithm>
 #include <cctype>

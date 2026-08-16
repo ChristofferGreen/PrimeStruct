@@ -6,9 +6,9 @@
 #include <optional>
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
-#include "primec/CollectionSpellingClassifier.h"
-#include "primec/StdlibSurfaceRegistry.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -393,7 +393,7 @@ std::string preferredGfxErrorHelperTarget(
 
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   // Removed-name membership delegates to the single authoritative set in
-  // primec/CollectionSpellingClassifier.h (decision D2); this site keeps
+  // primec/support/CollectionSpellingClassifier.h (decision D2); this site keeps
   // its generated-suffix stripping locally. It was the other
   // registry-membership variant; the D2 agreement unit test pins that the
   // registry manifest surface covers the same names.

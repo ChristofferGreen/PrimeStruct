@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 #include <cstdint>
 #include <string>

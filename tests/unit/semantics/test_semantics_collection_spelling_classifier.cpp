@@ -5,8 +5,8 @@
 #include <string_view>
 #include <vector>
 
-#include "primec/CollectionSpellingClassifier.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 TEST_SUITE_BEGIN("primestruct.semantics.collection_spelling_classifier");
 

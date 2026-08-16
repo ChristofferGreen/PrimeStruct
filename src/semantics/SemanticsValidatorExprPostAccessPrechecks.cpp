@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 namespace primec::semantics {
 

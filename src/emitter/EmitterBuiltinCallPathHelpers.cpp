@@ -3,11 +3,11 @@
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 #include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
-#include "primec/StringLiteral.h"
+#include "primec/frontend/StringLiteral.h"
 
 #include <array>
 #include <string_view>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::emitter {
 

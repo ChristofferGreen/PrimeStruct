@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "primec/IrValidation.h"
+#include "primec/ir/IrValidation.h"
 
 namespace primec {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primec/Ir.h"
+#include "primec/ir/Ir.h"
 
 #include <sstream>
 #include <string>

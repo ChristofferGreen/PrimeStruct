@@ -8,8 +8,8 @@
 
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStructTypeHelpers.h"
-#include "primec/Ast.h"
-#include "primec/Ir.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
 
 namespace primec {
 struct SemanticProgram;

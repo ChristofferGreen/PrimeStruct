@@ -2,13 +2,13 @@
 // collection-surface-audit: exempt
 #pragma once
 
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <array>
 #include <string>
 #include <string_view>
 #include <utility>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 inline std::string stripCollectionConstructorSuffixes(std::string resolvedPath) {
   const size_t specializationSuffix = resolvedPath.find("__t");

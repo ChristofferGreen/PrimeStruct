@@ -1,7 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsWorkerSymbolMerge.h"
-#include "primec/SemanticsDefinitionPartitioner.h"
+#include "primec/semantics/SemanticsDefinitionPartitioner.h"
 
 #include <algorithm>
 #include <chrono>

@@ -1,4 +1,4 @@
-#include "primec/SemanticsDefinitionPrepass.h"
+#include "primec/semantics/SemanticsDefinitionPrepass.h"
 
 #include <unordered_set>
 

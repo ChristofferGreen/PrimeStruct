@@ -13,9 +13,9 @@
 #include <utility>
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
-#include "primec/CompileArena.h"
-#include "primec/StdlibSurfaceRegistry.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/support/CompileArena.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 namespace {

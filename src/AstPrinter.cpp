@@ -1,4 +1,4 @@
-#include "primec/AstPrinter.h"
+#include "primec/ast/AstPrinter.h"
 
 #include <cstdint>
 #include <sstream>

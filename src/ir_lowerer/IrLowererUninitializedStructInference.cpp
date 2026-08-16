@@ -12,8 +12,8 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/SoaPathHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/SoaPathHelpers.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

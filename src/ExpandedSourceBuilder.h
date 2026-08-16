@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primec/ExpandedSource.h"
+#include "primec/frontend/ExpandedSource.h"
 
 #include <cstddef>
 #include <string>

@@ -1,5 +1,5 @@
 #include "IrToGlslEmitterInternal.h"
-#include "primec/IrToGlslEmitter.h"
+#include "primec/backend/IrToGlslEmitter.h"
 
 #include <sstream>
 

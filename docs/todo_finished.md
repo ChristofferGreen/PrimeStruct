@@ -6,6 +6,98 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4641: Group `include/primec/` headers by pipeline stage
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: File layout restructuring
+  - parallel_track: include-layout
+  - depends_on: TODO-4637, TODO-4638, TODO-4639, TODO-4640
+  - scope: Move the 67 flat headers in `include/primec/` into subdirectories
+    by pipeline stage: `ast/`, `frontend/`, `semantics/`, `ir/`, `backend/`,
+    `runtime/`, `support/`, `pipeline/`. Update all `#include` paths in
+    `src/` and `tests/`. Update `scripts/include_layer_allowlist.txt` and
+    `scripts/check_include_layers.py` if needed.
+  - implementation_notes: This phase has the widest blast radius. Move
+    headers last so test files are already settled. Use `git mv` and update
+    includes with a find-and-replace pass. Verify the include layer checker
+    still passes.
+  - acceptance:
+    - No headers remain at the `include/primec/` root (except possibly a
+      convenience umbrella header).
+    - All `#include` paths in `src/` and `tests/` resolve correctly.
+    - `scripts/check_include_layers.py` passes.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once all headers are grouped and the include layer
+    checker passes; do not restructure header contents in this leaf.
+  - finished_2026-08-16: moved all 68 `include/primec/*.h` headers (the
+    actual count; the doc's "67" estimate was stale) into `ast/` (4),
+    `frontend/` (13, including `StdlibSymbolManifest.h`), `semantics/` (7),
+    `ir/` (15), `backend/` (8), `runtime/` (5), `support/` (14, including
+    `CompileArena.h` and `CollectionSpellingClassifier.h`), and `pipeline/`
+    (2) via `git mv`, then rewrote all 953 `#include "primec/X.h"` lines
+    across 442 files (`src/`, `include/`, `tests/`) plus 5 in `tools/`
+    (missed by the first pass, which didn't scan that directory - caught
+    by a full `cmake --build` failure and a repo-wide re-scan).
+    `scripts/check_include_layers.py` passes unchanged (its rules are
+    prefix-based, not header-filename-based, so the reorg didn't need
+    updates there).
+
+    This move's real risk turned out to be the ~15 "architecture stays
+    source locked" tests scattered across the suite that read header
+    files' own on-disk content/paths at runtime (`std::filesystem::exists`/
+    `readRepoFile` calls building paths like `"include" / "primec" /
+    "X.h"`, `#include`-string containment checks like
+    `source.find("#include \"primec/X.h\"")`, and hardcoded
+    `tests/unit/compile_run/...`/`tests/unit/ir_pipeline/...` sibling-file
+    paths from a prior, unrelated flat-layout assumption) - a full
+    `./scripts/compile.sh --release` run was essential to find these;
+    they're invisible to a plain build and to running individual doctest
+    binaries directly (which is why they'd stayed undiscovered through
+    TODO-4637/4638/4639/4640's own verification). Fixed via scripted
+    basename/domain->new-path rewrites (extended to also cover
+    `compile_run`/`ir_pipeline`/`semantics` test-file sibling references,
+    which had the identical problem left over from TODO-4638/4639's own
+    moves and had never been caught before this).
+
+    Along the way this also surfaced and fixed two independent
+    pre-existing bugs, neither introduced by this TODO but only ever
+    exposed by actually running the full release gate:
+    - CMakeLists.txt's `PrimeStructCompileRunTestSources` derivation used
+      a regex (`^tests/unit/compile_run/test_compile_run_.*\.cpp$`) that
+      assumed TODO-4638's shard was still flat; once split into
+      subdirectories, matching files silently fell through into
+      `PrimeStructBackendIrTestSources` instead (via `list(REMOVE_ITEM)`
+      never removing sources it never received), corrupting both test
+      binaries' suite membership. Fixed by widening the regex to allow an
+      intermediate subdirectory segment.
+    - `scripts/check_test_suite_naming.py`'s `iter_test_sources` only
+      walked one directory level below `tests/unit/`, so most of
+      TODO-4637-4640's moved (two-level-deep) files were silently never
+      checked by its numeric-suffix-ban/duplicate-suite guardrails, and
+      its `EXPECTED_FILE_SUITES`/`check_vm_collections_splitout` checks
+      hardcoded now-stale flat paths. Fixed by making the scan recursive
+      (`rglob`) and updating the hardcoded paths; the newly-correct
+      recursive scan then caught two genuinely pre-existing (never
+      checked before) numeric-suffix violations in
+      `test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_count_fallback_{01,02}.h`,
+      renamed to `_direct_call.h` / `_reordered_wrapped_receiver.h`.
+
+    Also updated two pinned `docs/todo.md` snapshot strings in
+    `test_compile_run_examples_docs_locks.cpp` ("todo queue ... stay
+    source locked") to match the queue's actual post-TODO-4637-through-4641
+    state, since those TODOs' completion legitimately changed the queue
+    content the test was pinning.
+
+    Verified via a full `./scripts/compile.sh --release` run (the
+    canonical gate per `AGENTS.md`, not a scoped debug-binary check like
+    the previous three shard-move TODOs used) - iterated through 5 rounds
+    of full-gate failures (8, then 3, then 4, then 1, then 0) as each
+    class of hardcoded-path assumption was found and fixed. Final run:
+    1958 CTest cases, 0 failures (`99%+` pass rate reflects only the
+    pre-existing intentionally-`Disabled` shards, unrelated to this
+    change).
+
 - [x] TODO-4640: Move remaining test shards into subdirectories
   - owner: ai
   - created_at: 2026-06-11

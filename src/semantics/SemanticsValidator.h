@@ -20,10 +20,10 @@
 #include "SemanticsDefinitionWorkerResult.h"
 #include "SemanticsValidatorGraphLocalAuto.h"
 #include "SemanticsHelpers.h"
-#include "primec/SemanticValidationPlan.h"
-#include "primec/SemanticValidationResult.h"
-#include "primec/SymbolInterner.h"
-#include "primec/Semantics.h"
+#include "primec/semantics/SemanticValidationPlan.h"
+#include "primec/semantics/SemanticValidationResult.h"
+#include "primec/frontend/SymbolInterner.h"
+#include "primec/semantics/Semantics.h"
 
 namespace primec::semantics {
 

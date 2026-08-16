@@ -3,7 +3,7 @@
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsWorkerSymbolMerge.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
 #include <cctype>

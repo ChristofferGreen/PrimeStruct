@@ -4,8 +4,8 @@
 
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterCollectionSurfaceMetadata.h"
-#include "primec/StdlibSurfaceRegistry.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::emitter {
 

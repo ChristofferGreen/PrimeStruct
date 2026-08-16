@@ -1,6 +1,6 @@
-#include "primec/Ast.h"
-#include "primec/AstPrinter.h"
-#include "primec/IrPrinter.h"
+#include "primec/ast/Ast.h"
+#include "primec/ast/AstPrinter.h"
+#include "primec/ir/IrPrinter.h"
 
 #include "third_party/doctest.h"
 

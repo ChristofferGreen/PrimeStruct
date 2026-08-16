@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "primec/Vm.h"
+#include "primec/runtime/Vm.h"
 
 namespace primec::vm_detail {
 

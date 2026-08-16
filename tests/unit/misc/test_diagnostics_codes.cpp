@@ -1,4 +1,4 @@
-#include "primec/Diagnostics.h"
+#include "primec/support/Diagnostics.h"
 
 #include "third_party/doctest.h"
 

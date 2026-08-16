@@ -733,10 +733,10 @@ TEST_CASE("public call dispatch testing header stays in sync with alias-policy h
 TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path snapshotPath =
-      cwd / "tests" / "unit" / "semantics" / "test_semantics_type_resolution_graph_snapshots.cpp";
+      cwd / "tests" / "unit" / "semantics" / "type_resolution" / "test_semantics_type_resolution_graph_snapshots.cpp";
   if (!std::filesystem::exists(snapshotPath)) {
     snapshotPath =
-        cwd.parent_path() / "tests" / "unit" / "semantics" / "test_semantics_type_resolution_graph_snapshots.cpp";
+        cwd.parent_path() / "tests" / "unit" / "semantics" / "type_resolution" / "test_semantics_type_resolution_graph_snapshots.cpp";
   }
   REQUIRE(std::filesystem::exists(snapshotPath));
 
@@ -749,10 +749,10 @@ TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
 TEST_CASE("backend registry keeps semantic-product negative fixture families covered") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path registryPath =
-      cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_backends_registry.cpp";
+      cwd / "tests" / "unit" / "ir_pipeline" / "backends" / "test_ir_pipeline_backends_registry.cpp";
   if (!std::filesystem::exists(registryPath)) {
     registryPath =
-        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_backends_registry.cpp";
+        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "backends" / "test_ir_pipeline_backends_registry.cpp";
   }
   REQUIRE(std::filesystem::exists(registryPath));
 
@@ -776,9 +776,9 @@ TEST_CASE("backend registry keeps semantic-product negative fixture families cov
 
 TEST_CASE("ir lowerer header exposes only semantic-product-aware lowering entrypoint") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path irLowererHeaderPath = cwd / "include" / "primec" / "IrLowerer.h";
+  std::filesystem::path irLowererHeaderPath = cwd / "include" / "primec" / "ir" / "IrLowerer.h";
   if (!std::filesystem::exists(irLowererHeaderPath)) {
-    irLowererHeaderPath = cwd.parent_path() / "include" / "primec" / "IrLowerer.h";
+    irLowererHeaderPath = cwd.parent_path() / "include" / "primec" / "ir" / "IrLowerer.h";
   }
   REQUIRE(std::filesystem::exists(irLowererHeaderPath));
 
@@ -790,13 +790,13 @@ TEST_CASE("ir lowerer header exposes only semantic-product-aware lowering entryp
 
 TEST_CASE("semantic product routing facts have dedicated public headers") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "SemanticProduct.h";
+  std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "frontend" / "SemanticProduct.h";
   std::filesystem::path directCallFactsPath =
       cwd / "include" / "primec" / "semantic_product" / "DirectCallFacts.h";
   std::filesystem::path methodCallFactsPath =
       cwd / "include" / "primec" / "semantic_product" / "MethodCallFacts.h";
   if (!std::filesystem::exists(semanticProductPath)) {
-    semanticProductPath = cwd.parent_path() / "include" / "primec" / "SemanticProduct.h";
+    semanticProductPath = cwd.parent_path() / "include" / "primec" / "frontend" / "SemanticProduct.h";
     directCallFactsPath =
         cwd.parent_path() / "include" / "primec" / "semantic_product" / "DirectCallFacts.h";
     methodCallFactsPath =
@@ -819,8 +819,8 @@ TEST_CASE("semantic product routing facts have dedicated public headers") {
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets = {};") !=
         std::string::npos);
-  CHECK(directCallFacts.find("#include \"primec/SemanticProduct.h\"") == std::string::npos);
-  CHECK(methodCallFacts.find("#include \"primec/SemanticProduct.h\"") == std::string::npos);
+  CHECK(directCallFacts.find("#include \"primec/frontend/SemanticProduct.h\"") == std::string::npos);
+  CHECK(methodCallFacts.find("#include \"primec/frontend/SemanticProduct.h\"") == std::string::npos);
   CHECK(directCallFacts.find("struct SemanticProgramDirectCallTarget {") != std::string::npos);
   CHECK(methodCallFacts.find("struct SemanticProgramMethodCallTarget {") != std::string::npos);
   CHECK(directCallFacts.find("semanticProgramDirectCallTargetView") != std::string::npos);
@@ -939,7 +939,7 @@ TEST_CASE("semantic product routing fact v1 shape markers match public fields") 
 TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h") ? cwd : cwd.parent_path();
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h") ? cwd : cwd.parent_path();
   auto readRepoFile = [&](const std::filesystem::path &relativePath) {
     const std::filesystem::path fullPath = root / relativePath;
     REQUIRE(std::filesystem::exists(fullPath));
@@ -947,15 +947,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   };
 
   const std::string cmake = readRepoFile("CMakeLists.txt");
-  const std::string semanticProduct = readRepoFile("include/primec/SemanticProduct.h");
+  const std::string semanticProduct = readRepoFile("include/primec/frontend/SemanticProduct.h");
   const std::string directCallFacts =
       readRepoFile("include/primec/semantic_product/DirectCallFacts.h");
   const std::string methodCallFacts =
       readRepoFile("include/primec/semantic_product/MethodCallFacts.h");
-  const std::string compilePipelineHeader = readRepoFile("include/primec/CompilePipeline.h");
-  const std::string semanticsHeader = readRepoFile("include/primec/Semantics.h");
-  const std::string irPreparationHeader = readRepoFile("include/primec/IrPreparation.h");
-  const std::string irLowererHeader = readRepoFile("include/primec/IrLowerer.h");
+  const std::string compilePipelineHeader = readRepoFile("include/primec/pipeline/CompilePipeline.h");
+  const std::string semanticsHeader = readRepoFile("include/primec/semantics/Semantics.h");
+  const std::string irPreparationHeader = readRepoFile("include/primec/ir/IrPreparation.h");
+  const std::string irLowererHeader = readRepoFile("include/primec/ir/IrLowerer.h");
   const std::string compilePipelineSource = readRepoFile("src/CompilePipeline.cpp");
   const std::string irLowererEntrySetup =
       readRepoFile("src/ir_lowerer/IrLowererLowerSetupEntryEffects.h");
@@ -1503,7 +1503,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("isResidualBridgeHelperPath(resolvedPath)") !=
         std::string::npos);
-  CHECK(irCallResolution.find("#include \"primec/SoaPathHelpers.h\"") !=
+  CHECK(irCallResolution.find("#include \"primec/ir/SoaPathHelpers.h\"") !=
         std::string::npos);
   CHECK(irCallResolution.find("soa_paths::collectionPath(soa_paths::legacySoaFolder())") !=
         std::string::npos);
@@ -1583,7 +1583,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
 TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   auto readRepoFile = [&](const std::filesystem::path &relativePath) {
@@ -1595,13 +1595,13 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   const std::string semanticProductSource = readRepoFile("src/SemanticProduct.cpp");
   const std::string matrix = readRepoFile("docs/SemanticProductConsumerMatrix.md");
   const std::string registryTests =
-      readRepoFile("tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp");
+      readRepoFile("tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry.cpp");
   const std::string snapshotTests =
-      readRepoFile("tests/unit/semantics/test_semantics_type_resolution_graph_snapshots.cpp");
+      readRepoFile("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots.cpp");
   const std::string entrySetupTests = readRepoFile(
-      "tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp");
+      "tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp");
   const std::string callHelperTests = readRepoFile(
-      "tests/unit/ir_pipeline/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
+      "tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
   const std::string compileTimeFacadeTests =
       readRepoFile("tests/unit/compile_time/test_compile_time_evaluation_facade.cpp");
 
@@ -1883,11 +1883,11 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
 TEST_CASE("semantic product bridge path choices use helperNameId without helperName shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
 
@@ -1917,7 +1917,7 @@ TEST_CASE("semantic product bridge path choices use helperNameId without helperN
 TEST_CASE("semantic product method call targets use resolvedPathId without resolvedPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string methodCallFactsHeader =
@@ -1952,11 +1952,11 @@ TEST_CASE("semantic product method call targets use resolvedPathId without resol
 TEST_CASE("semantic product callable summaries use fullPathId without fullPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
@@ -1998,11 +1998,11 @@ TEST_CASE("semantic product callable summaries use fullPathId without fullPath s
 TEST_CASE("semantic product binding facts use resolvedPathId without resolvedPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string bindingTypeHelpersSource =
@@ -2034,11 +2034,11 @@ TEST_CASE("semantic product binding facts use resolvedPathId without resolvedPat
 TEST_CASE("semantic product return facts use definitionPathId without definitionPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
@@ -2068,11 +2068,11 @@ TEST_CASE("semantic product return facts use definitionPathId without definition
 TEST_CASE("semantic product local auto facts use initializerResolvedPathId without initializerResolvedPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string bindingTypeHelpersSource =
@@ -2117,11 +2117,11 @@ TEST_CASE("semantic product local auto facts use initializerResolvedPathId witho
 TEST_CASE("semantic product query facts use resolvedPathId without resolvedPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
@@ -2153,11 +2153,11 @@ TEST_CASE("semantic product query facts use resolvedPathId without resolvedPath 
 TEST_CASE("semantic product try facts use operandResolvedPathId without operandResolvedPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
@@ -2189,11 +2189,11 @@ TEST_CASE("semantic product try facts use operandResolvedPathId without operandR
 TEST_CASE("semantic product on_error facts use handlerPathId without handlerPath shadow field") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
-      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+      std::filesystem::exists(cwd / "include" / "primec" / "frontend" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
   const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+      readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string onErrorHelpersSource =

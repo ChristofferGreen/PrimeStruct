@@ -13,15 +13,15 @@
 #include <variant>
 #include <vector>
 
-#include "primec/AstMemory.h"
-#include "primec/CliDriver.h"
-#include "primec/Diagnostics.h"
-#include "primec/EmitKind.h"
-#include "primec/IrBackends.h"
-#include "primec/IrBackendProfiles.h"
-#include "primec/IrLowerer.h"
-#include "primec/IrPreparation.h"
-#include "primec/SemanticValidationPlan.h"
+#include "primec/ast/AstMemory.h"
+#include "primec/pipeline/CliDriver.h"
+#include "primec/support/Diagnostics.h"
+#include "primec/support/EmitKind.h"
+#include "primec/backend/IrBackends.h"
+#include "primec/backend/IrBackendProfiles.h"
+#include "primec/ir/IrLowerer.h"
+#include "primec/ir/IrPreparation.h"
+#include "primec/semantics/SemanticValidationPlan.h"
 #include "primec/semantic_product/DirectCallFacts.h"
 #include "primec/semantic_product/MethodCallFacts.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
@@ -9897,7 +9897,7 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   CHECK(source.find("software numeric types are not supported:") == std::string::npos);
   CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
   CHECK(source.find("compileCppExecutable(") == std::string::npos);
-  CHECK(source.find("#include \"primec/Emitter.h\"") == std::string::npos);
+  CHECK(source.find("#include \"primec/backend/Emitter.h\"") == std::string::npos);
 }
 
 TEST_CASE("primevm uses shared ir preparation helper") {

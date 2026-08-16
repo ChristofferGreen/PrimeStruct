@@ -1,16 +1,16 @@
-#include "primec/IrBackends.h"
+#include "primec/backend/IrBackends.h"
 
-#include "primec/CompileArena.h"
-#include "primec/ExternalTooling.h"
-#include "primec/IrBackendProfiles.h"
-#include "primec/IrSerializer.h"
-#include "primec/IrToCppEmitter.h"
-#include "primec/IrToGlslEmitter.h"
-#include "primec/NativeEmitter.h"
-#include "primec/ProcessRunner.h"
-#include "primec/TempPaths.h"
-#include "primec/Vm.h"
-#include "primec/WasmEmitter.h"
+#include "primec/support/CompileArena.h"
+#include "primec/support/ExternalTooling.h"
+#include "primec/backend/IrBackendProfiles.h"
+#include "primec/ir/IrSerializer.h"
+#include "primec/backend/IrToCppEmitter.h"
+#include "primec/backend/IrToGlslEmitter.h"
+#include "primec/backend/NativeEmitter.h"
+#include "primec/support/ProcessRunner.h"
+#include "primec/support/TempPaths.h"
+#include "primec/runtime/Vm.h"
+#include "primec/backend/WasmEmitter.h"
 
 #include <array>
 #include <cstdint>

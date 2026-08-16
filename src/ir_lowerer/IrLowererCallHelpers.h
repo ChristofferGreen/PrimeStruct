@@ -11,8 +11,8 @@
 #include "IrLowererCallHelperTypes.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSharedTypes.h"
-#include "primec/Ir.h"
-#include "primec/Ast.h"
+#include "primec/ir/Ir.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::ir_lowerer {
 

@@ -2,7 +2,7 @@
 // collection-surface-audit: exempt
 #pragma once
 
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <string_view>
 

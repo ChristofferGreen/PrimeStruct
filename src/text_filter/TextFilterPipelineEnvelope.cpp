@@ -2,8 +2,8 @@
 #include "TextFilterPipelineEnvelopeHelpers.h"
 
 #include "TextFilterHelpers.h"
-#include "primec/TextFilterPipeline.h"
-#include "primec/TransformRules.h"
+#include "primec/support/TextFilterPipeline.h"
+#include "primec/support/TransformRules.h"
 
 #include <unordered_set>
 

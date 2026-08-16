@@ -1,6 +1,6 @@
 #include "VmNumericOpcodeShared.h"
 
-#include "primec/VmKernelBoundary.h"
+#include "primec/runtime/VmKernelBoundary.h"
 
 namespace primec::vm_detail {
 

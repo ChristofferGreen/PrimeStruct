@@ -17,7 +17,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererStringCallHelpers.h"
-#include "primec/Diagnostics.h"
+#include "primec/support/Diagnostics.h"
 
 namespace primec::ir_lowerer {
 

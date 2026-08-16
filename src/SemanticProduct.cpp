@@ -1,6 +1,6 @@
-#include "primec/SemanticProduct.h"
+#include "primec/frontend/SemanticProduct.h"
 
-#include "primec/CompileArena.h"
+#include "primec/support/CompileArena.h"
 
 #include <algorithm>
 #include <limits>

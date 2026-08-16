@@ -1,6 +1,6 @@
-#include "primec/TempPaths.h"
+#include "primec/support/TempPaths.h"
 
-#include "primec/CompileArena.h"
+#include "primec/support/CompileArena.h"
 
 #include <atomic>
 #include <chrono>

@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "primec/TextFilterPipeline.h"
+#include "primec/support/TextFilterPipeline.h"
 
 namespace primec::text_filter {
 

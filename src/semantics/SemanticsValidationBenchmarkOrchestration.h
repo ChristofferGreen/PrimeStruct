@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primec/SemanticsBenchmark.h"
+#include "primec/semantics/SemanticsBenchmark.h"
 
 #include <cstdint>
 

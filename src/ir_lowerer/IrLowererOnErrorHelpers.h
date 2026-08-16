@@ -10,7 +10,7 @@
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::ir_lowerer {
 

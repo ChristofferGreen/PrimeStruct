@@ -1,7 +1,7 @@
-#include "primec/CompileTimeEvaluation.h"
+#include "primec/frontend/CompileTimeEvaluation.h"
 
-#include "primec/SemanticProduct.h"
-#include "primec/VmKernelBoundary.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/runtime/VmKernelBoundary.h"
 
 #include <algorithm>
 #include <charconv>

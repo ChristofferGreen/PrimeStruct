@@ -6,7 +6,7 @@
 #include <unordered_set>
 
 #include "IrLowererStructFieldBindingHelpers.h"
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::ir_lowerer {
 

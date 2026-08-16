@@ -11,9 +11,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "primec/Ast.h"
-#include "primec/Ir.h"
-#include "primec/SemanticProduct.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
+#include "primec/frontend/SemanticProduct.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererGpuEffects.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererNativeEffects.h"

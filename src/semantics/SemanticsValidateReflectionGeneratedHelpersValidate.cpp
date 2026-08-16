@@ -1,7 +1,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpersValidate.h"
 
 #include "SemanticsHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 #include <optional>
 #include <string>

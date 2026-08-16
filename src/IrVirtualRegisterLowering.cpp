@@ -1,4 +1,4 @@
-#include "primec/IrVirtualRegisterLowering.h"
+#include "primec/ir/IrVirtualRegisterLowering.h"
 
 #include <algorithm>
 #include <array>

@@ -1,5 +1,5 @@
-#include "primec/Parser.h"
-#include "primec/StringLiteral.h"
+#include "primec/frontend/Parser.h"
+#include "primec/frontend/StringLiteral.h"
 
 #include "ParserHelpers.h"
 

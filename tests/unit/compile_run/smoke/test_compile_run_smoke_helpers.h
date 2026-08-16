@@ -1,8 +1,8 @@
 #pragma once
 
-#include "primec/IrSerializer.h"
-#include "primec/Options.h"
-#include "primec/OptionsParser.h"
+#include "primec/ir/IrSerializer.h"
+#include "primec/support/Options.h"
+#include "primec/support/OptionsParser.h"
 
 #include <algorithm>
 #include <cctype>

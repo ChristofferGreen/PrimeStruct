@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "primec/Ast.h"
-#include "primec/SemanticProduct.h"
+#include "primec/ast/Ast.h"
+#include "primec/frontend/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 

@@ -2,8 +2,8 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/Ir.h"
-#include "primec/IrToCppEmitter.h"
+#include "primec/ir/Ir.h"
+#include "primec/backend/IrToCppEmitter.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.to_cpp");
 

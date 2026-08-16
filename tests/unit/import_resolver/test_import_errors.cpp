@@ -1,4 +1,4 @@
-#include "primec/ImportResolver.h"
+#include "primec/frontend/ImportResolver.h"
 #include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"

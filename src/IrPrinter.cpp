@@ -1,4 +1,4 @@
-#include "primec/IrPrinter.h"
+#include "primec/ir/IrPrinter.h"
 
 #include "IrPrinterInternal.h"
 

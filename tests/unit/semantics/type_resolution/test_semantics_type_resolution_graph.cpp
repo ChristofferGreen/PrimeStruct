@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "primec/SemanticReturnDependencyOrder.h"
+#include "primec/semantics/SemanticReturnDependencyOrder.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
 #include "third_party/doctest.h"

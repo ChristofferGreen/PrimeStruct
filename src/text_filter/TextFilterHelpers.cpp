@@ -1,6 +1,6 @@
 #include "TextFilterHelpers.h"
 
-#include "primec/StringLiteral.h"
+#include "primec/frontend/StringLiteral.h"
 
 #include <cctype>
 

@@ -1,8 +1,8 @@
-#include "primec/Ast.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/SemanticProduct.h"
-#include "primec/Semantics.h"
+#include "primec/ast/Ast.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/semantics/Semantics.h"
 
 #include "third_party/doctest.h"
 

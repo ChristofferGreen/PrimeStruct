@@ -16,9 +16,9 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/AstCallPathHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ast/AstCallPathHelpers.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

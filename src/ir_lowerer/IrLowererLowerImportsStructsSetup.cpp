@@ -4,7 +4,7 @@
 
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
-#include "primec/FrontendSyntax.h"
+#include "primec/frontend/FrontendSyntax.h"
 
 namespace primec::ir_lowerer {
 

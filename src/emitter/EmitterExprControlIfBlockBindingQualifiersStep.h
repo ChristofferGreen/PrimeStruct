@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "primec/Emitter.h"
+#include "primec/backend/Emitter.h"
 
 namespace primec::emitter {
 

@@ -2,8 +2,8 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
-#include "primec/CollectionSpellingClassifier.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
 #include <cctype>
@@ -16,7 +16,7 @@ namespace primec::semantics {
 namespace {
 
 // Removed-name membership delegates to the single authoritative sets in
-// primec/CollectionSpellingClassifier.h (decision D2). This site was one
+// primec/support/CollectionSpellingClassifier.h (decision D2). This site was one
 // of the two registry-membership variants; the D2 agreement unit test
 // pins that the registry manifest surfaces cover the same names.
 bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {

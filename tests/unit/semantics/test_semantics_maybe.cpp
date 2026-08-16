@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string_view>
 
-#include "primec/SemanticProduct.h"
+#include "primec/frontend/SemanticProduct.h"
 
 #include "test_semantics_helpers.h"
 

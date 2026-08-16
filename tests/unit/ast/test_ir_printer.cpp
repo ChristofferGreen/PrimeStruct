@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "primec/Ast.h"
-#include "primec/IrPrinter.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/IrPrinter.h"
 
 TEST_SUITE_BEGIN("primestruct.ir_printer");
 

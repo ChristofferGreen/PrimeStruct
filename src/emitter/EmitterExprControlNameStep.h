@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "primec/Emitter.h"
+#include "primec/backend/Emitter.h"
 
 namespace primec::emitter {
 

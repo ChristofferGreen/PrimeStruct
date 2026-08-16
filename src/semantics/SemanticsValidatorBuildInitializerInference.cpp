@@ -2,7 +2,7 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
-#include "primec/CollectionSpellingClassifier.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 #include <algorithm>
 #include <limits>

@@ -19,10 +19,10 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/SemanticProduct.h"
-#include "primec/SoaPathHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/ir/SoaPathHelpers.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;

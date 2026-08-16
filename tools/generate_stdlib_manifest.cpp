@@ -7,7 +7,7 @@
 // key=value manifest file colocated with the module source.
 //
 // Shares its source-slicing, namespace-wrapping, and hashing logic with
-// include/primec/StdlibSymbolManifest.h (TODO-5227), which the compile
+// include/primec/frontend/StdlibSymbolManifest.h (TODO-5227), which the compile
 // pipeline (in a later leaf) uses to re-derive and verify the same slices
 // at compile time - keeping both sides of the manifest contract in sync by
 // construction rather than by convention.
@@ -19,11 +19,11 @@
 //   generate_stdlib_manifest stdlib/std/image/image.prime /std/image
 //       stdlib/std/image/image.psmeta
 
-#include "primec/Ast.h"
-#include "primec/AstPrinter.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/StdlibSymbolManifest.h"
+#include "primec/ast/Ast.h"
+#include "primec/ast/AstPrinter.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/frontend/StdlibSymbolManifest.h"
 
 #include <algorithm>
 #include <cstdint>

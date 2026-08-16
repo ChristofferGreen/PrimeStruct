@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "primec/Ast.h"
+#include "primec/ast/Ast.h"
 
 namespace primec::ir_lowerer {
 

@@ -1,4 +1,4 @@
-#include "primec/CompileArena.h"
+#include "primec/support/CompileArena.h"
 
 #include <cstddef>
 #include <cstdint>

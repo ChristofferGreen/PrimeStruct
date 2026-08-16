@@ -5,7 +5,7 @@
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
-#include "primec/StringLiteral.h"
+#include "primec/frontend/StringLiteral.h"
 
 namespace primec::ir_lowerer {
 

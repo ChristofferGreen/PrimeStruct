@@ -7081,7 +7081,7 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
   REQUIRE(std::filesystem::exists(statementCallEmissionPath));
 
   const std::string source = readText(statementCallEmissionPath);
-  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") ==
+  CHECK(source.find("#include \"primec/support/StdlibSurfaceRegistry.h\"") ==
         std::string::npos);
   CHECK(source.find("resolvePublishedStatementCallVectorHelperName(") ==
         std::string::npos);

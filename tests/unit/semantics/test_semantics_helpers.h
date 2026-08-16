@@ -8,10 +8,10 @@
 #include <string>
 #include <vector>
 
-#include "primec/CompilePipeline.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/Semantics.h"
+#include "primec/pipeline/CompilePipeline.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/semantics/Semantics.h"
 #include "primec/testing/TestScratch.h"
 #include "third_party/doctest.h"
 

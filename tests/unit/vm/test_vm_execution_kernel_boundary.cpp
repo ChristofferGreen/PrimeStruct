@@ -1,5 +1,5 @@
-#include "primec/VmExecutionKernel.h"
-#include "primec/VmKernelBoundary.h"
+#include "primec/runtime/VmExecutionKernel.h"
+#include "primec/runtime/VmKernelBoundary.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -202,13 +202,13 @@ TEST_CASE("vm execution kernel avoids runtime-only dependencies") {
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path headerPath =
-      repoRoot / "include" / "primec" / "VmExecutionKernel.h";
+      repoRoot / "include" / "primec" / "runtime" / "VmExecutionKernel.h";
   const std::filesystem::path sourcePath =
       repoRoot / "src" / "runtime" / "VmExecutionKernel.cpp";
   const std::filesystem::path numericSharedPath =
       repoRoot / "src" / "runtime" / "VmNumericOpcodeShared.cpp";
   const std::filesystem::path kernelBoundaryHeaderPath =
-      repoRoot / "include" / "primec" / "VmKernelBoundary.h";
+      repoRoot / "include" / "primec" / "runtime" / "VmKernelBoundary.h";
   const std::filesystem::path kernelBoundarySourcePath =
       repoRoot / "src" / "runtime" / "VmKernelBoundary.cpp";
   REQUIRE(std::filesystem::exists(headerPath));
@@ -222,18 +222,18 @@ TEST_CASE("vm execution kernel avoids runtime-only dependencies") {
   const std::string numericShared = readText(numericSharedPath);
   const std::string kernelBoundaryHeader = readText(kernelBoundaryHeaderPath);
   const std::string kernelBoundarySource = readText(kernelBoundarySourcePath);
-  CHECK(header.find("primec/Vm.h") == std::string::npos);
+  CHECK(header.find("primec/runtime/Vm.h") == std::string::npos);
   CHECK(header.find("VmDebug") == std::string::npos);
   CHECK(source.find("VmHeapHelpers.h") == std::string::npos);
   CHECK(source.find("VmIoHelpers.h") == std::string::npos);
   CHECK(source.find("primevm_main") == std::string::npos);
-  CHECK(source.find("#include \"primec/VmKernelBoundary.h\"") !=
+  CHECK(source.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=
         std::string::npos);
   CHECK(source.find("vm_kernel::isPureNumericOpcode(op)") !=
         std::string::npos);
   CHECK(source.find("handleSharedVmControlFlowOpcode(") != std::string::npos);
   CHECK(source.find("handleVmNumericOpcode(") != std::string::npos);
-  CHECK(numericShared.find("#include \"primec/VmKernelBoundary.h\"") !=
+  CHECK(numericShared.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=
         std::string::npos);
   CHECK(numericShared.find("executePureNumericOpcode(inst, stack, error)") !=
         std::string::npos);

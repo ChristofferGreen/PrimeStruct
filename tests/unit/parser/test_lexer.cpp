@@ -1,4 +1,4 @@
-#include "primec/Lexer.h"
+#include "primec/frontend/Lexer.h"
 
 #include "third_party/doctest.h"
 

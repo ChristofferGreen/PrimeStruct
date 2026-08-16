@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 

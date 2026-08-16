@@ -11,9 +11,9 @@
 #include "IrLowererLowerInferenceSetup.h"
 #include "IrLowererLowerStatementsSourceMapStep.h"
 #include "IrLowererSetupLocalsHelpers.h"
-#include "primec/ExpandedSource.h"
-#include "primec/Ir.h"
-#include "primec/IrValidation.h"
+#include "primec/frontend/ExpandedSource.h"
+#include "primec/ir/Ir.h"
+#include "primec/ir/IrValidation.h"
 
 namespace primec::ir_lowerer {
 

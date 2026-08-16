@@ -1,12 +1,12 @@
-#include "primec/CliDriver.h"
-#include "primec/CompileArena.h"
-#include "primec/CompilePipeline.h"
-#include "primec/Diagnostics.h"
-#include "primec/EmitKind.h"
-#include "primec/IrBackends.h"
-#include "primec/IrPreparation.h"
-#include "primec/Options.h"
-#include "primec/OptionsParser.h"
+#include "primec/pipeline/CliDriver.h"
+#include "primec/support/CompileArena.h"
+#include "primec/pipeline/CompilePipeline.h"
+#include "primec/support/Diagnostics.h"
+#include "primec/support/EmitKind.h"
+#include "primec/backend/IrBackends.h"
+#include "primec/ir/IrPreparation.h"
+#include "primec/support/Options.h"
+#include "primec/support/OptionsParser.h"
 
 #include <chrono>
 #include <cstdint>

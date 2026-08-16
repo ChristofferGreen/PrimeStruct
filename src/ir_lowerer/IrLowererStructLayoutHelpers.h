@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "IrLowererStructFieldBindingHelpers.h"
-#include "primec/Ast.h"
-#include "primec/Ir.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
 
 namespace primec {
 struct SemanticProgramTypeMetadata;

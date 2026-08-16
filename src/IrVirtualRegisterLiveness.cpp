@@ -1,4 +1,4 @@
-#include "primec/IrVirtualRegisterLiveness.h"
+#include "primec/ir/IrVirtualRegisterLiveness.h"
 
 #include <algorithm>
 #include <iterator>

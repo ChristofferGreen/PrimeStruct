@@ -2,7 +2,7 @@
 
 #include "NativeEmitterInternals.h"
 #include "NativeEmitterInternalsX64.h"
-#include "primec/NativeEmitter.h"
+#include "primec/backend/NativeEmitter.h"
 
 #include <string>
 #include <vector>

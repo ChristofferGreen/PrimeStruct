@@ -1,7 +1,7 @@
-#include "primec/AstPrinter.h"
-#include "primec/IrPrinter.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
+#include "primec/ast/AstPrinter.h"
+#include "primec/ir/IrPrinter.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
 
 #include "third_party/doctest.h"
 

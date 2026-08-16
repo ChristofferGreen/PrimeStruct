@@ -3,7 +3,7 @@
 #include <cctype>
 #include <sstream>
 #include <string_view>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_printer {
 

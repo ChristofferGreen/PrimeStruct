@@ -3,7 +3,7 @@
 
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateReflectionMetadataInternal.h"
-#include "primec/StringLiteral.h"
+#include "primec/frontend/StringLiteral.h"
 
 #include <algorithm>
 #include <cstdint>

@@ -1,4 +1,4 @@
-#include "primec/SymbolInterner.h"
+#include "primec/frontend/SymbolInterner.h"
 
 #include <algorithm>
 #include <limits>

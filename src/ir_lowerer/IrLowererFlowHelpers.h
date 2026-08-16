@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
-#include "primec/Ast.h"
-#include "primec/Ir.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
 
 namespace primec::ir_lowerer {
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "SemanticPublicationSurface.h"
-#include "primec/Semantics.h"
-#include "primec/SymbolInterner.h"
+#include "primec/semantics/Semantics.h"
+#include "primec/frontend/SymbolInterner.h"
 
 #include <cstdint>
 #include <string>

@@ -1,10 +1,10 @@
 // soa-surface-audit: exempt
 #include <cstdio>
-#include "primec/CompileArena.h"
-#include "primec/Semantics.h"
-#include "primec/SemanticsBenchmark.h"
-#include "primec/SemanticValidationPlan.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/CompileArena.h"
+#include "primec/semantics/Semantics.h"
+#include "primec/semantics/SemanticsBenchmark.h"
+#include "primec/semantics/SemanticValidationPlan.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 
@@ -36,7 +36,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec {
 

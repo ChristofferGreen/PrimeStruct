@@ -7,9 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "primec/Ast.h"
-#include "primec/SemanticProduct.h"
-#include "primec/SymbolInterner.h"
+#include "primec/ast/Ast.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/frontend/SymbolInterner.h"
 
 namespace primec::ir_lowerer {
 

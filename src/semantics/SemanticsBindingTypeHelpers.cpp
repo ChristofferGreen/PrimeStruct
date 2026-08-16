@@ -2,8 +2,8 @@
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
-#include "primec/CompileArena.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/support/CompileArena.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 #include <array>
 #include <cctype>

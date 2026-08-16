@@ -7,7 +7,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/SoaPathHelpers.h"
+#include "primec/ir/SoaPathHelpers.h"
 
 #include <cctype>
 #include <memory>
@@ -15,7 +15,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

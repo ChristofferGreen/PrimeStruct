@@ -1,7 +1,7 @@
 #include "third_party/doctest.h"
 
-#include "primec/ExternalTooling.h"
-#include "primec/ProcessRunner.h"
+#include "primec/support/ExternalTooling.h"
+#include "primec/support/ProcessRunner.h"
 
 #include <filesystem>
 #include <functional>

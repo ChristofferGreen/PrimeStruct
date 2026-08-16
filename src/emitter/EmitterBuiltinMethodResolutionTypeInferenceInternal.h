@@ -1,7 +1,7 @@
 #pragma once
 
 #include "EmitterHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 namespace primec::emitter {
 

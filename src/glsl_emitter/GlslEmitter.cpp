@@ -1,4 +1,4 @@
-#include "primec/GlslEmitter.h"
+#include "primec/backend/GlslEmitter.h"
 
 #include "GlslEmitterInternal.h"
 

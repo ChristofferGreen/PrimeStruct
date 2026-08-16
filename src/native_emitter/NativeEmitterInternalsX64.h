@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "primec/Ir.h"
+#include "primec/ir/Ir.h"
 
 #if defined(__linux__)
 #include <sys/mman.h>

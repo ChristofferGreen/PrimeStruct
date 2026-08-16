@@ -1,5 +1,5 @@
 #include "SemanticsValidateExperimentalGfxConstructorsInternal.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include "SemanticsHelpers.h"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primec/Emitter.h"
+#include "primec/backend/Emitter.h"
 
 namespace primec::emitter {
 

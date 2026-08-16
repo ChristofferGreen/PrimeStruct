@@ -2,12 +2,12 @@
 #pragma once
 
 #include "StdlibCollectionSurfaceHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
 #include <string>
 #include <string_view>
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 namespace {

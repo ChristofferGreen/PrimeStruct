@@ -5,7 +5,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/SemanticReturnDependencyOrder.h"
+#include "primec/semantics/SemanticReturnDependencyOrder.h"
 
 #include <algorithm>
 #include <limits>

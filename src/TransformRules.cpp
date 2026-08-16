@@ -1,7 +1,7 @@
-#include "primec/TransformRules.h"
+#include "primec/support/TransformRules.h"
 
-#include "primec/Ast.h"
-#include "primec/TextFilterPipeline.h"
+#include "primec/ast/Ast.h"
+#include "primec/support/TextFilterPipeline.h"
 
 namespace primec {
 

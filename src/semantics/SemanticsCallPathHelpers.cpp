@@ -1,7 +1,7 @@
 #include "SemanticsHelpers.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <string_view>
 #include <utility>

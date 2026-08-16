@@ -6,8 +6,8 @@
 #include <string_view>
 #include <vector>
 
-#include "primec/StdlibSurfaceRegistry.h"
-#include "primec/SymbolInterner.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/frontend/SymbolInterner.h"
 
 namespace primec {
 

@@ -9,9 +9,9 @@
 
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererSharedTypes.h"
-#include "primec/Ast.h"
-#include "primec/Ir.h"
-#include "primec/SemanticProduct.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
+#include "primec/frontend/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 

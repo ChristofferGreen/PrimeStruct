@@ -1,8 +1,8 @@
 #include "IrLowererOnErrorHelpers.h"
 
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
-#include "primec/SemanticProduct.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/frontend/SemanticProduct.h"
 
 #include <memory>
 #include <string_view>

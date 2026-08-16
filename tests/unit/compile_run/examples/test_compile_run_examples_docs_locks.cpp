@@ -237,11 +237,9 @@ TEST_CASE("vector dynamic-storage docs lock completed first slice") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
   std::filesystem::path vmVectorLimitsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
-      "test_compile_run_vm_collections_vector_limits_pop_shadow.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_vector_limits_pop_shadow.cpp";
   std::filesystem::path nativeVectorLimitsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
-      "test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
@@ -255,13 +253,11 @@ TEST_CASE("vector dynamic-storage docs lock completed first slice") {
     todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
   }
   if (!std::filesystem::exists(vmVectorLimitsPath)) {
-    vmVectorLimitsPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-                         "test_compile_run_vm_collections_vector_limits_pop_shadow.cpp";
+    vmVectorLimitsPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_vector_limits_pop_shadow.cpp";
   }
   if (!std::filesystem::exists(nativeVectorLimitsPath)) {
     nativeVectorLimitsPath =
-        std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-        "test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp";
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
@@ -813,11 +809,9 @@ TEST_CASE("generic contiguous buffer substrate docs and coverage stay source loc
       std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
       "test_compile_run_checked_pointer_conformance_helpers.h";
   std::filesystem::path vmCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
-      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   std::filesystem::path nativeCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
-      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
@@ -826,12 +820,10 @@ TEST_CASE("generic contiguous buffer substrate docs and coverage stay source loc
                                 "test_compile_run_checked_pointer_conformance_helpers.h";
   }
   if (!std::filesystem::exists(vmCompatTestPath)) {
-    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-                       "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
+    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   }
   if (!std::filesystem::exists(nativeCompatTestPath)) {
-    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-                           "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(checkedPointerHelpersPath));
@@ -880,13 +872,11 @@ TEST_CASE("soa public collection docs stay source locked") {
   std::filesystem::path soaExamplePath =
       std::filesystem::path("..") / "examples" / "3.Surface" / "soa_ecs.prime";
   std::filesystem::path cppCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_imports_operations.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp";
   std::filesystem::path vmCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
-      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   std::filesystem::path nativeCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
-      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   if (!std::filesystem::exists(codeExamplesPath)) {
     codeExamplesPath = std::filesystem::current_path() / "docs" / "CodeExamples.md";
   }
@@ -913,16 +903,13 @@ TEST_CASE("soa public collection docs stay source locked") {
     soaExamplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_ecs.prime";
   }
   if (!std::filesystem::exists(cppCompatTestPath)) {
-    cppCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-                        "test_compile_run_imports_operations.cpp";
+    cppCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp";
   }
   if (!std::filesystem::exists(vmCompatTestPath)) {
-    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-                       "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
+    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   }
   if (!std::filesystem::exists(nativeCompatTestPath)) {
-    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-                           "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   }
   REQUIRE(std::filesystem::exists(codeExamplesPath));
   REQUIRE(std::filesystem::exists(primeStructPath));
@@ -1126,13 +1113,11 @@ TEST_CASE("soa public collection docs stay source locked") {
 
 TEST_CASE("legacy soa compatibility rejection matrix stays source locked") {
   const std::filesystem::path cppParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" / "test_compile_run_imports_operations.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp");
   const std::filesystem::path vmParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" /
-      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
   const std::filesystem::path nativeParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" /
-      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
   REQUIRE(std::filesystem::exists(cppParityPath));
   REQUIRE(std::filesystem::exists(vmParityPath));
   REQUIRE(std::filesystem::exists(nativeParityPath));
@@ -1205,13 +1190,11 @@ TEST_CASE("soa compatibility fixture migration boundary stays source locked") {
   const std::filesystem::path testsPath = resolveUnitTestsPath();
   const std::filesystem::path examplesPath = resolveRepoPath("examples");
   const std::filesystem::path cppParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" / "test_compile_run_imports_operations.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp");
   const std::filesystem::path vmParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" /
-      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
   const std::filesystem::path nativeParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" /
-      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
   REQUIRE(std::filesystem::exists(testsPath));
   REQUIRE(std::filesystem::exists(examplesPath));
   REQUIRE(std::filesystem::exists(cppParityPath));
@@ -1409,8 +1392,7 @@ TEST_CASE("canonical soa example stays source locked") {
       std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs.prime";
   std::filesystem::path examplesReadmePath = std::filesystem::path("..") / "examples" / "README.md";
   std::filesystem::path exampleSweepPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
-      "test_compile_run_bindings_and_examples.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "bindings" / "test_compile_run_bindings_and_examples.cpp";
   if (!std::filesystem::exists(examplePath)) {
     examplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_ecs.prime";
   }
@@ -1422,8 +1404,7 @@ TEST_CASE("canonical soa example stays source locked") {
     examplesReadmePath = std::filesystem::current_path() / "examples" / "README.md";
   }
   if (!std::filesystem::exists(exampleSweepPath)) {
-    exampleSweepPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
-                       "test_compile_run_bindings_and_examples.cpp";
+    exampleSweepPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "bindings" / "test_compile_run_bindings_and_examples.cpp";
   }
   REQUIRE(std::filesystem::exists(examplePath));
   CHECK(!std::filesystem::exists(oldExamplePath));
@@ -2004,11 +1985,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
   std::filesystem::path vmMathPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_vm_math.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_math.cpp";
   std::filesystem::path vmMapsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_vm_maps.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_maps.cpp";
   std::filesystem::path examplesDocsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_examples_docs.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "examples" / "test_compile_run_examples_docs.cpp";
   if (!std::filesystem::exists(todoPath)) {
     todoPath = std::filesystem::current_path() / "docs" / "todo.md";
   }
@@ -2017,15 +1998,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   }
   if (!std::filesystem::exists(vmMathPath)) {
     vmMathPath =
-        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "test_compile_run_vm_math.cpp";
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_math.cpp";
   }
   if (!std::filesystem::exists(vmMapsPath)) {
     vmMapsPath =
-        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "test_compile_run_vm_maps.cpp";
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_maps.cpp";
   }
   if (!std::filesystem::exists(examplesDocsPath)) {
     examplesDocsPath =
-        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "test_compile_run_examples_docs.cpp";
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "examples" / "test_compile_run_examples_docs.cpp";
   }
   REQUIRE(std::filesystem::exists(todoPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
@@ -2144,7 +2125,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4637: Move `ir_pipeline` test shard into subdirectory") !=
+                  "- TODO-4708: Measure per-shard doctest binary startup/registration overhead") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2174,8 +2155,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  first conservative view-escape diagnostic") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n"
-                  "2. TODO-4638: Move `compile_run` test shard into subdirectory\n") !=
+                  "9. TODO-4642: Consolidate loose top-level `src/` files into directories\n"
+                  "11. TODO-4644: Rewrite 53 overlong test names (>120 chars)\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -3215,14 +3196,14 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
   const std::filesystem::path syntaxSpecPath =
       resolveRepoPath("docs/PrimeStruct_SyntaxSpec.md");
   const std::filesystem::path fileLowererPath = resolveRepoPath(
-      "tests/unit/ir_pipeline/"
+      "tests/unit/ir_pipeline/validation/"
       "test_ir_pipeline_validation_ir_lowerer_inference_get_return_info_step_reports_missing_definitions.cpp");
   const std::filesystem::path gfxSemanticsPath =
       resolveRepoPath("tests/unit/semantics/test_semantics_imports_gfx.h");
   const std::filesystem::path maybeSemanticsPath =
       resolveRepoPath("tests/unit/semantics/test_semantics_maybe.cpp");
   const std::filesystem::path collectionSnapshotPath =
-      resolveRepoPath("tests/unit/semantics/test_semantics_type_resolution_graph_snapshots.cpp");
+      resolveRepoPath("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots.cpp");
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(fileLowererPath));

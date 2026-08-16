@@ -173,7 +173,7 @@ build and layout solidify.
 
 ## Semantics pipeline note
 - `Semantics::validate` pass order and ownership metadata are declared by
-  `semanticValidationPassManifest()` in `include/primec/SemanticValidationPlan.h`.
+  `semanticValidationPassManifest()` in `include/primec/semantics/SemanticValidationPlan.h`.
   The manifest is the executable dispatch authority, so update it and add typed
   pass-id runner coverage whenever semantic validation order, AST mutation
   ownership, compatibility-rewrite status, or semantic-product publication

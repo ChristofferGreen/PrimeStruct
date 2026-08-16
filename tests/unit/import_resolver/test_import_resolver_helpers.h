@@ -1,7 +1,7 @@
 #pragma once
 
-#include "primec/ImportResolver.h"
-#include "primec/ProcessRunner.h"
+#include "primec/frontend/ImportResolver.h"
+#include "primec/support/ProcessRunner.h"
 #include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"

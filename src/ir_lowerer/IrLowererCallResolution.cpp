@@ -7,8 +7,8 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
-#include "primec/SoaPathHelpers.h"
-#include "primec/StdlibCollectionPaths.h"
+#include "primec/ir/SoaPathHelpers.h"
+#include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 

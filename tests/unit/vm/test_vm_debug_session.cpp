@@ -15,8 +15,8 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/Vm.h"
-#include "primec/VmDebugAdapter.h"
+#include "primec/runtime/Vm.h"
+#include "primec/runtime/VmDebugAdapter.h"
 #include "primec/testing/TestScratch.h"
 
 TEST_SUITE_BEGIN("primestruct.vm.debug.session");

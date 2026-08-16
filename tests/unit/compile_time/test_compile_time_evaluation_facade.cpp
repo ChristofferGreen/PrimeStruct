@@ -1,7 +1,7 @@
-#include "primec/CompileTimeEvaluation.h"
-#include "primec/CompileTimeCallable.h"
-#include "primec/SemanticProduct.h"
-#include "primec/VmKernelBoundary.h"
+#include "primec/frontend/CompileTimeEvaluation.h"
+#include "primec/frontend/CompileTimeCallable.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/runtime/VmKernelBoundary.h"
 
 #include <filesystem>
 #include <fstream>
@@ -486,14 +486,14 @@ TEST_CASE("compile-time value predicates use shared VM kernel numeric API") {
 TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary") {
   const std::filesystem::path repoRoot = repoRootPath();
   const std::vector<std::filesystem::path> boundarySources = {
-      repoRoot / "include" / "primec" / "CompileTimeEvaluation.h",
-      repoRoot / "include" / "primec" / "CompileTimeCallable.h",
+      repoRoot / "include" / "primec" / "frontend" / "CompileTimeEvaluation.h",
+      repoRoot / "include" / "primec" / "frontend" / "CompileTimeCallable.h",
       repoRoot / "src" / "CompileTimeEvaluation.cpp",
       repoRoot / "src" / "CompileTimeCallable.cpp",
   };
   const std::vector<std::string_view> forbiddenFinalArtifacts = {
       "primevm_main",
-      "primec/Vm.h",
+      "primec/runtime/Vm.h",
       "IrPreparation",
       "IrToCpp",
       "NativeEmitter",
@@ -519,14 +519,14 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
   const std::string compileTimeSource =
       readSourceFile(repoRoot / "src" / "CompileTimeEvaluation.cpp");
   const std::string kernelBoundaryHeader =
-      readSourceFile(repoRoot / "include" / "primec" / "VmKernelBoundary.h");
-  CHECK(compileTimeSource.find("#include \"primec/VmKernelBoundary.h\"") !=
+      readSourceFile(repoRoot / "include" / "primec" / "runtime" / "VmKernelBoundary.h");
+  CHECK(compileTimeSource.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=
         std::string::npos);
   CHECK(compileTimeSource.find("executePureNumericOpcode(") !=
         std::string::npos);
   CHECK(kernelBoundaryHeader.find("executePureNumericOpcode(") !=
         std::string::npos);
-  CHECK(kernelBoundaryHeader.find("primec/Vm.h") == std::string::npos);
+  CHECK(kernelBoundaryHeader.find("primec/runtime/Vm.h") == std::string::npos);
 
   const std::string cmake = readSourceFile(repoRoot / "CMakeLists.txt");
   CHECK(cmake.find("src/runtime/VmKernelBoundary.cpp") != std::string::npos);

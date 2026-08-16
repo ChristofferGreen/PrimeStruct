@@ -1,4 +1,4 @@
-#include "primec/ProcessRunner.h"
+#include "primec/support/ProcessRunner.h"
 
 #include <algorithm>
 #include <cerrno>

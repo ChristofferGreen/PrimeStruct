@@ -596,7 +596,7 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
   const std::filesystem::path emitterBuiltinCollectionsPath =
       repoRoot / "src" / "emitter" / "EmitterBuiltinCollectionInferenceHelpers.cpp";
   const std::filesystem::path astCallPathHelpersPath =
-      repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
+      repoRoot / "include" / "primec" / "ast" / "AstCallPathHelpers.h";
   REQUIRE(std::filesystem::exists(emitterBuiltinCollectionsPath));
   REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
   const std::string source = readText(emitterBuiltinCollectionsPath);
@@ -757,7 +757,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(builtinPathHelpersSource.find(
             "std::string canonicalizeLegacySoaGetHelperPath(std::string_view path)") !=
         std::string::npos);
-  CHECK(builtinPathHelpersSource.find("#include \"primec/SoaPathHelpers.h\"") !=
+  CHECK(builtinPathHelpersSource.find("#include \"primec/ir/SoaPathHelpers.h\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("soa_paths::collectionPath(") !=
         std::string::npos);

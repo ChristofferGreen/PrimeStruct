@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "primec/Ir.h"
+#include "primec/ir/Ir.h"
 
 namespace primec::ir_lowerer {
 

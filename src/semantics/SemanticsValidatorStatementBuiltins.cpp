@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <string_view>
 

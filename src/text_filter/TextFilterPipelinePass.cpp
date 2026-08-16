@@ -1,7 +1,7 @@
 #include "TextFilterPipelineInternal.h"
 
 #include "TextFilterHelpers.h"
-#include "primec/TextFilterPipeline.h"
+#include "primec/support/TextFilterPipeline.h"
 
 #include <cctype>
 #include <string_view>

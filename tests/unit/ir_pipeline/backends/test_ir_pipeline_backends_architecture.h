@@ -140,13 +140,13 @@ TEST_CASE("design doc records soa public collection contract") {
 TEST_CASE("stdlib surface registry stays source locked") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
-  std::filesystem::path headerPath = cwd / "include" / "primec" / "StdlibSurfaceRegistry.h";
+  std::filesystem::path headerPath = cwd / "include" / "primec" / "support" / "StdlibSurfaceRegistry.h";
   std::filesystem::path sourcePath = cwd / "src" / "StdlibSurfaceRegistry.cpp";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
   }
   if (!std::filesystem::exists(headerPath)) {
-    headerPath = cwd.parent_path() / "include" / "primec" / "StdlibSurfaceRegistry.h";
+    headerPath = cwd.parent_path() / "include" / "primec" / "support" / "StdlibSurfaceRegistry.h";
   }
   if (!std::filesystem::exists(sourcePath)) {
     sourcePath = cwd.parent_path() / "src" / "StdlibSurfaceRegistry.cpp";
@@ -408,7 +408,7 @@ TEST_CASE("map insert semantic rewrite uses stdlib surface adapter") {
   REQUIRE(std::filesystem::exists(sourcePath));
 
   const std::string source = readTextFile(sourcePath);
-  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") != std::string::npos);
+  CHECK(source.find("#include \"primec/support/StdlibSurfaceRegistry.h\"") != std::string::npos);
   CHECK(source.find("resolveBuiltinKeyValueInsertSurfaceMemberName(") != std::string::npos);
   CHECK(source.find("keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
@@ -431,7 +431,7 @@ TEST_CASE("gfx buffer semantic rewrite uses stdlib surface adapter") {
   REQUIRE(std::filesystem::exists(sourcePath));
 
   const std::string source = readTextFile(sourcePath);
-  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") != std::string::npos);
+  CHECK(source.find("#include \"primec/support/StdlibSurfaceRegistry.h\"") != std::string::npos);
   CHECK(source.find("canonicalGfxBufferHelperPath") != std::string::npos);
   CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(path)") !=
         std::string::npos);
@@ -709,7 +709,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path irLowererStageContractsApiPath =
       cwd / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
   std::filesystem::path soaPathHelpersApiPath =
-      cwd / "include" / "primec" / "SoaPathHelpers.h";
+      cwd / "include" / "primec" / "ir" / "SoaPathHelpers.h";
   std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
   std::filesystem::path semanticsControlFlowApiPath =
       cwd / "include" / "primec" / "testing" / "SemanticsControlFlowProbes.h";
@@ -721,13 +721,12 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path textFilterHelperTestPath =
       cwd / "tests" / "unit" / "text_filter" / "test_text_filter_helpers.cpp";
   std::filesystem::path compileRunTestPath =
-      cwd / "tests" / "unit" / "compile_run" / "test_compile_run_vm_bounds.cpp";
+      cwd / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_bounds.cpp";
   std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline.cpp";
   std::filesystem::path validationHelpersTestPath =
-      cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_validation_helpers.h";
+      cwd / "tests" / "unit" / "ir_pipeline" / "validation" / "test_ir_pipeline_validation_helpers.h";
   std::filesystem::path countAccessValidationTestPath =
-      cwd / "tests" / "unit" / "ir_pipeline" /
-      "test_ir_pipeline_validation_ir_lowerer_count_access_helpers_build_bundled_entry_count_setup.cpp";
+      cwd / "tests" / "unit" / "ir_pipeline" / "validation" / "test_ir_pipeline_validation_ir_lowerer_count_access_helpers_build_bundled_entry_count_setup.cpp";
   if (!std::filesystem::exists(scriptPath)) {
     scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
     allowlistPath = cwd.parent_path() / "scripts" / "include_layer_allowlist.txt";
@@ -737,7 +736,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererCountAccessContracts.h";
     irLowererStageContractsApiPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
-    soaPathHelpersApiPath = cwd.parent_path() / "include" / "primec" / "SoaPathHelpers.h";
+    soaPathHelpersApiPath = cwd.parent_path() / "include" / "primec" / "ir" / "SoaPathHelpers.h";
     parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
     semanticsControlFlowApiPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsControlFlowProbes.h";
@@ -749,13 +748,12 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
     textFilterHelperTestPath =
         cwd.parent_path() / "tests" / "unit" / "text_filter" / "test_text_filter_helpers.cpp";
     compileRunTestPath =
-        cwd.parent_path() / "tests" / "unit" / "compile_run" / "test_compile_run_vm_bounds.cpp";
+        cwd.parent_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_bounds.cpp";
     irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline.cpp";
     validationHelpersTestPath =
-        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline_validation_helpers.h";
+        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "validation" / "test_ir_pipeline_validation_helpers.h";
     countAccessValidationTestPath =
-        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" /
-        "test_ir_pipeline_validation_ir_lowerer_count_access_helpers_build_bundled_entry_count_setup.cpp";
+        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "validation" / "test_ir_pipeline_validation_ir_lowerer_count_access_helpers_build_bundled_entry_count_setup.cpp";
   }
   REQUIRE(std::filesystem::exists(scriptPath));
   REQUIRE(std::filesystem::exists(allowlistPath));

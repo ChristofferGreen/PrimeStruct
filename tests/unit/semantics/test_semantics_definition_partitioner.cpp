@@ -1,10 +1,10 @@
 #include "third_party/doctest.h"
 
-#include "primec/SemanticProduct.h"
-#include "primec/SemanticValidationResult.h"
-#include "primec/SemanticsBenchmark.h"
-#include "primec/SemanticsDefinitionPartitioner.h"
-#include "primec/SemanticsDefinitionPrepass.h"
+#include "primec/frontend/SemanticProduct.h"
+#include "primec/semantics/SemanticValidationResult.h"
+#include "primec/semantics/SemanticsBenchmark.h"
+#include "primec/semantics/SemanticsDefinitionPartitioner.h"
+#include "primec/semantics/SemanticsDefinitionPrepass.h"
 
 #include <algorithm>
 #include <array>

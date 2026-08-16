@@ -4,8 +4,8 @@
 #include <fstream>
 #include <string_view>
 
-#include "primec/IrLowerer.h"
-#include "primec/IrSerializer.h"
+#include "primec/ir/IrLowerer.h"
+#include "primec/ir/IrSerializer.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 

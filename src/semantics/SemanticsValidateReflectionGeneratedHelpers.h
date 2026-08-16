@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "primec/Semantics.h"
+#include "primec/semantics/Semantics.h"
 
 namespace primec::semantics {
 

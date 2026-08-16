@@ -1,7 +1,7 @@
-#include "primec/Emitter.h"
-#include "primec/Ir.h"
-#include "primec/Lexer.h"
-#include "primec/Parser.h"
+#include "primec/backend/Emitter.h"
+#include "primec/ir/Ir.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
 
 #include "EmitterHelpers.h"
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"

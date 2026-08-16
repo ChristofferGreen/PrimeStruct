@@ -1,4 +1,4 @@
-#include "primec/FrontendSyntax.h"
+#include "primec/frontend/FrontendSyntax.h"
 
 namespace primec {
 

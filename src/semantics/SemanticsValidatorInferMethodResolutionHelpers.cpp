@@ -2,7 +2,7 @@
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
 #include <string_view>

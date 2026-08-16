@@ -15,7 +15,22 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
-### TODO-4637 verification: 2 pre-existing PrimeStruct_backend_ir_tests failures (2026-08-16)
+### TODO-4637 verification note superseded (2026-08-16)
+
+The note below (about 2 apparently-pre-existing `PrimeStruct_backend_ir_tests`
+failures found during a scoped Debug-config check of TODO-4637) is
+superseded: a full `./scripts/compile.sh --release` run performed while
+finishing TODO-4641 came back with **0 failing CTest cases** (1958 total,
+only the pre-existing intentionally-`Disabled` shards excluded) - neither
+of the two Debug-mode failures reproduced in Release. Left the original
+note below for the record; the two-line summary is: Debug-config direct
+binary runs are not a substitute for the full release gate per
+`AGENTS.md`, and in this case they also produced a false positive (or a
+Debug-vs-Release-only difference) alongside the real regression they
+correctly caught.
+
+<details>
+<summary>Original note (2026-08-16, TODO-4637 verification)</summary>
 
 While verifying the `ir_pipeline` test-shard subdirectory move (TODO-4637),
 `./build-debug/PrimeStruct_backend_ir_tests` (Debug config) showed 8
@@ -24,30 +39,23 @@ relative `.parent_path()` chain in
 `test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp`
 assumed the file's old directory depth; fixed by adding one more
 `.parent_path()` hop now that the file lives one level deeper under
-`validation/`). The remaining 2 are **not** caused by the move - confirmed
-by stashing the move and rebuilding at the original flat path, where both
-still fail identically:
+`validation/`). The remaining 2 appeared **not** caused by the move -
+confirmed by stashing the move and rebuilding at the original flat path,
+where both still failed identically:
 
 - `primestruct.ir.pipeline.conversions` / "ir lowerer supports map method
   calls" (`test_ir_pipeline_conversions_method_calls_and_argv.cpp:112`):
-  `REQUIRE(parseValidateAndLower(source, module, error))` fails - a
-  `/map/size` user definition calling `/std/collections/map/count` doesn't
-  parse/validate/lower successfully. Fails identically standalone
-  (`-tc=`), so not cross-test pollution (TODO-4707) - a real compile
-  failure in this source shape. Not yet triaged into a root cause; may
-  overlap with the open Map<K,V> resolution clusters (TODO-4741/TODO-4751).
+  `REQUIRE(parseValidateAndLower(source, module, error))` failed.
 - `primestruct.ir.pipeline.validation` / "semantics validate publishes
   module artifacts in import order"
   (`test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp:510`):
-  `REQUIRE(maxArtifacts != nullptr)` fails - `findModuleArtifacts(semanticProgram,
-  "/std/math/max")` returns null after compiling a program that imports
-  `/std/math/max` and `/std/math/abs`. Fails identically standalone. Not
-  yet triaged.
+  `REQUIRE(maxArtifacts != nullptr)` failed.
 
-This was a scoped Debug-config check of one test binary, not a full
-`./scripts/compile.sh --release` run - the broader release gate should
-still be run and reconciled with this file before the next round of
-release-test-fix work per the operating rules.
+Neither reproduced in the full Release-mode gate (see above) - if they
+resurface, treat as flaky/build-mode-dependent rather than assuming this
+note's earlier triage was correct.
+
+</details>
 
 **Superseded 2026-07-15**: the "green, 1548/1548" claim below was never an
 honest measurement of the full test surface. `cmake/PrimeStructManagedSemanticsSuites.cmake`
@@ -609,7 +617,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-08-15T22:36:29Z`
+- Last updated: `2026-08-16T10:55:28Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`

@@ -1,4 +1,4 @@
-#include "primec/WasmEmitter.h"
+#include "primec/backend/WasmEmitter.h"
 
 #include "WasmEmitterInternal.h"
 

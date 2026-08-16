@@ -10,7 +10,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/SoaPathHelpers.h"
+#include "primec/ir/SoaPathHelpers.h"
 
 #include <string_view>
 

@@ -1,4 +1,4 @@
-#include "primec/SemanticReturnDependencyOrder.h"
+#include "primec/semantics/SemanticReturnDependencyOrder.h"
 
 #include "CondensationDag.h"
 #include "TypeResolutionGraph.h"

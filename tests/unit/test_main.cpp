@@ -20,7 +20,7 @@
 //     lived in a different, previously-unscoped corner of src/ (first
 //     src/semantics, then a thread_local cache's own bucket-array buffer
 //     surviving .clear(), then src/TransformRegistry.cpp, with
-//     src/IrBackends.cpp/src/TempPaths.cpp/include/primec/SoaPathHelpers.h
+//     src/IrBackends.cpp/src/TempPaths.cpp/include/primec/ir/SoaPathHelpers.h
 //     found by grep but not yet crash-confirmed at the point this was
 //     stopped). That is exactly the exhaustiveness risk TODO-5234's own
 //     writeup already flagged ("no practical way to enumerate every static
