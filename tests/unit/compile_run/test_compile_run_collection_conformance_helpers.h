@@ -1,7 +1,7 @@
 #pragma once
 
-#include "test_compile_run_map_conformance_helpers.h"
-#include "test_compile_run_vector_conformance_helpers.h"
+#include "map_conformance/test_compile_run_map_conformance_helpers.h"
+#include "vector_conformance/test_compile_run_vector_conformance_helpers.h"
 
 inline void expectVmSharedStdlibMapConformanceHarness() {
   SUBCASE("stdlib") {

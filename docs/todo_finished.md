@@ -6,6 +6,53 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4638: Move `compile_run` test shard into subdirectory
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: File layout restructuring
+  - parallel_track: test-layout-compile-run
+  - depends_on: (none)
+  - scope: Move all `tests/unit/test_compile_run*.cpp` and helper headers
+    into `tests/unit/compile_run/`, with subdirectories for `bindings/`,
+    `emitters/`, `examples/`, `imports/`, `map_conformance/`,
+    `native_backend/`, `smoke/`, `text_filters/`, `vector_conformance/`,
+    and `vm/`. Update the `PrimeStruct_compile_run_tests` CMake source list.
+  - implementation_notes: Use `git mv` for every file to preserve history.
+    Do not rename test binaries.
+  - acceptance:
+    - All 208 `test_compile_run*` files live under `tests/unit/compile_run/`.
+    - CMake source list reflects new paths.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the compile_run shard is moved and tests pass; do
+    not touch other test shards in this leaf.
+  - finished_2026-08-16: moved all 211 `test_compile_run*` files (195 with
+    a clear category match: `bindings/` 2, `emitters/` 29, `examples/` 13,
+    `imports/` 4, `map_conformance/` 7, `native_backend/` 50, `smoke/` 18,
+    `text_filters/` 29, `vector_conformance/` 5, `vm/` 38; 16 files with no
+    clear category, e.g. `test_compile_run_helpers.h`, `benchmark_harness`,
+    `reflection_codegen*`, `math_conformance*`, `*_conformance_helpers.h`,
+    stayed at `tests/unit/compile_run/` root) via `git mv`, updating 174
+    `.cpp` paths in `CMakeLists.txt`'s `PrimeStructCompileRunTestSources`
+    list (21 moved `.h` files aren't separately listed there). Fixed 344
+    now-broken sibling-header `#include "..."` quote-includes across 148
+    files (a systematic relative-path rewrite: built a basename->new-path
+    map for every `test_compile_run*.h` under the shard, then rewrote each
+    unresolvable include to the correct relative path from its own
+    directory - far too many instances for one-off fixes given the
+    cross-directory fan-out, e.g. `map_conformance_helpers.h` and
+    `vector_conformance_helpers.h` moved into their own subdirectories but
+    are `#include`d only from files that stayed at shard root).
+    Verified via a Debug-config build+run of `PrimeStruct_compile_run_tests`
+    (had to also build `primec`/`primevm`, which several tests invoke as
+    `./primec` subprocesses relative to CWD, and run the test binary from
+    `build-debug/` rather than the repo root for that reason - unrelated
+    to this move, just how the binary must be invoked): 212/212 passing,
+    0 failures. Did not run the full `./scripts/compile.sh --release` gate
+    this pass (same as TODO-4637 - a scoped target build/run was used for
+    verification instead); that gate should still be run before this is
+    treated as fully release-verified.
+
 - [x] TODO-4637: Move `ir_pipeline` test shard into subdirectory
   - owner: ai
   - created_at: 2026-06-11

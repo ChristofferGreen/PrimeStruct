@@ -366,7 +366,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-2. TODO-4638: Move `compile_run` test shard into subdirectory
 5. TODO-4639: Move `semantics` test shard into subdirectory
 6. TODO-4640: Move remaining test shards into subdirectories
 7. TODO-4641: Group `include/primec/` headers by pipeline stage
@@ -473,26 +472,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-- [ ] TODO-4638: Move `compile_run` test shard into subdirectory
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: File layout restructuring
-  - parallel_track: test-layout-compile-run
-  - depends_on: (none)
-  - scope: Move all `tests/unit/test_compile_run*.cpp` and helper headers
-    into `tests/unit/compile_run/`, with subdirectories for `bindings/`,
-    `emitters/`, `examples/`, `imports/`, `map_conformance/`,
-    `native_backend/`, `smoke/`, `text_filters/`, `vector_conformance/`,
-    and `vm/`. Update the `PrimeStruct_compile_run_tests` CMake source list.
-  - implementation_notes: Use `git mv` for every file to preserve history.
-    Do not rename test binaries.
-  - acceptance:
-    - All 208 `test_compile_run*` files live under `tests/unit/compile_run/`.
-    - CMake source list reflects new paths.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the compile_run shard is moved and tests pass; do
-    not touch other test shards in this leaf.
 
 - [ ] TODO-4639: Move `semantics` test shard into subdirectory
   - owner: ai
