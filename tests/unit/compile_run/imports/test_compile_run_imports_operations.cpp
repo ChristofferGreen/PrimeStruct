@@ -3767,7 +3767,7 @@ main() {
   CHECK(runCommand(compileCmd) == 5);
 }
 
-TEST_CASE("i64 literals") {
+TEST_CASE("i64 literal returns its value") {
   const std::string source = R"(
 [return<i64>]
 main() {
@@ -3779,7 +3779,7 @@ main() {
   CHECK(runCommand(compileCmd) == 9);
 }
 
-TEST_CASE("u64 literals") {
+TEST_CASE("u64 literal returns its value") {
   const std::string source = R"(
 [return<u64>]
 main() {
@@ -3865,7 +3865,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("or operator rewrite") {
+TEST_CASE("|| operator rewrites to or()") {
   const std::string source = R"(
 [return<bool>]
 main() {

@@ -3,7 +3,7 @@
 #if (defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))) || (defined(__linux__) && defined(__x86_64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.argv");
 
-TEST_CASE("native argv count") {
+TEST_CASE("native exe args.count() reflects passed argv") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {

@@ -188,7 +188,7 @@ main() {
   CHECK(readFile(outPath) == "5000000000\n");
 }
 
-TEST_CASE("operator rewrite") {
+TEST_CASE("+ operator rewrites to plus()") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -256,7 +256,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("short-circuit and") {
+TEST_CASE("and() short-circuits its second argument") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -271,7 +271,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("short-circuit or") {
+TEST_CASE("or() short-circuits its second argument") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -286,7 +286,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("numeric boolean ops") {
+TEST_CASE("or() accepts convert<bool>() numeric operands") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -298,7 +298,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("convert<bool>") {
+TEST_CASE("convert<bool>() from i32 zero") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -310,7 +310,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("convert<i64>") {
+TEST_CASE("convert<i64>() is a no-op on i64") {
   const std::string source = R"(
 [return<i64>]
 main() {
@@ -322,7 +322,7 @@ main() {
   CHECK(runCommand(compileCmd) == 9);
 }
 
-TEST_CASE("convert<u64>") {
+TEST_CASE("convert<u64>() is a no-op on u64") {
   const std::string source = R"(
 [return<u64>]
 main() {
@@ -358,7 +358,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("pointer helpers") {
+TEST_CASE("dereference(location(x)) round-trips a value") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -371,7 +371,7 @@ main() {
   CHECK(runCommand(compileCmd) == 4);
 }
 
-TEST_CASE("pointer plus helper") {
+TEST_CASE("plus() on a pointer offsets by zero") {
   const std::string source = R"(
 [return<int>]
 main() {

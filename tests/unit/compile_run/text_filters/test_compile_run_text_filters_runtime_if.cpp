@@ -35,7 +35,7 @@ main() {
   CHECK(runCommand(compileCmd) == 42);
 }
 
-TEST_CASE("float binding") {
+TEST_CASE("float/f32 bindings add together") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -61,7 +61,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("float comparison") {
+TEST_CASE("greater_than() compares two f32 values") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -73,7 +73,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("string comparison") {
+TEST_CASE("equal() compares two utf8 string literals") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -230,7 +230,7 @@ main() {
   CHECK(runCommand(compileCmd) == 9);
 }
 
-TEST_CASE("if expression") {
+TEST_CASE("if() expression form yields a value") {
   const std::string source = R"(
 [return<int>]
 main() {

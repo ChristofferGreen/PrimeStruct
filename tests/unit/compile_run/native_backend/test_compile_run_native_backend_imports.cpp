@@ -170,7 +170,7 @@ main() {
         "Native lowering error: native backend does not support effect: global_write on /main\n");
 }
 
-TEST_CASE("namespace entry") {
+TEST_CASE("compiles with a namespaced entry point") {
   const std::string source = R"(
 namespace demo {
   [return<int>]
@@ -210,7 +210,7 @@ namespace demo {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("native import alias") {
+TEST_CASE("native import brings in a bare-name helper") {
   const std::string source = R"(
 import /util
 namespace util {
@@ -256,7 +256,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("import expansion") {
+TEST_CASE("path-literal import expands an included file") {
   const std::string libPath = writeTemp("compile_lib.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string source = "import<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include.prime", source);

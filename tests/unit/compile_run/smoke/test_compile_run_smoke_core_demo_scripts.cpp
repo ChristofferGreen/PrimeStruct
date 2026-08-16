@@ -476,7 +476,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("block expression") {
+TEST_CASE("block() expression evaluates to its return value") {
   const std::string source = R"(
 [return<int>]
 main() {

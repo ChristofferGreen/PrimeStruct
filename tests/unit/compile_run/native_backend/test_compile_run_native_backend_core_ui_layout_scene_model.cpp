@@ -358,7 +358,7 @@ main() {
   CHECK(readFile(outPath) == "1,3,8,3,1,40,57,9,3,3,0,0,10,3,3,0,0\n");
 }
 
-TEST_CASE("native large frame") {
+TEST_CASE("native exe handles a 300-local stack frame") {
   std::ostringstream source;
   source << "[return<int>]\n";
   source << "main() {\n";

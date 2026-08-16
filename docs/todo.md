@@ -267,7 +267,7 @@ investigation chain's actively-productive leaves - see
   overlong names (TODO-4644, done, see `docs/todo_finished.md`). Drop
   ~740 redundant `compiles and runs`
   prefixes (TODO-4645, done, see `docs/todo_finished.md`). Tighten 12
-  vague short names (TODO-4646). Full
+  vague short names (TODO-4646, done, see `docs/todo_finished.md`). Full
   analysis at `docs/FileLayoutRestructuring.md`.
 - Oversized file refactoring: split files that are too large for
   maintainable development. Split `SemanticsValidate.cpp` (8,025 lines)
@@ -370,7 +370,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-13. TODO-4646: Tighten 12 vague/short test names
 15. TODO-4647: Rename 63 opaque shard files with topic suffixes
 16. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
 17. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
@@ -470,24 +469,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-- [ ] TODO-4646: Tighten 12 vague/short test names
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: Test name quality
-  - parallel_track: test-name-vague
-  - depends_on: TODO-4643
-  - scope: Rewrite 12 test names under 20 characters to be specific enough
-    to identify the failure without reading the test body. See
-    `docs/FileLayoutRestructuring.md` for the full list.
-  - implementation_notes: Examples: `parses loop form` → `parses loop form
-    with body and condition`, `runs program in vm` → `vm runs hello world
-    entry point`, `ir lowers clamp` → `ir lowers clamp with i32 operands`.
-  - acceptance:
-    - `rg -U 'TEST_CASE\(\s*"([^"]{1,19})"' tests/unit/` returns empty.
-    - All rewritten names are specific enough to identify the behavior.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once all short names are tightened and tests pass.
 
 - [ ] TODO-4647: Rename 63 opaque shard files with topic suffixes
   - owner: ai

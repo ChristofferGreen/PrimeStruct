@@ -227,7 +227,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("native method call") {
+TEST_CASE("native backend resolves a namespaced method call") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]

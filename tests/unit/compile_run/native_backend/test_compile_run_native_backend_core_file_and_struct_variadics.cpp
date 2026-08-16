@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("native file io") {
+TEST_CASE("native exe writes and reads back a file") {
   const std::string outPath = (testScratchPath("") / "primec_native_file_io.txt").string();
   auto escape = [](const std::string &text) {
     std::string out;
@@ -382,7 +382,7 @@ main() {
   CHECK(readFile(outPath) == "42\n");
 }
 
-TEST_CASE("native executable") {
+TEST_CASE("native --emit=native produces a runnable exe") {
   const std::string source = R"(
 [return<int>]
 main() {

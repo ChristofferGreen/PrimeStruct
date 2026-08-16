@@ -1,4 +1,4 @@
-TEST_CASE("native convert") {
+TEST_CASE("native convert<int>() is a no-op on i32") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -13,7 +13,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native convert bool") {
+TEST_CASE("native convert<bool>() from i32 zero") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -46,7 +46,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("native convert i64") {
+TEST_CASE("native convert<i64>() is a no-op on i64") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -61,7 +61,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native convert u64") {
+TEST_CASE("native convert<u64>() is a no-op on u64") {
   const std::string source = R"(
 [return<bool>]
 main() {

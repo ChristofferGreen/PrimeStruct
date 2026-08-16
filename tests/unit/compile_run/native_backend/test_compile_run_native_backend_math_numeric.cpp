@@ -3,7 +3,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.math_numeric");
 
-TEST_CASE("native clamp") {
+TEST_CASE("native clamp() bounds an i32 value") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -19,7 +19,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("native clamp i64") {
+TEST_CASE("native clamp() bounds an i64 value") {
   const std::string source = R"(
 import /std/math/*
 [return<bool>]
@@ -96,7 +96,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("native math clamp") {
+TEST_CASE("native clamp() on f32 and u64 operands") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -115,7 +115,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("native math pow") {
+TEST_CASE("native pow() on i32 operands") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -235,7 +235,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("native math roots") {
+TEST_CASE("native sqrt()/cbrt() root helpers") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -397,7 +397,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native math exp/log") {
+TEST_CASE("native exp/exp2/log/log2/log10 helpers") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -463,7 +463,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native float pow") {
+TEST_CASE("native pow() on f32 operands") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -495,7 +495,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native u64 division") {
+TEST_CASE("native divide() on u64 operands") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -525,7 +525,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native bool return") {
+TEST_CASE("native exe returns a literal bool") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -570,7 +570,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native boolean ops") {
+TEST_CASE("native or/and/not compose on bools") {
   const std::string source = R"(
 [return<bool>]
 main() {

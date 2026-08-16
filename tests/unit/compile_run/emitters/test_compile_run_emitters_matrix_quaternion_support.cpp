@@ -209,7 +209,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("lerp in C++ emitter") {
+TEST_CASE("std/math/lerp resolves via import in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]

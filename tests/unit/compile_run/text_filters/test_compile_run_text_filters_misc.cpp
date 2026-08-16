@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
-TEST_CASE("with comments") {
+TEST_CASE("line/block/trailing comments are stripped before parsing") {
   const std::string source = R"(
 // comment at top
 [return<int>]
@@ -50,7 +50,7 @@ main() {
 #endif
 }
 
-TEST_CASE("greater_than") {
+TEST_CASE("greater_than() compares two i32 values") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -62,7 +62,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("less_than") {
+TEST_CASE("less_than() compares two i32 values") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -74,7 +74,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("equal") {
+TEST_CASE("equal() compares two i32 values") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -86,7 +86,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("not_equal") {
+TEST_CASE("not_equal() compares two i32 values") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -98,7 +98,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("min") {
+TEST_CASE("min() picks the smaller i32 operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -111,7 +111,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("max f32") {
+TEST_CASE("max() picks the larger f32 operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -124,7 +124,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("abs") {
+TEST_CASE("abs() of a negated i32 literal") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -137,7 +137,7 @@ main() {
   CHECK(runCommand(compileCmd) == 7);
 }
 
-TEST_CASE("sign f32") {
+TEST_CASE("sign() of positive and negative f32 values") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -150,7 +150,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("saturate f32") {
+TEST_CASE("saturate() clamps an f32 to [0, 1]") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -163,7 +163,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("clamp") {
+TEST_CASE("clamp() bounds an i32 value") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -176,7 +176,7 @@ main() {
   CHECK(runCommand(compileCmd) == 4);
 }
 
-TEST_CASE("clamp i64") {
+TEST_CASE("clamp() bounds an i64 value") {
   const std::string source = R"(
 import /std/math/*
 [return<i64>]
@@ -189,7 +189,7 @@ main() {
   CHECK(runCommand(compileCmd) == 6);
 }
 
-TEST_CASE("clamp mixed i32/i64") {
+TEST_CASE("clamp() with mixed i32/i64 bound operands") {
   const std::string source = R"(
 import /std/math/*
 [return<i64>]
@@ -202,7 +202,7 @@ main() {
   CHECK(runCommand(compileCmd) == 6);
 }
 
-TEST_CASE("clamp u64") {
+TEST_CASE("clamp() bounds a u64 value") {
   const std::string source = R"(
 import /std/math/*
 [return<u64>]
@@ -215,7 +215,7 @@ main() {
   CHECK(runCommand(compileCmd) == 6);
 }
 
-TEST_CASE("clamp f32") {
+TEST_CASE("clamp() bounds an f32 value") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -228,7 +228,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("clamp f64") {
+TEST_CASE("clamp() bounds an f64 value") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -241,7 +241,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("boolean literal") {
+TEST_CASE("bare true literal returns as bool") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -253,7 +253,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("bool return") {
+TEST_CASE("main returns a literal bool value") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -265,7 +265,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("bool comparison") {
+TEST_CASE("greater_than() compares two bool values") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -302,7 +302,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("string binding") {
+TEST_CASE("string binding compiles without a stray const") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -380,7 +380,7 @@ main() {
   CHECK(runCommand(compileCmd) == 4);
 }
 
-TEST_CASE("named-arg call") {
+TEST_CASE("named args can be passed out of declaration order") {
   const std::string source = R"(
 [return<int>]
 add([i32] a, [i32] b) {
@@ -398,7 +398,7 @@ main() {
 }
 
 
-TEST_CASE("convert builtin") {
+TEST_CASE("convert<int>() truncates an f32 literal") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -410,7 +410,7 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("mixed named args") {
+TEST_CASE("positional and named args can be mixed in one call") {
   const std::string source = R"(
 [return<int>]
 sum3([i32] a, [i32] b, [i32] c) {
@@ -481,7 +481,7 @@ main() {
   CHECK(runCommand(compileCmd) == 5);
 }
 
-TEST_CASE("if statement sugar") {
+TEST_CASE("if/else statement sugar selects the right branch") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -499,7 +499,7 @@ main() {
   CHECK(runCommand(compileCmd) == 9);
 }
 
-TEST_CASE("early return in if") {
+TEST_CASE("return() inside an if branch exits main early") {
   const std::string source = R"(
 [return<int>]
 main() {

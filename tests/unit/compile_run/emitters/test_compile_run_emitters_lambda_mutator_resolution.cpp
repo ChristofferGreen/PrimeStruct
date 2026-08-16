@@ -380,7 +380,7 @@ main() {
   CHECK(runCommand(compileCmd) == 7);
 }
 
-TEST_CASE("array index sugar") {
+TEST_CASE("array bracket index sugar reads an element") {
   const std::string source = R"(
 [return<int>]
 main() {

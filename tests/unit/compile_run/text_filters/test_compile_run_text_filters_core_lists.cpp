@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
 
-TEST_CASE("implicit i32 suffix") {
+TEST_CASE("bare integer literal implicitly gets an i32 suffix") {
   const std::string source = R"(
 [return<int>]
 main() {

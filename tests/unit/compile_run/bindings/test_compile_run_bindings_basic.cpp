@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
 
-TEST_CASE("empty void main") {
+TEST_CASE("compiles a no-op void-return main") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -13,7 +13,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("local binding") {
+TEST_CASE("reads back a local i32 binding value") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -26,7 +26,7 @@ main() {
   CHECK(runCommand(compileCmd) == 5);
 }
 
-TEST_CASE("bare zero-arg calls") {
+TEST_CASE("bare zero-arg calls resolve as invocations") {
   const std::string source = R"(
 [return<int>]
 forty() {
@@ -50,7 +50,7 @@ main() {
   CHECK(runCommand(vmCmd) == 41);
 }
 
-TEST_CASE("typeof type locals") {
+TEST_CASE("typeof-derived local field types resolve") {
   const std::string source = R"(
 [struct]
 Holder() {
@@ -172,7 +172,7 @@ main() {
   CHECK(runCommand(compileCmd) == 6);
 }
 
-TEST_CASE("assign to reference") {
+TEST_CASE("assign() writes through a Reference<T>") {
   const std::string source = R"(
 [return<int>]
 main() {

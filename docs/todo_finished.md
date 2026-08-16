@@ -6,6 +6,44 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4646: Tighten 12 vague/short test names
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: Test name quality
+  - parallel_track: test-name-vague
+  - depends_on: TODO-4643
+  - scope: Rewrite 12 test names under 20 characters to be specific enough
+    to identify the failure without reading the test body. See
+    `docs/FileLayoutRestructuring.md` for the full list.
+  - implementation_notes: Examples: `parses loop form` → `parses loop form
+    with body and condition`, `runs program in vm` → `vm runs hello world
+    entry point`, `ir lowers clamp` → `ir lowers clamp with i32 operands`.
+  - acceptance:
+    - `rg -U 'TEST_CASE\(\s*"([^"]{1,19})"' tests/unit/` returns empty.
+    - All rewritten names are specific enough to identify the behavior.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once all short names are tightened and tests pass.
+  - finished_2026-08-16: the original "12" count was very stale - 89
+    names were under 20 characters (the suite has grown substantially
+    since this TODO was filed). Rewrote all 89 across ~22 files, mostly
+    `tests/unit/compile_run/{bindings,emitters,vm,imports,smoke,
+    native_backend,text_filters}/`, reading each test body to name it
+    after the actual builtin/behavior under test (e.g. `"min"` ->
+    `"min() picks the smaller i32 operand"`, `"native convert bool"` ->
+    `"native convert<bool>() from i32 zero"`). One rename
+    (`"import<\"path\"> expands an included file"`) initially still
+    matched the `{1,19}` guardrail regex despite being well over 19
+    display characters - the regex's `[^"]` character class doesn't
+    understand C++ escaped quotes (`\"`), so it treated the first escaped
+    quote as the string terminator; reworded to avoid embedded quotes
+    entirely rather than fight the regex. Verified
+    `rg -U 'TEST_CASE\(\s*"([^"]{1,19})"' tests/unit/` returns empty and
+    no duplicate names were introduced. Updated the `docs/todo.md`
+    pinned "Execution Queue" snapshot string again (same reason as the
+    prior TODOs' notes). Verified via `./scripts/compile.sh --release`:
+    1958 CTest cases, 0 failures.
+
 - [x] TODO-4645: Drop `compiles and runs` prefix from ~740 test names
   - owner: ai
   - created_at: 2026-06-11

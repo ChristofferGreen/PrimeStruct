@@ -88,7 +88,7 @@ main() {
   CHECK(expr.args[0].name == "items");
 }
 
-TEST_CASE("parses index sugar") {
+TEST_CASE("parses bracket index sugar into an at() call") {
   const std::string source = R"(
 [return<int>]
 main() {

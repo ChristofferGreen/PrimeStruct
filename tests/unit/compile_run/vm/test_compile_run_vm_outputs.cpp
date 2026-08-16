@@ -78,7 +78,7 @@ main() {
   CHECK(std::filesystem::exists(expectedPath));
 }
 
-TEST_CASE("runs vm file io") {
+TEST_CASE("vm writes and reads back a file") {
   const std::string outPath = (testScratchPath("") / "primec_vm_file_io.txt").string();
   auto escape = [](const std::string &text) {
     std::string out;
@@ -3011,7 +3011,7 @@ log_file_error([FileError] err) {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("implicit void main") {
+TEST_CASE("main with no return<> defaults to void") {
   const std::string source = R"(
 main() {
   [i32] value{1i32}
@@ -3023,7 +3023,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("argv count") {
+TEST_CASE("args.count() reflects passed argv") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
@@ -3037,7 +3037,7 @@ main([array<string>] args) {
   CHECK(runCommand(argvCmd) == 3);
 }
 
-TEST_CASE("argv count helper") {
+TEST_CASE("count(args) helper reflects passed argv") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
@@ -3268,7 +3268,7 @@ main() {
   CHECK(runCommand(compileCmd) == 7);
 }
 
-TEST_CASE("array count helper") {
+TEST_CASE("count() helper on an array binding") {
   const std::string source = R"(
 [return<int>]
 main() {

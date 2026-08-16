@@ -136,7 +136,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("native references") {
+TEST_CASE("native assign() writes through a Reference<T>") {
   const std::string source = R"(
 [return<int>]
 main() {

@@ -282,7 +282,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("array bracket sugar") {
+TEST_CASE("array<i32>[...] bracket literal sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -342,7 +342,7 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
-TEST_CASE("map count") {
+TEST_CASE("map count() helper and method agree") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -364,7 +364,7 @@ main() {
 }
 
 
-TEST_CASE("map indexing") {
+TEST_CASE("map bracket indexing reads a value") {
   const std::string source = R"(
 import /std/collections/*
 

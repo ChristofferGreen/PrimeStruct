@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("repeat loop") {
+TEST_CASE("repeat() loop runs a fixed count") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -62,7 +62,7 @@ main() {
   CHECK(runCommand(compileCmd) == 6);
 }
 
-TEST_CASE("shared_scope loops") {
+TEST_CASE("shared_scope loops reuse locals across iterations") {
   const std::string source = R"(
 [return<int>]
 main() {

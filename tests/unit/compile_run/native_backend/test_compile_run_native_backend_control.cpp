@@ -33,7 +33,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native locals") {
+TEST_CASE("native exe reads and reassigns a mut local") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -50,7 +50,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("native if/else") {
+TEST_CASE("native if/else selects the right branch") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -70,7 +70,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("native repeat loop") {
+TEST_CASE("native repeat() loop runs a fixed count") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -175,7 +175,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("native pointer plus") {
+TEST_CASE("native plus() on a pointer offsets by zero") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -191,7 +191,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("native print output") {
+TEST_CASE("native print/print_line write to stdout and stderr") {
   const std::string source = R"(
 [return<int>]
 main() {
