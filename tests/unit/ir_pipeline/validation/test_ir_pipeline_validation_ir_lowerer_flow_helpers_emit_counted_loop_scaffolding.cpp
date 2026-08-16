@@ -16,6 +16,7 @@ std::string readTextFile(const std::string &path) {
               .parent_path()
               .parent_path()
               .parent_path()
+              .parent_path()
               .parent_path();
       const std::filesystem::path repoRelativePath =
           path.substr(markerPos + marker.size());

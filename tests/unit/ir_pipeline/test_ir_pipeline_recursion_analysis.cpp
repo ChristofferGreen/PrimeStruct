@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "validation/test_ir_pipeline_validation_helpers.h"
 
 #include "src/ir_lowerer/IrLowererRecursionAnalysis.h"
 

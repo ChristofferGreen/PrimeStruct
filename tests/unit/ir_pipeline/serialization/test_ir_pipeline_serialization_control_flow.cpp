@@ -1,5 +1,3 @@
-#pragma once
-
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -9,8 +7,10 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "third_party/doctest.h"
 
@@ -36,22 +36,16 @@
 #include "primec/Vm.h"
 #include "primec/VmDebugAdapter.h"
 #include "primec/WasmEmitter.h"
-#include "primec/testing/SemanticsControlFlowProbes.h"
 #include "primec/testing/EmitterHelpers.h"
 #include "primec/testing/IrLowererHelpers.h"
-#include "primec/testing/IrLowererStageContracts.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 #include "primec/testing/TestScratch.h"
-#include "test_ir_pipeline_helpers.h"
-
-namespace primec::ir_lowerer {
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryExecutionStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryStatementStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsFunctionTableStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsSourceMapStep.h"
-}
-
+#include "../test_ir_pipeline_helpers.h"
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
 #endif
+
+namespace {
+} // namespace
+
+#include "test_ir_pipeline_serialization_control_flow.h"

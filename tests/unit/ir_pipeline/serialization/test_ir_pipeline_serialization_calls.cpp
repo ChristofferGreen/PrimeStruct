@@ -39,7 +39,7 @@
 #include "primec/testing/IrLowererHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 #include "primec/testing/TestScratch.h"
-#include "test_ir_pipeline_helpers.h"
+#include "../test_ir_pipeline_helpers.h"
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
 #endif
@@ -47,4 +47,4 @@
 namespace {
 } // namespace
 
-#include "test_ir_pipeline_serialization_structs.h"
+#include "test_ir_pipeline_serialization_calls.h"

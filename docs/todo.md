@@ -102,7 +102,6 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-4637: Move `ir_pipeline` test shard into subdirectory
 - TODO-4708: Measure per-shard doctest binary startup/registration overhead
 - TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
 - TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
@@ -367,7 +366,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-1. TODO-4637: Move `ir_pipeline` test shard into subdirectory
 2. TODO-4638: Move `compile_run` test shard into subdirectory
 5. TODO-4639: Move `semantics` test shard into subdirectory
 6. TODO-4640: Move remaining test shards into subdirectories
@@ -475,28 +473,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-- [ ] TODO-4637: Move `ir_pipeline` test shard into subdirectory
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: File layout restructuring
-  - parallel_track: test-layout-ir-pipeline
-  - depends_on: (none)
-  - scope: Move all `tests/unit/test_ir_pipeline*.cpp` and
-    `tests/unit/test_ir_pipeline_helpers.h` files into
-    `tests/unit/ir_pipeline/`, with subdirectories for `backends/`,
-    `conversions/`, `serialization/`, `validation/`, `to_cpp/`, `to_glsl/`,
-    and `wasm/`. Update the `PrimeStruct_backend_ir_tests` CMake source list.
-  - implementation_notes: Use `git mv` for every file to preserve history.
-    Do not rename test binaries. See `docs/FileLayoutRestructuring.md` for
-    the full target layout.
-  - acceptance:
-    - All 157 `test_ir_pipeline*` files live under `tests/unit/ir_pipeline/`.
-    - CMake source list reflects new paths.
-    - `./scripts/compile.sh --release` passes.
-    - `git log --follow` tracks renamed files correctly.
-  - stop_rule: Stop once the ir_pipeline shard is moved and tests pass; do
-    not touch other test shards in this leaf.
 
 - [ ] TODO-4638: Move `compile_run` test shard into subdirectory
   - owner: ai

@@ -8,7 +8,7 @@
 #include "primec/Ir.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrSerializer.h"
-#include "test_ir_pipeline_helpers.h"
+#include "../test_ir_pipeline_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 

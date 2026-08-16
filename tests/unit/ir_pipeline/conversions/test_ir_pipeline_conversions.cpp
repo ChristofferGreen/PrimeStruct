@@ -9,7 +9,7 @@
 #include "primec/IrLowerer.h"
 #include "primec/IrSerializer.h"
 #include "primec/Vm.h"
-#include "test_ir_pipeline_helpers.h"
+#include "../test_ir_pipeline_helpers.h"
 
 #include "test_ir_pipeline_conversions_core.h"
 

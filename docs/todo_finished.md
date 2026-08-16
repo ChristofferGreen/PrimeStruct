@@ -6,6 +6,58 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4637: Move `ir_pipeline` test shard into subdirectory
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: File layout restructuring
+  - parallel_track: test-layout-ir-pipeline
+  - depends_on: (none)
+  - scope: Move all `tests/unit/test_ir_pipeline*.cpp` and
+    `tests/unit/test_ir_pipeline_helpers.h` files into
+    `tests/unit/ir_pipeline/`, with subdirectories for `backends/`,
+    `conversions/`, `serialization/`, `validation/`, `to_cpp/`, `to_glsl/`,
+    and `wasm/`. Update the `PrimeStruct_backend_ir_tests` CMake source list.
+  - implementation_notes: Use `git mv` for every file to preserve history.
+    Do not rename test binaries. See `docs/FileLayoutRestructuring.md` for
+    the full target layout.
+  - acceptance:
+    - All 157 `test_ir_pipeline*` files live under `tests/unit/ir_pipeline/`.
+    - CMake source list reflects new paths.
+    - `./scripts/compile.sh --release` passes.
+    - `git log --follow` tracks renamed files correctly.
+  - stop_rule: Stop once the ir_pipeline shard is moved and tests pass; do
+    not touch other test shards in this leaf.
+  - finished_2026-08-16: the flat-to-`tests/unit/ir_pipeline/` move had
+    already landed in an earlier session (outside this TODO's own
+    completion bookkeeping). This pass did the remaining subdirectory
+    split (`backends/` 20 files, `conversions/` 14, `serialization/` 15,
+    `validation/` 95 incl. the nested `test_ir_pipeline_validation_fragments/`
+    dir, `to_cpp/` 2, `to_glsl/` 2, `wasm/` 3; 9 files with no clear
+    category - `test_ir_pipeline.cpp`, `test_ir_pipeline_helpers.h`,
+    `entry_args`, `external_tooling`, `gpu`, `pointers`,
+    `pointers_numeric.h`, `recursion_analysis`, `type_resolution_parity` -
+    stayed at `tests/unit/ir_pipeline/` root, matching the doc's example
+    layout) via `git mv`, and updated the 121 `.cpp` paths in
+    `CMakeLists.txt`'s explicit `PrimeStructBackendAllTestSources` list
+    (the 30 moved `.h` files aren't separately listed there). Fixed 19
+    now-broken sibling-header `#include "..."` quote-includes (resolved
+    via same-directory lookup before the move) to explicit relative
+    paths. Also fixed a genuine regression the move exposed: a
+    `__FILE__`-relative `std::filesystem::path(...).parent_path()` chain
+    in `test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp`
+    hardcoded the old directory depth (3 levels under `tests/unit/`); added
+    one more `.parent_path()` hop for the new 4-level depth under
+    `validation/`. Verified via a Debug-config build+run of
+    `PrimeStruct_backend_ir_tests` (not the full `--release` gate - see
+    below): went from 8 failures to 2, and confirmed by stashing the move
+    and rebuilding at the original flat path that both remaining failures
+    are pre-existing and unrelated to this move (recorded in
+    `docs/failing_tests.md`). Did not run the full
+    `./scripts/compile.sh --release` gate this pass (file-move + one
+    bugfix, verified via the scoped test binary directly); that gate
+    should still be run before this is treated as fully release-verified.
+
 - [x] TODO-4643: Fix 8 duplicate test names across files
   - owner: ai
   - created_at: 2026-06-11
