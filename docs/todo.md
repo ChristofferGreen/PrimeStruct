@@ -366,7 +366,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-5. TODO-4639: Move `semantics` test shard into subdirectory
 6. TODO-4640: Move remaining test shards into subdirectories
 7. TODO-4641: Group `include/primec/` headers by pipeline stage
 9. TODO-4642: Consolidate loose top-level `src/` files into directories
@@ -473,25 +472,6 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
 
-- [ ] TODO-4639: Move `semantics` test shard into subdirectory
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: File layout restructuring
-  - parallel_track: test-layout-semantics
-  - depends_on: (none)
-  - scope: Move all `tests/unit/test_semantics*.cpp` and helper headers into
-    `tests/unit/semantics/`, with subdirectories for `bindings/`,
-    `calls_and_flow/`, `capabilities/`, `entry/`, `result_helpers/`,
-    `type_resolution/`, and `manual/`. Update the
-    `PrimeStruct_semantics_tests` CMake source list.
-  - implementation_notes: Use `git mv` for every file to preserve history.
-    Do not rename test binaries.
-  - acceptance:
-    - All ~100 `test_semantics*` files live under `tests/unit/semantics/`.
-    - CMake source list reflects new paths.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the semantics shard is moved and tests pass; do
-    not touch other test shards in this leaf.
 
 - [ ] TODO-4640: Move remaining test shards into subdirectories
   - owner: ai
