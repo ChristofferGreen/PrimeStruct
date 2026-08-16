@@ -261,7 +261,8 @@ investigation chain's actively-productive leaves - see
   `docs/FileLayoutRestructuring.md`.
 - Test name quality: improve test file and test case naming across the
   suite. Rename 63 opaque letter-suffixed shard files to topic-descriptive
-  names (TODO-4647). Fix 8 duplicate test names (TODO-4643). Rewrite 53
+  names (TODO-4647). Fix 8 duplicate test names (TODO-4643, done, see
+  `docs/todo_finished.md`). Rewrite 53
   overlong names (TODO-4644). Drop ~740 redundant `compiles and runs`
   prefixes (TODO-4645). Tighten 12 vague short names (TODO-4646). Full
   analysis at `docs/FileLayoutRestructuring.md`.
@@ -372,7 +373,6 @@ investigation chain's actively-productive leaves - see
 6. TODO-4640: Move remaining test shards into subdirectories
 7. TODO-4641: Group `include/primec/` headers by pipeline stage
 9. TODO-4642: Consolidate loose top-level `src/` files into directories
-10. TODO-4643: Fix 8 duplicate test names across files
 11. TODO-4644: Rewrite 53 overlong test names (>120 chars)
 12. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
 13. TODO-4646: Tighten 12 vague/short test names
@@ -603,74 +603,6 @@ investigation chain's actively-productive leaves - see
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once loose files are consolidated and tests pass; do
     not restructure existing subdirectories in this leaf.
-
-- [ ] TODO-4643: Fix 8 duplicate test names across files
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: Test name quality
-  - parallel_track: test-name-duplicates
-  - depends_on: (none)
-  - scope: Disambiguate 8 test names that appear in multiple files. Prefix
-    each with its test module or rewrite to name the distinct behavior each
-    test covers. See `docs/FileLayoutRestructuring.md` for the full list.
-  - implementation_notes: The duplicates are:
-    - `pointer plus accepts i64 offsets` (2 files)
-    - `block expression requires a value` (2 files)
-    - `runs vm with map at_unsafe helper` (2 files)
-    - `vector stdlib namespaced capacity expression keeps canonical precedence` (2 files)
-    - `vector stdlib namespaced capacity expression keeps return mismatch diagnostics` (2 files)
-    - `C++ emitter rejects canonical vector mutator methods with alias-only helper before emission` (2 files)
-    - `ir lowerer inline param helper aliases pure pointer soa_vector variadic forwarding` (2 files)
-    - `rejects vm vector method alias access struct method chain with array receiver diagnostics` (2 files)
-  - acceptance:
-    - `rg -U 'TEST_CASE\(\s*"([^"]+)"' tests/unit/ -o --replace '$1' | cut -d: -f2 | sort | uniq -d` returns empty.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once no duplicate names remain and tests pass.
-  - progress_2026-08-09: the original 8-name list above is stale - the
-    codebase has grown since this TODO was filed and
-    `rg -U --no-filename 'TEST_CASE\(\s*"([^"]+)"' tests/unit/ -o --replace
-    '$1' | sort | uniq -d` now finds a different set. Fixed 5 of the
-    current duplicates (renamed to describe the actual distinguishing
-    behavior of each, verified via reading each test body): "parses while
-    loop form with body and condition" (`test_parser_basic_control_flow.cpp`,
-    one instance actually tests `loop(3i32)` -> renamed to "parses loop
-    form with count and body"; kept the `while(...)` instance's original
-    name since it's the accurate one); "stdlib wrapper map constructor
-    validates on explicit canonical map returns"
-    (`test_semantics_calls_and_flow_collections_experimental_map_deref_and_struct_storage.cpp`,
-    split into "...accepts explicit canonical map return used across
-    helpers" (the accept case) and "...rejects mismatched value type in
-    explicit canonical map return" (the reject case)); and the 4-file,
-    8-instance "primec/primevm collect-diagnostics keeps user wrapper
-    method count capacity pair" cluster across
-    `test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp`,
-    `test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp`,
-    and `test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp`
-    - each pair distinguished by the actual shape variant its `writeTemp`
-    source filename already encoded (reversed call order, type-mismatch
-    with reversed call order, count-arg vs capacity-arg mismatch) but that
-    the TEST_CASE name itself hadn't captured.
-  - remaining_2026-08-09: **NOT fixed** - a much larger cluster of 27
-    exact-duplicate instances across
-    `tests/unit/parser/test_parser_basic_semantic_transforms_index_template.cpp`
-    (17 instances) and
-    `tests/unit/parser/test_parser_basic_semantic_transforms_nested_indexed.cpp`
-    (10 instances), all sharing one of 3 base names ("parses semantic
-    transform field-access/indexing/method-call after nested indexed
-    template body chain"). These test many distinct nested
-    indexed-template-chain parsing shapes (see the surrounding
-    non-duplicate names in the same files for the pattern, e.g. "...
-    indexed method-call field-access tail") but a large subset share the
-    exact bare base name with no distinguishing suffix. Deliberately not
-    renamed this pass - doing 27 renames correctly requires reading each
-    test body individually to identify its actual distinguishing parse
-    shape (indexed vs plain, method-call vs field-access vs both, chain
-    depth), and rushing that risks assigning misleading names, which is
-    worse than the current honest-but-duplicate names. Next session:
-    work through both files top-to-bottom, diff each duplicate-named
-    test's body against its neighbors, and name it after the specific
-    chain shape it parses (mirroring the already-distinguished sibling
-    names in the same files as the naming convention to follow).
 
 - [ ] TODO-4644: Rewrite 53 overlong test names (>120 chars)
   - owner: ai
