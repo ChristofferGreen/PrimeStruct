@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4645: Drop `compiles and runs` prefix from ~740 test names
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: Test name quality
+  - parallel_track: test-name-compile-run-prefix
+  - depends_on: TODO-4643
+  - scope: Remove the `compiles and runs` prefix from approximately 740
+    test names. The prefix adds no information — the test file and module
+    grouping already convey that this is a compile-run test.
+  - implementation_notes: Do a bulk find-and-replace of
+    `"compiles and runs "` → `""` in test name strings. Verify no
+    semantic collision after the prefix is removed (i.e., no two tests in
+    the same file end up with the same name).
+  - acceptance:
+    - `rg 'TEST_CASE\("compiles and runs' tests/unit/` returns empty.
+    - No duplicate names within any single file after the change.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once all prefixes are removed and tests pass.
+  - finished_2026-08-16: already fully done by prior work - `rg
+    '"compiles and runs' tests/unit/` (including a multi-line-aware `-U`
+    variant, since some `TEST_CASE(` calls wrap the name string onto its
+    own line) returns zero matches, and a full in-file duplicate-name
+    scan across every `tests/unit/**/*.{cpp,h}` file found none. No code
+    changes needed; only `docs/todo.md` bookkeeping (including the
+    "Execution Queue" pinned snapshot string in
+    `test_compile_run_examples_docs_locks.cpp`, updated again for the
+    same reason as the prior TODOs' notes).
+
 - [x] TODO-4644: Rewrite 53 overlong test names (>120 chars)
   - owner: ai
   - created_at: 2026-06-11

@@ -266,7 +266,8 @@ investigation chain's actively-productive leaves - see
   `docs/todo_finished.md`). Rewrite 53
   overlong names (TODO-4644, done, see `docs/todo_finished.md`). Drop
   ~740 redundant `compiles and runs`
-  prefixes (TODO-4645). Tighten 12 vague short names (TODO-4646). Full
+  prefixes (TODO-4645, done, see `docs/todo_finished.md`). Tighten 12
+  vague short names (TODO-4646). Full
   analysis at `docs/FileLayoutRestructuring.md`.
 - Oversized file refactoring: split files that are too large for
   maintainable development. Split `SemanticsValidate.cpp` (8,025 lines)
@@ -369,7 +370,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-12. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
 13. TODO-4646: Tighten 12 vague/short test names
 15. TODO-4647: Rename 63 opaque shard files with topic suffixes
 16. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
@@ -470,25 +470,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-- [ ] TODO-4645: Drop `compiles and runs` prefix from ~740 test names
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: Test name quality
-  - parallel_track: test-name-compile-run-prefix
-  - depends_on: TODO-4643
-  - scope: Remove the `compiles and runs` prefix from approximately 740
-    test names. The prefix adds no information — the test file and module
-    grouping already convey that this is a compile-run test.
-  - implementation_notes: Do a bulk find-and-replace of
-    `"compiles and runs "` → `""` in test name strings. Verify no
-    semantic collision after the prefix is removed (i.e., no two tests in
-    the same file end up with the same name).
-  - acceptance:
-    - `rg 'TEST_CASE\("compiles and runs' tests/unit/` returns empty.
-    - No duplicate names within any single file after the change.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once all prefixes are removed and tests pass.
 
 - [ ] TODO-4646: Tighten 12 vague/short test names
   - owner: ai
