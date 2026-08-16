@@ -14,7 +14,7 @@ option(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE
 # environment that doesn't have mimalloc's CMake config package installed,
 # so this default is safe even on machines that never installed
 # libmimalloc-dev. Deliberately does not touch the test binaries - unlike
-# src/CompileArena.cpp's arena, mimalloc has no long-lived-process reset
+# src/support/CompileArena.cpp's arena, mimalloc has no long-lived-process reset
 # hazard (it still honors real free()), so linking it into the test
 # binaries too is a plausible, lower-risk future follow-up, just not one
 # this leaf verified.
@@ -93,32 +93,32 @@ function(primestructEnableWarnings targetName)
 endfunction()
 
 set(PRIMESTRUCT_SUPPORT_SOURCES
-  src/CollectionSpellingClassifier.cpp
-  src/CompileArena.cpp
-  src/Diagnostics.cpp
-  src/EmitKind.cpp
-  src/OptionsParser.cpp
-  src/ProcessRunner.cpp
-  src/SourceLocationMapper.cpp
-  src/StdlibSurfaceRegistry.cpp
-  src/SymbolInterner.cpp
-  src/TempPaths.cpp
-  src/TransformRules.cpp
-  src/TransformRegistry.cpp
+  src/support/CollectionSpellingClassifier.cpp
+  src/support/CompileArena.cpp
+  src/support/Diagnostics.cpp
+  src/support/EmitKind.cpp
+  src/support/OptionsParser.cpp
+  src/support/ProcessRunner.cpp
+  src/support/SourceLocationMapper.cpp
+  src/support/StdlibSurfaceRegistry.cpp
+  src/frontend/SymbolInterner.cpp
+  src/support/TempPaths.cpp
+  src/support/TransformRules.cpp
+  src/support/TransformRegistry.cpp
   src/runtime/VmKernelBoundary.cpp
 )
 
 set(PRIMESTRUCT_FRONTEND_SOURCES
-  src/AstPrinter.cpp
-  src/CompileTimeCallable.cpp
-  src/CompileTimeEvaluation.cpp
-  src/CompileTimeValue.cpp
-  src/ExpandedSourceBuilder.cpp
-  src/FrontendSyntax.cpp
-  src/ImportResolver.cpp
-  src/ImportResolverHelpers.cpp
-  src/Lexer.cpp
-  src/SemanticProduct.cpp
+  src/ast/AstPrinter.cpp
+  src/frontend/CompileTimeCallable.cpp
+  src/frontend/CompileTimeEvaluation.cpp
+  src/frontend/CompileTimeValue.cpp
+  src/frontend/ExpandedSourceBuilder.cpp
+  src/frontend/FrontendSyntax.cpp
+  src/frontend/ImportResolver.cpp
+  src/frontend/ImportResolverHelpers.cpp
+  src/frontend/Lexer.cpp
+  src/frontend/SemanticProduct.cpp
   src/parser/ParserCore.cpp
   src/parser/ParserCoreBodyStatements.cpp
   src/parser/ParserCoreDefinitionBodies.cpp
@@ -293,26 +293,26 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/text_filter/TextFilterPipelinePass.cpp
   src/text_filter/TextFilterPipelineScan.cpp
   src/text_filter/TextFilterPipeline.cpp
-  src/StdlibSymbolManifest.cpp
+  src/frontend/StdlibSymbolManifest.cpp
 )
 
 set(PRIMESTRUCT_IR_SOURCES
-  src/AstMemory.cpp
-  src/CliDriver.cpp
-  src/CompilePipeline.cpp
-  src/IrBackendProfiles.cpp
-  src/IrInliner.cpp
-  src/IrPrinterHelpers.cpp
-  src/IrPreparation.cpp
-  src/IrPrinter.cpp
-  src/IrSerializer.cpp
-  src/IrValidation.cpp
-  src/IrVirtualRegisterAllocator.cpp
-  src/IrVirtualRegisterLiveness.cpp
-  src/IrVirtualRegisterLowering.cpp
-  src/IrVirtualRegisterScheduler.cpp
-  src/IrVirtualRegisterSpillInsertion.cpp
-  src/IrVirtualRegisterVerifier.cpp
+  src/ast/AstMemory.cpp
+  src/pipeline/CliDriver.cpp
+  src/pipeline/CompilePipeline.cpp
+  src/ir/IrBackendProfiles.cpp
+  src/ir/IrInliner.cpp
+  src/ir/IrPrinterHelpers.cpp
+  src/ir/IrPreparation.cpp
+  src/ir/IrPrinter.cpp
+  src/ir/IrSerializer.cpp
+  src/ir/IrValidation.cpp
+  src/ir/IrVirtualRegisterAllocator.cpp
+  src/ir/IrVirtualRegisterLiveness.cpp
+  src/ir/IrVirtualRegisterLowering.cpp
+  src/ir/IrVirtualRegisterScheduler.cpp
+  src/ir/IrVirtualRegisterSpillInsertion.cpp
+  src/ir/IrVirtualRegisterVerifier.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
   src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp
   src/ir_lowerer/IrLowererAccessTargetResolution.cpp
@@ -420,7 +420,7 @@ set(PRIMESTRUCT_IR_SOURCES
 )
 
 set(PRIMESTRUCT_CODEGEN_SOURCES
-  src/ExternalTooling.cpp
+  src/support/ExternalTooling.cpp
   src/emitter/EmitterEmit.cpp
   src/emitter/EmitterEmitSetupLifecycleHelperStep.cpp
   src/emitter/EmitterEmitSetupMathImport.cpp
@@ -479,11 +479,11 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/glsl_emitter/GlslEmitterExprMathBuiltins.cpp
   src/glsl_emitter/GlslEmitterHelpers.cpp
   src/glsl_emitter/GlslEmitterStatements.cpp
-  src/IrToCppEmitter.cpp
-  src/IrToCppEmitterInstructionEmitter.cpp
-  src/IrToCppEmitterPrintAndFileEmitter.cpp
-  src/IrToGlslEmitter.cpp
-  src/IrToGlslEmitterFunctionEmitter.cpp
+  src/backend/IrToCppEmitter.cpp
+  src/backend/IrToCppEmitterInstructionEmitter.cpp
+  src/backend/IrToCppEmitterPrintAndFileEmitter.cpp
+  src/backend/IrToGlslEmitter.cpp
+  src/backend/IrToGlslEmitterFunctionEmitter.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterMachO.cpp
   src/native_emitter/NativeEmitterElf.cpp
@@ -519,7 +519,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
 )
 
 set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES
-  src/IrBackends.cpp
+  src/ir/IrBackends.cpp
 )
 
 add_library(primec_support_lib ${PRIMESTRUCT_SUPPORT_SOURCES})
@@ -563,7 +563,7 @@ add_library(primec_lib INTERFACE)
 target_include_directories(primec_lib INTERFACE include)
 target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)
 
-add_executable(primec src/main.cpp)
+add_executable(primec src/bin/main.cpp)
 target_link_libraries(primec PRIVATE primec_backend_registry_lib primec_ir_lib)
 if(PRIMESTRUCT_MIMALLOC_LINKED)
   target_link_libraries(primec PRIVATE mimalloc)
@@ -578,7 +578,7 @@ target_link_libraries(generate_stdlib_manifest PRIVATE primec_frontend_lib)
 primestructEnableWarnings(generate_stdlib_manifest)
 
 # Precompiled header for primec's own generated-C++ ("--emit=exe") output.
-# See src/GeneratedCppRuntimePreamble.h and ExternalTooling.cpp - this lets
+# See src/backend/GeneratedCppRuntimePreamble.h and ExternalTooling.cpp - this lets
 # the clang++ invocation that compiles each generated program skip
 # re-parsing/re-instantiating the same handful of standard-library headers
 # every time (measured ~3.5x wall-clock reduction on the clang step for a
@@ -589,9 +589,9 @@ if(PRIMESTRUCT_CLANGXX_FOR_PCH)
   add_custom_command(
     OUTPUT "${PRIMESTRUCT_GENERATED_CPP_PCH}"
     COMMAND "${PRIMESTRUCT_CLANGXX_FOR_PCH}" -std=c++${CMAKE_CXX_STANDARD}
-            -x c++-header "${CMAKE_SOURCE_DIR}/src/GeneratedCppRuntimePreamble.h"
+            -x c++-header "${CMAKE_SOURCE_DIR}/src/backend/GeneratedCppRuntimePreamble.h"
             -o "${PRIMESTRUCT_GENERATED_CPP_PCH}"
-    DEPENDS "${CMAKE_SOURCE_DIR}/src/GeneratedCppRuntimePreamble.h"
+    DEPENDS "${CMAKE_SOURCE_DIR}/src/backend/GeneratedCppRuntimePreamble.h"
     COMMENT "Precompiling generated-C++ runtime preamble header")
   add_custom_target(primec_generated_cpp_pch DEPENDS "${PRIMESTRUCT_GENERATED_CPP_PCH}")
   add_dependencies(primec primec_generated_cpp_pch)
@@ -601,7 +601,7 @@ else()
   message(STATUS "clang++ not found - primec will compile generated C++ without a precompiled preamble header")
 endif()
 
-add_executable(primevm src/primevm_main.cpp)
+add_executable(primevm src/bin/primevm_main.cpp)
 target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)
 if(PRIMESTRUCT_MIMALLOC_LINKED)
   target_link_libraries(primevm PRIVATE mimalloc)

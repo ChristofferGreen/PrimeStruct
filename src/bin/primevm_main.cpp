@@ -8,7 +8,7 @@
 #include "primec/support/OptionsParser.h"
 #include "primec/runtime/Vm.h"
 #include "primec/runtime/VmDebugDap.h"
-#include "runtime/VmDebugDapProtocol.h"
+#include "../runtime/VmDebugDapProtocol.h"
 
 #include <cctype>
 #include <cstdint>
@@ -454,7 +454,7 @@ int main(int argc, char **argv) {
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
-  // TODO-5233/TODO-5234: see the matching comment in src/main.cpp. primevm
+  // TODO-5233/TODO-5234: see the matching comment in src/bin/main.cpp. primevm
   // is a one-shot compile-then-run process, so a single scope spanning the
   // compile plus the VM execution that follows is sufficient - no repeat
   // loop to reset between iterations of here.

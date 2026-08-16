@@ -45,6 +45,7 @@ def write_minimal_repo(repo_root: Path, *, with_budget_artifacts: bool) -> None:
   (repo_root / "docs").mkdir(parents=True)
   (repo_root / "scripts").mkdir()
   (repo_root / "src").mkdir()
+  (repo_root / "src" / "frontend").mkdir()
   (repo_root / "include").mkdir()
   (repo_root / "tests").mkdir()
 
@@ -64,7 +65,7 @@ def write_minimal_repo(repo_root: Path, *, with_budget_artifacts: bool) -> None:
       "src/ir_lowerer/Thing.cpp -> src/semantics/\n",
       encoding="utf-8",
   )
-  (repo_root / "src" / "SemanticProduct.cpp").write_text(
+  (repo_root / "src" / "frontend" / "SemanticProduct.cpp").write_text(
       "const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos() {\n"
       "  static const std::vector<SemanticProgramFactFamilyInfo> Families = {\n"
       "      {\"definitions\",\n"
@@ -126,7 +127,7 @@ def test_representative_parsing(module, scratch_parent: Path | None) -> None:
     }
     assert [entry["path"] for entry in report["largest_files"]] == [
         "src/Large.cpp",
-        "src/SemanticProduct.cpp",
+        "src/frontend/SemanticProduct.cpp",
     ]
     available_paths = {entry["path"] for entry in report["budget_summaries"]["available"]}
     assert "benchmarks/type_graph_budget_baseline.json" in available_paths

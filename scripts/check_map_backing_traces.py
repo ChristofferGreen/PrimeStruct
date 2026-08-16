@@ -48,8 +48,8 @@ TRACE_PATTERNS = [
 # allowed counts, so deleting residue does not require touching the audit;
 # adding new backing residue does.
 ALLOWED_MAX_COUNTS: dict[tuple[str, str], int] = {
-    ("src/IrPrinterHelpers.cpp", "experimental-map-path"): 4,
-    ("src/IrPrinterHelpers.cpp", "map-backing-type-symbol"): 2,
+    ("src/ir/IrPrinterHelpers.cpp", "experimental-map-path"): 4,
+    ("src/ir/IrPrinterHelpers.cpp", "map-backing-type-symbol"): 2,
     ("src/emitter/EmitterBuiltinCallPathHelpers.cpp", "experimental-map-path"): 1,
     ("src/emitter/EmitterHelpersTypes.cpp", "experimental-map-path"): 4,
     ("src/emitter/EmitterHelpersTypes.cpp", "map-backing-type-symbol"): 2,

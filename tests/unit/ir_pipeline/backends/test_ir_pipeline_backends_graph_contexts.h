@@ -329,18 +329,18 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   std::filesystem::path validationApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path graphHeaderPath = cwd / "src" / "semantics" / "TypeResolutionGraph.h";
   std::filesystem::path graphSourcePath = cwd / "src" / "semantics" / "TypeResolutionGraph.cpp";
-  std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
-  std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
-  std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
+  std::filesystem::path pipelinePath = cwd / "src" / "pipeline" / "CompilePipeline.cpp";
+  std::filesystem::path primecMainPath = cwd / "src" / "bin" / "main.cpp";
+  std::filesystem::path primevmMainPath = cwd / "src" / "bin" / "primevm_main.cpp";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
     testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
     validationApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     graphHeaderPath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.h";
     graphSourcePath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.cpp";
-    pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
-    primecMainPath = cwd.parent_path() / "src" / "main.cpp";
-    primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
+    pipelinePath = cwd.parent_path() / "src" / "pipeline" / "CompilePipeline.cpp";
+    primecMainPath = cwd.parent_path() / "src" / "bin" / "main.cpp";
+    primevmMainPath = cwd.parent_path() / "src" / "bin" / "primevm_main.cpp";
   }
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(testApiPath));
@@ -956,7 +956,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string semanticsHeader = readRepoFile("include/primec/semantics/Semantics.h");
   const std::string irPreparationHeader = readRepoFile("include/primec/ir/IrPreparation.h");
   const std::string irLowererHeader = readRepoFile("include/primec/ir/IrLowerer.h");
-  const std::string compilePipelineSource = readRepoFile("src/CompilePipeline.cpp");
+  const std::string compilePipelineSource = readRepoFile("src/pipeline/CompilePipeline.cpp");
   const std::string irLowererEntrySetup =
       readRepoFile("src/ir_lowerer/IrLowererLowerSetupEntryEffects.h");
   const std::string semanticPublicationBuildersHeader =
@@ -969,7 +969,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readRepoFile("src/semantics/SemanticsValidationPublicationOrchestration.h");
   const std::string semanticPublicationOrchestrationSource =
       readRepoFile("src/semantics/SemanticsValidationPublicationOrchestration.cpp");
-  const std::string semanticProductSource = readRepoFile("src/SemanticProduct.cpp");
+  const std::string semanticProductSource = readRepoFile("src/frontend/SemanticProduct.cpp");
   const std::string semanticsValidate = readRepoFile("src/semantics/SemanticsValidate.cpp");
   const std::string semanticsSnapshots = readRepoFile("src/semantics/SemanticsValidatorSnapshots.cpp");
   const std::string irCallResolution = readRepoFile("src/ir_lowerer/IrLowererCallResolution.cpp");
@@ -991,8 +991,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readRepoFile("include/primec/testing/ir_lowerer_helpers/IrLowererCallAccessHelpers.h");
   const std::string structLayoutHelpersHeader =
       readRepoFile("include/primec/testing/ir_lowerer_helpers/IrLowererStructLayoutHelpers.h");
-  const std::string primecMain = readRepoFile("src/main.cpp");
-  const std::string primevmMain = readRepoFile("src/primevm_main.cpp");
+  const std::string primecMain = readRepoFile("src/bin/main.cpp");
+  const std::string primevmMain = readRepoFile("src/bin/primevm_main.cpp");
 
   CHECK(semanticProduct.find("#include \"primec/semantic_product/DirectCallFacts.h\"") !=
         std::string::npos);
@@ -1592,7 +1592,7 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
     return readTextFile(fullPath);
   };
 
-  const std::string semanticProductSource = readRepoFile("src/SemanticProduct.cpp");
+  const std::string semanticProductSource = readRepoFile("src/frontend/SemanticProduct.cpp");
   const std::string matrix = readRepoFile("docs/SemanticProductConsumerMatrix.md");
   const std::string registryTests =
       readRepoFile("tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry.cpp");
@@ -1889,7 +1889,7 @@ TEST_CASE("semantic product bridge path choices use helperNameId without helperN
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
 
   const std::size_t bridgeStart =
       semanticProductHeader.find("struct SemanticProgramBridgePathChoice {");
@@ -1923,7 +1923,7 @@ TEST_CASE("semantic product method call targets use resolvedPathId without resol
   const std::string methodCallFactsHeader =
       readTextFile(root / "include" / "primec" / "semantic_product" / "MethodCallFacts.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string irCallResolutionSource =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp");
 
@@ -1958,7 +1958,7 @@ TEST_CASE("semantic product callable summaries use fullPathId without fullPath s
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
   const std::string irLowererReturnInfoHelpers =
@@ -2004,7 +2004,7 @@ TEST_CASE("semantic product binding facts use resolvedPathId without resolvedPat
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string bindingTypeHelpersSource =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp");
 
@@ -2040,7 +2040,7 @@ TEST_CASE("semantic product return facts use definitionPathId without definition
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
 
@@ -2074,7 +2074,7 @@ TEST_CASE("semantic product local auto facts use initializerResolvedPathId witho
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string bindingTypeHelpersSource =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp");
 
@@ -2123,7 +2123,7 @@ TEST_CASE("semantic product query facts use resolvedPathId without resolvedPath 
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
 
@@ -2159,7 +2159,7 @@ TEST_CASE("semantic product try facts use operandResolvedPathId without operandR
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
 
@@ -2195,7 +2195,7 @@ TEST_CASE("semantic product on_error facts use handlerPathId without handlerPath
   const std::string semanticProductHeader =
       readTextFile(root / "include" / "primec" / "frontend" / "SemanticProduct.h");
   const std::string semanticProductSource =
-      readTextFile(root / "src" / "SemanticProduct.cpp");
+      readTextFile(root / "src" / "frontend" / "SemanticProduct.cpp");
   const std::string onErrorHelpersSource =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererOnErrorHelpers.cpp");
 

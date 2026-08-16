@@ -1,6 +1,6 @@
 #include "primec/pipeline/CompilePipeline.h"
 
-#include "ExpandedSourceBuilder.h"
+#include "../frontend/ExpandedSourceBuilder.h"
 
 #include "primec/ast/AstMemory.h"
 #include "primec/ast/AstPrinter.h"
@@ -17,7 +17,7 @@
 #include "primec/frontend/StdlibSymbolManifest.h"
 #include "primec/support/TextFilterPipeline.h"
 #include "primec/support/TransformRules.h"
-#include "semantics/TypeResolutionGraph.h"
+#include "../semantics/TypeResolutionGraph.h"
 
 #include <algorithm>
 #include <array>

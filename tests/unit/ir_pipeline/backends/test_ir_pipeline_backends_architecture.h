@@ -1,8 +1,8 @@
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path mainPath = cwd / "src" / "main.cpp";
+  std::filesystem::path mainPath = cwd / "src" / "bin" / "main.cpp";
   if (!std::filesystem::exists(mainPath)) {
-    mainPath = cwd.parent_path() / "src" / "main.cpp";
+    mainPath = cwd.parent_path() / "src" / "bin" / "main.cpp";
   }
   REQUIRE(std::filesystem::exists(mainPath));
 
@@ -141,7 +141,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
   std::filesystem::path headerPath = cwd / "include" / "primec" / "support" / "StdlibSurfaceRegistry.h";
-  std::filesystem::path sourcePath = cwd / "src" / "StdlibSurfaceRegistry.cpp";
+  std::filesystem::path sourcePath = cwd / "src" / "support" / "StdlibSurfaceRegistry.cpp";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
   }
@@ -149,7 +149,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
     headerPath = cwd.parent_path() / "include" / "primec" / "support" / "StdlibSurfaceRegistry.h";
   }
   if (!std::filesystem::exists(sourcePath)) {
-    sourcePath = cwd.parent_path() / "src" / "StdlibSurfaceRegistry.cpp";
+    sourcePath = cwd.parent_path() / "src" / "support" / "StdlibSurfaceRegistry.cpp";
   }
 
   REQUIRE(std::filesystem::exists(cmakePath));
@@ -160,7 +160,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   const std::string header = readTextFile(headerPath);
   const std::string source = readTextFile(sourcePath);
 
-  CHECK(cmake.find("src/StdlibSurfaceRegistry.cpp") != std::string::npos);
+  CHECK(cmake.find("src/support/StdlibSurfaceRegistry.cpp") != std::string::npos);
 
   CHECK(header.find("enum class StdlibSurfaceDomain") != std::string::npos);
   CHECK(header.find("enum class StdlibSurfaceShape") != std::string::npos);
@@ -462,7 +462,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("set(PRIMESTRUCT_RUNTIME_SOURCES") != std::string::npos);
   CHECK(cmake.find("set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES") != std::string::npos);
   CHECK(cmake.find("src/runtime/VmKernelBoundary.cpp") != std::string::npos);
-  CHECK(cmake.find("src/IrBackendProfiles.cpp") != std::string::npos);
+  CHECK(cmake.find("src/ir/IrBackendProfiles.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateConvertConstructors.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp") !=

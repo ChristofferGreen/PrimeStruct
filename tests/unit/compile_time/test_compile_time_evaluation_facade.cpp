@@ -108,7 +108,7 @@ void addCompileTimeEffect(primec::SemanticProgram &program,
 
 std::filesystem::path repoRootPath() {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  if (std::filesystem::exists(cwd / "src" / "CompileTimeEvaluation.cpp")) {
+  if (std::filesystem::exists(cwd / "src" / "frontend" / "CompileTimeEvaluation.cpp")) {
     return cwd;
   }
   return cwd.parent_path();
@@ -488,8 +488,8 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
   const std::vector<std::filesystem::path> boundarySources = {
       repoRoot / "include" / "primec" / "frontend" / "CompileTimeEvaluation.h",
       repoRoot / "include" / "primec" / "frontend" / "CompileTimeCallable.h",
-      repoRoot / "src" / "CompileTimeEvaluation.cpp",
-      repoRoot / "src" / "CompileTimeCallable.cpp",
+      repoRoot / "src" / "frontend" / "CompileTimeEvaluation.cpp",
+      repoRoot / "src" / "frontend" / "CompileTimeCallable.cpp",
   };
   const std::vector<std::string_view> forbiddenFinalArtifacts = {
       "primevm_main",
@@ -517,7 +517,7 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
   }
 
   const std::string compileTimeSource =
-      readSourceFile(repoRoot / "src" / "CompileTimeEvaluation.cpp");
+      readSourceFile(repoRoot / "src" / "frontend" / "CompileTimeEvaluation.cpp");
   const std::string kernelBoundaryHeader =
       readSourceFile(repoRoot / "include" / "primec" / "runtime" / "VmKernelBoundary.h");
   CHECK(compileTimeSource.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=
@@ -530,8 +530,8 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
 
   const std::string cmake = readSourceFile(repoRoot / "CMakeLists.txt");
   CHECK(cmake.find("src/runtime/VmKernelBoundary.cpp") != std::string::npos);
-  CHECK(cmake.find("src/CompileTimeEvaluation.cpp") != std::string::npos);
-  CHECK(cmake.find("src/CompileTimeCallable.cpp") != std::string::npos);
+  CHECK(cmake.find("src/frontend/CompileTimeEvaluation.cpp") != std::string::npos);
+  CHECK(cmake.find("src/frontend/CompileTimeCallable.cpp") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_time_tests "
                    "PRIVATE primec_frontend_lib)") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_time_tests "

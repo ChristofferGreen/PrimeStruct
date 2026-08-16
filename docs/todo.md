@@ -257,7 +257,8 @@ investigation chain's actively-productive leaves - see
   into subdirectories mirroring source module structure (TODO-4637 through
   TODO-4640, done, see `docs/todo_finished.md`). Phase 2 groups headers by
   pipeline stage (TODO-4641, done, see `docs/todo_finished.md`). Phase 3
-  consolidates loose src files (TODO-4642). Full design document at
+  consolidates loose src files (TODO-4642, done, see
+  `docs/todo_finished.md`). Full design document at
   `docs/FileLayoutRestructuring.md`.
 - Test name quality: improve test file and test case naming across the
   suite. Rename 63 opaque letter-suffixed shard files to topic-descriptive
@@ -367,7 +368,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-9. TODO-4642: Consolidate loose top-level `src/` files into directories
 11. TODO-4644: Rewrite 53 overlong test names (>120 chars)
 12. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
 13. TODO-4646: Tighten 12 vague/short test names
@@ -470,30 +470,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-
-- [ ] TODO-4642: Consolidate loose top-level `src/` files into directories
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: File layout restructuring
-  - parallel_track: src-layout
-  - depends_on: TODO-4641
-  - scope: Move the ~20 loose `.cpp` and `.h` files at the `src/` root into
-    focused directories: `src/runtime/` (VM files), `src/ir/` (IR printer,
-    serializer, validation, inliner, vreg files), `src/pipeline/`
-    (CompilePipeline, CliDriver), `src/frontend/` (ImportResolver files),
-    `src/bin/` (main.cpp, primevm_main.cpp). Update the top-level CMake
-    source lists.
-  - implementation_notes: The `semantics/`, `ir_lowerer/`, `emitter/`,
-    `parser/`, `text_filter/`, `native_emitter/`, `glsl_emitter/`, and
-    `wasm_emitter/` directories stay as-is.
-  - acceptance:
-    - No `.cpp` or `.h` files remain at the `src/` root except possibly
-      a thin forwarding `loc.sh`.
-    - All CMake source lists reflect new paths.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once loose files are consolidated and tests pass; do
-    not restructure existing subdirectories in this leaf.
 
 - [ ] TODO-4644: Rewrite 53 overlong test names (>120 chars)
   - owner: ai

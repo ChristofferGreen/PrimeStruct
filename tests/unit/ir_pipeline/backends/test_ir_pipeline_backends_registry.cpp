@@ -9862,9 +9862,9 @@ TEST_CASE("shared vm backend profile exposes canonical diagnostics") {
 
 TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path mainPath = cwd / "src" / "main.cpp";
+  std::filesystem::path mainPath = cwd / "src" / "bin" / "main.cpp";
   if (!std::filesystem::exists(mainPath)) {
-    mainPath = cwd.parent_path() / "src" / "main.cpp";
+    mainPath = cwd.parent_path() / "src" / "bin" / "main.cpp";
   }
   REQUIRE(std::filesystem::exists(mainPath));
 
@@ -9902,9 +9902,9 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
 
 TEST_CASE("primevm uses shared ir preparation helper") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path mainPath = cwd / "src" / "primevm_main.cpp";
+  std::filesystem::path mainPath = cwd / "src" / "bin" / "primevm_main.cpp";
   if (!std::filesystem::exists(mainPath)) {
-    mainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
+    mainPath = cwd.parent_path() / "src" / "bin" / "primevm_main.cpp";
   }
   REQUIRE(std::filesystem::exists(mainPath));
 
@@ -9936,9 +9936,9 @@ TEST_CASE("primevm uses shared ir preparation helper") {
 
 TEST_CASE("primevm debug replay uses shared JSON parsing helpers") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path mainPath = cwd / "src" / "primevm_main.cpp";
+  std::filesystem::path mainPath = cwd / "src" / "bin" / "primevm_main.cpp";
   if (!std::filesystem::exists(mainPath)) {
-    mainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
+    mainPath = cwd.parent_path() / "src" / "bin" / "primevm_main.cpp";
   }
   REQUIRE(std::filesystem::exists(mainPath));
 

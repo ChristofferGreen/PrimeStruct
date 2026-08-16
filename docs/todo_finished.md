@@ -6,6 +6,81 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4642: Consolidate loose top-level `src/` files into directories
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: File layout restructuring
+  - parallel_track: src-layout
+  - depends_on: TODO-4641
+  - scope: Move the ~20 loose `.cpp` and `.h` files at the `src/` root into
+    focused directories: `src/runtime/` (VM files), `src/ir/` (IR printer,
+    serializer, validation, inliner, vreg files), `src/pipeline/`
+    (CompilePipeline, CliDriver), `src/frontend/` (ImportResolver files),
+    `src/bin/` (main.cpp, primevm_main.cpp). Update the top-level CMake
+    source lists.
+  - implementation_notes: The `semantics/`, `ir_lowerer/`, `emitter/`,
+    `parser/`, `text_filter/`, `native_emitter/`, `glsl_emitter/`, and
+    `wasm_emitter/` directories stay as-is.
+  - acceptance:
+    - No `.cpp` or `.h` files remain at the `src/` root except possibly
+      a thin forwarding `loc.sh`.
+    - All CMake source lists reflect new paths.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once loose files are consolidated and tests pass; do
+    not restructure existing subdirectories in this leaf.
+  - finished_2026-08-16: `src/runtime/` (VM files) was already fully
+    populated from an earlier session. Moved the remaining 54 loose
+    `.cpp`/`.h` files (the actual count; doc's "~20" estimate was stale)
+    into `src/ast/` (2: AstMemory/AstPrinter), `src/frontend/` (13),
+    `src/ir/` (15), a new `src/backend/` (8: `IrToCppEmitter*`/
+    `IrToGlslEmitter*`/`GeneratedCppRuntimePreamble.h` - not named in the
+    doc's target list since it predates that split, but mirrors
+    `include/primec/backend/` and is distinct from the pre-existing
+    `src/emitter/` directory, which implements a different `Emitter`
+    class), `src/support/` (12), `src/pipeline/` (2), and `src/bin/` (2:
+    main.cpp/primevm_main.cpp) via `git mv`. Updated 49 `.cpp` paths in
+    CMakeLists.txt (5 moved `.h` files aren't separately listed). Fixed 2
+    now-broken relative sibling-directory `#include`s
+    (`CompilePipeline.cpp`'s `"semantics/TypeResolutionGraph.h"` and
+    `primevm_main.cpp`'s `"runtime/VmDebugDapProtocol.h"`, both needing a
+    `../` prefix now that their own files moved one level deeper).
+
+    Same lesson as TODO-4641: a large batch of "architecture stays source
+    locked" tests hardcode `src/OldFlatName.cpp` paths (`cwd / "src" /
+    "X.cpp"` construction, `readRepoFile`/`readTextFile` calls, and
+    `cmake.find("src/X.cpp")` substring checks against `CMakeLists.txt`'s
+    own content) - fixed ~25 more instances across
+    `test_ir_pipeline_backends_architecture.h`,
+    `test_ir_pipeline_backends_registry.cpp`,
+    `test_ir_pipeline_backends_graph_contexts.h`,
+    `test_ir_pipeline_backends_graph_pilot.cpp`,
+    `test_compile_time_evaluation_facade.cpp`,
+    `test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`,
+    `test_stdlib_map_ownership.cpp`, and
+    `test_compile_run_benchmark_harness.cpp`. Also found and fixed the
+    same problem one layer up the stack: `scripts/architecture_health_dashboard.py`
+    reads the real `src/SemanticProduct.cpp` to extract semantic-product
+    fact-family documentation, and its own self-test
+    (`tests/scripts/test_architecture_health_dashboard.py`) writes a
+    synthetic fixture file at the same relative path the real script
+    expects - both needed updating together (path *and* the fixture's
+    `mkdir`) to keep the fixture and the script it's testing pointing at
+    the same location.
+
+    Updated two more `docs/todo.md` pinned snapshot strings in
+    `test_compile_run_examples_docs_locks.cpp` ("todo queue ... stay
+    source locked") for the same reason as TODO-4641's note - this TODO's
+    own completion moved the "Execution Queue" section's first-listed
+    entry again.
+
+    Verified via the full `./scripts/compile.sh --release` gate (not a
+    scoped check): first round hit a build failure (the
+    `TypeResolutionGraph.h` sibling-include gap above, missed by the
+    include-layer/naming checkers since neither scans relative
+    same-directory includes); fixed and reran clean at 1958 CTest cases,
+    0 failures.
+
 - [x] TODO-4641: Group `include/primec/` headers by pipeline stage
   - owner: ai
   - created_at: 2026-06-11

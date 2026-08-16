@@ -10,7 +10,7 @@ TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.core");
 TEST_CASE("graph type resolver pilot is wired through options and semantics inference") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path optionsHeaderPath = cwd / "include" / "primec" / "support" / "Options.h";
-  std::filesystem::path optionsParserPath = cwd / "src" / "OptionsParser.cpp";
+  std::filesystem::path optionsParserPath = cwd / "src" / "support" / "OptionsParser.cpp";
   std::filesystem::path semanticsHeaderPath = cwd / "include" / "primec" / "semantics" / "Semantics.h";
   std::filesystem::path semanticsValidatePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
   std::filesystem::path validatorHeaderPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
@@ -106,12 +106,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
   std::filesystem::path validatorInferUtilityPath =
       cwd / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
-  std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
-  std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
-  std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
+  std::filesystem::path pipelinePath = cwd / "src" / "pipeline" / "CompilePipeline.cpp";
+  std::filesystem::path primecMainPath = cwd / "src" / "bin" / "main.cpp";
+  std::filesystem::path primevmMainPath = cwd / "src" / "bin" / "primevm_main.cpp";
   if (!std::filesystem::exists(optionsHeaderPath)) {
     optionsHeaderPath = cwd.parent_path() / "include" / "primec" / "support" / "Options.h";
-    optionsParserPath = cwd.parent_path() / "src" / "OptionsParser.cpp";
+    optionsParserPath = cwd.parent_path() / "src" / "support" / "OptionsParser.cpp";
     semanticsHeaderPath = cwd.parent_path() / "include" / "primec" / "semantics" / "Semantics.h";
     semanticsValidatePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
     validatorHeaderPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
@@ -203,9 +203,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
     validatorInferUtilityPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
-    pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
-    primecMainPath = cwd.parent_path() / "src" / "main.cpp";
-    primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
+    pipelinePath = cwd.parent_path() / "src" / "pipeline" / "CompilePipeline.cpp";
+    primecMainPath = cwd.parent_path() / "src" / "bin" / "main.cpp";
+    primevmMainPath = cwd.parent_path() / "src" / "bin" / "primevm_main.cpp";
   }
   REQUIRE(std::filesystem::exists(optionsHeaderPath));
   REQUIRE(std::filesystem::exists(optionsParserPath));

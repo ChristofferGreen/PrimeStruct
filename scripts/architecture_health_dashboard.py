@@ -95,7 +95,7 @@ def collect_include_layer_allowlist(repo_root: Path) -> dict[str, Any]:
 
 
 def collect_semantic_product_fact_families(repo_root: Path) -> dict[str, Any]:
-  path = repo_root / "src" / "SemanticProduct.cpp"
+  path = repo_root / "src" / "frontend" / "SemanticProduct.cpp"
   text = path.read_text(encoding="utf-8")
   families: list[dict[str, str]] = []
   by_ownership: dict[str, int] = {}

@@ -3750,7 +3750,7 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
       repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   const std::filesystem::path pipelineHeaderPath =
       repoRoot / "include" / "primec" / "pipeline" / "CompilePipeline.h";
-  const std::filesystem::path pipelinePath = repoRoot / "src" / "CompilePipeline.cpp";
+  const std::filesystem::path pipelinePath = repoRoot / "src" / "pipeline" / "CompilePipeline.cpp";
   const std::string semanticsHeader = readFile(semanticsHeaderPath.string());
   const std::string semanticsBenchmarkHeader = readFile(semanticsBenchmarkHeaderPath.string());
   const std::string benchmarkOrchestrationHeader = readFile(benchmarkOrchestrationHeaderPath.string());

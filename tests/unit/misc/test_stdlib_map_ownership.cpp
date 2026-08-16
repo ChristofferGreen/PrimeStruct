@@ -96,7 +96,7 @@ TEST_SUITE_BEGIN("primestruct.stdlib.map_ownership");
 
 TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string mapSource = readText(collectionsFile("map.prime"));
-  const std::string registrySource = readText(repoRoot() / "src" / "StdlibSurfaceRegistry.cpp");
+  const std::string registrySource = readText(repoRoot() / "src" / "support" / "StdlibSurfaceRegistry.cpp");
   const std::string publicationBuildersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticPublicationBuilders.cpp");

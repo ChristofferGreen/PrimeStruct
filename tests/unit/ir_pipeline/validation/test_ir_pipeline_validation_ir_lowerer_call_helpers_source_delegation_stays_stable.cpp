@@ -4233,7 +4233,7 @@ TEST_CASE("lowerer import aliases are delegated to frontend syntax helpers") {
 
   const std::filesystem::path frontendSyntaxHeaderPath =
       repoRoot / "include" / "primec" / "frontend" / "FrontendSyntax.h";
-  const std::filesystem::path frontendSyntaxSourcePath = repoRoot / "src" / "FrontendSyntax.cpp";
+  const std::filesystem::path frontendSyntaxSourcePath = repoRoot / "src" / "frontend" / "FrontendSyntax.cpp";
   const std::filesystem::path lowerImportsStructsSetupSourcePath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerImportsStructsSetup.cpp";
   const std::filesystem::path structTypeHelpersSourcePath =
@@ -4258,7 +4258,7 @@ TEST_CASE("lowerer import aliases are delegated to frontend syntax helpers") {
         std::string::npos);
   CHECK(frontendSyntaxSource.find("isSyntaxWildcardImportPath(importPath, wildcardPrefix)") !=
         std::string::npos);
-  CHECK(cmake.find("src/FrontendSyntax.cpp") != std::string::npos);
+  CHECK(cmake.find("src/frontend/FrontendSyntax.cpp") != std::string::npos);
   CHECK(lowerImportsStructsSetupSource.find("#include \"primec/frontend/FrontendSyntax.h\"") !=
         std::string::npos);
   CHECK(lowerImportsStructsSetupSource.find("primec::buildSyntaxImportAliases(") !=

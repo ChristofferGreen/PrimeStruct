@@ -2155,8 +2155,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  first conservative view-escape diagnostic") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "9. TODO-4642: Consolidate loose top-level `src/` files into directories\n"
-                  "11. TODO-4644: Rewrite 53 overlong test names (>120 chars)\n") !=
+                  "11. TODO-4644: Rewrite 53 overlong test names (>120 chars)\n"
+                  "12. TODO-4645: Drop `compiles and runs` prefix from ~740 test names\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
