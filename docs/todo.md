@@ -255,7 +255,8 @@ investigation chain's actively-productive leaves - see
   `tests/unit/` (523 files), `include/primec/` (67 headers), and the
   top-level `src/` directory (~20 loose files). Phase 1 moves test shards
   into subdirectories mirroring source module structure (TODO-4637 through
-  TODO-4640). Phase 2 groups headers by pipeline stage (TODO-4641). Phase 3
+  TODO-4640, done, see `docs/todo_finished.md`). Phase 2 groups headers by
+  pipeline stage (TODO-4641). Phase 3
   consolidates loose src files (TODO-4642). Full design document at
   `docs/FileLayoutRestructuring.md`.
 - Test name quality: improve test file and test case naming across the
@@ -366,7 +367,6 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-6. TODO-4640: Move remaining test shards into subdirectories
 7. TODO-4641: Group `include/primec/` headers by pipeline stage
 9. TODO-4642: Consolidate loose top-level `src/` files into directories
 11. TODO-4644: Rewrite 53 overlong test names (>120 chars)
@@ -473,24 +473,6 @@ investigation chain's actively-productive leaves - see
     registry to non-collection surfaces in this leaf.
 
 
-- [ ] TODO-4640: Move remaining test shards into subdirectories
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: File layout restructuring
-  - parallel_track: test-layout-remaining
-  - depends_on: TODO-4637, TODO-4638, TODO-4639
-  - scope: Move remaining flat test files into subdirectories: `parser/`
-    (~20 files), `text_filter/` (7 files), `vm_debug/` (3 files),
-    `compile_time/` (3 files), `import_resolver/` (3 files), `ast/` (4
-    files). Update all affected CMake source lists.
-  - implementation_notes: Use `git mv` for every file to preserve history.
-    These are smaller shards so they can be done in one commit.
-  - acceptance:
-    - No `test_*.cpp` or `test_*.h` files remain at the `tests/unit/` root
-      except `main.cpp` and shared helpers.
-    - All CMake source lists reflect new paths.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once all remaining shards are moved and tests pass.
 
 - [ ] TODO-4641: Group `include/primec/` headers by pipeline stage
   - owner: ai

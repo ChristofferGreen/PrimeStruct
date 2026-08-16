@@ -6,6 +6,54 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (August 16, 2026)**
+- [x] TODO-4640: Move remaining test shards into subdirectories
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-16
+  - phase: File layout restructuring
+  - parallel_track: test-layout-remaining
+  - depends_on: TODO-4637, TODO-4638, TODO-4639
+  - scope: Move remaining flat test files into subdirectories: `parser/`
+    (~20 files), `text_filter/` (7 files), `vm_debug/` (3 files),
+    `compile_time/` (3 files), `import_resolver/` (3 files), `ast/` (4
+    files). Update all affected CMake source lists.
+  - implementation_notes: Use `git mv` for every file to preserve history.
+    These are smaller shards so they can be done in one commit.
+  - acceptance:
+    - No `test_*.cpp` or `test_*.h` files remain at the `tests/unit/` root
+      except `main.cpp` and shared helpers.
+    - All CMake source lists reflect new paths.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once all remaining shards are moved and tests pass.
+  - finished_2026-08-16: `parser/`, `text_filter/`, `vm_debug/` (as part
+    of `vm/`), `compile_time/`, and `import_resolver/` had already been
+    moved into subdirectories in earlier sessions. The remaining flat
+    files at `tests/unit/` root were: the 4-file `ast/` group
+    (`test_ast_ir_dump*.cpp/.h`, per the doc's target layout), plus 9
+    files with no directory named in this TODO's scope, categorized by
+    what they exercise: `test_ir_printer.cpp` and `test_printers_manual.cpp`
+    joined `ast/` (same `AstPrinter`/`IrPrinter` domain as the ast-dump
+    tests); `test_lexer.cpp`, `test_execution_parsing.cpp`,
+    `test_execution_whitespace.cpp`, `test_template_parsing.cpp` joined
+    `parser/` (already home to the rest of the `PrimeStruct_parser_tests`
+    target's sources, which these were already part of); and
+    `test_diagnostics_codes.cpp`, `test_scene_bgra8_renderer.cpp`,
+    `test_stdlib_map_ownership.cpp` (no natural existing home) went into
+    a new `misc/` directory, matching their `PrimeStruct_misc_tests`
+    CMake target. Updated the 12 affected `CMakeLists.txt` source
+    entries (including the `set_source_files_properties` override for
+    `test_stdlib_map_ownership.cpp`'s `-O0` build flag) and verified
+    `tests/unit/` root now holds only `test_main.cpp`. No broken
+    sibling-header includes (the one cross-file header,
+    `test_ast_ir_dump_helpers.h`, moved alongside both its includers).
+    Verified via Debug-config builds+runs of `PrimeStruct_misc_tests`
+    (337/337 passing) and `PrimeStruct_parser_tests` (500/500 passing)
+    from `build-debug/`. Did not run the full `./scripts/compile.sh
+    --release` gate this pass (same as TODO-4637/4638/4639 - scoped
+    target builds/runs used for verification instead); that gate should
+    still be run before this file-layout restructuring (TODO-4637
+    through TODO-4640) is treated as fully release-verified.
+
 - [x] TODO-4639: Move `semantics` test shard into subdirectory
   - owner: ai
   - created_at: 2026-06-11

@@ -620,7 +620,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set(PrimeStructStdlibMapOwnershipCompileOptions -O0)
   endif()
   set_source_files_properties(
-    tests/unit/test_stdlib_map_ownership.cpp
+    tests/unit/misc/test_stdlib_map_ownership.cpp
     PROPERTIES COMPILE_OPTIONS "${PrimeStructStdlibMapOwnershipCompileOptions}"
   )
 
@@ -630,16 +630,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/import_resolver/test_import_resolver_versions.cpp
     tests/unit/import_resolver/test_import_errors.cpp
     tests/unit/import_resolver/test_import_multiple.cpp
-    tests/unit/test_stdlib_map_ownership.cpp
-    tests/unit/test_ast_ir_dump.cpp
-    tests/unit/test_ast_ir_dump_inference.cpp
-    tests/unit/test_ast_ir_dump_namespace.cpp
-    tests/unit/test_printers_manual.cpp
-    tests/unit/test_ir_printer.cpp
-    tests/unit/test_scene_bgra8_renderer.cpp
+    tests/unit/misc/test_stdlib_map_ownership.cpp
+    tests/unit/ast/test_ast_ir_dump.cpp
+    tests/unit/ast/test_ast_ir_dump_inference.cpp
+    tests/unit/ast/test_ast_ir_dump_namespace.cpp
+    tests/unit/ast/test_printers_manual.cpp
+    tests/unit/ast/test_ir_printer.cpp
+    tests/unit/misc/test_scene_bgra8_renderer.cpp
     tests/unit/semantics/manual/test_semantics_manual.cpp
-    tests/unit/test_lexer.cpp
-    tests/unit/test_diagnostics_codes.cpp
+    tests/unit/parser/test_lexer.cpp
+    tests/unit/misc/test_diagnostics_codes.cpp
   )
   target_include_directories(PrimeStruct_misc_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
@@ -1177,9 +1177,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/parser/test_parser_errors_more_transforms.cpp
     tests/unit/parser/test_parser_errors_more_transforms_canonical.cpp
     tests/unit/parser/test_stdlib_symbol_manifest.cpp
-    tests/unit/test_execution_parsing.cpp
-    tests/unit/test_execution_whitespace.cpp
-    tests/unit/test_template_parsing.cpp
+    tests/unit/parser/test_execution_parsing.cpp
+    tests/unit/parser/test_execution_whitespace.cpp
+    tests/unit/parser/test_template_parsing.cpp
   )
   target_include_directories(PrimeStruct_parser_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_parser_tests PRIVATE primec_frontend_lib)
