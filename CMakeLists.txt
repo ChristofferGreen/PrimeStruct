@@ -150,6 +150,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidationBenchmarkOrchestration.cpp
   src/semantics/SemanticsValidationPublicationOrchestration.cpp
   src/semantics/SemanticsValidate.cpp
+  src/semantics/SemanticsValidateBuiltinSoaMetadata.cpp
   src/semantics/SemanticsValidateCompileTimeIf.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
