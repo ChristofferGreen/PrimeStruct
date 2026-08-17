@@ -271,7 +271,8 @@ investigation chain's actively-productive leaves - see
   analysis at `docs/FileLayoutRestructuring.md`.
 - Oversized file refactoring: split files that are too large for
   maintainable development. Split `SemanticsValidate.cpp` (8,025 lines)
-  into focused compilation units (TODO-4648). Convert IR lowerer include-only
+  into focused compilation units (TODO-4648, done, see
+  `docs/todo_finished.md`). Convert IR lowerer include-only
   `.h` fragments to compileable `.h/.cpp` pairs (TODO-4649). Convert
   `TemplateMonomorph*.h` semantics fragments (TODO-4650). Split oversized
   test files (TODO-4651) and oversized single test case bodies (TODO-4652).
@@ -370,64 +371,63 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-16. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
-17. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
-18. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
-19. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
-20. TODO-4652: Split oversized single test case bodies (>1000 lines)
-21. TODO-4653: Add dedicated IrPrinter unit tests
-22. TODO-4654: Add [public] annotations to stdlib modules
-23. TODO-4655: Add compile-run tests for language level examples
-24. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
-25. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-26. TODO-4684: Spike a minimal zero-C++ collection type (done, see docs/todo_finished.md)
-27. TODO-4685: Directory-scan discovery of collection .prime files (done, see docs/todo_finished.md)
-28. TODO-4686: Generic `[collection_type]`/`[key_value_type]` struct detection
-29. TODO-4687: Generic canonicalPath/bridgeKey/prefix derivation + override syntax
-30. TODO-4688: Fold `deriveCollectionsSurfaces()`'s 3 blocks into one loop
-31. TODO-4689: Dynamically-sized registry storage, enum resolution by path
-32. TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site
-33. TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
-34. TODO-4692: Migrate soaVector* literal families to registry lookup
-35. TODO-4693: Clean up residual ContainerError string comparisons
-36. TODO-4694: Introduce shared trait wrapper helpers, behavior-preserving
-37. TODO-4695: Migrate semantics/ call sites to wrappers
-38. TODO-4696: Migrate ir_lowerer/ call sites to wrappers
-39. TODO-4697: Migrate emitter/ call sites to wrappers
-40. TODO-4698: Swap wrapper internals to generic registry/trait queries, delete old helpers
-41. TODO-4699: Add legacy-collection-branch reachability instrumentation
-42. TODO-4700: Delete 3-slot branches + duplicate definition, evidence-based
-43. TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath branches
-44. TODO-4702: Add second toy collection type, zero C++
-45. TODO-4703: Add diff-based zero-C++ gate script
-46. TODO-4704: Add audit-exemption-count ratchet script
-47. TODO-4705: Correct stale Collection decoupling documentation
-48. TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
-49. TODO-4708: Measure per-shard doctest binary startup/registration overhead
-50. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
-51. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
-51a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
-51b. TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
-51c. TODO-5245: Convert stdlib surface registry's matchesAny() O(N) linear scan to O(1)/O(log N) lookup
-51d. TODO-5246: Continue profiling remaining allocation/hash/memcmp churn after TODO-5245
-52. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
-53. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
-54. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
-55. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
-56. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
-61. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
-62. TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
-63. TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
-64. TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
-65. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
-66. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
-67. TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
-68. TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
-69. TODO-5224: Build the per-module symbol manifest generator
-70. TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation (done, see docs/todo_finished.md)
-71. TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views (done, see docs/todo_finished.md)
-72. TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type (done, see docs/todo_finished.md)
-73. TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters (done, see docs/todo_finished.md)
+16. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
+17. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
+18. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
+19. TODO-4652: Split oversized single test case bodies (>1000 lines)
+20. TODO-4653: Add dedicated IrPrinter unit tests
+21. TODO-4654: Add [public] annotations to stdlib modules
+22. TODO-4655: Add compile-run tests for language level examples
+23. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
+24. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+25. TODO-4684: Spike a minimal zero-C++ collection type (done, see docs/todo_finished.md)
+26. TODO-4685: Directory-scan discovery of collection .prime files (done, see docs/todo_finished.md)
+27. TODO-4686: Generic `[collection_type]`/`[key_value_type]` struct detection
+28. TODO-4687: Generic canonicalPath/bridgeKey/prefix derivation + override syntax
+29. TODO-4688: Fold `deriveCollectionsSurfaces()`'s 3 blocks into one loop
+30. TODO-4689: Dynamically-sized registry storage, enum resolution by path
+31. TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site
+32. TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
+33. TODO-4692: Migrate soaVector* literal families to registry lookup
+34. TODO-4693: Clean up residual ContainerError string comparisons
+35. TODO-4694: Introduce shared trait wrapper helpers, behavior-preserving
+36. TODO-4695: Migrate semantics/ call sites to wrappers
+37. TODO-4696: Migrate ir_lowerer/ call sites to wrappers
+38. TODO-4697: Migrate emitter/ call sites to wrappers
+39. TODO-4698: Swap wrapper internals to generic registry/trait queries, delete old helpers
+40. TODO-4699: Add legacy-collection-branch reachability instrumentation
+41. TODO-4700: Delete 3-slot branches + duplicate definition, evidence-based
+42. TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath branches
+43. TODO-4702: Add second toy collection type, zero C++
+44. TODO-4703: Add diff-based zero-C++ gate script
+45. TODO-4704: Add audit-exemption-count ratchet script
+46. TODO-4705: Correct stale Collection decoupling documentation
+47. TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
+48. TODO-4708: Measure per-shard doctest binary startup/registration overhead
+49. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
+50. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+50a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
+50b. TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
+50c. TODO-5245: Convert stdlib surface registry's matchesAny() O(N) linear scan to O(1)/O(log N) lookup
+50d. TODO-5246: Continue profiling remaining allocation/hash/memcmp churn after TODO-5245
+51. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
+52. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
+53. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
+54. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
+55. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
+60. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
+61. TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
+62. TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
+63. TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
+64. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
+65. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
+66. TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
+67. TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
+68. TODO-5224: Build the per-module symbol manifest generator
+69. TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation (done, see docs/todo_finished.md)
+70. TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views (done, see docs/todo_finished.md)
+71. TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type (done, see docs/todo_finished.md)
+72. TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters (done, see docs/todo_finished.md)
 
 ### Task Blocks
 
@@ -468,33 +468,6 @@ investigation chain's actively-productive leaves - see
     - Release tests pass with the derived registry as the only source.
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
-
-- [ ] TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
-  - owner: ai
-  - created_at: 2026-06-11
-  - phase: Oversized file refactoring
-  - parallel_track: split-semantics-validate
-  - depends_on: (none)
-  - scope: Split the 8,025-line `src/semantics/SemanticsValidate.cpp` into
-    focused compilation units. Extract logical groups (validation passes,
-    snapshot helpers, publication builders, benchmark orchestration, SoA
-    helper metadata) into separate `.cpp` files with a shared context
-    header.
-  - implementation_notes: The file currently includes 13 Semantics-related
-    headers and contains ~213 function definitions. Group functions by
-    responsibility: validation entry points, snapshot/ID assignment
-    helpers, experimental collection metadata validators, publication
-    builders, and benchmark orchestration. Each extracted file gets a
-    focused header if it is called from outside, or stays internal to the
-    semantics module otherwise.
-  - acceptance:
-    - `SemanticsValidate.cpp` is under 2,000 lines.
-    - No extracted file exceeds 1,500 lines.
-    - `./scripts/compile.sh --release` passes.
-    - `rg -c 'TEST_CASE' tests/` shows the same total count (no tests
-      lost or duplicated).
-  - stop_rule: Stop once the file is split and tests pass; do not change
-    validation logic in this leaf.
 
 - [ ] TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
   - owner: ai

@@ -5,6 +5,70 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (August 17, 2026)**
+- [x] TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
+  - owner: ai
+  - created_at: 2026-06-11
+  - finished_at: 2026-08-17
+  - phase: Oversized file refactoring
+  - parallel_track: split-semantics-validate
+  - depends_on: (none)
+  - scope: Split the 8,025-line `src/semantics/SemanticsValidate.cpp` into
+    focused compilation units. Extract logical groups (validation passes,
+    snapshot helpers, publication builders, benchmark orchestration, SoA
+    helper metadata) into separate `.cpp` files with a shared context
+    header.
+  - implementation_notes: The file currently includes 13 Semantics-related
+    headers and contains ~213 function definitions. Group functions by
+    responsibility: validation entry points, snapshot/ID assignment
+    helpers, experimental collection metadata validators, publication
+    builders, and benchmark orchestration. Each extracted file gets a
+    focused header if it is called from outside, or stays internal to the
+    semantics module otherwise.
+  - acceptance:
+    - `SemanticsValidate.cpp` is under 2,000 lines.
+    - No extracted file exceeds 1,500 lines.
+    - `./scripts/compile.sh --release` passes.
+    - `rg -c 'TEST_CASE' tests/` shows the same total count (no tests
+      lost or duplicated).
+  - stop_rule: Stop once the file is split and tests pass; do not change
+    validation logic in this leaf.
+  - finished_2026-08-17: extracted the file's logical clusters into 7 new
+    `.h`/`.cpp` pairs, all verified compileable and behavior-preserving via
+    incremental `./scripts/compile.sh --release` gates (no validation-logic
+    changes, matching the stop_rule): `SemanticsValidateOmittedStructInitializers`
+    (struct-initializer omission rewrite, 242 lines), `SemanticsValidateCompileTimeIf`
+    (TypeLocal binding + `ct_if` branch rewriting, 1137 lines),
+    `SemanticsValidateSoaBindingExtraction` (experimental KV/SoA binding
+    detection and element-type extraction, 786 lines),
+    `SemanticsValidateBuiltinSoaMetadata` (SoA helper visibility checks,
+    parsed-binding extraction, and builtin SoA return-metadata validation,
+    742 lines), `SemanticsValidateBuiltinSoaRewrites` (builtin SoA
+    conversion/to_aos/access/count/mutator method rewrites, 1373 lines),
+    `SemanticsValidateExperimentalSoaMethodRewrites` (experimental SoA
+    same-path-helper/to_aos/inline-borrow method rewrites, 1148 lines), and
+    `SemanticsValidateExperimentalSoaFieldViewRewrites` (experimental SoA
+    field-view index/helper/carrier-index/assign-target rewrites, 1271
+    lines). Also promoted `isStructLikeDefinition` to a shared
+    `primec::semantics` helper (in `SemanticsHelpers.h`/
+    `SemanticsHelpersValidation.cpp`) and `candidatePathsForExprCall`/
+    `canonicalizeResolvedCallPath` into `SemanticsValidateBuiltinSoaMetadata`,
+    since both were needed across multiple extracted clusters and can't
+    cross translation units with internal (anonymous-namespace) linkage.
+    One regression was caught and fixed mid-series: a new extracted file
+    tripped `scripts/check_soa_surface_trace_inventory.py`'s zero-audit
+    CTest case (it scans production `src`/`include` for retired SoA
+    public-surface tokens); fixed by carrying forward the same
+    `// soa-surface-audit: exempt` marker `SemanticsValidate.cpp` itself
+    already used. `src/semantics/SemanticsValidate.cpp` is now 1797 lines
+    (down from 8414 lines measured at the start of this leaf), under the
+    2,000-line acceptance target, with every extracted file under the
+    1,500-line ceiling. Also updated the "Execution Queue" pinned snapshot
+    string in `test_compile_run_examples_docs_locks.cpp` and renumbered the
+    queue's subsequent entries. Verified via `./scripts/compile.sh
+    --release` after every extraction step: **100% tests passed, 0 tests
+    failed out of 1884** on the final run.
+
 **Todo Completion (August 16, 2026)**
 - [x] TODO-4647: Rename 63 opaque shard files with topic suffixes
   - owner: ai
