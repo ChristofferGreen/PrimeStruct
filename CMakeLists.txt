@@ -163,6 +163,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp
   src/semantics/SemanticsValidateReflectionMetadataContext.cpp
   src/semantics/SemanticsValidateReflectionMetadata.cpp
+  src/semantics/SemanticsValidateSoaBindingExtraction.cpp
   src/semantics/SemanticsValidateTransformsEnums.cpp
   src/semantics/SemanticsValidateTransforms.cpp
   src/semantics/SemanticsValidatorGraphLocalAuto.cpp
