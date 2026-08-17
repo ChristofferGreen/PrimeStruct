@@ -525,18 +525,102 @@ investigation chain's actively-productive leaves - see
     also needed the `// soa-surface-audit: exempt` marker carried over
     from `SemanticsValidate.cpp`'s convention, since the extracted body
     trips `scripts/check_soa_surface_trace_inventory.py`'s zero-audit
-    CTest case. Remaining: `IrLowererLowerStatementsExpr.h` (2,723 lines)
-    and `IrLowererLowerEmitExprTailDispatch.h` (1,937 lines). Both are
-    structurally messier than the four already done - `StatementsExpr.h`
-    in particular mixes ~48 genuine top-level helpers with lambdas nested
-    two and three levels deep at inconsistent indentation (8-space,
-    10-space, tabs), so the "list every top-level block, promote each to
-    a class method" approach that worked cleanly for `SumHelpers` needs
-    care to avoid mis-classifying a nested implementation-detail lambda
-    as a top-level one. Do these two last, in either order, and verify
-    each with the same paste-and-compiler-driven-capture-discovery
-    technique plus a full `./scripts/compile.sh --release` run before and
-    after fixing source-lock breakage.
+    CTest case.
+    progress_2026-08-17b: `IrLowererLowerStatementsExpr.h` partially
+    converted (5th of 6 fragments) and verified via
+    `./scripts/compile.sh --release` (1884 tests, 0 failures). This
+    fragment was NOT self-contained like the prior four: its middle span
+    (original lines 890-2557) is a mid-function continuation of the
+    `switch (expr.kind) { case Expr::Kind::Call: { ... } }` block opened
+    in `IrLowererLowerEmitExpr.h` and threaded through all 7
+    `IrLowererLowerOperators*.h` sub-includes - extracting that span
+    would risk silently mis-locating a `case`/`default` boundary in a
+    compiler backend's control flow, so it was deliberately left as raw
+    spliced text (still directly `#include`d, unchanged). Only the
+    genuinely self-contained portion - lines 1-889, forty top-level
+    named-lambda helpers plus a `resolveDirectHelperPath` lambda, none of
+    which reference the switch's case-local state - was extracted, into a
+    new `StatementsExprContext` class (same pattern as
+    `SumHelpersContext`: reference members bound in the constructor from
+    `setupStage`/`stateOut`/`callResolutionAdapters` alias chains, so the
+    extracted methods can keep calling each other unqualified via
+    implicit `this`). The remaining raw span (890-2557, plus a separate
+    trailing `emitPrintArg` assignment at 2560-2717) still lives in
+    `IrLowererLowerStatementsExpr.h` and now calls the extracted helpers
+    through a `statementsExprHelpers.<name>(...)` instance constructed
+    right before the file's `#include` splice point in
+    `IrLowererLowerReturnEmitStage.cpp`. Two new files:
+    `IrLowererLowerStatementsExprHelpers.h`/`.cpp` hold the extracted
+    class (NOTE: not named `IrLowererLowerStatementsExpr.{h,cpp}` -
+    that base name had to stay bound to the raw-fragment file, since it's
+    still directly `#include`d mid-function). Five functions needed an
+    explicit `const LocalMap &localsIn` parameter added (discovered via
+    compile errors) because the switch's enclosing `emitExpr` lambda's
+    `localsIn` parameter isn't a class member, only ambient at each call
+    site: `semanticCollectionFamilyForExpr`, `findDirectSoaWrapperDefinition`,
+    `resolveKeyValueAccessReceiverInfo`,
+    `resolveHelperReturnedArrayVectorAccessTargetInfo`,
+    `tryEmitBuiltinKeyValueConstructor`,
+    `resolveSameFamilyKeyValueHelperMemberName`. Several call sites in the
+    remaining raw span pass `resolveHelperReturnedArrayVectorAccessTargetInfo`
+    as a bare `ResolveCallArrayVectorAccessTargetInfoFn` callback (2-arg
+    `std::function<bool(const Expr&, ArrayVectorAccessTargetInfo&)>`) to
+    `resolveArrayVectorAccessTargetInfo`/`tryEmitCountAccessCall`/
+    `emitBuiltinArrayAccess` - these needed a `[&](const Expr
+    &targetCallExpr, ArrayVectorAccessTargetInfo &targetInfoOut) { return
+    statementsExprHelpers.resolveHelperReturnedArrayVectorAccessTargetInfo(
+    targetCallExpr, targetInfoOut, localsIn); }` wrapper lambda instead of
+    a bare reference, since the class method's signature now carries the
+    extra `localsIn` parameter the callback type doesn't have. Also
+    needed: `IrLowererStructTypeHelpers.h` (for `ResolveStructTypeNameFn`
+    and a `resolveStructTypeName` member, used by
+    `findDirectStructDefinition`) and `primec/ir/StdlibCollectionPaths.h`
+    (for the `collection_paths::` namespace used throughout). One
+    genuine near-duplicate lambda (`experimentalCollectionMemberPath`,
+    used both inside the extracted class and once from the still-raw
+    tail) was kept as a public `StatementsExprContext` method rather than
+    private, specifically so the raw tail could still call it via
+    `statementsExprHelpers.experimentalCollectionMemberPath(...)`.
+    Verifying this conversion surfaced a process pitfall worth flagging
+    for future sessions: running `./scripts/compile.sh --release` twice
+    concurrently against the same `build-release` directory (e.g. one
+    foreground/backgrounded pair racing) corrupts the shared build and
+    produces spurious `sh: 1: ./primec: Permission denied` and wrong-value
+    test failures that look like real regressions but vanish on a single
+    clean rerun - always confirm no other `compile.sh`/`ctest` process is
+    running before starting a fresh release-gate run. A second, subtler
+    pitfall: running the raw doctest binary directly (e.g.
+    `./PrimeStruct_backend_ir_tests` with no `-tc` filter) surfaces
+    additional failures beyond what `ctest` shows, because `ctest` shards
+    test cases into separate processes while the raw binary runs every
+    TEST_CASE in one process sharing static/global state - `ctest` via
+    `./scripts/compile.sh --release` is the authoritative gate per
+    AGENTS.md; don't chase failures that only reproduce in a raw
+    full-binary run without also confirming they reproduce in `ctest`.
+    Six source-lock tests needed fixing this round, all in
+    `test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp`
+    (five separate TEST_CASEs whose string checks pinned the old raw
+    lambda-definition text) and `test_stdlib_map_ownership.cpp` (one
+    positive-substring check for `keyValueConstructorMetadata` that only
+    appears in the new `.cpp`, not the remaining raw tail) - the general
+    fix pattern was reading the new `IrLowererLowerStatementsExprHelpers.cpp`
+    as a second source string alongside the existing
+    `IrLowererLowerStatementsExpr.h` read (or concatenating both, for
+    tests that just need substring presence regardless of which file) and
+    updating literal `auto name = [&](...)  {` checks to the class's
+    `ReturnType StatementsExprContext::name(...)  {` signature text, plus
+    adding the `statementsExprHelpers.` prefix to usage-site literal
+    checks still in the raw tail. Remaining:
+    `IrLowererLowerStatementsExpr.h`'s span at original lines 890-2557
+    (deliberately left raw - do not attempt without a much more careful
+    multi-file trace of the `switch (expr.kind) { case Expr::Kind::Call:
+    ... default: ... }` structure spanning `IrLowererLowerEmitExpr.h` +
+    all 7 `IrLowererLowerOperators*.h` files + this span), the separate
+    `emitPrintArg` assignment at original lines 2560-2717 (self-contained,
+    safe to extract following the `InlineCalls.h` pattern - a complete
+    `stateOut.emitPrintArg = [&](...) {...};` field assignment - just not
+    done yet), and all of `IrLowererLowerEmitExprTailDispatch.h`
+    (1,937 lines, completely unstarted).
   - acceptance:
     - Each fragment is a compileable `.h/.cpp` pair.
     - No `.h` file under `src/ir_lowerer/` contains function

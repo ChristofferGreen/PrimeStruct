@@ -206,7 +206,7 @@ TEST_CASE("ir lowerer temp receiver method access skips builtin array lowering")
       source.find("resolveMethodCallDefinition(expr, localsIn);", methodCalleeDecl);
   REQUIRE(methodCalleeResolve != std::string::npos);
   const size_t methodCalleeDirectFallback =
-      source.find("methodCallee = findDirectHelperDefinition(resolveExprPath(expr));",
+      source.find("methodCallee = statementsExprHelpers.findDirectHelperDefinition(resolveExprPath(expr));",
                   methodCalleeResolve);
   CHECK(methodCalleeDirectFallback !=
         std::string::npos);
@@ -232,16 +232,21 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
           : std::filesystem::path("..");
   const std::filesystem::path lowerStatementsExprPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+  const std::filesystem::path lowerStatementsExprHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExprHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
+  REQUIRE(std::filesystem::exists(lowerStatementsExprHelpersPath));
   const std::string source = readText(lowerStatementsExprPath);
+  const std::string helpersSource = readText(lowerStatementsExprHelpersPath);
 
-  const size_t samePathHelper =
-      source.find("auto isSamePathSoaHelperPath = [&](const std::string &path) {");
-  const size_t wrapperHelper =
-      source.find("auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {");
+  const size_t samePathHelper = helpersSource.find(
+      "bool StatementsExprContext::isSamePathSoaHelperPath(const std::string &path) {");
+  const size_t wrapperHelper = helpersSource.find(
+      "bool StatementsExprContext::isSoaWrapperHelperFamilyPath(const std::string &path) {");
   const size_t wrapperEnd =
-      source.find("auto findDirectSoaWrapperDefinition", wrapperHelper);
+      helpersSource.find("const Definition * StatementsExprContext::findDirectSoaWrapperDefinition",
+                         wrapperHelper);
 
   REQUIRE(samePathHelper != std::string::npos);
   REQUIRE(wrapperHelper != std::string::npos);
@@ -249,7 +254,7 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
   CHECK(samePathHelper < wrapperHelper);
 
   const std::string wrapperHelperSource =
-      source.substr(wrapperHelper, wrapperEnd - wrapperHelper);
+      helpersSource.substr(wrapperHelper, wrapperEnd - wrapperHelper);
   CHECK(wrapperHelperSource.find("\"/std/collections/soa/\"") !=
         std::string::npos);
   CHECK(wrapperHelperSource.find(
@@ -263,14 +268,14 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
   CHECK(wrapperHelperSource.find("\"/to_aos_ref\"") == std::string::npos);
 
   CHECK(source.find("directCallee == nullptr &&\n"
-                    "              isSamePathSoaHelperPath(rawPath)") ==
+                    "              statementsExprHelpers.isSamePathSoaHelperPath(rawPath)") ==
         std::string::npos);
   CHECK(source.find("const bool isVisibleSamePathSoaHelper =\n"
-                    "                isSamePathSoaHelperPath(rawPath) &&\n"
-                    "                isDirectHelperDefinitionFamily(expr, *directCallee);") !=
+                    "                statementsExprHelpers.isSamePathSoaHelperPath(rawPath) &&\n"
+                    "                statementsExprHelpers.isDirectHelperDefinitionFamily(expr, *directCallee);") !=
         std::string::npos);
   CHECK(source.find("const bool isResolvedSoaWrapperHelper =\n"
-                    "                isSoaWrapperHelperFamilyPath(directCallee->fullPath);") !=
+                    "                statementsExprHelpers.isSoaWrapperHelperFamilyPath(directCallee->fullPath);") !=
         std::string::npos);
   CHECK(source.find("if (isResolvedSoaWrapperHelper || isVisibleSamePathSoaHelper)") !=
         std::string::npos);
@@ -306,7 +311,7 @@ TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before di
   const size_t directResolution =
       source.find("const Definition *directCallee = resolveDefinitionCall(expr);");
   const size_t structFallback =
-      source.find("directCallee = findDirectStructDefinition(expr);");
+      source.find("directCallee = statementsExprHelpers.findDirectStructDefinition(expr);");
 
   REQUIRE(aliasRewrite != std::string::npos);
   REQUIRE(resolvedAliasRewrite != std::string::npos);
@@ -318,7 +323,7 @@ TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before di
   CHECK(resolvedAliasRewrite < structFallback);
   CHECK(source.find(
             "rewrittenVectorCtor.name =\n"
-            "                experimentalCollectionMemberPath(\"vector\", \"vector\");") !=
+            "                statementsExprHelpers.experimentalCollectionMemberPath(\"vector\", \"vector\");") !=
         std::string::npos);
   CHECK(source.find("rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};") !=
         std::string::npos);
@@ -380,14 +385,14 @@ TEST_CASE("ir lowerer prefers explicit experimental vector helper before struct 
       std::filesystem::exists(std::filesystem::path("src"))
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
-  const std::filesystem::path statementsExprPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+  const std::filesystem::path statementsExprHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExprHelpers.cpp";
   const std::filesystem::path collectionHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
-  REQUIRE(std::filesystem::exists(statementsExprPath));
+  REQUIRE(std::filesystem::exists(statementsExprHelpersPath));
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
-  const std::string statementsSource = readText(statementsExprPath);
+  const std::string statementsSource = readText(statementsExprHelpersPath);
   const std::string collectionSource = readText(collectionHelpersPath);
 
   const size_t statementsVectorHelperCheck =
@@ -1200,7 +1205,10 @@ TEST_CASE("ir lowerer statement direct vector receiver fallbacks use semantic ta
       "resolveArrayVectorAccessTargetInfo(\n"
       "                  expr.args.front(),\n"
       "                  localsIn,\n"
-      "                  resolveHelperReturnedArrayVectorAccessTargetInfo,\n"
+      "                  [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {\n"
+      "                    return statementsExprHelpers.resolveHelperReturnedArrayVectorAccessTargetInfo(\n"
+      "                        targetCallExpr, targetInfoOut, localsIn);\n"
+      "                  },\n"
       "                  semanticProgram,\n"
       "                  &callResolutionAdapters.semanticProductTargets.semanticIndex)");
   const size_t builtinReceiverFallback = source.find(
@@ -1986,70 +1994,74 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
           : std::filesystem::path("..");
   const std::filesystem::path statementsExprPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+  const std::filesystem::path statementsExprHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExprHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(statementsExprPath));
+  REQUIRE(std::filesystem::exists(statementsExprHelpersPath));
   const std::string source = readText(statementsExprPath);
+  const std::string helpersSource = readText(statementsExprHelpersPath);
 
-  CHECK(source.find("auto matchesDirectHelperDefinitionFamilyPath =") !=
+  CHECK(helpersSource.find("bool StatementsExprContext::matchesDirectHelperDefinitionFamilyPath(const std::string &candidatePath, const Definition &callee) {") !=
         std::string::npos);
-  CHECK(source.find("auto isDirectHelperDefinitionFamily = [&](const Expr &callExpr,") !=
+  CHECK(helpersSource.find("bool StatementsExprContext::isDirectHelperDefinitionFamily(const Expr &callExpr,") !=
         std::string::npos);
-  CHECK(source.find("const std::string resolvedPath = resolveExprPath(callExpr);") !=
+  CHECK(helpersSource.find("const std::string resolvedPath = resolveExprPath(callExpr);") !=
         std::string::npos);
-  CHECK(source.find("matchesDirectHelperDefinitionFamilyPath(resolvedPath, callee);") !=
+  CHECK(helpersSource.find("matchesDirectHelperDefinitionFamilyPath(resolvedPath, callee);") !=
         std::string::npos);
-  CHECK(source.find("auto findDirectHelperDefinition = [&](const std::string &rawPath) -> const Definition * {") !=
+  CHECK(helpersSource.find("const Definition * StatementsExprContext::findDirectHelperDefinition(const std::string &rawPath) {") !=
         std::string::npos);
-  CHECK(source.find("auto matchesGeneratedLeafDefinition = [&](const std::string &path,") !=
+  CHECK(helpersSource.find("auto matchesGeneratedLeafDefinition = [&](const std::string &path,") !=
         std::string::npos);
-  CHECK(source.find("path.compare(rawPath.size(), markerSize, marker) == 0 &&") !=
+  CHECK(helpersSource.find("path.compare(rawPath.size(), markerSize, marker) == 0 &&") !=
         std::string::npos);
-  CHECK(source.find("path.find('/', rawPath.size() + markerSize) ==") !=
+  CHECK(helpersSource.find("path.find('/', rawPath.size() + markerSize) ==") !=
         std::string::npos);
-  CHECK(source.find("auto stripGeneratedHelperSuffix = [](std::string helperPath) {") !=
+  CHECK(helpersSource.find("std::string StatementsExprContext::stripGeneratedHelperSuffix(std::string helperPath) {") !=
         std::string::npos);
-  CHECK(source.find("const size_t leafStart = helperPath.find_last_of('/');") !=
+  CHECK(helpersSource.find("const size_t leafStart = helperPath.find_last_of('/');") !=
         std::string::npos);
-  CHECK(source.find(
+  CHECK(helpersSource.find(
             "helperPath.find(\"__\", leafStart == std::string::npos ? 0 : leafStart + 1);") !=
         std::string::npos);
-  CHECK(source.find("auto extractHelperTail = [&](std::string helperPath) {") !=
+  CHECK(helpersSource.find("std::string StatementsExprContext::extractHelperTail(std::string helperPath) {") !=
         std::string::npos);
-  CHECK(source.find("auto isInternalSoaHelperFamilyName = [&](const std::string &helperName) {") !=
+  CHECK(helpersSource.find("bool StatementsExprContext::isInternalSoaHelperFamilyName(const std::string &helperName) {") !=
         std::string::npos);
-  CHECK(source.find("helperName.rfind(\"soaColumn\", 0) == 0 ||") !=
+  CHECK(helpersSource.find("helperName.rfind(\"soaColumn\", 0) == 0 ||") !=
         std::string::npos);
-  CHECK(source.find("helperName.rfind(\"SoaColumns\", 0) == 0;") !=
+  CHECK(helpersSource.find("helperName.rfind(\"SoaColumns\", 0) == 0;") !=
         std::string::npos);
-  CHECK(source.find("auto findDirectInternalSoaDefinition = [&](const std::string &rawPath)") !=
+  CHECK(helpersSource.find("const Definition * StatementsExprContext::findDirectInternalSoaDefinition(const std::string &rawPath) {") !=
         std::string::npos);
-  CHECK(source.find(
+  CHECK(helpersSource.find(
             "path.rfind(collection_paths::modulePrefix(collection_paths::kInternalSoaStorageFolder), 0) != 0") !=
         std::string::npos);
-  CHECK(source.find("auto findDirectStructDefinition = [&](const Expr &callExpr) -> const Definition * {") !=
+  CHECK(helpersSource.find("const Definition * StatementsExprContext::findDirectStructDefinition(const Expr &callExpr) {") !=
         std::string::npos);
-  CHECK(source.find("resolveStructTypeName(callExpr.name, callExpr.namespacePrefix, directStructPath)") !=
+  CHECK(helpersSource.find("resolveStructTypeName(callExpr.name, callExpr.namespacePrefix, directStructPath)") !=
         std::string::npos);
-  CHECK(source.find("auto isInternalSoaHelperFamilyPath = [&](const std::string &path) {") !=
+  CHECK(helpersSource.find("bool StatementsExprContext::isInternalSoaHelperFamilyPath(const std::string &path) {") !=
         std::string::npos);
-  CHECK(source.find("extractHelperTail(normalizeCollectionHelperPath(path))") !=
+  CHECK(helpersSource.find("extractHelperTail(normalizeCollectionHelperPath(path))") !=
         std::string::npos);
   CHECK(source.find("if (directCallee == nullptr &&") !=
         std::string::npos);
-  CHECK(source.find("isInternalSoaHelperFamilyPath(rawPath)) {") !=
+  CHECK(source.find("statementsExprHelpers.isInternalSoaHelperFamilyPath(rawPath)) {") !=
         std::string::npos);
-  CHECK(source.find("directCallee = findDirectInternalSoaDefinition(rawPath);") !=
+  CHECK(source.find("directCallee = statementsExprHelpers.findDirectInternalSoaDefinition(rawPath);") !=
         std::string::npos);
   CHECK(source.find("if (directCallee == nullptr && !expr.isMethodCall) {") !=
         std::string::npos);
-  CHECK(source.find("directCallee = findDirectStructDefinition(expr);") !=
+  CHECK(source.find("directCallee = statementsExprHelpers.findDirectStructDefinition(expr);") !=
         std::string::npos);
   CHECK(source.find("if (ir_lowerer::isStructDefinition(*directCallee)) {") !=
         std::string::npos);
   CHECK(source.find(
             "directCallee->fullPath.rfind(collection_paths::modulePrefix(collection_paths::kInternalSoaStorageFolder), 0) == 0 &&") !=
         std::string::npos);
-  CHECK(source.find("isInternalSoaHelperFamilyPath(directCallee->fullPath)) {") !=
+  CHECK(source.find("statementsExprHelpers.isInternalSoaHelperFamilyPath(directCallee->fullPath)) {") !=
         std::string::npos);
   CHECK(source.find("(helperName == \"count\" || helperName == \"contains\" ||") !=
         std::string::npos);
@@ -2067,13 +2079,13 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0) &&") ==
         std::string::npos);
-  CHECK(source.find("isDirectCollectionHelperPath(rawPath)") !=
+  CHECK(source.find("statementsExprHelpers.isDirectCollectionHelperPath(rawPath)") !=
         std::string::npos);
-  CHECK(source.find("isCanonicalKeyValueHelperFamilyPath(rawPath)") !=
+  CHECK(source.find("statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(rawPath)") !=
         std::string::npos);
-  CHECK(source.find("directCallee = findDirectHelperDefinition(rawPath);") !=
+  CHECK(source.find("directCallee = statementsExprHelpers.findDirectHelperDefinition(rawPath);") !=
         std::string::npos);
-  CHECK(source.find("directCallee = findDirectHelperDefinition(resolvedExprPath);") !=
+  CHECK(source.find("directCallee = statementsExprHelpers.findDirectHelperDefinition(resolvedExprPath);") !=
         std::string::npos);
   CHECK(source.find("if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {") !=
         std::string::npos);
@@ -2100,15 +2112,18 @@ TEST_CASE("ir lowerer late expression canonical map helpers use path-family gate
           : std::filesystem::path("..");
   const std::filesystem::path statementsExprPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+  const std::filesystem::path statementsExprHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExprHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(statementsExprPath));
+  REQUIRE(std::filesystem::exists(statementsExprHelpersPath));
   const std::string source = readText(statementsExprPath);
+  const std::string helpersSource = readText(statementsExprHelpersPath);
 
-  const size_t canonicalMapGate =
-      source.find("auto isCanonicalKeyValueHelperFamilyPath =");
+  const size_t canonicalMapGate = helpersSource.find(
+      "bool StatementsExprContext::isCanonicalKeyValueHelperFamilyPath(const std::string &path)");
   const size_t explicitAccessGate = source.find(
-      "const bool isExplicitCanonicalKeyValueAccess =",
-      canonicalMapGate);
+      "const bool isExplicitCanonicalKeyValueAccess =");
   const size_t builtinDeferral =
       source.find("if (isExplicitCanonicalKeyValueAccess &&",
                   explicitAccessGate);
@@ -2116,7 +2131,6 @@ TEST_CASE("ir lowerer late expression canonical map helpers use path-family gate
   REQUIRE(canonicalMapGate != std::string::npos);
   REQUIRE(explicitAccessGate != std::string::npos);
   REQUIRE(builtinDeferral != std::string::npos);
-  CHECK(canonicalMapGate < explicitAccessGate);
   CHECK(explicitAccessGate < builtinDeferral);
   CHECK(source.find("resolveCollectionPairTypeInfo(expr.args.front(), localsIn)") ==
         std::string::npos);

@@ -380,7 +380,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "text_filter" /
                "TextFilterPipelinePass.cpp");
   const std::string lowerStatementsExprSource =
-      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h");
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h") +
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsExprHelpers.cpp");
   const std::string lowerStatementsBindingsSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h");
   const std::string inlineNativeSource =

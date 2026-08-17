@@ -16,6 +16,7 @@
 #include "IrLowererLowerEmitExprTryHelpers.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCalls.h"
+#include "IrLowererLowerStatementsExprHelpers.h"
 #include "IrLowererLowerSumHelpers.h"
 #include "IrLowererLowerInlineCallCleanupStep.h"
 #include "IrLowererLowerInlineCallContextSetupStep.h"
@@ -246,6 +247,9 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
 #include "IrLowererLowerEmitExpr.h"
 #include "IrLowererLowerOperators.h"
+
+  ir_lowerer::StatementsExprContext statementsExprHelpers(setupStage, stateOut, callResolutionAdapters, error);
+
 #include "IrLowererLowerStatementsExpr.h"
 #include "IrLowererLowerStatementsBindings.h"
 #include "IrLowererLowerStatementsLoops.h"
