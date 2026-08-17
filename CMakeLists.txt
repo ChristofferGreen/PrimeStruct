@@ -153,6 +153,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateBuiltinSoaMetadata.cpp
   src/semantics/SemanticsValidateBuiltinSoaRewrites.cpp
   src/semantics/SemanticsValidateCompileTimeIf.cpp
+  src/semantics/SemanticsValidateExperimentalSoaFieldViewRewrites.cpp
   src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
