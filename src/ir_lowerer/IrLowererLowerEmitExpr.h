@@ -33,11 +33,6 @@
           return stdCollectionsRoot() + "/" +
                  collection_paths::experimentalFolder(collectionName) + "/";
         };
-    const auto experimentalCollectionMemberPath =
-        [&](std::string_view collectionName, std::string_view memberName) {
-          return experimentalCollectionMemberRoot(collectionName) +
-                 std::string(memberName);
-        };
     const auto experimentalCollectionTypePath =
         [&](std::string_view collectionName, std::string_view typeName) {
           return experimentalCollectionMemberRoot(collectionName) +
@@ -1277,5 +1272,13 @@
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(slicePtrLocal));
           return true;
         }
-        #include "IrLowererLowerEmitExprCollectionHelpers.h"
+        if (auto collectionHelpersResult = tryLowerEmitExprCollectionHelpers(
+                defMap, function, nextLocal,
+                emitExpr, allocTempLocal, emitStructCopySlots, resolveDefinitionCall,
+                resolveExprPath, resolveStructSlotLayout, inferExprKind, inferStructExprPath,
+                emitArrayIndexOutOfBounds, callResolutionAdapters, semanticProgram,
+                expr, localsIn, error);
+            collectionHelpersResult.has_value()) {
+          return *collectionHelpersResult;
+        }
         #include "IrLowererLowerEmitExprTailDispatch.h"

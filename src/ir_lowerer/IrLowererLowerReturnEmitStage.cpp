@@ -12,6 +12,7 @@
 #include "IrLowererInlineCallContextHelpers.h"
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlineStructArgHelpers.h"
+#include "IrLowererLowerEmitExprCollectionHelpers.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCallCleanupStep.h"
 #include "IrLowererLowerInlineCallContextSetupStep.h"

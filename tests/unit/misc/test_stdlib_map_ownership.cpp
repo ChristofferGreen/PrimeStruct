@@ -60,7 +60,7 @@ bool isAllowedMapBackingFile(const std::string &relativePath) {
       "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
       "src/ir_lowerer/IrLowererInlinePackedArgs.cpp",
       "src/ir_lowerer/IrLowererInlineParamHelpers.cpp",
-      "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
+      "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.cpp",
       "src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h",
       "src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp",
       "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",
@@ -81,9 +81,9 @@ bool isAllowedExperimentalMapTrace(const std::string &relativePath,
   }
   if (contains("std/collections/experimental_map/Entry")) {
     return relativePath ==
-           "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h";
+           "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.cpp";
   }
-  if (relativePath == "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h" &&
+  if (relativePath == "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.cpp" &&
       contains("receiverDef->fullPath.rfind(\"/std/collections/experimental_map/\", 0) == 0")) {
     return true;
   }
@@ -398,7 +398,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string tailDispatchSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h");
   const std::string lowerEmitExprCollectionSource =
-      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h");
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp");
   const std::string builtinNameHelpersSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererBuiltinNameHelpers.cpp");
   const std::string lowererHelpersSource =

@@ -22,7 +22,7 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -84,7 +84,7 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -142,7 +142,7 @@ TEST_CASE("ir lowerer late collection constructor guards use published construct
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -340,7 +340,7 @@ TEST_CASE("ir lowerer collection helper resolves vector aliases before direct de
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -383,7 +383,7 @@ TEST_CASE("ir lowerer prefers explicit experimental vector helper before struct 
   const std::filesystem::path statementsExprPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(statementsExprPath));
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
@@ -488,7 +488,7 @@ TEST_CASE("ir lowerer materialized collection receivers prefer semantic target f
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -559,7 +559,7 @@ TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before 
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -1942,7 +1942,7 @@ TEST_CASE("ir lowerer canonical map contains and tryAt rewrites stay recognized 
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
   const std::filesystem::path tailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
 
