@@ -664,4 +664,79 @@ std::string oldExplicitSoaMutatorHelperName(std::string_view rawName) {
   return {};
 }
 
+std::vector<std::string> candidatePathsForExprCall(
+    const Expr &callExpr,
+    const std::string &definitionNamespace,
+    const std::unordered_map<std::string, semantics::BindingInfo> *bindings,
+    const std::unordered_set<std::string> *structPaths) {
+  std::vector<std::string> candidatePaths;
+  if (callExpr.isMethodCall && !callExpr.args.empty() && bindings != nullptr && structPaths != nullptr &&
+      callExpr.args.front().kind == Expr::Kind::Name) {
+    const Expr &receiver = callExpr.args.front();
+    auto bindingIt = bindings->find(receiver.name);
+    if (bindingIt != bindings->end()) {
+      const std::string receiverNamespace =
+          !receiver.namespacePrefix.empty() ? receiver.namespacePrefix : definitionNamespace;
+      const std::string receiverStructPath = resolveStructReceiverPathFromBinding(
+          bindingIt->second, receiverNamespace, *structPaths);
+      if (!receiverStructPath.empty()) {
+        candidatePaths.push_back(receiverStructPath + "/" + callExpr.name);
+      }
+    }
+  }
+  if (callExpr.isMethodCall && !callExpr.args.empty() && structPaths != nullptr &&
+      callExpr.args.front().kind == Expr::Kind::Call) {
+    // Struct-literal / constructor receivers (Holder{}.cloneValues()):
+    // resolve the constructor name to a struct path so the member helper
+    // definition is a candidate - otherwise chained soa helper methods on
+    // such receivers never reach the method desugar and their canonical
+    // targets stay unmaterialized in lowering.
+    const Expr &receiver = callExpr.args.front();
+    if (!receiver.name.empty()) {
+      std::string receiverPath = receiver.name;
+      if (receiverPath.front() != '/') {
+        std::string prefix = !receiver.namespacePrefix.empty()
+                                 ? receiver.namespacePrefix
+                                 : definitionNamespace;
+        if (!prefix.empty() && prefix.front() != '/') {
+          prefix.insert(prefix.begin(), '/');
+        }
+        receiverPath = prefix.empty() ? "/" + receiverPath
+                                      : prefix + "/" + receiverPath;
+      }
+      if (structPaths->count(receiverPath) > 0) {
+        candidatePaths.push_back(receiverPath + "/" + callExpr.name);
+      }
+    }
+  }
+  if (!callExpr.name.empty() && callExpr.name.front() == '/') {
+    candidatePaths.push_back(callExpr.name);
+    return candidatePaths;
+  }
+  if (callExpr.isMethodCall) {
+    if (!callExpr.namespacePrefix.empty()) {
+      candidatePaths.push_back(callExpr.namespacePrefix + "/" + callExpr.name);
+    }
+    return candidatePaths;
+  }
+  if (!callExpr.namespacePrefix.empty()) {
+    candidatePaths.push_back(callExpr.namespacePrefix + "/" + callExpr.name);
+  }
+  if (!definitionNamespace.empty()) {
+    candidatePaths.push_back(definitionNamespace + "/" + callExpr.name);
+  }
+  candidatePaths.push_back("/" + callExpr.name);
+  candidatePaths.push_back(callExpr.name);
+  return candidatePaths;
+}
+
+Expr canonicalizeResolvedCallPath(const Expr &callExpr, const std::string &resolvedPath) {
+  Expr rewritten = callExpr;
+  rewritten.name = resolvedPath;
+  rewritten.namespacePrefix.clear();
+  rewritten.isMethodCall = false;
+  rewritten.isFieldAccess = false;
+  return rewritten;
+}
+
 } // namespace primec

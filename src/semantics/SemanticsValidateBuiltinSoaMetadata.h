@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -64,5 +65,11 @@ std::string borrowedBuiltinSoaCountHelperName(std::string_view helperName);
 bool isOldExplicitSoaCountHelperName(std::string_view rawName);
 std::string builtinSoaMutatorHelperName(std::string_view rawName);
 std::string oldExplicitSoaMutatorHelperName(std::string_view rawName);
+std::vector<std::string> candidatePathsForExprCall(
+    const Expr &callExpr,
+    const std::string &definitionNamespace,
+    const std::unordered_map<std::string, semantics::BindingInfo> *bindings = nullptr,
+    const std::unordered_set<std::string> *structPaths = nullptr);
+Expr canonicalizeResolvedCallPath(const Expr &callExpr, const std::string &resolvedPath);
 
 } // namespace primec
