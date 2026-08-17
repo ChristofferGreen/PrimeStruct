@@ -495,13 +495,10 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(emitExprHeaderSource.find("runLowerExprEmitMovePassthroughStep(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitUploadReadbackPassthroughStep(") != std::string::npos);
 
-  const std::filesystem::path statementsExprHeaderPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
-  REQUIRE(std::filesystem::exists(statementsExprHeaderPath));
-  const std::string statementsExprHeaderSource = readText(statementsExprHeaderPath);
-  CHECK(statementsExprHeaderSource.find("emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn,") !=
+  CHECK(returnEmitStageSource.find(
+            "emitPrintArg = [&](const Expr &printArgExpr, const LocalMap &printArgLocals,") !=
         std::string::npos);
-  CHECK(statementsExprHeaderSource.find("auto emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn,") ==
+  CHECK(returnEmitStageSource.find("auto emitPrintArg = [&](const Expr &printArgExpr,") ==
         std::string::npos);
 
   const std::filesystem::path statementsCallsHeaderPath =

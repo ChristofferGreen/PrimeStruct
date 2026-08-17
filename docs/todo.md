@@ -610,17 +610,50 @@ investigation chain's actively-productive leaves - see
     updating literal `auto name = [&](...)  {` checks to the class's
     `ReturnType StatementsExprContext::name(...)  {` signature text, plus
     adding the `statementsExprHelpers.` prefix to usage-site literal
-    checks still in the raw tail. Remaining:
-    `IrLowererLowerStatementsExpr.h`'s span at original lines 890-2557
-    (deliberately left raw - do not attempt without a much more careful
-    multi-file trace of the `switch (expr.kind) { case Expr::Kind::Call:
-    ... default: ... }` structure spanning `IrLowererLowerEmitExpr.h` +
-    all 7 `IrLowererLowerOperators*.h` files + this span), the separate
-    `emitPrintArg` assignment at original lines 2560-2717 (self-contained,
-    safe to extract following the `InlineCalls.h` pattern - a complete
-    `stateOut.emitPrintArg = [&](...) {...};` field assignment - just not
-    done yet), and all of `IrLowererLowerEmitExprTailDispatch.h`
-    (1,937 lines, completely unstarted).
+    checks still in the raw tail.
+    progress_2026-08-17c: Extracted the separate `emitPrintArg` field
+    assignment (original lines 2560-2717, the file's last statement) into
+    `IrLowererLowerEmitExprPrintArg.{h,cpp}` (`emitPrintArgImpl`, a plain
+    free function - this fragment was a self-contained
+    `stateOut.emitPrintArg = [&](...) {...};` assignment, not
+    interdependent with other lambdas, so it followed the simpler
+    `InlineCalls.h` pattern rather than the `StatementsExprContext` class
+    pattern). Verified via `./scripts/compile.sh --release` (1884 tests,
+    0 failures). Captures threaded through as explicit parameters/derived
+    locals inside the new `.cpp`, reusing already-known alias chains:
+    `internString` from
+    `setupStage.setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup.stringLiteralHelpers.internString`,
+    `emitArrayIndexOutOfBounds` from the same `runtimeErrorEmitters`
+    struct, and `hasEntryArgs`/`entryArgsName`/`isEntryArgsName` from
+    `setupStage.setupLocalsOrchestration.entryCountAccessSetup` (the
+    `isEntryArgsName` alias there is the already-bound
+    2-arg `IsEntryArgsNameFn`, distinct from the 4-arg free function of
+    the same name in `IrLowererCountAccessHelpers.h` - don't confuse the
+    two). The forwarding lambda assignment
+    (`emitPrintArg = [&](const Expr &printArgExpr, const LocalMap
+    &printArgLocals, const PrintBuiltin &printBuiltin) -> bool { return
+    ir_lowerer::emitPrintArgImpl(...); };`) was inserted right after
+    `#include "IrLowererLowerStatementsExpr.h"` in
+    `IrLowererLowerReturnEmitStage.cpp`, since that raw fragment used to
+    be the file's trailing statement. One source-lock test needed fixing:
+    `test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp`
+    pinned the old `emitPrintArg = [&](const Expr &arg, const LocalMap
+    &localsIn,` text at the `IrLowererLowerStatementsExpr.h` path -
+    repointed to `IrLowererLowerReturnEmitStage.cpp` with the new
+    parameter names (`printArgExpr`/`printArgLocals`), reusing that
+    test's existing `returnEmitStageSource` variable rather than
+    re-reading the file a second time (a second `readText` of the same
+    path under a new variable name of the same name triggered a
+    redeclaration compile error - the file already had an earlier
+    `const std::string returnEmitStageSource = readText(...)` for that
+    exact path). Remaining for TODO-4649: `IrLowererLowerStatementsExpr.h`'s
+    span at original lines 890-2557 (deliberately left raw - do not
+    attempt without a much more careful multi-file trace of the
+    `switch (expr.kind) { case Expr::Kind::Call: ... default: ... }`
+    structure spanning `IrLowererLowerEmitExpr.h` + all 7
+    `IrLowererLowerOperators*.h` files + this span), and all of
+    `IrLowererLowerEmitExprTailDispatch.h` (1,937 lines, completely
+    unstarted - this is the 6th and final fragment).
   - acceptance:
     - Each fragment is a compileable `.h/.cpp` pair.
     - No `.h` file under `src/ir_lowerer/` contains function

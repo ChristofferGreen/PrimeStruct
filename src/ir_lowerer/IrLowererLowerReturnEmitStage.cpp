@@ -13,6 +13,7 @@
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlineStructArgHelpers.h"
 #include "IrLowererLowerEmitExprCollectionHelpers.h"
+#include "IrLowererLowerEmitExprPrintArg.h"
 #include "IrLowererLowerEmitExprTryHelpers.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCalls.h"
@@ -251,6 +252,13 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   ir_lowerer::StatementsExprContext statementsExprHelpers(setupStage, stateOut, callResolutionAdapters, error);
 
 #include "IrLowererLowerStatementsExpr.h"
+
+  emitPrintArg = [&](const Expr &printArgExpr, const LocalMap &printArgLocals,
+                     const PrintBuiltin &printBuiltin) -> bool {
+    return ir_lowerer::emitPrintArgImpl(setupStage, stateOut, callResolutionAdapters, printArgExpr,
+                                        printArgLocals, printBuiltin, error);
+  };
+
 #include "IrLowererLowerStatementsBindings.h"
 #include "IrLowererLowerStatementsLoops.h"
     const bool lowered = ir_lowerer::runLowerStatementsCallsStep(
