@@ -192,7 +192,7 @@
             expr.templateArgs.empty()) {
           return emitExpr(expr.args.front(), localsIn);
         }
-        const auto pickExprResult = tryEmitPickExpr(expr, localsIn);
+        const auto pickExprResult = sumHelpers.tryEmitPickExpr(expr, localsIn);
         if (pickExprResult == LoweredSumPickEmitResult::Error) {
           return false;
         }
@@ -200,10 +200,10 @@
           return true;
         }
         if (!expr.isMethodCall && !expr.isFieldAccess) {
-          if (const Definition *sumDef = resolveSumDefinitionForTypeText(expr.name, expr.namespacePrefix);
+          if (const Definition *sumDef = sumHelpers.resolveSumDefinitionForTypeText(expr.name, expr.namespacePrefix);
               sumDef != nullptr) {
             (void)sumDef;
-            return tryEmitLoweredSumConstructorExpr(expr, localsIn);
+            return sumHelpers.tryEmitLoweredSumConstructorExpr(expr, localsIn);
           }
         }
         auto appendSemanticProductTypeTextCandidate =

@@ -15,6 +15,7 @@
 #include "IrLowererLowerEmitExprCollectionHelpers.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCalls.h"
+#include "IrLowererLowerSumHelpers.h"
 #include "IrLowererLowerInlineCallCleanupStep.h"
 #include "IrLowererLowerInlineCallContextSetupStep.h"
 #include "IrLowererLowerInlineCallGpuLocalsStep.h"
@@ -230,7 +231,8 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   emitStatement = {};
 
 #include "IrLowererLowerReturnInfo.h"
-#include "IrLowererLowerSumHelpers.h"
+
+  ir_lowerer::SumHelpersContext sumHelpers(setupStage, stateOut, callResolutionAdapters, error);
 
   emitInlineDefinitionCall = [&](const Expr &callExpr,
                                  const Definition &callee,

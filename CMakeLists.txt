@@ -348,6 +348,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererLowerEffects.cpp
   src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.cpp
   src/ir_lowerer/IrLowererLowerInlineCalls.cpp
+  src/ir_lowerer/IrLowererLowerSumHelpers.cpp
   src/ir_lowerer/IrLowererGpuEffects.cpp
   src/ir_lowerer/IrLowererNativeEffects.cpp
   src/ir_lowerer/IrLowererVmEffects.cpp

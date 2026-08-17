@@ -122,7 +122,7 @@
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        if (const Definition *sumDef = resolveSumDefinitionForTypeText(
+        if (const Definition *sumDef = sumHelpers.resolveSumDefinitionForTypeText(
             trimTemplateTypeText(transform.templateArgs.front()),
             defIt->second->namespacePrefix)) {
           return sumDef;
@@ -136,7 +136,7 @@
         if (returnFact != nullptr) {
           auto resolveSemanticReturnSum =
               [&](const std::string &typeText, SymbolId typeTextId) -> const Definition * {
-            return resolveSumDefinitionForTypeText(
+            return sumHelpers.resolveSumDefinitionForTypeText(
                 resolveSemanticProductTypeText(semanticTargets.semanticProgram,
                                                typeText,
                                                typeTextId),
@@ -203,15 +203,15 @@
         uninitializedType = trimTemplateTypeText(init.templateArgs.front());
       }
       if (!uninitializedType.empty()) {
-        if (const Definition *sumDef = resolveSumDefinitionForTypeText(uninitializedType, stmt.namespacePrefix)) {
+        if (const Definition *sumDef = sumHelpers.resolveSumDefinitionForTypeText(uninitializedType, stmt.namespacePrefix)) {
           int32_t totalSlots = 0;
-          if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+          if (!sumHelpers.loweredSumSlotCount(*sumDef, totalSlots)) {
             if (!error.empty()) {
               return false;
             }
-            if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
+            if (const SumVariant *unsupportedVariant = sumHelpers.firstUnsupportedSumPayloadVariant(*sumDef);
                 unsupportedVariant != nullptr) {
-              error = unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
+              error = sumHelpers.unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
             } else {
               error = "native backend does not support sum payload type on " + sumDef->fullPath;
             }
@@ -226,7 +226,7 @@
           const int32_t baseLocal = nextLocal;
           nextLocal += totalSlots;
           info.index = nextLocal++;
-          emitLoweredSumHeader(baseLocal, totalSlots);
+          sumHelpers.emitLoweredSumHeader(baseLocal, totalSlots);
           function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
           localsIn.emplace(stmt.name, info);
@@ -569,10 +569,10 @@
           const std::string targetType =
               trimTemplateTypeText(transform.templateArgs.front());
           if (const Definition *sumDef =
-                  resolveSumDefinitionForTypeText(targetType,
+                  sumHelpers.resolveSumDefinitionForTypeText(targetType,
                                                   stmt.namespacePrefix);
-              sumDef != nullptr && isStdlibResultSumDefinition(*sumDef)) {
-            applyStdlibResultSumInfoToLocal(*sumDef, info);
+              sumDef != nullptr && sumHelpers.isStdlibResultSumDefinition(*sumDef)) {
+            sumHelpers.applyStdlibResultSumInfoToLocal(*sumDef, info);
           }
           return;
         }
@@ -583,13 +583,13 @@
           return nullptr;
         }
         if (const Definition *sumDef =
-                resolveSumDefinitionForTypeText(info.structTypeName, stmt.namespacePrefix)) {
+                sumHelpers.resolveSumDefinitionForTypeText(info.structTypeName, stmt.namespacePrefix)) {
           return sumDef;
         }
         auto resolveSemanticSumTypeText =
             [&](const std::string &typeText, SymbolId typeTextId) -> const Definition * {
           const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
-          return resolveSumDefinitionForTypeText(
+          return sumHelpers.resolveSumDefinitionForTypeText(
               resolveSemanticProductTypeText(semanticTargets.semanticProgram,
                                              typeText,
                                              typeTextId),
@@ -605,7 +605,7 @@
             typeText += "<" + joinTemplateArgsText(transform.templateArgs) + ">";
           }
           if (const Definition *sumDef =
-                  resolveSumDefinitionForTypeText(typeText, stmt.namespacePrefix)) {
+                  sumHelpers.resolveSumDefinitionForTypeText(typeText, stmt.namespacePrefix)) {
             return sumDef;
           }
           break;
@@ -651,21 +651,21 @@
       };
       if (const Definition *sumDef = resolveBindingSumDefinition()) {
         int32_t totalSlots = 0;
-        if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+        if (!sumHelpers.loweredSumSlotCount(*sumDef, totalSlots)) {
           if (!error.empty()) {
             return false;
           }
           LoweredSumVariantSelection selection;
           const bool selectedForDiagnostic =
-              selectSumVariantForInitializer(init, *sumDef, localsIn, selection);
+              sumHelpers.selectSumVariantForInitializer(init, *sumDef, localsIn, selection);
           if (!selectedForDiagnostic && !error.empty()) {
             return false;
           }
           if (selectedForDiagnostic && selection.variant != nullptr) {
-            error = unsupportedSumPayloadError(*sumDef, *selection.variant);
-          } else if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
+            error = sumHelpers.unsupportedSumPayloadError(*sumDef, *selection.variant);
+          } else if (const SumVariant *unsupportedVariant = sumHelpers.firstUnsupportedSumPayloadVariant(*sumDef);
                      unsupportedVariant != nullptr) {
-            error = unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
+            error = sumHelpers.unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
           } else {
             error = "native backend does not support sum payload type on " + sumDef->fullPath;
           }
@@ -677,16 +677,16 @@
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.structTypeName = sumDef->fullPath;
         info.structSlotCount = totalSlots;
-        applyStdlibResultSumInfoToLocal(*sumDef, info);
+        sumHelpers.applyStdlibResultSumInfoToLocal(*sumDef, info);
         info.index = nextLocal++;
-        emitLoweredSumHeader(baseLocal, totalSlots);
+        sumHelpers.emitLoweredSumHeader(baseLocal, totalSlots);
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         bool emittedSumMove = false;
-        if (!tryEmitLoweredSumMoveIntoLocal(baseLocal, *sumDef, init, localsIn, emittedSumMove)) {
+        if (!sumHelpers.tryEmitLoweredSumMoveIntoLocal(baseLocal, *sumDef, init, localsIn, emittedSumMove)) {
           return false;
         }
-        if (!emittedSumMove && !emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, init, localsIn)) {
+        if (!emittedSumMove && !sumHelpers.emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, init, localsIn)) {
           return false;
         }
         localsIn.emplace(stmt.name, info);
@@ -1190,9 +1190,9 @@
             bool &resolvedOut) { return resolveUninitializedStorage(storageExpr, valueLocals, accessOut, resolvedOut); },
         [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
         [&](const std::string &structPath, ir_lowerer::StructSlotLayoutInfo &layoutOut) {
-          if (const Definition *sumDef = resolveSumDefinitionByPath(structPath)) {
+          if (const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(structPath)) {
             int32_t totalSlots = 0;
-            if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+            if (!sumHelpers.loweredSumSlotCount(*sumDef, totalSlots)) {
               return false;
             }
             layoutOut = {};
@@ -1212,7 +1212,7 @@
             int32_t valuePtrLocal,
             bool &handledOut) {
           handledOut = false;
-          const Definition *sumDef = resolveSumDefinitionByPath(access.typeInfo.structPath);
+          const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(access.typeInfo.structPath);
           if (sumDef == nullptr) {
             return true;
           }
@@ -1220,7 +1220,7 @@
           if (valuePtrLocal < 0) {
             return true;
           }
-          return emitActiveSumPayloadDestroyFromSumPtr(*sumDef, valuePtrLocal, localsIn);
+          return sumHelpers.emitActiveSumPayloadDestroyFromSumPtr(*sumDef, valuePtrLocal, localsIn);
         });
     if (uninitializedInitDropResult == ir_lowerer::UninitializedStorageInitDropEmitResult::Error) {
       return false;
@@ -1259,7 +1259,7 @@
     if (printPathSpaceResult == ir_lowerer::StatementPrintPathSpaceEmitResult::Emitted) {
       return true;
     }
-    const auto pickStatementResult = tryEmitPickStatement(stmt, localsIn);
+    const auto pickStatementResult = sumHelpers.tryEmitPickStatement(stmt, localsIn);
     if (pickStatementResult == LoweredSumPickEmitResult::Error) {
       return false;
     }
@@ -1287,14 +1287,14 @@
       const Expr &returnValueExpr = emittedReturnStmt->args.front();
       if (const Definition *returnSumDef = extractDeclaredSumReturnDefinition();
           returnSumDef != nullptr &&
-          isStdlibResultSumDefinition(*returnSumDef) &&
-          (isLegacyResultOkCall(returnValueExpr) ||
-           isStdlibResultVariantHelperCall(returnValueExpr, "ok") ||
-           isStdlibResultVariantHelperCall(returnValueExpr, "error") ||
-           isLegacyResultMapCall(returnValueExpr) ||
-           isLegacyResultAndThenCall(returnValueExpr) || isLegacyResultMap2Call(returnValueExpr))) {
+          sumHelpers.isStdlibResultSumDefinition(*returnSumDef) &&
+          (sumHelpers.isLegacyResultOkCall(returnValueExpr) ||
+           sumHelpers.isStdlibResultVariantHelperCall(returnValueExpr, "ok") ||
+           sumHelpers.isStdlibResultVariantHelperCall(returnValueExpr, "error") ||
+           sumHelpers.isLegacyResultMapCall(returnValueExpr) ||
+           sumHelpers.isLegacyResultAndThenCall(returnValueExpr) || sumHelpers.isLegacyResultMap2Call(returnValueExpr))) {
         int32_t totalSlots = 0;
-        if (!loweredSumSlotCount(*returnSumDef, totalSlots)) {
+        if (!sumHelpers.loweredSumSlotCount(*returnSumDef, totalSlots)) {
           if (!error.empty()) {
             return false;
           }
@@ -1305,40 +1305,40 @@
         const int32_t baseLocal = nextLocal;
         nextLocal += totalSlots;
         const int32_t ptrLocal = nextLocal++;
-        emitLoweredSumHeader(baseLocal, totalSlots);
+        sumHelpers.emitLoweredSumHeader(baseLocal, totalSlots);
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-        if (!emitLoweredSumConstructionIntoLocal(baseLocal, *returnSumDef, returnValueExpr, localsIn)) {
+        if (!sumHelpers.emitLoweredSumConstructionIntoLocal(baseLocal, *returnSumDef, returnValueExpr, localsIn)) {
           return false;
         }
         rewrittenReturnLocals = localsIn;
         LocalInfo returnInfo;
         returnInfo.kind = LocalInfo::Kind::Value;
         returnInfo.valueKind = LocalInfo::ValueKind::Int64;
-        const SumVariant *okVariant = findSumVariantByName(*returnSumDef, "ok");
-        const SumVariant *errorVariant = findSumVariantByName(*returnSumDef, "error");
+        const SumVariant *okVariant = sumHelpers.findSumVariantByName(*returnSumDef, "ok");
+        const SumVariant *errorVariant = sumHelpers.findSumVariantByName(*returnSumDef, "error");
         bool emittedPackedResultReturn = false;
         if (okVariant != nullptr && errorVariant != nullptr) {
           LoweredSumPayloadStorageInfo okPayload;
           LoweredSumPayloadStorageInfo errorPayload;
           int32_t okTag = 0;
           int32_t errorTag = 0;
-          if (!resolveSemanticProductSumPayloadStorageInfo(
+          if (!sumHelpers.resolveSemanticProductSumPayloadStorageInfo(
                   *returnSumDef, *okVariant, "packed Result return ok payload", okPayload) ||
-              !resolveSemanticProductSumPayloadStorageInfo(
+              !sumHelpers.resolveSemanticProductSumPayloadStorageInfo(
                   *returnSumDef, *errorVariant, "packed Result return error payload", errorPayload) ||
-              !resolveSemanticProductSumVariantTag(
+              !sumHelpers.resolveSemanticProductSumVariantTag(
                   *returnSumDef, *okVariant, "packed Result return ok tag", okTag) ||
-              !resolveSemanticProductSumVariantTag(
+              !sumHelpers.resolveSemanticProductSumVariantTag(
                   *returnSumDef, *errorVariant, "packed Result return error tag", errorTag)) {
             return false;
           }
           const bool okPayloadTypeIsScalar =
               !okVariant->hasPayload ||
-              valueKindFromTypeName(sumPayloadTypeText(*okVariant)) !=
+              valueKindFromTypeName(sumHelpers.sumPayloadTypeText(*okVariant)) !=
                   LocalInfo::ValueKind::Unknown;
           const bool errorPayloadTypeIsScalar =
-              valueKindFromTypeName(sumPayloadTypeText(*errorVariant)) !=
+              valueKindFromTypeName(sumHelpers.sumPayloadTypeText(*errorVariant)) !=
               LocalInfo::ValueKind::Unknown;
           if (okPayloadTypeIsScalar && errorPayloadTypeIsScalar &&
               !okPayload.isAggregate && !errorPayload.isAggregate) {
@@ -1369,7 +1369,7 @@
             function.instructions[jumpToEnd].imm =
                 static_cast<uint64_t>(function.instructions.size());
             returnInfo.index = packedLocal;
-            applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
+            sumHelpers.applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
             emittedPackedResultReturn = true;
           }
         }
@@ -1377,7 +1377,7 @@
           returnInfo.structTypeName = returnSumDef->fullPath;
           returnInfo.structSlotCount = totalSlots;
           returnInfo.index = ptrLocal;
-          applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
+          sumHelpers.applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
           if (returnInlineContext.has_value()) {
             if (returnInlineContext->returnLocal < 0) {
               error = "native backend missing inline return local";

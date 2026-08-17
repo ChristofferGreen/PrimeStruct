@@ -3661,7 +3661,7 @@ for(
       direct-call `try(...)` operand inference, binding metadata, and direct `Result.ok(...)` payload-struct inference.
       Retirement decision: delete the syntax-fallback pieces after semantic-product facts fully describe helper-call
       results and stdlib sum construction covers the payload cases directly.
-    - **IR/backend lowering:** `src/ir_lowerer/IrLowererLowerSumHelpers.h`,
+    - **IR/backend lowering:** `src/ir_lowerer/IrLowererLowerSumHelpers.cpp`,
       `src/ir_lowerer/IrLowererLowerEmitExprResultHelpers.h`,
       `src/ir_lowerer/IrLowererPackedResultHelpers.cpp`, and
       `src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp` own the remaining VM/native sum lowering and packed

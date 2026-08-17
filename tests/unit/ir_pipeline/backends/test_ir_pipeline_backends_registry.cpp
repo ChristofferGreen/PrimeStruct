@@ -1444,10 +1444,10 @@ main() {
 TEST_CASE("native pick payload locals use semantic-product variant metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path lowerSumHelpersPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   if (!std::filesystem::exists(lowerSumHelpersPath)) {
     lowerSumHelpersPath =
-        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   }
   REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
 
@@ -1513,10 +1513,10 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
 TEST_CASE("native pick target sum resolution resolves interned type ids") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path lowerSumHelpersPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   if (!std::filesystem::exists(lowerSumHelpersPath)) {
     lowerSumHelpersPath =
-        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   }
   REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
 
@@ -1705,10 +1705,10 @@ main() {
 TEST_CASE("native sum variant selection uses semantic-product payload metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path lowerSumHelpersPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   if (!std::filesystem::exists(lowerSumHelpersPath)) {
     lowerSumHelpersPath =
-        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   }
   REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
 
@@ -1966,10 +1966,10 @@ main() {
 TEST_CASE("native Result combinator sources use semantic-product query facts") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path lowerSumHelpersPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   if (!std::filesystem::exists(lowerSumHelpersPath)) {
     lowerSumHelpersPath =
-        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.cpp";
   }
   REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
 

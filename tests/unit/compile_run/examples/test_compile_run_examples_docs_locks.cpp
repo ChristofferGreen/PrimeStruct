@@ -1528,7 +1528,7 @@ TEST_CASE("Result helper compatibility adapter inventory stays source locked") {
       "src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h",
       "src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp",
       "src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp",
-      "src/ir_lowerer/IrLowererLowerSumHelpers.h",
+      "src/ir_lowerer/IrLowererLowerSumHelpers.cpp",
       "src/ir_lowerer/IrLowererPackedResultHelpers.cpp",
       "src/ir_lowerer/IrLowererResultHelpers.cpp",
       "src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp",
@@ -1555,7 +1555,7 @@ TEST_CASE("Result helper compatibility adapter inventory stays source locked") {
 
   const std::vector<std::string> expectedHelperStringFiles = {
       "src/ir_lowerer/IrLowererLowerEmitExprResultHelpers.h",
-      "src/ir_lowerer/IrLowererLowerSumHelpers.h",
+      "src/ir_lowerer/IrLowererLowerSumHelpers.cpp",
       "src/ir_lowerer/IrLowererPackedResultHelpers.cpp",
       "src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp",
       "src/semantics/SemanticsValidatorExprResultFile.cpp",
