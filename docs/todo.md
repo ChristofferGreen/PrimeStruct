@@ -488,6 +488,55 @@ investigation chain's actively-productive leaves - see
     function declarations into the `.h`, move implementations to a new
     `.cpp`, update the CMake source list, and fix any textually-included
     dependencies.
+    progress_2026-08-17: 4 of 6 fragments converted and verified via
+    `./scripts/compile.sh --release` (1884 tests, 0 failures) after each:
+    `IrLowererLowerEmitExprCollectionHelpers` (818 lines),
+    `IrLowererLowerInlineCalls` (1,088 lines),
+    `IrLowererLowerSumHelpers` (2,964 lines - converted to a
+    `SumHelpersContext` class since ~65 named local lambdas all closed
+    over the same shared mutable state and called each other by bare
+    name; the class's reference members let those inter-calls stay
+    unqualified via implicit `this`), and
+    `IrLowererLowerEmitExprTryHelpers` (1,239 lines - depended on several
+    `SumHelpersContext` methods, so it had to follow that conversion, not
+    precede it). Each of these fragments was captured mid-function via a
+    raw `#include` inside `runLowerReturnEmitStage` in
+    `IrLowererLowerReturnEmitStage.cpp` (not a standalone function), so
+    the extraction pattern differs from `IrLowererLowerEffects.{h,cpp}`:
+    (1) paste the fragment as a real function/class-method body with a
+    minimal parameter guess, (2) let the compiler enumerate every missing
+    capture as a hard "not declared in this scope" error, (3) thread each
+    one through as an explicit parameter or class reference member
+    (mostly re-derived from `LowerSetupStageState`/
+    `LowerReturnEmitStageState`, already passed to prior extractions -
+    grep `setupStage.setupLocalsOrchestration` in the converted `.cpp`
+    files for the full alias chain), (4) for fragments that are one big
+    `if (...) { ... }` block with implicit fallthrough (CollectionHelpers,
+    TryHelpers), wrap the return type in `std::optional<bool>` with
+    `std::nullopt` meaning "not matched, fall through" exactly as the
+    fallthrough did before. Each conversion also broke several
+    file-content "source locked" tests pinning exact code snippets at the
+    old `.h` path (e.g. `test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp`,
+    `test_stdlib_map_ownership.cpp`, `test_ir_pipeline_backends_registry.cpp`,
+    `test_compile_run_examples_docs_locks.cpp`) plus one
+    `docs/PrimeStruct.md` path mention per fragment - grep the old
+    filename across `tests/` and `docs/` after each conversion and repoint
+    to the new `.cpp`. One extraction (`IrLowererLowerEmitExprCollectionHelpers`)
+    also needed the `// soa-surface-audit: exempt` marker carried over
+    from `SemanticsValidate.cpp`'s convention, since the extracted body
+    trips `scripts/check_soa_surface_trace_inventory.py`'s zero-audit
+    CTest case. Remaining: `IrLowererLowerStatementsExpr.h` (2,723 lines)
+    and `IrLowererLowerEmitExprTailDispatch.h` (1,937 lines). Both are
+    structurally messier than the four already done - `StatementsExpr.h`
+    in particular mixes ~48 genuine top-level helpers with lambdas nested
+    two and three levels deep at inconsistent indentation (8-space,
+    10-space, tabs), so the "list every top-level block, promote each to
+    a class method" approach that worked cleanly for `SumHelpers` needs
+    care to avoid mis-classifying a nested implementation-detail lambda
+    as a top-level one. Do these two last, in either order, and verify
+    each with the same paste-and-compiler-driven-capture-discovery
+    technique plus a full `./scripts/compile.sh --release` run before and
+    after fixing source-lock breakage.
   - acceptance:
     - Each fragment is a compileable `.h/.cpp` pair.
     - No `.h` file under `src/ir_lowerer/` contains function
