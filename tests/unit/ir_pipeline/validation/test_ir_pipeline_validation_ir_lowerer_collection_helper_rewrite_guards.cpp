@@ -911,7 +911,7 @@ TEST_CASE("ir lowerer inline map insert helper prefers semantic receiver facts")
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path inlineCallsPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.cpp";
 
   REQUIRE(std::filesystem::exists(inlineCallsPath));
   const std::string source = readText(inlineCallsPath);
@@ -992,7 +992,7 @@ TEST_CASE("ir lowerer vector metadata inline helpers stay in prime definitions")
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path inlineCallsPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.cpp";
 
   REQUIRE(std::filesystem::exists(inlineCallsPath));
   const std::string source = readText(inlineCallsPath);

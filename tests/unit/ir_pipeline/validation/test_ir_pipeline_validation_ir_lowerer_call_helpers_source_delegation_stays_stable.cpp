@@ -4381,7 +4381,7 @@ TEST_CASE("ir lowerer collection literal diagnostics avoid vector-literal traces
 
   const std::string helpersSource = readText(lowererRoot / "IrLowererHelpers.cpp");
   const std::string inlineCallsSource =
-      readText(lowererRoot / "IrLowererLowerInlineCalls.h");
+      readText(lowererRoot / "IrLowererLowerInlineCalls.cpp");
   CHECK(helpersSource.find("collectionLiteralExceedsLocalCapacityLimitMessage()") !=
         std::string::npos);
   CHECK(inlineCallsSource.find("Expr collectionLiteralExpr = callExpr;") !=

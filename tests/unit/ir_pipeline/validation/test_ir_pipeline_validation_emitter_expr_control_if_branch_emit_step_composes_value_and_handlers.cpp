@@ -519,7 +519,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(statementsCallsHeaderSource.find("bool runLowerStatementsCallsStage(") !=
         std::string::npos);
 
-  const std::filesystem::path inlineCallsHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+  const std::filesystem::path inlineCallsHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.cpp";
   REQUIRE(std::filesystem::exists(inlineCallsHeaderPath));
   const std::string inlineCallsHeaderSource = readText(inlineCallsHeaderPath);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallActiveContextStep(") != std::string::npos);

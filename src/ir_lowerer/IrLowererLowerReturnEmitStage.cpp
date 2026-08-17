@@ -14,6 +14,7 @@
 #include "IrLowererInlineStructArgHelpers.h"
 #include "IrLowererLowerEmitExprCollectionHelpers.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
+#include "IrLowererLowerInlineCalls.h"
 #include "IrLowererLowerInlineCallCleanupStep.h"
 #include "IrLowererLowerInlineCallContextSetupStep.h"
 #include "IrLowererLowerInlineCallGpuLocalsStep.h"
@@ -72,13 +73,11 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   bool &sawReturn = setupStage.sawReturn;
   int32_t &nextLocal = setupStage.nextLocal;
   int32_t &onErrorTempCounter = setupStage.onErrorTempCounter;
-  auto &loweredCallTargets = setupStage.loweredCallTargets;
   auto &instructionSourceRangesByFunction = setupStage.instructionSourceRangesByFunction;
   auto &fileScopeStack = setupStage.fileScopeStack;
   auto &currentOnError = setupStage.currentOnError;
   auto &currentReturnResult = setupStage.currentReturnResult;
   auto &setupLocalsOrchestration = setupStage.setupLocalsOrchestration;
-  auto &realCallReservationIndex = setupStage.realCallReservationIndex;
 
   const auto &runtimeErrorAndStringLiteralSetup =
       setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup;
@@ -116,7 +115,6 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
   const SemanticProgram *const &semanticProgram = callResolutionAdapters.semanticProgram;
   auto &resolveExprPath = callResolutionAdapters.resolveExprPath;
-  OnErrorByDefinition &onErrorByDef = *input.onErrorByDef;
 
   const auto &setupMathResolvers = setupLocalsOrchestration.setupMathResolvers;
   stateOut.getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
@@ -201,25 +199,8 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     instructionSourceRangesByFunction[functionName].push_back(range);
   };
 
-  DiagnosticSink diagnosticSink(input.diagnosticInfo);
-  auto captureLoweringDiagnosticPrimarySpan = [&](const Expr &expr) {
-    if (expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
-      return;
-    }
-    DiagnosticSpan span;
-    span.line = expr.sourceLine;
-    span.column = expr.sourceColumn;
-    span.endLine = expr.sourceLine;
-    span.endColumn = expr.sourceColumn;
-    if (setupStage.expandedSource != nullptr) {
-      span = mapDiagnosticSpanToSourceUnit(*setupStage.expandedSource, span);
-    }
-    diagnosticSink.capturePrimarySpanIfUnset(span);
-  };
-
   using InlineContext = LowerReturnEmitInlineContext;
   auto *&activeInlineContext = stateOut.activeInlineContext;
-  auto &inlineStack = stateOut.inlineStack;
   auto &emitFileErrorWhy = stateOut.emitFileErrorWhy;
   auto &emitMovePassthroughCall = stateOut.emitMovePassthroughCall;
   auto &emitUploadPassthroughCall = stateOut.emitUploadPassthroughCall;
@@ -250,7 +231,17 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
 #include "IrLowererLowerReturnInfo.h"
 #include "IrLowererLowerSumHelpers.h"
-#include "IrLowererLowerInlineCalls.h"
+
+  emitInlineDefinitionCall = [&](const Expr &callExpr,
+                                 const Definition &callee,
+                                 const LocalMap &callerLocals,
+                                 bool requireValue) -> bool {
+    return ir_lowerer::emitInlineDefinitionCallImpl(
+        setupStage, stateOut, callResolutionAdapters,
+        input.diagnosticInfo, input.onErrorByDef,
+        callExpr, callee, callerLocals, requireValue, error);
+  };
+
 #include "IrLowererLowerEmitExpr.h"
 #include "IrLowererLowerOperators.h"
 #include "IrLowererLowerStatementsExpr.h"
