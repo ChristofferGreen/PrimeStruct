@@ -470,26 +470,26 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(runCommand("./primec --unknown-option 2> " + quoteShellArg(primecErrPath)) == 2);
   const std::string primecErr = readFile(primecErrPath);
   CHECK(primecErr.find("Usage: primec") != std::string::npos);
-  CHECK(primecErr.find("[--emit=cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir]") !=
+  CHECK(primecErr.find("--emit=cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir") !=
         std::string::npos);
-  CHECK(primecErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
-  CHECK(primecErr.find("[--wasm-profile wasi|browser]") != std::string::npos);
-  CHECK(primecErr.find("[--text-transforms <list>]") != std::string::npos);
-  CHECK(primecErr.find("[--ir-inline]") != std::string::npos);
+  CHECK(primecErr.find("--import-path <dir>, -I <dir>") != std::string::npos);
+  CHECK(primecErr.find("--wasm-profile wasi|browser") != std::string::npos);
+  CHECK(primecErr.find("--text-transforms <list>") != std::string::npos);
+  CHECK(primecErr.find("--ir-inline") != std::string::npos);
   CHECK(primecErr.find("--text-filters <list>") == std::string::npos);
 
   CHECK(runCommand("./primevm --unknown-option 2> " + quoteShellArg(primevmErrPath)) == 2);
   const std::string primevmErr = readFile(primevmErrPath);
   CHECK(primevmErr.find("Usage: primevm") != std::string::npos);
-  CHECK(primevmErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
-  CHECK(primevmErr.find("[--text-transforms <list>]") != std::string::npos);
-  CHECK(primevmErr.find("[--ir-inline]") != std::string::npos);
-  CHECK(primevmErr.find("[--debug-json]") != std::string::npos);
-  CHECK(primevmErr.find("[--debug-json-snapshots [none|stop|all]]") != std::string::npos);
-  CHECK(primevmErr.find("[--debug-trace <path>]") != std::string::npos);
-  CHECK(primevmErr.find("[--debug-dap]") != std::string::npos);
-  CHECK(primevmErr.find("[--debug-replay <trace>]") != std::string::npos);
-  CHECK(primevmErr.find("[--debug-replay-sequence <n>]") != std::string::npos);
+  CHECK(primevmErr.find("--import-path <dir>, -I <dir>") != std::string::npos);
+  CHECK(primevmErr.find("--text-transforms <list>") != std::string::npos);
+  CHECK(primevmErr.find("--ir-inline") != std::string::npos);
+  CHECK(primevmErr.find("--debug-json") != std::string::npos);
+  CHECK(primevmErr.find("--debug-json-snapshots [none|stop|all]") != std::string::npos);
+  CHECK(primevmErr.find("--debug-trace <path>") != std::string::npos);
+  CHECK(primevmErr.find("--debug-dap") != std::string::npos);
+  CHECK(primevmErr.find("--debug-replay <trace>") != std::string::npos);
+  CHECK(primevmErr.find("--debug-replay-sequence <n>") != std::string::npos);
   CHECK(primevmErr.find("--text-filters <list>") == std::string::npos);
 }
 

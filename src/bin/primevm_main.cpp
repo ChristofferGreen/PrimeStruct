@@ -13,6 +13,7 @@
 #include <cctype>
 #include <cstdint>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -385,17 +386,59 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr << "Usage: primevm <input.prime> [--entry /path] [--import-path <dir>] [-I <dir>] "
-                   "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
-                   "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
-                   "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
-                   "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--debug-trace <path>] [--debug-dap] "
-                   "[--debug-replay <trace>] [--debug-replay-sequence <n>] "
-                   "[--collect-diagnostics] "
-                   "[--default-effects <list>] [--ir-inline] "
-                   "[--dump-stage pre_ast|ast|ast-semantic|semantic-product|type-graph|ir] "
-                   "[-- <program args...>]\n"
-                   "Dump-stage note: lowering-facing dumps now include semantic-product between ast-semantic and ir.\n";
+      constexpr int kFlagCol = 40;
+      auto flagLine = [&](std::string_view flag, std::string_view desc) {
+        if (desc.empty()) {
+          std::cerr << "  " << flag << "\n";
+        } else if (static_cast<int>(flag.size()) >= kFlagCol - 2) {
+          std::cerr << "  " << flag << "\n" << std::string(kFlagCol + 2, ' ') << desc << "\n";
+        } else {
+          std::cerr << "  " << std::left << std::setw(kFlagCol) << std::string(flag) << desc << "\n";
+        }
+      };
+      std::cerr << "Usage: primevm [options] <input.prime> [-- <program args...>]\n\n";
+
+      std::cerr << "Entry / imports:\n";
+      flagLine("--entry /path", "Entry point definition path");
+      flagLine("--import-path <dir>, -I <dir>", "Add an import search directory");
+      std::cerr << "\n";
+
+      std::cerr << "Transforms:\n";
+      flagLine("--text-transforms <list>", "Enable specific text transforms");
+      flagLine("--text-transform-rules <rules>", "Text transform rule overrides");
+      flagLine("--semantic-transforms <list>", "Enable specific semantic transforms");
+      flagLine("--semantic-transform-rules <rules>", "Semantic transform rule overrides");
+      flagLine("--transform-list <list>", "Enable transforms by name (text + semantic)");
+      flagLine("--no-text-transforms", "Disable all text transforms");
+      flagLine("--no-semantic-transforms", "Disable all semantic transforms");
+      flagLine("--no-transforms", "Disable all transforms");
+      flagLine("--list-transforms", "List available transforms and exit");
+      std::cerr << "\n";
+
+      std::cerr << "Diagnostics:\n";
+      flagLine("--emit-diagnostics", "Emit machine-readable JSON diagnostics on stderr");
+      flagLine("--collect-diagnostics", "Collect diagnostics instead of stopping at the first error");
+      std::cerr << "\n";
+
+      std::cerr << "Debugging:\n";
+      flagLine("--debug-json", "Emit debugger-facing JSON events on stdout");
+      flagLine("--debug-json-snapshots [none|stop|all]", "Control snapshot verbosity for --debug-json");
+      flagLine("--debug-trace <path>", "Write an execution trace to <path>");
+      flagLine("--debug-dap", "Speak the Debug Adapter Protocol on stdio");
+      flagLine("--debug-replay <trace>", "Replay a previously recorded --debug-trace file");
+      flagLine("--debug-replay-sequence <n>", "Stop replay at trace sequence number <n>");
+      std::cerr << "\n";
+
+      std::cerr << "Effects / IR:\n";
+      flagLine("--default-effects <list>", "Default effect set for definitions without one");
+      flagLine("--ir-inline", "Inline eligible calls during IR lowering");
+      flagLine("--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
+      flagLine("", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir");
+      flagLine("", "(lowering-facing dumps include semantic-product between");
+      flagLine("", "ast-semantic and ir)");
+      std::cerr << "\n";
+
+      std::cerr << "Everything after `--` is passed through as program args at runtime.\n";
     }
     return 2;
   }

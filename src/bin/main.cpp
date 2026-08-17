@@ -13,6 +13,7 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <optional>
@@ -248,26 +249,70 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr << "Usage: primec [--emit=" << primec::primecEmitKindsUsage() << "] <input.prime> [-o <output>] "
-                << "[--entry /path] [--import-path <dir>] [-I <dir>] "
-                << "[--wasm-profile wasi|browser] "
-                << "[--text-transforms <list>] [--text-transform-rules <rules>] "
-                << "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
-                << "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] "
-                << "[--no-transforms] [--out-dir <dir>] [--list-transforms] [--emit-diagnostics] "
-                << "[--collect-diagnostics] "
-                << "[--default-effects <list>] [--ir-inline] "
-                << "[--benchmark-semantic-phase-counters] "
-                << "[--benchmark-semantic-allocation-counters] "
-                << "[--benchmark-semantic-rss-checkpoints] "
-                << "[--benchmark-semantic-disable-method-target-memoization] "
-                << "[--benchmark-semantic-graph-local-auto-legacy-key-shadow] "
-                << "[--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow] "
-                << "[--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr] "
-                << "[--benchmark-semantic-definition-validation-workers <n>] "
-                << "[--benchmark-semantic-repeat-count <n>] "
-                << "[--dump-stage pre_ast|ast|ast-semantic|semantic-product|type-graph|ir] [-- <program args...>]\n"
-                << "Dump-stage note: lowering-facing dumps now include semantic-product between ast-semantic and ir.\n";
+      constexpr int kFlagCol = 40;
+      auto flagLine = [&](std::string_view flag, std::string_view desc) {
+        if (desc.empty()) {
+          std::cerr << "  " << flag << "\n";
+        } else if (static_cast<int>(flag.size()) >= kFlagCol - 2) {
+          std::cerr << "  " << flag << "\n" << std::string(kFlagCol + 2, ' ') << desc << "\n";
+        } else {
+          std::cerr << "  " << std::left << std::setw(kFlagCol) << std::string(flag) << desc << "\n";
+        }
+      };
+      auto flagOnly = [&](std::string_view flag) { std::cerr << "  " << flag << "\n"; };
+      std::cerr << "Usage: primec [options] <input.prime> [-- <program args...>]\n\n";
+
+      std::cerr << "Output:\n";
+      flagLine(std::string("--emit=") + std::string(primec::primecEmitKindsUsage()), "Output kind (default: exe)");
+      flagLine("-o <output>", "Output file path");
+      flagLine("--out-dir <dir>", "Output directory");
+      flagLine("--entry /path", "Entry point definition path");
+      flagLine("--wasm-profile wasi|browser", "Wasm host profile (with --emit=wasm)");
+      std::cerr << "\n";
+
+      std::cerr << "Imports:\n";
+      flagLine("--import-path <dir>, -I <dir>", "Add an import search directory");
+      std::cerr << "\n";
+
+      std::cerr << "Transforms:\n";
+      flagLine("--text-transforms <list>", "Enable specific text transforms");
+      flagLine("--text-transform-rules <rules>", "Text transform rule overrides");
+      flagLine("--semantic-transforms <list>", "Enable specific semantic transforms");
+      flagLine("--semantic-transform-rules <rules>", "Semantic transform rule overrides");
+      flagLine("--transform-list <list>", "Enable transforms by name (text + semantic)");
+      flagLine("--no-text-transforms", "Disable all text transforms");
+      flagLine("--no-semantic-transforms", "Disable all semantic transforms");
+      flagLine("--no-transforms", "Disable all transforms");
+      flagLine("--list-transforms", "List available transforms and exit");
+      std::cerr << "\n";
+
+      std::cerr << "Diagnostics:\n";
+      flagLine("--emit-diagnostics", "Emit machine-readable JSON diagnostics on stderr");
+      flagLine("--collect-diagnostics", "Collect diagnostics instead of stopping at the first error");
+      std::cerr << "\n";
+
+      std::cerr << "Effects / IR:\n";
+      flagLine("--default-effects <list>", "Default effect set for definitions without one");
+      flagLine("--ir-inline", "Inline eligible calls during IR lowering");
+      flagLine("--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
+      flagLine("", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir");
+      flagLine("", "(lowering-facing dumps include semantic-product between");
+      flagLine("", "ast-semantic and ir)");
+      std::cerr << "\n";
+
+      std::cerr << "Benchmarking (semantic phase):\n";
+      flagOnly("--benchmark-semantic-phase-counters");
+      flagOnly("--benchmark-semantic-allocation-counters");
+      flagOnly("--benchmark-semantic-rss-checkpoints");
+      flagOnly("--benchmark-semantic-disable-method-target-memoization");
+      flagOnly("--benchmark-semantic-graph-local-auto-legacy-key-shadow");
+      flagOnly("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow");
+      flagOnly("--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr");
+      flagOnly("--benchmark-semantic-definition-validation-workers <n>");
+      flagOnly("--benchmark-semantic-repeat-count <n>");
+      std::cerr << "\n";
+
+      std::cerr << "Everything after `--` is passed through as program args at runtime.\n";
     }
     return 2;
   }
