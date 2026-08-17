@@ -3655,7 +3655,7 @@ for(
     - **IR metadata and helper-call inference:** `src/ir_lowerer/IrLowererResultHelpers.cpp`,
       `src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp`,
       `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp`,
-      `src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h`,
+      `src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.cpp`,
       `src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp`, and
       `src/ir_lowerer/IrLowererUninitializedStructInference.cpp` own helper-result metadata, base-kind inference,
       direct-call `try(...)` operand inference, binding metadata, and direct `Result.ok(...)` payload-struct inference.

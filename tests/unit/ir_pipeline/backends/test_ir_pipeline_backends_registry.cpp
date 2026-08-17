@@ -2494,10 +2494,10 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.cpp";
   if (!std::filesystem::exists(tryHelpersPath)) {
     tryHelpersPath =
-        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.cpp";
   }
   REQUIRE(std::filesystem::exists(tryHelpersPath));
 
@@ -2520,10 +2520,10 @@ TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
 TEST_CASE("native try operand result metadata resolves interned query ids") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.cpp";
   if (!std::filesystem::exists(tryHelpersPath)) {
     tryHelpersPath =
-        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.cpp";
   }
   REQUIRE(std::filesystem::exists(tryHelpersPath));
 
@@ -2571,10 +2571,10 @@ TEST_CASE("native try operand result metadata resolves interned query ids") {
 TEST_CASE("native try fact result metadata resolves interned ids") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.cpp";
   if (!std::filesystem::exists(tryHelpersPath)) {
     tryHelpersPath =
-        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.cpp";
   }
   REQUIRE(std::filesystem::exists(tryHelpersPath));
 

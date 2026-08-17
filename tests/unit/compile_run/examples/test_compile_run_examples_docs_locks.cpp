@@ -1525,7 +1525,7 @@ TEST_CASE("Result helper compatibility adapter inventory stays source locked") {
       "src/emitter/EmitterExprLambda.h",
       "src/emitter/EmitterExprResultCalls.h",
       "src/ir_lowerer/IrLowererLowerEmitExprResultHelpers.h",
-      "src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h",
+      "src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.cpp",
       "src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp",
       "src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp",
       "src/ir_lowerer/IrLowererLowerSumHelpers.cpp",

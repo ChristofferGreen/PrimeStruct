@@ -13,6 +13,7 @@
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlineStructArgHelpers.h"
 #include "IrLowererLowerEmitExprCollectionHelpers.h"
+#include "IrLowererLowerEmitExprTryHelpers.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCalls.h"
 #include "IrLowererLowerSumHelpers.h"
@@ -200,7 +201,6 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     instructionSourceRangesByFunction[functionName].push_back(range);
   };
 
-  using InlineContext = LowerReturnEmitInlineContext;
   auto *&activeInlineContext = stateOut.activeInlineContext;
   auto &emitFileErrorWhy = stateOut.emitFileErrorWhy;
   auto &emitMovePassthroughCall = stateOut.emitMovePassthroughCall;

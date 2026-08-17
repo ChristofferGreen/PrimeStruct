@@ -499,7 +499,11 @@
           }
         }
         #include "IrLowererLowerEmitExprStorageHelpers.h"
-        #include "IrLowererLowerEmitExprTryHelpers.h"
+        if (auto tryHelperResult = tryLowerEmitExprTryHelper(
+                setupStage, stateOut, callResolutionAdapters, sumHelpers, expr, localsIn, error);
+            tryHelperResult.has_value()) {
+          return *tryHelperResult;
+        }
         auto isFileHandleExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) {
           if (valueExpr.kind != Expr::Kind::Name) {
             return false;
