@@ -244,6 +244,7 @@ bool validateCapabilitiesTransform(const Transform &transform, const std::string
 bool parsePositiveIntArg(const std::string &text, int &value);
 
 bool isStructTransformName(const std::string &name);
+bool isStructLikeDefinition(const Definition &def);
 bool isReflectionTransformName(const std::string &name);
 bool isSupportedReflectionGeneratorName(const std::string &name);
 bool isReflectionMetadataQueryName(const std::string &name);

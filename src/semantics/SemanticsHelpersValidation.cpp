@@ -146,6 +146,34 @@ bool isStructTransformName(const std::string &name) {
          name == "no_padding" || name == "platform_independent_padding";
 }
 
+bool isStructLikeDefinition(const Definition &def) {
+  bool hasStructTransform = false;
+  bool hasReturnTransform = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "sum") {
+      return false;
+    }
+    if (transform.name == "return") {
+      hasReturnTransform = true;
+    }
+    if (isStructTransformName(transform.name)) {
+      hasStructTransform = true;
+    }
+  }
+  bool fieldOnlyStruct = false;
+  if (!hasStructTransform && !hasReturnTransform && def.parameters.empty() &&
+      !def.hasReturnStatement && !def.returnExpr.has_value()) {
+    fieldOnlyStruct = true;
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        fieldOnlyStruct = false;
+        break;
+      }
+    }
+  }
+  return hasStructTransform || fieldOnlyStruct;
+}
+
 bool isReflectionTransformName(const std::string &name) {
   return name == "reflect" || name == "generate";
 }
