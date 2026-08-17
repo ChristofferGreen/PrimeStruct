@@ -1285,4 +1285,5 @@
             collectionHelpersResult.has_value()) {
           return *collectionHelpersResult;
         }
+        ir_lowerer::TailDispatchContext tailDispatchHelpers(setupStage, stateOut, callResolutionAdapters, error);
         #include "IrLowererLowerEmitExprTailDispatch.h"

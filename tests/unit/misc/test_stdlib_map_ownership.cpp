@@ -397,7 +397,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string nativeTailSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp");
   const std::string tailDispatchSource =
-      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h");
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h") +
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp");
   const std::string lowerEmitExprCollectionSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp");
   const std::string builtinNameHelpersSource =

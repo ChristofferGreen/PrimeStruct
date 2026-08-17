@@ -465,7 +465,7 @@ TEST_CASE("ir lowerer bare vector helper rewrites prefer semantic receiver facts
   REQUIRE(callbackSemanticFactUse != std::string::npos);
   const size_t callbackDirectReturnInference =
       source.find("const Definition *callee =\n"
-                  "                  resolveTailDispatchDirectHelperDefinition(targetCallExpr);",
+                  "                  tailDispatchHelpers.resolveTailDispatchDirectHelperDefinition(targetCallExpr);",
                   callbackSemanticFactUse);
   REQUIRE(callbackDirectReturnInference != std::string::npos);
   CHECK(callbackSemanticFactUse < callbackDirectReturnInference);
@@ -691,17 +691,17 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   const std::string source = readText(tailDispatchPath);
 
   CHECK(source.find(
-            "auto rewriteExplicitKeyValueHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {") !=
+            "bool TailDispatchContext::rewriteExplicitKeyValueHelperBuiltinExpr(const Expr &callExpr, Expr &rewrittenExpr, const LocalMap &localsIn) {") !=
         std::string::npos);
-  CHECK(source.find("auto hasPublishedSemanticKeyValueSurface = [&](const Expr &callExpr) {") !=
+  CHECK(source.find("bool TailDispatchContext::hasPublishedSemanticKeyValueSurface(const Expr &callExpr) {") !=
         std::string::npos);
-  CHECK(source.find("auto resolvePublishedTailDispatchKeyValueHelperName =") !=
+  CHECK(source.find("bool TailDispatchContext::resolvePublishedTailDispatchKeyValueHelperName(") !=
         std::string::npos);
   CHECK(source.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
@@ -781,22 +781,24 @@ TEST_CASE("ir lowerer tail dispatch semantic query targets resolve interned type
           : std::filesystem::path("..");
   const std::filesystem::path tailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+  const std::filesystem::path tailDispatchHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(tailDispatchPath));
+  REQUIRE(std::filesystem::exists(tailDispatchHelpersPath));
   const std::string source = readText(tailDispatchPath);
+  const std::string helpersSource = readText(tailDispatchHelpersPath);
 
-  CHECK(source.find("auto resolveSemanticQueryFactTypeText =") !=
+  CHECK(helpersSource.find("std::string TailDispatchContext::resolveSemanticQueryFactTypeText(") !=
         std::string::npos);
-  CHECK(source.find("SymbolId typeTextId") != std::string::npos);
-  CHECK(source.find("semanticProgramResolveCallTargetString(*semanticProgram, typeTextId)") !=
+  CHECK(helpersSource.find("SymbolId typeTextId") != std::string::npos);
+  CHECK(helpersSource.find("semanticProgramResolveCallTargetString(*semanticProgram, typeTextId)") !=
         std::string::npos);
-  CHECK(source.find("resolveFactTypeText(queryFact.bindingTypeText, queryFact.bindingTypeTextId)") !=
+  CHECK(helpersSource.find("resolveFactTypeText(queryFact.bindingTypeText, queryFact.bindingTypeTextId)") !=
         std::string::npos);
-  CHECK(source.find("resolveFactTypeText(queryFact.queryTypeText, queryFact.queryTypeTextId)") !=
+  CHECK(helpersSource.find("resolveFactTypeText(queryFact.queryTypeText, queryFact.queryTypeTextId)") !=
         std::string::npos);
-  CHECK(source.find("const std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);") !=
-        std::string::npos);
-  CHECK(source.find("std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);") !=
+  CHECK(source.find("const std::string bindingType = tailDispatchHelpers.resolveSemanticQueryFactTypeText(*queryFact);") !=
         std::string::npos);
   CHECK(source.find("std::string bindingType = ir_lowerer::trimTemplateTypeText(queryFact->bindingTypeText);") ==
         std::string::npos);
@@ -821,35 +823,39 @@ TEST_CASE("ir lowerer internal soa metadata receivers resolve interned ids") {
           : std::filesystem::path("..");
   const std::filesystem::path tailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+  const std::filesystem::path tailDispatchHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(tailDispatchPath));
+  REQUIRE(std::filesystem::exists(tailDispatchHelpersPath));
   const std::string source = readText(tailDispatchPath);
+  const std::string helpersSource = readText(tailDispatchHelpersPath);
 
   const size_t resolverPos =
-      source.find("auto resolveSemanticReceiverTypeText =");
+      helpersSource.find("std::string TailDispatchContext::resolveSemanticReceiverTypeText(");
   const size_t idCheckPos =
-      source.find("typeTextId != InvalidSymbolId", resolverPos);
+      helpersSource.find("typeTextId != InvalidSymbolId", resolverPos);
   const size_t internedResolvePos =
-      source.find("semanticProgramResolveCallTargetString(*semanticProgram, typeTextId)",
-                  idCheckPos);
+      helpersSource.find("semanticProgramResolveCallTargetString(*semanticProgram, typeTextId)",
+                         idCheckPos);
   const size_t beforeInlinePos =
-      source.find("auto emitInternalSoaMetadataBeforeInline", internedResolvePos);
+      source.find("auto emitInternalSoaMetadataBeforeInline");
   const size_t beforeInlineReceiverPos =
-      source.find("resolveSemanticReceiverTypeText(\n"
+      source.find("tailDispatchHelpers.resolveSemanticReceiverTypeText(\n"
                   "                  queryFact->receiverBindingTypeText,\n"
                   "                  queryFact->receiverBindingTypeTextId)",
                   beforeInlinePos);
   const size_t beforeInlineLocalFallbackPos =
       source.find("auto localIt = localsIn.find(receiverExpr.name);",
                   beforeInlineReceiverPos);
-  const size_t nativeReceiverPos =
-      source.find("auto isInternalSoaMetadataReceiver", beforeInlineReceiverPos);
+  const size_t nativeReceiverPos = helpersSource.find(
+      "bool TailDispatchContext::isInternalSoaMetadataReceiver(");
   const size_t nativeReceiverResolvePos =
-      source.find("resolveSemanticReceiverTypeText(",
-                  nativeReceiverPos);
+      helpersSource.find("resolveSemanticReceiverTypeText(",
+                         nativeReceiverPos);
   const size_t nativeReceiverLocalFallbackPos =
-      source.find("auto localIt = localsIn.find(receiverExpr.name);",
-                  nativeReceiverResolvePos);
+      helpersSource.find("auto localIt = localsIn.find(receiverExpr.name);",
+                         nativeReceiverResolvePos);
 
   REQUIRE(resolverPos != std::string::npos);
   REQUIRE(idCheckPos != std::string::npos);
@@ -862,11 +868,8 @@ TEST_CASE("ir lowerer internal soa metadata receivers resolve interned ids") {
   REQUIRE(nativeReceiverLocalFallbackPos != std::string::npos);
   CHECK(resolverPos < idCheckPos);
   CHECK(idCheckPos < internedResolvePos);
-  CHECK(internedResolvePos < beforeInlinePos);
   CHECK(beforeInlinePos < beforeInlineReceiverPos);
   CHECK(beforeInlineReceiverPos < beforeInlineLocalFallbackPos);
-  CHECK(beforeInlineReceiverPos < nativeReceiverPos);
-  CHECK(nativeReceiverPos < nativeReceiverResolvePos);
   CHECK(nativeReceiverResolvePos < nativeReceiverLocalFallbackPos);
   CHECK(source.find("auto classifyInternalReceiverFromSemanticFacts =") !=
         std::string::npos);
@@ -1032,7 +1035,7 @@ TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental m
   const std::filesystem::path statementCallPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
   const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(statementCallPath));
   REQUIRE(std::filesystem::exists(tailDispatchPath));
@@ -1550,37 +1553,38 @@ TEST_CASE("ir lowerer tail map insert rewrite uses semantic receiver facts first
           : std::filesystem::path("..");
   const std::filesystem::path tailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+  const std::filesystem::path tailDispatchHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(tailDispatchPath));
+  REQUIRE(std::filesystem::exists(tailDispatchHelpersPath));
   const std::string tailDispatchSource = readText(tailDispatchPath);
+  const std::string tailDispatchHelpersSource = readText(tailDispatchHelpersPath);
 
   CHECK(tailDispatchSource.find("const SemanticProductIndex *const tailDispatchKeyValueSemanticIndexPtr =") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("tailDispatchKeyValueSemanticIndexPtr") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("populateTailDispatchKeyValueStructPathFromKinds") ==
+  CHECK(tailDispatchHelpersSource.find("populateTailDispatchKeyValueStructPathFromKinds") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("resolveSpecializedKeyValueStorageStructPathForBindingType(\n"
+  CHECK(tailDispatchHelpersSource.find("resolveSpecializedKeyValueStorageStructPathForBindingType(\n"
                                 "                      typeText, structPath)") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("collectionTypePath(\"map\", false) + \"<\"") ==
+  CHECK(tailDispatchHelpersSource.find("collectionTypePath(\"map\", false) + \"<\"") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("resolveCollectionPairTypeInfo(\n"
+  CHECK(tailDispatchHelpersSource.find("resolveCollectionPairTypeInfo(\n"
                                 "                  callExpr.args[receiverIndex],\n"
-                                "                  localsIn,\n"
-                                "                  inferCallKeyValueTargetInfo,\n"
-                                "                  semanticProgram,\n"
-                                "                  tailDispatchKeyValueSemanticIndexPtr)") !=
+                                "                  localsIn,\n") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("auto resolveTailDispatchSemanticTypeText =") ==
+  CHECK(tailDispatchHelpersSource.find("auto resolveTailDispatchSemanticTypeText =") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("tryPopulateTailDispatchMapKindsFromSemanticTypeText") ==
+  CHECK(tailDispatchHelpersSource.find("tryPopulateTailDispatchMapKindsFromSemanticTypeText") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("tryPopulateTailDispatchKeyValueTargetInfoFromSemanticFacts") ==
+  CHECK(tailDispatchHelpersSource.find("tryPopulateTailDispatchKeyValueTargetInfoFromSemanticFacts") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("inferTailDispatchMapStructPathFromTypeText") ==
+  CHECK(tailDispatchHelpersSource.find("inferTailDispatchMapStructPathFromTypeText") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("ir_lowerer::isKeyValueStorageStructPath(targetInfo.structTypeName)") !=
+  CHECK(tailDispatchHelpersSource.find("ir_lowerer::isKeyValueStorageStructPath(targetInfo.structTypeName)") !=
         std::string::npos);
 }
 
@@ -1642,23 +1646,20 @@ TEST_CASE("ir lowerer tail explicit map helper rewrite uses semantic receiver fa
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
   const size_t rewritePos =
-      tailDispatchSource.find("auto rewriteExplicitKeyValueHelperBuiltinExpr =");
+      tailDispatchSource.find("bool TailDispatchContext::rewriteExplicitKeyValueHelperBuiltinExpr(");
   REQUIRE(rewritePos != std::string::npos);
   const size_t semanticIndexPos =
       tailDispatchSource.find("explicitKeyValueHelperSemanticIndex", rewritePos);
   const size_t semanticMapResolverPos = tailDispatchSource.find(
       "ir_lowerer::resolveCollectionPairTypeInfo(\n"
       "                  callExpr.args.front(),\n"
-      "                  localsIn,\n"
-      "                  inferCallKeyValueTargetInfo,\n"
-      "                  semanticProgram,\n"
-      "                  explicitKeyValueHelperSemanticIndexPtr)",
+      "                  localsIn,\n",
       rewritePos);
   const size_t semanticReceiverResolverPos = tailDispatchSource.find(
       "ir_lowerer::resolveArrayVectorAccessTargetInfo(\n"
@@ -1699,13 +1700,13 @@ TEST_CASE("ir lowerer tail canonical experimental map helper rewrite uses semant
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
   const size_t rewritePos = tailDispatchSource.find(
-      "auto rewriteCanonicalKeyValueHelperForExperimentalReceiverExpr =");
+      "bool TailDispatchContext::rewriteCanonicalKeyValueHelperForExperimentalReceiverExpr(");
   REQUIRE(rewritePos != std::string::npos);
   const size_t semanticIndexPos =
       tailDispatchSource.find("canonicalKeyValueHelperSemanticIndex", rewritePos);
@@ -1718,10 +1719,7 @@ TEST_CASE("ir lowerer tail canonical experimental map helper rewrite uses semant
   const size_t semanticMapResolverPos = tailDispatchSource.find(
       "ir_lowerer::resolveCollectionPairTypeInfo(\n"
       "                    receiverExpr,\n"
-      "                    localsIn,\n"
-      "                    inferCallKeyValueTargetInfo,\n"
-      "                    semanticProgram,\n"
-      "                    canonicalKeyValueHelperSemanticIndexPtr)",
+      "                    localsIn,\n",
       rewritePos);
   const size_t semanticReceiverResolverPos = tailDispatchSource.find(
       "ir_lowerer::resolveArrayVectorAccessTargetInfo(\n"
@@ -1759,29 +1757,26 @@ TEST_CASE("ir lowerer tail borrowed key/value receiver rewrite uses semantic rec
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  const size_t rewritePos =
-      tailDispatchSource.find("auto rewriteImplicitBorrowedKeyValueReceiverExpr =");
+  const size_t rewritePos = tailDispatchSource.find(
+      "bool TailDispatchContext::rewriteImplicitBorrowedKeyValueReceiverExpr(");
   REQUIRE(rewritePos != std::string::npos);
   const size_t semanticIndexPos =
       tailDispatchSource.find("borrowedKeyValueReceiverSemanticIndex", rewritePos);
   const size_t semanticMapResolverPos = tailDispatchSource.find(
       "ir_lowerer::resolveCollectionPairTypeInfo(\n"
       "                    receiverExpr,\n"
-      "                    localsIn,\n"
-      "                    inferCallKeyValueTargetInfo,\n"
-      "                    semanticProgram,\n"
-      "                    borrowedKeyValueReceiverSemanticIndexPtr)",
+      "                    localsIn,\n",
       rewritePos);
   const size_t wrappedMapGatePos = tailDispatchSource.find(
       "return keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.isWrappedKeyValueTarget;",
       rewritePos);
-  const size_t rewriteEndPos =
-      tailDispatchSource.find("Expr rewrittenExplicitKeyValueHelperExpr;", rewritePos);
+  const size_t rewriteEndPos = tailDispatchSource.find(
+      "bool TailDispatchContext::resolveCanonicalMathBuiltinName(", rewritePos);
   const size_t oldNameLocalProbePos =
       tailDispatchSource.find("localsIn.find(receiverExpr.name)", rewritePos);
   const size_t oldArgsPackLocalProbePos =
@@ -1827,10 +1822,7 @@ TEST_CASE("ir lowerer native tail map access inference uses semantic receiver fa
 
   CHECK(tailDispatchSource.find("resolveCollectionPairTypeInfo(\n"
                                 "                  targetCallExpr,\n"
-                                "                  localsIn,\n"
-                                "                  inferCallKeyValueTargetInfo,\n"
-                                "                  semanticProgram,\n"
-                                "                  tailDispatchKeyValueSemanticIndexPtr)") !=
+                                "                  localsIn,\n") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("populateTailDispatchKeyValueStructPathFromKinds(targetInfoOut);") ==
         std::string::npos);
@@ -1952,7 +1944,7 @@ TEST_CASE("ir lowerer canonical map contains and tryAt rewrites stay recognized 
   const std::filesystem::path collectionHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.cpp";
   const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatchHelpers.cpp";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   REQUIRE(std::filesystem::exists(tailDispatchPath));

@@ -14,6 +14,7 @@
 #include "IrLowererInlineStructArgHelpers.h"
 #include "IrLowererLowerEmitExprCollectionHelpers.h"
 #include "IrLowererLowerEmitExprPrintArg.h"
+#include "IrLowererLowerEmitExprTailDispatchHelpers.h"
 #include "IrLowererLowerEmitExprTryHelpers.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCalls.h"
@@ -210,7 +211,6 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &emitReadbackPassthroughCall = stateOut.emitReadbackPassthroughCall;
   auto &emitFloatLiteral = stateOut.emitFloatLiteral;
   auto &emitCompareToZero = stateOut.emitCompareToZero;
-  auto &getMathBuiltinName = stateOut.getMathBuiltinName;
   auto &getMathConstantName = stateOut.getMathConstantName;
   auto &resolveDefinitionCall = stateOut.resolveDefinitionCall;
   auto &resolveResultExprInfo = stateOut.resolveResultExprInfo;
