@@ -147,7 +147,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
                "SemanticsValidatorExprCollectionCountCapacity.cpp");
   const std::string templateCoreSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphCoreUtilities.h");
+               "TemplateMonomorphCoreUtilities.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphCoreUtilities.cpp");
   const std::string templateReceiverSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExperimentalCollectionReceiverResolution.h");

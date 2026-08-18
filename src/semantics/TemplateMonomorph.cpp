@@ -2,6 +2,8 @@
 #include "SemanticsHelpers.h"
 #include "TemplateMonomorphContext.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
+#include "TemplateMonomorphCoreUtilities.h"
+#include "TemplateMonomorphSetupUtilities.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/CompileArena.h"
 #include "RequirementPredicateFacts.h"
@@ -45,15 +47,6 @@ ResolvedType resolveTypeStringImpl(std::string input,
                                    std::string &error,
                                    std::unordered_set<std::string> &substitutionStack);
 
-bool isGeneratedTemplateSpecializationPath(std::string_view path);
-bool isEnclosingTemplateParamName(const std::string &name,
-                                  const std::string &namespacePrefix,
-                                  const Context &ctx);
-bool isEnclosingTypePackParamName(const std::string &name,
-                                  const std::string &namespacePrefix,
-                                  const Context &ctx);
-bool extractExplicitBindingType(const Expr &expr, BindingInfo &infoOut);
-
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
                                const LocalTypeMap &locals,
@@ -72,7 +65,6 @@ bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,
                                           const std::string &namespacePrefix,
                                           Context &ctx);
 
-#include "TemplateMonomorphCoreUtilities.h"
 #include "TemplateMonomorphSourceDefinitionSetup.h"
 
 std::string resolveCalleePath(const Expr &expr,
@@ -113,7 +105,6 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
                                                                        const Context &ctx,
                                                                        std::vector<std::string> &templateArgsOut);
 
-#include "TemplateMonomorphSetupUtilities.h"
 #include "TemplateMonomorphCollectionCompatibilityPaths.h"
 #include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"
 

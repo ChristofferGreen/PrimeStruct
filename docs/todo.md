@@ -585,6 +585,32 @@ investigation chain's actively-productive leaves - see
     1,378 lines - both grown somewhat since this TODO was filed; re-measure
     with `wc -l src/semantics/TemplateMonomorph*.h` before resuming since
     the numbers above are already stale).
+    progress_2026-08-18_2: Converted `TemplateMonomorphCoreUtilities.h`
+    (820 lines) and `TemplateMonomorphSetupUtilities.h` together, since
+    they turned out to be mutually dependent (`evaluateRequirementOverloadViability`
+    in CoreUtilities needs `extractExplicitBindingType` from SetupUtilities;
+    `joinMangledTemplateArgs` in SetupUtilities needs `stripWhitespace` from
+    CoreUtilities) - resolved via ordinary cross-`.cpp` `#include` of each
+    other's header (no true type-level circularity, just function-decl
+    dependencies). Both promoted to `namespace primec` per the established
+    pattern; both `.cpp` files needed `semantics::` qualification for types
+    living in `primec::semantics` (`BindingInfo`, `ParameterInfo`,
+    `RequirementPredicateFactDraft`, `ReturnKind`, plus several
+    `SemanticsValidatorInferCollectionCompatibilityInternal.h`-declared
+    helpers) - found via compile-error-driven iteration (49 then 16 errors
+    across two rounds, all fixed by targeted qualification/include
+    additions). Hit the C++ "defaults in declaration OR definition, not
+    both" rule 8 times (7 in CoreUtilities.cpp, 1 in SetupUtilities.cpp) -
+    fixed by stripping `= value` from every `.cpp` definition, keeping
+    defaults only in the header. One struct (`RequirementOverloadViability`)
+    had to stay a full definition in the header, not a forward declaration,
+    since it's a plain data struct rather than a function. Fixed one
+    source-locked test (`test_stdlib_map_ownership.cpp`'s
+    `templateCoreSource` variable) to concatenate both
+    `TemplateMonomorphCoreUtilities.h` and `.cpp` content, matching the
+    established pattern. Verified via `./scripts/compile.sh --release`
+    (1884 tests, 0 failures). Remaining: 21 of 24 `TemplateMonomorph*.h`
+    fragments still need converting.
   - acceptance:
     - Each fragment is a compileable `.h/.cpp` pair.
     - No `TemplateMonomorph*.h` file contains function implementations.

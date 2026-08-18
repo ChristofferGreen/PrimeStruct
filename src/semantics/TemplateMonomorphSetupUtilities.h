@@ -1,414 +1,62 @@
 #pragma once
 
-uint64_t fnv1a64(const std::string &text) {
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char c : text) {
-    hash ^= static_cast<uint64_t>(c);
-    hash *= 1099511628211ULL;
-  }
-  return hash;
-}
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <vector>
 
-bool isUnsignedIntegerTemplateArgText(std::string_view text) {
-  if (text.empty()) {
-    return false;
-  }
-  size_t index = 0;
-  if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
-    index = 2;
-    if (index == text.size()) {
-      return false;
-    }
-    for (; index < text.size(); ++index) {
-      if (text[index] == ',') {
-        continue;
-      }
-      if (!std::isxdigit(static_cast<unsigned char>(text[index]))) {
-        return false;
-      }
-    }
-    return true;
-  }
-  for (char c : text) {
-    if (c == ',') {
-      continue;
-    }
-    if (!std::isdigit(static_cast<unsigned char>(c))) {
-      return false;
-    }
-  }
-  return true;
-}
+#include "TemplateMonomorphContext.h"
+#include "primec/ast/Ast.h"
+
+namespace primec {
+
+uint64_t fnv1a64(const std::string &text);
+
+bool isUnsignedIntegerTemplateArgText(std::string_view text);
 
 TemplateArgument normalizedTemplateArgumentAt(const std::vector<std::string> &args,
                                               const std::vector<TemplateArgument> *details,
-                                              size_t index) {
-  if (details != nullptr && index < details->size()) {
-    return (*details)[index];
-  }
-  if (index < args.size() && isUnsignedIntegerTemplateArgText(args[index])) {
-    return TemplateArgument::integer(args[index], 0);
-  }
-  return TemplateArgument::type(index < args.size() ? args[index] : std::string{});
-}
+                                              size_t index);
 
 const std::vector<TemplateArgument> *matchingTemplateArgumentDetails(
     const std::vector<std::string> &args,
-    const std::vector<TemplateArgument> &details) {
-  if (args.size() != details.size()) {
-    return nullptr;
-  }
-  for (size_t i = 0; i < args.size(); ++i) {
-    if (args[i] != details[i].text) {
-      return nullptr;
-    }
-  }
-  return &details;
-}
+    const std::vector<TemplateArgument> &details);
 
 std::string joinMangledTemplateArgs(const std::vector<std::string> &args,
-                                    const std::vector<TemplateArgument> *details = nullptr) {
-  std::ostringstream out;
-  auto kindPrefix = [](TemplateArgumentKind kind) -> std::string_view {
-    switch (kind) {
-    case TemplateArgumentKind::Type:
-      return "type:";
-    case TemplateArgumentKind::Integer:
-      return "int:";
-    case TemplateArgumentKind::Symbol:
-      return "symbol:";
-    case TemplateArgumentKind::Unsupported:
-      return "unsupported:";
-    }
-    return "unsupported:";
-  };
-  for (size_t i = 0; i < args.size(); ++i) {
-    if (i > 0) {
-      out << ",";
-    }
-    const TemplateArgument arg = normalizedTemplateArgumentAt(args, details, i);
-    out << kindPrefix(arg.kind);
-    out << stripWhitespace(args[i]);
-  }
-  return out.str();
-}
+                                    const std::vector<TemplateArgument> *details = nullptr);
 
-// Reverse of the joinMangledTemplateArgs element encoding: specialization
-// cache keys spell each top-level argument with a kind prefix
-// ("type:Particle"), so any consumer recovering template arguments from a
-// cache key must strip it or the prefixed text leaks into instantiations
-// (e.g. soaSupportedFieldCount<type:Particle>).
-std::string stripMangledTemplateArgKindPrefix(std::string value) {
-  for (const std::string_view prefix :
-       {std::string_view("type:"), std::string_view("int:"),
-        std::string_view("symbol:"), std::string_view("unsupported:")}) {
-    if (value.rfind(prefix, 0) == 0) {
-      value.erase(0, prefix.size());
-      break;
-    }
-  }
-  return value;
-}
+std::string stripMangledTemplateArgKindPrefix(std::string value);
 
 std::string mangleTemplateArgs(const std::vector<std::string> &args,
-                               const std::vector<TemplateArgument> *details = nullptr) {
-  const std::string canonical = joinMangledTemplateArgs(args, details);
-  const uint64_t hash = fnv1a64(canonical);
-  std::ostringstream out;
-  out << "__t" << std::hex << hash;
-  return out.str();
-}
+                               const std::vector<TemplateArgument> *details = nullptr);
 
-bool isPathPrefix(const std::string &prefix, const std::string &path) {
-  if (prefix.empty()) {
-    return false;
-  }
-  if (path == prefix) {
-    return true;
-  }
-  if (path.size() <= prefix.size()) {
-    return false;
-  }
-  if (path.rfind(prefix, 0) != 0) {
-    return false;
-  }
-  return path[prefix.size()] == '/';
-}
+bool isPathPrefix(const std::string &prefix, const std::string &path);
 
-bool isGeneratedTemplateSpecializationPath(std::string_view path) {
-  const size_t marker = path.rfind("__t");
-  if (marker == std::string::npos || marker + 3 >= path.size()) {
-    return false;
-  }
-  for (size_t i = marker + 3; i < path.size(); ++i) {
-    if (!std::isxdigit(static_cast<unsigned char>(path[i]))) {
-      return false;
-    }
-  }
-  return true;
-}
+bool isGeneratedTemplateSpecializationPath(std::string_view path);
 
 bool isEnclosingTemplateParamName(const std::string &name,
                                   const std::string &namespacePrefix,
-                                  const Context &ctx) {
-  auto matchesDefinitionParams = [&](const std::string &path) {
-    auto it = ctx.sourceDefs.find(path);
-    if (it == ctx.sourceDefs.end()) {
-      return false;
-    }
-    return std::find(it->second.templateArgs.begin(), it->second.templateArgs.end(), name) !=
-           it->second.templateArgs.end();
-  };
-  std::string prefix =
-      namespacePrefix.empty() ? ctx.currentDefinitionPath : namespacePrefix;
-  while (!prefix.empty()) {
-    if (matchesDefinitionParams(prefix)) {
-      return true;
-    }
-    if (isGeneratedTemplateSpecializationPath(prefix)) {
-      const size_t marker = prefix.rfind("__t");
-      if (marker != std::string::npos && matchesDefinitionParams(prefix.substr(0, marker))) {
-        return true;
-      }
-    }
-    const size_t slash = prefix.find_last_of('/');
-    if (slash == std::string::npos) {
-      break;
-    }
-    prefix.erase(slash);
-  }
-  return false;
-}
+                                  const Context &ctx);
 
 bool isEnclosingTypePackParamName(const std::string &name,
                                   const std::string &namespacePrefix,
-                                  const Context &ctx) {
-  auto matchesDefinitionPackParam = [&](const std::string &path) {
-    auto it = ctx.sourceDefs.find(path);
-    if (it == ctx.sourceDefs.end()) {
-      return false;
-    }
-    const Definition &def = it->second;
-    for (size_t i = 0; i < def.templateArgs.size(); ++i) {
-      if (def.templateArgs[i] != name) {
-        continue;
-      }
-      return i < def.templateArgIsPack.size() && def.templateArgIsPack[i];
-    }
-    return false;
-  };
-  std::string prefix =
-      namespacePrefix.empty() ? ctx.currentDefinitionPath : namespacePrefix;
-  while (!prefix.empty()) {
-    if (matchesDefinitionPackParam(prefix)) {
-      return true;
-    }
-    if (isGeneratedTemplateSpecializationPath(prefix)) {
-      const size_t marker = prefix.rfind("__t");
-      if (marker != std::string::npos &&
-          matchesDefinitionPackParam(prefix.substr(0, marker))) {
-        return true;
-      }
-    }
-    const size_t slash = prefix.find_last_of('/');
-    if (slash == std::string::npos) {
-      break;
-    }
-    prefix.erase(slash);
-  }
-  return false;
-}
+                                  const Context &ctx);
 
-std::string replacePathPrefix(const std::string &path, const std::string &prefix, const std::string &replacement) {
-  if (!isPathPrefix(prefix, path)) {
-    return path;
-  }
-  if (path == prefix) {
-    return replacement;
-  }
-  return replacement + path.substr(prefix.size());
-}
+std::string replacePathPrefix(const std::string &path, const std::string &prefix, const std::string &replacement);
 
-bool hasMathImport(const Context &ctx) {
-  auto includesMathImport = [](const std::vector<std::string> &importPaths) {
-    for (const auto &importPath : importPaths) {
-      if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
-        return true;
-      }
-    }
-    return false;
-  };
-  if (includesMathImport(ctx.program.sourceImports)) {
-    return true;
-  }
-  if (includesMathImport(ctx.program.imports)) {
-    return true;
-  }
-  return false;
-}
+bool hasMathImport(const Context &ctx);
 
-bool extractExplicitBindingType(const Expr &expr, BindingInfo &infoOut) {
-  if (!expr.isBinding) {
-    return false;
-  }
-  if (!hasExplicitBindingTypeTransform(expr)) {
-    return false;
-  }
-  for (const auto &transform : expr.transforms) {
-    if (transform.name == "effects" || transform.name == "capabilities" || transform.name == "return") {
-      continue;
-    }
-    if (isBindingAuxTransformName(transform.name)) {
-      continue;
-    }
-    if (!transform.arguments.empty()) {
-      continue;
-    }
-    infoOut.typeName = transform.name;
-    infoOut.typeTemplateArg.clear();
-    if (!transform.templateArgs.empty()) {
-      infoOut.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
-    }
-    return true;
-  }
-  return false;
-}
+bool extractExplicitBindingType(const Expr &expr, semantics::BindingInfo &infoOut);
 
-std::string bindingTypeToString(const BindingInfo &info) {
-  if (info.typeTemplateArg.empty()) {
-    return info.typeName;
-  }
-  return info.typeName + "<" + info.typeTemplateArg + ">";
-}
+std::string bindingTypeToString(const semantics::BindingInfo &info);
 
-std::string generateTemplateParamName(const Definition &def, size_t index) {
-  std::string candidate = "T" + std::to_string(index);
-  auto isUsed = [&](const std::string &name) -> bool {
-    for (const auto &existing : def.templateArgs) {
-      if (existing == name) {
-        return true;
-      }
-    }
-    return false;
-  };
-  while (isUsed(candidate)) {
-    ++index;
-    candidate = "T" + std::to_string(index);
-  }
-  return candidate;
-}
+std::string generateTemplateParamName(const Definition &def, size_t index);
 
-bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std::string &error) {
-  bool replaced = false;
-  for (auto &transform : binding.transforms) {
-    if (transform.name == "effects" || transform.name == "capabilities" || transform.name == "return") {
-      continue;
-    }
-    if (isBindingAuxTransformName(transform.name)) {
-      continue;
-    }
-    if (!transform.arguments.empty()) {
-      error = "binding transforms do not take arguments";
-      return false;
-    }
-    if (!transform.templateArgs.empty()) {
-      error = "binding transforms do not take template arguments";
-      return false;
-    }
-    if (replaced) {
-      error = "binding requires exactly one type";
-      return false;
-    }
-    transform.name = typeName;
-    replaced = true;
-  }
-  if (!replaced) {
-    Transform transform;
-    transform.name = typeName;
-    binding.transforms.push_back(std::move(transform));
-    replaced = true;
-  }
-  return replaced;
-}
+bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std::string &error);
 
-bool isTemplatedAutoCompatDefinitionPath(std::string_view fullPath) {
-  auto isVectorCompatibilityDefinition = [&](std::string_view helperName) {
-    const std::string path =
-        "/std/collections/" + legacyExperimentalVectorCompatibilityHelperName(helperName);
-    return fullPath == path;
-  };
-  return isVectorCompatibilityDefinition("push") ||
-         isVectorCompatibilityDefinition("pop") ||
-         isVectorCompatibilityDefinition("reserve") ||
-         isVectorCompatibilityDefinition("clear") ||
-         isVectorCompatibilityDefinition("remove_at") ||
-         isVectorCompatibilityDefinition("remove_swap") ||
-         isVectorCompatibilityDefinition("at") ||
-         isVectorCompatibilityDefinition("at_unsafe");
-}
+bool isTemplatedAutoCompatDefinitionPath(std::string_view fullPath);
 
-bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error) {
-  for (auto &def : program.definitions) {
-    std::vector<std::string> implicitParams;
-    if (!def.templateArgs.empty()) {
-      const bool allowTemplatedAuto = isTemplatedAutoCompatDefinitionPath(def.fullPath);
-      for (auto &param : def.parameters) {
-        if (!param.isBinding) {
-          continue;
-        }
-        BindingInfo info;
-        if (!hasExplicitBindingTypeTransform(param) ||
-            !extractExplicitBindingType(param, info)) {
-          if (allowTemplatedAuto) {
-            continue;
-          }
-          error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
-          return false;
-        }
-        if (info.typeName == "auto") {
-          if (!allowTemplatedAuto) {
-            error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
-            return false;
-          }
-          if (!info.typeTemplateArg.empty()) {
-            error = "auto parameters do not accept template arguments: " + def.fullPath;
-            return false;
-          }
-        }
-      }
-      continue;
-    }
-    size_t autoIndex = 0;
-    for (auto &param : def.parameters) {
-      if (!param.isBinding) {
-        continue;
-      }
-      BindingInfo info;
-      bool hasExplicit = extractExplicitBindingType(param, info);
-      if (!hasExplicit && hasExplicitBindingTypeTransform(param)) {
-        continue;
-      }
-      if (hasExplicit && info.typeName != "auto") {
-        continue;
-      }
-      if (hasExplicit && !info.typeTemplateArg.empty()) {
-        error = "auto parameters do not accept template arguments: " + def.fullPath;
-        return false;
-      }
-      std::string templateParam = generateTemplateParamName(def, autoIndex++);
-      if (!replaceBindingTypeTransform(param, templateParam, error)) {
-        if (error.empty()) {
-          error = "auto parameter requires an explicit type transform: " + def.fullPath;
-        }
-        return false;
-      }
-      def.templateArgs.push_back(templateParam);
-      implicitParams.push_back(templateParam);
-    }
-    if (!implicitParams.empty()) {
-      ctx.implicitTemplateDefs.insert(def.fullPath);
-      ctx.implicitTemplateParams.emplace(def.fullPath, std::move(implicitParams));
-    }
-  }
-  return true;
-}
+bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error);
+
+} // namespace primec
