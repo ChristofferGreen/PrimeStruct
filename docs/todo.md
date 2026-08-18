@@ -488,6 +488,103 @@ investigation chain's actively-productive leaves - see
     `SemanticsValidate.cpp` first, since these fragments are textually
     included into that translation unit. After the split, convert each
     fragment following the same pattern as the IR lowerer migration.
+    progress_2026-08-18: Started. This turned out to need real
+    architectural groundwork before any fragment could be converted, so
+    "follow the IR lowerer pattern" undersold the first step. Key
+    discovery: unlike the IR lowerer's raw-splice fragments (lambda
+    assignments mid-function), every `TemplateMonomorph*.h` fragment
+    already contains genuine top-level free function definitions (e.g.
+    `bool isCompileTimeTypeofPredicateArg(...) { ... }`) - so on the
+    surface this looks like a pure mechanical split. The catch: all 24
+    fragments are `#include`d inside `TemplateMonomorph.cpp`'s single
+    anonymous namespace (`namespace primec::semantics { namespace { ...
+    } }`, lines 29-468), giving every function INTERNAL linkage, and the
+    ubiquitous `Context` struct (used by nearly every function signature)
+    is itself defined inside that same anonymous namespace - so no
+    fragment could become a real separate-TU `.cpp` until `Context` (and
+    its supporting types: `ResolvedType`, `SubstMap`, `TemplateRootInfo`,
+    `TemplateArgumentBinding`, `HelperOverloadEntry`,
+    `GenericTypeOverloadEntry`, `ExplicitTemplateArgInferenceFact`,
+    `ImplicitTemplateArgInferenceFact`, plus the `LocalTypeMap` alias and
+    a handful of loose standalone helpers directly in
+    `TemplateMonomorph.cpp` - `sourceDefsFamilyPathIndex`,
+    `anySourceDefStartsWith`, `isArgsPackParameterExpr`,
+    `definitionHasVariadicParameter`, `definitionHasTypePackParameter`,
+    `isStructDefinition`) moved somewhere any TU could include. Extracted
+    all of it into a new `TemplateMonomorphContext.h`/`.cpp` pair,
+    promoted to `namespace primec` (not `primec::semantics` - matching
+    the exact precedent `TODO-4648`'s `SemanticsValidateBuiltinSoaMetadata.h`
+    already established for this same problem: put cross-TU shared
+    symbols in the immediately-enclosing `primec` namespace so unqualified
+    calls from deeper-nested `primec::semantics::(anonymous)` scopes
+    still resolve them via ordinary outward namespace lookup, without
+    needing `using` declarations or qualification at every call site).
+    `Context`'s own name was kept as-is (confirmed no existing
+    `primec::Context` collision) to avoid a mechanical rename across all
+    24 fragment files. One easy trap avoided: the
+    `ExplicitTemplateArgResolutionFactForTesting`/
+    `ImplicitTemplateArgResolutionFactForTesting` testing-fact types live
+    in `primec::semantics` (a namespace NESTED inside `primec`, not
+    enclosing it) - unqualified use from within `namespace primec { ... }`
+    doesn't find them (lookup only walks outward through enclosing
+    scopes, never into siblings/children), so `Context`'s two testing-fact
+    vector members needed explicit `semantics::` qualification.
+    A second, easy-to-get-backwards rule this leaf had to get right:
+    C++ namespace blocks are lexically relative, not globally-rooted -
+    writing `namespace primec { ... }` from a position textually INSIDE
+    `namespace primec::semantics { namespace { ... HERE ... } }` does
+    NOT reopen the real top-level `::primec`; it declares a brand-new,
+    wrongly-nested `primec::semantics::(anonymous)::primec` that
+    silently compiles (unqualified lookup finds ITS declaration first)
+    but fails to LINK against a `.cpp`'s real `primec::` definition
+    ("undefined reference"). This means every converted fragment's
+    `#include` must move from its current mid-file position (inside the
+    anonymous namespace, where the raw fragment used to be spliced) up
+    to the top-level include block (alongside the new
+    `#include "TemplateMonomorphContext.h"`, before `namespace
+    primec::semantics {` opens) - leaving it in place is a silent
+    linker-time bug, not a compile error, so don't skip this step or
+    trust that "it compiled" means it's correct; always do a full link
+    (`cmake --build build-debug --target primec_frontend_lib`, which
+    both compiles AND links the static lib) after each conversion.
+    Converted the first (smallest) fragment as an end-to-end proof of
+    the technique: `TemplateMonomorphExperimentalCollectionConstructorPaths.h`
+    (8 lines, one function - `experimentalVectorConstructorRewritePath`)
+    into a real `.h`/`.cpp` pair, verified via `./scripts/compile.sh
+    --release` (1884 tests, 0 failures). Fixed one source-locked test
+    (`test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`)
+    whose checks against this fragment's content needed to read both the
+    new `.h` and `.cpp` (concatenated, matching the pattern already used
+    for the IR lowerer's split files) since the function body and its
+    `#include "StdlibCollectionSurfaceHelpers.h"` moved to the `.cpp`.
+    Two fragment-conversion blockers discovered while scoping the next
+    files, left unconverted for now: (1) several fragments contain
+    TEMPLATE functions (e.g.
+    `TemplateMonomorphExperimentalCollectionReturnRewrites.h`'s
+    `rewriteExperimentalConstructorReturnTree`,
+    `TemplateMonomorphDefinitionReturnOrchestration.h`'s
+    `rewriteDefinitionReturnConstructors`) - templates must stay visible
+    at every instantiation point, so they cannot move to a `.cpp`; only
+    a fragment's non-template functions are convertible, meaning several
+    files will end up as a genuine mixed `.h` (declarations + templates
+    that must stay inline) plus `.cpp` (the extractable subset), not a
+    clean full move. (2) Fragments reference types/functions defined in
+    OTHER not-yet-converted fragments (e.g.
+    `TemplateMonomorphDefinitionReturnOrchestration.h`'s
+    `isDefinitionReturnPathStatement` takes a
+    `DefinitionReturnStatementSelection` still defined inside
+    `TemplateMonomorphExperimentalCollectionReturnSetup.h`'s own
+    anonymous-namespace scope) - converting one fragment to external
+    linkage sometimes requires converting (or at least promoting the
+    referenced type from) another fragment first, so a dependency map
+    across all 24 files should be built before doing more conversions,
+    rather than discovering blockers one file at a time. Remaining: 23 of
+    24 `TemplateMonomorph*.h` fragments still need converting, prioritizing
+    the largest first per this task's scope list (`TemplateMonomorphExpressionRewrite.h`
+    is now 3,497 lines, `TemplateMonomorphImplicitTemplateInference.h` is
+    1,378 lines - both grown somewhat since this TODO was filed; re-measure
+    with `wc -l src/semantics/TemplateMonomorph*.h` before resuming since
+    the numbers above are already stale).
   - acceptance:
     - Each fragment is a compileable `.h/.cpp` pair.
     - No `TemplateMonomorph*.h` file contains function implementations.

@@ -1,8 +1,10 @@
 #pragma once
 
-#include "StdlibCollectionSurfaceHelpers.h"
+#include <cstddef>
+#include <string>
 
-std::string experimentalVectorConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount) {
-  (void)argumentCount;
-  return metadataBackedExperimentalVectorConstructorCompatibilityPath(resolvedPath);
-}
+namespace primec {
+
+std::string experimentalVectorConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount);
+
+} // namespace primec

@@ -142,6 +142,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsHelpersValidation.cpp
   src/semantics/SemanticsArgumentOrdering.cpp
   src/semantics/TemplateMonomorph.cpp
+  src/semantics/TemplateMonomorphContext.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionConstructorPaths.cpp
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp
   src/semantics/TypeResolutionGraph.cpp

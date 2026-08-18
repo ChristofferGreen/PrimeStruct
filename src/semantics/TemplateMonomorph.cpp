@@ -1,5 +1,7 @@
 #include <cstdio>
 #include "SemanticsHelpers.h"
+#include "TemplateMonomorphContext.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/CompileArena.h"
 #include "RequirementPredicateFacts.h"
@@ -27,144 +29,6 @@
 
 namespace primec::semantics {
 namespace {
-
-struct ResolvedType {
-  std::string text;
-  bool concrete = true;
-};
-
-using SubstMap = std::unordered_map<std::string, std::string>;
-
-struct TemplateRootInfo {
-  std::string fullPath;
-  std::vector<std::string> params;
-};
-
-struct TemplateArgumentBinding {
-  SubstMap mapping;
-  std::unordered_set<std::string> integerParameters;
-  std::vector<TemplatePackBinding> packBindings;
-};
-
-struct HelperOverloadEntry {
-  std::string internalPath;
-  std::string sourceKey;
-  size_t parameterCount = 0;
-  size_t variadicMinArgumentCount = 0;
-  bool isVariadic = false;
-  bool hasRequirementTransform = false;
-};
-
-struct GenericTypeOverloadEntry {
-  std::string internalPath;
-  size_t templateParameterCount = 0;
-};
-
-struct ExplicitTemplateArgInferenceFact {
-  std::string resolvedTypeText;
-  bool resolvedConcrete = false;
-};
-
-struct ImplicitTemplateArgInferenceFact {
-  std::vector<std::string> inferredArgs;
-};
-
-struct Context {
-  explicit Context(Program &inputProgram)
-      : program(inputProgram) {}
-
-  Program &program;
-  std::unordered_map<std::string, Definition> sourceDefs;
-  // Lazily-built, sorted view of sourceDefs' keys, used by
-  // hasDefinitionFamilyPath()/hasTemplatedDefinitionFamilyPath() (see
-  // TemplateMonomorphMethodTargets.h) to answer prefix-existence queries in
-  // O(log N) instead of a linear scan over sourceDefs. Must be invalidated
-  // (sourceDefsFamilyPathIndexValid = false) at every sourceDefs mutation
-  // site - see initializeTemplateMonomorphSourceDefinitions() and
-  // TemplateMonomorphTemplateSpecialization.h's clone-insertion loop.
-  // mutable so read-only query helpers taking `const Context &` can still
-  // build/cache it (several call sites, e.g. resolveMethodCallTemplateTarget,
-  // only have a const Context&).
-  mutable std::set<std::string> sourceDefsFamilyPathIndex;
-  mutable bool sourceDefsFamilyPathIndexValid = false;
-  std::unordered_set<std::string> templateDefs;
-  std::unordered_map<std::string, std::string> directImportAliases;
-  std::unordered_map<std::string, std::string> transitiveImportAliases;
-  std::unordered_map<std::string, std::string> stdlibScopedImportAliases;
-  std::unordered_map<std::string, std::string> importAliases;
-  std::unordered_map<std::string, std::vector<std::string>> directImportAliasTargets;
-  std::unordered_map<std::string, std::vector<std::string>> transitiveImportAliasTargets;
-  std::unordered_map<std::string, std::vector<std::string>> stdlibScopedImportAliasTargets;
-  std::unordered_map<std::string, std::vector<std::string>> importAliasTargets;
-  std::unordered_map<std::string, std::vector<HelperOverloadEntry>> helperOverloads;
-  std::unordered_map<std::string, std::string> helperOverloadInternalToPublic;
-  std::unordered_map<std::string, std::string> helperOverloadDefinitionIdentity;
-  std::unordered_map<std::string, std::vector<GenericTypeOverloadEntry>> genericTypeOverloads;
-  std::unordered_map<std::string, std::string> genericTypeOverloadInternalToPublic;
-  std::unordered_map<std::string, std::string> specializationCache;
-  std::unordered_set<std::string> outputPaths;
-  std::vector<Definition> outputDefs;
-  std::vector<Execution> outputExecs;
-  std::string currentDefinitionPath;
-  std::unordered_set<std::string> implicitTemplateDefs;
-  std::unordered_map<std::string, std::vector<std::string>> implicitTemplateParams;
-  std::unordered_set<std::string> returnInferenceStack;
-  bool collectExplicitTemplateArgFactsForTesting = false;
-  std::vector<ExplicitTemplateArgResolutionFactForTesting> explicitTemplateArgFactsForTesting;
-  std::unordered_map<std::string, ExplicitTemplateArgInferenceFact> explicitTemplateArgInferenceFacts;
-  uint64_t explicitTemplateArgInferenceFactHitsForTesting = 0;
-  bool collectImplicitTemplateArgFactsForTesting = false;
-  std::vector<ImplicitTemplateArgResolutionFactForTesting> implicitTemplateArgFactsForTesting;
-  std::unordered_map<std::string, ImplicitTemplateArgInferenceFact> implicitTemplateArgInferenceFacts;
-  uint64_t implicitTemplateArgInferenceFactHitsForTesting = 0;
-  const Definition *currentRewriteDefinition = nullptr;
-  mutable std::string requirementOverloadSelectionError;
-};
-
-const std::set<std::string> &sourceDefsFamilyPathIndex(const Context &ctx) {
-  if (!ctx.sourceDefsFamilyPathIndexValid) {
-    ctx.sourceDefsFamilyPathIndex.clear();
-    for (const auto &[defPath, definition] : ctx.sourceDefs) {
-      (void)definition;
-      ctx.sourceDefsFamilyPathIndex.insert(defPath);
-    }
-    ctx.sourceDefsFamilyPathIndexValid = true;
-  }
-  return ctx.sourceDefsFamilyPathIndex;
-}
-
-// True if any key in sourceDefs starts with `prefix`. Relies on
-// lexicographic ordering: every element sharing `prefix` sorts
-// contiguously starting at lower_bound(prefix).
-bool anySourceDefStartsWith(const Context &ctx, const std::string &prefix) {
-  const std::set<std::string> &index = sourceDefsFamilyPathIndex(ctx);
-  const auto it = index.lower_bound(prefix);
-  return it != index.end() && it->compare(0, prefix.size(), prefix) == 0;
-}
-
-using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
-
-bool isArgsPackParameterExpr(const Expr &param) {
-  for (const Transform &transform : param.transforms) {
-    if (transform.name == "args" && transform.templateArgs.size() == 1) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool definitionHasVariadicParameter(const Definition &def) {
-  return !def.parameters.empty() && isArgsPackParameterExpr(def.parameters.back());
-}
-
-bool definitionHasTypePackParameter(const Definition &def) {
-  for (bool isPack : def.templateArgIsPack) {
-    if (isPack) {
-      return true;
-    }
-  }
-  return false;
-}
 
 ResolvedType resolveTypeString(std::string input,
                                const SubstMap &mapping,
@@ -208,38 +72,8 @@ bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,
                                           const std::string &namespacePrefix,
                                           Context &ctx);
 
-bool isStructDefinition(const Definition &def);
-
 #include "TemplateMonomorphCoreUtilities.h"
 #include "TemplateMonomorphSourceDefinitionSetup.h"
-
-bool isStructDefinition(const Definition &def) {
-  bool isStruct = false;
-  bool hasReturnTransform = false;
-  for (const auto &transform : def.transforms) {
-    if (transform.name == "sum") {
-      return false;
-    }
-    if (transform.name == "return") {
-      hasReturnTransform = true;
-    }
-    if (isStructTransformName(transform.name)) {
-      isStruct = true;
-    }
-  }
-  if (isStruct) {
-    return true;
-  }
-  if (hasReturnTransform || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
-    return false;
-  }
-  for (const auto &stmt : def.statements) {
-    if (!stmt.isBinding) {
-      return false;
-    }
-  }
-  return true;
-}
 
 std::string resolveCalleePath(const Expr &expr,
                               const std::string &namespacePrefix,
@@ -372,7 +206,6 @@ const std::string *lookupScopedImportAliasForNamespace(std::string_view name,
 #include "TemplateMonomorphTypeResolution.h"
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
-#include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionValueRewrites.h"

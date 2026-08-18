@@ -605,7 +605,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   const std::string templateMonomorphExperimentalCollectionReceiverResolutionSource =
       readText(templateMonomorphExperimentalCollectionReceiverResolutionPath);
   const std::string templateMonomorphExperimentalCollectionConstructorPathsSource =
-      readText(templateMonomorphExperimentalCollectionConstructorPathsPath);
+      readText(templateMonomorphExperimentalCollectionConstructorPathsPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorPaths.cpp");
   const std::string templateMonomorphExperimentalCollectionTypeHelpersSource =
       readText(templateMonomorphExperimentalCollectionTypeHelpersPath);
   const std::string templateMonomorphExperimentalCollectionReturnRewritesSource =
