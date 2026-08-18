@@ -173,7 +173,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
                "TemplateMonomorphTypeResolution.h");
   const std::string templateCollectionCompatibilitySource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphCollectionCompatibilityPaths.h");
+               "TemplateMonomorphCollectionCompatibilityPaths.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphCollectionCompatibilityPaths.cpp");
   const std::string templateBindingCallInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphBindingCallInference.h");

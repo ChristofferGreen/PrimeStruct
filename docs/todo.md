@@ -611,6 +611,101 @@ investigation chain's actively-productive leaves - see
     established pattern. Verified via `./scripts/compile.sh --release`
     (1884 tests, 0 failures). Remaining: 21 of 24 `TemplateMonomorph*.h`
     fragments still need converting.
+    progress_2026-08-18_3: Built a dependency map across all 21 remaining
+    raw fragments (script: for each fragment, find its top-level function
+    definitions, then check which OTHER still-raw fragments' functions it
+    calls) before converting anything further, per the prior note's
+    recommendation. Finding: nearly the entire remaining fragment set is
+    one giant mutually-recursive strongly-connected component, hinged on
+    a handful of hub functions - `resolveTypeString`/`resolveCalleePath`/
+    `rewriteTransforms` (bodies live in `TemplateMonomorphTypeResolution.h`),
+    `inferBindingTypeForMonomorph`/`inferImplicitTemplateArgs` (bodies in
+    `TemplateMonomorphImplicitTemplateInference.h`), `rewriteExpr` (body in
+    `TemplateMonomorphExpressionRewrite.h`), `resolveMethodCallTemplateTarget`
+    (body in `TemplateMonomorphMethodTargets.h`), and `resolveFieldBindingTarget`
+    (body in `TemplateMonomorphAssignmentTargetResolution.h`) - that
+    essentially every other fragment calls into, directly or transitively.
+    Converting any one of those hub fragments requires converting (or at
+    least being ready to convert in the same link step) most of the
+    others, since they call each other circularly; this makes the
+    "convert one fragment, verify link, commit" per-fragment cadence this
+    task otherwise follows infeasible for that cluster without a much
+    larger single leap. Deferred that cluster (7 large files, ~7,300
+    lines combined: `TemplateMonomorphTypeResolution.h`,
+    `TemplateMonomorphImplicitTemplateInference.h`,
+    `TemplateMonomorphExpressionRewrite.h`, `TemplateMonomorphMethodTargets.h`,
+    `TemplateMonomorphAssignmentTargetResolution.h`,
+    `TemplateMonomorphFallbackTypeInference.h`,
+    `TemplateMonomorphCollectionCompatibilityPaths.h`-adjacent callers) to a
+    dedicated future leaf and instead converted the 3 fragments the
+    dependency map showed had zero calls into any still-raw fragment:
+    `TemplateMonomorphExperimentalCollectionTypeHelpers.h` (69 lines, calls
+    only into already-normal-linkage `StdlibCollectionSurfaceHelpers.h`/
+    `SemanticsHelpers.h`), `TemplateMonomorphSourceDefinitionSetup.h` (258
+    lines, calls only into the already-converted
+    `TemplateMonomorphCoreUtilities`/`SetupUtilities`), and
+    `TemplateMonomorphCollectionCompatibilityPaths.h` (294 lines, calls
+    into `primec::support::CollectionSpellingClassifier.h` and the
+    already-converted `TemplateMonomorphCoreUtilities.h`). All three
+    promoted to `namespace primec` per the established pattern. Hit one
+    new wrinkle not seen in the prior two conversions: several helpers
+    these fragments call (`normalizeBindingTypeName`, `splitTemplateTypeName`,
+    `splitTopLevelTemplateArgs`, `buildOrderedArguments`, `ParameterInfo`,
+    `isExperimentalSoaVectorTypePath`) live in `SemanticsHelpers.h`, which
+    is itself declared in `primec::semantics` (not `primec`) despite being
+    an ordinary already-externally-linked header - so unqualified calls
+    from the new `namespace primec` `.cpp` files didn't resolve even
+    though the symbols were perfectly linkable; fixed with `using
+    semantics::<name>;` declarations at the top of each new `.cpp`, same
+    remedy as the `primec::semantics`-nested testing-fact types from the
+    first progress note, just via a normal (non-anonymous-namespace)
+    header this time. Also needed `using semantics::...` for a handful of
+    `[[maybe_unused]]` free functions
+    (`trimLeadingSlash`, `canonicalVectorCompatibilityHelperPathOrFallback`,
+    `canonicalVectorCompatibilityPrefixOrFallback`,
+    `isUnrootedCanonicalVectorCompatibilityPath`,
+    `stripUnrootedCanonicalVectorCompatibilityPrefix`,
+    `isLegacyExperimentalVectorCompatibilityPath`,
+    `isLegacyExperimentalVectorCompatibilitySpecializedTypePath`,
+    `isLegacyExperimentalVectorCompatibilityTypePath`,
+    `legacyExperimentalVectorCompatibilityPrefix`) declared inside
+    `SemanticsValidatorInferCollectionCompatibilityInternal.h`'s own
+    self-contained `namespace primec::semantics { namespace { ... } }`
+    block - this header is included directly (not spliced) by many
+    existing `.cpp` files, each getting its own internal-linkage copy per
+    TU, which is fine and unrelated to the outer-anonymous-namespace
+    linker trap from the first progress note. Hit one new gate failure
+    not covered by the documented workflow: `./scripts/compile.sh
+    --release` failed `PrimeStruct_soa_surface_trace_zero_audit` (a
+    Python script, `scripts/check_soa_surface_trace_inventory.py`, that
+    scans source files for legacy SoA spelling patterns and requires a
+    `// soa-surface-audit: exempt` marker on any file allowed to still
+    reference the retired `soa_vector` token) - the original
+    `TemplateMonomorphCollectionCompatibilityPaths.h` carried that marker
+    comment on line 1, but the new sibling `.cpp` file did not, so moving
+    the marked function bodies into the `.cpp` made the audit see
+    unmarked matches; fixed by copying the same `// soa-surface-audit:
+    exempt` comment to the top of the new `.cpp`. Lesson for future
+    fragment splits: check the first line of the `.h` for an audit/lint
+    exemption marker comment before splitting, and copy it to the `.cpp`
+    if the marked content moves there. Fixed the two source-locked tests
+    referencing these three fragments' filenames
+    (`tests/unit/misc/test_stdlib_map_ownership.cpp`'s
+    `templateCollectionCompatibilitySource` variable, and
+    `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`'s
+    `templateMonomorphExperimentalCollectionTypeHelpersSource` and
+    `templateMonomorphCollectionCompatibilityPathsSource` variables) to
+    concatenate `.h` + `.cpp` content, matching the pattern already
+    established for `TemplateMonomorphExperimentalCollectionConstructorPaths`
+    in the same test file.
+    `TemplateMonomorphSourceDefinitionSetup.h` had no source-locked test
+    references. Verified via `./scripts/compile.sh --release` (1884
+    tests, 0 failures). Remaining: 18 of 24 `TemplateMonomorph*.h`
+    fragments still need converting (15 non-blocked + the giant
+    mutually-recursive hub cluster of ~7 large files described above,
+    which will likely need to be converted as one large multi-file leap
+    rather than one-at-a-time; plus the 2 template-function-blocked
+    files that stay header-only permanently).
   - acceptance:
     - Each fragment is a compileable `.h/.cpp` pair.
     - No `TemplateMonomorph*.h` file contains function implementations.

@@ -608,7 +608,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExperimentalCollectionConstructorPathsPath) +
       readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorPaths.cpp");
   const std::string templateMonomorphExperimentalCollectionTypeHelpersSource =
-      readText(templateMonomorphExperimentalCollectionTypeHelpersPath);
+      readText(templateMonomorphExperimentalCollectionTypeHelpersPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionTypeHelpers.cpp");
   const std::string templateMonomorphExperimentalCollectionReturnRewritesSource =
       readText(templateMonomorphExperimentalCollectionReturnRewritesPath);
   const std::string templateMonomorphExperimentalCollectionReturnSetupSource =
@@ -630,7 +631,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   const std::string templateMonomorphExpressionRewriteSource =
       readText(templateMonomorphExpressionRewritePath);
   const std::string templateMonomorphCollectionCompatibilityPathsSource =
-      readText(templateMonomorphCollectionCompatibilityPathsPath);
+      readText(templateMonomorphCollectionCompatibilityPathsPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionCompatibilityPaths.cpp");
   const std::string collectionSurfaceHelpersSource =
       readText(collectionSurfaceHelpersPath);
   const std::string collectionTypeHelpersSource =

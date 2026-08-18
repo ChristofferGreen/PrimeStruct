@@ -4,6 +4,9 @@
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 #include "TemplateMonomorphCoreUtilities.h"
 #include "TemplateMonomorphSetupUtilities.h"
+#include "TemplateMonomorphCollectionCompatibilityPaths.h"
+#include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"
+#include "TemplateMonomorphSourceDefinitionSetup.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/CompileArena.h"
 #include "RequirementPredicateFacts.h"
@@ -65,8 +68,6 @@ bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,
                                           const std::string &namespacePrefix,
                                           Context &ctx);
 
-#include "TemplateMonomorphSourceDefinitionSetup.h"
-
 std::string resolveCalleePath(const Expr &expr,
                               const std::string &namespacePrefix,
                               const Context &ctx,
@@ -104,9 +105,6 @@ bool extractCollectionVectorValueReceiverTemplateArgsFromTypeText(const std::str
 bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                        const Context &ctx,
                                                                        std::vector<std::string> &templateArgsOut);
-
-#include "TemplateMonomorphCollectionCompatibilityPaths.h"
-#include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"
 
 bool instantiateTemplate(const std::string &basePath,
                          const std::vector<std::string> &resolvedArgs,

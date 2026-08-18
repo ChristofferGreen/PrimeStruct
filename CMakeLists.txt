@@ -146,6 +146,9 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphExperimentalCollectionConstructorPaths.cpp
   src/semantics/TemplateMonomorphCoreUtilities.cpp
   src/semantics/TemplateMonomorphSetupUtilities.cpp
+  src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.cpp
+  src/semantics/TemplateMonomorphSourceDefinitionSetup.cpp
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp
   src/semantics/TypeResolutionGraph.cpp
