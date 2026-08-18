@@ -116,4 +116,27 @@ bool definitionHasVariadicParameter(const Definition &def);
 bool definitionHasTypePackParameter(const Definition &def);
 bool isStructDefinition(const Definition &def);
 
+bool usesStdlibScopedImportAliases(const std::string &namespacePrefix, const Context &ctx);
+const std::unordered_map<std::string, std::string> &scopedImportAliasesForNamespace(
+    const std::string &namespacePrefix, const Context &ctx);
+const std::unordered_map<std::string, std::vector<std::string>> &scopedImportAliasTargetsForNamespace(
+    const std::string &namespacePrefix, const Context &ctx);
+const std::string *lookupScopedImportAliasForNamespace(std::string_view name,
+                                                        const std::string &namespacePrefix,
+                                                        const Context &ctx);
+bool rewriteExecution(Execution &exec, Context &ctx, std::string &error);
+
+bool instantiateTemplate(const std::string &basePath,
+                         const std::vector<std::string> &resolvedArgs,
+                         const std::vector<TemplateArgument> *resolvedArgDetails,
+                         Context &ctx,
+                         std::string &error,
+                         std::string &specializedPathOut);
+
+bool instantiateTemplate(const std::string &basePath,
+                         const std::vector<std::string> &resolvedArgs,
+                         Context &ctx,
+                         std::string &error,
+                         std::string &specializedPathOut);
+
 } // namespace primec

@@ -1,425 +1,99 @@
 #pragma once
 
-Context makeTemplateMonomorphContext(Program &program) {
-  return Context(program);
-}
+#include <string>
+#include <string_view>
+#include <vector>
+#include <optional>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
-void buildImportAliases(Context &ctx) {
-  ctx.directImportAliases.clear();
-  ctx.transitiveImportAliases.clear();
-  ctx.stdlibScopedImportAliases.clear();
-  ctx.importAliases.clear();
-  ctx.directImportAliasTargets.clear();
-  ctx.transitiveImportAliasTargets.clear();
-  ctx.stdlibScopedImportAliasTargets.clear();
-  ctx.importAliasTargets.clear();
-  const std::string InternalVectorTypePath =
-      canonicalVectorTypeIdentityPrefix() + "Vector";
-  const auto &directImportPaths = ctx.program.sourceImports.empty()
-                                      ? ctx.program.imports
-                                      : ctx.program.sourceImports;
-  auto stdlibSurfaceImportAliasPriority = [](const StdlibSurfaceMetadata &metadata) {
-    switch (metadata.shape) {
-      case StdlibSurfaceShape::ConstructorFamily:
-        return 30;
-      case StdlibSurfaceShape::ErrorFamily:
-        return 20;
-      case StdlibSurfaceShape::HelperFamily:
-        return 10;
-    }
-    return 0;
-  };
-  auto stdlibSurfaceMatchesImportAliasPath = [](const StdlibSurfaceMetadata &metadata,
-                                                const std::string_view importPath) {
-    return metadata.canonicalPath == importPath ||
-           std::find(metadata.importAliasSpellings.begin(),
-                     metadata.importAliasSpellings.end(),
-                     importPath) != metadata.importAliasSpellings.end();
-  };
-  auto findStdlibSurfaceImportAliasMetadata =
-      [&](const std::string_view importPath) -> const StdlibSurfaceMetadata * {
-    const StdlibSurfaceMetadata *bestMatch = nullptr;
-    int bestPriority = -1;
-    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
-      if (!stdlibSurfaceMatchesImportAliasPath(metadata, importPath)) {
-        continue;
-      }
-      const int priority = stdlibSurfaceImportAliasPriority(metadata);
-      if (bestMatch == nullptr || priority > bestPriority) {
-        bestMatch = &metadata;
-        bestPriority = priority;
-      }
-    }
-    return bestMatch;
-  };
-  auto findStdlibSurfaceWildcardAliasMetadata =
-      [&](const std::string_view importRoot,
-          const std::string_view aliasName) -> const StdlibSurfaceMetadata * {
-    const StdlibSurfaceMetadata *bestMatch = nullptr;
-    int bestPriority = -1;
-    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
-      if (metadata.canonicalImportRoot != importRoot) {
-        continue;
-      }
-      if (std::find(metadata.importAliasSpellings.begin(),
-                    metadata.importAliasSpellings.end(),
-                    aliasName) == metadata.importAliasSpellings.end()) {
-        continue;
-      }
-      const int priority = stdlibSurfaceImportAliasPriority(metadata);
-      if (bestMatch == nullptr || priority > bestPriority) {
-        bestMatch = &metadata;
-        bestPriority = priority;
-      }
-    }
-    return bestMatch;
-  };
-  auto shouldSkipWildcardAlias = [](const std::string &prefix, const std::string &remainder) {
-    return prefix == "/std/collections" && (remainder == "vector" || remainder == "map");
-  };
-  auto shouldKeepSoaHelperTargetOutOfImportAliases =
-      [](const std::string &aliasName, const std::string &targetPath) {
-        return targetPath.rfind(templateMonomorphCompatibilitySoaHelperPrefix(),
-                                0) == 0 &&
-               (aliasName == "count" || aliasName == "get" ||
-                aliasName == "ref" || aliasName == "count_ref" ||
-                aliasName == "get_ref" || aliasName == "ref_ref" ||
-                aliasName == "reserve" || aliasName == "push" ||
-                aliasName == templateMonomorphSoaToAosHelperName() ||
-                aliasName == templateMonomorphSoaToAosHelperName(true));
-      };
-  auto recordAliasTarget =
-      [](std::unordered_map<std::string, std::vector<std::string>> &targetAliasTargets,
-         const std::string &aliasName,
-         const std::string &targetPath) {
-    auto &targets = targetAliasTargets[aliasName];
-    if (std::find(targets.begin(), targets.end(), targetPath) == targets.end()) {
-      targets.push_back(targetPath);
-    }
-  };
-  auto targetsForAliasMap =
-      [&](std::unordered_map<std::string, std::string> &targetAliases)
-      -> std::unordered_map<std::string, std::vector<std::string>> & {
-    if (&targetAliases == &ctx.directImportAliases) {
-      return ctx.directImportAliasTargets;
-    }
-    return ctx.transitiveImportAliasTargets;
-  };
-  auto registerAlias = [&](std::unordered_map<std::string, std::string> &targetAliases,
-                           const std::string &aliasName,
-                           const std::string &targetPath) {
-    recordAliasTarget(targetsForAliasMap(targetAliases), aliasName, targetPath);
-    targetAliases.emplace(aliasName, targetPath);
-    if (!shouldKeepSoaHelperTargetOutOfImportAliases(aliasName, targetPath)) {
-      recordAliasTarget(ctx.importAliasTargets, aliasName, targetPath);
-      ctx.importAliases.emplace(aliasName, targetPath);
-    }
-  };
-  auto registerDefinitionAlias = [&](std::unordered_map<std::string, std::string> &targetAliases,
-                                     const std::string &aliasName,
-                                     const std::string &targetPath) {
-    recordAliasTarget(targetsForAliasMap(targetAliases), aliasName, targetPath);
-    targetAliases[aliasName] = targetPath;
-    if (!shouldKeepSoaHelperTargetOutOfImportAliases(aliasName, targetPath)) {
-      recordAliasTarget(ctx.importAliasTargets, aliasName, targetPath);
-      ctx.importAliases[aliasName] = targetPath;
-    }
-  };
-  auto registerStdlibSurfaceExactAlias =
-      [&](std::unordered_map<std::string, std::string> &targetAliases,
-          const std::string &importPath) {
-    const StdlibSurfaceMetadata *metadata =
-        findStdlibSurfaceImportAliasMetadata(importPath);
-    if (metadata == nullptr) {
-      return false;
-    }
-    const size_t slash = importPath.find_last_of('/');
-    const std::string aliasName =
-        slash == std::string::npos ? importPath : importPath.substr(slash + 1);
-    if (aliasName.empty()) {
-      return false;
-    }
-    registerDefinitionAlias(
-        targetAliases, aliasName, std::string(metadata->canonicalPath));
-    return true;
-  };
-  auto registerStdlibSurfaceWildcardAliases =
-      [&](std::unordered_map<std::string, std::string> &targetAliases,
-          const std::string &prefix) {
-    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
-      if (metadata.canonicalImportRoot != prefix) {
-        continue;
-      }
-      for (const std::string_view spelling : metadata.importAliasSpellings) {
-        if (spelling.empty() || spelling.front() == '/') {
-          continue;
-        }
-        const StdlibSurfaceMetadata *preferred =
-            findStdlibSurfaceWildcardAliasMetadata(prefix, spelling);
-        if (preferred != &metadata) {
-          continue;
-        }
-        registerDefinitionAlias(
-            targetAliases, std::string(spelling),
-            std::string(preferred->canonicalPath));
-      }
-    }
-  };
-  for (const auto &importPath : directImportPaths) {
-    if (importPath.empty() || importPath[0] != '/') {
-      continue;
-    }
-    bool isWildcard = false;
-    std::string prefix;
-    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-      isWildcard = true;
-      prefix = importPath.substr(0, importPath.size() - 2);
-    } else if (importPath.find('/', 1) == std::string::npos) {
-      isWildcard = true;
-      prefix = importPath;
-    }
-    if (isWildcard) {
-      registerStdlibSurfaceWildcardAliases(ctx.directImportAliases, prefix);
-      if (prefix == collection_paths::moduleRoot(collection_paths::kVectorFolder)) {
-        if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
-          registerDefinitionAlias(
-              ctx.directImportAliases, "Vector", InternalVectorTypePath);
-        }
-      }
-      const std::string scopedPrefix = prefix + "/";
-      for (const auto &[publicPath, overloads] : ctx.helperOverloads) {
-        (void)overloads;
-        if (publicPath.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = publicPath.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (shouldSkipWildcardAlias(prefix, remainder)) {
-          continue;
-        }
-        registerAlias(ctx.directImportAliases, remainder, publicPath);
-      }
-      for (const auto &[publicPath, overloads] : ctx.genericTypeOverloads) {
-        (void)overloads;
-        if (publicPath.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = publicPath.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (shouldSkipWildcardAlias(prefix, remainder)) {
-          continue;
-        }
-        registerAlias(ctx.directImportAliases, remainder, publicPath);
-      }
-      for (const auto &entry : ctx.sourceDefs) {
-        const std::string &path = entry.first;
-        if (ctx.helperOverloadInternalToPublic.count(path) > 0) {
-          continue;
-        }
-        if (ctx.genericTypeOverloadInternalToPublic.count(path) > 0) {
-          continue;
-        }
-        if (path.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = path.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (shouldSkipWildcardAlias(prefix, remainder)) {
-          continue;
-        }
-        registerDefinitionAlias(ctx.directImportAliases, remainder, path);
-      }
-      continue;
-    }
-    if (registerStdlibSurfaceExactAlias(ctx.directImportAliases, importPath)) {
-      continue;
-    }
-    auto defIt = ctx.sourceDefs.find(importPath);
-    if (defIt == ctx.sourceDefs.end()) {
-      if (ctx.helperOverloads.count(importPath) == 0 &&
-          ctx.genericTypeOverloads.count(importPath) == 0) {
-        continue;
-      }
-    }
-    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
-    if (remainder.empty()) {
-      continue;
-    }
-    if (defIt != ctx.sourceDefs.end()) {
-      registerDefinitionAlias(ctx.directImportAliases, remainder, importPath);
-    } else {
-      registerAlias(ctx.directImportAliases, remainder, importPath);
-    }
-  }
+#include "TemplateMonomorphContext.h"
+#include "primec/ast/Ast.h"
+#include "SemanticsHelpers.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
 
-  if (ctx.program.sourceImports.empty()) {
-    return;
-  }
+namespace primec {
 
-  std::unordered_set<std::string> directImportSet(directImportPaths.begin(), directImportPaths.end());
-  for (const auto &importPath : ctx.program.imports) {
-    if (directImportSet.count(importPath) != 0 || importPath.empty() || importPath[0] != '/') {
-      continue;
-    }
-    bool isWildcard = false;
-    std::string prefix;
-    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-      isWildcard = true;
-      prefix = importPath.substr(0, importPath.size() - 2);
-    } else if (importPath.find('/', 1) == std::string::npos) {
-      isWildcard = true;
-      prefix = importPath;
-    }
-    if (isWildcard) {
-      registerStdlibSurfaceWildcardAliases(ctx.transitiveImportAliases, prefix);
-      if (prefix == collection_paths::moduleRoot(collection_paths::kVectorFolder)) {
-        if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
-          registerDefinitionAlias(
-              ctx.transitiveImportAliases, "Vector", InternalVectorTypePath);
-        }
-        // Fall through to the member scans so transitive collection
-        // module imports expose their helper names to stdlib-scoped
-        // resolution exactly like every other module.
-      }
-      const std::string scopedPrefix = prefix + "/";
-      for (const auto &[publicPath, overloads] : ctx.helperOverloads) {
-        (void)overloads;
-        if (publicPath.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = publicPath.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (shouldSkipWildcardAlias(prefix, remainder) ||
-            isRootBuiltinName(remainder)) {
-          continue;
-        }
-        registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
-      }
-      for (const auto &[publicPath, overloads] : ctx.genericTypeOverloads) {
-        (void)overloads;
-        if (publicPath.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = publicPath.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (shouldSkipWildcardAlias(prefix, remainder) ||
-            isRootBuiltinName(remainder)) {
-          continue;
-        }
-        registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
-      }
-      for (const auto &entry : ctx.sourceDefs) {
-        const std::string &path = entry.first;
-        if (ctx.helperOverloadInternalToPublic.count(path) > 0) {
-          continue;
-        }
-        if (ctx.genericTypeOverloadInternalToPublic.count(path) > 0) {
-          continue;
-        }
-        if (path.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = path.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (shouldSkipWildcardAlias(prefix, remainder) ||
-            isRootBuiltinName(remainder)) {
-          continue;
-        }
-        registerDefinitionAlias(ctx.transitiveImportAliases, remainder, path);
-      }
-      continue;
-    }
-    if (registerStdlibSurfaceExactAlias(ctx.transitiveImportAliases, importPath)) {
-      continue;
-    }
-    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
-    if (remainder.empty()) {
-      continue;
-    }
-    if (ctx.sourceDefs.count(importPath) > 0) {
-      registerDefinitionAlias(ctx.transitiveImportAliases, remainder, importPath);
-    } else {
-      registerAlias(ctx.transitiveImportAliases, remainder, importPath);
-    }
-  }
+using semantics::isPickCall;
+using semantics::canonicalizeLegacySoaToAosHelperPath;
+using semantics::isVectorCompatibilityHelperName;
+using semantics::isExperimentalSoaGetLikeHelperPath;
+using semantics::isExperimentalSoaRefLikeHelperPath;
+using semantics::isPublishedVectorMutatorHelperName;
 
-  ctx.stdlibScopedImportAliases = ctx.transitiveImportAliases;
-  for (const auto &[aliasName, targetPath] : ctx.directImportAliases) {
-    ctx.stdlibScopedImportAliases[aliasName] = targetPath;
-  }
-  ctx.stdlibScopedImportAliasTargets = ctx.transitiveImportAliasTargets;
-  for (const auto &[aliasName, targetPaths] : ctx.directImportAliasTargets) {
-    for (const std::string &targetPath : targetPaths) {
-      recordAliasTarget(ctx.stdlibScopedImportAliasTargets, aliasName, targetPath);
-    }
-  }
-}
+using semantics::isBindingAuxTransformName;
+using semantics::isRootBuiltinName;
+using semantics::isCanonicalVectorCompatibilityPath;
+using semantics::getBuiltinArrayAccessName;
+using semantics::isExperimentalSoaVectorTypePath;
+using semantics::soaUnavailableMethodDiagnostic;
+using semantics::trimLeadingSlash;
 
-bool isPathUnderTemplateRoot(const std::string &path, const std::unordered_set<std::string> &templateRoots) {
-  for (const auto &root : templateRoots) {
-    if (isPathPrefix(root, path)) {
-      return true;
-    }
-  }
-  return false;
-}
+using semantics::canonicalizeLegacySoaRefHelperPath;
+using semantics::isCompileTimeTypeBinding;
+using semantics::isExperimentalSoaVectorHelperFamilyPath;
+using semantics::isKeyValueCollectionTypeName;
+using semantics::isLegacyExperimentalVectorCompatibilityPath;
+using semantics::isLegacyExperimentalVectorCompatibilitySpecializedTypePath;
+using semantics::legacyExperimentalVectorCompatibilityPrefix;
+using semantics::preferredPublishedCollectionLoweringPath;
+using semantics::resolveCanonicalVectorHelperNameFromResolvedPath;
+using semantics::resolveVectorCompatibilityHelperNameFromResolvedPath;
+using semantics::vectorHelperSurfaceMetadata;
+
+using semantics::hasNamedArguments;
+using semantics::getBuiltinPointerName;
+using semantics::vectorConstructorSurfaceMetadata;
+using semantics::canonicalVectorCompatibilityPrefixOrFallback;
+
+using semantics::joinTemplateArgs;
+using semantics::canonicalVectorTypeIdentityPrefix;
+using semantics::legacyExperimentalVectorCompatibilityTypeText;
+using semantics::returnKindForTypeName;
+using semantics::resolveTypePath;
+using semantics::mapCollectionAliasToken;
+using semantics::stripUnrootedCanonicalVectorCompatibilityPrefix;
+using semantics::publicSoaHelperTargetPath;
+using semantics::isUnrootedCanonicalVectorCompatibilityPath;
+using semantics::isSoftwareNumericTypeName;
+using semantics::isLegacyOrCanonicalSoaHelperPath;
+using semantics::isIfCall;
+using semantics::isCanonicalSoaRefLikeHelperPath;
+using semantics::compatibilitySoaHelperTargetPath;
+using semantics::canonicalizeLegacySoaGetHelperPath;
+using semantics::canonicalVectorCompatibilityHelperPathOrFallback;
+
+using semantics::BindingInfo;
+using semantics::ParameterInfo;
+using semantics::ReturnKind;
+using semantics::buildOrderedArguments;
+using semantics::extractKeyValueCollectionTypesFromTypeText;
+using semantics::getBuiltinCollectionName;
+using semantics::isExperimentalSoaVectorSpecializedTypePath;
+using semantics::isPrimitiveBindingTypeName;
+using semantics::isReturnCall;
+using semantics::isSimpleCallName;
+using semantics::normalizeBindingTypeName;
+using semantics::splitTemplateTypeName;
+using semantics::splitTopLevelTemplateArgs;
+
+
+
+Context makeTemplateMonomorphContext(Program &program);
+
+void buildImportAliases(Context &ctx);
+
+bool isPathUnderTemplateRoot(const std::string &path, const std::unordered_set<std::string> &templateRoots);
 
 bool rewriteMonomorphizedDefinitions(Context &ctx,
                                      const std::unordered_set<std::string> &templateRoots,
-                                     std::string &error) {
-  for (const auto &def : ctx.program.definitions) {
-    Definition clone = def;
-    std::string overloadInternalPath;
-    std::string overloadName;
-    if (resolveHelperOverloadDefinitionIdentity(def, ctx, overloadInternalPath, overloadName)) {
-      clone.fullPath = std::move(overloadInternalPath);
-      clone.name = std::move(overloadName);
-    } else if (resolveGenericTypeOverloadDefinitionIdentity(
-                   def, ctx, overloadInternalPath, overloadName)) {
-      clone.fullPath = std::move(overloadInternalPath);
-      clone.name = std::move(overloadName);
-    }
-    if (isPathUnderTemplateRoot(clone.fullPath, templateRoots)) {
-      continue;
-    }
-    // Concrete (non-template) internal stdlib definitions are already in canonical
-    // form — their template siblings get instantiated on demand. Skip the full
-    // rewrite pass for these to avoid O(n) traversals over thousands of bodies.
-    const bool isConcreteInternal =
-        def.templateArgs.empty() &&
-        def.namespacePrefix.find("/internal_") != std::string::npos;
-    if (!isConcreteInternal) {
-      if (!rewriteDefinition(clone, SubstMap{}, {}, ctx, error)) {
-        return false;
-      }
-    }
-    if (ctx.outputPaths.insert(clone.fullPath).second) {
-      ctx.outputDefs.push_back(std::move(clone));
-    }
-  }
-  return true;
-}
+                                     std::string &error);
 
-bool rewriteMonomorphizedExecutions(Context &ctx, std::string &error) {
-  ctx.outputExecs.reserve(ctx.program.executions.size());
-  for (const auto &exec : ctx.program.executions) {
-    Execution clone = exec;
-    if (!rewriteExecution(clone, ctx, error)) {
-      return false;
-    }
-    ctx.outputExecs.push_back(std::move(clone));
-  }
-  return true;
-}
+bool rewriteMonomorphizedExecutions(Context &ctx, std::string &error);
+
+
+
+} // namespace primec

@@ -587,23 +587,34 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(collectionSurfaceHelpersPath));
   REQUIRE(std::filesystem::exists(collectionTypeHelpersPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
-  const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
-  const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
-  const std::string templateMonomorphBindingBlockSource = readText(templateMonomorphBindingBlockPath);
-  const std::string templateMonomorphMethodTargetsSource = readText(templateMonomorphMethodTargetsPath);
-  const std::string templateMonomorphTypeResolutionSource = readText(templateMonomorphTypeResolutionPath);
+  const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphFallbackTypeInference.cpp");
+  const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphBindingCallInference.cpp");
+  const std::string templateMonomorphBindingBlockSource = readText(templateMonomorphBindingBlockPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphBindingBlockInference.cpp");
+  const std::string templateMonomorphMethodTargetsSource = readText(templateMonomorphMethodTargetsPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphMethodTargets.cpp");
+  const std::string templateMonomorphTypeResolutionSource = readText(templateMonomorphTypeResolutionPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphTypeResolution.cpp");
   const std::string templateMonomorphAssignmentTargetResolutionSource =
-      readText(templateMonomorphAssignmentTargetResolutionPath);
+      readText(templateMonomorphAssignmentTargetResolutionPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphAssignmentTargetResolution.cpp");
   const std::string templateMonomorphExperimentalCollectionArgumentRewritesSource =
-      readText(templateMonomorphExperimentalCollectionArgumentRewritesPath);
+      readText(templateMonomorphExperimentalCollectionArgumentRewritesPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionArgumentRewrites.cpp");
   const std::string templateMonomorphExperimentalCollectionConstructorRewritesSource =
-      readText(templateMonomorphExperimentalCollectionConstructorRewritesPath);
+      readText(templateMonomorphExperimentalCollectionConstructorRewritesPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorRewrites.cpp");
   const std::string templateMonomorphExperimentalCollectionTargetValueRewritesSource =
-      readText(templateMonomorphExperimentalCollectionTargetValueRewritesPath);
+      readText(templateMonomorphExperimentalCollectionTargetValueRewritesPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionTargetValueRewrites.cpp");
   const std::string templateMonomorphExperimentalCollectionValueRewritesSource =
-      readText(templateMonomorphExperimentalCollectionValueRewritesPath);
+      readText(templateMonomorphExperimentalCollectionValueRewritesPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionValueRewrites.cpp");
   const std::string templateMonomorphExperimentalCollectionReceiverResolutionSource =
-      readText(templateMonomorphExperimentalCollectionReceiverResolutionPath);
+      readText(templateMonomorphExperimentalCollectionReceiverResolutionPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReceiverResolution.cpp");
   const std::string templateMonomorphExperimentalCollectionConstructorPathsSource =
       readText(templateMonomorphExperimentalCollectionConstructorPathsPath) +
       readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorPaths.cpp");
@@ -613,23 +624,32 @@ TEST_CASE("template monomorph source delegation stays stable") {
   const std::string templateMonomorphExperimentalCollectionReturnRewritesSource =
       readText(templateMonomorphExperimentalCollectionReturnRewritesPath);
   const std::string templateMonomorphExperimentalCollectionReturnSetupSource =
-      readText(templateMonomorphExperimentalCollectionReturnSetupPath);
+      readText(templateMonomorphExperimentalCollectionReturnSetupPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReturnSetup.cpp");
   const std::string templateMonomorphDefinitionBindingSetupSource =
-      readText(templateMonomorphDefinitionBindingSetupPath);
+      readText(templateMonomorphDefinitionBindingSetupPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionBindingSetup.cpp");
   const std::string templateMonomorphDefinitionReturnOrchestrationSource =
-      readText(templateMonomorphDefinitionReturnOrchestrationPath);
+      readText(templateMonomorphDefinitionReturnOrchestrationPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionReturnOrchestration.cpp");
   const std::string templateMonomorphDefinitionExperimentalCollectionRewritesSource =
-      readText(templateMonomorphDefinitionExperimentalCollectionRewritesPath);
+      readText(templateMonomorphDefinitionExperimentalCollectionRewritesPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionExperimentalCollectionRewrites.cpp");
   const std::string templateMonomorphExecutionRewritesSource =
-      readText(templateMonomorphExecutionRewritesPath);
+      readText(templateMonomorphExecutionRewritesPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExecutionRewrites.cpp");
   const std::string templateMonomorphDefinitionRewritesSource =
-      readText(templateMonomorphDefinitionRewritesPath);
+      readText(templateMonomorphDefinitionRewritesPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionRewrites.cpp");
   const std::string templateMonomorphTemplateSpecializationSource =
-      readText(templateMonomorphTemplateSpecializationPath);
+      readText(templateMonomorphTemplateSpecializationPath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphTemplateSpecialization.cpp");
   const std::string templateMonomorphImplicitTemplateInferenceSource =
-      readText(templateMonomorphImplicitTemplateInferencePath);
+      readText(templateMonomorphImplicitTemplateInferencePath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphImplicitTemplateInference.cpp");
   const std::string templateMonomorphExpressionRewriteSource =
-      readText(templateMonomorphExpressionRewritePath);
+      readText(templateMonomorphExpressionRewritePath) +
+      readText(repoRoot / "src" / "semantics" / "TemplateMonomorphExpressionRewrite.cpp");
   const std::string templateMonomorphCollectionCompatibilityPathsSource =
       readText(templateMonomorphCollectionCompatibilityPathsPath) +
       readText(repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionCompatibilityPaths.cpp");

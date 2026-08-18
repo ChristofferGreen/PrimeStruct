@@ -469,7 +469,7 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once the manifest and loader are gone; do not extend the
     registry to non-collection surfaces in this leaf.
 
-- [ ] TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
+- [x] TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
   - owner: ai
   - created_at: 2026-06-11
   - phase: Oversized file refactoring
@@ -706,6 +706,110 @@ investigation chain's actively-productive leaves - see
     which will likely need to be converted as one large multi-file leap
     rather than one-at-a-time; plus the 2 template-function-blocked
     files that stay header-only permanently).
+    progress_2026-08-18_4: Converted the entire remaining 18-fragment
+    mutually-recursive cluster in one coordinated pass, as the prior note
+    anticipated would be required. Approach: wrote a Python source
+    splitter (brace-depth/string/comment-aware scanner, not a regex hack)
+    that walks each fragment's top-level constructs and classifies each
+    as a template (stays in the `.h` verbatim - two-phase lookup requires
+    it), a plain `struct`/data type (stays in the `.h` verbatim - matches
+    the `RequirementOverloadViability` precedent), or a free function
+    (signature moves to the `.h` as a declaration, body moves to the new
+    `.cpp`, default arguments stripped from the `.cpp` definition only).
+    Verified the splitter round-trips every file's brace count exactly
+    before applying it, then ran it across all 21 non-permanently-header
+    fragments at once (`TemplateMonomorphExperimentalCollectionReturnRewrites.h`
+    excluded - 100% template, no extractable part) and did the
+    declaration/body split, `namespace primec` promotion, and mid-file
+    include relocation for all of them in a single batch, per the prior
+    note's recommendation, rather than one file at a time. New gotchas
+    hit at this scale, beyond the ones already documented: (1)
+    `TemplateMonomorphDefinitionRewrites.h` had an internal
+    `namespace { ... }` wrapper around most of its functions (unique
+    among all 24 fragments - grepped to confirm) that existed purely for
+    organizational grouping, not to hide anything from other TUs; since
+    two of its functions (`generatedPackFieldName`,
+    `isSumDefinitionForMonomorphRefresh`) are called from sibling
+    fragments, the wrapper had to be stripped (not preserved) so every
+    function in the file gets real external linkage - grep each
+    fragment's function names against every other still-raw fragment
+    before deciding whether an internal wrapper namespace is load-bearing
+    or just cosmetic. (2) A handful of already-established
+    "TemplateMonomorph-adjacent" helper headers
+    (`StdlibCollectionSurfaceHelpers.h`,
+    `SemanticsValidatorInferCollectionCompatibilityInternal.h`) declare
+    unqualified globals or their own internal anonymous namespace and are
+    only safe to `#include` from *outside* any enclosing namespace (i.e.
+    before `namespace primec {` opens) - including them from inside
+    `namespace primec { ... }` (as a normal include list entry, the same
+    mistake the very first progress note's "primec::primec" trap
+    describes but for a header instead of a raw fragment) silently
+    creates a bogus nested `primec::primec` namespace that fails to
+    compile with confusing "does not name a type" errors far from the
+    real cause; the fix is the same as for raw fragments - move the
+    `#include` above the `namespace primec {` line. (3) Symbols living in
+    `primec::semantics`'s own anonymous namespace (declared inside
+    `SemanticsValidatorInferCollectionCompatibilityInternal.h`) are
+    reachable unqualified from `namespace primec` scope via
+    `using semantics::<name>;` exactly like ordinary `primec::semantics`
+    declarations (anonymous-namespace injection into the enclosing named
+    namespace makes this work); needed roughly 30 such `using` lines
+    across the fragment set, discovered via repeated compile-error-driven
+    batches rather than one at a time - at this scale, collect every
+    `'X' was not declared ... did you mean primec::semantics(::{anonymous})::X'`
+    hint from a full build log per pass and batch-add them together
+    rather than fixing individually. (4) Two small function families that
+    used to live directly in `TemplateMonomorph.cpp`'s own anonymous
+    namespace (`usesStdlibScopedImportAliases` /
+    `scopedImportAliasesForNamespace` / `scopedImportAliasTargetsForNamespace`
+    / `lookupScopedImportAliasForNamespace` / `rewriteExecution`, and
+    both `instantiateTemplate` overloads) are called from the
+    newly-converted fragments' `.cpp` files but were never fragments
+    themselves, so converting the fragments alone left them stuck with
+    internal linkage and unreachable from other TUs; moved both families
+    out to `TemplateMonomorphContext.h`/`.cpp` (the established
+    "shared cross-fragment infra" pair) with external linkage - a fragment
+    conversion pass needs to check for orchestrator-local helpers the
+    fragments call into, not just fragment-to-fragment calls. (5) One
+    stray forward-declaration
+    (`const LocalTypeMap *locals = nullptr, const std::vector<ParameterInfo> *params = nullptr`
+    defaults on `resolveCalleePath`) existed only on the stale
+    `primec::semantics::(anon)` forward-declaration block being deleted,
+    not on the real fragment definition anywhere else - deleting the
+    stale forward-declaration (correctly, per the established
+    "remove shadowing forward decls" rule) silently dropped the only
+    place those two default arguments were ever spelled out, breaking
+    3-argument call sites elsewhere; when deleting a stale forward decl,
+    diff what's being deleted for `= <default>` tokens and make sure
+    every one has a new home in the converted header, not just the bare
+    signature. Also copied the `// collection-surface-audit: exempt`
+    marker (present on `TemplateMonomorphExpressionRewrite.h` and
+    `TemplateMonomorphImplicitTemplateInference.h`) into their new `.cpp`
+    siblings per the established rule. Fixed the two source-locked tests
+    (`tests/unit/misc/test_stdlib_map_ownership.cpp`,
+    `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`)
+    to concatenate every newly-converted fragment's `.h` + `.cpp` content,
+    matching the established pattern - one of these files has 20+ such
+    variables so did this as a batch edit rather than one at a time.
+    CMakeLists.txt got all 21 new `.cpp` files added. One process note:
+    started the first `./scripts/compile.sh --release` run in the
+    background and edited the source-locked tests while it was still
+    running, which raced the build against the fix and produced two
+    misleading "content missing" failures purely because the release
+    tree had compiled the pre-fix test files; re-running the full gate
+    after the edits landed produced a clean 100% pass (1884 tests, 0
+    failures) - don't start the release gate until all source edits
+    (including source-locked test fixups) for the checkpoint are
+    finished, or be prepared to discount/rerun if edits land mid-run.
+    Final state: all 24 original `TemplateMonomorph*.h` fragments are now
+    either real `.h`/`.cpp` pairs (23 of them) or the one fragment that
+    is 100% template functions and must stay header-only permanently
+    (`TemplateMonomorphExperimentalCollectionReturnRewrites.h`, per the
+    documented two-phase-lookup constraint) - this satisfies the task's
+    intent even though that one file still contains a function body, so
+    the letter of the "no `TemplateMonomorph*.h` file contains function
+    implementations" acceptance line has this one documented, permanent
+    exception. TODO-4650 is complete.
   - acceptance:
     - Each fragment is a compileable `.h/.cpp` pair.
     - No `TemplateMonomorph*.h` file contains function implementations.

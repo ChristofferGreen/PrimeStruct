@@ -152,25 +152,39 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
                "TemplateMonomorphCoreUtilities.cpp");
   const std::string templateReceiverSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphExperimentalCollectionReceiverResolution.h");
+               "TemplateMonomorphExperimentalCollectionReceiverResolution.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExperimentalCollectionReceiverResolution.cpp");
   const std::string templateExpressionRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphExpressionRewrite.h");
+               "TemplateMonomorphExpressionRewrite.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExpressionRewrite.cpp");
   const std::string templateFallbackTypeInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphFallbackTypeInference.h");
+               "TemplateMonomorphFallbackTypeInference.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphFallbackTypeInference.cpp");
   const std::string templateReturnSetupSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphExperimentalCollectionReturnSetup.h");
+               "TemplateMonomorphExperimentalCollectionReturnSetup.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExperimentalCollectionReturnSetup.cpp");
   const std::string templateReturnOrchestrationSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphDefinitionReturnOrchestration.h");
+               "TemplateMonomorphDefinitionReturnOrchestration.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphDefinitionReturnOrchestration.cpp");
   const std::string templateDefinitionRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h");
+               "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphDefinitionExperimentalCollectionRewrites.cpp");
   const std::string templateTypeResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphTypeResolution.h");
+               "TemplateMonomorphTypeResolution.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphTypeResolution.cpp");
   const std::string templateCollectionCompatibilitySource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphCollectionCompatibilityPaths.h") +
@@ -178,13 +192,19 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
                "TemplateMonomorphCollectionCompatibilityPaths.cpp");
   const std::string templateBindingCallInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphBindingCallInference.h");
+               "TemplateMonomorphBindingCallInference.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphBindingCallInference.cpp");
   const std::string templateConstructorRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphExperimentalCollectionConstructorRewrites.h");
+               "TemplateMonomorphExperimentalCollectionConstructorRewrites.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExperimentalCollectionConstructorRewrites.cpp");
   const std::string templateValueRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
-               "TemplateMonomorphExperimentalCollectionValueRewrites.h");
+               "TemplateMonomorphExperimentalCollectionValueRewrites.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExperimentalCollectionValueRewrites.cpp");
   const std::filesystem::path oldMapConstructorHelpersPath =
       repoRoot() / "src" / "semantics" / "MapConstructorHelpers.h";
   const std::filesystem::path collectionSurfaceHelpersPath =

@@ -1,232 +1,112 @@
 #pragma once
 
-bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
-  auto isSoftwareIntegerKind = [](ReturnKind kind) {
-    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
-           kind == ReturnKind::Bool || kind == ReturnKind::Integer;
-  };
-  auto isSoftwareDecimalKind = [&](ReturnKind kind) {
-    return isSoftwareIntegerKind(kind) || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
-           kind == ReturnKind::Decimal;
-  };
-  switch (expectedKind) {
-    case ReturnKind::Int:
-    case ReturnKind::Int64:
-    case ReturnKind::UInt64:
-    case ReturnKind::Integer:
-      return isSoftwareIntegerKind(actualKind);
-    case ReturnKind::Float32:
-    case ReturnKind::Float64:
-    case ReturnKind::Decimal:
-      return isSoftwareDecimalKind(actualKind);
-    case ReturnKind::Complex:
-      return isSoftwareDecimalKind(actualKind) ||
-             actualKind == ReturnKind::Complex;
-    default:
-      return false;
-  }
-}
+#include <string>
+#include <string_view>
+#include <vector>
+#include <optional>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+
+#include "TemplateMonomorphContext.h"
+#include "primec/ast/Ast.h"
+#include "SemanticsHelpers.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
+
+namespace primec {
+
+using semantics::isPickCall;
+using semantics::canonicalizeLegacySoaToAosHelperPath;
+using semantics::isVectorCompatibilityHelperName;
+using semantics::isExperimentalSoaGetLikeHelperPath;
+using semantics::isExperimentalSoaRefLikeHelperPath;
+using semantics::isPublishedVectorMutatorHelperName;
+
+using semantics::isBindingAuxTransformName;
+using semantics::isRootBuiltinName;
+using semantics::isCanonicalVectorCompatibilityPath;
+using semantics::getBuiltinArrayAccessName;
+using semantics::isExperimentalSoaVectorTypePath;
+using semantics::soaUnavailableMethodDiagnostic;
+using semantics::trimLeadingSlash;
+
+using semantics::canonicalizeLegacySoaRefHelperPath;
+using semantics::isCompileTimeTypeBinding;
+using semantics::isExperimentalSoaVectorHelperFamilyPath;
+using semantics::isKeyValueCollectionTypeName;
+using semantics::isLegacyExperimentalVectorCompatibilityPath;
+using semantics::isLegacyExperimentalVectorCompatibilitySpecializedTypePath;
+using semantics::legacyExperimentalVectorCompatibilityPrefix;
+using semantics::preferredPublishedCollectionLoweringPath;
+using semantics::resolveCanonicalVectorHelperNameFromResolvedPath;
+using semantics::resolveVectorCompatibilityHelperNameFromResolvedPath;
+using semantics::vectorHelperSurfaceMetadata;
+
+using semantics::hasNamedArguments;
+using semantics::getBuiltinPointerName;
+using semantics::vectorConstructorSurfaceMetadata;
+using semantics::canonicalVectorCompatibilityPrefixOrFallback;
+
+using semantics::joinTemplateArgs;
+using semantics::canonicalVectorTypeIdentityPrefix;
+using semantics::legacyExperimentalVectorCompatibilityTypeText;
+using semantics::returnKindForTypeName;
+using semantics::resolveTypePath;
+using semantics::mapCollectionAliasToken;
+using semantics::stripUnrootedCanonicalVectorCompatibilityPrefix;
+using semantics::publicSoaHelperTargetPath;
+using semantics::isUnrootedCanonicalVectorCompatibilityPath;
+using semantics::isSoftwareNumericTypeName;
+using semantics::isLegacyOrCanonicalSoaHelperPath;
+using semantics::isIfCall;
+using semantics::isCanonicalSoaRefLikeHelperPath;
+using semantics::compatibilitySoaHelperTargetPath;
+using semantics::canonicalizeLegacySoaGetHelperPath;
+using semantics::canonicalVectorCompatibilityHelperPathOrFallback;
+
+using semantics::BindingInfo;
+using semantics::ParameterInfo;
+using semantics::ReturnKind;
+using semantics::buildOrderedArguments;
+using semantics::extractKeyValueCollectionTypesFromTypeText;
+using semantics::getBuiltinCollectionName;
+using semantics::isExperimentalSoaVectorSpecializedTypePath;
+using semantics::isPrimitiveBindingTypeName;
+using semantics::isReturnCall;
+using semantics::isSimpleCallName;
+using semantics::normalizeBindingTypeName;
+using semantics::splitTemplateTypeName;
+using semantics::splitTopLevelTemplateArgs;
+
+
+
+bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind);
 
 std::string resolveStructLikeTypePathForTemplatedVectorFallback(const std::string &typeName,
                                                                 const std::string &namespacePrefix,
-                                                                const Context &ctx) {
-  std::string normalized = normalizeBindingTypeName(typeName);
-  if (normalized.empty()) {
-    return {};
-  }
-  std::string base;
-  std::string argText;
-  if (splitTemplateTypeName(normalized, base, argText) && !base.empty()) {
-    normalized = base;
-  }
-  if (isPrimitiveBindingTypeName(normalized) || isSoftwareNumericTypeName(normalized) || normalized == "string" ||
-      isBuiltinTemplateContainer(normalized)) {
-    return {};
-  }
-  if (!normalized.empty() && normalized[0] == '/') {
-    return ctx.sourceDefs.count(normalized) > 0 ? normalized : std::string{};
-  }
-  if (const std::string *importAlias =
-          lookupScopedImportAliasForNamespace(normalized, namespacePrefix, ctx);
-      importAlias != nullptr && ctx.sourceDefs.count(*importAlias) > 0) {
-    return *importAlias;
-  }
-  std::string resolved = resolveTypePath(normalized, namespacePrefix);
-  if (ctx.sourceDefs.count(resolved) > 0) {
-    return resolved;
-  }
-  return {};
-}
+                                                                const Context &ctx);
 
 std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr,
                                                                 const LocalTypeMap &locals,
                                                                 const std::string &namespacePrefix,
                                                                 const Context &ctx,
-                                                                bool allowMathBare) {
-  if (expr.kind != Expr::Kind::Call || expr.isBinding) {
-    return {};
-  }
-  std::string resolved;
-  if (expr.isMethodCall) {
-    if (!resolveMethodCallTemplateTarget(expr, locals, ctx, resolved)) {
-      return {};
-    }
-  } else {
-    resolved = resolveCalleePath(expr, namespacePrefix, ctx);
-  }
-  if (!expr.isMethodCall && expr.templateArgs.size() == 1) {
-    const std::string experimentalPath = experimentalVectorConstructorInferencePath(resolved);
-    if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
-      return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(expr.templateArgs));
-    }
-    if (isCollectionVectorConstructorHelperPath(resolved)) {
-      return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(expr.templateArgs));
-    }
-  }
-  if (!expr.isMethodCall && expr.templateArgs.empty()) {
-    const std::string experimentalVectorPath = experimentalVectorConstructorInferencePath(resolved);
-    if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0) {
-      const auto defIt = ctx.sourceDefs.find(resolved);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      expr,
-                                      locals,
-                                      {},
-                                      SubstMap{},
-                                      {},
-                                      namespacePrefix,
-                                      const_cast<Context &>(ctx),
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError) &&
-            inferredArgs.size() == 1) {
-          return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(inferredArgs));
-        }
-      }
-    }
-    if (isCollectionVectorConstructorHelperPath(resolved)) {
-      const auto defIt = ctx.sourceDefs.find(resolved);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      expr,
-                                      locals,
-                                      {},
-                                      SubstMap{},
-                                      {},
-                                      namespacePrefix,
-                                      const_cast<Context &>(ctx),
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError) &&
-            inferredArgs.size() == 1) {
-          return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(inferredArgs));
-        }
-      }
-    }
-  }
-  const auto defIt = ctx.sourceDefs.find(resolved);
-  if (defIt == ctx.sourceDefs.end()) {
-    return {};
-  }
-  if (!expr.isMethodCall) {
-    const std::string experimentalVectorPath = experimentalVectorConstructorInferencePath(resolved);
-    if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0) {
-      for (const auto &transform : defIt->second.transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        std::string valueType;
-        if (extractCollectionVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
-          return legacyExperimentalVectorCompatibilityTypeText(valueType);
-        }
-      }
-    }
-  }
-  if (isStructDefinition(defIt->second)) {
-    return resolved;
-  }
-  for (const auto &transform : defIt->second.transforms) {
-    if (transform.name != "return" || transform.templateArgs.size() != 1) {
-      continue;
-    }
-    const std::string &returnType = transform.templateArgs.front();
-    if (returnType == "auto") {
-      continue;
-    }
-    return resolveStructLikeTypePathForTemplatedVectorFallback(returnType, defIt->second.namespacePrefix, ctx);
-  }
-  return {};
-}
+                                                                bool allowMathBare);
 
 bool isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference(
-    std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
-  return isUnspecializedExperimentalKeyValueBackingTypeName(typeName);
-}
+    std::string typeName);
 
 bool isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(
-    std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
-  return isQualifiedExperimentalKeyValueBackingTypeName(typeName);
-}
+    std::string typeName);
 
 bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,
                                           const SubstMap &mapping,
                                           const std::unordered_set<std::string> &allowedParams,
                                           const std::string &namespacePrefix,
-                                          Context &ctx) {
-  if (typeText.empty()) {
-    return false;
-  }
-  std::string normalizedInput = normalizeBindingTypeName(typeText);
-  std::string inputBase;
-  std::string inputArgText;
-  if (splitTemplateTypeName(normalizedInput, inputBase, inputArgText)) {
-    std::string normalizedInputBase = normalizeBindingTypeName(inputBase);
-    if (!normalizedInputBase.empty() && normalizedInputBase.front() == '/') {
-      normalizedInputBase.erase(normalizedInputBase.begin());
-    }
-    if (!isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference(
-            normalizedInputBase)) {
-      return false;
-    }
-  } else {
-    if (!normalizedInput.empty() && normalizedInput.front() == '/') {
-      normalizedInput.erase(normalizedInput.begin());
-    }
-    if (!isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(
-            normalizedInput)) {
-      return false;
-    }
-  }
-  std::string localError;
-  ResolvedType resolvedType = resolveTypeString(typeText, mapping, allowedParams, namespacePrefix, ctx, localError);
-  if (!localError.empty()) {
-    return false;
-  }
-  std::string normalized = normalizeBindingTypeName(resolvedType.text);
-  std::string base;
-  std::string argText;
-  if (splitTemplateTypeName(normalized, base, argText)) {
-    std::string normalizedBase = normalizeBindingTypeName(base);
-    if (!normalizedBase.empty() && normalizedBase.front() == '/') {
-      normalizedBase.erase(normalizedBase.begin());
-    }
-    if (isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference(
-            normalizedBase)) {
-      std::vector<std::string> args;
-      return splitTopLevelTemplateArgs(argText, args) && args.size() == 2;
-    }
-  }
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  return isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(normalized);
-}
+                                          Context &ctx);
+
+
 
 struct TemplatedFallbackQueryStateAdapterData {
   std::string queryTypeText;
@@ -240,195 +120,18 @@ struct TemplatedFallbackQueryStateAdapterData {
 
 void populateTemplatedFallbackQueryStateAdapterFromQueryTypeText(
     const std::string &queryTypeText,
-    TemplatedFallbackQueryStateAdapterData &out) {
-  out.hasResultType = false;
-  out.resultTypeHasValue = false;
-  out.resultValueType.clear();
-  out.resultErrorType.clear();
-  out.mismatchDiagnostic.clear();
-
-  const auto isResultQueryTypeBase = [](std::string typeText) {
-    typeText = normalizeBindingTypeName(typeText);
-    if (!typeText.empty() && typeText.front() == '/') {
-      typeText.erase(typeText.begin());
-    }
-    return typeText == "Result" || typeText == "std/result/Result";
-  };
-  std::string normalizedQueryType = normalizeBindingTypeName(queryTypeText);
-  std::string resultBase;
-  std::string resultArgText;
-  if (!splitTemplateTypeName(normalizedQueryType, resultBase, resultArgText)) {
-    if (isResultQueryTypeBase(normalizedQueryType)) {
-      out.mismatchDiagnostic = "result query type missing template arguments: " + queryTypeText;
-    }
-    return;
-  }
-
-  if (!isResultQueryTypeBase(resultBase)) {
-    return;
-  }
-
-  std::vector<std::string> resultArgs;
-  if (!splitTopLevelTemplateArgs(resultArgText, resultArgs) || resultArgs.empty() || resultArgs.size() > 2) {
-    out.mismatchDiagnostic = "invalid Result query type envelope: " + queryTypeText;
-    return;
-  }
-
-  out.hasResultType = true;
-  if (resultArgs.size() == 2) {
-    out.resultTypeHasValue = true;
-    out.resultValueType = normalizeBindingTypeName(resultArgs.front());
-    out.resultErrorType = normalizeBindingTypeName(resultArgs.back());
-  } else {
-    out.resultTypeHasValue = false;
-    out.resultErrorType = normalizeBindingTypeName(resultArgs.front());
-  }
-}
+    TemplatedFallbackQueryStateAdapterData &out);
 
 bool inferDefinitionReturnBindingForTemplatedFallback(const Definition &def,
                                                       bool allowMathBare,
                                                       Context &ctx,
-                                                      BindingInfo &infoOut) {
-  if (!def.templateArgs.empty()) {
-    return false;
-  }
-  if (!ctx.returnInferenceStack.insert(def.fullPath).second) {
-    return false;
-  }
-  struct InferenceScopeGuard {
-    std::unordered_set<std::string> &stack;
-    std::string fullPath;
-    ~InferenceScopeGuard() { stack.erase(fullPath); }
-  } inferenceScopeGuard{ctx.returnInferenceStack, def.fullPath};
-
-  std::vector<ParameterInfo> defParams;
-  defParams.reserve(def.parameters.size());
-  for (const auto &paramExpr : def.parameters) {
-    ParameterInfo paramInfo;
-    paramInfo.name = paramExpr.name;
-    extractExplicitBindingType(paramExpr, paramInfo.binding);
-    if (paramExpr.args.size() == 1) {
-      paramInfo.defaultExpr = &paramExpr.args.front();
-    }
-    defParams.push_back(std::move(paramInfo));
-  }
-
-  LocalTypeMap locals;
-  const Expr *valueExpr = nullptr;
-  bool sawReturn = false;
-  for (const auto &stmt : def.statements) {
-    if (stmt.isBinding) {
-      BindingInfo binding;
-      if (extractExplicitBindingType(stmt, binding)) {
-        if (binding.typeName == "auto" && stmt.args.size() == 1 &&
-            inferBindingTypeForMonomorph(stmt.args.front(), defParams, locals, allowMathBare, ctx, binding)) {
-          locals[stmt.name] = binding;
-        } else {
-          locals[stmt.name] = binding;
-        }
-      } else if (stmt.args.size() == 1 &&
-                 inferBindingTypeForMonomorph(stmt.args.front(), defParams, locals, allowMathBare, ctx, binding)) {
-        locals[stmt.name] = binding;
-      }
-      continue;
-    }
-    if (isReturnCall(stmt)) {
-      if (stmt.args.size() != 1) {
-        return false;
-      }
-      valueExpr = &stmt.args.front();
-      sawReturn = true;
-      continue;
-    }
-    if (!sawReturn) {
-      valueExpr = &stmt;
-    }
-  }
-  if (def.returnExpr.has_value()) {
-    valueExpr = &*def.returnExpr;
-  }
-  if (valueExpr == nullptr) {
-    return false;
-  }
-  return inferBindingTypeForMonomorph(*valueExpr, defParams, locals, allowMathBare, ctx, infoOut);
-}
+                                                      BindingInfo &infoOut);
 
 std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
                                                         const LocalTypeMap &locals,
                                                         const std::string &namespacePrefix,
                                                         const Context &ctx,
-                                                        bool allowMathBare) {
-  if (expr.kind != Expr::Kind::Call || expr.isBinding) {
-    return {};
-  }
-  std::string builtinCollection;
-  if (getBuiltinCollectionName(expr, builtinCollection)) {
-    const std::string keyValueCollectionAlias = mapCollectionAliasToken();
-    if ((builtinCollection == "array" || builtinCollection == "vector" ||
-         isTemplateMonomorphSoaReceiverType(builtinCollection)) &&
-        expr.templateArgs.size() == 1) {
-      return builtinCollection + "<" + expr.templateArgs.front() + ">";
-    }
-    if (!keyValueCollectionAlias.empty() &&
-        builtinCollection == keyValueCollectionAlias &&
-        expr.templateArgs.size() == 2) {
-      return keyValueCollectionAlias + "<" + expr.templateArgs.front() + ", " +
-             expr.templateArgs[1] + ">";
-    }
-  }
-  if (!expr.isBinding && expr.args.size() == 1 &&
-      (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity"))) {
-    return "i32";
-  }
-  std::string resolved;
-  if (expr.isMethodCall) {
-    if (!resolveMethodCallTemplateTarget(expr, locals, ctx, resolved)) {
-      return {};
-    }
-  } else {
-    resolved = resolveCalleePath(expr, namespacePrefix, ctx);
-  }
-  const auto defIt = ctx.sourceDefs.find(resolved);
-  if (defIt == ctx.sourceDefs.end()) {
-    return {};
-  }
-  if (isStructDefinition(defIt->second)) {
-    return resolved;
-  }
-  const Definition &resolvedDef = defIt->second;
-  std::unordered_set<std::string> allowedParams(resolvedDef.templateArgs.begin(),
-                                                resolvedDef.templateArgs.end());
-  SubstMap returnTypeMapping;
-  if (expr.templateArgs.size() == resolvedDef.templateArgs.size()) {
-    returnTypeMapping.reserve(expr.templateArgs.size());
-    for (size_t i = 0; i < expr.templateArgs.size(); ++i) {
-      returnTypeMapping.emplace(resolvedDef.templateArgs[i], expr.templateArgs[i]);
-    }
-  }
-  for (const auto &transform : defIt->second.transforms) {
-    if (transform.name != "return" || transform.templateArgs.size() != 1) {
-      continue;
-    }
-    const std::string &returnType = transform.templateArgs.front();
-    if (returnType == "auto") {
-      continue;
-    }
-    std::string resolvedError;
-    ResolvedType resolvedReturnType =
-        resolveTypeString(returnType, returnTypeMapping, allowedParams, resolvedDef.namespacePrefix,
-                          const_cast<Context &>(ctx), resolvedError);
-    if (!resolvedError.empty() || !resolvedReturnType.concrete || resolvedReturnType.text.empty()) {
-      continue;
-    }
-    return resolvedReturnType.text;
-  }
-  BindingInfo inferredReturn;
-  Context &mutableCtx = const_cast<Context &>(ctx);
-  if (inferDefinitionReturnBindingForTemplatedFallback(defIt->second, allowMathBare, mutableCtx, inferredReturn)) {
-    return bindingTypeToString(inferredReturn);
-  }
-  return {};
-}
+                                                        bool allowMathBare);
 
 bool inferTemplatedFallbackQueryStateAdapter(const Expr &expr,
                                              const LocalTypeMap &locals,
@@ -436,24 +139,7 @@ bool inferTemplatedFallbackQueryStateAdapter(const Expr &expr,
                                              const std::string &namespacePrefix,
                                              Context &ctx,
                                              bool allowMathBare,
-                                             TemplatedFallbackQueryStateAdapterData &out) {
-  out = {};
-  out.queryTypeText =
-      inferExprTypeTextForTemplatedVectorFallback(expr, locals, namespacePrefix, ctx, allowMathBare);
-  if (out.queryTypeText.empty()) {
-    return false;
-  }
-
-  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty()) {
-    BindingInfo receiverBinding;
-    if (inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, receiverBinding) &&
-        !receiverBinding.typeName.empty()) {
-      out.receiverBinding = std::move(receiverBinding);
-    }
-  }
-  populateTemplatedFallbackQueryStateAdapterFromQueryTypeText(out.queryTypeText, out);
-  return true;
-}
+                                             TemplatedFallbackQueryStateAdapterData &out);
 
 bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         const Expr &expr,
@@ -461,169 +147,7 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         const std::vector<ParameterInfo> &params,
                                                         bool allowMathBare,
                                                         Context &ctx,
-                                                        const std::string &namespacePrefix) {
-  auto isTemplateParamName = [&](const std::string &name) {
-    for (const auto &templateArg : def.templateArgs) {
-      if (templateArg == name) {
-        return true;
-      }
-    }
-    return false;
-  };
-  const std::string keyValueCollectionAlias = mapCollectionAliasToken();
-  auto isCollectionEnvelopeBase = [&](const std::string &base) {
-    return base == "array" || base == "vector" ||
-           (!keyValueCollectionAlias.empty() &&
-            base == keyValueCollectionAlias) ||
-           isTemplateMonomorphSoaReceiverType(base);
-  };
-  auto hasUnknownEnvelopeMismatch = [&](const std::string &normalizedExpected,
-                                        const std::string &normalizedActual) {
-    if (normalizedExpected == normalizedActual) {
-      return false;
-    }
-    std::string expectedBase;
-    std::string expectedArgText;
-    std::string actualBase;
-    std::string actualArgText;
-    const bool expectedIsTemplate = splitTemplateTypeName(normalizedExpected, expectedBase, expectedArgText);
-    const bool actualIsTemplate = splitTemplateTypeName(normalizedActual, actualBase, actualArgText);
-    if (expectedIsTemplate && actualIsTemplate) {
-      const std::string normalizedExpectedBase = normalizeBindingTypeName(expectedBase);
-      const std::string normalizedActualBase = normalizeBindingTypeName(actualBase);
-      if (normalizedExpectedBase == normalizedActualBase) {
-        return true;
-      }
-      return isCollectionEnvelopeBase(normalizedExpectedBase) || isCollectionEnvelopeBase(normalizedActualBase);
-    }
-    if (expectedIsTemplate == actualIsTemplate) {
-      return false;
-    }
-    const std::string &nonTemplateText = expectedIsTemplate ? normalizedActual : normalizedExpected;
-    if (isTemplateParamName(nonTemplateText)) {
-      return false;
-    }
-    const std::string templateBase = normalizeBindingTypeName(expectedIsTemplate ? expectedBase : actualBase);
-    return isCollectionEnvelopeBase(templateBase);
-  };
-  std::vector<ParameterInfo> callParams;
-  callParams.reserve(def.parameters.size());
-  for (const auto &paramExpr : def.parameters) {
-    ParameterInfo param;
-    param.name = paramExpr.name;
-    extractExplicitBindingType(paramExpr, param.binding);
-    if (paramExpr.args.size() == 1) {
-      param.defaultExpr = &paramExpr.args.front();
-    }
-    callParams.push_back(std::move(param));
-  }
-  std::vector<const Expr *> ordered;
-  std::string orderError;
-  if (!buildOrderedArguments(callParams, expr.args, expr.argNames, ordered, orderError)) {
-    return false;
-  }
-  std::unordered_set<const Expr *> explicitArgs;
-  explicitArgs.reserve(expr.args.size());
-  for (const auto &arg : expr.args) {
-    explicitArgs.insert(&arg);
-  }
-  for (size_t i = 0; i < callParams.size(); ++i) {
-    const auto &param = callParams[i];
-    if (param.binding.typeName.empty() || !ordered[i]) {
-      continue;
-    }
-    if (explicitArgs.count(ordered[i]) == 0) {
-      continue;
-    }
-    BindingInfo actual;
-    if (!inferBindingTypeForMonomorph(*ordered[i], params, locals, allowMathBare, ctx, actual)) {
-      const std::string expectedTypeText = bindingTypeToString(param.binding);
-      const std::string inferredActualTypeText =
-          inferExprTypeTextForTemplatedVectorFallback(*ordered[i], locals, namespacePrefix, ctx, allowMathBare);
-      if (!expectedTypeText.empty() && !inferredActualTypeText.empty()) {
-        const std::string normalizedExpected = normalizeBindingTypeName(expectedTypeText);
-        const std::string normalizedActual = normalizeBindingTypeName(inferredActualTypeText);
-        if (normalizedExpected == "string" && normalizedActual != "string") {
-          return true;
-        }
-        if (normalizedExpected != "string" && normalizedActual == "string") {
-          return true;
-        }
-        const ReturnKind expectedKind = returnKindForTypeName(normalizedExpected);
-        const ReturnKind actualKind = returnKindForTypeName(normalizedActual);
-        if (expectedKind != ReturnKind::Unknown && actualKind != ReturnKind::Unknown) {
-          if (!isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
-            if (expectedKind == actualKind && expectedKind == ReturnKind::Array &&
-                normalizedExpected != normalizedActual) {
-              return true;
-            }
-            if (expectedKind != actualKind) {
-              return true;
-            }
-          }
-        } else if (expectedKind != actualKind) {
-          if (normalizedExpected != normalizedActual) {
-            return true;
-          }
-        } else if (hasUnknownEnvelopeMismatch(normalizedExpected, normalizedActual)) {
-          return true;
-        }
-      }
-      const std::string expectedStructPath =
-          resolveStructLikeTypePathForTemplatedVectorFallback(param.binding.typeName, def.namespacePrefix, ctx);
-      if (expectedStructPath.empty()) {
-        continue;
-      }
-      const std::string actualStructPath =
-          resolveStructLikeExprPathForTemplatedVectorFallback(*ordered[i], locals, namespacePrefix, ctx, allowMathBare);
-      if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
-        return true;
-      }
-      continue;
-    }
-    const std::string expectedTypeText = bindingTypeToString(param.binding);
-    const std::string actualTypeText = bindingTypeToString(actual);
-    const std::string normalizedExpected = normalizeBindingTypeName(expectedTypeText);
-    const std::string normalizedActual = normalizeBindingTypeName(actualTypeText);
-    if (normalizedExpected == "string" && normalizedActual != "string") {
-      return true;
-    }
-    if (normalizedExpected != "string" && normalizedActual == "string") {
-      return true;
-    }
-    const ReturnKind expectedKind = returnKindForTypeName(normalizedExpected);
-    const ReturnKind actualKind = returnKindForTypeName(normalizedActual);
-    if (expectedKind == ReturnKind::Unknown || actualKind == ReturnKind::Unknown) {
-      if (expectedKind == ReturnKind::Unknown && actualKind == ReturnKind::Unknown) {
-        const std::string expectedStructPath =
-            resolveStructLikeTypePathForTemplatedVectorFallback(param.binding.typeName, def.namespacePrefix, ctx);
-        const std::string actualStructPath =
-            resolveStructLikeTypePathForTemplatedVectorFallback(actual.typeName, namespacePrefix, ctx);
-        if (!expectedStructPath.empty() && !actualStructPath.empty() && expectedStructPath != actualStructPath) {
-          return true;
-        }
-        if (hasUnknownEnvelopeMismatch(normalizedExpected, normalizedActual)) {
-          return true;
-        }
-      } else if (expectedKind != actualKind) {
-        if (normalizedExpected != normalizedActual) {
-          return true;
-        }
-      }
-      continue;
-    }
-    if (isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
-      continue;
-    }
-    if (expectedKind == actualKind && expectedKind == ReturnKind::Array && normalizedExpected != normalizedActual) {
-      return true;
-    }
-    if (actualKind != expectedKind) {
-      return true;
-    }
-  }
-  return false;
-}
+                                                        const std::string &namespacePrefix);
 
 std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
                                                    const std::string &path,
@@ -631,82 +155,8 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
                                                    const std::vector<ParameterInfo> &params,
                                                    bool allowMathBare,
                                                    Context &ctx,
-                                                   const std::string &namespacePrefix) {
-  if (!expr.templateArgs.empty()) {
-    return path;
-  }
-  const auto defIt = ctx.sourceDefs.find(path);
-  if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
-    return path;
-  }
-  const std::string pathCanonical = canonicalizeLegacySoaGetHelperPath(path);
-  if (isLegacyOrCanonicalSoaHelperPath(pathCanonical, "count_ref") ||
-      isLegacyOrCanonicalSoaHelperPath(pathCanonical, "get_ref") ||
-      isCanonicalSoaRefLikeHelperPath(pathCanonical)) {
-    return path;
-  }
-  const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);
-  const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
-  if (!acceptsCallShape && preserveCompatibilityTemplatePath &&
-      (hasNamedCallArguments(expr) || definitionHasArgumentCountMismatch(defIt->second, expr))) {
-    // Keep diagnostics on explicit compatibility helpers when named arguments
-    // or argument counts do not match.
-    return path;
-  }
-  const bool prefersTypeMismatchFallback = shouldPreferTemplatedVectorFallbackForTypeMismatch(
-      defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix);
-  if (preserveCompatibilityTemplatePath && prefersTypeMismatchFallback) {
-    // Keep diagnostics on explicit compatibility helpers when argument types
-    // mismatch the declared helper shape.
-    return path;
-  }
-  std::string pathBase = path;
-  if (const size_t specializationSuffix = pathBase.find("__");
-      specializationSuffix != std::string::npos) {
-    pathBase.erase(specializationSuffix);
-  }
-  const std::string publicSoaPrefix = templateMonomorphPublicSoaHelperPrefix();
-  if (pathBase.rfind(publicSoaPrefix, 0) == 0 &&
-      (pathBase == publicSoaHelperTargetPath("push") ||
-       pathBase == publicSoaHelperTargetPath("reserve")) &&
-      !expr.args.empty()) {
-    auto inferFirstArgFamily = [&]() -> std::string {
-      BindingInfo receiverBinding;
-      std::string receiverTypeText;
-      if (inferBindingTypeForMonomorph(expr.args.front(), params, locals,
-                                       allowMathBare, ctx, receiverBinding)) {
-        receiverTypeText = bindingTypeToString(receiverBinding);
-      }
-      if (receiverTypeText.empty()) {
-        receiverTypeText = inferExprTypeTextForTemplatedVectorFallback(
-            expr.args.front(), locals, namespacePrefix, ctx, allowMathBare);
-      }
-      receiverTypeText = normalizeBindingTypeName(receiverTypeText);
-      std::string base;
-      std::string argText;
-      if (splitTemplateTypeName(receiverTypeText, base, argText) &&
-          !base.empty()) {
-        receiverTypeText = normalizeBindingTypeName(base);
-      }
-      return normalizeCollectionReceiverTypeName(receiverTypeText);
-    };
-    if (inferFirstArgFamily() == "vector") {
-      const std::string helperName =
-          pathBase.substr(publicSoaPrefix.size());
-      const std::string vectorPath =
-          canonicalVectorCompatibilityHelperPathOrFallback(helperName);
-      if (ctx.sourceDefs.count(vectorPath) > 0 &&
-          ctx.templateDefs.count(vectorPath) > 0) {
-        return vectorPath;
-      }
-    }
-  }
-  const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
-  if (acceptsCallShape && !prefersTypeMismatchFallback) {
-    return path;
-  }
-  if (preferred != path && ctx.sourceDefs.count(preferred) > 0 && ctx.templateDefs.count(preferred) > 0) {
-    return preferred;
-  }
-  return path;
-}
+                                                   const std::string &namespacePrefix);
+
+
+
+} // namespace primec

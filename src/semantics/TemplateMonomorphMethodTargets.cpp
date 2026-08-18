@@ -1,0 +1,757 @@
+#include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "TemplateMonomorphBindingBlockInference.h"
+#include "TemplateMonomorphBindingCallInference.h"
+#include "TemplateMonomorphDefinitionBindingSetup.h"
+#include "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h"
+#include "TemplateMonomorphDefinitionReturnOrchestration.h"
+#include "TemplateMonomorphDefinitionRewrites.h"
+#include "TemplateMonomorphExecutionRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
+#include "TemplateMonomorphExperimentalCollectionReturnRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
+#include "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionValueRewrites.h"
+#include "TemplateMonomorphExpressionRewrite.h"
+#include "TemplateMonomorphFallbackTypeInference.h"
+#include "TemplateMonomorphFinalOrchestration.h"
+#include "TemplateMonomorphImplicitTemplateInference.h"
+#include "TemplateMonomorphMethodTargets.h"
+#include "TemplateMonomorphTemplateSpecialization.h"
+#include "TemplateMonomorphTypeResolution.h"
+#include "SemanticsHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "StdlibCollectionSurfaceHelpers.h"
+#include "TemplateMonomorphCoreUtilities.h"
+#include "TemplateMonomorphSetupUtilities.h"
+#include "TemplateMonomorphCollectionCompatibilityPaths.h"
+#include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"
+#include "TemplateMonomorphSourceDefinitionSetup.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
+#include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+
+#include <sstream>
+
+#include "primec/support/CompileArena.h"
+
+namespace primec {
+
+using semantics::isPickCall;
+using semantics::canonicalizeLegacySoaToAosHelperPath;
+using semantics::isVectorCompatibilityHelperName;
+using semantics::isExperimentalSoaGetLikeHelperPath;
+using semantics::isExperimentalSoaRefLikeHelperPath;
+using semantics::isPublishedVectorMutatorHelperName;
+
+using semantics::isBindingAuxTransformName;
+using semantics::isRootBuiltinName;
+using semantics::isCanonicalVectorCompatibilityPath;
+using semantics::getBuiltinArrayAccessName;
+using semantics::isExperimentalSoaVectorTypePath;
+using semantics::soaUnavailableMethodDiagnostic;
+using semantics::trimLeadingSlash;
+
+using semantics::canonicalizeLegacySoaRefHelperPath;
+using semantics::isCompileTimeTypeBinding;
+using semantics::isExperimentalSoaVectorHelperFamilyPath;
+using semantics::isKeyValueCollectionTypeName;
+using semantics::isLegacyExperimentalVectorCompatibilityPath;
+using semantics::isLegacyExperimentalVectorCompatibilitySpecializedTypePath;
+using semantics::legacyExperimentalVectorCompatibilityPrefix;
+using semantics::preferredPublishedCollectionLoweringPath;
+using semantics::resolveCanonicalVectorHelperNameFromResolvedPath;
+using semantics::resolveVectorCompatibilityHelperNameFromResolvedPath;
+using semantics::vectorHelperSurfaceMetadata;
+
+using semantics::hasNamedArguments;
+using semantics::getBuiltinPointerName;
+using semantics::vectorConstructorSurfaceMetadata;
+using semantics::canonicalVectorCompatibilityPrefixOrFallback;
+
+using semantics::joinTemplateArgs;
+using semantics::canonicalVectorTypeIdentityPrefix;
+using semantics::legacyExperimentalVectorCompatibilityTypeText;
+using semantics::returnKindForTypeName;
+using semantics::resolveTypePath;
+using semantics::mapCollectionAliasToken;
+using semantics::stripUnrootedCanonicalVectorCompatibilityPrefix;
+using semantics::publicSoaHelperTargetPath;
+using semantics::isUnrootedCanonicalVectorCompatibilityPath;
+using semantics::isSoftwareNumericTypeName;
+using semantics::isLegacyOrCanonicalSoaHelperPath;
+using semantics::isIfCall;
+using semantics::isCanonicalSoaRefLikeHelperPath;
+using semantics::compatibilitySoaHelperTargetPath;
+using semantics::canonicalizeLegacySoaGetHelperPath;
+using semantics::canonicalVectorCompatibilityHelperPathOrFallback;
+
+using semantics::BindingInfo;
+using semantics::ParameterInfo;
+using semantics::ReturnKind;
+using semantics::buildOrderedArguments;
+using semantics::extractKeyValueCollectionTypesFromTypeText;
+using semantics::getBuiltinCollectionName;
+using semantics::isExperimentalSoaVectorSpecializedTypePath;
+using semantics::isPrimitiveBindingTypeName;
+using semantics::isReturnCall;
+using semantics::isSimpleCallName;
+using semantics::normalizeBindingTypeName;
+using semantics::splitTemplateTypeName;
+using semantics::splitTopLevelTemplateArgs;
+
+
+bool resolveMethodCallTemplateTarget(const Expr &expr,
+                                     const LocalTypeMap &locals,
+                                     const Context &ctx,
+                                     std::string &pathOut) {
+  pathOut.clear();
+  if (!expr.isMethodCall || expr.args.empty() || expr.name.empty()) {
+    return false;
+  }
+  const std::string rawMethodName = expr.name;
+  std::string methodName = rawMethodName;
+  const Expr &receiverExpr = expr.args.front();
+  if (!methodName.empty() && methodName.front() == '/') {
+    methodName.erase(methodName.begin());
+  }
+  auto normalizeCollectionMethodName = [](const std::string &receiverTypeName,
+                                          std::string candidate) -> std::string {
+    if (receiverTypeName == "array" || receiverTypeName == "vector" ||
+        isTemplateMonomorphSoaReceiverType(receiverTypeName)) {
+      const std::string vectorPrefix = std::string("vector") + "/";
+      const std::string arrayPrefix = "array/";
+      if (candidate.rfind(vectorPrefix, 0) == 0) {
+        return candidate.substr(vectorPrefix.size());
+      }
+      if (candidate.rfind(arrayPrefix, 0) == 0) {
+        return candidate.substr(arrayPrefix.size());
+      }
+      if (isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
+        return std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(candidate));
+      }
+      std::string helperName;
+      if (stripTemplateMonomorphSoaHelperPrefix(candidate, helperName, false)) {
+        return helperName;
+      }
+    }
+    if (receiverTypeName == "map") {
+      return metadataBackedKeyValueHelperMethodName(candidate);
+    }
+    return candidate;
+  };
+  auto isFileMethodName = [](std::string_view methodName) {
+    return methodName == "write" || methodName == "writeLine" ||
+           methodName == "write_line" || methodName == "writeByte" ||
+           methodName == "write_byte" || methodName == "readByte" ||
+           methodName == "read_byte" || methodName == "writeBytes" ||
+           methodName == "write_bytes" || methodName == "flush" ||
+           methodName == "close";
+  };
+  auto normalizeFileMethodName = [](std::string_view methodName) {
+    if (methodName == "readByte") {
+      return std::string("read_byte");
+    }
+    if (methodName == "writeLine") {
+      return std::string("write_line");
+    }
+    if (methodName == "writeByte") {
+      return std::string("write_byte");
+    }
+    if (methodName == "writeBytes") {
+      return std::string("write_bytes");
+    }
+    return std::string(methodName);
+  };
+  auto normalizeFileErrorMethodName = [](std::string_view methodName) {
+    if (methodName == "isEof") {
+      return std::string("is_eof");
+    }
+    return std::string(methodName);
+  };
+  std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
+      [&](std::string typeText) -> std::string {
+    typeText = normalizeBindingTypeName(typeText);
+    if (typeText.empty()) {
+      return typeText;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
+      base = normalizeBindingTypeName(base);
+      if ((base == "Reference" || base == "Pointer") && !argText.empty()) {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+          return typeText;
+        }
+        return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
+      }
+      if (const std::string *importAlias =
+              lookupScopedImportAliasForNamespace(base, receiverExpr.namespacePrefix, ctx);
+          importAlias != nullptr) {
+        return *importAlias + "<" + argText + ">";
+      }
+      return typeText;
+    }
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(typeText, receiverExpr.namespacePrefix, ctx);
+        importAlias != nullptr) {
+      return *importAlias;
+    }
+    return typeText;
+  };
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    std::string typeText = binding.typeName;
+    if (!binding.typeTemplateArg.empty()) {
+      typeText += "<" + binding.typeTemplateArg + ">";
+    }
+    return typeText;
+  };
+  auto isBorrowedSoaReceiverType = [&](std::string typeText) {
+    typeText = normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
+      return false;
+    }
+    const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+    if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+      return false;
+    }
+    return isTemplateMonomorphSoaReceiverType(
+        normalizeCollectionReceiverTypeName(
+            unwrapCollectionReceiverEnvelope(argText)));
+  };
+  auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
+    return unwrapCollectionReceiverEnvelope(
+        qualifyImportedCollectionTypeText(bindingTypeText(binding)));
+  };
+  auto selectStaticHelperOverloadPath = [&](const std::string &resolvedPath) -> std::string {
+    auto familyIt = ctx.helperOverloads.find(resolvedPath);
+    if (familyIt == ctx.helperOverloads.end()) {
+      return resolvedPath;
+    }
+    const size_t argumentCount = expr.args.empty() ? 0 : expr.args.size() - 1;
+    for (const auto &entry : familyIt->second) {
+      if (entry.parameterCount == argumentCount) {
+        return entry.internalPath;
+      }
+    }
+    return resolvedPath;
+  };
+  auto hasDefinitionFamilyPath = [&](std::string_view path) {
+    const std::string pathString(path);
+    if (ctx.sourceDefs.count(pathString) > 0 || ctx.helperOverloads.count(pathString) > 0) {
+      return true;
+    }
+    return anySourceDefStartsWith(ctx, pathString + "<") ||
+           anySourceDefStartsWith(ctx, pathString + "__t") ||
+           anySourceDefStartsWith(ctx, pathString + "__ov");
+  };
+  auto hasTemplatedDefinitionFamilyPath = [&](std::string_view path) {
+    const std::string pathString(path);
+    if (ctx.templateDefs.count(pathString) > 0) {
+      return true;
+    }
+    return anySourceDefStartsWith(ctx, pathString + "<");
+  };
+  auto receiverHelperFamilyLeaf = [](std::string_view resolvedType) -> std::string {
+    if (resolvedType.empty()) {
+      return {};
+    }
+    const size_t slash = resolvedType.find_last_of('/');
+    const size_t nameStart = slash == std::string_view::npos ? 0 : slash + 1;
+    size_t nameEnd = resolvedType.size();
+    auto limitNameEnd = [&](size_t candidate) {
+      if (candidate != std::string_view::npos && candidate < nameEnd) {
+        nameEnd = candidate;
+      }
+    };
+    limitNameEnd(resolvedType.find("__t", nameStart));
+    limitNameEnd(resolvedType.find("__ov", nameStart));
+    limitNameEnd(resolvedType.find('<', nameStart));
+    if (nameEnd <= nameStart) {
+      return {};
+    }
+    return std::string(resolvedType.substr(nameStart, nameEnd - nameStart));
+  };
+  auto soaCanonicalMethodPath = [](const std::string &helperNameString) {
+    return compatibilitySoaHelperTargetPath(helperNameString);
+  };
+  auto preferredSamePathSoaMethodTarget =
+      [&](std::string_view helperName, std::string_view samePathPrefix) {
+    const std::string helperNameString(helperName);
+    const std::string samePathPrefixString(samePathPrefix);
+    const std::string samePath = samePathPrefixString + helperNameString;
+    if (hasDefinitionFamilyPath(samePath)) {
+      return samePath;
+    }
+    return soaCanonicalMethodPath(helperNameString);
+  };
+  auto preferredSamePathSoaToAosMethodTarget = [&](std::string_view helperName) {
+    return preferredSamePathSoaMethodTarget(helperName, "/");
+  };
+  auto preferredSamePathSoaCountMethodTarget = [&](std::string_view helperName) {
+    return preferredSamePathSoaMethodTarget(
+        helperName, templateMonomorphSamePathSoaHelperPrefix());
+  };
+  auto preferredSamePathSoaPushReserveMethodTarget = [&](std::string_view helperName) {
+    return preferredSamePathSoaMethodTarget(
+        helperName, templateMonomorphSamePathSoaHelperPrefix());
+  };
+  auto preferredSamePathSoaGetMethodTarget = [&](std::string_view helperName) {
+    return preferredSamePathSoaMethodTarget(
+        helperName, templateMonomorphSamePathSoaHelperPrefix());
+  };
+  auto preferredSamePathSoaRefMethodTarget = [&](std::string_view helperName) {
+    return preferredSamePathSoaMethodTarget(
+        helperName, templateMonomorphSamePathSoaHelperPrefix());
+  };
+  auto borrowedSoaWrapperMethodName = [](std::string_view helperName) {
+    if (helperName == "count") {
+      return std::string("count_ref");
+    }
+    if (helperName == "get") {
+      return std::string("get_ref");
+    }
+    if (helperName == "ref") {
+      return std::string("ref_ref");
+    }
+    if (helperName == templateMonomorphSoaToAosHelperName()) {
+      return templateMonomorphSoaToAosHelperName(true);
+    }
+    return std::string(helperName);
+  };
+  const Expr &receiver = expr.args.front();
+  auto resolveIndexedArgsPackMapMethodTarget = [&]() -> bool {
+    if (receiver.kind != Expr::Kind::Call || receiver.isBinding ||
+        receiver.isMethodCall || receiver.args.size() != 2 ||
+        (!isSimpleCallName(receiver, "at") &&
+         !isSimpleCallName(receiver, "at_unsafe"))) {
+      return false;
+    }
+    const Expr &packReceiver = receiver.args.front();
+    if (packReceiver.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto bindingIt = locals.find(packReceiver.name);
+    if (bindingIt == locals.end()) {
+      return false;
+    }
+    std::string elemType;
+    if (!getArgsPackElementType(bindingIt->second, elemType)) {
+      return false;
+    }
+    std::string keyType;
+    std::string valueType;
+    if (!extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
+      return false;
+    }
+    std::string helperName = normalizeCollectionMethodName("map", methodName);
+    std::string base;
+    std::string argText;
+    const bool receiverIsWrapped =
+        splitTemplateTypeName(normalizeBindingTypeName(elemType), base,
+                              argText) &&
+        (normalizeBindingTypeName(base) == "Reference" ||
+         normalizeBindingTypeName(base) == "Pointer");
+    if (receiverIsWrapped) {
+      if (helperName == "count") {
+        helperName = "count_ref";
+      } else if (helperName == "contains") {
+        helperName = "contains_ref";
+      } else if (helperName == "tryAt") {
+        helperName = "tryAt_ref";
+      } else if (helperName == "at") {
+        helperName = "at_ref";
+      } else if (helperName == "at_unsafe") {
+        helperName = "at_unsafe_ref";
+      } else if (helperName == "insert") {
+        helperName = "insert_ref";
+      }
+    }
+    pathOut = selectHelperOverloadPath(
+        expr, metadataBackedCanonicalKeyValueHelperPath(helperName), ctx);
+    return true;
+  };
+  bool isBorrowedSoaReceiver = false;
+  std::string wrappedReceiverTypeName;
+  if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
+    if (methodName == "result") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/result");
+      return true;
+    }
+    if (methodName == "status") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/status");
+      return true;
+    }
+    if (methodName == "why") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/why");
+      return true;
+    }
+    if (methodName == "is_eof") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/is_eof");
+      return true;
+    }
+    if (methodName == "eof") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/eof");
+      return true;
+    }
+  }
+  std::string typeName;
+  if (receiver.kind == Expr::Kind::Name) {
+    auto it = locals.find(receiver.name);
+    if (it != locals.end()) {
+      wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(it->second));
+      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(it->second));
+      typeName = unwrapImportedCollectionReceiverType(it->second);
+    }
+  } else if (receiver.kind == Expr::Kind::Literal) {
+    typeName = receiver.isUnsigned ? "u64" : (receiver.intWidth == 64 ? "i64" : "i32");
+  } else if (receiver.kind == Expr::Kind::BoolLiteral) {
+    typeName = "bool";
+  } else if (receiver.kind == Expr::Kind::FloatLiteral) {
+    typeName = receiver.floatWidth == 64 ? "f64" : "f32";
+  } else if (receiver.kind == Expr::Kind::StringLiteral) {
+    typeName = "string";
+  } else if (receiver.kind == Expr::Kind::Call) {
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(receiver, {}, locals, hasMathImport(ctx), const_cast<Context &>(ctx), receiverInfo)) {
+      wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(receiverInfo));
+      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(receiverInfo));
+      typeName = unwrapImportedCollectionReceiverType(receiverInfo);
+    }
+    if (typeName.empty()) {
+      const std::string inferredTypeText = qualifyImportedCollectionTypeText(
+          inferExprTypeTextForTemplatedVectorFallback(
+              receiver, locals, receiver.namespacePrefix, ctx, hasMathImport(ctx)));
+      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(inferredTypeText);
+      typeName = unwrapCollectionReceiverEnvelope(inferredTypeText);
+    }
+    if (!receiver.isBinding) {
+      std::string resolved;
+      if (receiver.isMethodCall) {
+        if (!resolveMethodCallTemplateTarget(receiver, locals, ctx, resolved)) {
+          resolved.clear();
+        }
+      } else {
+        resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
+      }
+      auto defIt = ctx.sourceDefs.find(resolved);
+      if (defIt != ctx.sourceDefs.end()) {
+        if (isStructDefinition(defIt->second)) {
+          pathOut = selectHelperOverloadPath(expr, resolved + "/" + methodName, ctx);
+          return true;
+        }
+        for (const auto &transform : defIt->second.transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          const std::string &returnType = transform.templateArgs.front();
+          if (returnType == "auto") {
+            continue;
+          }
+          wrappedReceiverTypeName = qualifyImportedCollectionTypeText(returnType);
+          isBorrowedSoaReceiver = isBorrowedSoaReceiverType(returnType);
+          typeName = unwrapCollectionReceiverEnvelope(
+              qualifyImportedCollectionTypeText(returnType));
+          break;
+        }
+        if (typeName.empty()) {
+          BindingInfo inferredReturn;
+          if (inferDefinitionReturnBindingForTemplatedFallback(
+                  defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
+            wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(inferredReturn));
+            isBorrowedSoaReceiver =
+                isBorrowedSoaReceiverType(bindingTypeText(inferredReturn));
+            typeName = unwrapImportedCollectionReceiverType(inferredReturn);
+          }
+        }
+      } else {
+        std::string collection;
+        if (getBuiltinCollectionName(receiver, collection)) {
+          typeName = collection;
+        }
+      }
+    }
+  }
+  if (resolveIndexedArgsPackMapMethodTarget()) {
+    return true;
+  }
+  if (typeName.empty()) {
+    return false;
+  }
+  if (!expr.templateArgs.empty() && !wrappedReceiverTypeName.empty()) {
+    std::string wrapperBase;
+    std::string wrapperArgText;
+    if (splitTemplateTypeName(normalizeBindingTypeName(wrappedReceiverTypeName),
+                              wrapperBase,
+                              wrapperArgText)) {
+      wrapperBase = normalizeCollectionReceiverTypeName(wrapperBase);
+      if ((wrapperBase == "Reference" || wrapperBase == "Pointer") &&
+          !wrapperArgText.empty()) {
+        std::string wrapperMethodName = methodName;
+        const size_t slash = wrapperMethodName.find_last_of('/');
+        if (slash != std::string::npos) {
+          wrapperMethodName.erase(0, slash + 1);
+        }
+        const std::string rootedWrapperMethodPath =
+            "/" + wrapperBase + "/" + wrapperMethodName;
+        if (hasTemplatedDefinitionFamilyPath(rootedWrapperMethodPath) &&
+            hasDefinitionFamilyPath(rootedWrapperMethodPath)) {
+          pathOut = selectHelperOverloadPath(expr, rootedWrapperMethodPath, ctx);
+          return true;
+        }
+      }
+    }
+  }
+  typeName = normalizeCollectionReceiverTypeName(typeName);
+  auto preferredFileMethodTarget = [&](std::string_view helperName) {
+    const std::string normalizedHelperName = normalizeFileMethodName(helperName);
+    const std::string builtinPath = "/file/" + normalizedHelperName;
+    if (normalizedHelperName != "write" &&
+        normalizedHelperName != "write_line" &&
+        normalizedHelperName != "close") {
+      return builtinPath;
+    }
+    if ((normalizedHelperName == "write" || normalizedHelperName == "write_line") &&
+        expr.args.size() > 10) {
+      return builtinPath;
+    }
+    if (receiver.kind == Expr::Kind::Name && receiver.name == "self") {
+      return builtinPath;
+    }
+    const std::string stdlibPath = "/File/" + normalizedHelperName;
+    if (hasDefinitionFamilyPath(stdlibPath)) {
+      return stdlibPath;
+    }
+    return builtinPath;
+  };
+  const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
+  std::string normalizedTypeName = typeName;
+  if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
+    normalizedTypeName.erase(normalizedTypeName.begin());
+  }
+  const auto normalizedReceiverLeafName = [&]() {
+    const size_t slash = normalizedTypeName.find_last_of('/');
+    return slash == std::string::npos ? normalizedTypeName
+                                      : normalizedTypeName.substr(slash + 1);
+  }();
+  if ((typeName == "File" || normalizedReceiverLeafName == "File") &&
+      isFileMethodName(normalizedMethodName)) {
+    pathOut = preferredFileMethodTarget(normalizedMethodName);
+    return true;
+  }
+  if (isExplicitRemovedCollectionMethodAlias(typeName, rawMethodName)) {
+    return false;
+  }
+  if (isPrimitiveBindingTypeName(typeName)) {
+    pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
+    return true;
+  }
+  if (normalizedReceiverLeafName == "args") {
+    const std::string argsPackMethodName =
+        normalizeCollectionMethodName("array", methodName);
+    if (argsPackMethodName == "count" || argsPackMethodName == "at" ||
+        argsPackMethodName == "at_unsafe") {
+      pathOut = "/array/" + argsPackMethodName;
+      return true;
+    }
+    return false;
+  }
+  const std::string fileErrorMethodName =
+      normalizeFileErrorMethodName(normalizedMethodName);
+  if (normalizedReceiverLeafName == "FileError" &&
+      (fileErrorMethodName == "why" || fileErrorMethodName == "is_eof" ||
+       fileErrorMethodName == "status" || fileErrorMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + fileErrorMethodName);
+    return true;
+  }
+  if (normalizedReceiverLeafName == "ImageError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/image/ImageError/" + normalizedMethodName);
+    return true;
+  }
+  if (normalizedReceiverLeafName == "ContainerError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/collections/ContainerError/" + normalizedMethodName);
+    return true;
+  }
+  if (normalizedReceiverLeafName == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    // GfxError exists in both /std/gfx and /std/gfx/experimental; prefer
+    // whichever one is actually present in this compilation rather than
+    // hardcoding the non-experimental path. Without this, a method-call-
+    // syntax use of an experimental GfxError's templated result<T>/why/
+    // status requests instantiation of the wrong (non-existent) base path,
+    // silently producing no specialization - normally masked by whole-file
+    // stdlib splicing, where some other explicit-absolute-path call
+    // elsewhere in the same file happens to already have triggered the
+    // needed specialization via the correct path.
+    const std::string experimentalPath =
+        "/std/gfx/experimental/GfxError/" + normalizedMethodName;
+    if (hasDefinitionFamilyPath(experimentalPath)) {
+      pathOut = selectStaticHelperOverloadPath(experimentalPath);
+      return true;
+    }
+    pathOut = selectStaticHelperOverloadPath("/std/gfx/GfxError/" + normalizedMethodName);
+    return true;
+  }
+  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaCountMethodTarget(helperName), ctx);
+    return true;
+  }
+  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+      (normalizedMethodName == templateMonomorphSoaToAosHelperName() ||
+       normalizedMethodName == templateMonomorphSoaToAosHelperName(true))) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaToAosMethodTarget(helperName), ctx);
+    return true;
+  }
+  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+      (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaGetMethodTarget(helperName), ctx);
+    return true;
+  }
+  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+      (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+      (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaRefMethodTarget(helperName), ctx);
+    return true;
+  }
+  std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+  const bool isCollectionFamilyReceiver =
+      typeName == "array" || typeName == "vector" || typeName == "map" ||
+      isTemplateMonomorphSoaReceiverType(typeName);
+  if (ctx.sourceDefs.count(resolvedType) == 0 && !isCollectionFamilyReceiver) {
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(normalizedTypeName, receiver.namespacePrefix, ctx);
+        importAlias != nullptr) {
+      resolvedType = *importAlias;
+    }
+  }
+  if (ctx.sourceDefs.count(resolvedType) == 0) {
+    if (isCollectionFamilyReceiver) {
+      pathOut = "/" + typeName + "/" + normalizedMethodName;
+      pathOut = preferVectorStdlibHelperPath(pathOut, ctx.sourceDefs);
+      pathOut = selectHelperOverloadPath(expr, pathOut, ctx);
+      return true;
+    }
+    if (typeName == "string") {
+      pathOut = selectHelperOverloadPath(expr, "/string/" + normalizedMethodName, ctx);
+      return true;
+    }
+    return false;
+  }
+  const bool isConcreteExperimentalSoaReceiver =
+      isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+      isExperimentalSoaVectorSpecializedTypePath(resolvedType);
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaCountMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaGetMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaRefMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == templateMonomorphSoaToAosHelperName() ||
+       normalizedMethodName == templateMonomorphSoaToAosHelperName(true))) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaToAosMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  const std::string samePathMethodTarget = resolvedType + "/" + normalizedMethodName;
+  const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
+  if (!receiverHelperLeaf.empty()) {
+    const std::string rootedHelperTarget = "/" + receiverHelperLeaf + "/" + normalizedMethodName;
+    if (samePathMethodTarget != rootedHelperTarget &&
+        !hasDefinitionFamilyPath(samePathMethodTarget) &&
+        hasDefinitionFamilyPath(rootedHelperTarget)) {
+      pathOut = selectHelperOverloadPath(expr, rootedHelperTarget, ctx);
+      return true;
+    }
+  }
+  pathOut = preferVectorStdlibHelperPath(resolvedType + "/" + normalizedMethodName, ctx.sourceDefs);
+  pathOut = selectHelperOverloadPath(expr, pathOut, ctx);
+  return true;
+}
+
+std::string resolveNameToPath(const std::string &name,
+                              const std::string &namespacePrefix,
+                              const std::unordered_map<std::string, std::string> &importAliases,
+                              const std::unordered_map<std::string, Definition> &defs) {
+  if (name.empty()) {
+    return "";
+  }
+  if (!name.empty() && name[0] == '/') {
+    return name;
+  }
+  if (name.find('/') != std::string::npos) {
+    return "/" + name;
+  }
+  if (!namespacePrefix.empty()) {
+    std::string scoped = namespacePrefix + "/" + name;
+    if (defs.count(scoped) > 0) {
+      return scoped;
+    }
+    auto aliasIt = importAliases.find(name);
+    if (aliasIt != importAliases.end()) {
+      return aliasIt->second;
+    }
+    return scoped;
+  }
+  std::string root = "/" + name;
+  if (defs.count(root) > 0) {
+    return root;
+  }
+  auto aliasIt = importAliases.find(name);
+  if (aliasIt != importAliases.end()) {
+    return aliasIt->second;
+  }
+  return root;
+}
+
+
+} // namespace primec

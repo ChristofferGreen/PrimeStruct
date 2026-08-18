@@ -1,0 +1,1019 @@
+#include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "TemplateMonomorphBindingBlockInference.h"
+#include "TemplateMonomorphBindingCallInference.h"
+#include "TemplateMonomorphDefinitionBindingSetup.h"
+#include "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h"
+#include "TemplateMonomorphDefinitionReturnOrchestration.h"
+#include "TemplateMonomorphDefinitionRewrites.h"
+#include "TemplateMonomorphExecutionRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
+#include "TemplateMonomorphExperimentalCollectionReturnRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
+#include "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionValueRewrites.h"
+#include "TemplateMonomorphExpressionRewrite.h"
+#include "TemplateMonomorphFallbackTypeInference.h"
+#include "TemplateMonomorphFinalOrchestration.h"
+#include "TemplateMonomorphImplicitTemplateInference.h"
+#include "TemplateMonomorphMethodTargets.h"
+#include "TemplateMonomorphTemplateSpecialization.h"
+#include "TemplateMonomorphTypeResolution.h"
+#include "SemanticsHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "StdlibCollectionSurfaceHelpers.h"
+#include "TemplateMonomorphCoreUtilities.h"
+#include "TemplateMonomorphSetupUtilities.h"
+#include "TemplateMonomorphCollectionCompatibilityPaths.h"
+#include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"
+#include "TemplateMonomorphSourceDefinitionSetup.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
+#include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/StdlibSurfaceRegistry.h"
+
+#include <sstream>
+
+#include "primec/support/CompileArena.h"
+
+namespace primec {
+
+using semantics::isPickCall;
+using semantics::canonicalizeLegacySoaToAosHelperPath;
+using semantics::isVectorCompatibilityHelperName;
+using semantics::isExperimentalSoaGetLikeHelperPath;
+using semantics::isExperimentalSoaRefLikeHelperPath;
+using semantics::isPublishedVectorMutatorHelperName;
+
+using semantics::isBindingAuxTransformName;
+using semantics::isRootBuiltinName;
+using semantics::isCanonicalVectorCompatibilityPath;
+using semantics::getBuiltinArrayAccessName;
+using semantics::isExperimentalSoaVectorTypePath;
+using semantics::soaUnavailableMethodDiagnostic;
+using semantics::trimLeadingSlash;
+
+using semantics::canonicalizeLegacySoaRefHelperPath;
+using semantics::isCompileTimeTypeBinding;
+using semantics::isExperimentalSoaVectorHelperFamilyPath;
+using semantics::isKeyValueCollectionTypeName;
+using semantics::isLegacyExperimentalVectorCompatibilityPath;
+using semantics::isLegacyExperimentalVectorCompatibilitySpecializedTypePath;
+using semantics::legacyExperimentalVectorCompatibilityPrefix;
+using semantics::preferredPublishedCollectionLoweringPath;
+using semantics::resolveCanonicalVectorHelperNameFromResolvedPath;
+using semantics::resolveVectorCompatibilityHelperNameFromResolvedPath;
+using semantics::vectorHelperSurfaceMetadata;
+
+using semantics::hasNamedArguments;
+using semantics::getBuiltinPointerName;
+using semantics::vectorConstructorSurfaceMetadata;
+using semantics::canonicalVectorCompatibilityPrefixOrFallback;
+
+using semantics::joinTemplateArgs;
+using semantics::canonicalVectorTypeIdentityPrefix;
+using semantics::legacyExperimentalVectorCompatibilityTypeText;
+using semantics::returnKindForTypeName;
+using semantics::resolveTypePath;
+using semantics::mapCollectionAliasToken;
+using semantics::stripUnrootedCanonicalVectorCompatibilityPrefix;
+using semantics::publicSoaHelperTargetPath;
+using semantics::isUnrootedCanonicalVectorCompatibilityPath;
+using semantics::isSoftwareNumericTypeName;
+using semantics::isLegacyOrCanonicalSoaHelperPath;
+using semantics::isIfCall;
+using semantics::isCanonicalSoaRefLikeHelperPath;
+using semantics::compatibilitySoaHelperTargetPath;
+using semantics::canonicalizeLegacySoaGetHelperPath;
+using semantics::canonicalVectorCompatibilityHelperPathOrFallback;
+
+using semantics::BindingInfo;
+using semantics::ParameterInfo;
+using semantics::ReturnKind;
+using semantics::buildOrderedArguments;
+using semantics::extractKeyValueCollectionTypesFromTypeText;
+using semantics::getBuiltinCollectionName;
+using semantics::isExperimentalSoaVectorSpecializedTypePath;
+using semantics::isPrimitiveBindingTypeName;
+using semantics::isReturnCall;
+using semantics::isSimpleCallName;
+using semantics::normalizeBindingTypeName;
+using semantics::splitTemplateTypeName;
+using semantics::splitTopLevelTemplateArgs;
+
+
+bool splitTypePackExpansionText(const std::string &input, std::string &packNameOut) {
+  const std::string trimmed = trimWhitespace(input);
+  if (trimmed.size() <= 3 || trimmed.compare(trimmed.size() - 3, 3, "...") != 0) {
+    return false;
+  }
+  packNameOut = trimWhitespace(trimmed.substr(0, trimmed.size() - 3));
+  return !packNameOut.empty();
+}
+
+bool splitTypePackIndexText(const std::string &input,
+                            std::string &packNameOut,
+                            std::string &indexTextOut) {
+  const std::string trimmed = trimWhitespace(input);
+  if (trimmed.size() < 4 || trimmed.back() != ']') {
+    return false;
+  }
+  int templateDepth = 0;
+  for (size_t i = 0; i < trimmed.size(); ++i) {
+    const char ch = trimmed[i];
+    if (ch == '<') {
+      ++templateDepth;
+      continue;
+    }
+    if (ch == '>' && templateDepth > 0) {
+      --templateDepth;
+      continue;
+    }
+    if (ch != '[' || templateDepth != 0) {
+      continue;
+    }
+    packNameOut = trimWhitespace(trimmed.substr(0, i));
+    indexTextOut = trimWhitespace(trimmed.substr(i + 1, trimmed.size() - i - 2));
+    return !packNameOut.empty() && !indexTextOut.empty() &&
+           indexTextOut.find('[') == std::string::npos &&
+           indexTextOut.find(']') == std::string::npos;
+  }
+  return false;
+}
+
+bool parseUnsignedTemplateIndex(std::string_view text, uint64_t &valueOut) {
+  if (!isUnsignedIntegerTemplateArgText(text)) {
+    return false;
+  }
+  uint64_t value = 0;
+  if (text.size() > 2 && text[0] == '0' &&
+      (text[1] == 'x' || text[1] == 'X')) {
+    for (size_t i = 2; i < text.size(); ++i) {
+      const char c = text[i];
+      if (c == ',') {
+        continue;
+      }
+      uint64_t digit = 0;
+      if (c >= '0' && c <= '9') {
+        digit = static_cast<uint64_t>(c - '0');
+      } else if (c >= 'a' && c <= 'f') {
+        digit = static_cast<uint64_t>(10 + c - 'a');
+      } else if (c >= 'A' && c <= 'F') {
+        digit = static_cast<uint64_t>(10 + c - 'A');
+      } else {
+        return false;
+      }
+      if (value > (UINT64_MAX - digit) / 16) {
+        return false;
+      }
+      value = value * 16 + digit;
+    }
+    valueOut = value;
+    return true;
+  }
+  for (char c : text) {
+    if (c == ',') {
+      continue;
+    }
+    if (c < '0' || c > '9') {
+      return false;
+    }
+    const uint64_t digit = static_cast<uint64_t>(c - '0');
+    if (value > (UINT64_MAX - digit) / 10) {
+      return false;
+    }
+    value = value * 10 + digit;
+  }
+  valueOut = value;
+  return true;
+}
+
+bool resolveTemplateIndexText(const std::string &indexText,
+                              const SubstMap &mapping,
+                              uint64_t &indexOut) {
+  std::string resolved = trimWhitespace(indexText);
+  const auto mappedIt = mapping.find(resolved);
+  if (mappedIt != mapping.end()) {
+    resolved = trimWhitespace(mappedIt->second);
+  }
+  return parseUnsignedTemplateIndex(resolved, indexOut);
+}
+
+const TemplatePackBinding *findTemplatePackBinding(const Definition &def,
+                                                   const std::string &name) {
+  for (const TemplatePackBinding &binding : def.templatePackBindings) {
+    if (binding.parameterName == name) {
+      return &binding;
+    }
+  }
+  return nullptr;
+}
+
+const TemplatePackBinding *findTemplatePackBindingForCurrentDefinition(const Context &ctx,
+                                                                       const std::string &name) {
+  if (ctx.currentRewriteDefinition != nullptr) {
+    if (const TemplatePackBinding *binding =
+            findTemplatePackBinding(*ctx.currentRewriteDefinition, name)) {
+      return binding;
+    }
+  }
+  auto defIt = ctx.sourceDefs.find(ctx.currentDefinitionPath);
+  if (defIt == ctx.sourceDefs.end()) {
+    return nullptr;
+  }
+  return findTemplatePackBinding(defIt->second, name);
+}
+
+bool appendResolvedTemplateArg(const std::string &arg,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               std::string &error,
+                               std::unordered_set<std::string> &substitutionStack,
+                               std::vector<std::string> &resolvedArgs,
+                               bool &allConcrete) {
+  std::string packName;
+  if (splitTypePackExpansionText(arg, packName)) {
+    const TemplatePackBinding *packBinding =
+        findTemplatePackBindingForCurrentDefinition(ctx, packName);
+    if (packBinding == nullptr) {
+      error = "unknown type-pack parameter for type expansion: " + packName;
+      return false;
+    }
+    for (const std::string &packArg : packBinding->arguments) {
+      if (!appendResolvedTemplateArg(packArg,
+                                     mapping,
+                                     allowedParams,
+                                     namespacePrefix,
+                                     ctx,
+                                     error,
+                                     substitutionStack,
+                                     resolvedArgs,
+                                     allConcrete)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  ResolvedType resolved =
+      resolveTypeStringImpl(arg, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
+  if (!error.empty()) {
+    return false;
+  }
+  if (!resolved.concrete) {
+    allConcrete = false;
+  }
+  resolvedArgs.push_back(resolved.text);
+  return true;
+}
+
+bool resolveTemplateArgumentList(std::vector<std::string> &args,
+                                 const SubstMap &mapping,
+                                 const std::unordered_set<std::string> &allowedParams,
+                                 const std::string &namespacePrefix,
+                                 Context &ctx,
+                                 std::string &error,
+                                 bool &allConcreteOut) {
+  std::vector<std::string> resolvedArgs;
+  resolvedArgs.reserve(args.size());
+  bool allConcrete = true;
+  std::unordered_set<std::string> substitutionStack;
+  for (const auto &arg : args) {
+    if (!appendResolvedTemplateArg(arg,
+                                   mapping,
+                                   allowedParams,
+                                   namespacePrefix,
+                                   ctx,
+                                   error,
+                                   substitutionStack,
+                                   resolvedArgs,
+                                   allConcrete)) {
+      return false;
+    }
+  }
+  args = std::move(resolvedArgs);
+  allConcreteOut = allConcrete;
+  return true;
+}
+
+bool isRequirementSubstitutionIdentChar(char ch) {
+  return std::isalnum(static_cast<unsigned char>(ch)) || ch == '_';
+}
+
+std::string rewriteRequirementArgumentText(const std::string &text,
+                                           const SubstMap &mapping) {
+  std::string out;
+  out.reserve(text.size());
+  bool inString = false;
+  char stringDelimiter = '\0';
+  for (std::size_t i = 0; i < text.size();) {
+    const char ch = text[i];
+    if (inString) {
+      out.push_back(ch);
+      if (ch == '\\' && i + 1 < text.size()) {
+        out.push_back(text[i + 1]);
+        i += 2;
+        continue;
+      }
+      if (ch == stringDelimiter) {
+        inString = false;
+        stringDelimiter = '\0';
+      }
+      ++i;
+      continue;
+    }
+    if (ch == '"' || ch == '\'') {
+      inString = true;
+      stringDelimiter = ch;
+      out.push_back(ch);
+      ++i;
+      continue;
+    }
+    if (!isRequirementSubstitutionIdentChar(ch) ||
+        std::isdigit(static_cast<unsigned char>(ch))) {
+      out.push_back(ch);
+      ++i;
+      continue;
+    }
+    const std::size_t start = i;
+    while (i < text.size() && isRequirementSubstitutionIdentChar(text[i])) {
+      ++i;
+    }
+    const std::string token = text.substr(start, i - start);
+    auto mappedIt = mapping.find(token);
+    out.append(mappedIt == mapping.end() ? token : mappedIt->second);
+  }
+  return out;
+}
+
+ResolvedType resolveTypeStringImpl(std::string input,
+                                   const SubstMap &mapping,
+                                   const std::unordered_set<std::string> &allowedParams,
+                                   const std::string &namespacePrefix,
+                                   Context &ctx,
+                                   std::string &error,
+                                   std::unordered_set<std::string> &substitutionStack) {
+  ResolvedType result;
+  std::string trimmed = trimWhitespace(input);
+  if (trimmed.empty()) {
+    result.text = input;
+    result.concrete = true;
+    return result;
+  }
+  std::string packIndexName;
+  std::string packIndexText;
+  if (splitTypePackIndexText(trimmed, packIndexName, packIndexText)) {
+    const TemplatePackBinding *packBinding =
+        findTemplatePackBindingForCurrentDefinition(ctx, packIndexName);
+    if (packBinding == nullptr) {
+      error = "unknown type-pack parameter for type index: " + packIndexName;
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    uint64_t packIndex = 0;
+    if (!resolveTemplateIndexText(packIndexText, mapping, packIndex)) {
+      error = "type-pack index must resolve to an integer template argument: " +
+              packIndexText;
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    if (packIndex >= packBinding->arguments.size()) {
+      error = "type-pack index out of range: " + packIndexName + "[" +
+              packIndexText + "] has " +
+              std::to_string(packBinding->arguments.size()) + " elements";
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    return resolveTypeStringImpl(packBinding->arguments[static_cast<size_t>(packIndex)],
+                                 mapping,
+                                 allowedParams,
+                                 namespacePrefix,
+                                 ctx,
+                                 error,
+                                 substitutionStack);
+  }
+  if (isUnsignedIntegerTemplateArgText(trimmed)) {
+    result.text = trimmed;
+    result.concrete = true;
+    return result;
+  }
+  if (allowedParams.count(trimmed) > 0) {
+    result.text = trimmed;
+    result.concrete = false;
+    return result;
+  }
+  auto mapIt = mapping.find(trimmed);
+  if (mapIt != mapping.end()) {
+    if (isUnsignedIntegerTemplateArgText(mapIt->second)) {
+      error = "integer template argument cannot be used as a type: " + trimmed;
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    const std::string mapped = trimWhitespace(mapIt->second);
+    if (mapped == trimmed || !substitutionStack.insert(trimmed).second) {
+      result.text = trimmed;
+      result.concrete = !isEnclosingTemplateParamName(trimmed, namespacePrefix, ctx);
+      return result;
+    }
+    ResolvedType resolved =
+        resolveTypeStringImpl(mapIt->second, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
+    substitutionStack.erase(trimmed);
+    return resolved;
+  }
+  if (isEnclosingTypePackParamName(trimmed, namespacePrefix, ctx)) {
+    error = "type-pack parameter requires expansion support from TODO-4275: " +
+            trimmed;
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimmed, base, argText)) {
+    if (isEnclosingTemplateParamName(trimmed, namespacePrefix, ctx)) {
+      result.text = trimmed;
+      result.concrete = false;
+      return result;
+    }
+    std::string resolvedPath =
+        resolveNameToPath(trimmed, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+    if (ctx.templateDefs.count(resolvedPath) > 0) {
+      error = "template arguments required for " + resolvedPath;
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    result.text = trimmed;
+    result.concrete = true;
+    return result;
+  }
+  if (allowedParams.count(base) > 0) {
+    error = "template parameters cannot be templated: " + base;
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(argText, args)) {
+    error = "invalid template arguments for " + base;
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
+  std::vector<std::string> resolvedArgs;
+  resolvedArgs.reserve(args.size());
+  bool allConcrete = true;
+  for (const auto &arg : args) {
+    if (!appendResolvedTemplateArg(arg,
+                                   mapping,
+                                   allowedParams,
+                                   namespacePrefix,
+                                   ctx,
+                                   error,
+                                   substitutionStack,
+                                   resolvedArgs,
+                                   allConcrete)) {
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+  }
+  const auto explicitTemplateArgFactKey = [&](const std::string &targetPath) {
+    return targetPath + "<" + joinTemplateArgs(resolvedArgs) + ">";
+  };
+  const auto consumeExplicitTemplateArgFact = [&](const std::string &targetPath, ResolvedType &resolvedOut) {
+    const std::string factKey = explicitTemplateArgFactKey(targetPath);
+    const auto factIt = ctx.explicitTemplateArgInferenceFacts.find(factKey);
+    if (factIt == ctx.explicitTemplateArgInferenceFacts.end()) {
+      return false;
+    }
+    resolvedOut.text = factIt->second.resolvedTypeText;
+    resolvedOut.concrete = factIt->second.resolvedConcrete;
+    ++ctx.explicitTemplateArgInferenceFactHitsForTesting;
+    return true;
+  };
+  const auto publishExplicitTemplateArgFact = [&](const std::string &targetPath, const ResolvedType &resolvedType) {
+    ctx.explicitTemplateArgInferenceFacts[explicitTemplateArgFactKey(targetPath)] =
+        ExplicitTemplateArgInferenceFact{resolvedType.text, resolvedType.concrete};
+  };
+  const auto recordExplicitTemplateArgFact = [&](const std::string &targetPath,
+                                                 const ResolvedType &resolvedType) {
+    if (!ctx.collectExplicitTemplateArgFactsForTesting) {
+      return;
+    }
+    ctx.explicitTemplateArgFactsForTesting.push_back(
+        ExplicitTemplateArgResolutionFactForTesting{
+            namespacePrefix,
+            targetPath,
+            joinTemplateArgs(resolvedArgs),
+            resolvedType.text,
+            resolvedType.concrete,
+        });
+  };
+  std::string overloadBasePath =
+      resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  if (ctx.genericTypeOverloads.count(overloadBasePath) > 0) {
+    if (!selectGenericTypeOverloadPath(overloadBasePath,
+                                       resolvedArgs.size(),
+                                       ctx,
+                                       overloadBasePath,
+                                       error)) {
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    if (!allConcrete) {
+      result.text = base + "<" + joinTemplateArgs(resolvedArgs) + ">";
+      result.concrete = false;
+      recordExplicitTemplateArgFact(overloadBasePath, result);
+      return result;
+    }
+    if (consumeExplicitTemplateArgFact(overloadBasePath, result)) {
+      recordExplicitTemplateArgFact(overloadBasePath, result);
+      return result;
+    }
+    std::string specializedPath;
+    if (!instantiateTemplate(overloadBasePath, resolvedArgs, ctx, error, specializedPath)) {
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    result.text = specializedPath;
+    result.concrete = true;
+    publishExplicitTemplateArgFact(overloadBasePath, result);
+    recordExplicitTemplateArgFact(overloadBasePath, result);
+    return result;
+  }
+  if (isBuiltinTemplateContainer(base) || isBuiltinCollectionTemplateBase(base, resolvedArgs.size())) {
+    const std::string normalizedBase = isBuiltinTemplateContainer(base)
+                                           ? base
+                                           : normalizeBuiltinCollectionTemplateBase(base);
+    if (allConcrete && consumeExplicitTemplateArgFact(normalizedBase, result)) {
+      recordExplicitTemplateArgFact(normalizedBase, result);
+      return result;
+    }
+    result.text = normalizedBase + "<" + joinTemplateArgs(resolvedArgs) + ">";
+    result.concrete = allConcrete;
+    if (allConcrete) {
+      publishExplicitTemplateArgFact(normalizedBase, result);
+    }
+    recordExplicitTemplateArgFact(normalizedBase, result);
+    return result;
+  }
+  std::string resolvedBasePath =
+      resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  if (!selectGenericTypeOverloadPath(resolvedBasePath,
+                                     resolvedArgs.size(),
+                                     ctx,
+                                     resolvedBasePath,
+                                     error)) {
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
+  if (ctx.templateDefs.count(resolvedBasePath) == 0) {
+    error = "template arguments are only supported on templated definitions: " + resolvedBasePath;
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
+  if (!allConcrete) {
+    result.text = base + "<" + joinTemplateArgs(resolvedArgs) + ">";
+    result.concrete = false;
+    recordExplicitTemplateArgFact(resolvedBasePath, result);
+    return result;
+  }
+  if (consumeExplicitTemplateArgFact(resolvedBasePath, result)) {
+    recordExplicitTemplateArgFact(resolvedBasePath, result);
+    return result;
+  }
+  std::string specializedPath;
+  if (!instantiateTemplate(resolvedBasePath, resolvedArgs, ctx, error, specializedPath)) {
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
+  result.text = specializedPath;
+  result.concrete = true;
+  publishExplicitTemplateArgFact(resolvedBasePath, result);
+  recordExplicitTemplateArgFact(resolvedBasePath, result);
+  return result;
+}
+
+ResolvedType resolveTypeString(std::string input,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               std::string &error) {
+  std::unordered_set<std::string> substitutionStack;
+  return resolveTypeStringImpl(input, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
+}
+
+bool rewriteTransforms(std::vector<Transform> &transforms,
+                       const SubstMap &mapping,
+                       const std::unordered_set<std::string> &allowedParams,
+                       const std::string &namespacePrefix,
+                       Context &ctx,
+                       std::string &error) {
+  for (auto &transform : transforms) {
+    if (transform.isPackExpansion) {
+      error = "type-pack expansion is only supported in struct field declarations: " +
+              transform.name;
+      return false;
+    }
+    if (!isNonTypeTransformName(transform.name)) {
+      if (transform.templateArgs.empty()) {
+        ResolvedType resolvedName = resolveTypeString(transform.name, mapping, allowedParams, namespacePrefix, ctx, error);
+        if (!error.empty()) {
+          return false;
+        }
+        if (resolvedName.text != transform.name) {
+          std::string base;
+          std::string argText;
+          if (splitTemplateTypeName(resolvedName.text, base, argText)) {
+            if (!transform.templateArgs.empty()) {
+              error = "template arguments cannot be combined on " + transform.name;
+              return false;
+            }
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(argText, args)) {
+              error = "invalid template arguments for " + resolvedName.text;
+              return false;
+            }
+            transform.name = base;
+            transform.templateArgs = std::move(args);
+          } else {
+            transform.name = resolvedName.text;
+          }
+        }
+      } else {
+        bool allConcreteTemplateArgs = true;
+        if (!resolveTemplateArgumentList(transform.templateArgs,
+                                         mapping,
+                                         allowedParams,
+                                         namespacePrefix,
+                                         ctx,
+                                         error,
+                                         allConcreteTemplateArgs)) {
+          return false;
+        }
+
+        std::string resolvedPath =
+            resolveNameToPath(transform.name,
+                              namespacePrefix,
+                              scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                              ctx.sourceDefs);
+        if (!selectGenericTypeOverloadPath(resolvedPath,
+                                           transform.templateArgs.size(),
+                                           ctx,
+                                           resolvedPath,
+                                           error)) {
+          return false;
+        }
+        const bool isImportedGfxBufferTemplate =
+            resolvedPath == "/std/gfx/Buffer" || resolvedPath == "/std/gfx/experimental/Buffer";
+        if (isImportedGfxBufferTemplate && allConcreteTemplateArgs) {
+          std::string specializedPath;
+          if (!instantiateTemplate(resolvedPath, transform.templateArgs, ctx, error, specializedPath)) {
+            return false;
+          }
+          transform.name = resolvedPath;
+          continue;
+        }
+        const bool canResolveTemplatedName =
+            isBuiltinTemplateContainer(transform.name) || ctx.templateDefs.count(resolvedPath) > 0;
+        if (canResolveTemplatedName) {
+          std::string templatedName = transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
+          ResolvedType resolvedName = resolveTypeString(templatedName, mapping, allowedParams, namespacePrefix, ctx, error);
+          if (!error.empty()) {
+            return false;
+          }
+
+          std::string base;
+          std::string argText;
+          if (splitTemplateTypeName(resolvedName.text, base, argText)) {
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(argText, args)) {
+              error = "invalid template arguments for " + resolvedName.text;
+              return false;
+            }
+            transform.name = base;
+            transform.templateArgs = std::move(args);
+          } else {
+            transform.name = resolvedName.text;
+            transform.templateArgs.clear();
+          }
+        }
+      }
+    }
+    bool ignoredAllConcrete = true;
+    if (!resolveTemplateArgumentList(transform.templateArgs,
+                                     mapping,
+                                     allowedParams,
+                                     namespacePrefix,
+                                     ctx,
+                                     error,
+                                     ignoredAllConcrete)) {
+      return false;
+    }
+    if (transform.name == "require") {
+      for (std::string &argument : transform.arguments) {
+        argument = rewriteRequirementArgumentText(argument, mapping);
+      }
+    }
+  }
+  return true;
+}
+
+std::string resolveCalleePath(const Expr &expr,
+                              const std::string &namespacePrefix,
+                              const Context &ctx,
+                              const LocalTypeMap *locals,
+                              const std::vector<ParameterInfo> *params) {
+  auto rewriteBuiltinCollectionImportAlias = [&](const std::string &resolvedPath) -> std::string {
+    if (expr.isMethodCall) {
+      return resolvedPath;
+    }
+    std::string builtinCollection;
+    if (!getBuiltinCollectionName(expr, builtinCollection)) {
+      return resolvedPath;
+    }
+    if (expr.name != builtinCollection) {
+      return resolvedPath;
+    }
+    if (std::string constructorPath =
+            metadataBackedKeyValueConstructorAliasRewritePath(resolvedPath);
+        !constructorPath.empty()) {
+      return constructorPath;
+    }
+    return resolvedPath;
+  };
+  auto rewriteCanonicalCollectionConstructorPath = [&](const std::string &resolvedPath) -> std::string {
+    if (expr.isMethodCall) {
+      return resolvedPath;
+    }
+    if (metadataBackedKeyValueConstructorAliasRewritePath(resolvedPath) == resolvedPath &&
+        (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
+      return resolvedPath;
+    }
+    const StdlibSurfaceMetadata *vectorCtorMetadata =
+        vectorConstructorSurfaceMetadata();
+    const std::string vectorConstructorPath =
+        vectorCtorMetadata == nullptr
+            ? canonicalVectorCompatibilityHelperPathOrFallback("vector")
+            : std::string(vectorCtorMetadata->canonicalPath);
+    const std::string vectorTypePath =
+        canonicalVectorCompatibilityPrefixOrFallback() + "/Vector";
+    if (resolvedPath == vectorTypePath &&
+        ctx.sourceDefs.count(vectorTypePath) == 0 &&
+        (ctx.sourceDefs.count(vectorConstructorPath) > 0 ||
+         ctx.helperOverloads.count(vectorConstructorPath) > 0)) {
+      return vectorConstructorPath;
+    }
+    return resolvedPath;
+  };
+  auto finalizeResolvedPath = [&](const std::string &resolvedPath) -> std::string {
+    return selectHelperOverloadPath(
+        expr, rewriteCanonicalCollectionConstructorPath(resolvedPath), ctx, locals, params);
+  };
+  auto resolveStdlibSurfaceCompatibilityAlias = [&]() -> std::string {
+    if (expr.isMethodCall || !usesStdlibScopedImportAliases(namespacePrefix, ctx)) {
+      return {};
+    }
+    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+      if (metadata.shape == StdlibSurfaceShape::ConstructorFamily) {
+        continue;
+      }
+      auto findVisibleSpelling = [&](std::span<const std::string_view> spellings) {
+        for (const std::string_view spelling : spellings) {
+          const size_t slash = spelling.find_last_of('/');
+          const std::string_view spellingLeaf =
+              slash == std::string_view::npos ? spelling : spelling.substr(slash + 1);
+          if (spelling.empty() || spelling.front() != '/' ||
+              (spellingLeaf != expr.name &&
+               resolveStdlibSurfaceMemberName(metadata, spelling) != expr.name)) {
+            continue;
+          }
+          const std::string path(spelling);
+          if (ctx.sourceDefs.count(path) > 0 ||
+              ctx.helperOverloads.count(path) > 0) {
+            return path;
+          }
+        }
+        return std::string{};
+      };
+      if (std::string path = findVisibleSpelling(metadata.compatibilitySpellings);
+          !path.empty()) {
+        return path;
+      }
+      if (std::string path = findVisibleSpelling(metadata.loweringSpellings);
+          !path.empty()) {
+        return path;
+      }
+    }
+    return {};
+  };
+  auto resolveRootedStdlibSurfaceCompatibilityPath =
+      [&](const std::string &resolvedPath) -> std::string {
+    if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) ||
+        ctx.sourceDefs.count(resolvedPath) > 0 ||
+        ctx.helperOverloads.count(resolvedPath) > 0) {
+      return {};
+    }
+    const StdlibSurfaceMetadata *metadata =
+        findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+    if (metadata == nullptr || metadata->shape == StdlibSurfaceShape::ConstructorFamily) {
+      return {};
+    }
+    auto containsSpelling = [&](std::span<const std::string_view> spellings) {
+      return std::find(spellings.begin(), spellings.end(), resolvedPath) !=
+             spellings.end();
+    };
+    if (!containsSpelling(metadata->compatibilitySpellings) &&
+        !containsSpelling(metadata->loweringSpellings)) {
+      return {};
+    }
+    const std::string_view memberName =
+        resolveStdlibSurfaceMemberName(*metadata, resolvedPath);
+    if (memberName.empty()) {
+      return {};
+    }
+    const std::string canonicalPath =
+        std::string(metadata->canonicalPath) + "/" + std::string(memberName);
+    if (ctx.sourceDefs.count(canonicalPath) > 0 ||
+        ctx.helperOverloads.count(canonicalPath) > 0) {
+      return canonicalPath;
+    }
+    return {};
+  };
+  if (expr.name.empty()) {
+    return "";
+  }
+  auto isExplicitRemovedKeyValueCompatibilityPath = [&](std::string_view path) -> bool {
+    const std::string helperName =
+        metadataBackedKeyValueHelperRootAliasMethodName(path);
+    return !helperName.empty() &&
+           isRemovedKeyValueCompatibilityHelper(
+               keyValueCompatibilityHelperBase(helperName));
+  };
+  // Shared collection-spelling classifier consultation
+  // (docs/CompatPathResolutionConsolidation.md Step 2a). Direct-call
+  // shapes only: method-call retirement/rejection (Mechanism B) is
+  // validator-owned, and the classifier deliberately never canonicalizes
+  // method shapes. Bare /soa/* spellings are deliberately NOT consulted
+  // here: they are the same-path helper family the rewrite pipeline
+  // itself synthesizes and consumes mid-monomorphization, and their
+  // canonicalization is publication-stage behavior (what fact the
+  // validator reports), not resolution-stage behavior (which definition
+  // executes) - redirecting them here breaks the stdlib SOA template
+  // machinery. The prefix pre-filter also keeps the (family-aware, hence
+  // linear-scan) definition callback off the hot path for ordinary calls.
+  auto classifierCanonicalCollectionPath =
+      [&](const std::string &rootedPath) -> std::string {
+    if (expr.isMethodCall) {
+      return {};
+    }
+    if (!isResolutionStageCollectionSpellingPrefix(rootedPath)) {
+      return {};
+    }
+    const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
+        rootedPath,
+        CollectionCallShape::DirectCall,
+        CollectionReceiverFamily::None,
+        [&](std::string_view path) {
+          const std::string key(path);
+          if (ctx.sourceDefs.count(key) > 0 ||
+              ctx.templateDefs.count(key) > 0 ||
+              ctx.helperOverloads.count(key) > 0) {
+            return true;
+          }
+          const std::string templatedPrefix = key + "<";
+          const std::string specializedPrefix = key + "__t";
+          const std::string overloadPrefix = key + "__ov";
+          for (const auto &[definedPath, def] : ctx.sourceDefs) {
+            (void)def;
+            if (definedPath.rfind(templatedPrefix, 0) == 0 ||
+                definedPath.rfind(specializedPrefix, 0) == 0 ||
+                definedPath.rfind(overloadPrefix, 0) == 0) {
+              return true;
+            }
+          }
+          return false;
+        });
+    return decision.disposition == CompatSpellingDisposition::Canonicalize
+               ? decision.canonicalPath
+               : std::string{};
+  };
+  std::string builtinCollection;
+  if (!expr.isMethodCall &&
+      getBuiltinCollectionName(expr, builtinCollection) &&
+      expr.name == builtinCollection) {
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
+        importAlias != nullptr) {
+      const std::string constructorAlias =
+          metadataBackedKeyValueConstructorAliasRewritePath(*importAlias);
+      if (!constructorAlias.empty()) {
+        return finalizeResolvedPath(constructorAlias);
+      }
+    }
+    return finalizeResolvedPath("/" + builtinCollection);
+  }
+  if (!expr.name.empty() && expr.name[0] == '/') {
+    if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) &&
+        isExplicitRemovedKeyValueCompatibilityPath(expr.name)) {
+      return finalizeResolvedPath(expr.name);
+    }
+    if (std::string stdlibSurfacePath =
+            resolveRootedStdlibSurfaceCompatibilityPath(expr.name);
+        !stdlibSurfacePath.empty()) {
+      return finalizeResolvedPath(stdlibSurfacePath);
+    }
+    if (std::string classifierPath =
+            classifierCanonicalCollectionPath(expr.name);
+        !classifierPath.empty()) {
+      return finalizeResolvedPath(classifierPath);
+    }
+    return finalizeResolvedPath(expr.name);
+  }
+  if (expr.name.find('/') != std::string::npos) {
+    const std::string rootedPath = "/" + expr.name;
+    if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) &&
+        isExplicitRemovedKeyValueCompatibilityPath(rootedPath)) {
+      return finalizeResolvedPath(rootedPath);
+    }
+    if (std::string stdlibSurfacePath =
+            resolveRootedStdlibSurfaceCompatibilityPath(rootedPath);
+        !stdlibSurfacePath.empty()) {
+      return finalizeResolvedPath(stdlibSurfacePath);
+    }
+    if (std::string classifierPath =
+            classifierCanonicalCollectionPath(rootedPath);
+        !classifierPath.empty()) {
+      return finalizeResolvedPath(classifierPath);
+    }
+    return finalizeResolvedPath(rootedPath);
+  }
+  if (namespacePrefix.empty() && !ctx.currentDefinitionPath.empty()) {
+    const std::string localDefinitionPath = ctx.currentDefinitionPath + "/" + expr.name;
+    if (ctx.sourceDefs.count(localDefinitionPath) > 0 ||
+        ctx.helperOverloads.count(localDefinitionPath) > 0) {
+      return finalizeResolvedPath(localDefinitionPath);
+    }
+  }
+  if (!namespacePrefix.empty()) {
+    const size_t lastSlash = namespacePrefix.find_last_of('/');
+    const std::string_view suffix = lastSlash == std::string::npos
+                                        ? std::string_view(namespacePrefix)
+                                        : std::string_view(namespacePrefix).substr(lastSlash + 1);
+    if (suffix == expr.name && ctx.sourceDefs.count(namespacePrefix) > 0) {
+      return finalizeResolvedPath(namespacePrefix);
+    }
+    std::string prefix = namespacePrefix;
+    while (!prefix.empty()) {
+      std::string candidate = prefix + "/" + expr.name;
+      if (ctx.sourceDefs.count(candidate) > 0) {
+        return finalizeResolvedPath(candidate);
+      }
+      const size_t slash = prefix.find_last_of('/');
+      if (slash == std::string::npos) {
+        break;
+      }
+      prefix = prefix.substr(0, slash);
+    }
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
+        importAlias != nullptr) {
+      return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(*importAlias));
+    }
+    if (std::string stdlibSurfaceAlias = resolveStdlibSurfaceCompatibilityAlias();
+        !stdlibSurfaceAlias.empty()) {
+      return finalizeResolvedPath(stdlibSurfaceAlias);
+    }
+    return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(namespacePrefix + "/" + expr.name));
+  }
+  std::string root = "/" + expr.name;
+  if (ctx.sourceDefs.count(root) > 0) {
+    return finalizeResolvedPath(root);
+  }
+  if (const std::string *importAlias =
+          lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
+      importAlias != nullptr) {
+    return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(*importAlias));
+  }
+  if (std::string stdlibSurfaceAlias = resolveStdlibSurfaceCompatibilityAlias();
+      !stdlibSurfaceAlias.empty()) {
+    return finalizeResolvedPath(stdlibSurfaceAlias);
+  }
+  return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(root));
+}
+
+
+} // namespace primec

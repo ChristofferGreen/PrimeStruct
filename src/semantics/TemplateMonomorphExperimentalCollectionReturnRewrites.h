@@ -1,5 +1,12 @@
 #pragma once
 
+#include "TemplateMonomorphContext.h"
+#include "primec/ast/Ast.h"
+
+namespace primec {
+
+using semantics::isReturnCall;
+
 template <typename RewriteCurrentFn>
 void rewriteExperimentalConstructorReturnTree(Expr &candidate, RewriteCurrentFn &&rewriteCurrent) {
   rewriteCurrent(candidate);
@@ -29,3 +36,5 @@ void rewriteExperimentalConstructorReturnTree(Expr &candidate, RewriteCurrentFn 
     }
   }
 }
+
+} // namespace primec

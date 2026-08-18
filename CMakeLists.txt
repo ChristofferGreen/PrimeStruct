@@ -149,6 +149,27 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp
   src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.cpp
   src/semantics/TemplateMonomorphSourceDefinitionSetup.cpp
+  src/semantics/TemplateMonomorphFallbackTypeInference.cpp
+  src/semantics/TemplateMonomorphMethodTargets.cpp
+  src/semantics/TemplateMonomorphBindingCallInference.cpp
+  src/semantics/TemplateMonomorphBindingBlockInference.cpp
+  src/semantics/TemplateMonomorphTypeResolution.cpp
+  src/semantics/TemplateMonomorphAssignmentTargetResolution.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionArgumentRewrites.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionTargetValueRewrites.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionValueRewrites.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.cpp
+  src/semantics/TemplateMonomorphExperimentalCollectionReturnSetup.cpp
+  src/semantics/TemplateMonomorphDefinitionBindingSetup.cpp
+  src/semantics/TemplateMonomorphDefinitionReturnOrchestration.cpp
+  src/semantics/TemplateMonomorphDefinitionExperimentalCollectionRewrites.cpp
+  src/semantics/TemplateMonomorphExecutionRewrites.cpp
+  src/semantics/TemplateMonomorphDefinitionRewrites.cpp
+  src/semantics/TemplateMonomorphTemplateSpecialization.cpp
+  src/semantics/TemplateMonomorphImplicitTemplateInference.cpp
+  src/semantics/TemplateMonomorphExpressionRewrite.cpp
+  src/semantics/TemplateMonomorphFinalOrchestration.cpp
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp
   src/semantics/TypeResolutionGraph.cpp
