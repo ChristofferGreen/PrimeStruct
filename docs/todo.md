@@ -1078,7 +1078,7 @@ investigation chain's actively-productive leaves - see
     tests failed out of 1884" (1958 registered, remainder intentionally
     disabled shards).
 
-- [ ] TODO-4655: Add compile-run tests for language level examples
+- [x] TODO-4655: Add compile-run tests for language level examples
   - owner: ai
   - created_at: 2026-06-11
   - phase: Test coverage gaps
@@ -1100,6 +1100,56 @@ investigation chain's actively-productive leaves - see
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once all examples are covered; do not add new examples
     in this leaf.
+  - progress_2026-08-19: Audited all 37 `.prime` files under
+    `examples/{0.Concrete,1.Template,2.Inference,3.Surface,4.Transforms}/`.
+    Found most (32) already covered by the pre-existing
+    `compileExampleIrBatch` IR-compile batch tests in
+    `tests/unit/compile_run/examples/test_compile_run_examples_docs.cpp`
+    (parses+lowers every file under those prefixes except
+    `result_helpers.prime`, `raytracer.prime`, `soa_ecs.prime`, which that
+    batch's `collectExamplePrimeFiles` explicitly skips) plus the 2
+    `4.Transforms/` files via the existing
+    "checked-in ast transform example runs in VM" test. Added
+    `tests/unit/compile_run/examples/test_compile_run_examples_language_levels.cpp`
+    with 6 new TEST_CASEs (grouped by level) that compile-and-run every
+    0.Concrete/1.Template/2.Inference/3.Surface example through
+    `./primec --emit=vm ... --entry /main`, asserting each example's actual
+    exit code (deterministic per file) so behavior drift is caught, not
+    just parse/lowering drift. While building this coverage, found and
+    fixed a real compiler-vs-example drift: `examples/3.Surface/raytracer.prime`
+    used named-field struct construction without the required braces
+    (`Scene([s1] Sphere(...), ...)`), which the compiler now rejects with
+    "struct construction requires braces" (PSC1005); fixed to
+    `Scene{[s1] Sphere{...}, ...}` and it now compiles and renders its PPM
+    frame via the VM in ~15s (own test case, not folded into the batch
+    table, given the runtime). `examples/3.Surface/soa_ecs.prime` remains
+    genuinely broken -- its `[auto mut] particles{soa</Particle>()}`
+    declaration fails semantic analysis with "unknown call target: push"
+    (a tracked SoA/auto-inference method-resolution gap, see the SoA
+    same-path user shadow / receiver-precedence entries elsewhere in this
+    file) -- fixing that compiler bug is out of scope for this leaf, so
+    the new test pins the current failure and its exact error message
+    instead of asserting success, so a regression or an eventual fix is
+    caught either way. Also updated the *actually active* sharding config
+    (`cmake/PrimeStructManagedCompileRunImportsTextExamplesSuites.cmake` --
+    the `elseif(suite STREQUAL "primestruct.compile.run.examples")` block
+    in `CMakeLists.txt` itself is dead code for this suite, since it's
+    listed in `PrimeStructManagedCompileRunSuites` and skipped via
+    `continue()`) to insert the 6 new cases at their correct position in
+    the suite's doctest `--order-by=file` ordering (case index 79-84) and
+    shift the following ranges accordingly (verified via
+    `--list-test-cases` and a script that confirmed cases 1-130 are each
+    covered by exactly one shard, no gaps/overlaps). Full validation:
+    `./scripts/compile.sh --release` passed clean (100% tests passed, 0
+    failed out of 1890 run; the other ~74 listed are pre-existing disabled
+    tests unrelated to this change); raw build log grepped for
+    `error:`/`Error 1`/`Error 2` and found none. Coverage: 12/12
+    0.Concrete, 2/2 1.Template, 5/5 2.Inference, 16/16 3.Surface (14 via
+    exit-code assertions, raytracer.prime via its own VM-run assertion,
+    soa_ecs.prime via a pinned-failure assertion), 2/2 4.Transforms
+    (pre-existing) -- all 37 example files now have at least one
+    compile-and-run (or, for the one genuinely-broken file, a
+    compile-and-pin) test case.
 
 - [ ] TODO-4670: Remove old vector/soa-vector alias early-exit branches
   - owner: ai

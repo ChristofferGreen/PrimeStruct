@@ -39,31 +39,31 @@ Scene {
 
 [return<i32> effects(io_out)]
 main() {
-  [Scene] scene{Scene(
-    [s1] Sphere(
+  [Scene] scene{Scene{
+    [s1] Sphere{
       [center] Vec3{0.0, -0.1, -1.0},
       [radius] 0.5,
       [base] ColorRGB{0.8, 0.2, 0.2},
       [reflectivity] 0.75,
       [isGlass] 0.0
-    ),
-    [s2] Sphere(
+    },
+    [s2] Sphere{
       [center] Vec3{1.1, -0.1, -1.6},
       [radius] 0.5,
       [base] ColorRGB{0.2, 0.2, 0.85},
       [reflectivity] 0.85,
       [isGlass] 0.0
-    ),
-    [s3] Sphere(
+    },
+    [s3] Sphere{
       [center] Vec3{-1.2, -0.2, -1.4},
       [radius] 0.4,
       [base] ColorRGB{1.0, 1.0, 1.0},
       [reflectivity] 0.0,
       [isGlass] 1.0
-    ),
+    },
     [planeNormal] Vec3{0.0, 1.0, 0.0},
     [planeY] -0.6
-  )}
+  }}
   [i32] width{128}
   [i32] height{128}
   [i32] samples{2}

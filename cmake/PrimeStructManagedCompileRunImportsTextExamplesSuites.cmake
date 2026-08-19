@@ -96,14 +96,28 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   SHARD_PREFIX "metal_pipeline_and_borrow_checker"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 72
-                                  RANGE_LAST 94
+                                  RANGE_LAST 78
+                                  CASES_PER_SHARD 1)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "language_level_examples"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
+                                  RANGE_FIRST 79
+                                  RANGE_LAST 84
+                                  CASES_PER_SHARD 1)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "metal_pipeline_and_borrow_checker"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
+                                  RANGE_FIRST 85
+                                  RANGE_LAST 100
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "examples_newly_exposed_2026_07_16"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
-                                  RANGE_FIRST 95
-                                  RANGE_LAST 124
+                                  RANGE_FIRST 101
+                                  RANGE_LAST 130
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"

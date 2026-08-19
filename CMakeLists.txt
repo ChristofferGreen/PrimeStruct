@@ -878,6 +878,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp
+    tests/unit/compile_run/examples/test_compile_run_examples_language_levels.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_metal_smoke_and_borrows.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_native_launcher.cpp
