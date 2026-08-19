@@ -1423,7 +1423,7 @@ investigation chain's actively-productive leaves - see
     grepped for `error:`/`Error 1`/`Error 2`, zero matches) and "no
     failing CTest cases".
 
-- [ ] TODO-4687: Derive canonical path, bridge key, and member prefix generically, with annotation override
+- [x] TODO-4687: Derive canonical path, bridge key, and member prefix generically, with annotation override
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 1
@@ -1445,6 +1445,56 @@ investigation chain's actively-productive leaves - see
       convention-derived "mapValue".
   - stop_rule: Stop once derivation is proven equivalent for existing types;
     folding deriveCollectionsSurfaces() into one loop is TODO-4688.
+  - progress_2026-08-19: Resolved a contradiction in this entry's own scope
+    text using the acceptance criteria as tiebreaker: the parenthetical
+    ("minus known suffixes Value/Vector/Column") does not literally hold for
+    either worked example (a longer compound type name keeps its trailing
+    segment un-stripped in the expected default output, and the key-value
+    type's expected default-without-override output is only explained if no
+    suffix is stripped) — so the implemented default convention is
+    lowercase-first-letter only, with **no suffix stripping**, which is what
+    actually reproduces both the plain-collection and the SoA worked
+    examples and is what makes the key-value type's override
+    non-optional/required, matching the acceptance bullet. Implemented in
+    `include/primec/support/StdlibSurfaceRegistry.h` /
+    `src/support/StdlibSurfaceRegistry.cpp`:
+    `deriveStdlibCollectionMemberPrefix()`, `deriveStdlibCollectionCanonicalPath()`,
+    `deriveStdlibCollectionBridgeKey()`. Grammar override: the real parser's
+    semantic validator hard-rejects any parenthesized argument on the two
+    struct-category annotations ("transform does not accept arguments"), so
+    a `(...)`-style argument on the annotation itself was not viable.
+    Instead the override is spelled as a standalone
+    `// member_prefix="..."` comment line immediately *preceding* the
+    annotation line (not trailing it, and not between it and the struct
+    declaration) — this keeps it inert to the real compiler (an ordinary
+    comment) and, critically, keeps the annotation-then-declaration text
+    byte-for-byte unchanged, since several existing tests assert exact
+    substring matches like `"[public struct key_value_type]\n  MapValue<K,
+    V>()"` against the raw file text (a first attempt at a trailing-comment
+    syntax broke one of these). `StdlibCollectionStructAnnotation` gained
+    `std::optional<std::string> memberPrefixOverride`, populated by
+    `detectStdlibCollectionStructAnnotations()`. Added the override comment
+    to `stdlib/std/collections/map.prime` above its
+    `[public struct key_value_type]` annotation. Per stop_rule, the new
+    derivation functions are proven equivalent via a parity-asserting unit
+    test (extended
+    `tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp`)
+    but are **not** wired into `deriveCollectionsSurfaces()` — that fold is
+    TODO-4688. Caught and fixed two build failures during verification: (1)
+    doc comments in the header that spelled out concrete literal type
+    names/paths/bridge keys tripped 3 separate zero-tolerance compiler-
+    knowledge audits (`check_soa_surface_trace_inventory.py`,
+    `check_vector_surface_traces.py`,
+    `check_map_vector_compiler_knowledge.py`) — reworded to describe the
+    convention generically, since the paired `.cpp` already carries a
+    `collection-surface-audit: exempt` marker covering worked examples
+    there; (2) an initial trailing-comment-on-the-annotation-line syntax
+    broke the exact-substring test in
+    `test_semantics_calls_and_flow_collections_count_helpers_and_bare_map_calls.cpp`
+    — switched to the preceding-line comment convention described above.
+    Verified via `./scripts/compile.sh --release`: raw build log grepped
+    for `error:`/`Error 1`/`Error 2` (zero matches) and ctest reported
+    "100% tests passed, 0 tests failed out of 1891".
 
 - [ ] TODO-4688: Fold deriveCollectionsSurfaces()'s 3 hand-written blocks into one generic loop
   - owner: ai

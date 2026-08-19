@@ -1072,6 +1072,25 @@ std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metad
 
 } // namespace
 
+// TODO-4687: parses an optional `member_prefix="..."` override out of a
+// trailing line comment on a [collection_type]/[key_value_type] annotation
+// line, e.g. `[public struct key_value_type] // member_prefix="map"`.
+// Returns nullopt when no such marker is present on the line.
+static std::optional<std::string> parseStdlibCollectionMemberPrefixOverrideComment(
+    std::string_view line) {
+  static constexpr std::string_view marker = "member_prefix=\"";
+  const auto markerPos = line.find(marker);
+  if (markerPos == std::string_view::npos) {
+    return std::nullopt;
+  }
+  const auto valueStart = markerPos + marker.size();
+  const auto valueEnd = line.find('"', valueStart);
+  if (valueEnd == std::string_view::npos) {
+    return std::nullopt;
+  }
+  return std::string(line.substr(valueStart, valueEnd - valueStart));
+}
+
 // TODO-4686: generic [collection_type]/[key_value_type] struct-annotation
 // detection. Defined outside the anonymous namespace above (but still in
 // this translation unit, so it can reuse trimAscii/leadingSpaces/
@@ -1097,6 +1116,7 @@ std::vector<StdlibCollectionStructAnnotation> detectStdlibCollectionStructAnnota
   std::vector<StdlibCollectionStructAnnotation> results;
   bool expectingStructName = false;
   StdlibCollectionAnnotationKind pendingKind{};
+  std::optional<std::string> pendingOverride;
 
   for (std::size_t i = 0; i < lines.size(); ++i) {
     const std::string_view sv(lines[i]);
@@ -1118,9 +1138,10 @@ std::vector<StdlibCollectionStructAnnotation> detectStdlibCollectionStructAnnota
         // This is the struct declaration line, e.g. "SoaVector<T>() {".
         const std::string typeName = extractFunctionName(lines[i]);
         if (!typeName.empty()) {
-          results.push_back({typeName, pendingKind});
+          results.push_back({typeName, pendingKind, pendingOverride});
         }
         expectingStructName = false;
+        pendingOverride.reset();
         continue;
       }
     }
@@ -1142,6 +1163,15 @@ std::vector<StdlibCollectionStructAnnotation> detectStdlibCollectionStructAnnota
       // a detection target.
       continue;
     }
+    // TODO-4687: optional member-prefix override, spelled as a standalone
+    // `// member_prefix="..."` comment line immediately preceding the
+    // annotation line (see the grammar note on
+    // detectStdlibCollectionStructAnnotations()). Kept on its own line
+    // (rather than trailing the annotation) so it does not perturb any
+    // exact-substring matching against the annotation-then-declaration text
+    // done elsewhere.
+    pendingOverride = (i > 0) ? parseStdlibCollectionMemberPrefixOverrideComment(lines[i - 1])
+                              : std::nullopt;
     expectingStructName = true;
   }
   return results;
@@ -1157,6 +1187,41 @@ detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles() {
     }
   }
   return results;
+}
+
+// TODO-4687: default memberPrefix convention is lowercase-first-letter of
+// the detected type name with no suffix stripping (Vector -> "vector",
+// SoaVector -> "soaVector"); an explicit memberPrefixOverride always wins
+// (MapValue -> "map" via override, since the bare convention would derive
+// "mapValue"). See the scope-vs-acceptance discrepancy note in docs/todo.md
+// TODO-4687 for why suffix-stripping is deliberately not implemented here.
+std::string deriveStdlibCollectionMemberPrefix(const StdlibCollectionStructAnnotation &annotation) {
+  if (annotation.memberPrefixOverride.has_value()) {
+    return *annotation.memberPrefixOverride;
+  }
+  std::string prefix = annotation.typeName;
+  if (!prefix.empty()) {
+    prefix.front() = static_cast<char>(std::tolower(static_cast<unsigned char>(prefix.front())));
+  }
+  return prefix;
+}
+
+// TODO-4687: canonicalPath convention is "/std/collections/" + the file's
+// stem (filename without the ".prime" extension), matching the hardcoded
+// paths built by deriveCollectionsSurfaces() today (vector.prime ->
+// "/std/collections/vector", map.prime -> "/std/collections/map",
+// soa.prime -> "/std/collections/soa").
+std::string deriveStdlibCollectionCanonicalPath(const std::filesystem::path &filepath) {
+  return "/std/collections/" + filepath.stem().string();
+}
+
+// TODO-4687: bridgeKey convention is "collections." + file stem + "_" +
+// surfaceSuffix, matching the hardcoded keys passed to buildSurfaceData()
+// today (e.g. "collections.vector_helpers", "collections.map_constructors",
+// "collections.soa_helpers").
+std::string deriveStdlibCollectionBridgeKey(const std::filesystem::path &filepath,
+                                            std::string_view surfaceSuffix) {
+  return "collections." + filepath.stem().string() + "_" + std::string(surfaceSuffix);
 }
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry() {

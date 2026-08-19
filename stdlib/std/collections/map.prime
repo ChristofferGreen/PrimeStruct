@@ -13,6 +13,7 @@ namespace std {
     [public V] value
   }
 
+  // member_prefix="map"
   [public struct key_value_type]
   MapValue<K, V>() {
     [public Vector<K> mut] keys{vector<K>()}

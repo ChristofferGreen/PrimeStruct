@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -87,6 +88,11 @@ enum class StdlibCollectionAnnotationKind {
 struct StdlibCollectionStructAnnotation {
   std::string typeName;
   StdlibCollectionAnnotationKind kind{};
+  // TODO-4687: optional convention override. Populated when the annotation
+  // line carries a trailing `// member_prefix="..."` comment (see grammar
+  // note below); nullopt means the caller should fall back to the default
+  // derivation convention.
+  std::optional<std::string> memberPrefixOverride;
 };
 
 // Scans a single stdlib .prime file for top-level [public struct collection_type]
@@ -97,8 +103,21 @@ struct StdlibCollectionStructAnnotation {
 // scanStdlibPublicFunctions for [public] function scanning: only annotations
 // at indent depth < 4 are considered (struct-level, not nested struct-method
 // annotations), and struct declarations without one of these two annotations
-// (e.g. a bare "[public struct]") are not reported. Does not derive
-// canonicalPath/bridgeKey/prefix (TODO-4687); this is detection only.
+// (e.g. a bare "[public struct]") are not reported.
+//
+// TODO-4687 grammar note: the real parser's semantic validator rejects any
+// parenthesized argument on the two struct-category annotations ("transform
+// does not accept arguments"), so a member-prefix override cannot live
+// inside the `[...]` annotation brackets. Instead it is spelled as a
+// standalone `member_prefix="..."` line comment on its own line immediately
+// preceding the annotation line (kept off the annotation line itself, and
+// off the declaration line, so it never perturbs exact-substring matching
+// against the annotation-then-declaration text done elsewhere in the
+// codebase). This scans as plain text here (and as an ordinary ignored
+// comment to the real compiler), so it never perturbs actual `.prime`
+// parsing/semantics. When present, it overrides the default memberPrefix
+// derivation convention (see deriveStdlibCollectionMemberPrefix below) for
+// that struct.
 std::vector<StdlibCollectionStructAnnotation> detectStdlibCollectionStructAnnotations(
     const std::filesystem::path &filepath);
 
@@ -112,5 +131,27 @@ struct StdlibCollectionAnnotationFileResult {
 // regardless of whether the registry currently makes use of that file.
 std::vector<StdlibCollectionAnnotationFileResult>
 detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles();
+
+// TODO-4687: derive the default memberPrefix for a detected collection
+// struct annotation: the lowercase-first-letter of the detected type name,
+// with no suffix stripping (the whole type name is lowercase-first-lettered,
+// no suffix removed), unless the annotation carries an explicit
+// memberPrefixOverride, in which case the override is returned verbatim.
+// See src/support/StdlibSurfaceRegistry.cpp (which carries a compiler-
+// knowledge-audit exemption marker) for concrete worked examples against
+// today's collection source files.
+std::string deriveStdlibCollectionMemberPrefix(const StdlibCollectionStructAnnotation &annotation);
+
+// TODO-4687: derive the canonicalPath for a collection source file: a fixed
+// stdlib collections root prefix plus the file's stem (filename without the
+// ".prime" extension). See the .cpp for concrete worked examples.
+std::string deriveStdlibCollectionCanonicalPath(const std::filesystem::path &filepath);
+
+// TODO-4687: derive the bridgeKey for a collection source file's surface:
+// a fixed "collections." prefix, the file stem, an underscore, then
+// surfaceSuffix (e.g. "helpers"/"constructors"). See the .cpp for concrete
+// worked examples.
+std::string deriveStdlibCollectionBridgeKey(const std::filesystem::path &filepath,
+                                            std::string_view surfaceSuffix);
 
 } // namespace primec
