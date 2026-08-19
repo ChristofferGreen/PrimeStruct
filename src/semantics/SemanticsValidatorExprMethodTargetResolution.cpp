@@ -491,20 +491,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   auto preferredBorrowedSoaHelperTargetForCollectionMethod =
       [&](std::string helperName) {
-        // TODO-4690: migrated off a hardcoded "count" -> "count_ref"
-        // literal onto the registry-backed borrowed-variant lookup; the
-        // other branches below remain their own hardcoded chains (out of
-        // scope for this migration, tracked by TODO-4691/4692).
-        if (const std::string_view borrowedCountVariant = findBorrowedVariant(
-                StdlibSurfaceId::CollectionsColumnarHelpers, "count");
-            helperName == "count" && !borrowedCountVariant.empty()) {
-          helperName = std::string(borrowedCountVariant);
-        } else if (helperName == "get") {
-          helperName = "get_ref";
-        } else if (helperName == "ref") {
-          helperName = "ref_ref";
-        } else if (helperName == "to_aos") {
-          helperName = "to_aos_ref";
+        // TODO-4691: all four branches now resolve via the registry-backed
+        // borrowed-variant lookup instead of hardcoded literal reassignment
+        // (TODO-4690 migrated only the "count" branch; this migrates the
+        // rest of this lambda's chain).
+        if (const std::string_view borrowedVariant = findBorrowedVariant(
+                StdlibSurfaceId::CollectionsColumnarHelpers, helperName);
+            !borrowedVariant.empty()) {
+          helperName = std::string(borrowedVariant);
         }
         return preferredSoaHelperTargetForCollectionType(
             helperName, internalSoaCollectionTypePath(true));
@@ -986,14 +980,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   };
   auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
-    if (helperName == "count") {
-      helperName = "count_ref";
-    } else if (helperName == "get") {
-      helperName = "get_ref";
-    } else if (helperName == "ref") {
-      helperName = "ref_ref";
-    } else if (helperName == "to_aos") {
-      helperName = "to_aos_ref";
+    // TODO-4691: registry-backed borrowed-variant lookup instead of a
+    // hardcoded count/get/ref/to_aos literal chain (mirrors the sibling
+    // preferredBorrowedSoaHelperTargetForCollectionMethod lambda above).
+    if (const std::string_view borrowedVariant = findBorrowedVariant(
+            StdlibSurfaceId::CollectionsColumnarHelpers, helperName);
+        !borrowedVariant.empty()) {
+      helperName = borrowedVariant;
     }
     return preferredSoaHelperTargetForCollectionType(
         helperName, internalSoaCollectionTypePath(true));

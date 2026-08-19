@@ -2066,11 +2066,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers: colle
   CHECK(exprMethodTargetResolutionSource.find(
             "hasReceiverCompatibleExplicitVectorHelperPath(") !=
         std::string::npos);
+  // TODO-4691: preferredBorrowedSoaAccessHelperTarget no longer hardcodes a
+  // count/get/ref/to_aos == literal chain; it resolves via the registry-
+  // backed findBorrowedVariant lookup instead (mirrors the sibling
+  // preferredBorrowedSoaHelperTargetForCollectionMethod lambda).
   CHECK(exprMethodTargetResolutionSource.find(
-            "helperName == \"to_aos\"") !=
+            "helperName == \"to_aos\"") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "helperName = \"to_aos_ref\"") !=
+            "helperName = \"to_aos_ref\"") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "findBorrowedVariant(\n            "
+            "StdlibSurfaceId::CollectionsColumnarHelpers, helperName)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "preferredBorrowedSoaAccessHelperTarget(normalizedMethodName)") !=
