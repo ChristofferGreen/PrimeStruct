@@ -902,7 +902,7 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once all oversized test files are split and tests
     pass.
 
-- [ ] TODO-4652: Split oversized single test case bodies (>1000 lines)
+- [x] TODO-4652: Split oversized single test case bodies (>1000 lines)
   - owner: ai
   - created_at: 2026-06-11
   - phase: Oversized file refactoring
@@ -916,6 +916,60 @@ investigation chain's actively-productive leaves - see
     counts. Use `rg` to find `TEST_CASE` followed by many lines before
     the next `TEST_CASE`. Split into smaller focused subcases or extract
     repeated patterns into shared helper functions.
+    progress_2026-08-19: Wrote a brace/string/comment-aware Python
+    scanner (matches `TEST_CASE(`/`SUBCASE(` invocations to their real
+    closing brace, skipping braces inside string/char literals and
+    comments) and ran it over all of `tests/**/*.cpp`; found exactly 9
+    TEST_CASE bodies over 1,000 physical lines (no oversized SUBCASE
+    bodies existed). Note on approach: nesting checks inside `SUBCASE`
+    blocks does not shrink a TEST_CASE's own physical line span (the
+    acceptance criterion measures the outer macro's brace-matched
+    extent), so every oversized case was split into multiple sibling
+    top-level `TEST_CASE`s instead, with the shared file-reading
+    setup/fixture boilerplate each body depended on factored into one
+    local loader (a `_shared.h` helper for the docs-locks file, which
+    already had a shared header; a plain file-local `struct` + `static`
+    loader function for the three files that did not). Split files:
+    `test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp`
+    (1 case, 1208 lines -> 2 cases, ~575/607 lines; loader added to
+    `test_compile_run_examples_docs_locks_shared.h`);
+    `test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp`,
+    `..._expr_method_and_collection_dispatch_inference.cpp`, and
+    `..._collection_access_and_emitter_lowering.cpp` (1 case each,
+    ~1332-1344 lines -> 2 cases each, all under 700 lines, reusing the
+    existing `MapOwnershipSources` shared fixture); the three
+    `..._buffer_store_direct_calls_helper_lowerer_*.cpp` shards (1 case
+    each, ~1265-1279 lines -> 2 cases each, split at a natural
+    `inlineCalls = 0; instructions.clear(); error.clear();` reset
+    boundary since each block was already fully self-contained);
+    `test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp`
+    (its "soa pending diagnostics route through shared semantics
+    helpers" case, 1980 lines -> 3 cases of 452-764 lines, new
+    file-local `SoaPendingDiagnosticsSources` loader); and
+    `test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`
+    (its "template monomorph source delegation stays stable" case, 2555
+    lines -> 3 cases of 799-827 lines, new file-local
+    `TemplateMonomorphSourceDelegationSources` loader). For every
+    multi-field split, cross-checked that each new TEST_CASE's declared
+    fixture-field references exactly matched the fields its own body
+    actually called `.find(...)` on, to avoid `-Werror=unused-variable`
+    breaking the build (the TODO-4651 lesson about a stray unused local
+    surviving an extraction). No test semantics changed: every original
+    `CHECK`/`REQUIRE` still runs, unmodified, against the same fixture
+    data; only the physical grouping into TEST_CASE bodies (and, for the
+    two file-local-struct cases, the setup's home from inline lambda
+    locals to a returned struct) changed. Re-ran the scanner afterward
+    and confirmed 0 TEST_CASE/SUBCASE bodies remain over 1,000 lines
+    anywhere under `tests/`. Verified with a from-scratch
+    `./scripts/compile.sh --release` run started only after all 9 files
+    were finished editing (an earlier in-flight build overlapped with
+    edits to the last two files and was discarded as untrustworthy per
+    the TODO-4651 lesson, not counted as verification): build log free
+    of `error:`/`Error 1`/`Error 2`, ctest summary "100% tests passed, 0
+    tests failed out of 1884". `scripts/check_test_suite_naming.py` also
+    passes unchanged (no file renames were needed for this task). All
+    9 files committed and pushed together as one checkpoint. TODO-4652
+    is complete.
   - acceptance:
     - No single TEST_CASE body exceeds 1,000 lines.
     - `./scripts/compile.sh --release` passes.
