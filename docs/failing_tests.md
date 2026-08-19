@@ -617,7 +617,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-08-19T06:42:25Z`
+- Last updated: `2026-08-19T06:54:00Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
