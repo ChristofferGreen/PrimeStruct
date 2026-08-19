@@ -975,7 +975,7 @@ investigation chain's actively-productive leaves - see
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once oversized test bodies are split and tests pass.
 
-- [ ] TODO-4653: Add dedicated IrPrinter unit tests
+- [x] TODO-4653: Add dedicated IrPrinter unit tests
   - owner: ai
   - created_at: 2026-06-11
   - phase: Test coverage gaps
@@ -994,6 +994,28 @@ investigation chain's actively-productive leaves - see
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once basic IrPrinter coverage exists; do not aim for
     exhaustive coverage in this leaf.
+  - progress_2026-08-19: Found `tests/unit/ast/test_ir_printer.cpp` already
+    existed (added incidentally under TODO-4640/TODO-4641's file-layout
+    moves) with 5 `TEST_CASE`s (empty program, single definition,
+    definition with parameters, execution envelope, template args) and
+    already registered in `CMakeLists.txt`'s `PrimeStruct_misc_tests`
+    target, but it lacked the acceptance-required "expression printing"
+    and "struct printing" coverage. Added two more `TEST_CASE`s: one
+    constructing a `plus(2, 3)` nested-call expression inside a `return`
+    statement and checking the rendered `return plus(2, 3)` text, and one
+    constructing a `[struct]`-transform definition with an `i32` field
+    binding and checking the exact golden output (`let value: i32 = 1`)
+    against the same format already verified indirectly in
+    `test_ast_ir_dump.cpp`'s struct-definition case. File now has 7
+    `TEST_CASE`s at `tests/unit/ast/test_ir_printer.cpp`, matching the
+    existing convention of topic-named single-purpose files under
+    `tests/unit/ast/` (sibling to `test_ast_ir_dump*.cpp`,
+    `test_printers_manual.cpp`) rather than a new top-level
+    `tests/unit/test_ir_printer.cpp`; no `CMakeLists.txt` change was
+    needed since the file was already registered. `./scripts/compile.sh
+    --release` ran clean: build log has no `error:`/`Error 1`/`Error 2`,
+    and ctest reports `100% tests passed, 0 tests failed out of 1884`
+    with `PrimeStruct_primestruct_ir_printer` passing.
 
 - [ ] TODO-4654: Add `[public]` annotations to stdlib modules
   - owner: ai
