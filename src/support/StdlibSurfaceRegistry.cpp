@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -266,15 +267,6 @@ struct ManifestSurfaceData {
     memberAliases.refreshViews();
     borrowedVariants.refreshViews();
   }
-};
-
-struct CollectionsManifestSurfaces {
-  ManifestSurfaceData vectorHelpers;
-  ManifestSurfaceData vectorConstructors;
-  ManifestSurfaceData mapHelpers;
-  ManifestSurfaceData mapConstructors;
-  ManifestSurfaceData soaHelpers;
-  ManifestSurfaceData soaConstructors;
 };
 
 std::string trimAscii(std::string_view value) {
@@ -573,83 +565,171 @@ static ManifestSurfaceData buildSurfaceData(
   return d;
 }
 
-// Finds a specific filename within an already-discovered directory listing
-// (TODO-4685: the 3 known collection files are looked up against the same
-// generic directory scan used for discovery, rather than each doing its own
-// independent filesystem lookup).
-std::optional<std::filesystem::path> findInStdlibCollectionFileList(
-    const std::vector<std::filesystem::path> &files, std::string_view filename) {
-  for (const auto &file : files) {
-    if (file.filename() == filename) {
-      return file;
-    }
-  }
-  return std::nullopt;
-}
-
-// TODO-4688: per-type behavioral configuration for the generic collection-
-// surface derivation loop below. Everything that is pure naming/path
-// boilerplate (memberPrefix, canonicalPath, bridgeKey, import alias,
-// lowering-path base) is derived generically from the TODO-4685/4686/4687
-// discovery machinery; only the genuine semantic differences between the
-// 3 collection types' stdlib surfaces are kept here as explicit config:
+// TODO-4688/4689: per-type behavioral configuration for the generic
+// collection-surface derivation loop below. Everything that is pure
+// naming/path boilerplate (memberPrefix, canonicalPath, bridgeKey, import
+// alias, lowering-path base) is derived generically from the
+// TODO-4685/4686/4687 discovery machinery; only genuine semantic
+// differences between collection types' stdlib surfaces are kept here as
+// explicit, opt-in config, keyed by file name:
 //   - which struct-annotation kind identifies the type's collection struct
 //     (collection_type vs key_value_type);
-//   - whether statement-member detection applies (vector only);
+//   - whether statement-member detection applies;
 //   - whether a constructor member also appears in the helper surface's
-//     memberNames (vector/map: yes; soa: no);
-//   - the helper surface's backingTypeName override (map only: "MapValue";
-//     vector/soa leave it empty).
+//     memberNames;
+//   - the helper surface's backingTypeName override.
+// A discovered *.prime file with a [collection_type]/[key_value_type]
+// struct annotation but no entry here (TODO-4689: e.g. a brand-new
+// collection type) still gets a registry entry, using the default
+// convention below (DefaultCollectionSurfaceConfig): no statement-member
+// detection, constructor joins the helper surface, no backing-type
+// override. This is what lets a newly-added annotated stdlib file appear
+// in stdlibSurfaceRegistry() with zero further edits to this file.
 struct CollectionSurfaceConfig {
   std::string_view fileName;
   StdlibCollectionAnnotationKind annotationKind;
   bool detectStatementMembers;
   bool constructorJoinsHelperSurface;
   std::string_view helperBackingTypeName;
-  ManifestSurfaceData CollectionsManifestSurfaces::*helperField;
-  ManifestSurfaceData CollectionsManifestSurfaces::*constructorField;
 };
 
 static const std::array<CollectionSurfaceConfig, 3> CollectionSurfaceConfigs = {{
     {"vector.prime", StdlibCollectionAnnotationKind::CollectionType,
-     /*detectStatementMembers=*/true, /*constructorJoinsHelperSurface=*/true, "",
-     &CollectionsManifestSurfaces::vectorHelpers, &CollectionsManifestSurfaces::vectorConstructors},
+     /*detectStatementMembers=*/true, /*constructorJoinsHelperSurface=*/true, ""},
     {"map.prime", StdlibCollectionAnnotationKind::KeyValueType,
-     /*detectStatementMembers=*/false, /*constructorJoinsHelperSurface=*/true, "MapValue",
-     &CollectionsManifestSurfaces::mapHelpers, &CollectionsManifestSurfaces::mapConstructors},
+     /*detectStatementMembers=*/false, /*constructorJoinsHelperSurface=*/true, "MapValue"},
     {"soa.prime", StdlibCollectionAnnotationKind::CollectionType,
-     /*detectStatementMembers=*/false, /*constructorJoinsHelperSurface=*/false, "",
-     &CollectionsManifestSurfaces::soaHelpers, &CollectionsManifestSurfaces::soaConstructors},
+     /*detectStatementMembers=*/false, /*constructorJoinsHelperSurface=*/false, ""},
 }};
 
-static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
-  CollectionsManifestSurfaces derived;
-  const std::vector<std::filesystem::path> collectionFiles = listStdlibCollectionFiles();
+constexpr CollectionSurfaceConfig DefaultCollectionSurfaceConfig{
+    /*fileName=*/"", StdlibCollectionAnnotationKind::CollectionType,
+    /*detectStatementMembers=*/false, /*constructorJoinsHelperSurface=*/true, ""};
 
+static const CollectionSurfaceConfig *findCollectionSurfaceConfig(std::string_view fileName) {
   for (const auto &config : CollectionSurfaceConfigs) {
-    const std::filesystem::path nominalPath(config.fileName);
-    const auto path = findInStdlibCollectionFileList(collectionFiles, config.fileName);
+    if (config.fileName == fileName) {
+      return &config;
+    }
+  }
+  return nullptr;
+}
 
-    // Generic TODO-4686/4687 derivation: find the struct annotation of the
-    // expected kind for this file and derive its memberPrefix/collection
-    // type name from it, rather than a hardcoded literal per type.
-    std::string memberPrefix;
-    std::string collectionTypeName;
-    if (path.has_value()) {
-      const auto annotations = detectStdlibCollectionStructAnnotations(*path);
-      for (const auto &annotation : annotations) {
-        if (annotation.kind == config.annotationKind) {
-          memberPrefix = deriveStdlibCollectionMemberPrefix(annotation);
-          collectionTypeName = annotation.typeName + "<";
-          break;
-        }
+// TODO-4689: files that carry a [collection_type]/[key_value_type] struct
+// annotation but are *not* a public collection surface of their own -- an
+// internal implementation detail another surface's own file already owns
+// (e.g. a backing-storage type used by, and imported from, one of the real
+// surface files above). Generic discovery would otherwise happily turn
+// every one of their many internal [public] helper functions into a second,
+// unrelated domain==Collections surface (confirmed by a full-suite release
+// run: including such a file broke unrelated UI/scene compile-run tests,
+// not just something scoped to that file's own type). This exclusion list
+// only needs an entry for files like that; a brand-new *public* collection
+// type's own file is never on it.
+static const std::array<std::string_view, 1> ExcludedCollectionSurfaceFiles = {{
+    "soa_storage.prime",
+}};
+
+static bool isExcludedCollectionSurfaceFile(std::string_view fileName) {
+  return std::find(ExcludedCollectionSurfaceFiles.begin(), ExcludedCollectionSurfaceFiles.end(), fileName) !=
+         ExcludedCollectionSurfaceFiles.end();
+}
+
+// Picks the struct annotation this file's collection surface should be
+// derived from: the config's expected kind when the file has explicit
+// config (preserves today's vector/map/soa selection exactly), otherwise
+// the first collection_type/key_value_type annotation found (TODO-4689
+// generic fallback for a file with no config entry).
+static const StdlibCollectionStructAnnotation *selectCollectionSurfaceAnnotation(
+    const std::vector<StdlibCollectionStructAnnotation> &annotations,
+    const CollectionSurfaceConfig *config) {
+  for (const auto &annotation : annotations) {
+    if (config != nullptr ? annotation.kind == config->annotationKind
+                           : (annotation.kind == StdlibCollectionAnnotationKind::CollectionType ||
+                              annotation.kind == StdlibCollectionAnnotationKind::KeyValueType)) {
+      return &annotation;
+    }
+  }
+  return nullptr;
+}
+
+// TODO-4689: dynamically sized collection-surface storage. Every *.prime
+// file directly under stdlib/std/collections/ carrying a
+// [collection_type]/[key_value_type] struct annotation contributes one
+// helper + one constructor entry, in file order (listStdlibCollectionFiles()
+// already sorts for determinism); a file without such an annotation
+// contributes nothing. Backing ManifestSurfaceData is returned by value
+// into a vector the caller owns for the process lifetime -- growing that
+// vector only moves ManifestSurfaceData objects (each of whose owned
+// std::string/std::vector members keep their own heap buffers on move), so
+// the string_view spans captured by refreshViews() before the push stay
+// valid regardless of how many entries the vector ends up holding.
+// Orders discovered collection files so today's known types (vector, map,
+// soa) are processed in their historical CollectionSurfaceConfigs order
+// first, with any other discovered/dynamic files following afterward in
+// their (alphabetical) discovery order. Some downstream consumers of
+// stdlibSurfaceRegistry() resolve an ambiguous/unscoped query (e.g. "which
+// collection surface owns member X") by taking the first registry-order
+// match rather than a canonicalPath-scoped one; preserving today's relative
+// order for the known types keeps their behavior byte-for-byte unchanged,
+// while a newly discovered surface still always appears (just after them).
+static std::vector<std::filesystem::path> orderCollectionFilesForDerivation(
+    std::vector<std::filesystem::path> collectionFiles) {
+  std::vector<std::filesystem::path> ordered;
+  ordered.reserve(collectionFiles.size());
+  std::vector<bool> consumed(collectionFiles.size(), false);
+  for (const auto &config : CollectionSurfaceConfigs) {
+    for (std::size_t i = 0; i < collectionFiles.size(); ++i) {
+      if (!consumed[i] && collectionFiles[i].filename() == config.fileName) {
+        ordered.push_back(collectionFiles[i]);
+        consumed[i] = true;
+        break;
       }
     }
+  }
+  for (std::size_t i = 0; i < collectionFiles.size(); ++i) {
+    if (!consumed[i]) {
+      ordered.push_back(collectionFiles[i]);
+    }
+  }
+  return ordered;
+}
 
-    const auto records = path.has_value()
-        ? scanStdlibPublicFunctions(*path, memberPrefix, collectionTypeName,
-                                     config.detectStatementMembers)
-        : std::vector<ScannedFunctionRecord>{};
+static std::vector<ManifestSurfaceData> deriveCollectionsSurfaceData() {
+  std::vector<ManifestSurfaceData> derived;
+  const std::vector<std::filesystem::path> collectionFiles =
+      orderCollectionFilesForDerivation(listStdlibCollectionFiles());
+  derived.reserve(collectionFiles.size() * 2);
+
+  for (const auto &path : collectionFiles) {
+    const std::string fileName = path.filename().string();
+    if (isExcludedCollectionSurfaceFile(fileName)) {
+      continue;
+    }
+    const CollectionSurfaceConfig *config = findCollectionSurfaceConfig(fileName);
+    const auto annotations = detectStdlibCollectionStructAnnotations(path);
+    const StdlibCollectionStructAnnotation *annotation =
+        selectCollectionSurfaceAnnotation(annotations, config);
+    if (annotation == nullptr) {
+      // Not a collection-surface file (no matching struct annotation).
+      continue;
+    }
+
+    const bool detectStatementMembers =
+        config != nullptr ? config->detectStatementMembers
+                           : DefaultCollectionSurfaceConfig.detectStatementMembers;
+    const bool constructorJoinsHelperSurface =
+        config != nullptr ? config->constructorJoinsHelperSurface
+                           : DefaultCollectionSurfaceConfig.constructorJoinsHelperSurface;
+    const std::string_view helperBackingTypeName =
+        config != nullptr ? config->helperBackingTypeName
+                           : DefaultCollectionSurfaceConfig.helperBackingTypeName;
+
+    const std::string memberPrefix = deriveStdlibCollectionMemberPrefix(*annotation);
+    const std::string collectionTypeName = annotation->typeName + "<";
+
+    const auto records =
+        scanStdlibPublicFunctions(path, memberPrefix, collectionTypeName, detectStatementMembers);
 
     std::vector<std::string> helperMembers;
     std::vector<std::string> helperStatements;
@@ -663,7 +743,7 @@ static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
           ctorMembers.push_back(rec.name);
           ctorLowered.push_back(rec.name);
         }
-        if (config.constructorJoinsHelperSurface &&
+        if (constructorJoinsHelperSurface &&
             std::find(helperMembers.begin(), helperMembers.end(), rec.name) == helperMembers.end()) {
           helperMembers.push_back(rec.name);
         }
@@ -683,217 +763,228 @@ static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
     }
 
     // Generic TODO-4687 derivation of canonicalPath/bridgeKey/import alias/
-    // lowering-path base from the file's stem, independent of the type-
-    // specific config above.
-    const std::string basePath = deriveStdlibCollectionCanonicalPath(nominalPath);
-    const std::string stem = nominalPath.stem().string();
-    const std::string helperBridgeKey = deriveStdlibCollectionBridgeKey(nominalPath, "helpers");
-    const std::string constructorBridgeKey = deriveStdlibCollectionBridgeKey(nominalPath, "constructors");
+    // lowering-path base from the file's stem, independent of the
+    // type-specific config above.
+    const std::string basePath = deriveStdlibCollectionCanonicalPath(path);
+    const std::string stem = path.stem().string();
+    const std::string helperBridgeKey = deriveStdlibCollectionBridgeKey(path, "helpers");
+    const std::string constructorBridgeKey = deriveStdlibCollectionBridgeKey(path, "constructors");
     const std::string constructorPath = basePath + "/" + stem;
 
-    derived.*config.helperField = buildSurfaceData(
-        helperBridgeKey, "/std/collections", basePath, std::string(config.helperBackingTypeName),
+    derived.push_back(buildSurfaceData(
+        helperBridgeKey, "/std/collections", basePath, std::string(helperBackingTypeName),
         helperMembers, helperStatements, helperLowered,
-        basePath, stem, basePath);
+        basePath, stem, basePath));
 
-    derived.*config.constructorField = buildSurfaceData(
+    derived.push_back(buildSurfaceData(
         constructorBridgeKey, "/std/collections", constructorPath, "",
         ctorMembers, {}, ctorLowered,
-        basePath, stem, basePath);
+        basePath, stem, basePath));
   }
 
   return derived;
 }
 
-const CollectionsManifestSurfaces CollectionsSurfaces = deriveCollectionsSurfaces();
+const std::vector<ManifestSurfaceData> CollectionsSurfaceData = deriveCollectionsSurfaceData();
 
-constexpr StdlibSurfaceId collectionSurfaceId(std::size_t slotIndex) {
-  return static_cast<StdlibSurfaceId>(
-      static_cast<int>(StdlibSurfaceId::CollectionsManifestSurface0) +
-      static_cast<int>(slotIndex));
+// TODO-4689: the canonical paths TODO-4688's generic derivation is known to
+// produce today for vector/map/soa's helper + constructor surfaces. A
+// discovered collection surface whose canonicalPath matches one of these
+// keeps its dedicated StdlibSurfaceId enum member (so none of the existing
+// ~40 StdlibSurfaceId::CollectionsManifestSurface0-etc. call sites change);
+// any other discovered collection surface gets
+// StdlibSurfaceId::CollectionsDynamicSurface instead.
+struct KnownCollectionSurfaceId {
+  StdlibSurfaceId id;
+  std::string_view canonicalPath;
+};
+
+static constexpr std::array<KnownCollectionSurfaceId, 6> KnownCollectionSurfaceIds = {{
+    {StdlibSurfaceId::CollectionsManifestSurface0, "/std/collections/vector"},
+    {StdlibSurfaceId::CollectionsManifestSurface1, "/std/collections/vector/vector"},
+    {StdlibSurfaceId::CollectionsManifestSurface2, "/std/collections/map"},
+    {StdlibSurfaceId::CollectionsManifestSurface3, "/std/collections/map/map"},
+    {StdlibSurfaceId::CollectionsColumnarHelpers, "/std/collections/soa"},
+    {StdlibSurfaceId::CollectionsColumnarConstructors, "/std/collections/soa/soa"},
+}};
+
+static StdlibSurfaceId resolveCollectionSurfaceId(std::string_view canonicalPath) {
+  for (const auto &known : KnownCollectionSurfaceIds) {
+    if (known.canonicalPath == canonicalPath) {
+      return known.id;
+    }
+  }
+  return StdlibSurfaceId::CollectionsDynamicSurface;
 }
 
-static_assert(collectionSurfaceId(0) == StdlibSurfaceId::CollectionsManifestSurface0);
-static_assert(collectionSurfaceId(5) == StdlibSurfaceId::CollectionsColumnarConstructors);
+// Builds the domain==Collections StdlibSurfaceMetadata entries from the
+// persistent CollectionsSurfaceData backing storage above (its
+// string_view-bearing spans are what these entries point into, so
+// CollectionsSurfaceData must outlive the returned entries).
+static std::vector<StdlibSurfaceMetadata> buildCollectionsSurfaceMetadata(
+    const std::vector<ManifestSurfaceData> &backing) {
+  std::vector<StdlibSurfaceMetadata> entries;
+  entries.reserve(backing.size());
+  for (std::size_t i = 0; i < backing.size(); ++i) {
+    const ManifestSurfaceData &d = backing[i];
+    const bool isConstructor = (i % 2) == 1; // helper, constructor pushed in that order per file
+    entries.push_back(StdlibSurfaceMetadata{
+        .id = resolveCollectionSurfaceId(d.canonicalPath),
+        .domain = StdlibSurfaceDomain::Collections,
+        .shape = isConstructor ? StdlibSurfaceShape::ConstructorFamily : StdlibSurfaceShape::HelperFamily,
+        .bridgeKey = d.bridgeKey,
+        .canonicalImportRoot = d.canonicalImportRoot,
+        .canonicalPath = d.canonicalPath,
+        .backingTypeName = d.backingTypeName,
+        .memberNames = d.memberNames.views,
+        .memberAliases = d.memberAliases.views,
+        .statementMemberNames = d.statementMemberNames.views,
+        .importAliasSpellings = d.importAliasSpellings.views,
+        .compatibilitySpellings = d.compatibilitySpellings.views,
+        .loweringSpellings = d.loweringSpellings.views,
+        .borrowedVariants = d.borrowedVariants.views,
+    });
+  }
+  return entries;
+}
 
-const std::array<StdlibSurfaceMetadata, 11> Registry = {{
-    {
-        .id = StdlibSurfaceId::FileHelpers,
-        .domain = StdlibSurfaceDomain::File,
-        .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = "file.file_helpers",
-        .canonicalImportRoot = "/std/file",
-        .canonicalPath = "/std/file/File",
-        .backingTypeName = {},
-        .memberNames = FileHelperMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = FileHelperImportAliases,
-        .compatibilitySpellings = FileHelperCompatibilitySpellings,
-        .loweringSpellings = FileHelperLoweringSpellings,
-        .borrowedVariants = {},
-    },
-    {
-        .id = StdlibSurfaceId::FileErrorHelpers,
-        .domain = StdlibSurfaceDomain::File,
-        .shape = StdlibSurfaceShape::ErrorFamily,
-        .bridgeKey = "file.file_error",
-        .canonicalImportRoot = "/std/file",
-        .canonicalPath = "/std/file/FileError",
-        .backingTypeName = {},
-        .memberNames = FileErrorHelperMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = FileErrorImportAliases,
-        .compatibilitySpellings = FileErrorCompatibilitySpellings,
-        .loweringSpellings = FileErrorLoweringSpellings,
-        .borrowedVariants = {},
-    },
-    {
-        .id = collectionSurfaceId(0),
-        .domain = StdlibSurfaceDomain::Collections,
-        .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = CollectionsSurfaces.vectorHelpers.bridgeKey,
-        .canonicalImportRoot = CollectionsSurfaces.vectorHelpers.canonicalImportRoot,
-        .canonicalPath = CollectionsSurfaces.vectorHelpers.canonicalPath,
-        .backingTypeName = CollectionsSurfaces.vectorHelpers.backingTypeName,
-        .memberNames = CollectionsSurfaces.vectorHelpers.memberNames.views,
-        .memberAliases = CollectionsSurfaces.vectorHelpers.memberAliases.views,
-        .statementMemberNames = CollectionsSurfaces.vectorHelpers.statementMemberNames.views,
-        .importAliasSpellings = CollectionsSurfaces.vectorHelpers.importAliasSpellings.views,
-        .compatibilitySpellings = CollectionsSurfaces.vectorHelpers.compatibilitySpellings.views,
-        .loweringSpellings = CollectionsSurfaces.vectorHelpers.loweringSpellings.views,
-        .borrowedVariants = CollectionsSurfaces.vectorHelpers.borrowedVariants.views,
-    },
-    {
-        .id = collectionSurfaceId(1),
-        .domain = StdlibSurfaceDomain::Collections,
-        .shape = StdlibSurfaceShape::ConstructorFamily,
-        .bridgeKey = CollectionsSurfaces.vectorConstructors.bridgeKey,
-        .canonicalImportRoot = CollectionsSurfaces.vectorConstructors.canonicalImportRoot,
-        .canonicalPath = CollectionsSurfaces.vectorConstructors.canonicalPath,
-        .backingTypeName = CollectionsSurfaces.vectorConstructors.backingTypeName,
-        .memberNames = CollectionsSurfaces.vectorConstructors.memberNames.views,
-        .memberAliases = CollectionsSurfaces.vectorConstructors.memberAliases.views,
-        .statementMemberNames = CollectionsSurfaces.vectorConstructors.statementMemberNames.views,
-        .importAliasSpellings = CollectionsSurfaces.vectorConstructors.importAliasSpellings.views,
-        .compatibilitySpellings = CollectionsSurfaces.vectorConstructors.compatibilitySpellings.views,
-        .loweringSpellings = CollectionsSurfaces.vectorConstructors.loweringSpellings.views,
-        .borrowedVariants = CollectionsSurfaces.vectorConstructors.borrowedVariants.views,
-    },
-    {
-        .id = collectionSurfaceId(2),
-        .domain = StdlibSurfaceDomain::Collections,
-        .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = CollectionsSurfaces.mapHelpers.bridgeKey,
-        .canonicalImportRoot = CollectionsSurfaces.mapHelpers.canonicalImportRoot,
-        .canonicalPath = CollectionsSurfaces.mapHelpers.canonicalPath,
-        .backingTypeName = CollectionsSurfaces.mapHelpers.backingTypeName,
-        .memberNames = CollectionsSurfaces.mapHelpers.memberNames.views,
-        .memberAliases = CollectionsSurfaces.mapHelpers.memberAliases.views,
-        .statementMemberNames = CollectionsSurfaces.mapHelpers.statementMemberNames.views,
-        .importAliasSpellings = CollectionsSurfaces.mapHelpers.importAliasSpellings.views,
-        .compatibilitySpellings = CollectionsSurfaces.mapHelpers.compatibilitySpellings.views,
-        .loweringSpellings = CollectionsSurfaces.mapHelpers.loweringSpellings.views,
-        .borrowedVariants = CollectionsSurfaces.mapHelpers.borrowedVariants.views,
-    },
-    {
-        .id = collectionSurfaceId(3),
-        .domain = StdlibSurfaceDomain::Collections,
-        .shape = StdlibSurfaceShape::ConstructorFamily,
-        .bridgeKey = CollectionsSurfaces.mapConstructors.bridgeKey,
-        .canonicalImportRoot = CollectionsSurfaces.mapConstructors.canonicalImportRoot,
-        .canonicalPath = CollectionsSurfaces.mapConstructors.canonicalPath,
-        .backingTypeName = CollectionsSurfaces.mapConstructors.backingTypeName,
-        .memberNames = CollectionsSurfaces.mapConstructors.memberNames.views,
-        .memberAliases = CollectionsSurfaces.mapConstructors.memberAliases.views,
-        .statementMemberNames = CollectionsSurfaces.mapConstructors.statementMemberNames.views,
-        .importAliasSpellings = CollectionsSurfaces.mapConstructors.importAliasSpellings.views,
-        .compatibilitySpellings = CollectionsSurfaces.mapConstructors.compatibilitySpellings.views,
-        .loweringSpellings = CollectionsSurfaces.mapConstructors.loweringSpellings.views,
-        .borrowedVariants = CollectionsSurfaces.mapConstructors.borrowedVariants.views,
-    },
-    {
-        .id = collectionSurfaceId(4),
-        .domain = StdlibSurfaceDomain::Collections,
-        .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = CollectionsSurfaces.soaHelpers.bridgeKey,
-        .canonicalImportRoot = CollectionsSurfaces.soaHelpers.canonicalImportRoot,
-        .canonicalPath = CollectionsSurfaces.soaHelpers.canonicalPath,
-        .backingTypeName = CollectionsSurfaces.soaHelpers.backingTypeName,
-        .memberNames = CollectionsSurfaces.soaHelpers.memberNames.views,
-        .memberAliases = CollectionsSurfaces.soaHelpers.memberAliases.views,
-        .statementMemberNames = CollectionsSurfaces.soaHelpers.statementMemberNames.views,
-        .importAliasSpellings = CollectionsSurfaces.soaHelpers.importAliasSpellings.views,
-        .compatibilitySpellings = CollectionsSurfaces.soaHelpers.compatibilitySpellings.views,
-        .loweringSpellings = CollectionsSurfaces.soaHelpers.loweringSpellings.views,
-        .borrowedVariants = CollectionsSurfaces.soaHelpers.borrowedVariants.views,
-    },
-    {
-        .id = collectionSurfaceId(5),
-        .domain = StdlibSurfaceDomain::Collections,
-        .shape = StdlibSurfaceShape::ConstructorFamily,
-        .bridgeKey = CollectionsSurfaces.soaConstructors.bridgeKey,
-        .canonicalImportRoot = CollectionsSurfaces.soaConstructors.canonicalImportRoot,
-        .canonicalPath = CollectionsSurfaces.soaConstructors.canonicalPath,
-        .backingTypeName = CollectionsSurfaces.soaConstructors.backingTypeName,
-        .memberNames = CollectionsSurfaces.soaConstructors.memberNames.views,
-        .memberAliases = CollectionsSurfaces.soaConstructors.memberAliases.views,
-        .statementMemberNames = CollectionsSurfaces.soaConstructors.statementMemberNames.views,
-        .importAliasSpellings = CollectionsSurfaces.soaConstructors.importAliasSpellings.views,
-        .compatibilitySpellings = CollectionsSurfaces.soaConstructors.compatibilitySpellings.views,
-        .loweringSpellings = CollectionsSurfaces.soaConstructors.loweringSpellings.views,
-        .borrowedVariants = CollectionsSurfaces.soaConstructors.borrowedVariants.views,
-    },
-    {
-        .id = StdlibSurfaceId::CollectionsContainerErrorHelpers,
-        .domain = StdlibSurfaceDomain::Collections,
-        .shape = StdlibSurfaceShape::ErrorFamily,
-        .bridgeKey = "collections.container_error",
-        .canonicalImportRoot = "/std/collections",
-        .canonicalPath = "/std/collections/ContainerError",
-        .backingTypeName = {},
-        .memberNames = CollectionsContainerErrorMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = CollectionsContainerErrorImportAliases,
-        .compatibilitySpellings = CollectionsContainerErrorCompatibilitySpellings,
-        .loweringSpellings = CollectionsContainerErrorLoweringSpellings,
-        .borrowedVariants = {},
-    },
-    {
-        .id = StdlibSurfaceId::GfxBufferHelpers,
-        .domain = StdlibSurfaceDomain::Gfx,
-        .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = "gfx.buffer_helpers",
-        .canonicalImportRoot = "/std/gfx",
-        .canonicalPath = "/std/gfx/Buffer",
-        .backingTypeName = {},
-        .memberNames = GfxBufferHelperMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = GfxBufferImportAliases,
-        .compatibilitySpellings = GfxBufferCompatibilitySpellings,
-        .loweringSpellings = GfxBufferLoweringSpellings,
-        .borrowedVariants = {},
-    },
-    {
-        .id = StdlibSurfaceId::GfxErrorHelpers,
-        .domain = StdlibSurfaceDomain::Gfx,
-        .shape = StdlibSurfaceShape::ErrorFamily,
-        .bridgeKey = "gfx.gfx_error",
-        .canonicalImportRoot = "/std/gfx",
-        .canonicalPath = "/std/gfx/GfxError",
-        .backingTypeName = {},
-        .memberNames = GfxErrorHelperMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = GfxErrorImportAliases,
-        .compatibilitySpellings = GfxErrorCompatibilitySpellings,
-        .loweringSpellings = GfxErrorLoweringSpellings,
-        .borrowedVariants = {},
-    },
-}};
+// TODO-4689: "fail loudly if not found" -- every one of the 6 known
+// canonical paths above is expected to be discovered at startup given
+// today's real stdlib collection files. If one is missing (e.g. a stdlib
+// file was deleted/renamed without updating KnownCollectionSurfaceIds),
+// StdlibSurfaceId::CollectionsManifestSurface0 and friends would silently
+// resolve to nothing for every one of their ~40 call sites, which is far
+// worse than a hard startup failure.
+static void verifyKnownCollectionSurfaceIdsResolved(
+    const std::vector<StdlibSurfaceMetadata> &collectionsEntries) {
+  for (const auto &known : KnownCollectionSurfaceIds) {
+    const bool found = std::any_of(
+        collectionsEntries.begin(), collectionsEntries.end(), [&](const StdlibSurfaceMetadata &entry) {
+          return entry.id == known.id && entry.canonicalPath == known.canonicalPath;
+        });
+    if (!found) {
+      throw std::runtime_error(
+          "StdlibSurfaceRegistry: a known collection surface canonical path "
+          "was not discovered at startup; the stdlib collections directory "
+          "layout may have changed without updating KnownCollectionSurfaceIds");
+    }
+  }
+}
+
+// TODO-4689: the 5 fixed, non-collection entries (File x2, Collections'
+// ContainerError, Gfx x2). These never grow/shrink at runtime; only the
+// collection entries spliced in between them (below) are dynamically
+// discovered.
+const StdlibSurfaceMetadata FileHelpersSurface = {
+    .id = StdlibSurfaceId::FileHelpers,
+    .domain = StdlibSurfaceDomain::File,
+    .shape = StdlibSurfaceShape::HelperFamily,
+    .bridgeKey = "file.file_helpers",
+    .canonicalImportRoot = "/std/file",
+    .canonicalPath = "/std/file/File",
+    .backingTypeName = {},
+    .memberNames = FileHelperMembers,
+    .memberAliases = {},
+    .statementMemberNames = {},
+    .importAliasSpellings = FileHelperImportAliases,
+    .compatibilitySpellings = FileHelperCompatibilitySpellings,
+    .loweringSpellings = FileHelperLoweringSpellings,
+    .borrowedVariants = {},
+};
+
+const StdlibSurfaceMetadata FileErrorHelpersSurface = {
+    .id = StdlibSurfaceId::FileErrorHelpers,
+    .domain = StdlibSurfaceDomain::File,
+    .shape = StdlibSurfaceShape::ErrorFamily,
+    .bridgeKey = "file.file_error",
+    .canonicalImportRoot = "/std/file",
+    .canonicalPath = "/std/file/FileError",
+    .backingTypeName = {},
+    .memberNames = FileErrorHelperMembers,
+    .memberAliases = {},
+    .statementMemberNames = {},
+    .importAliasSpellings = FileErrorImportAliases,
+    .compatibilitySpellings = FileErrorCompatibilitySpellings,
+    .loweringSpellings = FileErrorLoweringSpellings,
+    .borrowedVariants = {},
+};
+
+const StdlibSurfaceMetadata CollectionsContainerErrorHelpersSurface = {
+    .id = StdlibSurfaceId::CollectionsContainerErrorHelpers,
+    .domain = StdlibSurfaceDomain::Collections,
+    .shape = StdlibSurfaceShape::ErrorFamily,
+    .bridgeKey = "collections.container_error",
+    .canonicalImportRoot = "/std/collections",
+    .canonicalPath = "/std/collections/ContainerError",
+    .backingTypeName = {},
+    .memberNames = CollectionsContainerErrorMembers,
+    .memberAliases = {},
+    .statementMemberNames = {},
+    .importAliasSpellings = CollectionsContainerErrorImportAliases,
+    .compatibilitySpellings = CollectionsContainerErrorCompatibilitySpellings,
+    .loweringSpellings = CollectionsContainerErrorLoweringSpellings,
+    .borrowedVariants = {},
+};
+
+const StdlibSurfaceMetadata GfxBufferHelpersSurface = {
+    .id = StdlibSurfaceId::GfxBufferHelpers,
+    .domain = StdlibSurfaceDomain::Gfx,
+    .shape = StdlibSurfaceShape::HelperFamily,
+    .bridgeKey = "gfx.buffer_helpers",
+    .canonicalImportRoot = "/std/gfx",
+    .canonicalPath = "/std/gfx/Buffer",
+    .backingTypeName = {},
+    .memberNames = GfxBufferHelperMembers,
+    .memberAliases = {},
+    .statementMemberNames = {},
+    .importAliasSpellings = GfxBufferImportAliases,
+    .compatibilitySpellings = GfxBufferCompatibilitySpellings,
+    .loweringSpellings = GfxBufferLoweringSpellings,
+    .borrowedVariants = {},
+};
+
+const StdlibSurfaceMetadata GfxErrorHelpersSurface = {
+    .id = StdlibSurfaceId::GfxErrorHelpers,
+    .domain = StdlibSurfaceDomain::Gfx,
+    .shape = StdlibSurfaceShape::ErrorFamily,
+    .bridgeKey = "gfx.gfx_error",
+    .canonicalImportRoot = "/std/gfx",
+    .canonicalPath = "/std/gfx/GfxError",
+    .backingTypeName = {},
+    .memberNames = GfxErrorHelperMembers,
+    .memberAliases = {},
+    .statementMemberNames = {},
+    .importAliasSpellings = GfxErrorImportAliases,
+    .compatibilitySpellings = GfxErrorCompatibilitySpellings,
+    .loweringSpellings = GfxErrorLoweringSpellings,
+    .borrowedVariants = {},
+};
+
+// TODO-4689: Registry storage is now a container built once at startup
+// (function-local static, initialized on first use -- process lifetime,
+// same effective lifetime as the old fixed std::array) that concatenates
+// the 5 fixed entries above with however many collection entries
+// deriveCollectionsSurfaceData() discovered. Its size is no longer a
+// compile-time literal: a new discovered collection surface (helper +
+// constructor pair) grows this vector by 2 with no change here.
+const std::vector<StdlibSurfaceMetadata> &registry() {
+  static const std::vector<StdlibSurfaceMetadata> storage = [] {
+    const std::vector<StdlibSurfaceMetadata> collectionsEntries =
+        buildCollectionsSurfaceMetadata(CollectionsSurfaceData);
+    verifyKnownCollectionSurfaceIdsResolved(collectionsEntries);
+
+    std::vector<StdlibSurfaceMetadata> built;
+    built.reserve(5 + collectionsEntries.size());
+    built.push_back(FileHelpersSurface);
+    built.push_back(FileErrorHelpersSurface);
+    built.insert(built.end(), collectionsEntries.begin(), collectionsEntries.end());
+    built.push_back(CollectionsContainerErrorHelpersSurface);
+    built.push_back(GfxBufferHelpersSurface);
+    built.push_back(GfxErrorHelpersSurface);
+    return built;
+  }();
+  return storage;
+}
 
 bool matchesAny(std::span<const std::string_view> spellings, std::string_view spelling) {
   return std::find(spellings.begin(), spellings.end(), spelling) != spellings.end();
@@ -902,8 +993,8 @@ bool matchesAny(std::span<const std::string_view> spellings, std::string_view sp
 // TODO-5245: Registry (11 entries) is fixed, immutable, process-lifetime
 // data, and every spelling that stdlibSurfaceMatchesSpelling() can match
 // against (canonicalPath, importAliasSpellings, compatibilitySpellings,
-// loweringSpellings) is likewise fixed once deriveCollectionsSurfaces() has
-// run at static-init time. findStdlibSurfaceMetadataBySpelling() was
+// loweringSpellings) is likewise fixed once deriveCollectionsSurfaceData()
+// has run at static-init time. findStdlibSurfaceMetadataBySpelling() was
 // previously an O(Registry.size() * spellings-per-entry) linear scan
 // (std::find_if over 11 entries, each running up to 3 matchesAny() linear
 // scans over spans of up to ~20-30 spellings) called ~100K+ times in a
@@ -926,7 +1017,7 @@ const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> &stdli
         built.try_emplace(spelling, metadata);
       }
     };
-    for (const StdlibSurfaceMetadata &metadata : Registry) {
+    for (const StdlibSurfaceMetadata &metadata : registry()) {
       built.try_emplace(metadata.canonicalPath, &metadata);
       insertAll(metadata.importAliasSpellings, &metadata);
       insertAll(metadata.compatibilitySpellings, &metadata);
@@ -944,12 +1035,15 @@ const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> &stdli
 // every call, tens of thousands of times per compile. Keyed by the
 // metadata's address, which is stable and unique because every
 // StdlibSurfaceMetadata instance that ever reaches this code is a
-// reference/pointer into the single static Registry array (verified: no
-// StdlibSurfaceMetadata is constructed anywhere else in the codebase).
+// reference/pointer into registry()'s single, once-built static vector
+// (verified: no StdlibSurfaceMetadata is constructed anywhere else in the
+// codebase); TODO-4689 made that vector dynamically sized, but it is still
+// built exactly once and never resized afterward, so addresses into it
+// remain stable for the process lifetime.
 const std::unordered_set<std::string_view> &stdlibSurfaceMemberNameSet(const StdlibSurfaceMetadata &metadata) {
   static const std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> cache = [] {
     std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> built;
-    for (const StdlibSurfaceMetadata &entry : Registry) {
+    for (const StdlibSurfaceMetadata &entry : registry()) {
       built.emplace(&entry,
                     std::unordered_set<std::string_view>(entry.memberNames.begin(), entry.memberNames.end()));
     }
@@ -1181,8 +1275,8 @@ std::string deriveStdlibCollectionMemberPrefix(const StdlibCollectionStructAnnot
 }
 
 // TODO-4687: canonicalPath convention is "/std/collections/" + the file's
-// stem (filename without the ".prime" extension), matching the hardcoded
-// paths built by deriveCollectionsSurfaces() today (vector.prime ->
+// stem (filename without the ".prime" extension), matching the paths
+// deriveCollectionsSurfaceData() derives today (vector.prime ->
 // "/std/collections/vector", map.prime -> "/std/collections/map",
 // soa.prime -> "/std/collections/soa").
 std::string deriveStdlibCollectionCanonicalPath(const std::filesystem::path &filepath) {
@@ -1199,30 +1293,61 @@ std::string deriveStdlibCollectionBridgeKey(const std::filesystem::path &filepat
 }
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry() {
-  return Registry;
+  return registry();
+}
+
+// TODO-4689 testing hook: stdlibSurfaceRegistry() is backed by a
+// once-built, process-lifetime cache (registry(), above), so it cannot
+// observe a *.prime file added to stdlib/std/collections/ after the first
+// call to any StdlibSurfaceRegistry lookup in the current process -- which
+// an unrelated earlier test in the same test binary/process may already
+// have triggered. This performs the same collection-surface discovery and
+// derivation fresh on every call (no caching), so a test can add a
+// [collection_type]/[key_value_type]-annotated *.prime file and immediately
+// observe it becoming a domain==Collections surface, proving the dynamic-
+// discovery property stdlibSurfaceRegistry() itself relies on, regardless
+// of process/test execution order.
+std::vector<StdlibCollectionSurfaceSnapshot> rediscoverStdlibCollectionsSurfacesForTesting() {
+  const std::vector<ManifestSurfaceData> backing = deriveCollectionsSurfaceData();
+  const std::vector<StdlibSurfaceMetadata> entries = buildCollectionsSurfaceMetadata(backing);
+  std::vector<StdlibCollectionSurfaceSnapshot> result;
+  result.reserve(entries.size());
+  for (const auto &entry : entries) {
+    result.push_back({
+        .id = entry.id,
+        .domain = entry.domain,
+        .shape = entry.shape,
+        .canonicalPath = std::string(entry.canonicalPath),
+        .bridgeKey = std::string(entry.bridgeKey),
+    });
+  }
+  return result;
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadata(StdlibSurfaceId id) {
-  const auto it = std::find_if(Registry.begin(), Registry.end(), [id](const StdlibSurfaceMetadata &metadata) {
+  const auto &reg = registry();
+  const auto it = std::find_if(reg.begin(), reg.end(), [id](const StdlibSurfaceMetadata &metadata) {
     return metadata.id == id;
   });
-  return it == Registry.end() ? nullptr : &*it;
+  return it == reg.end() ? nullptr : &*it;
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByCanonicalPath(std::string_view canonicalPath) {
+  const auto &reg = registry();
   const auto it = std::find_if(
-      Registry.begin(), Registry.end(), [canonicalPath](const StdlibSurfaceMetadata &metadata) {
+      reg.begin(), reg.end(), [canonicalPath](const StdlibSurfaceMetadata &metadata) {
         return metadata.canonicalPath == canonicalPath;
       });
-  return it == Registry.end() ? nullptr : &*it;
+  return it == reg.end() ? nullptr : &*it;
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByBridgeKey(std::string_view bridgeKey) {
+  const auto &reg = registry();
   const auto it =
-      std::find_if(Registry.begin(), Registry.end(), [bridgeKey](const StdlibSurfaceMetadata &metadata) {
+      std::find_if(reg.begin(), reg.end(), [bridgeKey](const StdlibSurfaceMetadata &metadata) {
         return metadata.bridgeKey == bridgeKey;
       });
-  return it == Registry.end() ? nullptr : &*it;
+  return it == reg.end() ? nullptr : &*it;
 }
 
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling) {
@@ -1393,8 +1518,9 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPathUncached(std
       return metadata;
     }
   }
+  const auto &reg = registry();
   const auto it = std::find_if(
-      Registry.begin(), Registry.end(), [normalizedPath](const StdlibSurfaceMetadata &metadata) {
+      reg.begin(), reg.end(), [normalizedPath](const StdlibSurfaceMetadata &metadata) {
         if (metadata.shape == StdlibSurfaceShape::ConstructorFamily) {
           return false;
         }
@@ -1408,7 +1534,7 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPathUncached(std
                                  normalizedPath, aliasSpelling, metadata);
                            });
       });
-  return it == Registry.end() ? nullptr : &*it;
+  return it == reg.end() ? nullptr : &*it;
 }
 
 }  // namespace

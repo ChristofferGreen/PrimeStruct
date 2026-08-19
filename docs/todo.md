@@ -1566,7 +1566,7 @@ investigation chain's actively-productive leaves - see
     log grepped for `error:`/`Error 1`/`Error 2` (zero matches) and
     ctest reported "100% tests passed, 0 tests failed out of 1891".
 
-- [ ] TODO-4689: Make collection registry storage dynamically sized; resolve enum members by canonical path
+- [x] TODO-4689: Make collection registry storage dynamically sized; resolve enum members by canonical path
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 1
@@ -1589,6 +1589,91 @@ investigation chain's actively-productive leaves - see
       unchanged; full suite passes.
   - stop_rule: Stop once new-type discovery requires zero C++ edits beyond
     the .prime file; do not migrate any of the ~40 existing enum call sites.
+  - progress_2026-08-19: `src/support/StdlibSurfaceRegistry.cpp`'s `Registry`
+    is now `registry()`, a function-local-static `std::vector<
+    StdlibSurfaceMetadata>` built once on first use by concatenating the 5
+    fixed non-collection entries (File x2, Collections' ContainerError,
+    Gfx x2 -- unchanged literal `StdlibSurfaceMetadata` blocks) with however
+    many collection entries `deriveCollectionsSurfaceData()` discovers.
+    `stdlibSurfaceRegistry()` and every `find...` lookup now read from
+    `registry()` instead of the old fixed array; `findStdlibSurfaceMetadata
+    (StdlibSurfaceId)` was already a linear scan matching a stored `.id`
+    field (not an index), so it needed no algorithmic change, only the
+    `Registry` -> `registry()` rename.
+    Discovery generalization: `deriveCollectionsSurfaceData()` now iterates
+    every `*.prime` file `listStdlibCollectionFiles()` finds (not just the
+    3 named in `CollectionSurfaceConfigs`); a file with a matching
+    `[collection_type]`/`[key_value_type]` annotation gets a
+    helper+constructor entry pair using its config's behavioral flags
+    (`detectStatementMembers`/`constructorJoinsHelperSurface`/
+    `helperBackingTypeName`) when the file has a `CollectionSurfaceConfigs`
+    entry, or generic defaults (`DefaultCollectionSurfaceConfig`: no
+    statement-member detection, constructor joins the helper surface, no
+    backing-type override) otherwise -- this default path is what lets a
+    brand-new annotated file become a registry entry with zero further
+    C++ edits. Files are reordered before derivation
+    (`orderCollectionFilesForDerivation()`) so the 3 known types are always
+    processed in their historical vector/map/soa order first, with any
+    other discovered file appended after; enum-id resolution is by
+    canonical path (`KnownCollectionSurfaceIds`, a 6-entry table of
+    `{StdlibSurfaceId, canonicalPath}` pairs identical to today's real
+    paths) via `resolveCollectionSurfaceId()`, so storage order no longer
+    determines which enum value an entry gets. A discovered surface with no
+    matching known path gets the new `StdlibSurfaceId::
+    CollectionsDynamicSurface` enum value instead of a dedicated member
+    (added once to the header; every future zero-edit discovery reuses it).
+    `verifyKnownCollectionSurfaceIdsResolved()` throws `std::runtime_error`
+    at first `registry()` build if any of the 6 known canonical paths isn't
+    discovered (the "fail loudly" requirement).
+    Excluded one pre-existing file from generic discovery:
+    `stdlib/std/collections/soa_storage.prime` also carries a
+    `[public struct collection_type]` annotation (it's `SoaVector`'s
+    internal backing-storage type, ~200 `[public]` helper functions, not a
+    public surface of its own) -- a first implementation that scanned every
+    annotated file unconditionally picked it up as a 7th collection surface
+    and broke an unrelated compile-run test
+    (`vm_core_core_newly_exposed_2026_07_16_104_113`, a UI/scene-adapter
+    test whose `vector<i32>`/`UiScene` output came back truncated/wrong).
+    Root-caused via `git stash` bisection (confirmed the failure did not
+    reproduce on the pre-TODO-4689 tree) plus a manual `./primec --emit=vm`
+    repro of the exact failing test source, then narrowed to two
+    contributing causes fixed together: (1) `soa_storage.prime`'s ~200
+    generically-scanned helper names polluting the Collections-domain
+    registry, fixed by an explicit `ExcludedCollectionSurfaceFiles` list
+    (currently just that one file, documented as internal-implementation
+    exclusion, not a per-new-type maintenance burden); (2) discovery
+    iterating files in alphabetical order (map, soa, vector) instead of
+    vector/map/soa's historical order, which mattered because at least one
+    existing consumer of `stdlibSurfaceRegistry()` resolves an unscoped
+    query by taking the first registry-order match rather than a
+    canonicalPath-scoped one -- fixed by `orderCollectionFilesForDerivation()`
+    above. After both fixes the manual repro produced byte-identical output
+    to `expectedUiSceneAdapterOutput()` and exit code 11 as expected.
+    Acceptance test: added a permanent test case ("a newly added
+    collection_type annotated file appears as a domain==Collections
+    surface...", `tests/unit/misc/test_support_stdlib_collection_struct_
+    annotation_detection.cpp`, new `primestruct.stdlib.collection_registry_
+    dynamic_discovery` TEST_SUITE registered in `CMakeLists.txt`'s
+    `PrimeStructMiscTestSuites` so ctest runs it as its own process) that
+    writes a temporary `[collection_type]`-annotated `.prime` file directly
+    into the real `stdlib/std/collections/` directory (RAII-cleaned up
+    afterward, mirroring TODO-4684's spike-and-revert pattern) and checks it
+    became a `domain==Collections` entry with `id==
+    StdlibSurfaceId::CollectionsDynamicSurface` and zero further
+    `StdlibSurfaceRegistry.cpp`/`.h` edits. Since `stdlibSurfaceRegistry()`
+    itself is a once-built, process-lifetime cache that an unrelated earlier
+    test in the same process could already have built before the temp file
+    existed on disk, the test instead calls a new, narrowly-scoped testing
+    hook, `rediscoverStdlibCollectionsSurfacesForTesting()` (declared in the
+    header, returns a fully owned `StdlibCollectionSurfaceSnapshot` list,
+    fresh/uncached on every call) added specifically to make the
+    dynamic-discovery property observable in a single test process without
+    relying on execution order. Verified via `./scripts/compile.sh
+    --release`: raw build log grepped for `error:`/`Error 1`/`Error 2`
+    (zero matches after the fix; the first attempt did surface a real
+    regression this way, described above) and ctest reported "100% tests
+    passed, 0 tests failed out of 1892" (both new stdlib-suite test cases
+    included and passing).
 
 - [ ] TODO-4690: Wire borrowedVariants/findBorrowedVariant and migrate first call site
   - owner: ai

@@ -33,6 +33,14 @@ enum class StdlibSurfaceId {
   CollectionsContainerErrorHelpers,
   GfxBufferHelpers,
   GfxErrorHelpers,
+  // TODO-4689: assigned to any collection surface the startup discovery
+  // loop finds that does not match one of the known canonical paths above
+  // (i.e. a collection surface with no dedicated enum member yet). Shared
+  // by every such surface -- callers that need a specific dynamically
+  // discovered surface look it up by canonical path or bridge key instead
+  // of this id, the same way discovery-only surfaces were reached before
+  // this enum value existed.
+  CollectionsDynamicSurface,
 };
 
 struct StdlibSurfaceMemberAlias {
@@ -58,6 +66,24 @@ struct StdlibSurfaceMetadata {
 };
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry();
+
+// TODO-4689 testing hook: a fully owned (no string_view/span lifetime
+// concerns), fresh-every-call snapshot of the domain==Collections entries
+// stdlibSurfaceRegistry() would build from today's stdlib/std/collections/
+// contents. Unlike stdlibSurfaceRegistry() itself -- which is backed by a
+// once-built, process-lifetime cache -- this re-runs discovery + derivation
+// on every call, so tests can add a [collection_type]/[key_value_type]
+// annotated *.prime file and immediately observe the resulting surface
+// without depending on process/test execution order. See
+// rediscoverStdlibCollectionsSurfacesForTesting()'s definition for details.
+struct StdlibCollectionSurfaceSnapshot {
+  StdlibSurfaceId id{};
+  StdlibSurfaceDomain domain{};
+  StdlibSurfaceShape shape{};
+  std::string canonicalPath;
+  std::string bridgeKey;
+};
+std::vector<StdlibCollectionSurfaceSnapshot> rediscoverStdlibCollectionsSurfacesForTesting();
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadata(StdlibSurfaceId id);
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByCanonicalPath(std::string_view canonicalPath);
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByBridgeKey(std::string_view bridgeKey);

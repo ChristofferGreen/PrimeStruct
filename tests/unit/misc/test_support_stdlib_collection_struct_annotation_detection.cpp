@@ -400,3 +400,80 @@ TEST_CASE("deriveCollectionsSurfaces() output is byte-identical across the TODO-
 }
 
 TEST_SUITE_END();
+
+// TODO-4689: proves the registry's collection-surface storage is
+// dynamically discovered (not a fixed, compile-time-sized list) by adding a
+// brand-new [collection_type]-annotated *.prime file at test time and
+// checking it becomes a domain==Collections surface with no dedicated
+// StdlibSurfaceId enum member -- with zero edits to
+// StdlibSurfaceRegistry.cpp/.h beyond the one-time testing hook added
+// alongside this task (rediscoverStdlibCollectionsSurfacesForTesting()).
+// Kept in its own TEST_SUITE (see PrimeStructMiscTestSuites in
+// CMakeLists.txt) so ctest runs it as its own process: this avoids the
+// awkwardness of stdlibSurfaceRegistry() itself being a once-built,
+// process-lifetime cache that an earlier test's unrelated registry lookup
+// could otherwise have already built before this file existed on disk.
+TEST_SUITE_BEGIN("primestruct.stdlib.collection_registry_dynamic_discovery");
+
+TEST_CASE("a newly added collection_type annotated file appears as a domain==Collections "
+          "surface with no dedicated enum member, without any registry source edits") {
+  // Locate the real stdlib/std/collections directory via the same
+  // production discovery entry point exercised elsewhere in this file,
+  // rather than duplicating its directory-walk logic here.
+  const auto discovered = primec::detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles();
+  REQUIRE(!discovered.empty());
+  const std::filesystem::path collectionsDir = discovered.front().file.parent_path();
+
+  const std::filesystem::path spikePath =
+      collectionsDir / "todo4689_spike_dynamic_registry_type.prime";
+
+  struct SpikeFileGuard {
+    std::filesystem::path path;
+    ~SpikeFileGuard() {
+      std::error_code ec;
+      std::filesystem::remove(path, ec);
+    }
+  } spikeFileGuard{spikePath};
+
+  {
+    std::ofstream out(spikePath);
+    REQUIRE(bool(out));
+    out << R"PRIME(
+namespace std {
+  namespace collections {
+  namespace todo4689_spike {
+  [public struct collection_type]
+  Todo4689SpikeBag<T>() {
+    [public i32] count
+
+    [public return<i32>]
+    size() {
+      return(this.count)
+    }
+  }
+  }
+  }
+}
+)PRIME";
+  }
+
+  const auto snapshots = primec::rediscoverStdlibCollectionsSurfacesForTesting();
+
+  const primec::StdlibCollectionSurfaceSnapshot *helperSurface = nullptr;
+  for (const auto &snapshot : snapshots) {
+    if (snapshot.canonicalPath == "/std/collections/todo4689_spike_dynamic_registry_type") {
+      helperSurface = &snapshot;
+      break;
+    }
+  }
+
+  REQUIRE(helperSurface != nullptr);
+  CHECK(helperSurface->domain == primec::StdlibSurfaceDomain::Collections);
+  CHECK(helperSurface->shape == primec::StdlibSurfaceShape::HelperFamily);
+  // No dedicated StdlibSurfaceId enum member exists for this brand-new
+  // type: it resolves to the shared "dynamically discovered" id instead.
+  CHECK(helperSurface->id == primec::StdlibSurfaceId::CollectionsDynamicSurface);
+  CHECK(helperSurface->bridgeKey == "collections.todo4689_spike_dynamic_registry_type_helpers");
+}
+
+TEST_SUITE_END();

@@ -1295,6 +1295,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir_printer
     primestruct.diagnostics.codes
     primestruct.stdlib.collection_struct_annotation_detection
+    primestruct.stdlib.collection_registry_dynamic_discovery
   )
 
   set(PrimeStructBackendIrTestSuites
