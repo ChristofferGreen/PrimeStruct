@@ -1017,7 +1017,7 @@ investigation chain's actively-productive leaves - see
     and ctest reports `100% tests passed, 0 tests failed out of 1884`
     with `PrimeStruct_primestruct_ir_printer` passing.
 
-- [ ] TODO-4654: Add `[public]` annotations to stdlib modules
+- [x] TODO-4654: Add `[public]` annotations to stdlib modules
   - owner: ai
   - created_at: 2026-06-11
   - phase: Stdlib quality
@@ -1040,6 +1040,43 @@ investigation chain's actively-productive leaves - see
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the style-aligned modules have visibility
     annotations; do not annotate all 31 files in this leaf.
+  - progress_2026-08-19: Confirmed `[public]`/`[private]` are real
+    transform annotations (`SemanticsValidatorBuildTransforms.cpp`,
+    `TypeResolutionGraph.cpp`) that gate whether a stdlib definition gets
+    an import alias; definitions are private by default per
+    `docs/PrimeStruct.md`, but private definitions stay callable within
+    the same compilation unit, so this change is additive/non-breaking.
+    Audited all 16 style-aligned modules named in
+    `docs/CodeExamples.md`/AGENTS.md by diffing "definition header
+    lines" (`^\s*\[...\]\s*$`, i.e. transform-only lines that precede a
+    definition, as opposed to inline `[Type] name{...}` local
+    bindings/fields) against ones already carrying `public`/`private`.
+    Found most files (`math/color.prime`, `math/matrix.prime`,
+    `math/quaternion.prime`, `math/vector.prime`, `maybe/maybe.prime`,
+    `file/errors.prime`, `file/file.prime`, `image/image.prime`,
+    `ui/ui.prime`, `scene/scene.prime`, `collections/vector.prime`,
+    `collections/map.prime`, `collections/errors.prime`,
+    `tuple/tuple.prime`) already fully annotated from earlier
+    collection-decoupling/reflection work, with internal helpers
+    (`*_internal` operator backing in math, `vectorAlloc`/`vectorCheckShape`-style
+    plumbing in collections, PPM/PNG byte-level codec internals in
+    `image.prime`, `append_word`/`append_color`-style serialization
+    helpers and internal layout accessors in `ui.prime`) correctly left
+    unannotated. Fixed two real gaps: (1) `collections/soa.prime`'s
+    `SoaVector<T>` struct was missing `[public]` even though its fields
+    and methods were already public (inconsistent with the sibling
+    `Vector`/`MapValue` collection structs, which are both
+    `[public struct ...]`) - added `[public]`. (2) `gfx/gfx.prime`'s
+    `windowCreate`/`deviceCreate` are the only constructors that produce
+    a valid (non-zero-token) `Window`/`Device` - the same role
+    `vector<T>()`/`map<K, V>()` play for their collection types - but
+    were unmarked; added `[public]`. Internal substrate simulation
+    (`GraphicsSubstrate`, `Substrate*Config` structs/methods) and the raw
+    `gfxError`/`ignoreGfxError` helpers were left unannotated. Verified
+    `./scripts/compile.sh --release`: build log has no
+    `error:`/`Error 1`/`Error 2`, and ctest reports "100% tests passed, 0
+    tests failed out of 1884" (1958 registered, remainder intentionally
+    disabled shards).
 
 - [ ] TODO-4655: Add compile-run tests for language level examples
   - owner: ai

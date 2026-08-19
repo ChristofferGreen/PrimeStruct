@@ -8,7 +8,7 @@ import /std/collections/soa_storage/*
 namespace std {
   namespace collections {
   namespace soa {
-  [struct collection_type]
+  [public struct collection_type]
   SoaVector<T>() {
     [public SoaColumn<T> mut] storage{soaColumnNew<T>()}
 
