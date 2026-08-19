@@ -2031,23 +2031,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (!isWrappedKeyValueReceiver(receiverExpr)) {
       return helperName;
     }
-    if (helperName == "count") {
-      return std::string("count_ref");
-    }
-    if (helperName == "contains") {
-      return std::string("contains_ref");
-    }
-    if (helperName == "tryAt") {
-      return std::string("tryAt_ref");
-    }
-    if (helperName == "at") {
-      return std::string("at_ref");
-    }
+    // TODO-4691: count/contains/tryAt/at/insert now resolve via the
+    // registry-backed borrowed-variant lookup instead of a hardcoded
+    // literal chain. at_unsafe -> at_unsafe_ref stays hardcoded: TODO-4690
+    // deliberately left that pair out of the registry table because a
+    // pre-existing stdlib-map-ownership audit test forbids the
+    // "at_unsafe_ref" literal appearing in StdlibSurfaceRegistry.cpp.
     if (helperName == "at_unsafe") {
       return std::string("at_unsafe_ref");
     }
-    if (helperName == "insert") {
-      return std::string("insert_ref");
+    if (const std::string_view borrowedVariant = findBorrowedVariant(
+            StdlibSurfaceId::CollectionsManifestSurface2, helperName);
+        !borrowedVariant.empty()) {
+      return std::string(borrowedVariant);
     }
     return helperName;
   };
@@ -3659,19 +3655,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
         return resolveExplicitRootKeyValueMethodPath();
       }
+      // TODO-4691: count/contains/tryAt/at/insert now resolve via the
+      // registry-backed borrowed-variant lookup instead of a hardcoded
+      // literal chain. at_unsafe -> at_unsafe_ref stays hardcoded: TODO-4690
+      // deliberately left that pair out of the registry table because a
+      // pre-existing stdlib-map-ownership audit test forbids the
+      // "at_unsafe_ref" literal appearing in StdlibSurfaceRegistry.cpp.
       std::string borrowedHelperName = normalizedMethodName;
-      if (borrowedHelperName == "count") {
-        borrowedHelperName = "count_ref";
-      } else if (borrowedHelperName == "contains") {
-        borrowedHelperName = "contains_ref";
-      } else if (borrowedHelperName == "tryAt") {
-        borrowedHelperName = "tryAt_ref";
-      } else if (borrowedHelperName == "at") {
-        borrowedHelperName = "at_ref";
-      } else if (borrowedHelperName == "at_unsafe") {
+      if (borrowedHelperName == "at_unsafe") {
         borrowedHelperName = "at_unsafe_ref";
-      } else if (borrowedHelperName == "insert") {
-        borrowedHelperName = "insert_ref";
+      } else if (const std::string_view borrowedVariant = findBorrowedVariant(
+                     StdlibSurfaceId::CollectionsManifestSurface2,
+                     borrowedHelperName);
+                 !borrowedVariant.empty()) {
+        borrowedHelperName = std::string(borrowedVariant);
       }
       return setPreferredKeyValueMethodTarget(receiver, borrowedHelperName);
     }
