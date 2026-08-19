@@ -817,7 +817,7 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once all template monomorph fragments are converted
     and tests pass.
 
-- [ ] TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
+- [x] TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
   - owner: ai
   - created_at: 2026-06-11
   - phase: Oversized file refactoring
@@ -858,6 +858,42 @@ investigation chain's actively-productive leaves - see
     single-test-case-body splitting; still needs to come under 3,000
     lines per this task's own acceptance criteria regardless of
     TEST_CASE count).
+    progress_2026-08-19_2: Finished the remaining 3 files. Split
+    `test_compile_run_examples_docs_locks.cpp` into
+    `_roadmap_and_collections`/`_todo_queue_and_skip_debt`/`_ui_graphics_and_stdlib.cpp`
+    shards + `_shared.h`; `test_stdlib_map_ownership.cpp` into
+    `_map_surface_registry_and_template_monomorph`/`_expr_method_and_collection_dispatch_inference`/
+    `_collection_access_and_emitter_lowering`/`_ir_lowerer_inline_dispatch_and_result_helpers`/
+    `_experimental_map_production_traces.cpp` shards + `_shared.h` (also
+    updated the `-O0` `set_source_files_properties` list in
+    CMakeLists.txt to cover all 5 new files); and the
+    `..._buffer_store_direct_calls_helper_lowerer.cpp` shard (which stayed
+    oversized after the first split, per the note above) further split by
+    extracting large TEST_CASE-body blocks into
+    `_core_method_and_direct_call_paths`/`_collection_and_soa_receiver_paths`/
+    `_maps_pack_alias_and_wrapped_receiver_paths`/`_builtin_vector_alias_and_wrapper_dispatch_paths.cpp`
+    shards + `_shared.h` holding the common fixture loader. All shards
+    verified under 3,000 lines and ≤50 TEST_CASEs. CMakeLists.txt updated
+    for all three files' source lists.
+    Caught one false-green: an initial `./scripts/compile.sh --release`
+    run reported "no failing CTest cases" despite the build actually
+    failing with `-Werror=unused-variable` on a stray `int inlineCalls =
+    0;` left in the new `_shared.h`'s fixture loader (a leftover from the
+    extraction script that hoisted shard-local `inlineCalls` counters out
+    without removing the now-unused declaration in the shared loader
+    function) - `compile.sh`'s wrapper swallowed the build failure and
+    ctest ran without ever rebuilding the failing target, so "0 failures"
+    reflected stale/missing binaries, not a real pass. Caught by
+    cross-checking the raw build log for `error:`/`Error 1` lines rather
+    than trusting the ctest summary alone - a reminder that a green
+    `docs/failing_tests.md` result must be paired with a build log that
+    shows no compile/link errors, especially right after a large
+    generated-code change. Fixed by deleting the stray unused declaration
+    and rebuilding; the re-run showed a clean build log and 0 failing
+    CTest cases. Acceptance criteria now met for all files in this task's
+    scope: no test file exceeds 3,000 lines, none exceed 50 TEST_CASE
+    macros, all shard files use topic-descriptive suffixes,
+    `./scripts/compile.sh --release` passes cleanly.
   - acceptance:
     - No test file exceeds 3,000 lines.
     - No test file contains more than 50 TEST_CASE macros.

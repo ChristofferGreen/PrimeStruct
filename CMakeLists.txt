@@ -662,7 +662,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set(PrimeStructStdlibMapOwnershipCompileOptions -O0)
   endif()
   set_source_files_properties(
-    tests/unit/misc/test_stdlib_map_ownership.cpp
+    tests/unit/misc/test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp
+    tests/unit/misc/test_stdlib_map_ownership_expr_method_and_collection_dispatch_inference.cpp
+    tests/unit/misc/test_stdlib_map_ownership_collection_access_and_emitter_lowering.cpp
+    tests/unit/misc/test_stdlib_map_ownership_ir_lowerer_inline_dispatch_and_result_helpers.cpp
+    tests/unit/misc/test_stdlib_map_ownership_experimental_map_production_traces.cpp
     PROPERTIES COMPILE_OPTIONS "${PrimeStructStdlibMapOwnershipCompileOptions}"
   )
 
@@ -672,7 +676,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/import_resolver/test_import_resolver_versions.cpp
     tests/unit/import_resolver/test_import_errors.cpp
     tests/unit/import_resolver/test_import_multiple.cpp
-    tests/unit/misc/test_stdlib_map_ownership.cpp
+    tests/unit/misc/test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp
+    tests/unit/misc/test_stdlib_map_ownership_expr_method_and_collection_dispatch_inference.cpp
+    tests/unit/misc/test_stdlib_map_ownership_collection_access_and_emitter_lowering.cpp
+    tests/unit/misc/test_stdlib_map_ownership_ir_lowerer_inline_dispatch_and_result_helpers.cpp
+    tests/unit/misc/test_stdlib_map_ownership_experimental_map_production_traces.cpp
     tests/unit/ast/test_ast_ir_dump.cpp
     tests/unit/ast/test_ast_ir_dump_inference.cpp
     tests/unit/ast/test_ast_ir_dump_namespace.cpp
@@ -802,7 +810,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_binding_helper_emits_runtime_string_call_bindings.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_binding_helper_validates_print_statement_builtin_diagnostics.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_semantic_facts_before_lowerer.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_direct_calls_helper_lowerer.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_direct_calls_helper_lowerer_core_method_and_direct_call_paths.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_direct_calls_helper_lowerer_collection_and_soa_receiver_paths.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_direct_calls_helper_lowerer_maps_pack_alias_and_wrapped_receiver_paths.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_direct_calls_helper_lowerer_builtin_vector_alias_and_wrapper_dispatch_paths.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_emission_source_delegation_stays.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_direct_call_diagnostics.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_function_table_diagnostics.cpp
@@ -864,7 +875,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/examples/test_compile_run_examples_demo_script_core.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_docs.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_docs_commands.cpp
-    tests/unit/compile_run/examples/test_compile_run_examples_docs_locks.cpp
+    tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp
+    tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp
+    tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_metal_smoke_and_borrows.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_native_launcher.cpp
