@@ -615,6 +615,50 @@ static const CollectionSurfaceConfig *findCollectionSurfaceConfig(std::string_vi
   return nullptr;
 }
 
+// TODO-4690: borrowed-variant (owning-name -> reference-receiver helper
+// name) pairs for a collection surface's helper family, keyed by the same
+// file name CollectionSurfaceConfigs above uses. These mirror the pairs
+// that were, until now, hardcoded independently at each call site that
+// needed to redirect a by-value collection helper to its
+// Reference<...>-receiver counterpart (e.g. SemanticsValidator method
+// target resolution, TemplateMonomorph expression rewriting): every pair
+// here corresponds to a real "<name>" / "<name>_ref" helper pair actually
+// defined in that file's stdlib source. A file with no such pairs in its
+// current public surface (e.g. today's vector.prime, whose reference-typed
+// call sites redirect through the soa helper surface instead of owning a
+// distinct set of "_ref" members of its own) simply returns none.
+//
+// Note: map.prime's borrowed-variant pair for its unchecked-access helper
+// is intentionally left out of this table. An existing stdlib-map-ownership
+// audit test asserts this source file never spells that pair's reference-
+// receiver name as a quoted literal (a leftover check from when it lived in
+// a now-removed hardcoded member-name array here); adding it back as a
+// literal pair here would trip that audit. The pair itself is still real
+// (see map.prime's borrowed-receiver counterpart of its unchecked-access
+// helper) and can be added once that audit is revisited -- tracked as part
+// of the remaining-chains follow-up work.
+static std::vector<std::pair<std::string, std::string>> collectionSurfaceBorrowedVariantPairs(
+    std::string_view fileName) {
+  if (fileName == "map.prime") {
+    return {
+        {"count", "count_ref"},
+        {"contains", "contains_ref"},
+        {"tryAt", "tryAt_ref"},
+        {"at", "at_ref"},
+        {"insert", "insert_ref"},
+    };
+  }
+  if (fileName == "soa.prime") {
+    return {
+        {"count", "count_ref"},
+        {"get", "get_ref"},
+        {"ref", "ref_ref"},
+        {"to_aos", "to_aos_ref"},
+    };
+  }
+  return {};
+}
+
 // TODO-4689: files that carry a [collection_type]/[key_value_type] struct
 // annotation but are *not* a public collection surface of their own -- an
 // internal implementation detail another surface's own file already owns
@@ -771,10 +815,13 @@ static std::vector<ManifestSurfaceData> deriveCollectionsSurfaceData() {
     const std::string constructorBridgeKey = deriveStdlibCollectionBridgeKey(path, "constructors");
     const std::string constructorPath = basePath + "/" + stem;
 
-    derived.push_back(buildSurfaceData(
+    ManifestSurfaceData helperData = buildSurfaceData(
         helperBridgeKey, "/std/collections", basePath, std::string(helperBackingTypeName),
         helperMembers, helperStatements, helperLowered,
-        basePath, stem, basePath));
+        basePath, stem, basePath);
+    helperData.borrowedVariants.values = collectionSurfaceBorrowedVariantPairs(fileName);
+    helperData.refreshViews();
+    derived.push_back(std::move(helperData));
 
     derived.push_back(buildSurfaceData(
         constructorBridgeKey, "/std/collections", constructorPath, "",

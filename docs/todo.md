@@ -1675,7 +1675,7 @@ investigation chain's actively-productive leaves - see
     passed, 0 tests failed out of 1892" (both new stdlib-suite test cases
     included and passing).
 
-- [ ] TODO-4690: Wire borrowedVariants/findBorrowedVariant and migrate first call site
+- [x] TODO-4690: Wire borrowedVariants/findBorrowedVariant and migrate first call site
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 2
@@ -1694,6 +1694,59 @@ investigation chain's actively-productive leaves - see
       removed; behavior unchanged; semantics tests pass.
   - stop_rule: Stop once one call site is migrated and passing; migrating
     the rest is TODO-4691/4692.
+  - progress_2026-08-19: Re-scanned the two cited sites (the second file is
+    now the .cpp half of TemplateMonomorphExpressionRewrite.h/.cpp, split by
+    the earlier TODO-4650 work) and found the borrowed-variant pairs are
+    real for two of the three CollectionSurfaceConfigs file entries:
+    soa.prime (count->count_ref, get->get_ref, ref->ref_ref,
+    to_aos->to_aos_ref, backed by soaVectorCountRef/soaVectorGetRef/
+    soaVectorRefRef/soaVectorToAosRef) and map.prime (count->count_ref,
+    contains->contains_ref, tryAt->tryAt_ref, at->at_ref,
+    insert->insert_ref, backed by mapCountRef/mapContainsRef/mapTryAtRef/
+    mapAtRef/mapInsertRef). vector.prime's own public helper surface has no
+    such pairs today (its reference-typed call sites redirect through the
+    soa helper surface instead of owning distinct "_ref" members), so its
+    borrowedVariants stays empty; this is a genuine gap in the source data,
+    not an oversight. Added a `collectionSurfaceBorrowedVariantPairs(fileName)`
+    table in src/support/StdlibSurfaceRegistry.cpp, keyed the same way as
+    the existing CollectionSurfaceConfigs, and wired it into
+    deriveCollectionsSurfaceData() so each collection helper surface's
+    borrowedVariants is populated from real stdlib pairs (constructor
+    surfaces are left empty, matching how memberAliases etc. already work).
+    One pair — map's at_unsafe->at_unsafe_ref — was deliberately left out
+    of the table: an existing stdlib-map-ownership audit test
+    (tests/unit/misc/test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp:35)
+    asserts this registry source file never spells that pair's reference-
+    receiver name as a quoted literal (a leftover check from a previously
+    removed hardcoded member array), and reintroducing it here — even via a
+    config table, and even from an explanatory comment — tripped that
+    check. Left a comment explaining the omission instead of touching the
+    audit test, since that's out of this task's scope.
+    Migrated exactly one call site: the SOA borrowed-helper lambda
+    (`preferredBorrowedSoaHelperTargetForCollectionMethod`, now around
+    line ~494 of SemanticsValidatorExprMethodTargetResolution.cpp) — only
+    its `count` branch now resolves via
+    `findBorrowedVariant(StdlibSurfaceId::CollectionsColumnarHelpers, "count")`
+    instead of the literal `helperName = "count_ref"` assignment; the
+    sibling `get`/`ref`/`to_aos` branches in the same lambda were left as
+    their existing hardcoded chains, per the stop_rule (their migration is
+    TODO-4691/4692). Old behavior: on a borrowed-SOA receiver, "count" was
+    unconditionally rewritten to the literal "count_ref". New behavior:
+    identical in practice, since the registry now always has a
+    "count"->"count_ref" borrowedVariants entry for the SOA helper surface
+    (StdlibSurfaceId::CollectionsColumnarHelpers) — findBorrowedVariant
+    resolves to the same "count_ref" string, just looked up from data
+    instead of hardcoded inline.
+    Verified via `./scripts/compile.sh --release`: raw build log grepped
+    for `error:`/`Error 1`/`Error 2` (zero matches) and ctest reported
+    "100% tests passed, 0 tests failed out of 1892" after re-running the
+    handful of tests that had timed out under transient resource
+    contention from a stale/orphaned prior build's leftover compile
+    processes (confirmed via `ctest --rerun-failed`, which passed all
+    three in under half a second once the contention cleared — an
+    environment artifact, not a regression). The pre-existing
+    stdlib_map_ownership audit test was specifically re-checked and
+    passes with the new borrowedVariants table in place.
 
 - [ ] TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
   - owner: ai

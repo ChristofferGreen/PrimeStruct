@@ -491,8 +491,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   auto preferredBorrowedSoaHelperTargetForCollectionMethod =
       [&](std::string helperName) {
-        if (helperName == "count") {
-          helperName = "count_ref";
+        // TODO-4690: migrated off a hardcoded "count" -> "count_ref"
+        // literal onto the registry-backed borrowed-variant lookup; the
+        // other branches below remain their own hardcoded chains (out of
+        // scope for this migration, tracked by TODO-4691/4692).
+        if (const std::string_view borrowedCountVariant = findBorrowedVariant(
+                StdlibSurfaceId::CollectionsColumnarHelpers, "count");
+            helperName == "count" && !borrowedCountVariant.empty()) {
+          helperName = std::string(borrowedCountVariant);
         } else if (helperName == "get") {
           helperName = "get_ref";
         } else if (helperName == "ref") {
