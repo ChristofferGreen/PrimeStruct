@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -298,6 +299,103 @@ TEST_CASE("derived memberPrefix/canonicalPath/bridgeKey match today's hardcoded 
           "collections.soa_helpers");
     CHECK(primec::deriveStdlibCollectionBridgeKey(filepath, "constructors") ==
           "collections.soa_constructors");
+  }
+}
+
+// TODO-4688: parity snapshot of deriveCollectionsSurfaces()'s output,
+// captured from the 3 hand-written blocks before folding them into one
+// generic loop. This is the hard byte-identical-output requirement from
+// TODO-4688's acceptance criteria: every field of every derived collection
+// StdlibSurfaceMetadata entry, asserted against literal values captured
+// from the pre-refactor implementation.
+TEST_CASE("deriveCollectionsSurfaces() output is byte-identical across the TODO-4688 refactor") {
+  struct Expected {
+    primec::StdlibSurfaceId id;
+    std::string_view bridgeKey;
+    std::string_view canonicalImportRoot;
+    std::string_view canonicalPath;
+    std::string_view backingTypeName;
+    std::vector<std::string_view> memberNames;
+    std::vector<std::string_view> statementMemberNames;
+    std::vector<std::string_view> importAliasSpellings;
+    std::vector<std::string_view> loweringSpellings;
+  };
+
+  const std::vector<Expected> expectations = {
+      {primec::StdlibSurfaceId::CollectionsManifestSurface0,
+       "collections.vector_helpers", "/std/collections", "/std/collections/vector", "",
+       {"vector", "count", "capacity", "push", "pop", "reserve", "clear", "remove_at",
+        "remove_swap", "at", "at_unsafe"},
+       {"push", "pop", "reserve", "clear", "remove_at", "remove_swap"},
+       {"/std/collections/vector", "vector"},
+       {"/std/collections/vector/count", "/std/collections/vector/capacity",
+        "/std/collections/vector/push", "/std/collections/vector/pop",
+        "/std/collections/vector/reserve", "/std/collections/vector/clear",
+        "/std/collections/vector/remove_at", "/std/collections/vector/remove_swap",
+        "/std/collections/vector/at", "/std/collections/vector/at_unsafe"}},
+      {primec::StdlibSurfaceId::CollectionsManifestSurface1,
+       "collections.vector_constructors", "/std/collections", "/std/collections/vector/vector", "",
+       {"vector"},
+       {},
+       {"/std/collections/vector", "vector"},
+       {"/std/collections/vector/vector"}},
+      {primec::StdlibSurfaceId::CollectionsManifestSurface2,
+       "collections.map_helpers", "/std/collections", "/std/collections/map", "MapValue",
+       {"entry", "map", "count", "count_ref", "insert", "insert_ref", "contains", "contains_ref",
+        "tryAt", "tryAt_ref", "at", "at_ref", "at_unsafe", "at_unsafe_ref"},
+       {},
+       {"/std/collections/map", "map"},
+       {"/std/collections/map/count", "/std/collections/map/count_ref",
+        "/std/collections/map/insert", "/std/collections/map/insert_ref",
+        "/std/collections/map/contains", "/std/collections/map/contains_ref",
+        "/std/collections/map/tryAt", "/std/collections/map/tryAt_ref",
+        "/std/collections/map/at", "/std/collections/map/at_ref",
+        "/std/collections/map/at_unsafe", "/std/collections/map/at_unsafe_ref"}},
+      {primec::StdlibSurfaceId::CollectionsManifestSurface3,
+       "collections.map_constructors", "/std/collections", "/std/collections/map/map", "",
+       {"map"},
+       {},
+       {"/std/collections/map", "map"},
+       {"/std/collections/map/map"}},
+      {primec::StdlibSurfaceId::CollectionsColumnarHelpers,
+       "collections.soa_helpers", "/std/collections", "/std/collections/soa", "",
+       {"count", "count_ref", "get", "get_ref", "ref", "ref_ref", "field_view", "reserve",
+        "push", "to_aos", "to_aos_ref"},
+       {},
+       {"/std/collections/soa", "soa"},
+       {"/std/collections/soa/count", "/std/collections/soa/count_ref",
+        "/std/collections/soa/get", "/std/collections/soa/get_ref",
+        "/std/collections/soa/ref", "/std/collections/soa/ref_ref",
+        "/std/collections/soa/field_view", "/std/collections/soa/reserve",
+        "/std/collections/soa/push", "/std/collections/soa/to_aos",
+        "/std/collections/soa/to_aos_ref"}},
+      {primec::StdlibSurfaceId::CollectionsColumnarConstructors,
+       "collections.soa_constructors", "/std/collections", "/std/collections/soa/soa", "",
+       {"soa", "single", "from_aos"},
+       {},
+       {"/std/collections/soa", "soa"},
+       {"/std/collections/soa/soa", "/std/collections/soa/single",
+        "/std/collections/soa/from_aos"}},
+  };
+
+  for (const auto &expected : expectations) {
+    const auto *m = primec::findStdlibSurfaceMetadata(expected.id);
+    REQUIRE(m != nullptr);
+    CAPTURE(expected.bridgeKey);
+    CHECK(m->bridgeKey == expected.bridgeKey);
+    CHECK(m->canonicalImportRoot == expected.canonicalImportRoot);
+    CHECK(m->canonicalPath == expected.canonicalPath);
+    CHECK(m->backingTypeName == expected.backingTypeName);
+    CHECK(std::vector<std::string_view>(m->memberNames.begin(), m->memberNames.end()) ==
+          expected.memberNames);
+    CHECK(std::vector<std::string_view>(m->statementMemberNames.begin(),
+                                         m->statementMemberNames.end()) ==
+          expected.statementMemberNames);
+    CHECK(std::vector<std::string_view>(m->importAliasSpellings.begin(),
+                                         m->importAliasSpellings.end()) ==
+          expected.importAliasSpellings);
+    CHECK(std::vector<std::string_view>(m->loweringSpellings.begin(), m->loweringSpellings.end()) ==
+          expected.loweringSpellings);
   }
 }
 

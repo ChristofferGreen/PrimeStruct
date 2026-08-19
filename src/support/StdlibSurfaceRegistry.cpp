@@ -587,32 +587,88 @@ std::optional<std::filesystem::path> findInStdlibCollectionFileList(
   return std::nullopt;
 }
 
+// TODO-4688: per-type behavioral configuration for the generic collection-
+// surface derivation loop below. Everything that is pure naming/path
+// boilerplate (memberPrefix, canonicalPath, bridgeKey, import alias,
+// lowering-path base) is derived generically from the TODO-4685/4686/4687
+// discovery machinery; only the genuine semantic differences between the
+// 3 collection types' stdlib surfaces are kept here as explicit config:
+//   - which struct-annotation kind identifies the type's collection struct
+//     (collection_type vs key_value_type);
+//   - whether statement-member detection applies (vector only);
+//   - whether a constructor member also appears in the helper surface's
+//     memberNames (vector/map: yes; soa: no);
+//   - the helper surface's backingTypeName override (map only: "MapValue";
+//     vector/soa leave it empty).
+struct CollectionSurfaceConfig {
+  std::string_view fileName;
+  StdlibCollectionAnnotationKind annotationKind;
+  bool detectStatementMembers;
+  bool constructorJoinsHelperSurface;
+  std::string_view helperBackingTypeName;
+  ManifestSurfaceData CollectionsManifestSurfaces::*helperField;
+  ManifestSurfaceData CollectionsManifestSurfaces::*constructorField;
+};
+
+static const std::array<CollectionSurfaceConfig, 3> CollectionSurfaceConfigs = {{
+    {"vector.prime", StdlibCollectionAnnotationKind::CollectionType,
+     /*detectStatementMembers=*/true, /*constructorJoinsHelperSurface=*/true, "",
+     &CollectionsManifestSurfaces::vectorHelpers, &CollectionsManifestSurfaces::vectorConstructors},
+    {"map.prime", StdlibCollectionAnnotationKind::KeyValueType,
+     /*detectStatementMembers=*/false, /*constructorJoinsHelperSurface=*/true, "MapValue",
+     &CollectionsManifestSurfaces::mapHelpers, &CollectionsManifestSurfaces::mapConstructors},
+    {"soa.prime", StdlibCollectionAnnotationKind::CollectionType,
+     /*detectStatementMembers=*/false, /*constructorJoinsHelperSurface=*/false, "",
+     &CollectionsManifestSurfaces::soaHelpers, &CollectionsManifestSurfaces::soaConstructors},
+}};
+
 static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
   CollectionsManifestSurfaces derived;
   const std::vector<std::filesystem::path> collectionFiles = listStdlibCollectionFiles();
 
-  // --- Vector ---
-  {
-    const auto path = findInStdlibCollectionFileList(collectionFiles, "vector.prime");
+  for (const auto &config : CollectionSurfaceConfigs) {
+    const std::filesystem::path nominalPath(config.fileName);
+    const auto path = findInStdlibCollectionFileList(collectionFiles, config.fileName);
+
+    // Generic TODO-4686/4687 derivation: find the struct annotation of the
+    // expected kind for this file and derive its memberPrefix/collection
+    // type name from it, rather than a hardcoded literal per type.
+    std::string memberPrefix;
+    std::string collectionTypeName;
+    if (path.has_value()) {
+      const auto annotations = detectStdlibCollectionStructAnnotations(*path);
+      for (const auto &annotation : annotations) {
+        if (annotation.kind == config.annotationKind) {
+          memberPrefix = deriveStdlibCollectionMemberPrefix(annotation);
+          collectionTypeName = annotation.typeName + "<";
+          break;
+        }
+      }
+    }
+
     const auto records = path.has_value()
-        ? scanStdlibPublicFunctions(*path, "vector", "Vector<", /*detectStatement=*/true)
+        ? scanStdlibPublicFunctions(*path, memberPrefix, collectionTypeName,
+                                     config.detectStatementMembers)
         : std::vector<ScannedFunctionRecord>{};
 
     std::vector<std::string> helperMembers;
     std::vector<std::string> helperStatements;
     std::vector<std::string> helperLowered;
     std::vector<std::string> ctorMembers;
+    std::vector<std::string> ctorLowered;
 
     for (const auto &rec : records) {
       if (rec.isConstructor) {
-        // "vector" constructor goes to BOTH helper and constructor surfaces
         if (std::find(ctorMembers.begin(), ctorMembers.end(), rec.name) == ctorMembers.end()) {
           ctorMembers.push_back(rec.name);
+          ctorLowered.push_back(rec.name);
         }
-        if (std::find(helperMembers.begin(), helperMembers.end(), rec.name) == helperMembers.end()) {
+        if (config.constructorJoinsHelperSurface &&
+            std::find(helperMembers.begin(), helperMembers.end(), rec.name) == helperMembers.end()) {
           helperMembers.push_back(rec.name);
         }
-        // constructors are NOT in lowering_spellings of the helper surface
+        // constructors are never added to helperLowered (not in
+        // lowering_spellings of the helper surface), regardless of type.
       } else {
         if (std::find(helperMembers.begin(), helperMembers.end(), rec.name) == helperMembers.end()) {
           helperMembers.push_back(rec.name);
@@ -626,106 +682,24 @@ static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
       }
     }
 
-    derived.vectorHelpers = buildSurfaceData(
-        "collections.vector_helpers", "/std/collections", "/std/collections/vector", "",
+    // Generic TODO-4687 derivation of canonicalPath/bridgeKey/import alias/
+    // lowering-path base from the file's stem, independent of the type-
+    // specific config above.
+    const std::string basePath = deriveStdlibCollectionCanonicalPath(nominalPath);
+    const std::string stem = nominalPath.stem().string();
+    const std::string helperBridgeKey = deriveStdlibCollectionBridgeKey(nominalPath, "helpers");
+    const std::string constructorBridgeKey = deriveStdlibCollectionBridgeKey(nominalPath, "constructors");
+    const std::string constructorPath = basePath + "/" + stem;
+
+    derived.*config.helperField = buildSurfaceData(
+        helperBridgeKey, "/std/collections", basePath, std::string(config.helperBackingTypeName),
         helperMembers, helperStatements, helperLowered,
-        "/std/collections/vector", "vector", "/std/collections/vector");
+        basePath, stem, basePath);
 
-    std::vector<std::string> ctorLowered;
-    for (const auto &n : ctorMembers) {
-      ctorLowered.push_back(n);
-    }
-    derived.vectorConstructors = buildSurfaceData(
-        "collections.vector_constructors", "/std/collections", "/std/collections/vector/vector", "",
+    derived.*config.constructorField = buildSurfaceData(
+        constructorBridgeKey, "/std/collections", constructorPath, "",
         ctorMembers, {}, ctorLowered,
-        "/std/collections/vector", "vector", "/std/collections/vector");
-  }
-
-  // --- Map ---
-  {
-    const auto path = findInStdlibCollectionFileList(collectionFiles, "map.prime");
-    const auto records = path.has_value()
-        ? scanStdlibPublicFunctions(*path, "map", "MapValue<", /*detectStatement=*/false)
-        : std::vector<ScannedFunctionRecord>{};
-
-    std::vector<std::string> helperMembers;
-    std::vector<std::string> helperLowered;
-    std::vector<std::string> ctorMembers;
-
-    for (const auto &rec : records) {
-      if (rec.isConstructor) {
-        if (std::find(ctorMembers.begin(), ctorMembers.end(), rec.name) == ctorMembers.end()) {
-          ctorMembers.push_back(rec.name);
-        }
-        // Constructor also goes into helper members (but NOT into helper lowering_spellings)
-        if (std::find(helperMembers.begin(), helperMembers.end(), rec.name) == helperMembers.end()) {
-          helperMembers.push_back(rec.name);
-        }
-      } else {
-        if (std::find(helperMembers.begin(), helperMembers.end(), rec.name) == helperMembers.end()) {
-          helperMembers.push_back(rec.name);
-        }
-        // "entry" produces Entry<K,V> not MapValue — its first param is not MapValue
-        // so takesCollectionParam is false, and it won't appear in helperLowered.
-        if (rec.takesCollectionParam) {
-          helperLowered.push_back(rec.name);
-        }
-      }
-    }
-
-    derived.mapHelpers = buildSurfaceData(
-        "collections.map_helpers", "/std/collections", "/std/collections/map", "MapValue",
-        helperMembers, {}, helperLowered,
-        "/std/collections/map", "map", "/std/collections/map");
-
-    std::vector<std::string> ctorLowered;
-    for (const auto &n : ctorMembers) {
-      ctorLowered.push_back(n);
-    }
-    derived.mapConstructors = buildSurfaceData(
-        "collections.map_constructors", "/std/collections", "/std/collections/map/map", "",
-        ctorMembers, {}, ctorLowered,
-        "/std/collections/map", "map", "/std/collections/map");
-  }
-
-  // --- Soa ---
-  {
-    const auto path = findInStdlibCollectionFileList(collectionFiles, "soa.prime");
-    const auto records = path.has_value()
-        ? scanStdlibPublicFunctions(*path, "soaVector", "SoaVector<", /*detectStatement=*/false)
-        : std::vector<ScannedFunctionRecord>{};
-
-    std::vector<std::string> helperMembers;
-    std::vector<std::string> helperLowered;
-    std::vector<std::string> ctorMembers;
-    std::vector<std::string> ctorLowered;
-
-    for (const auto &rec : records) {
-      if (rec.isConstructor) {
-        if (std::find(ctorMembers.begin(), ctorMembers.end(), rec.name) == ctorMembers.end()) {
-          ctorMembers.push_back(rec.name);
-          ctorLowered.push_back(rec.name);
-        }
-        // SOA constructor names do NOT go into the helper surface
-      } else {
-        if (std::find(helperMembers.begin(), helperMembers.end(), rec.name) == helperMembers.end()) {
-          helperMembers.push_back(rec.name);
-        }
-        if (rec.takesCollectionParam) {
-          helperLowered.push_back(rec.name);
-        }
-      }
-    }
-
-    derived.soaHelpers = buildSurfaceData(
-        "collections.soa_helpers", "/std/collections", "/std/collections/soa", "",
-        helperMembers, {}, helperLowered,
-        "/std/collections/soa", "soa", "/std/collections/soa");
-
-    derived.soaConstructors = buildSurfaceData(
-        "collections.soa_constructors", "/std/collections", "/std/collections/soa/soa", "",
-        ctorMembers, {}, ctorLowered,
-        "/std/collections/soa", "soa", "/std/collections/soa");
+        basePath, stem, basePath);
   }
 
   return derived;

@@ -1496,7 +1496,7 @@ investigation chain's actively-productive leaves - see
     for `error:`/`Error 1`/`Error 2` (zero matches) and ctest reported
     "100% tests passed, 0 tests failed out of 1891".
 
-- [ ] TODO-4688: Fold deriveCollectionsSurfaces()'s 3 hand-written blocks into one generic loop
+- [x] TODO-4688: Fold deriveCollectionsSurfaces()'s 3 hand-written blocks into one generic loop
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 1
@@ -1514,6 +1514,57 @@ investigation chain's actively-productive leaves - see
     - Release tests pass.
   - stop_rule: Stop once the loop replaces the 3 blocks with identical
     output; changing storage shape/enum resolution is TODO-4689.
+  - progress_2026-08-19: Replaced the 3 hand-written `--- Vector ---` /
+    `--- Map ---` / `--- Soa ---` blocks in `deriveCollectionsSurfaces()`
+    (`src/support/StdlibSurfaceRegistry.cpp`) with one loop over a
+    3-entry `CollectionSurfaceConfig` table. All naming/path boilerplate
+    (memberPrefix, collectionTypeName, canonicalPath, bridgeKey, import
+    alias, lowering-path base) is now derived generically per iteration
+    via TODO-4686's `detectStdlibCollectionStructAnnotations()` and
+    TODO-4687's `deriveStdlibCollectionMemberPrefix()` /
+    `deriveStdlibCollectionCanonicalPath()` /
+    `deriveStdlibCollectionBridgeKey()`, keyed off each config entry's
+    `fileName` and the struct-annotation kind (`collection_type` for
+    vector/soa, `key_value_type` for map) it should match. Only the 3
+    genuine per-type behavioral differences (not naming/path boilerplate)
+    stayed as explicit config fields, per the stop_rule: whether
+    statement-member detection applies (vector only, `detectStatement
+    Members`), whether a constructor member also joins the helper
+    surface's memberNames (`constructorJoinsHelperSurface`: true for
+    vector/map, false for soa), and the helper surface's
+    `backingTypeName` override (empty for vector/soa, `"MapValue"` for
+    map — not derivable from the generic machinery, since it has no
+    correlation with the other two flags). Named `vectorHelpers` /
+    `vectorConstructors` / ... fields are populated via
+    pointer-to-member (`ManifestSurfaceData
+    CollectionsManifestSurfaces::*`) in each config entry, so existing
+    consumers of those named fields are unaffected. Proved output parity
+    with a new TEST_CASE in
+    `tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp`
+    ("deriveCollectionsSurfaces() output is byte-identical across the
+    TODO-4688 refactor") that snapshots every field (bridgeKey,
+    canonicalImportRoot, canonicalPath, backingTypeName, memberNames,
+    statementMemberNames, importAliasSpellings, loweringSpellings) of
+    all 6 derived collection `StdlibSurfaceMetadata` entries as literal
+    expected values, captured from the pre-refactor implementation by
+    building and running a temporary dump test case before making any
+    source changes, then asserted unchanged after the refactor (54
+    assertions, all passing both before and after). Caught and fixed one
+    test break during verification: a pre-existing architectural
+    "map ownership" test
+    (`tests/unit/misc/test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp`)
+    asserted the literal substring `"collections.map_helpers"` appears
+    in `StdlibSurfaceRegistry.cpp`'s raw source text — no longer true
+    once that bridge key is computed at runtime instead of hardcoded;
+    updated the assertion to check the same invariant via the public
+    `findStdlibSurfaceMetadata()` API at runtime instead of scanning
+    source text for the literal. No new zero-tolerance compiler-
+    knowledge-audit literal was introduced: the .cpp file already
+    carries a `collection-surface-audit: exempt` marker (from TODO-4687)
+    covering the type-name literals mentioned in the new config table's
+    comments. Verified via `./scripts/compile.sh --release`: raw build
+    log grepped for `error:`/`Error 1`/`Error 2` (zero matches) and
+    ctest reported "100% tests passed, 0 tests failed out of 1891".
 
 - [ ] TODO-4689: Make collection registry storage dynamically sized; resolve enum members by canonical path
   - owner: ai

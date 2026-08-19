@@ -1,3 +1,5 @@
+#include "primec/support/StdlibSurfaceRegistry.h"
+
 #include "third_party/doctest.h"
 
 #include "test_stdlib_map_ownership_shared.h"
@@ -22,7 +24,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation map surfa
   CHECK(s.mapSource.find("[args<Entry<K, V>>] entries") != std::string::npos);
   CHECK(s.mapSource.find("entries[index]") == std::string::npos);
   CHECK(s.mapSource.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
-  CHECK(s.registrySource.find("\"collections.map_helpers\"") != std::string::npos);
+  // TODO-4688: "collections.map_helpers" is generically derived (file stem +
+  // surface suffix) rather than a hardcoded literal in the registry source,
+  // so assert the canonical registry produces it at runtime instead of
+  // scanning for the literal substring.
+  const auto *mapHelpersMetadata =
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsManifestSurface2);
+  REQUIRE(mapHelpersMetadata != nullptr);
+  CHECK(mapHelpersMetadata->bridgeKey == "collections.map_helpers");
   CHECK(s.registrySource.find("\"at_unsafe_ref\"") == std::string::npos);
   CHECK(s.registrySource.find("CollectionsMapHelperMembers") == std::string::npos);
   CHECK(s.registrySource.find("CollectionsMapConstructorMembers") == std::string::npos);
