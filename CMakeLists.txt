@@ -690,6 +690,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/manual/test_semantics_manual.cpp
     tests/unit/parser/test_lexer.cpp
     tests/unit/misc/test_diagnostics_codes.cpp
+    tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp
   )
   target_include_directories(PrimeStruct_misc_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
@@ -1293,6 +1294,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.stdlib.map_ownership
     primestruct.ir_printer
     primestruct.diagnostics.codes
+    primestruct.stdlib.collection_struct_annotation_detection
   )
 
   set(PrimeStructBackendIrTestSuites

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <filesystem>
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace primec {
 
@@ -75,5 +77,40 @@ std::string_view findBorrowedVariant(const StdlibSurfaceMetadata &metadata, std:
 std::string_view findBorrowedVariant(StdlibSurfaceId id, std::string_view memberName);
 std::string resolveCompatibilitySpellingToCanonicalPath(std::string_view compatibilitySpelling);
 std::string findCompatibilitySpelling(StdlibSurfaceId id, std::string_view memberName);
+
+// TODO-4686: generic [collection_type]/[key_value_type] struct-annotation detection.
+enum class StdlibCollectionAnnotationKind {
+  CollectionType,
+  KeyValueType,
+};
+
+struct StdlibCollectionStructAnnotation {
+  std::string typeName;
+  StdlibCollectionAnnotationKind kind{};
+};
+
+// Scans a single stdlib .prime file for top-level [public struct collection_type]
+// / [public struct key_value_type] annotations and returns, for each one found,
+// the annotated struct's declared type name pulled from the next non-blank/
+// non-comment line (e.g. a line reading "Foo<T>() {" yields the type name
+// "Foo"). Mirrors the annotation-then-lookahead scanning style used internally by
+// scanStdlibPublicFunctions for [public] function scanning: only annotations
+// at indent depth < 4 are considered (struct-level, not nested struct-method
+// annotations), and struct declarations without one of these two annotations
+// (e.g. a bare "[public struct]") are not reported. Does not derive
+// canonicalPath/bridgeKey/prefix (TODO-4687); this is detection only.
+std::vector<StdlibCollectionStructAnnotation> detectStdlibCollectionStructAnnotations(
+    const std::filesystem::path &filepath);
+
+struct StdlibCollectionAnnotationFileResult {
+  std::filesystem::path file;
+  std::vector<StdlibCollectionStructAnnotation> annotations;
+};
+
+// Runs detectStdlibCollectionStructAnnotations() over every *.prime file
+// discovered by the TODO-4685 directory scan (stdlib/std/collections/),
+// regardless of whether the registry currently makes use of that file.
+std::vector<StdlibCollectionAnnotationFileResult>
+detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles();
 
 } // namespace primec

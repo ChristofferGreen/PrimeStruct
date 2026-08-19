@@ -1072,6 +1072,93 @@ std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metad
 
 } // namespace
 
+// TODO-4686: generic [collection_type]/[key_value_type] struct-annotation
+// detection. Defined outside the anonymous namespace above (but still in
+// this translation unit, so it can reuse trimAscii/leadingSpaces/
+// extractFunctionName/listStdlibCollectionFiles) so it has external linkage
+// and is unit-testable directly.
+std::vector<StdlibCollectionStructAnnotation> detectStdlibCollectionStructAnnotations(
+    const std::filesystem::path &filepath) {
+  std::ifstream input(filepath);
+  if (!input) {
+    return {};
+  }
+
+  // Pre-read all lines so lookahead to the declaration line following an
+  // annotation works the same way scanStdlibPublicFunctions does it.
+  std::vector<std::string> lines;
+  {
+    std::string line;
+    while (std::getline(input, line)) {
+      lines.push_back(std::move(line));
+    }
+  }
+
+  std::vector<StdlibCollectionStructAnnotation> results;
+  bool expectingStructName = false;
+  StdlibCollectionAnnotationKind pendingKind{};
+
+  for (std::size_t i = 0; i < lines.size(); ++i) {
+    const std::string_view sv(lines[i]);
+    const std::string trimmed = trimAscii(sv);
+
+    if (expectingStructName) {
+      if (trimmed.empty()) {
+        continue;
+      }
+      // Skip comment lines (// ...) but not rooted paths (/ ...)
+      if (trimmed.size() >= 2 && trimmed[0] == '/' && trimmed[1] == '/') {
+        continue;
+      }
+      if (trimmed.front() == '[') {
+        // Another annotation before the struct name line — reset and fall
+        // through to re-check this line as a potential annotation of its own.
+        expectingStructName = false;
+      } else {
+        // This is the struct declaration line, e.g. "SoaVector<T>() {".
+        const std::string typeName = extractFunctionName(lines[i]);
+        if (!typeName.empty()) {
+          results.push_back({typeName, pendingKind});
+        }
+        expectingStructName = false;
+        continue;
+      }
+    }
+
+    // Struct-level annotations sit at shallow indent (namespace body); skip
+    // deeper (struct-method) annotations, matching scanStdlibPublicFunctions.
+    if (leadingSpaces(sv) >= 4) {
+      continue;
+    }
+    if (trimmed.find("[public struct") == std::string_view::npos) {
+      continue;
+    }
+    if (trimmed.find("collection_type") != std::string_view::npos) {
+      pendingKind = StdlibCollectionAnnotationKind::CollectionType;
+    } else if (trimmed.find("key_value_type") != std::string_view::npos) {
+      pendingKind = StdlibCollectionAnnotationKind::KeyValueType;
+    } else {
+      // A bare "[public struct]" (no collection/key-value annotation) — not
+      // a detection target.
+      continue;
+    }
+    expectingStructName = true;
+  }
+  return results;
+}
+
+std::vector<StdlibCollectionAnnotationFileResult>
+detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles() {
+  std::vector<StdlibCollectionAnnotationFileResult> results;
+  for (const auto &file : listStdlibCollectionFiles()) {
+    auto annotations = detectStdlibCollectionStructAnnotations(file);
+    if (!annotations.empty()) {
+      results.push_back({file, std::move(annotations)});
+    }
+  }
+  return results;
+}
+
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry() {
   return Registry;
 }

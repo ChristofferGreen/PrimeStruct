@@ -1372,7 +1372,7 @@ investigation chain's actively-productive leaves - see
     - Release map/conformance/lock suites green
   - stop_rule: pair signatures deleted and suites green
 
-- [ ] TODO-4686: Detect [collection_type]/[key_value_type] struct declarations generically
+- [x] TODO-4686: Detect [collection_type]/[key_value_type] struct declarations generically
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 1
@@ -1393,6 +1393,35 @@ investigation chain's actively-productive leaves - see
     - Unit test covers detection against a fixture .prime file.
   - stop_rule: Stop once detection is proven correct; derivation of
     canonicalPath/bridgeKey/prefix is TODO-4687.
+  - progress_2026-08-19: Added `detectStdlibCollectionStructAnnotations()`
+    (scans a single `.prime` file for top-level `[public struct
+    collection_type]`/`[public struct key_value_type]` annotations,
+    pulling the declared type name from the next non-blank/non-comment
+    line, mirroring the annotation-then-lookahead style used by
+    `scanStdlibPublicFunctions`) and
+    `detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles()`
+    (runs it over every `.prime` file the TODO-4685 directory scan
+    discovers under `stdlib/std/collections/`), both in
+    `include/primec/support/StdlibSurfaceRegistry.h` /
+    `src/support/StdlibSurfaceRegistry.cpp`. Added
+    `tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp`
+    (7 TEST_CASEs) verifying detection against `vector.prime`,
+    `map.prime`, `soa.prime`, and `soa_storage.prime`, confirming all 4
+    currently-annotated structs (`Vector`, `MapValue`, `SoaVector`,
+    `SoaColumn`) are found with correct kinds and that `SoaColumn`
+    (currently unused by the registry) is discovered without being
+    misclassified. Derivation of canonicalPath/bridgeKey/prefix is left
+    for TODO-4687 as scoped. Caught and fixed one build failure during
+    verification: the new header's example comment used the literal
+    identifier `SoaVector` twice, tripping
+    `scripts/check_soa_surface_trace_inventory.py`'s zero-tolerance audit
+    for that retired-type-symbol trace in `include/`/`src/` (this header
+    has no `soa-surface-audit: exempt` marker, unlike the paired `.cpp`,
+    which already carries one) - reworded the comment to use a generic
+    placeholder type name instead of naming `SoaVector` literally.
+    Verified via `./scripts/compile.sh --release`: clean build (raw log
+    grepped for `error:`/`Error 1`/`Error 2`, zero matches) and "no
+    failing CTest cases".
 
 - [ ] TODO-4687: Derive canonical path, bridge key, and member prefix generically, with annotation override
   - owner: ai
