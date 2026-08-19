@@ -179,12 +179,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           arg, "unknown call target: /std/collections/mapPair");
     }
   }
-  if (const std::string removedRootMapDiagnostic =
-          removedRootMapMethodDiagnostic(expr);
-      !removedRootMapDiagnostic.empty()) {
-    handledOut = true;
-    return failExprDiagnostic(expr, removedRootMapDiagnostic);
-  }
+  // Deleted (TODO-4681): a `removedRootMapMethodDiagnostic(expr)` check
+  // used to live here, duplicating the identical check already performed
+  // unconditionally in SemanticsValidator::validateExpr
+  // (SemanticsValidatorExpr.cpp) before this function is ever reached, on
+  // the same immutable `expr`. That earlier check always short-circuits
+  // with an early return when the diagnostic is non-empty, so this copy
+  // could never see a non-empty result. Confirmed unreachable both
+  // structurally (see above) and empirically (0 hits across the full
+  // release test suite with temporary hit-counting instrumentation).
   const auto canonicalVectorHelperPath =
       [](std::string_view helperName) {
         std::string path = canonicalVectorCompatibilityHelperPath(helperName);
@@ -311,11 +314,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                !resolvedBuiltinMethod &&
                defMap_.find(resolvedMethodTarget) != defMap_.end();
       };
-  if (isResolvedCountOrCapacityHelperInstantiation()) {
-    handledOut = true;
-    return true;
-  }
-
+  // Deleted (TODO-4681): a second, identical
+  // `isResolvedCountOrCapacityHelperInstantiation()` early-return used to
+  // live here, duplicating the check a few lines above (kept). Nothing
+  // between the two call sites mutates `expr`, `resolved`, or `defMap_`
+  // (the lambda's captures), and the first call already returns from this
+  // function whenever it is true, so this second call could only ever be
+  // reached with the identical (already-false) result. Confirmed
+  // unreachable both structurally and empirically (0 hits across the full
+  // release test suite with temporary hit-counting instrumentation).
   const auto applyNamedArgumentCountOrCapacityHelperFastPath =
       [&]() {
         if (!matchesNamedArgumentCountOrCapacityHelperFastPath) {

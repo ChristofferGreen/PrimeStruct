@@ -1243,7 +1243,7 @@ investigation chain's actively-productive leaves - see
     across 4036 log lines) and `100% tests passed, 0 tests failed out
     of 1890`.
 
-- [ ] TODO-4681: Delete unreachable collection dispatch branches
+- [x] TODO-4681: Delete unreachable collection dispatch branches
   - owner: ai
   - created_at: 2026-07-02
   - phase: Collection dispatch retirement
@@ -1257,6 +1257,64 @@ investigation chain's actively-productive leaves - see
     - Dead interceptor branches removed with evidence they were unreachable
     - Full release test suite passes
   - stop_rule: evidenced dead code removed and tests pass
+  - progress_2026-08-19: The repo's coverage workflow
+    (`./scripts/code_coverage.sh`) is not usable in this environment
+    (`llvm-profdata`/`clang++` are present but
+    `libclang_rt.profile-x86_64.a` is not installed, so the coverage
+    CMake configure fails before any build happens) - not a code issue,
+    so no attempt was made to fix the sandbox's toolchain. Fell back to
+    the task's sanctioned alternative: temporary hit-counting
+    instrumentation (env-gated, appended a branch id to a log file,
+    guarded by `PRIMESTRUCT_BRANCH_EVIDENCE_LOG` so it is a no-op unless
+    set) on the 13 `handledOut = true` interception sites in
+    `SemanticsValidatorExprCollectionCountCapacity.cpp` (the
+    count/capacity dispatch entry point named in TODO-4677's own scope
+    text) plus 5 sites in `IrLowererStructSlotLayoutHelpers.cpp` covering
+    the TODO-4670/TODO-4671 "kept, not dead" helpers
+    (`isInternalSoaColumnTypeName`, `isExperimentalSoaVectorTypeName`, and
+    the three `isBuiltinVectorTypeName` per-field-loop call sites), then
+    ran the full instrumented `./scripts/compile.sh --release` suite once
+    (1890 tests, 100% passed) and inspected which ids never fired.
+    3 of the 13 count/capacity sites and 2 of the 5 ir_lowerer sites had
+    zero hits. Per the task's explicit conservative bar ("not just no
+    test currently exercises this path"), only sites with an additional
+    *structural* unreachability proof were deleted:
+    - Deleted: a `removedRootMapMethodDiagnostic(expr)` check inside
+      `resolveExprCollectionCountCapacityTarget` duplicated, verbatim, a
+      check already performed unconditionally in
+      `SemanticsValidator::validateExpr` (`SemanticsValidatorExpr.cpp`,
+      around the `removedRootMapDiagnostic` early-return) before this
+      function is ever reached, on the same immutable `expr` - the outer
+      check always short-circuits with an early return first, so the
+      inner copy could never see a non-empty diagnostic. 0 hits.
+    - Deleted: a second, identical
+      `isResolvedCountOrCapacityHelperInstantiation()` early-return later
+      in the same function, duplicating an identical call a few lines
+      above. Nothing between the two call sites mutates the lambda's
+      captures (`expr`, `resolved`, `defMap_`), and the first call already
+      returns from the function whenever true, so the second call could
+      only reach the identical (already-false) result. 0 hits.
+    - Kept (0 hits, no structural proof found):
+      `canonicalizeDirectExperimentalSoaWrapperCountHelperCall()`'s
+      count_ref branch in the same file (legacy `experimental_soa_vector`
+      wrapper path - plausible dead compat shim per TODO-4681's premise,
+      but not provably short-circuited by an earlier check); the inline
+      "field typed as `vector<T>` with no separate template arg" and the
+      bare "field typed as plain `vector` with no template info anywhere"
+      branches in `IrLowererStructSlotLayoutHelpers.cpp`'s per-field loop
+      (0 hits each, but no proof the parser/binder forbids the untyped
+      shape they guard against).
+    - Kept (still fire; not dead): `isInternalSoaColumnTypeName`'s
+      isolated-unit-test struct-layout fallback (1 hit) and
+      `isExperimentalSoaVectorTypeName`'s equivalent fallback (12 hits),
+      confirming TODO-4671's finding that both helpers have live callers.
+    Instrumentation and its two temporary headers were fully removed
+    before landing (`git diff` shows only the two structural deletions
+    plus the auto-managed `docs/failing_tests.md` timestamp).
+    Verified via `./scripts/compile.sh --release`: clean build (raw
+    build log grepped for `error:`/`Error 1`/`Error 2`, zero matches
+    across 4051 log lines) and `100% tests passed, 0 tests failed out
+    of 1890`, matching the instrumented run's pass count exactly.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai
