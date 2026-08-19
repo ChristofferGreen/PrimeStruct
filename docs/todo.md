@@ -1151,7 +1151,7 @@ investigation chain's actively-productive leaves - see
     compile-and-run (or, for the one genuinely-broken file, a
     compile-and-pin) test case.
 
-- [ ] TODO-4670: Remove old vector/soa-vector alias early-exit branches
+- [x] TODO-4670: Remove old vector/soa-vector alias early-exit branches
   - owner: ai
   - created_at: 2026-06-13
   - phase: Collection decoupling - Phase 3
@@ -1169,6 +1169,29 @@ investigation chain's actively-productive leaves - see
       have no remaining callers in this file
     - All tests pass
   - stop_rule: branches deleted and tests pass
+  - progress_2026-08-19: Deleted the two hardcoded 3-slot early-exit
+    branches (the `isBuiltinVectorTypeName(structPath)` and
+    `isBuiltinSoaVectorTypeName(structPath)` checks at the top of
+    `resolveStructSlotLayoutFromDefinitionFields`) in
+    `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp`. Struct-path
+    resolution now falls through directly to the generic
+    definition-field-driven layout path (cache lookup, then
+    `resolveDefinitionNamespacePrefix`/`collectStructLayoutFields`, with
+    the existing `vectorBackingTypePath()`-based fallback further down
+    still covering isolated-unit-test cases where the vector struct
+    definition is not in `defMap`). `isBuiltinVectorTypeName` and
+    `isBuiltinSoaVectorTypeName` still have live callers elsewhere in this
+    same file (per-field vector/soa detection inside the field-enumeration
+    loop of `resolveStructSlotLayoutFromDefinitionFields`, e.g.
+    `normalizeVectorStructPath`, `resolveSoaVectorFieldStructPath`, and
+    the inline/templated-field branches around what is now lines
+    360-470) - those are unrelated to the two removed early-exit branches,
+    so per this task's literal scope (branches removed from that one
+    function only) the helper definitions were intentionally left in
+    place for TODO-4671's broader dead-helper sweep to evaluate. Verified
+    via `./scripts/compile.sh --release`: clean build (no `error:`/
+    `Error 1`/`Error 2` in the raw log) and
+    `100% tests passed, 0 tests failed out of 1890`.
 
 - [ ] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
   - owner: ai

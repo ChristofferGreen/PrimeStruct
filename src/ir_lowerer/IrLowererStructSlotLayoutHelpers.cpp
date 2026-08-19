@@ -256,26 +256,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     std::unordered_set<std::string> &layoutStack,
     StructSlotLayoutInfo &out,
     std::string &error) {
-  if (isBuiltinVectorTypeName(structPath)) {
-    StructSlotLayoutInfo layout;
-    layout.structPath = normalizeVectorStructPath(structPath);
-    layout.totalSlots = 3;
-    layout.fields.push_back({"count", 0, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"capacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
-    out = layout;
-    return true;
-  }
-  if (isBuiltinSoaVectorTypeName(structPath)) {
-    StructSlotLayoutInfo layout;
-    layout.structPath = normalizeVectorStructPath(structPath);
-    layout.totalSlots = 3;
-    layout.fields.push_back({"count", 0, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"capacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
-    out = layout;
-    return true;
-  }
   auto cached = layoutCache.find(structPath);
   if (cached != layoutCache.end()) {
     out = cached->second;
