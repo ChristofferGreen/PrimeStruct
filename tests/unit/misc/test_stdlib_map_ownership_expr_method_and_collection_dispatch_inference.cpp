@@ -713,6 +713,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation expr meth
         std::string::npos);
   CHECK(s.buildInitializerInferenceCallsSource.find(
             "isResolvedKeyValueConstructorPath") != std::string::npos);
+}
+
+TEST_CASE("canonical map surface owns standalone stdlib implementation expr method and collection dispatch inference: dispatch and fallback paths") {
+  const MapOwnershipSources s = loadMapOwnershipSources();
   CHECK(s.inferCollectionDispatchSource.find("resolvedPath.rfind(\"/map/\"") ==
         std::string::npos);
   CHECK(s.inferCollectionDispatchSource.find("resolvedPath == \"/map/at\"") ==

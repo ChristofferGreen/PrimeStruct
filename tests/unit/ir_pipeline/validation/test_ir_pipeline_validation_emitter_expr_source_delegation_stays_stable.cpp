@@ -490,7 +490,42 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "return \"/vector/\" + helperName;") ==
         std::string::npos);
 }
-TEST_CASE("template monomorph source delegation stays stable") {
+struct TemplateMonomorphSourceDelegationSources {
+  std::string templateMonomorphSource;
+  std::string templateMonomorphFallbackSource;
+  std::string templateMonomorphBindingCallSource;
+  std::string templateMonomorphBindingBlockSource;
+  std::string templateMonomorphMethodTargetsSource;
+  std::string templateMonomorphTypeResolutionSource;
+  std::string templateMonomorphAssignmentTargetResolutionSource;
+  std::string templateMonomorphExperimentalCollectionArgumentRewritesSource;
+  std::string templateMonomorphExperimentalCollectionConstructorRewritesSource;
+  std::string templateMonomorphExperimentalCollectionTargetValueRewritesSource;
+  std::string templateMonomorphExperimentalCollectionValueRewritesSource;
+  std::string templateMonomorphExperimentalCollectionReceiverResolutionSource;
+  std::string templateMonomorphExperimentalCollectionConstructorPathsSource;
+  std::string templateMonomorphExperimentalCollectionTypeHelpersSource;
+  std::string templateMonomorphExperimentalCollectionReturnRewritesSource;
+  std::string templateMonomorphExperimentalCollectionReturnSetupSource;
+  std::string templateMonomorphDefinitionBindingSetupSource;
+  std::string templateMonomorphDefinitionReturnOrchestrationSource;
+  std::string templateMonomorphDefinitionExperimentalCollectionRewritesSource;
+  std::string templateMonomorphExecutionRewritesSource;
+  std::string templateMonomorphDefinitionRewritesSource;
+  std::string templateMonomorphTemplateSpecializationSource;
+  std::string templateMonomorphImplicitTemplateInferenceSource;
+  std::string templateMonomorphExpressionRewriteSource;
+  std::string templateMonomorphCollectionCompatibilityPathsSource;
+  std::string collectionSurfaceHelpersSource;
+  std::string collectionTypeHelpersSource;
+};
+
+// Shared fixture for the "template monomorph source delegation stays
+// stable" checks below: reads every TemplateMonomorph*/collection-surface
+// source file the split TEST_CASEs assert against exactly once, so the
+// split shards can share one snapshot without duplicating the
+// file-resolution boilerplate.
+static TemplateMonomorphSourceDelegationSources loadTemplateMonomorphSourceDelegationSources() {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -657,6 +692,46 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(collectionSurfaceHelpersPath);
   const std::string collectionTypeHelpersSource =
       readText(collectionTypeHelpersPath);
+
+  TemplateMonomorphSourceDelegationSources sources;
+  sources.templateMonomorphSource = templateMonomorphSource;
+  sources.templateMonomorphFallbackSource = templateMonomorphFallbackSource;
+  sources.templateMonomorphBindingCallSource = templateMonomorphBindingCallSource;
+  sources.templateMonomorphBindingBlockSource = templateMonomorphBindingBlockSource;
+  sources.templateMonomorphMethodTargetsSource = templateMonomorphMethodTargetsSource;
+  sources.templateMonomorphTypeResolutionSource = templateMonomorphTypeResolutionSource;
+  sources.templateMonomorphAssignmentTargetResolutionSource = templateMonomorphAssignmentTargetResolutionSource;
+  sources.templateMonomorphExperimentalCollectionArgumentRewritesSource = templateMonomorphExperimentalCollectionArgumentRewritesSource;
+  sources.templateMonomorphExperimentalCollectionConstructorRewritesSource = templateMonomorphExperimentalCollectionConstructorRewritesSource;
+  sources.templateMonomorphExperimentalCollectionTargetValueRewritesSource = templateMonomorphExperimentalCollectionTargetValueRewritesSource;
+  sources.templateMonomorphExperimentalCollectionValueRewritesSource = templateMonomorphExperimentalCollectionValueRewritesSource;
+  sources.templateMonomorphExperimentalCollectionReceiverResolutionSource = templateMonomorphExperimentalCollectionReceiverResolutionSource;
+  sources.templateMonomorphExperimentalCollectionConstructorPathsSource = templateMonomorphExperimentalCollectionConstructorPathsSource;
+  sources.templateMonomorphExperimentalCollectionTypeHelpersSource = templateMonomorphExperimentalCollectionTypeHelpersSource;
+  sources.templateMonomorphExperimentalCollectionReturnRewritesSource = templateMonomorphExperimentalCollectionReturnRewritesSource;
+  sources.templateMonomorphExperimentalCollectionReturnSetupSource = templateMonomorphExperimentalCollectionReturnSetupSource;
+  sources.templateMonomorphDefinitionBindingSetupSource = templateMonomorphDefinitionBindingSetupSource;
+  sources.templateMonomorphDefinitionReturnOrchestrationSource = templateMonomorphDefinitionReturnOrchestrationSource;
+  sources.templateMonomorphDefinitionExperimentalCollectionRewritesSource = templateMonomorphDefinitionExperimentalCollectionRewritesSource;
+  sources.templateMonomorphExecutionRewritesSource = templateMonomorphExecutionRewritesSource;
+  sources.templateMonomorphDefinitionRewritesSource = templateMonomorphDefinitionRewritesSource;
+  sources.templateMonomorphTemplateSpecializationSource = templateMonomorphTemplateSpecializationSource;
+  sources.templateMonomorphImplicitTemplateInferenceSource = templateMonomorphImplicitTemplateInferenceSource;
+  sources.templateMonomorphExpressionRewriteSource = templateMonomorphExpressionRewriteSource;
+  sources.templateMonomorphCollectionCompatibilityPathsSource = templateMonomorphCollectionCompatibilityPathsSource;
+  sources.collectionSurfaceHelpersSource = collectionSurfaceHelpersSource;
+  sources.collectionTypeHelpersSource = collectionTypeHelpersSource;
+  return sources;
+}
+
+TEST_CASE("template monomorph source delegation stays stable: include wiring and implicit template inference") {
+  const TemplateMonomorphSourceDelegationSources fixture = loadTemplateMonomorphSourceDelegationSources();
+  const std::string &templateMonomorphSource = fixture.templateMonomorphSource;
+  const std::string &templateMonomorphMethodTargetsSource = fixture.templateMonomorphMethodTargetsSource;
+  const std::string &templateMonomorphTypeResolutionSource = fixture.templateMonomorphTypeResolutionSource;
+  const std::string &templateMonomorphImplicitTemplateInferenceSource = fixture.templateMonomorphImplicitTemplateInferenceSource;
+  const std::string &collectionSurfaceHelpersSource = fixture.collectionSurfaceHelpersSource;
+
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -1448,6 +1523,17 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasAnyBuiltinSoaRefCanonicalNameMatch =") ==
         std::string::npos);
+}
+
+TEST_CASE("template monomorph source delegation stays stable: expression rewrite and binding-call/method-target inference") {
+  const TemplateMonomorphSourceDelegationSources fixture = loadTemplateMonomorphSourceDelegationSources();
+  const std::string &templateMonomorphFallbackSource = fixture.templateMonomorphFallbackSource;
+  const std::string &templateMonomorphBindingCallSource = fixture.templateMonomorphBindingCallSource;
+  const std::string &templateMonomorphBindingBlockSource = fixture.templateMonomorphBindingBlockSource;
+  const std::string &templateMonomorphMethodTargetsSource = fixture.templateMonomorphMethodTargetsSource;
+  const std::string &templateMonomorphImplicitTemplateInferenceSource = fixture.templateMonomorphImplicitTemplateInferenceSource;
+  const std::string &templateMonomorphExpressionRewriteSource = fixture.templateMonomorphExpressionRewriteSource;
+
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasAnyNormalizedCanonicalNameSoaRefMatch =\n"
             "        normalizedCanonicalNameMatchesSoaRef ||\n"
@@ -2243,6 +2329,34 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphMethodTargetsSource.find(
             "canonicalizeLegacySoaToAosHelperPath(samePath)") ==
         std::string::npos);
+}
+
+TEST_CASE("template monomorph source delegation stays stable: experimental collection rewrites and definitions") {
+  const TemplateMonomorphSourceDelegationSources fixture = loadTemplateMonomorphSourceDelegationSources();
+  const std::string &templateMonomorphFallbackSource = fixture.templateMonomorphFallbackSource;
+  const std::string &templateMonomorphMethodTargetsSource = fixture.templateMonomorphMethodTargetsSource;
+  const std::string &templateMonomorphTypeResolutionSource = fixture.templateMonomorphTypeResolutionSource;
+  const std::string &templateMonomorphAssignmentTargetResolutionSource = fixture.templateMonomorphAssignmentTargetResolutionSource;
+  const std::string &templateMonomorphExperimentalCollectionArgumentRewritesSource = fixture.templateMonomorphExperimentalCollectionArgumentRewritesSource;
+  const std::string &templateMonomorphExperimentalCollectionConstructorRewritesSource = fixture.templateMonomorphExperimentalCollectionConstructorRewritesSource;
+  const std::string &templateMonomorphExperimentalCollectionTargetValueRewritesSource = fixture.templateMonomorphExperimentalCollectionTargetValueRewritesSource;
+  const std::string &templateMonomorphExperimentalCollectionValueRewritesSource = fixture.templateMonomorphExperimentalCollectionValueRewritesSource;
+  const std::string &templateMonomorphExperimentalCollectionReceiverResolutionSource = fixture.templateMonomorphExperimentalCollectionReceiverResolutionSource;
+  const std::string &templateMonomorphExperimentalCollectionConstructorPathsSource = fixture.templateMonomorphExperimentalCollectionConstructorPathsSource;
+  const std::string &templateMonomorphExperimentalCollectionTypeHelpersSource = fixture.templateMonomorphExperimentalCollectionTypeHelpersSource;
+  const std::string &templateMonomorphExperimentalCollectionReturnRewritesSource = fixture.templateMonomorphExperimentalCollectionReturnRewritesSource;
+  const std::string &templateMonomorphExperimentalCollectionReturnSetupSource = fixture.templateMonomorphExperimentalCollectionReturnSetupSource;
+  const std::string &templateMonomorphDefinitionBindingSetupSource = fixture.templateMonomorphDefinitionBindingSetupSource;
+  const std::string &templateMonomorphDefinitionReturnOrchestrationSource = fixture.templateMonomorphDefinitionReturnOrchestrationSource;
+  const std::string &templateMonomorphDefinitionExperimentalCollectionRewritesSource = fixture.templateMonomorphDefinitionExperimentalCollectionRewritesSource;
+  const std::string &templateMonomorphExecutionRewritesSource = fixture.templateMonomorphExecutionRewritesSource;
+  const std::string &templateMonomorphDefinitionRewritesSource = fixture.templateMonomorphDefinitionRewritesSource;
+  const std::string &templateMonomorphTemplateSpecializationSource = fixture.templateMonomorphTemplateSpecializationSource;
+  const std::string &templateMonomorphExpressionRewriteSource = fixture.templateMonomorphExpressionRewriteSource;
+  const std::string &templateMonomorphCollectionCompatibilityPathsSource = fixture.templateMonomorphCollectionCompatibilityPathsSource;
+  const std::string &collectionSurfaceHelpersSource = fixture.collectionSurfaceHelpersSource;
+  const std::string &collectionTypeHelpersSource = fixture.collectionTypeHelpersSource;
+
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string helperNameString(helperName);") !=
         std::string::npos);
@@ -3045,6 +3159,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "bool specializeTemplateDefinitionFamily(const std::string &basePath,") !=
         std::string::npos);
 }
+
 
 TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   auto readText = [](const std::filesystem::path &path) {

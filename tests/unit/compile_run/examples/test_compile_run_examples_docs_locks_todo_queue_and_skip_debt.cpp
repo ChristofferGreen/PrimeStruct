@@ -4,44 +4,10 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
 
-TEST_CASE("todo queue and skipped doctest debt stay source locked") {
-  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
-  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
-  std::filesystem::path vmMathPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_math.cpp";
-  std::filesystem::path vmMapsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_maps.cpp";
-  std::filesystem::path examplesDocsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "examples" / "test_compile_run_examples_docs.cpp";
-  if (!std::filesystem::exists(todoPath)) {
-    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
-  }
-  if (!std::filesystem::exists(todoFinishedPath)) {
-    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
-  }
-  if (!std::filesystem::exists(vmMathPath)) {
-    vmMathPath =
-        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_math.cpp";
-  }
-  if (!std::filesystem::exists(vmMapsPath)) {
-    vmMapsPath =
-        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_maps.cpp";
-  }
-  if (!std::filesystem::exists(examplesDocsPath)) {
-    examplesDocsPath =
-        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "examples" / "test_compile_run_examples_docs.cpp";
-  }
-  REQUIRE(std::filesystem::exists(todoPath));
-  REQUIRE(std::filesystem::exists(todoFinishedPath));
-  REQUIRE(std::filesystem::exists(vmMathPath));
-  REQUIRE(std::filesystem::exists(vmMapsPath));
-  REQUIRE(std::filesystem::exists(examplesDocsPath));
-
-  const std::string todo = readFile(todoPath.string());
-  const std::string todoFinished = readFile(todoFinishedPath.string());
-  const std::string vmMath = readFile(vmMathPath.string());
-  const std::string vmMaps = readFile(vmMapsPath.string());
-  const std::string examplesDocs = readFile(examplesDocsPath.string());
+TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and priority lanes") {
+  const DocsLocksTodoQueueFixture fixture = loadDocsLocksTodoQueueFixture();
+  const std::string &todo = fixture.todo;
+  const std::string &todoFinished = fixture.todoFinished;
 
   CHECK(todo.find("## Purpose") != std::string::npos);
   CHECK(todo.find("Do not keep completed-task summaries, historical rollout notes, or closed\n"
@@ -613,6 +579,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
+}
+
+TEST_CASE("todo queue and skipped doctest debt stay source locked: execution queue and skip debt summary") {
+  const DocsLocksTodoQueueFixture fixture = loadDocsLocksTodoQueueFixture();
+  const std::string &todo = fixture.todo;
+  const std::string &todoFinished = fixture.todoFinished;
+  const std::string &vmMath = fixture.vmMath;
+  const std::string &vmMaps = fixture.vmMaps;
+  const std::string &examplesDocs = fixture.examplesDocs;
+
   const std::vector<std::string> completedSemanticPhaseQueue = {
       "TODO-4351: Add value-level compile-time requirement facts",
       "TODO-4347: Integrate requirements with overload selection",

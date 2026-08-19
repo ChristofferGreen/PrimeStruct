@@ -636,7 +636,36 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
   CHECK(source.find("std/collections/soa/reserve") == std::string::npos);
 }
 
-TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
+// Shared fixture for the "soa pending diagnostics route through shared
+// semantics helpers" checks below: reads every semantics source file the
+// split TEST_CASEs assert against exactly once, so the split shards can
+// share one snapshot without duplicating the file-resolution boilerplate.
+struct SoaPendingDiagnosticsSources {
+  std::string builtinPathHelpersSource;
+  std::string semanticsHelpersSource;
+  std::string buildInitializerInferenceSource;
+  std::string buildInitializerInferenceCallsSource;
+  std::string exprArgumentValidationCollectionsSource;
+  std::string exprMapSoaBuiltinsSource;
+  std::string exprSource;
+  std::string exprCountCapacityMapBuiltinsSource;
+  std::string exprMethodCompatibilitySetupSource;
+  std::string inferPreDispatchCallsSource;
+  std::string inferLateFallbackBuiltinsSource;
+  std::string inferMethodResolutionSource;
+  std::string exprMethodTargetResolutionSource;
+  std::string exprCollectionAccessSource;
+  std::string exprCollectionAccessValidationSource;
+  std::string inferDefinitionSource;
+  std::string inferCollectionReturnInferenceSource;
+  std::string buildCallResolutionSource;
+  std::string exprResolvedCallArgumentsSource;
+  std::string exprMutationBorrowsSource;
+  std::string statementBindingsSource;
+  std::string statementReturnsSource;
+};
+
+static SoaPendingDiagnosticsSources loadSoaPendingDiagnosticsSources() {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -716,32 +745,46 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   REQUIRE(std::filesystem::exists(statementBindingsPath));
   REQUIRE(std::filesystem::exists(statementReturnsPath));
 
-  const std::string builtinPathHelpersSource = readText(builtinPathHelpersPath);
-  const std::string semanticsHelpersSource = readText(semanticsHelpersPath);
-  const std::string buildInitializerInferenceSource = readText(buildInitializerInferencePath);
-  const std::string buildInitializerInferenceCallsSource = readText(buildInitializerInferenceCallsPath);
-  const std::string exprArgumentValidationCollectionsSource =
+  SoaPendingDiagnosticsSources sources;
+  sources.builtinPathHelpersSource = readText(builtinPathHelpersPath);
+  sources.semanticsHelpersSource = readText(semanticsHelpersPath);
+  sources.buildInitializerInferenceSource = readText(buildInitializerInferencePath);
+  sources.buildInitializerInferenceCallsSource = readText(buildInitializerInferenceCallsPath);
+  sources.exprArgumentValidationCollectionsSource =
       readText(exprArgumentValidationCollectionsPath);
-  const std::string exprMapSoaBuiltinsSource = readText(exprMapSoaBuiltinsPath);
-  const std::string exprSource = readText(exprPath);
-  const std::string exprCountCapacityMapBuiltinsSource = readText(exprCountCapacityMapBuiltinsPath);
-  const std::string exprMethodCompatibilitySetupSource =
+  sources.exprMapSoaBuiltinsSource = readText(exprMapSoaBuiltinsPath);
+  sources.exprSource = readText(exprPath);
+  sources.exprCountCapacityMapBuiltinsSource = readText(exprCountCapacityMapBuiltinsPath);
+  sources.exprMethodCompatibilitySetupSource =
       readText(exprMethodCompatibilitySetupPath);
-  const std::string inferPreDispatchCallsSource = readText(inferPreDispatchCallsPath);
-  const std::string inferLateFallbackBuiltinsSource =
+  sources.inferPreDispatchCallsSource = readText(inferPreDispatchCallsPath);
+  sources.inferLateFallbackBuiltinsSource =
       readText(inferLateFallbackBuiltinsPath);
-  const std::string inferMethodResolutionSource = readText(inferMethodResolutionPath);
-  const std::string exprMethodTargetResolutionSource = readText(exprMethodTargetResolutionPath);
-  const std::string exprCollectionAccessSource = readText(exprCollectionAccessPath);
-  const std::string exprCollectionAccessValidationSource = readText(exprCollectionAccessValidationPath);
-  const std::string inferDefinitionSource = readText(inferDefinitionPath);
-  const std::string inferCollectionReturnInferenceSource =
+  sources.inferMethodResolutionSource = readText(inferMethodResolutionPath);
+  sources.exprMethodTargetResolutionSource = readText(exprMethodTargetResolutionPath);
+  sources.exprCollectionAccessSource = readText(exprCollectionAccessPath);
+  sources.exprCollectionAccessValidationSource = readText(exprCollectionAccessValidationPath);
+  sources.inferDefinitionSource = readText(inferDefinitionPath);
+  sources.inferCollectionReturnInferenceSource =
       readText(inferCollectionReturnInferencePath);
-  const std::string buildCallResolutionSource = readText(buildCallResolutionPath);
-  const std::string exprResolvedCallArgumentsSource = readText(exprResolvedCallArgumentsPath);
-  const std::string exprMutationBorrowsSource = readText(exprMutationBorrowsPath);
-  const std::string statementBindingsSource = readText(statementBindingsPath);
-  const std::string statementReturnsSource = readText(statementReturnsPath);
+  sources.buildCallResolutionSource = readText(buildCallResolutionPath);
+  sources.exprResolvedCallArgumentsSource = readText(exprResolvedCallArgumentsPath);
+  sources.exprMutationBorrowsSource = readText(exprMutationBorrowsPath);
+  sources.statementBindingsSource = readText(statementBindingsPath);
+  sources.statementReturnsSource = readText(statementReturnsPath);
+  return sources;
+}
+
+TEST_CASE("soa pending diagnostics route through shared semantics helpers: builtin path and initializer inference") {
+  const SoaPendingDiagnosticsSources fixture = loadSoaPendingDiagnosticsSources();
+  const std::string &builtinPathHelpersSource = fixture.builtinPathHelpersSource;
+  const std::string &semanticsHelpersSource = fixture.semanticsHelpersSource;
+  const std::string &buildInitializerInferenceSource = fixture.buildInitializerInferenceSource;
+  const std::string &buildInitializerInferenceCallsSource = fixture.buildInitializerInferenceCallsSource;
+  const std::string &exprMapSoaBuiltinsSource = fixture.exprMapSoaBuiltinsSource;
+  const std::string &buildCallResolutionSource = fixture.buildCallResolutionSource;
+  const std::string &inferDefinitionSource = fixture.inferDefinitionSource;
+  const std::string &statementBindingsSource = fixture.statementBindingsSource;
 
   CHECK(builtinPathHelpersSource.find("std::string soaFieldViewHelperPath(std::string_view fieldName)") !=
         std::string::npos);
@@ -1496,6 +1539,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("\"/soa/field_view/\"") == std::string::npos);
+}
+
+TEST_CASE("soa pending diagnostics route through shared semantics helpers: argument validation and method target resolution") {
+  const SoaPendingDiagnosticsSources fixture = loadSoaPendingDiagnosticsSources();
+  const std::string &buildInitializerInferenceSource = fixture.buildInitializerInferenceSource;
+  const std::string &exprArgumentValidationCollectionsSource = fixture.exprArgumentValidationCollectionsSource;
+  const std::string &exprCountCapacityMapBuiltinsSource = fixture.exprCountCapacityMapBuiltinsSource;
+  const std::string &exprMapSoaBuiltinsSource = fixture.exprMapSoaBuiltinsSource;
+  const std::string &exprMethodTargetResolutionSource = fixture.exprMethodTargetResolutionSource;
+  const std::string &exprSource = fixture.exprSource;
+  const std::string &inferMethodResolutionSource = fixture.inferMethodResolutionSource;
+  const std::string &semanticsHelpersSource = fixture.semanticsHelpersSource;
+
   CHECK(exprArgumentValidationCollectionsSource.find(
             "bool SemanticsValidator::resolveDirectSoaVectorOrExperimentalBorrowedReceiver(") !=
         std::string::npos);
@@ -1937,6 +1993,26 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find(
             "samePathSoaHelperTargetPath(helper)") !=
         std::string::npos);
+}
+
+TEST_CASE("soa pending diagnostics route through shared semantics helpers: collection access and statement lowering") {
+  const SoaPendingDiagnosticsSources fixture = loadSoaPendingDiagnosticsSources();
+  const std::string &buildInitializerInferenceSource = fixture.buildInitializerInferenceSource;
+  const std::string &builtinPathHelpersSource = fixture.builtinPathHelpersSource;
+  const std::string &exprCollectionAccessSource = fixture.exprCollectionAccessSource;
+  const std::string &exprCollectionAccessValidationSource = fixture.exprCollectionAccessValidationSource;
+  const std::string &exprMethodCompatibilitySetupSource = fixture.exprMethodCompatibilitySetupSource;
+  const std::string &exprMethodTargetResolutionSource = fixture.exprMethodTargetResolutionSource;
+  const std::string &exprMutationBorrowsSource = fixture.exprMutationBorrowsSource;
+  const std::string &exprResolvedCallArgumentsSource = fixture.exprResolvedCallArgumentsSource;
+  const std::string &inferCollectionReturnInferenceSource = fixture.inferCollectionReturnInferenceSource;
+  const std::string &inferDefinitionSource = fixture.inferDefinitionSource;
+  const std::string &inferLateFallbackBuiltinsSource = fixture.inferLateFallbackBuiltinsSource;
+  const std::string &inferMethodResolutionSource = fixture.inferMethodResolutionSource;
+  const std::string &inferPreDispatchCallsSource = fixture.inferPreDispatchCallsSource;
+  const std::string &statementBindingsSource = fixture.statementBindingsSource;
+  const std::string &statementReturnsSource = fixture.statementReturnsSource;
+
   CHECK(exprMethodTargetResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(

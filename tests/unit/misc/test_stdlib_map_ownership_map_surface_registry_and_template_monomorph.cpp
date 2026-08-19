@@ -666,6 +666,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation map surfa
         std::string::npos);
   CHECK(s.privateExprInferenceSource.find("directKeyValueHelperCompatibilityPath") !=
         std::string::npos);
+}
+
+TEST_CASE("canonical map surface owns standalone stdlib implementation map surface registry and template monomorph: template monomorph paths") {
+  const MapOwnershipSources s = loadMapOwnershipSources();
   CHECK(s.templateCoreSource.find("name == \"/map\"") == std::string::npos);
   CHECK(s.templateCoreSource.find("name == \"std/collections/map\"") ==
         std::string::npos);

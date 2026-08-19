@@ -127,6 +127,60 @@ static inline bool isExplicitSoaRejectionFixtureName(const std::string &testName
   return false;
 }
 
+// Shared fixture for the todo-queue/skip-debt source-lock checks: reads
+// docs/todo.md, docs/todo_finished.md, and the VM math/maps/examples-docs
+// test sources once so each split TEST_CASE can assert against the same
+// snapshot without duplicating the file-resolution/REQUIRE boilerplate.
+struct DocsLocksTodoQueueFixture {
+  std::string todo;
+  std::string todoFinished;
+  std::string vmMath;
+  std::string vmMaps;
+  std::string examplesDocs;
+};
+
+static inline DocsLocksTodoQueueFixture loadDocsLocksTodoQueueFixture() {
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  std::filesystem::path vmMathPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_math.cpp";
+  std::filesystem::path vmMapsPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_maps.cpp";
+  std::filesystem::path examplesDocsPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "examples" / "test_compile_run_examples_docs.cpp";
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  if (!std::filesystem::exists(vmMathPath)) {
+    vmMathPath =
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_math.cpp";
+  }
+  if (!std::filesystem::exists(vmMapsPath)) {
+    vmMapsPath =
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_maps.cpp";
+  }
+  if (!std::filesystem::exists(examplesDocsPath)) {
+    examplesDocsPath =
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "examples" / "test_compile_run_examples_docs.cpp";
+  }
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+  REQUIRE(std::filesystem::exists(vmMathPath));
+  REQUIRE(std::filesystem::exists(vmMapsPath));
+  REQUIRE(std::filesystem::exists(examplesDocsPath));
+
+  DocsLocksTodoQueueFixture fixture;
+  fixture.todo = readFile(todoPath.string());
+  fixture.todoFinished = readFile(todoFinishedPath.string());
+  fixture.vmMath = readFile(vmMathPath.string());
+  fixture.vmMaps = readFile(vmMapsPath.string());
+  fixture.examplesDocs = readFile(examplesDocsPath.string());
+  return fixture;
+}
+
 static inline std::vector<std::string> directOldSoaImportFixtureViolations(
     const std::filesystem::path &testsPath) {
   std::vector<std::string> violations;

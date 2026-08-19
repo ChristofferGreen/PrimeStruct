@@ -761,6 +761,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation collectio
   CHECK(s.collectionAccessSource.find(
             "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
+}
+
+TEST_CASE("canonical map surface owns standalone stdlib implementation collection access and emitter lowering: emitter and inference paths") {
+  const MapOwnershipSources s = loadMapOwnershipSources();
   CHECK(s.countCapacityMapBuiltinSource.find("/std/collections/map/count") ==
         std::string::npos);
   CHECK(s.countCapacityMapBuiltinSource.find("/std/collections/map/at") ==

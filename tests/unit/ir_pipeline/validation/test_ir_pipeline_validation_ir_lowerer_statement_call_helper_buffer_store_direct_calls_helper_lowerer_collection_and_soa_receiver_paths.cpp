@@ -639,6 +639,14 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   CHECK(error.empty());
   CHECK(inlineCalls == 0);
   CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer statement call helper emits direct calls: collection and soa receiver paths (continued)") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+  const DirectCallStatementFixtures f = loadDirectCallStatementFixtures();
+  std::vector<primec::IrInstruction> instructions;
+  int inlineCalls = 0;
+  std::string error;
 
   inlineCalls = 0;
   instructions.clear();
