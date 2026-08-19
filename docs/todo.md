@@ -1748,7 +1748,7 @@ investigation chain's actively-productive leaves - see
     stdlib_map_ownership audit test was specifically re-checked and
     passes with the new borrowedVariants table in place.
 
-- [ ] TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
+- [x] TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 2
@@ -1766,6 +1766,62 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once all listed chains are migrated; do not touch
     unrelated helperName checks in the same file that aren't borrowed-
     variant routing.
+  - progress_2026-08-19: The cited line ranges had shifted well past the
+    file's current 3829 lines by the time this was picked up (TODO-4690's
+    edit and unrelated intervening work moved everything below its edit
+    point); re-located every remaining borrowed-variant *routing* chain
+    (a literal reassignment/return of the bare name to its "_ref" form,
+    as opposed to the many unrelated `normalizedMethodName == "x" ||
+    normalizedMethodName == "x_ref"` *membership* checks scattered through
+    the file, which are dispatch conditions, not routing, and were left
+    alone per the stop_rule) by content instead: exactly four sites, two
+    SOA and two map. Migrated in two batches, each verified independently
+    via a full `./scripts/compile.sh --release` before being committed:
+    Batch 1 (SOA, commit 6b91ac9): both SOA method-target lambdas —
+    `preferredBorrowedSoaHelperTargetForCollectionMethod` (TODO-4690 had
+    migrated only its "count" branch; this migrated its remaining
+    get/ref/to_aos branches) and the fully-hardcoded sibling
+    `preferredBorrowedSoaAccessHelperTarget` — now resolve
+    count/get/ref/to_aos -> *_ref entirely via
+    `findBorrowedVariant(StdlibSurfaceId::CollectionsColumnarHelpers,
+    helperName)`, replacing the if/else-if literal chains. A source-
+    pinning audit test
+    (test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp)
+    asserted the literal `helperName == "to_aos"` / `helperName =
+    "to_aos_ref"` text was present in the file; updated its two CHECKs to
+    assert absence instead, plus a new CHECK pinning the
+    `findBorrowedVariant(StdlibSurfaceId::CollectionsColumnarHelpers,
+    helperName)` call text that replaced them.
+    Batch 2 (map, commit 1672ebc): both map method-target routing sites —
+    `borrowedKeyValueHelperNameForReceiver` and the Pointer/Reference
+    receiver branch building `borrowedHelperName` inside
+    `resolveMethodTarget` — now resolve count/contains/tryAt/at/insert
+    -> *_ref via `findBorrowedVariant(StdlibSurfaceId::
+    CollectionsManifestSurface2, ...)` (confirmed as the map helper
+    surface's id via this same file's existing
+    `isCanonicalMapBuiltinMethodHelper` helper, which already queried
+    that id). No pinning test asserted the literal text at either site,
+    so no test file changes were needed for this batch.
+    at_unsafe exception (both map sites): `at_unsafe` -> `at_unsafe_ref`
+    was deliberately left as its own hardcoded `if` branch at both map
+    call sites, exactly as TODO-4690's note anticipated — the registry's
+    `collectionSurfaceBorrowedVariantPairs("map.prime")` table has no
+    entry for that pair (a pre-existing stdlib-map-ownership audit test
+    forbids the "at_unsafe_ref" literal appearing in
+    StdlibSurfaceRegistry.cpp), so `findBorrowedVariant` would return
+    empty for it; adding the pair to the registry to close this gap is
+    out of this task's scope (TODO-4690 already decided that) and was not
+    attempted.
+    Verified via two full, independent `./scripts/compile.sh --release`
+    runs (one after each batch, from a clean state, not `--rerun-failed`):
+    raw build logs grepped for `error:`/`Error 1`/`Error 2` (zero matches
+    in either) and both ctest summaries reported "100% tests passed, 0
+    tests failed out of 1892" (batch 1's run caught and fixed the one
+    genuinely affected pinning test above; batch 2's run had zero
+    failures with no test-file changes needed). Pushed both commits to
+    `claude/todo-implementation-f8ll5h`; each was also fast-forwarded onto
+    `master` after confirming `origin/master` was still an ancestor of
+    HEAD at push time.
 
 - [ ] TODO-4692: Migrate soaVector* literal families to registry-driven lookup
   - owner: ai
