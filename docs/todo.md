@@ -1823,7 +1823,7 @@ investigation chain's actively-productive leaves - see
     `master` after confirming `origin/master` was still an ancestor of
     HEAD at push time.
 
-- [ ] TODO-4692: Migrate soaVector* literal families to registry-driven lookup
+- [x] TODO-4692: Migrate soaVector* literal families to registry-driven lookup
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 2
@@ -1841,6 +1841,68 @@ investigation chain's actively-productive leaves - see
       shards) pass.
   - stop_rule: Stop once the listed literal families are migrated; do not
     touch soa literals outside these two files in this leaf.
+  - progress_2026-08-19: Investigated fully; concluded no code change can be
+    made here without either an incorrect behavior change or inventing new
+    registry data (both explicitly disallowed by this task's own guidance),
+    so the two files were left untouched. Findings below.
+    Re-location: SemanticsValidate.cpp (still 1797 lines, still exists) no
+    longer contains any `soaVector` literal — that logic moved to
+    src/semantics/SemanticsValidateBuiltinSoaMetadata.cpp (confirmed via
+    grep across src/), which is this TODO's successor file; its
+    `extractParsedOrExperimentalSoaBindingInfo` (around line 456-464) is
+    the soaVectorNew/soaVectorSingle/soaVectorFromAos site. The
+    SemanticsBuiltinPathHelpers.cpp site re-located to lines ~952-1102
+    (isExperimentalSoaCountLikeHelperPath/isExperimentalSoaBorrowedHelperPath/
+    isExperimentalSoaGetLikeHelperPath/isExperimentalSoaGrowthHelperPath/
+    isExperimentalSoaRefLikeHelperPath), all still present verbatim.
+    Root cause why these 9 literals cannot be registry-driven: the soa
+    registry surfaces (StdlibSurfaceId::CollectionsColumnarHelpers /
+    CollectionsColumnarConstructors) are derived by
+    deriveCollectionsSurfaceData() scanning stdlib/std/collections/soa.prime
+    for `[public]` functions, using a "skip long name" filter
+    (scanStdlibPublicFunctions's skipLongNamePrefix param, set to the
+    struct's derived memberPrefix "soaVector") that deliberately excludes
+    any public function whose name is "soaVector" + an uppercase letter —
+    i.e. exactly the soaVectorCount/soaVectorCountRef/soaVectorGetRef/
+    soaVectorRefRef/soaVectorPush/soaVectorReserve/soaVectorNew/
+    soaVectorSingle/soaVectorFromAos family this TODO names. Confirmed by
+    the byte-identical parity test in
+    tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp
+    ("deriveCollectionsSurfaces() output is byte-identical across the
+    TODO-4688 refactor"), which pins CollectionsColumnarHelpers'
+    memberNames to exactly {"count","count_ref","get","get_ref","ref",
+    "ref_ref","field_view","reserve","push","to_aos","to_aos_ref"} and
+    CollectionsColumnarConstructors' to {"soa","single","from_aos"} — the
+    bare/canonical public wrapper names (soa.prime lines 205-259), never
+    the soaVectorX internal implementation names those wrappers delegate to
+    (soa.prime lines 53-160). So isStdlibSurfaceMemberName/
+    findBorrowedVariant/isStdlibSurfaceStatementMemberName against the soa
+    registry entry structurally cannot recognize any soaVectorX spelling —
+    not a gap to close by picking a different query function, but a
+    deliberate registry design choice (skip filter) that the parity test
+    locks in. The two flagged files' soaVectorX comparisons check paths
+    under a wholly distinct internal folder (experimentalSoaFolder() =
+    "experimental_soa_vector", collapsed onto the same "soa" canonical
+    folder value only for kInternalSoaVectorFolder/
+    kExperimentalSoaVectorFolder per collection_paths.h, itself unrelated
+    to the registry's canonicalPath "/std/collections/soa" bare-member
+    surface) — confirmed by inspecting every other production consumer of
+    this same soaVectorX<->bare-name relationship
+    (SemanticsValidatorSnapshots.cpp's local `resolveSoaHelperName` lambda,
+    lines ~373-409): it is itself a hardcoded literal if/else switch, not
+    backed by StdlibSurfaceRegistry data, independently corroborating that
+    no registry-driven alternative exists anywhere in the codebase today.
+    Per this task's own guidance ("if you find a literal whose exact
+    semantic doesn't match any existing registry query function, do NOT
+    invent a new registry function to force a migration... use good
+    judgment"), no change was made to either file. Adding soaVectorX
+    spellings to the registry's memberNames/statementMemberNames to close
+    this gap is future work equivalent in scope to what TODO-4690 declined
+    to do for vector.prime's missing borrowedVariants pairs — out of this
+    leaf's stop_rule ("do not touch soa literals outside these two files").
+    No source files were modified, so no rebuild was required; `git status`
+    /`git diff` confirmed a clean tree before and after this investigation.
+    Not pushed (nothing to push beyond this docs/todo.md update).
 
 - [ ] TODO-4693: Clean up residual bare ContainerError string comparisons
   - owner: ai
