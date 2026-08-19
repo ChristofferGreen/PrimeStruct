@@ -24,6 +24,27 @@ static std::filesystem::path resolveRepoPath(const std::filesystem::path &relati
   return path;
 }
 
+static std::string readRepoShardsConcat(const std::filesystem::path &directory,
+                                        const std::string &filenamePrefix) {
+  std::vector<std::filesystem::path> matches;
+  for (const auto &entry : std::filesystem::directory_iterator(directory)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::string name = entry.path().filename().string();
+    if (name.rfind(filenamePrefix, 0) == 0) {
+      matches.push_back(entry.path());
+    }
+  }
+  REQUIRE(!matches.empty());
+  std::sort(matches.begin(), matches.end());
+  std::string combined;
+  for (const auto &path : matches) {
+    combined += readFile(path.string());
+  }
+  return combined;
+}
+
 static std::vector<std::filesystem::path> filesWithRetainedDoctestSkips(
     const std::filesystem::path &testsPath) {
   std::vector<std::filesystem::path> paths;
@@ -808,8 +829,6 @@ TEST_CASE("generic contiguous buffer substrate docs and coverage stay source loc
   std::filesystem::path checkedPointerHelpersPath =
       std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
       "test_compile_run_checked_pointer_conformance_helpers.h";
-  std::filesystem::path vmCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   std::filesystem::path nativeCompatTestPath =
       std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   if (!std::filesystem::exists(primeStructPath)) {
@@ -819,20 +838,18 @@ TEST_CASE("generic contiguous buffer substrate docs and coverage stay source loc
     checkedPointerHelpersPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
                                 "test_compile_run_checked_pointer_conformance_helpers.h";
   }
-  if (!std::filesystem::exists(vmCompatTestPath)) {
-    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
-  }
   if (!std::filesystem::exists(nativeCompatTestPath)) {
     nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(checkedPointerHelpersPath));
-  REQUIRE(std::filesystem::exists(vmCompatTestPath));
   REQUIRE(std::filesystem::exists(nativeCompatTestPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string checkedPointerHelpers = readFile(checkedPointerHelpersPath.string());
-  const std::string vmCompatTest = readFile(vmCompatTestPath.string());
+  const std::string vmCompatTest = readRepoShardsConcat(
+      resolveRepoPath(std::filesystem::path("tests") / "unit" / "compile_run" / "vm"),
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count");
   const std::string nativeCompatTest = readFile(nativeCompatTestPath.string());
 
   CHECK(primeStructDoc.find("VM/native conformance now also covers a non-vector") !=
@@ -873,8 +890,6 @@ TEST_CASE("soa public collection docs stay source locked") {
       std::filesystem::path("..") / "examples" / "3.Surface" / "soa_ecs.prime";
   std::filesystem::path cppCompatTestPath =
       std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp";
-  std::filesystem::path vmCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   std::filesystem::path nativeCompatTestPath =
       std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   if (!std::filesystem::exists(codeExamplesPath)) {
@@ -905,9 +920,6 @@ TEST_CASE("soa public collection docs stay source locked") {
   if (!std::filesystem::exists(cppCompatTestPath)) {
     cppCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp";
   }
-  if (!std::filesystem::exists(vmCompatTestPath)) {
-    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
-  }
   if (!std::filesystem::exists(nativeCompatTestPath)) {
     nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   }
@@ -921,7 +933,6 @@ TEST_CASE("soa public collection docs stay source locked") {
   REQUIRE(std::filesystem::exists(soaPath));
   REQUIRE(std::filesystem::exists(soaExamplePath));
   REQUIRE(std::filesystem::exists(cppCompatTestPath));
-  REQUIRE(std::filesystem::exists(vmCompatTestPath));
   REQUIRE(std::filesystem::exists(nativeCompatTestPath));
 
   const std::string codeExamples = readFile(codeExamplesPath.string());
@@ -932,7 +943,9 @@ TEST_CASE("soa public collection docs stay source locked") {
   const std::string soaStdlib = readFile(soaPath.string());
   const std::string soaExample = readFile(soaExamplePath.string());
   const std::string cppCompatTest = readFile(cppCompatTestPath.string());
-  const std::string vmCompatTest = readFile(vmCompatTestPath.string());
+  const std::string vmCompatTest = readRepoShardsConcat(
+      resolveRepoPath(std::filesystem::path("tests") / "unit" / "compile_run" / "vm"),
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count");
   const std::string nativeCompatTest = readFile(nativeCompatTestPath.string());
 
   CHECK(primeStructDoc.find("### SoA Public Collection Contract") != std::string::npos);
@@ -1114,16 +1127,15 @@ TEST_CASE("soa public collection docs stay source locked") {
 TEST_CASE("legacy soa compatibility rejection matrix stays source locked") {
   const std::filesystem::path cppParityPath = resolveRepoPath(
       std::filesystem::path("tests") / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp");
-  const std::filesystem::path vmParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
   const std::filesystem::path nativeParityPath = resolveRepoPath(
       std::filesystem::path("tests") / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
   REQUIRE(std::filesystem::exists(cppParityPath));
-  REQUIRE(std::filesystem::exists(vmParityPath));
   REQUIRE(std::filesystem::exists(nativeParityPath));
 
   const std::string cppParity = readFile(cppParityPath.string());
-  const std::string vmParity = readFile(vmParityPath.string());
+  const std::string vmParity = readRepoShardsConcat(
+      resolveRepoPath(std::filesystem::path("tests") / "unit" / "compile_run" / "vm"),
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count");
   const std::string nativeParity = readFile(nativeParityPath.string());
   const std::string parityProgram = R"(import /std/collections/*
 import /std/collections/soa/*
@@ -1191,14 +1203,11 @@ TEST_CASE("soa compatibility fixture migration boundary stays source locked") {
   const std::filesystem::path examplesPath = resolveRepoPath("examples");
   const std::filesystem::path cppParityPath = resolveRepoPath(
       std::filesystem::path("tests") / "unit" / "compile_run" / "imports" / "test_compile_run_imports_operations.cpp");
-  const std::filesystem::path vmParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "compile_run" / "vm" / "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
   const std::filesystem::path nativeParityPath = resolveRepoPath(
       std::filesystem::path("tests") / "unit" / "compile_run" / "native_backend" / "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
   REQUIRE(std::filesystem::exists(testsPath));
   REQUIRE(std::filesystem::exists(examplesPath));
   REQUIRE(std::filesystem::exists(cppParityPath));
-  REQUIRE(std::filesystem::exists(vmParityPath));
   REQUIRE(std::filesystem::exists(nativeParityPath));
 
   const auto violations = directOldSoaImportFixtureViolations(testsPath);
@@ -1220,7 +1229,9 @@ TEST_CASE("soa compatibility fixture migration boundary stays source locked") {
   }
 
   const std::string cppParity = readFile(cppParityPath.string());
-  const std::string vmParity = readFile(vmParityPath.string());
+  const std::string vmParity = readRepoShardsConcat(
+      resolveRepoPath(std::filesystem::path("tests") / "unit" / "compile_run" / "vm"),
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count");
   const std::string nativeParity = readFile(nativeParityPath.string());
   CHECK(cppParity.find("TEST_CASE(\"public soa count helper") !=
         std::string::npos);
@@ -3202,7 +3213,8 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
   const std::filesystem::path maybeSemanticsPath =
       resolveRepoPath("tests/unit/semantics/test_semantics_maybe.cpp");
   const std::filesystem::path collectionSnapshotPath =
-      resolveRepoPath("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots.cpp");
+      resolveRepoPath("tests/unit/semantics/type_resolution/"
+                       "test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp");
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(fileLowererPath));

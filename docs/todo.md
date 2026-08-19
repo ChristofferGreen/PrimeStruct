@@ -836,6 +836,26 @@ investigation chain's actively-productive leaves - see
     elsewhere. Name shards by topic, not letters. Update CMake source
     lists. The doctest size guardrail says split at 10 SUBCASEs; apply
     the same principle to TEST_CASE count.
+    progress_2026-08-19: Split 5 of the 7 listed files into topic-named
+    shards (`test_ir_pipeline_backends_registry.cpp`,
+    `test_semantics_type_resolution_graph_snapshots.cpp`,
+    `test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`,
+    `test_stdlib_map_ownership.cpp`,
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`),
+    each shard grouped by topic with shared fixtures factored into
+    `_shared.h` headers where needed, CMakeLists.txt and
+    `scripts/check_test_suite_naming.py` updated accordingly. Verified via
+    `./scripts/compile.sh --release` (0 failing CTest cases). Two files
+    still exceed the 3,000-line acceptance threshold and need further
+    splitting: `test_compile_run_examples_docs_locks.cpp` (5,217 lines,
+    93 TEST_CASEs - not yet split) and the
+    `test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp`
+    shard renamed to `..._buffer_store_direct_calls_helper_lowerer.cpp`
+    (5,651 lines but only 2 TEST_CASEs - the mass is in a small number of
+    very large TEST_CASE bodies, which overlaps with TODO-4652's
+    single-test-case-body splitting; still needs to come under 3,000
+    lines per this task's own acceptance criteria regardless of
+    TEST_CASE count).
   - acceptance:
     - No test file exceeds 3,000 lines.
     - No test file contains more than 50 TEST_CASE macros.

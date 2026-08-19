@@ -732,15 +732,23 @@ TEST_CASE("public call dispatch testing header stays in sync with alias-policy h
 
 TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path snapshotPath =
-      cwd / "tests" / "unit" / "semantics" / "type_resolution" / "test_semantics_type_resolution_graph_snapshots.cpp";
-  if (!std::filesystem::exists(snapshotPath)) {
-    snapshotPath =
-        cwd.parent_path() / "tests" / "unit" / "semantics" / "type_resolution" / "test_semantics_type_resolution_graph_snapshots.cpp";
+  static const char *const kSnapshotShardNames[] = {
+      "test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp",
+      "test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp",
+      "test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp",
+      "test_semantics_type_resolution_graph_snapshots_formatter_module_fact_semantic.cpp",
+  };
+  std::string snapshot;
+  for (const char *shardName : kSnapshotShardNames) {
+    std::filesystem::path shardPath =
+        cwd / "tests" / "unit" / "semantics" / "type_resolution" / shardName;
+    if (!std::filesystem::exists(shardPath)) {
+      shardPath =
+          cwd.parent_path() / "tests" / "unit" / "semantics" / "type_resolution" / shardName;
+    }
+    REQUIRE(std::filesystem::exists(shardPath));
+    snapshot += readTextFile(shardPath);
   }
-  REQUIRE(std::filesystem::exists(snapshotPath));
-
-  const std::string snapshot = readTextFile(snapshotPath);
   CHECK(snapshot.find("REQUIRE(lowerer.lower(baselineAst, &semanticProgram,") !=
         std::string::npos);
   CHECK(snapshot.find("fallbackModule") == std::string::npos);
@@ -748,15 +756,23 @@ TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
 
 TEST_CASE("backend registry keeps semantic-product negative fixture families covered") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path registryPath =
-      cwd / "tests" / "unit" / "ir_pipeline" / "backends" / "test_ir_pipeline_backends_registry.cpp";
-  if (!std::filesystem::exists(registryPath)) {
-    registryPath =
-        cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "backends" / "test_ir_pipeline_backends_registry.cpp";
+  static const char *const kRegistryShardNames[] = {
+      "test_ir_pipeline_backends_registry_native_semantic_product_result.cpp",
+      "test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp",
+      "test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects.cpp",
+      "test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp",
+  };
+  std::string registrySource;
+  for (const char *shardName : kRegistryShardNames) {
+    std::filesystem::path shardPath =
+        cwd / "tests" / "unit" / "ir_pipeline" / "backends" / shardName;
+    if (!std::filesystem::exists(shardPath)) {
+      shardPath =
+          cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "backends" / shardName;
+    }
+    REQUIRE(std::filesystem::exists(shardPath));
+    registrySource += readTextFile(shardPath);
   }
-  REQUIRE(std::filesystem::exists(registryPath));
-
-  const std::string registrySource = readTextFile(registryPath);
   CHECK(registrySource.find("missing semantic-product direct-call semantic id:") != std::string::npos);
   CHECK(registrySource.find("missing semantic-product method-call target:") != std::string::npos);
   CHECK(registrySource.find("ir lowerer rejects missing semantic-product bridge-path choices") !=
@@ -1595,9 +1611,15 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   const std::string semanticProductSource = readRepoFile("src/frontend/SemanticProduct.cpp");
   const std::string matrix = readRepoFile("docs/SemanticProductConsumerMatrix.md");
   const std::string registryTests =
-      readRepoFile("tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry.cpp");
+      readRepoFile("tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp") +
+      readRepoFile("tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp") +
+      readRepoFile("tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects.cpp") +
+      readRepoFile("tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp");
   const std::string snapshotTests =
-      readRepoFile("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots.cpp");
+      readRepoFile("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp") +
+      readRepoFile("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp") +
+      readRepoFile("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp") +
+      readRepoFile("tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_formatter_module_fact_semantic.cpp");
   const std::string entrySetupTests = readRepoFile(
       "tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp");
   const std::string callHelperTests = readRepoFile(

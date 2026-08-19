@@ -23,7 +23,10 @@ EXPECTED_FILE_SUITES = {
     'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_pilot.cpp': 'primestruct.ir.pipeline.backends.core',
     'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp': 'primestruct.ir.pipeline.backends.glsl',
     'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_cpp_vm.cpp': 'primestruct.ir.pipeline.backends.cpp_vm',
-    'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry.cpp': 'primestruct.ir.pipeline.backends.registry',
+    'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp': 'primestruct.ir.pipeline.backends.registry',
+    'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp': 'primestruct.ir.pipeline.backends.registry',
+    'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects.cpp': 'primestruct.ir.pipeline.backends.registry',
+    'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp': 'primestruct.ir.pipeline.backends.registry',
 }
 
 

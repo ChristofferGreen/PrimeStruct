@@ -801,7 +801,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_binding_helper_classifies_variadic_struct_reference_parameters.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_binding_helper_emits_runtime_string_call_bindings.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_binding_helper_validates_print_statement_builtin_diagnostics.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_semantic_facts_before_lowerer.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_direct_calls_helper_lowerer.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_emission_source_delegation_stays.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_direct_call_diagnostics.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_function_table_diagnostics.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_recursion_analysis.cpp
@@ -843,7 +845,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp
-    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp
     tests/unit/vm/test_vm_debug_session.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_external_tooling.cpp
     tests/unit/ir_pipeline/to_cpp/test_ir_pipeline_to_cpp.cpp
@@ -1023,7 +1028,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_push_limit.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_shadow_access.cpp
-    tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp
+    tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_helper_public_runs.cpp
+    tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_experimental_runs_borrowed.cpp
+    tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_reject_count_map_experimental_runs_wrapped.cpp
+    tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_reject_count_map_vector_canonical_runs.cpp
+    tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_reject_count_templated_temporary_runs_wrapper.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_gpu.cpp
@@ -1043,7 +1052,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp
-    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp
     tests/unit/ir_pipeline/to_cpp/test_ir_pipeline_to_cpp.cpp
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl.cpp
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl_runtime.cpp
@@ -1107,7 +1119,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_access.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_count_helpers_and_bare_map_calls.cpp
-    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_public_soa_helper_count.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_experimental_soa_field_view.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_helper_soa_validates_binding.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_to_aos_soa_helper_validates.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_wrapper_temporary_access_resolution.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_user_array_helper_precedence.cpp
@@ -1162,7 +1178,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_traits.cpp
     tests/unit/semantics/test_semantics_type_packs.cpp
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph.cpp
-    tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots.cpp
+    tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp
+    tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp
+    tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp
+    tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_formatter_module_fact_semantic.cpp
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_return_solver.cpp
     tests/unit/semantics/test_semantics_symbol_interner.cpp
     tests/unit/semantics/test_semantics_uninitialized_fields.cpp
