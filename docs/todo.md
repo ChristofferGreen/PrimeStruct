@@ -1193,7 +1193,7 @@ investigation chain's actively-productive leaves - see
     `Error 1`/`Error 2` in the raw log) and
     `100% tests passed, 0 tests failed out of 1890`.
 
-- [ ] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+- [x] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
   - owner: ai
   - created_at: 2026-06-13
   - phase: Collection decoupling - Cleanup
@@ -1209,6 +1209,39 @@ investigation chain's actively-productive leaves - see
     - No unused collection helper functions remain
     - Full test suite passes
   - stop_rule: dead code removed and tests pass
+  - progress_2026-08-19: Checked all six named helpers across the whole
+    codebase (`grep -rn` over `src/` and `tests/`, plus a full-repo sweep
+    for the first two names).
+    - `isVectorTypeName` / `isMapTypeName`: zero occurrences anywhere in
+      the repo (not even a definition) - these literal names never exist
+      in the current codebase, so there was nothing to delete for either.
+      (Equivalent logic lives under different names, covered below.)
+    - `isBuiltinVectorTypeName`: has live callers. Defined and called in
+      `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp` (used at
+      `normalizeVectorStructPath` and the inline/templated-field branches
+      of `resolveStructSlotLayoutFromDefinitionFields`), and separately
+      defined/called in `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`.
+      Kept (not dead).
+    - `isBuiltinSoaVectorTypeName`: has live callers in
+      `IrLowererStructSlotLayoutHelpers.cpp` (`normalizeVectorStructPath`,
+      `resolveSoaVectorFieldStructPath`). Kept (not dead).
+    - `isInternalSoaColumnTypeName`: has a live caller in
+      `IrLowererStructSlotLayoutHelpers.cpp`
+      (`resolveStructSlotLayoutFromDefinitionFields`'s definition-not-found
+      fallback branch). Kept (not dead).
+    - `isExperimentalSoaVectorTypeName`: has live callers. Defined/called
+      in `IrLowererStructSlotLayoutHelpers.cpp`
+      (`resolveStructSlotLayoutFromDefinitionFields`'s fallback branch),
+      and separately defined/called in
+      `src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp`. Kept
+      (not dead).
+    Net result: no dead code found among the six named helpers, so no
+    deletions were made in `IrLowererStructSlotLayoutHelpers.cpp` or
+    elsewhere - all remaining helpers in that file have live callers.
+    Verified via `./scripts/compile.sh --release`: clean build (raw
+    build log grepped for `error:`/`Error 1`/`Error 2`, zero matches
+    across 4036 log lines) and `100% tests passed, 0 tests failed out
+    of 1890`.
 
 - [ ] TODO-4681: Delete unreachable collection dispatch branches
   - owner: ai
