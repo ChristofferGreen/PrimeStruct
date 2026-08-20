@@ -753,6 +753,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_body_return_step_dispatches_returns.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_collection_key_value_surface_wrappers.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_semantics_validator_public_contracts.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp
@@ -1213,6 +1214,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/result_helpers/test_semantics_result_helpers_errors.cpp
     tests/unit/semantics/result_helpers/test_semantics_result_helpers_gfx.cpp
     tests/unit/semantics/test_semantics_collection_spelling_classifier.cpp
+    tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp
   )
   target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_semantics_tests PRIVATE primec_ir_lib)

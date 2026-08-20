@@ -369,6 +369,15 @@ bool isKeyValueCollectionTypeName(const std::string &name) {
              normalized, "map", "Map");
 }
 
+bool isKeyValueSurfaceTypeName(const std::string &name) {
+  // TODO-4694: behavior-preserving union of isKeyValueCollectionTypeName
+  // and the literal map-and-entry backing-type-name cases of
+  // isExperimentalCollectionBackingTypeName. See SemanticsHelpers.h.
+  return isKeyValueCollectionTypeName(name) ||
+         isExperimentalCollectionBackingTypeName("map", "Map", name) ||
+         isExperimentalCollectionBackingTypeName("map", "Entry", name);
+}
+
 bool returnsKeyValueCollectionType(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {

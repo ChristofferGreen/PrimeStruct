@@ -238,6 +238,21 @@ bool isKeyValueStorageValue(const Expr &target, const std::unordered_map<std::st
   return false;
 }
 
+// TODO-4694: generically-named wrapper unioning today's collection-value
+// classification helpers (isCollectionVectorValue and isArrayValue).
+// Behavior-preserving; existing call sites are unchanged and continue to
+// use the original helpers directly until a later migration step.
+bool isCollectionSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  return isCollectionVectorValue(target, localTypes) || isArrayValue(target, localTypes);
+}
+
+// TODO-4694: generically-named wrapper for today's key-value-value
+// classification helper (isKeyValueStorageValue). Behavior-preserving;
+// existing call sites are unchanged.
+bool isKeyValueSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  return isKeyValueStorageValue(target, localTypes);
+}
+
 bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::StringLiteral) {
     return true;

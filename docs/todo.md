@@ -1934,7 +1934,7 @@ investigation chain's actively-productive leaves - see
     so no behavior changed. Verified via `./scripts/compile.sh
     --release`: no failing CTest cases.
 
-- [ ] TODO-4694: Introduce shared collection/key-value trait wrapper helpers (behavior-preserving)
+- [x] TODO-4694: Introduce shared collection/key-value trait wrapper helpers (behavior-preserving)
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 3
@@ -1951,6 +1951,45 @@ investigation chain's actively-productive leaves - see
       union of the old helpers' current behavior for all currently-known
       inputs.
     - No existing call site changed.
+  - progress_2026-08-20: Landed 3 new wrapper helpers, grouped by the old
+    helpers' actual signatures (string type-name checks vs. Expr/localTypes
+    value checks) rather than a flat 1:1 mapping to the scope's example
+    names, since isKeyValueCollectionTypeName/isExperimentalCollectionBackingTypeName
+    take a type-name string while isCollectionVectorValue/isKeyValueStorageValue/
+    isArrayValue take an `Expr` + localTypes binding map:
+    - `bool primec::semantics::isKeyValueSurfaceTypeName(const std::string &name)`
+      in src/semantics/SemanticsHelpers.h (declaration) /
+      src/semantics/SemanticsBindingTypeHelpers.cpp (definition) — unions
+      isKeyValueCollectionTypeName(name) with the literal-arg backing-type-name
+      cases of isExperimentalCollectionBackingTypeName("map", "Map", name)
+      and isExperimentalCollectionBackingTypeName("map", "Entry", name)
+      (both literal-arg spellings that appear at existing call sites).
+    - `bool primec::emitter::isCollectionSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes)`
+      in src/emitter/EmitterHelpers.h + include/primec/testing/EmitterHelpers.h
+      (declarations) / src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp
+      (definition) — unions isCollectionVectorValue(...) with isArrayValue(...).
+    - `bool primec::emitter::isKeyValueSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes)`
+      in the same header/source pair — a thin wrapper around
+      isKeyValueStorageValue(...) (the sole value-domain key-value helper).
+    Equivalence proof: new unit tests assert, for a representative set of
+    currently-known inputs (both true and false cases, plus the map/entry
+    backing-type-name special cases and Reference/Pointer-wrapped
+    spellings), that each new wrapper's result equals the boolean OR of the
+    corresponding old helpers' results computed on the same input, plus a
+    handful of anchor cases pinned to concrete true/false results so a
+    degenerate always-false wrapper cannot pass by matching an equally
+    degenerate comparison. Tests:
+    tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp (string
+    wrapper, registered in PrimeStruct_semantics_tests) and
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_collection_key_value_surface_wrappers.cpp
+    (value wrappers, registered in PrimeStruct_backend_ir_tests via
+    PrimeStructBackendAllTestSources). The two tests/-> src/ includes this
+    required were added to scripts/include_layer_allowlist.txt (checked by
+    the PrimeStruct_include_layers CTest case). No existing call site of
+    the 5 old helpers was touched; a fresh `./scripts/compile.sh --release`
+    run (clean rebuild + full ctest) passed 100% (1892 enabled cases) with
+    zero `error:`/`Error 1`/`Error 2` in the raw build log. Call-site
+    migration is left to TODO-4695/4696/4697 as scoped.
   - stop_rule: Stop once wrappers exist and are proven equivalent; call
     site migration is TODO-4695/4696/4697.
 

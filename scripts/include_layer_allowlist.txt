@@ -5,3 +5,9 @@
 # No current lowerer -> private semantics helper dependencies.
 
 tests/unit/ir_pipeline/test_ir_pipeline_recursion_analysis.cpp -> src/ir_lowerer/IrLowererRecursionAnalysis.h
+
+# TODO-4694: direct unit-test coverage of the new shared trait wrapper
+# helpers' behavior-preserving equivalence to the old collection/key-value
+# type-name classification helpers.
+tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp -> src/semantics/SemanticsHelpers.h
+tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp -> src/semantics/StdlibCollectionSurfaceHelpers.h

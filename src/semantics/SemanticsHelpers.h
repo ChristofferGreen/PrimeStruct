@@ -89,6 +89,13 @@ bool validateBuiltinComparableKeyType(const BindingInfo &binding,
                                       const std::vector<std::string> *templateArgs,
                                       std::string &error);
 bool isKeyValueCollectionTypeName(const std::string &name);
+// TODO-4694: generically-named wrapper unioning today's key-value
+// type-name classification helpers (isKeyValueCollectionTypeName plus the
+// literal-arg map-and-entry backing-type-name cases of
+// isExperimentalCollectionBackingTypeName). Behavior-preserving; existing
+// call sites are unchanged and continue to use the original helpers
+// directly until a later migration step.
+bool isKeyValueSurfaceTypeName(const std::string &name);
 bool returnsKeyValueCollectionType(const std::string &typeText);
 bool extractKeyValueCollectionTypesFromTypeText(const std::string &typeText,
                                                 std::string &keyTypeOut,
