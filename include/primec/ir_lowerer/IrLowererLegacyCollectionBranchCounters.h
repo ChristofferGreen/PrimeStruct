@@ -39,6 +39,19 @@ struct LegacyCollectionBranchCounters {
   uint64_t collectionVectorMetadataMethodPathHits = 0;
   uint64_t collectionVectorOwnerPathHits = 0;
 
+  // TODO-4701 (docs/todo.md): finer-grained split of
+  // collectionVectorOwnerPathHits by which of the two isCollectionVectorOwnerPath
+  // call sites fired, and, for the targetPath call site, whether the
+  // tryResolvedPath(targetPath) fallback ahead of that branch's
+  // `return nullptr` (landed 2026-07-04/05) actually resolved something or
+  // fell through to nullptr. The two site counters sum to
+  // collectionVectorOwnerPathHits; the two targetPath-site sub-counters sum
+  // to collectionVectorOwnerPathTargetPathSiteHits.
+  uint64_t collectionVectorOwnerPathTargetPathSiteHits = 0;
+  uint64_t collectionVectorOwnerPathTargetPathFallbackResolvedHits = 0;
+  uint64_t collectionVectorOwnerPathTargetPathFallbackNullptrHits = 0;
+  uint64_t collectionVectorOwnerPathReceiverTypeSiteHits = 0;
+
   // Count of logged divergences from the dual-computation equivalence check
   // (hardcoded 3-slot layout vs. what the generic field-based layout path
   // would have produced for the same input).
@@ -67,6 +80,16 @@ void recordLegacyCollectionBranchHitStructSlotLayoutSoa();
 void recordLegacyCollectionBranchHitUninitializedStructInferenceDuplicate();
 void recordLegacyCollectionBranchHitCollectionVectorMetadataMethodPath();
 void recordLegacyCollectionBranchHitCollectionVectorOwnerPath();
+
+// TODO-4701: finer-grained recorders for the two isCollectionVectorOwnerPath
+// call sites (see the struct fields above for what each counts). Each of
+// these is recorded in addition to (not instead of) the coarse
+// recordLegacyCollectionBranchHitCollectionVectorOwnerPath() call already at
+// both sites.
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathSite();
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackResolved();
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackNullptr();
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathReceiverTypeSite();
 
 // Logs a single divergence (log-only, non-fatal) between the hardcoded
 // 3-slot layout result actually used and what the generic field-based

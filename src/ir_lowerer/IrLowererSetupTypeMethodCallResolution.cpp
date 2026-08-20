@@ -550,14 +550,17 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
         if (isCollectionVectorOwnerPath(targetPath)) {
           recordLegacyCollectionBranchHitCollectionVectorOwnerPath();
+          recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathSite();
           // targetPath already names the exact method (buildReceiverMethodTargetPath
           // was a no-op above), so try the direct lookup before giving up: a
           // stdlib-owned struct can have its own real field_count/field_capacity
           // definitions directly at this path.
           if (const Definition *resolvedDef = tryResolvedPath(targetPath);
               resolvedDef != nullptr) {
+            recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackResolved();
             return resolvedDef;
           }
+          recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackNullptr();
           return nullptr;
         }
       }
@@ -725,6 +728,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
         if (isCollectionVectorOwnerPath(receiverTypeText)) {
           recordLegacyCollectionBranchHitCollectionVectorOwnerPath();
+          recordLegacyCollectionBranchHitCollectionVectorOwnerPathReceiverTypeSite();
           const std::string receiverMethodPath =
               buildReceiverMethodTargetPath(receiverTypeText, explicitMethodPath);
           if (const Definition *receiverTypedDef =

@@ -141,6 +141,34 @@ void recordLegacyCollectionBranchHitCollectionVectorOwnerPath() {
   ++counters().collectionVectorOwnerPathHits;
 }
 
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathSite() {
+  if (!legacyCollectionBranchCountersEnabled()) {
+    return;
+  }
+  ++counters().collectionVectorOwnerPathTargetPathSiteHits;
+}
+
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackResolved() {
+  if (!legacyCollectionBranchCountersEnabled()) {
+    return;
+  }
+  ++counters().collectionVectorOwnerPathTargetPathFallbackResolvedHits;
+}
+
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackNullptr() {
+  if (!legacyCollectionBranchCountersEnabled()) {
+    return;
+  }
+  ++counters().collectionVectorOwnerPathTargetPathFallbackNullptrHits;
+}
+
+void recordLegacyCollectionBranchHitCollectionVectorOwnerPathReceiverTypeSite() {
+  if (!legacyCollectionBranchCountersEnabled()) {
+    return;
+  }
+  ++counters().collectionVectorOwnerPathReceiverTypeSiteHits;
+}
+
 namespace {
 
 std::string jsonEscape(const std::string &text) {
@@ -205,6 +233,14 @@ void emitLegacyCollectionBranchCountersReport() {
       "\"collection_vector_metadata_method_path_hits\":" +
       std::to_string(c.collectionVectorMetadataMethodPathHits) + ","
       "\"collection_vector_owner_path_hits\":" + std::to_string(c.collectionVectorOwnerPathHits) + ","
+      "\"collection_vector_owner_path_target_path_site_hits\":" +
+      std::to_string(c.collectionVectorOwnerPathTargetPathSiteHits) + ","
+      "\"collection_vector_owner_path_target_path_fallback_resolved_hits\":" +
+      std::to_string(c.collectionVectorOwnerPathTargetPathFallbackResolvedHits) + ","
+      "\"collection_vector_owner_path_target_path_fallback_nullptr_hits\":" +
+      std::to_string(c.collectionVectorOwnerPathTargetPathFallbackNullptrHits) + ","
+      "\"collection_vector_owner_path_receiver_type_site_hits\":" +
+      std::to_string(c.collectionVectorOwnerPathReceiverTypeSiteHits) + ","
       "\"struct_slot_layout_divergence_count\":" + std::to_string(c.structSlotLayoutDivergenceCount) + "}";
   std::cerr << line << "\n";
   appendLineToLogFileSink(line);

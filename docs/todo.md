@@ -2698,7 +2698,7 @@ investigation chain's actively-productive leaves - see
       identical slot layouts for vector/soa fields via the surviving
       generic field-based path.
 
-- [ ] TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath/isCollectionVectorMetadataMethodPath branches
+- [x] TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath/isCollectionVectorMetadataMethodPath branches
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 4
@@ -2722,6 +2722,116 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once evidence-supported deletions land; file a follow-up
     TODO for any branch whose evidence is inconclusive rather than forcing
     a decision.
+  - progress_2026-08-20: Gathered granular evidence and concluded **no
+    deletion is safe in this leaf** - every remaining sub-branch is either
+    directly nonzero or is genuine reachable error-handling whose zero count
+    is a suite-coverage gap, not proof of dead code.
+    - Re-located the three cited call sites by content (matching TODO-4699's
+      note that the file has shifted and only 3 remain): the
+      `isCollectionVectorMetadataMethodPath(explicitMethodPath)` check at
+      line 412 (single call site), the `isCollectionVectorOwnerPath(targetPath)`
+      branch at line 551 inside `resolveLoweredDefinitionPath`'s
+      `allowsReceiverResolvedVectorMetadataFallback` block (this is the one
+      containing the `tryResolvedPath(targetPath)` fallback the scope names),
+      and the `isCollectionVectorOwnerPath(receiverTypeText)` branch at line
+      726. The old `:1220` citation no longer corresponds to any
+      isCollectionVectorOwnerPath/isCollectionVectorMetadataMethodPath call
+      site in the current 1,245-line file - stale from before TODO-4699/4700
+      touched this area; noted here rather than silently dropped.
+    - TODO-4699's existing counters (`collection_vector_owner_path_hits`,
+      `collection_vector_metadata_method_path_hits`) were too coarse to
+      answer this task's question: the owner-path counter aggregates both
+      call sites (551 and 726) into one number, and neither counter
+      distinguishes whether the `tryResolvedPath(targetPath)` fallback
+      inside the 551 branch actually resolved something or fell through to
+      `return nullptr`. Added four new counters to the same
+      `--benchmark-ir-lowerer-legacy-collection-branch-counters` /
+      `PRIMEC_BENCHMARK_IR_LOWERER_LEGACY_COLLECTION_BRANCH_COUNTERS`
+      infrastructure TODO-4699 built (no new mechanism):
+      `collectionVectorOwnerPathTargetPathSiteHits`,
+      `collectionVectorOwnerPathTargetPathFallbackResolvedHits`,
+      `collectionVectorOwnerPathTargetPathFallbackNullptrHits`, and
+      `collectionVectorOwnerPathReceiverTypeSiteHits`, each recorded
+      alongside (not instead of) the existing coarse counter, in
+      `include/primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h`/
+      `.cpp` and `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp`.
+    - Verified default (flag-off) behavior unchanged first: a fresh
+      `./scripts/compile.sh --release` run (full ctest, not
+      `--rerun-failed`, actively polled to completion via a blocking
+      `while [ ! -f donefile ]; do sleep 15; done` loop against a
+      backgrounded+disowned build so the poll survives a tool-call timeout,
+      not an idle Monitor wait) passed 100% (1892 tests, 0 failures) with
+      zero `error:`/`Error 1`/`Error 2` in the raw build log.
+    - Full-suite evidence run with the flag enabled: reran `ctest --parallel
+      8` against the same built binaries with
+      `PRIMEC_BENCHMARK_IR_LOWERER_LEGACY_COLLECTION_BRANCH_COUNTERS=1` and
+      the log-file-sink env var set (same actively-polled backgrounded
+      pattern), aggregating all 2,962 per-process report lines (239
+      nonzero, matching TODO-4699's run almost exactly - counts differ
+      trivially from environment/test-ordering noise, not a regression).
+      54/1892 compile_run tests failed purely from the appended benchmark
+      stderr line, same expected collateral TODO-4699 documented. Aggregated
+      counters:
+      - `collection_vector_metadata_method_path_hits`: **63,632** (matches
+        TODO-4699 - single call site, unchanged)
+      - `collection_vector_owner_path_hits`: **117,676** (matches TODO-4699)
+      - `collection_vector_owner_path_target_path_site_hits` (line 551):
+        **58,838**
+      - `collection_vector_owner_path_target_path_fallback_resolved_hits`
+        (the `tryResolvedPath(targetPath)` fallback actually found a
+        definition): **58,838** - i.e. every single time the 551 branch
+        fires in the whole suite, the fallback resolves successfully.
+      - `collection_vector_owner_path_target_path_fallback_nullptr_hits`
+        (fell through to the branch's `return nullptr`): **0**
+      - `collection_vector_owner_path_receiver_type_site_hits` (line 726):
+        **58,838** (58,838 + 58,838 = 117,676, confirming the split
+        accounts for the full coarse total with no third site)
+    - Decision per call site:
+      - Line 412 `isCollectionVectorMetadataMethodPath` and both owner-path
+        call sites (551, 726) are directly nonzero (58,838 hits each) -
+        clearly live, not candidates for deletion, consistent with TODO-4699's
+        top-level finding.
+      - The `tryResolvedPath(targetPath)` fallback itself (551-560): nonzero
+        reachability (58,838 resolved hits) - **explicitly preserved per
+        this TODO's own scope**, as instructed.
+      - The one sub-branch that came back counter-zero -
+        `collectionVectorOwnerPathTargetPathFallbackNullptrHits` (the
+        `return nullptr` at line 561, taken when `tryResolvedPath(targetPath)`
+        fails) - **was NOT deleted despite the zero counter**, because it
+        fails the acceptance bar's second half (manual-reachability
+        justification for deletion, not just a zero count). Manual review:
+        this is a genuine defensive "give up" path for when a
+        vector-owner-typed receiver's exact method path has no matching
+        lowered definition (e.g. a malformed/unsupported metadata-method
+        call on a stdlib-owned struct) - it is trivially reachable in
+        principle for any input where `tryResolvedPath(targetPath)` fails,
+        the suite's Vector-owner test coverage just never happens to
+        construct that input. Critically, deleting the early `return
+        nullptr` would not be a no-op: falling through would let control
+        reach the broader fallback chain a few lines below (lines 564+ -
+        `receiverMethodTargetPath`, then `normalizedTargetPath` retries),
+        which the branch currently intentionally skips by returning early.
+        That is an observable behavior change for the untested case, not a
+        dead-code deletion, so it is out of scope for a "delete only
+        provably-unreachable code" task. No follow-up TODO filed for this
+        one specifically since the judgment is conclusive (not evidence-
+        inconclusive) - the branch is real, reachable, load-bearing
+        error-handling that this suite simply doesn't exercise; it is
+        already documented here per the acceptance bar's "document
+        continued necessity" clause. Grepped `src/`, `include/`, and
+        `tests/` for every remaining caller of both functions to confirm no
+        other call site exists beyond the three already covered.
+    - Net result: zero deletions in this leaf (a legitimate outcome per this
+      task's own stop_rule, same as TODO-4692's precedent) - both functions
+      and every one of their branches, including the specific
+      `tryResolvedPath(targetPath)` fallback, remain exactly as they were;
+      only new (default-off, additive, zero-behavior-change) granular
+      counters were added to make this evidence-gathering pass possible.
+    - Verified via `./scripts/compile.sh --release` (flag off, fresh full
+      build+ctest, described above) and a separate `ctest` pass with the
+      flag on (described above); no code deletions made, so no second
+      post-deletion rebuild was needed beyond the flag-off run already
+      described.
 
 - [ ] TODO-4702: Add a second toy collection type (Deque or RingBuffer) purely in stdlib, zero C++
   - owner: ai
