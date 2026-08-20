@@ -251,7 +251,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation collectio
         std::string::npos);
   CHECK(s.scalarPointerMemorySource.find("collectionName == \"map\"") ==
         std::string::npos);
-  CHECK(s.scalarPointerMemorySource.find("isKeyValueCollectionTypeName(collectionName)") !=
+  CHECK(s.scalarPointerMemorySource.find("isKeyValueSurfaceTypeName(collectionName)") !=
         std::string::npos);
   CHECK(s.scalarPointerMemorySource.find("isMapLikeCollectionExpr") ==
         std::string::npos);

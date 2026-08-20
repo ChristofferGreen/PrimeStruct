@@ -82,7 +82,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
         args.size() == 1) {
       return "/vector";
     }
-    if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
+    if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
       return "/map";
     }
     return {};
@@ -281,7 +281,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
          (base == "Vector" ||
           isLegacyExperimentalVectorCompatibilityPath("/" + base))) ||
         (expectedBase == "soa" && isExperimentalSoaVectorTypePath(base)) ||
-        (expectedBase == "map" && isKeyValueCollectionTypeName(base))) {
+        (expectedBase == "map" && isKeyValueSurfaceTypeName(base))) {
       return splitTopLevelTemplateArgs(arg, argsOut);
     }
     std::vector<std::string> args;

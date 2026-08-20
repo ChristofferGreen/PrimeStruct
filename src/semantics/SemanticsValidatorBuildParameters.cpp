@@ -141,8 +141,7 @@ bool SemanticsValidator::buildParameters() {
       if (!normalizedType.empty() && normalizedType.front() == '/') {
         normalizedType.erase(normalizedType.begin());
       }
-      return isKeyValueCollectionTypeName(normalizedType) ||
-             isExperimentalCollectionBackingTypeName("map", "Map", normalizedType);
+      return isKeyValueSurfaceTypeName(normalizedType);
     };
     auto typeTextCarriesExperimentalKeyValue = [&](const std::string &typeText) {
       if (typeTextIsExperimentalKeyValue(typeText)) {

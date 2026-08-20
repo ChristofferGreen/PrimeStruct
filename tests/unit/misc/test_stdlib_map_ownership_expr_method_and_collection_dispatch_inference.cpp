@@ -577,7 +577,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation expr meth
   CHECK(s.passesEffectFreeSource.find("bareMapCallPath") == std::string::npos);
   CHECK(s.buildParametersSource.find("normalizedType == \"std/collections/map\"") ==
         std::string::npos);
-  CHECK(s.buildParametersSource.find("isKeyValueCollectionTypeName(normalizedType)") !=
+  CHECK(s.buildParametersSource.find("isKeyValueSurfaceTypeName(normalizedType)") !=
         std::string::npos);
   CHECK(s.buildParametersSource.find("typeTextIsExperimentalMapValue") ==
         std::string::npos);

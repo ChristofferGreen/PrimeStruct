@@ -116,7 +116,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     if (base == "Pointer" || base == "Reference" || base == "Result" ||
         base == "Buffer" || base == "uninitialized" || base == "array" ||
         base == "vector" || base == "soa" || base == "Task" ||
-        isKeyValueCollectionTypeName(base) ||
+        isKeyValueSurfaceTypeName(base) ||
         base == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
         isUnspecializedExperimentalKeyValueBackingTypeName(base) ||
@@ -941,7 +941,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                  candidate.templateArgs.size() == 1) {
         currentTypeTextOut = collection + "<" + candidate.templateArgs.front() + ">";
         return true;
-      } else if (isKeyValueCollectionTypeName(collection) && candidate.templateArgs.size() == 2) {
+      } else if (isKeyValueSurfaceTypeName(collection) && candidate.templateArgs.size() == 2) {
         currentTypeTextOut = collection + "<" + candidate.templateArgs[0] + ", " +
                              candidate.templateArgs[1] + ">";
         return true;

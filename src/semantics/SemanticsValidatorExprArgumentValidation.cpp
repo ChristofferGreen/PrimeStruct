@@ -17,7 +17,7 @@ bool isCollectionLikeTemplateBase(std::string_view baseName) {
   const std::string normalizedBase = normalizeBindingTypeName(std::string(baseName));
   return normalizedBase == "array" || normalizedBase == "vector" ||
          normalizedBase == "soa" || normalizedBase == "map" ||
-         isKeyValueCollectionTypeName(normalizedBase);
+         isKeyValueSurfaceTypeName(normalizedBase);
 }
 
 bool resolveCanonicalArgumentValidationKeyValueAccessHelper(

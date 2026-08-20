@@ -331,7 +331,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
-      return isKeyValueCollectionTypeName(normalized);
+      return isKeyValueSurfaceTypeName(normalized);
     };
 
     if (typeName.empty()) {

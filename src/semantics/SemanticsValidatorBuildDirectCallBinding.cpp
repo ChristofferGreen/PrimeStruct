@@ -43,7 +43,7 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
         bindingOut.typeTemplateArg = argText;
         return true;
       }
-      if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
+      if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
         bindingOut.typeName = base;
         bindingOut.typeTemplateArg = argText;
         return true;

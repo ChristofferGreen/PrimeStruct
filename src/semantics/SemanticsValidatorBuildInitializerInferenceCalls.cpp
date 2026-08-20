@@ -105,7 +105,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       bindingOut.typeTemplateArg = expr.templateArgs.front();
       return true;
     }
-    if (isKeyValueCollectionTypeName(collection) && expr.templateArgs.size() == 2) {
+    if (isKeyValueSurfaceTypeName(collection) && expr.templateArgs.size() == 2) {
       const std::string keyValueAlias = mapCollectionAliasToken();
       if (keyValueAlias.empty()) {
         return false;
@@ -139,7 +139,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       bindingOut.typeTemplateArg = argText;
       return true;
     }
-    if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
+    if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
       bindingOut.typeName = base;
       bindingOut.typeTemplateArg = argText;
       return true;
@@ -910,7 +910,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
     const std::string normalizedBindingType = normalizeBindingTypeName(bindingOut.typeName);
     const bool shouldPreferResolvedDirectCallBinding =
-        ((!bindingOut.typeTemplateArg.empty() && isKeyValueCollectionTypeName(normalizedBindingType)) ||
+        ((!bindingOut.typeTemplateArg.empty() && isKeyValueSurfaceTypeName(normalizedBindingType)) ||
          (bindingOut.typeTemplateArg.empty() &&
           !normalizedBindingType.empty() &&
           normalizedBindingType.front() != '/' &&
@@ -1008,7 +1008,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
               initializerExprForInference->templateArgs.size() == 1) {
             bindingOut.typeName = collectionName;
             bindingOut.typeTemplateArg = initializerExprForInference->templateArgs.front();
-          } else if (isKeyValueCollectionTypeName(collectionName) &&
+          } else if (isKeyValueSurfaceTypeName(collectionName) &&
                      initializerExprForInference->templateArgs.size() == 2) {
             std::vector<std::string> collectionArgs;
             if (!resolveCallCollectionTemplateArgs(*initializerExprForInference,

@@ -63,7 +63,7 @@ std::string canonicalKeyValueIdentity(const std::string &typeText) {
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(normalized, base, argText) ||
-      !isKeyValueCollectionTypeName(base)) {
+      !isKeyValueSurfaceTypeName(base)) {
     return {};
   }
   std::vector<std::string> args;

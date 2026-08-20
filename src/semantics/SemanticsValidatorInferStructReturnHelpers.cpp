@@ -96,7 +96,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
       !normalizedTypeTemplateArg.empty()) {
     return "/" + normalizedTypeName;
   }
-  if (isKeyValueCollectionTypeName(normalizedTypeName) && !normalizedTypeTemplateArg.empty()) {
+  if (isKeyValueSurfaceTypeName(normalizedTypeName) && !normalizedTypeTemplateArg.empty()) {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(normalizedTypeTemplateArg, args) && args.size() == 2) {
       return specializedExperimentalKeyValueStructReturnPath(args);
@@ -112,7 +112,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
       if ((base == "array" || base == "vector" || base == "soa") && args.size() == 1) {
         return "/" + base;
       }
-      if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
+      if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
         return specializedExperimentalKeyValueStructReturnPath(args);
       }
     }

@@ -173,7 +173,7 @@ std::string SemanticsValidator::inferMethodCollectionTypePathFromTypeText(
   if (isExperimentalSoaVectorTypePath(base) && args.size() == 1) {
     return "/soa";
   }
-  if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
+  if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
     return "/map";
   }
   return {};

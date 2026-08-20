@@ -1993,7 +1993,7 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once wrappers exist and are proven equivalent; call
     site migration is TODO-4695/4696/4697.
 
-- [ ] TODO-4695: Migrate semantics/ call sites to the shared trait wrapper helpers
+- [x] TODO-4695: Migrate semantics/ call sites to the shared trait wrapper helpers
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 3
@@ -2007,6 +2007,135 @@ investigation chain's actively-productive leaves - see
     - Full semantics test suite passes.
   - stop_rule: Stop once src/semantics/ call sites are migrated; ir_lowerer/
     and emitter/ are separate leaves.
+  - progress_2026-08-20: Migrated 36 call sites to
+    `primec::semantics::isKeyValueSurfaceTypeName(name)`: 35 sites that
+    called bare `isKeyValueCollectionTypeName(name)` (generic "is this a
+    key-value-shaped collection base" dispatch checks used for return-kind
+    classification, path derivation, argument/parameter classification, and
+    method-target resolution — files: SemanticsValidatorEffectFreeCollections.cpp
+    (x2), SemanticsReturnKindHelpers.cpp, SemanticsValidatorInferMethodResolutionHelpers.cpp,
+    SemanticsValidatorInferUtility.cpp (x2), SemanticsValidatorBuildDirectCallBinding.cpp,
+    SemanticsValidatorInferDefinition.cpp, SemanticsValidatorInfer.cpp (x2),
+    SemanticsValidatorBuildInitializerInferenceCalls.cpp (x4),
+    SemanticsValidatorExprArgumentValidation.cpp (the standalone
+    isCollectionLikeTemplateBase check only), SemanticsValidatorTaskHandles.cpp,
+    SemanticsValidatorResultHelpers.cpp, SemanticsValidatorInferCollectionReturnInference.cpp
+    (x2), SemanticsValidatorInferCollectionCompatibility.cpp (x2),
+    SemanticsValidatorExprScalarPointerMemory.cpp, SemanticsValidatorBuildReturnKinds.cpp
+    (x2), SemanticsValidatorExprMethodTargetResolution.cpp (x4),
+    SemanticsValidatorStatementReturns.cpp, SemanticsValidatorStatementBodyArguments.cpp,
+    SemanticsValidatorInferCollectionCallResolution.cpp (x2),
+    SemanticsValidatorInferStructReturnHelpers.cpp (x2)); plus 1 site in
+    SemanticsValidatorBuildParameters.cpp that already hand-rolled the same
+    union (`isKeyValueCollectionTypeName(X) || isExperimentalCollectionBackingTypeName("map","Map",X)`)
+    inside its `typeTextIsExperimentalKeyValue` lambda, collapsed to a
+    single `isKeyValueSurfaceTypeName(X)` call (this is the one
+    isExperimentalCollectionBackingTypeName call-site migration; it also
+    now additionally recognizes the Entry backing spelling, consistent
+    with the lambda's "experimental key-value" intent). Old helpers'
+    call-site counts in src/semantics/ dropped from 46
+    (isKeyValueCollectionTypeName) / 30 (isExperimentalCollectionBackingTypeName)
+    to 11 / 29 respectively — not 0, per this task's explicit nuance
+    clause permitting deliberate exceptions; each remaining site was
+    read in full context and left alone for a documented reason:
+    - SemanticsValidatorExprArgumentValidation.cpp:511 — mutually
+      exclusive `else if` sibling of a separate `else if` branch at line
+      530 that explicitly dispatches on
+      `isExperimentalMapBackingTemplateBaseForArgumentValidation(...)`
+      with different diagnostic/fallback-inference logic; widening line
+      511 would swallow inputs meant for the line-530 branch and skip its
+      distinct `inferCollectionBindingType` fallback path.
+    - SemanticsValidatorExprArgumentValidation.cpp:555 and :735 — each
+      already hand-implements
+      `isKeyValueCollectionTypeName(X) || isExperimentalMapBackingTemplateBaseForArgumentValidation(X)`
+      where the second term is deliberately narrower than
+      isKeyValueSurfaceTypeName's `isExperimentalCollectionBackingTypeName("map","Map",X)`
+      term (it additionally requires the type's leaf spelling to equal
+      "Map", excluding specialized/monomorphized `Map__t...` paths);
+      swapping in isKeyValueSurfaceTypeName would newly match those
+      specialized paths, a real widening beyond current intent.
+    - TemplateMonomorphExperimentalCollectionReceiverResolution.cpp:379 —
+      already ORed with the file's own
+      `isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution`
+      helper, and the file separately defines a sibling
+      `isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution`
+      used elsewhere, showing the file deliberately keeps
+      specialized-vs-unspecialized backing-path handling distinct;
+      widening here would blur that boundary.
+    - SemanticsValidatorStatementPrintability.cpp:160 — immediately
+      preceded by an explicit early `return false` for
+      `isUnspecializedExperimentalKeyValueBackingBaseForPrintability(normalizedBase)`,
+      i.e. the function deliberately special-cases the (unspecialized)
+      backing type before falling through to the plain-collection check;
+      widening the plain check would let Entry/specialized backing paths
+      (not excluded by the guard above) reach printability logic meant
+      only for genuine surface key-value types.
+    - SemanticsBindingTypeHelpers.cpp:387/390/419 (inside
+      `returnsKeyValueCollectionType` and
+      `extractKeyValueCollectionTypesFromTypeText`) — left alone as a
+      deliberately conservative call: these are foundational, extremely
+      widely-used recognizers (30+ call sites across semantics, template
+      monomorphization, and the emitter's local copy) whose K/V
+      extraction result feeds directly into further type-equality
+      comparisons; auditing every downstream consumer for safety was out
+      of budget for this leaf, so they are left as a flagged follow-up
+      rather than migrated speculatively. SemanticsBindingTypeHelpers.cpp:364
+      (the isKeyValueCollectionTypeName definition itself) and :376 (the
+      isKeyValueSurfaceTypeName wrapper's own body, which correctly calls
+      the raw primitive it wraps) are not call sites and are intentionally
+      unchanged; SemanticsHelpers.h:91 is a declaration, not a call.
+    Of the remaining 29 isExperimentalCollectionBackingTypeName call
+    sites: 1 (StdlibCollectionSurfaceHelpers.h:63) is the function's own
+    definition; 2 (SemanticsBindingTypeHelpers.cpp:377-378) are inside
+    isKeyValueSurfaceTypeName's own body; 1
+    (TemplateMonomorphCollectionCompatibilityPaths.cpp:247) passes a
+    runtime variable (`keyValueBackingName`), not the literal "map"/"Map"
+    or "map"/"Entry" args the wrapper covers, so it is out of this task's
+    scope per its own stop_rule; the remaining 25 are all narrowly-named
+    "backing struct" / "Specialized"/"Unspecialized" helper functions
+    (e.g. isExperimentalKeyValueBackingReturnStruct,
+    isExperimentalKeyValueBackingStructPath,
+    isSpecializedExperimentalKeyValueBackingPath,
+    isUnspecializedExperimentalKeyValueBackingTypeName, and similar,
+    across SemanticsValidatorInferTargetResolution.cpp,
+    SemanticsValidatorBuildDirectCallBinding.cpp,
+    SemanticsValidatorExprCollectionAccessValidation.cpp,
+    SemanticsValidatorStatementContainerHelpers.cpp,
+    SemanticsValidatorInferStructReturn.cpp,
+    SemanticsValidateSoaBindingExtraction.cpp,
+    SemanticsValidatorExprArgumentValidationCollections.cpp,
+    SemanticsValidatorBuildInitializerInference.cpp,
+    SemanticsValidatorExprArgumentValidation.cpp,
+    TemplateMonomorphExperimentalCollectionReceiverResolution.cpp,
+    SemanticsValidatorResultHelpers.cpp,
+    SemanticsValidatorStatementPrintability.cpp,
+    SemanticsValidatorExprReceiverPaths.cpp,
+    SemanticsValidatorInferCollectionCompatibility.cpp,
+    SemanticsValidatorExprPreDispatchDirectCalls.cpp,
+    SemanticPublicationBuilders.cpp,
+    SemanticsValidatorPassesStructLayouts.cpp,
+    SemanticsValidatorExprMethodTargetResolution.cpp,
+    SemanticsValidatorStatementReturns.cpp, and
+    StdlibCollectionSurfaceHelpers.h itself) that deliberately detect
+    only the internal experimental backing-struct representation (often
+    distinguishing specialized vs. unspecialized spellings, or the bare
+    struct name specifically) as distinct from the general surface
+    key-value type; migrating these to the union-based
+    isKeyValueSurfaceTypeName would incorrectly also match plain
+    `map`/`Map<K,V>` surface spellings these helpers exist specifically
+    to exclude, so all are left alone. Fixed two source-text pinning
+    tests that literally asserted the old helper spelling was present in
+    the migrated files' source
+    (tests/unit/misc/test_stdlib_map_ownership_collection_access_and_emitter_lowering.cpp
+    and
+    tests/unit/misc/test_stdlib_map_ownership_expr_method_and_collection_dispatch_inference.cpp)
+    to assert the new isKeyValueSurfaceTypeName spelling instead; no new
+    test files were added, so no include_layer_allowlist.txt changes were
+    needed. Verified via `./scripts/compile.sh --release`: a fresh clean
+    run (full ctest, not --rerun-failed) passed 100% (1892 enabled cases,
+    0 failures), with zero `error:`/`Error 1`/`Error 2` in the raw build
+    log. Migration of ir_lowerer/ and emitter/ call sites remains
+    TODO-4696/TODO-4697 as scoped.
 
 - [ ] TODO-4696: Migrate ir_lowerer/ call sites to the shared trait wrapper helpers
   - owner: ai

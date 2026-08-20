@@ -162,7 +162,7 @@ std::string SemanticsValidator::effectFreeCollectionPathFromType(const std::stri
   if ((typeName == "array" || typeName == "vector" || typeName == "soa") && !typeTemplateArg.empty()) {
     return "/" + typeName;
   }
-  if (isKeyValueCollectionTypeName(typeName) && !typeTemplateArg.empty()) {
+  if (isKeyValueSurfaceTypeName(typeName) && !typeTemplateArg.empty()) {
     return "/map";
   }
   std::string base;
@@ -177,7 +177,7 @@ std::string SemanticsValidator::effectFreeCollectionPathFromType(const std::stri
   if ((base == "array" || base == "vector" || base == "soa") && args.size() == 1) {
     return "/" + base;
   }
-  if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
+  if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
     return "/map";
   }
   if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
