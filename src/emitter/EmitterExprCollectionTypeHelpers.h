@@ -229,7 +229,7 @@
       return "";
     }
     const Expr &receiver = candidate.args[receiverIndex];
-    if (isKeyValueStorageValue(receiver, localTypes)) {
+    if (isKeyValueSurfaceValue(receiver, localTypes)) {
       return "/map";
     }
     if (receiver.kind == Expr::Kind::Call) {
@@ -301,7 +301,7 @@
       return "";
     }
     const Expr &receiver = candidate.args.front();
-    if (isKeyValueStorageValue(receiver, localTypes)) {
+    if (isKeyValueSurfaceValue(receiver, localTypes)) {
       return "/map";
     }
     if (receiver.kind == Expr::Kind::Call) {
@@ -330,7 +330,7 @@
     if (isStringValue(targetExpr, localTypes)) {
       return "/string";
     }
-    if (isKeyValueStorageValue(targetExpr, localTypes)) {
+    if (isKeyValueSurfaceValue(targetExpr, localTypes)) {
       return "/map";
     }
     if (isCollectionVectorValue(targetExpr, localTypes)) {

@@ -293,7 +293,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const Expr &receiverExpr = candidate.args.front();
-    if (isKeyValueStorageValue(receiverExpr, localTypes)) {
+    if (isKeyValueSurfaceValue(receiverExpr, localTypes)) {
       return true;
     }
     if (inferPrimitiveTypeName) {
@@ -328,7 +328,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
     return receiverIndex < candidate.args.size() &&
-           isKeyValueStorageValue(candidate.args[receiverIndex], localTypes);
+           isKeyValueSurfaceValue(candidate.args[receiverIndex], localTypes);
   };
   auto isExplicitVectorAccessCompatibilityCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
@@ -346,8 +346,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (receiverIndex >= candidate.args.size()) {
       return false;
     }
-    return isArrayValue(candidate.args[receiverIndex], localTypes) ||
-           isCollectionVectorValue(candidate.args[receiverIndex], localTypes) ||
+    return isCollectionSurfaceValue(candidate.args[receiverIndex], localTypes) ||
            isStringValue(candidate.args[receiverIndex], localTypes);
   };
   auto isExplicitVectorCountCapacityDirectCall = [&](const Expr &candidate) {

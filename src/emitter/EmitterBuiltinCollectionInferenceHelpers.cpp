@@ -311,13 +311,11 @@ size_t getAccessCallReceiverIndex(const Expr &call,
       }
     }
   }
-  const bool leadingIsCollectionLike = isArrayValue(call.args.front(), localTypes) ||
-                                       isCollectionVectorValue(call.args.front(), localTypes) ||
-                                       isKeyValueStorageValue(call.args.front(), localTypes) ||
+  const bool leadingIsCollectionLike = isCollectionSurfaceValue(call.args.front(), localTypes) ||
+                                       isKeyValueSurfaceValue(call.args.front(), localTypes) ||
                                        isStringValue(call.args.front(), localTypes);
-  const bool trailingIsCollectionLike = isArrayValue(call.args[1], localTypes) ||
-                                        isCollectionVectorValue(call.args[1], localTypes) ||
-                                        isKeyValueStorageValue(call.args[1], localTypes) ||
+  const bool trailingIsCollectionLike = isCollectionSurfaceValue(call.args[1], localTypes) ||
+                                        isKeyValueSurfaceValue(call.args[1], localTypes) ||
                                         isStringValue(call.args[1], localTypes);
   if (!leadingIsCollectionLike && trailingIsCollectionLike) {
     return 1;

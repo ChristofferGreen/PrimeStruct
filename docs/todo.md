@@ -2183,7 +2183,7 @@ investigation chain's actively-productive leaves - see
     changed; only this docs/todo.md entry was updated. Migration of
     emitter/ call sites remains TODO-4697 as scoped.
 
-- [ ] TODO-4697: Migrate emitter/ call sites (isCollectionVectorValue/isKeyValueStorageValue/isArrayValue) to the shared wrapper helpers
+- [x] TODO-4697: Migrate emitter/ call sites (isCollectionVectorValue/isKeyValueStorageValue/isArrayValue) to the shared wrapper helpers
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 3
@@ -2196,6 +2196,124 @@ investigation chain's actively-productive leaves - see
     - Old helpers' call-site count in src/emitter/ drops to 0.
     - Compile-run tests pass.
   - stop_rule: Stop once emitter call sites are migrated.
+  - progress_2026-08-20: Enumerated every real call site of the three old
+    helpers under src/emitter/ via `grep -rn` across the 7 files named in
+    scope (EmitterBuiltinCollectionInferenceHelpers.cpp,
+    EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp,
+    EmitterEmitBodyVectorHelpers.h, EmitterExprCollectionTypeHelpers.h,
+    EmitterExprControl.h, EmitterExprLambdaBody.h, EmitterHelpers.h — the
+    last holding only the old helpers' declarations, not calls), excluding
+    substring false-positives from the unrelated local-only
+    `isCollectionVectorValueLocal` helper and excluding the two old
+    helpers' own definition bodies and the TODO-4694 wrappers'
+    (isCollectionSurfaceValue/isKeyValueSurfaceValue) own bootstrap bodies
+    in EmitterBuiltinCollectionInferenceHelpers.cpp (which correctly still
+    call the raw primitives they union/wrap; not call sites, per the same
+    exclusion TODO-4695's progress note applied to
+    isKeyValueSurfaceTypeName's own body). Migrated 14 call-site
+    occurrences to the TODO-4694 wrappers:
+    `isKeyValueSurfaceValue` for every migrated
+    `isKeyValueStorageValue(...)` site (behavior-neutral per TODO-4694 —
+    verified its body is still the thin `return
+    isKeyValueStorageValue(target, localTypes);` wrapper, unchanged since
+    landing) in EmitterBuiltinCollectionInferenceHelpers.cpp
+    (getAccessCallReceiverIndex, x2),
+    EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp
+    (isBareKeyValueAccessMethod, isExplicitKeyValueAccessCompatibilityCall),
+    EmitterExprCollectionTypeHelpers.h
+    (builtinCanonicalKeyValueAccessReceiverTypePath,
+    builtinKeyValueAccessMethodReceiverTypePath,
+    resolvedTypePathForTarget), and EmitterExprControl.h (the count-rewrite
+    receiver-classification lambda); and `isCollectionSurfaceValue` for
+    every site that already independently OR'd bare
+    `isCollectionVectorValue(...)` with bare `isArrayValue(...)` on the
+    same receiver — collapsing to the union wrapper is a pure
+    simplification there, not a widening, since the union was already the
+    site's existing behavior: EmitterBuiltinCollectionInferenceHelpers.cpp
+    (getAccessCallReceiverIndex, x2, each replacing an
+    `isArrayValue(...) || isCollectionVectorValue(...)` pair) and
+    EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp
+    (isExplicitVectorAccessCompatibilityCall, replacing its
+    `isArrayValue(...) || isCollectionVectorValue(...)` pair). Old
+    helpers' call-site count in src/emitter/ did not drop to 0 — 13
+    call-site occurrences were deliberately left alone, each read in full
+    surrounding-function context and left for a documented reason, per
+    this task's explicit nuance clause (mirroring TODO-4695's style):
+    - EmitterBuiltinCollectionInferenceHelpers.cpp:282/285
+      (`isArrayCountCall`) and :299 (`isVectorCapacityCall`) — these two
+      functions exist specifically to distinguish array-count semantics
+      from vector-count/vector-capacity semantics (isArrayCountCall
+      explicitly early-returns false when the receiver is a
+      *vector*-typed explicit-array-count call, i.e. it deliberately
+      excludes vectors); widening either bare `isArrayValue`/
+      `isCollectionVectorValue` call to the union would make an
+      array-typed receiver spuriously satisfy the vector-only capacity
+      check, or a vector-typed receiver spuriously satisfy the
+      array-only count check.
+    - EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp:240
+      (`isBareVectorAccessMethod`) and :260
+      (`isExplicitVectorAccessSlashMethod`) — both feed
+      vector-helper-path resolution (`resolveBareVectorAccessMethodHelperPath`,
+      the vector `at`/`at_unsafe` dispatch) specifically; the file
+      resolves array-typed and vector-typed `.at()` receivers to distinct
+      helper paths elsewhere (see the left-alone
+      EmitterExprCollectionTypeHelpers.h sites below), so widening these
+      to also match arrays would misroute array receivers into the
+      vector-only helper-path resolution branch.
+    - EmitterEmitBodyVectorHelpers.h:67 and EmitterExprLambdaBody.h:506 —
+      both are the identical "probe positional reordered receiver" check
+      feeding a `vectorHelper`-specific method-candidate rewrite; the
+      check is deliberately vector-only (`!isCollectionVectorValue(...)`
+      gates whether the leading Name arg looks like a non-vector-receiver
+      positional literal), so widening to the array-inclusive union would
+      suppress the reorder probe for genuine array receivers that are not
+      vectors, changing which argument position gets treated as the
+      method receiver.
+    - EmitterExprCollectionTypeHelpers.h:182/185
+      (`builtinCanonicalVectorAccessReceiverTypePath`), :271/274
+      (`builtinVectorAccessMethodReceiverTypePath`), and :336/339
+      (`resolvedTypePathForTarget`) — each function returns a distinct
+      `"/vector"` vs `"/array"` type-path string from adjacent `if`
+      branches checking `isCollectionVectorValue` then `isArrayValue` in
+      sequence on the same receiver; this is exactly the "distinguishing
+      VECTOR from ARRAY in adjacent branches of the same function" case
+      the task's nuance clause calls out — collapsing either branch to
+      the union would make the function return the wrong type-path
+      string (or the first-checked one only) for the other collection
+      kind.
+    - EmitterExprControl.h:113 — the count-rewrite receiver-classification
+      lambda's `isArrayValue(...)` term was left alone (only its sibling
+      `isKeyValueStorageValue(...)` term was migrated, see above): this
+      lambda gates eligibility for `runEmitterExprControlCountRewriteStep`,
+      whose companion predicates in the same call
+      (`isArrayCountCall`/`isStringCountCall`) are themselves array/string
+      -specific and deliberately exclude vectors (per the
+      EmitterBuiltinCollectionInferenceHelpers.cpp:282/285 note above);
+      widening this lambda's array term to also match vectors would admit
+      vector receivers into a count-rewrite path designed around
+      array/map/string receivers only.
+    No source-text pinning tests reference the old helper names against
+    these emitter files: the one test file matching the old helper names
+    under `tests/`
+    (test_ir_pipeline_validation_emitter_collection_key_value_surface_wrappers.cpp)
+    is a behavioral-equivalence test asserting
+    `isCollectionSurfaceValue`/`isKeyValueSurfaceValue` match the union of
+    the raw primitives, not a source-text pin on any migrated call-site
+    file, so it needed no change; the emitter-referencing pinning tests
+    under tests/unit/ir_pipeline/validation/
+    (test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp,
+    test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp,
+    test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp)
+    only assert the touched files' existence/path, not old-helper-name
+    source text, so none needed updating either. No new test files were
+    added, so no include_layer_allowlist.txt changes were needed.
+    Verified via `./scripts/compile.sh --release`: a fresh clean run (full
+    ctest, not --rerun-failed), actively polled to completion rather than
+    idled on, passed 100% (1892 enabled cases, 0 failures), with zero
+    `error:`/`Error 1`/`Error 2` in the raw build log. Old helpers still
+    exist and are still declared in EmitterHelpers.h/testing headers
+    (their deletion, plus swapping the wrappers' own bootstrap bodies to a
+    generic registry query, is TODO-4698 as scoped).
 
 - [ ] TODO-4698: Swap wrapper internals to query the generic registry/has_trait; delete old type-specific helpers
   - owner: ai
