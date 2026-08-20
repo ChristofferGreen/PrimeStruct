@@ -53,6 +53,11 @@ struct Options {
   bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false;
   bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false;
   std::optional<uint32_t> benchmarkSemanticRepeatCompileCount;
+  // TODO-4699 (docs/todo.md): reachability instrumentation for the legacy
+  // hardcoded-3-slot vector-or-soa struct-layout branches and legacy
+  // collection-vector method-call-resolution branches TODO-4700/TODO-4701
+  // are evaluating for deletion.
+  bool benchmarkIrLowererLegacyCollectionBranchCounters = false;
   // TODO-5226/TODO-5228 (docs/LibrarySymbolManifestLazyImports.md):
   // iterative lazy stdlib import expansion. When set, a wildcard/module-root
   // import of a module with a sibling `.psmeta` symbol manifest is spliced

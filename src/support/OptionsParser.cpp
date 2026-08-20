@@ -791,6 +791,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
         return false;
       }
       out.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
+    } else if (arg == "--benchmark-ir-lowerer-legacy-collection-branch-counters") {
+      out.benchmarkIrLowererLegacyCollectionBranchCounters = true;
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
     } else if (!arg.empty() && arg[0] == '-') {

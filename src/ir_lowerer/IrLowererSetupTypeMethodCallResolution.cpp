@@ -12,6 +12,7 @@
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
 
 namespace primec::ir_lowerer {
 
@@ -409,6 +410,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
   const bool allowsReceiverResolvedVectorMetadataFallback =
       isCollectionVectorMetadataMethodPath(explicitMethodPath);
+  if (allowsReceiverResolvedVectorMetadataFallback) {
+    recordLegacyCollectionBranchHitCollectionVectorMetadataMethodPath();
+  }
   const std::string rootedKeyValuePrefix =
       keyValueCollectionAliasRoot(false) + "/";
   const std::string canonicalKeyValuePrefix = collectionMemberRoot("map", false);
@@ -545,6 +549,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           }
         }
         if (isCollectionVectorOwnerPath(targetPath)) {
+          recordLegacyCollectionBranchHitCollectionVectorOwnerPath();
           // targetPath already names the exact method (buildReceiverMethodTargetPath
           // was a no-op above), so try the direct lookup before giving up: a
           // stdlib-owned struct can have its own real field_count/field_capacity
@@ -719,6 +724,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           receiverTypeText.insert(receiverTypeText.begin(), '/');
         }
         if (isCollectionVectorOwnerPath(receiverTypeText)) {
+          recordLegacyCollectionBranchHitCollectionVectorOwnerPath();
           const std::string receiverMethodPath =
               buildReceiverMethodTargetPath(receiverTypeText, explicitMethodPath);
           if (const Definition *receiverTypedDef =

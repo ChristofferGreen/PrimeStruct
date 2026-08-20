@@ -349,6 +349,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir/IrVirtualRegisterSpillInsertion.cpp
   src/ir/IrVirtualRegisterVerifier.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
+  src/ir_lowerer/IrLowererLegacyCollectionBranchCounters.cpp
   src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp
   src/ir_lowerer/IrLowererAccessTargetResolution.cpp
   src/ir_lowerer/IrLowererAccessLoadHelpers.cpp

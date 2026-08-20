@@ -5,6 +5,7 @@
 #include "primec/support/EmitKind.h"
 #include "primec/backend/IrBackends.h"
 #include "primec/ir/IrPreparation.h"
+#include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
 #include "primec/support/Options.h"
 #include "primec/support/OptionsParser.h"
 
@@ -312,10 +313,16 @@ int main(int argc, char **argv) {
       flagOnly("--benchmark-semantic-repeat-count <n>");
       std::cerr << "\n";
 
+      std::cerr << "Benchmarking (IR lowerer, TODO-4699):\n";
+      flagOnly("--benchmark-ir-lowerer-legacy-collection-branch-counters");
+      std::cerr << "\n";
+
       std::cerr << "Everything after `--` is passed through as program args at runtime.\n";
     }
     return 2;
   }
+  primec::ir_lowerer::setLegacyCollectionBranchCountersEnabled(
+      options.benchmarkIrLowererLegacyCollectionBranchCounters);
   if (options.listTransforms) {
     primec::printTransformList(std::cout);
     return 0;
