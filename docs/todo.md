@@ -2137,7 +2137,7 @@ investigation chain's actively-productive leaves - see
     log. Migration of ir_lowerer/ and emitter/ call sites remains
     TODO-4696/TODO-4697 as scoped.
 
-- [ ] TODO-4696: Migrate ir_lowerer/ call sites to the shared trait wrapper helpers
+- [x] TODO-4696: Migrate ir_lowerer/ call sites to the shared trait wrapper helpers
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 3
@@ -2150,6 +2150,38 @@ investigation chain's actively-productive leaves - see
     - Old helpers' call-site count in src/ir_lowerer/ drops to 0.
     - Full ir_pipeline test suite passes.
   - stop_rule: Stop once src/ir_lowerer/ call sites are migrated.
+  - progress_2026-08-20: Investigated before editing anything: `grep -rn
+    "isKeyValueCollectionTypeName\|isExperimentalCollectionBackingTypeName"
+    src/ir_lowerer/` (covering both `.cpp` and `.h` files, case-insensitive
+    re-check included) returns zero matches — `src/ir_lowerer/` already had
+    0 call sites of either old helper before this task started, so there
+    was nothing to migrate. This makes sense structurally: the IR lowerer
+    operates on already-lowered IR nodes/bindings rather than re-deriving
+    surface type-name strings, so the semantics-layer, string-based
+    type-name classifiers
+    (isKeyValueCollectionTypeName/isExperimentalCollectionBackingTypeName,
+    and their TODO-4694 union wrapper isKeyValueSurfaceTypeName) are not
+    called from this layer; also confirmed zero pre-existing call sites of
+    the new isKeyValueSurfaceTypeName/isCollectionSurfaceValue/
+    isKeyValueSurfaceValue wrappers under src/ir_lowerer/, so this is not a
+    case of a prior migration already having happened here. 0 call sites
+    migrated, 0 left alone (none exist). Also checked all source-text
+    pinning tests that reference either old helper name
+    (tests/unit/misc/test_stdlib_map_ownership_collection_access_and_emitter_lowering.cpp,
+    tests/unit/misc/test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp,
+    tests/unit/misc/test_stdlib_map_ownership_expr_method_and_collection_dispatch_inference.cpp,
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_pilot_contexts.h,
+    tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp): none of
+    them pin source text from any file under src/ir_lowerer/, so no test
+    updates were required for this leaf. Verified via
+    `./scripts/compile.sh --release`: a fresh clean run (full ctest, not
+    --rerun-failed) passed 100% (1892 enabled cases, 0 failures), with zero
+    `error:`/`Error 1`/`Error 2` in the raw build log — this is the
+    pre-existing baseline state, confirming acceptance ("old helpers'
+    call-site count in src/ir_lowerer/ drops to 0") was already met and no
+    behavior-affecting change was needed to satisfy it. No source files
+    changed; only this docs/todo.md entry was updated. Migration of
+    emitter/ call sites remains TODO-4697 as scoped.
 
 - [ ] TODO-4697: Migrate emitter/ call sites (isCollectionVectorValue/isKeyValueStorageValue/isArrayValue) to the shared wrapper helpers
   - owner: ai
