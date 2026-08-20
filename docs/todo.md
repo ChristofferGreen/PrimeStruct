@@ -1904,7 +1904,7 @@ investigation chain's actively-productive leaves - see
     /`git diff` confirmed a clean tree before and after this investigation.
     Not pushed (nothing to push beyond this docs/todo.md update).
 
-- [ ] TODO-4693: Clean up residual bare ContainerError string comparisons
+- [x] TODO-4693: Clean up residual bare ContainerError string comparisons
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 2
@@ -1918,6 +1918,21 @@ investigation chain's actively-productive leaves - see
       StdlibSurfaceRegistry.cpp itself.
     - Tests pass.
   - stop_rule: Stop once both comparisons are migrated.
+  - progress_2026-08-19: Migrated both remaining bare `"ContainerError"`
+    comparisons: `src/ir_lowerer/IrLowererPackedResultHelpers.cpp`'s
+    `resolveSemanticProductResultOkPayloadInfo` and
+    `src/ir_lowerer/IrLowererResultHelpers.cpp`'s
+    `applySemanticResultValueTypeText` each replaced their
+    `(bindingTypeText == "ContainerError" || bindingTypeText ==
+    containerErrorMetadata->canonicalPath)`-style check with
+    `stdlibSurfaceMatchesSpelling(*containerErrorMetadata,
+    bindingTypeText)`. Verified this preserves both original branches:
+    `stdlibSurfaceMatchesSpelling` checks `canonicalPath` plus
+    `importAliasSpellings`/`compatibilitySpellings`/`loweringSpellings`,
+    and `CollectionsContainerErrorImportAliases` already contains the
+    bare `"ContainerError"` spelling alongside the full canonical path,
+    so no behavior changed. Verified via `./scripts/compile.sh
+    --release`: no failing CTest cases.
 
 - [ ] TODO-4694: Introduce shared collection/key-value trait wrapper helpers (behavior-preserving)
   - owner: ai

@@ -72,8 +72,7 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
   const auto *containerErrorMetadata =
       findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsContainerErrorHelpers);
   if (containerErrorMetadata != nullptr &&
-      (trimmedValueType == "ContainerError" ||
-       trimmedValueType == containerErrorMetadata->canonicalPath)) {
+      stdlibSurfaceMatchesSpelling(*containerErrorMetadata, trimmedValueType)) {
     out.valueStructType = std::string(containerErrorMetadata->canonicalPath);
     return true;
   }

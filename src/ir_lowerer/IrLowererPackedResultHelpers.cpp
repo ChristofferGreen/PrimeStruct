@@ -149,8 +149,7 @@ bool resolveSemanticProductResultOkPayloadInfo(
   const auto *containerErrorMetadata =
       findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsContainerErrorHelpers);
   if (containerErrorMetadata != nullptr &&
-      (bindingTypeText == "ContainerError" ||
-       bindingTypeText == containerErrorMetadata->canonicalPath)) {
+      stdlibSurfaceMatchesSpelling(*containerErrorMetadata, bindingTypeText)) {
     out.structType = std::string(containerErrorMetadata->canonicalPath);
     return true;
   }
