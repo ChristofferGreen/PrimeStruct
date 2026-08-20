@@ -2315,7 +2315,7 @@ investigation chain's actively-productive leaves - see
     (their deletion, plus swapping the wrappers' own bootstrap bodies to a
     generic registry query, is TODO-4698 as scoped).
 
-- [ ] TODO-4698: Swap wrapper internals to query the generic registry/has_trait; delete old type-specific helpers
+- [x] TODO-4698: Swap wrapper internals to query the generic registry/has_trait; delete old type-specific helpers
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 3
@@ -2334,6 +2334,136 @@ investigation chain's actively-productive leaves - see
     - Full suite passes.
   - stop_rule: Stop once old helpers are deleted and wrappers are generic;
     do not begin new trait categories in this leaf.
+  - progress_2026-08-20: **Premise conflict confirmed and resolved before
+    touching code.** This task's opening clause ("now that all call sites
+    go through the TODO-4694 wrappers") is false as written: re-reading
+    TODO-4695/4696/4697's progress notes in full confirmed each
+    deliberately left many call sites of the 5 old helpers calling the raw
+    primitives directly (not the union wrappers), each for a documented,
+    genuine correctness reason (mutually-exclusive sibling branches,
+    vector-only-vs-array-only dispatch, specialized-vs-unspecialized
+    backing-path distinctions, etc. -- see those entries for the full
+    per-file list). Re-grepped every one of the 5 old helpers' real call
+    sites (excluding declarations, the helpers' own definitions, and their
+    own text in comments/tests) as of this leaf's start and confirmed the
+    counts match what 4695/4696/4697 left behind: isKeyValueCollectionTypeName
+    5, isExperimentalCollectionBackingTypeName 25 (all with literal "map"
+    collectionName args except one runtime-variable site already
+    out-of-scope per 4695), isCollectionVectorValue 9, isArrayValue 6 real
+    narrow callers, plus isKeyValueStorageValue's *single* real caller
+    being the isKeyValueSurfaceValue wrapper's own forwarding body (0 other
+    callers -- TODO-4697 had migrated every other src/emitter/ call site of
+    it to the union wrapper with zero documented exceptions, unlike the
+    other four helpers).
+    **What this means for "swap wrapper internals to genuinely query the
+    registry":** investigated whether a *more precise* registry-driven
+    query (per this task's own "best case" framing) could replace the
+    remaining narrow callers of the 4 helpers with real callers left.
+    Concluded no, for two independent reasons: (1) every remaining narrow
+    call site's whole reason for existing is to recognize *one specific*
+    collection kind (vector-only, array-only, the internal map-backing
+    struct specifically) as distinct from the general surface type, or to
+    stay mutually exclusive with a sibling branch checking a different
+    narrow predicate on the same input -- a registry query, however
+    precise, that answers "is this ANY collection-shaped thing" cannot
+    also answer "is this specifically NOT a vector" or "is this the
+    internal backing struct, not the surface spelling" without becoming
+    exactly as narrow (i.e. exactly the old helper) as what's already
+    there; and (2) `StdlibSurfaceMetadata` (include/primec/support/
+    StdlibSurfaceRegistry.h) does not store a per-surface "kind" (vector
+    vs. key-value) trait at all for a generically-discovered collection
+    file -- `CollectionSurfaceConfigs` in src/support/StdlibSurfaceRegistry.cpp
+    hardcodes that distinction (and map's "MapValue" backingTypeName
+    override) only for the 3 known files (vector.prime/map.prime/
+    soa.prime); a brand-new `[key_value_type]`-annotated file with no
+    config entry gets `DefaultCollectionSurfaceConfig` regardless of
+    whether its annotation says `collection_type` or `key_value_type`, so
+    there is today no registry-queryable signal that would let a generic
+    domain-iteration query correctly tell a new key-value-shaped type
+    apart from a new plain-collection-shaped type. Adding that signal
+    (a stored annotationKind field threaded through derivation) is real,
+    separate, new-trait-category work this leaf's own stop_rule says not
+    to begin. (Separately confirmed the language-level `meta.has_trait<T>
+    (Collection)`/`(KeyValue)` reflection query -- src/semantics/
+    SemanticsValidateReflectionMetadata.cpp's `hasTraitConformance` lambda
+    -- already IS fully generic today, checking the resolved Definition's
+    `transforms` list for a `collection_type`/`key_value_type` annotation
+    directly with zero registry involvement, exactly matching TODO-4684's
+    finding; but that mechanism operates on an already-resolved Definition
+    with its transform list, not on the raw type-name strings or
+    Expr+localTypes value shapes the 5 old C++ helpers classify, so it is
+    not a drop-in replacement for their call sites without separately
+    resolving a Definition at every one of those ~40 sites -- also
+    out-of-scope new plumbing, not a leaf-sized change.)
+    **What was safe and was done:** isKeyValueStorageValue was deleted --
+    it is the one helper among the 5 that genuinely reached zero real
+    callers after TODO-4697, so keeping it as a separately-named primitive
+    added nothing. Inlined its body (itself already registry-backed via
+    `extractKeyValueCollectionTypesLocal`/`isSurfaceCollectionName(...,
+    KeyValueConstructors)`, not a hardcoded string match) directly into
+    `isKeyValueSurfaceValue` in
+    src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp, removed its
+    declaration from src/emitter/EmitterHelpers.h and
+    include/primec/testing/EmitterHelpers.h, and updated
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_collection_key_value_surface_wrappers.cpp's
+    "isKeyValueSurfaceValue matches isKeyValueStorageValue" equivalence
+    test (which compared against the now-deleted primitive) to instead
+    assert pinned true/false expectations per case (added an
+    `expectedKeyValue` field to the existing `WrapperCase` table, values
+    matching what each case's original comment already documented). No
+    source-text pinning test anywhere references `isKeyValueStorageValue`
+    as literal code (only docs/CollectionDecoupling.md's historical prose,
+    left as-is).
+    The other 4 old helpers (isKeyValueCollectionTypeName,
+    isExperimentalCollectionBackingTypeName, isCollectionVectorValue,
+    isArrayValue) were **not** deleted and still exist: each has real,
+    necessary, deliberately-narrow callers outside the wrappers (counts
+    above), so deleting them and repointing those callers at the wider
+    union wrappers would be a genuine widening regression, exactly what
+    this task's own premise-conflict warning describes. The
+    isKeyValueSurfaceTypeName (src/semantics/SemanticsBindingTypeHelpers.cpp)
+    and isCollectionSurfaceValue (src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp)
+    wrapper bodies therefore continue to delegate to these 4 primitives
+    (unchanged) -- there is no genuinely more-precise registry query
+    available to swap them to without either re-deriving the exact same
+    narrow logic under a new name (no real change) or duplicating it (a
+    maintenance hazard, and not what "query the registry" means). Added
+    an explanatory comment to each wrapper's definition site recording
+    this reasoning so a future reader doesn't mistake the unchanged
+    delegation for an oversight.
+    Net result: **1 of 5 old helpers deleted** (isKeyValueStorageValue);
+    **4 of 5 retained** with documented, re-verified necessary callers,
+    matching this task's own "path 2" contingency and the TODO-4692
+    precedent for a complete-but-partial pass.
+    **Spike-type acceptance criterion:** re-ran (as part of the full-suite
+    verification below, not a new addition) the existing TODO-4689
+    acceptance test
+    (tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp,
+    `primestruct.stdlib.collection_registry_dynamic_discovery` suite,
+    "a newly added collection_type annotated file appears as a
+    domain==Collections surface..."), which writes a temporary
+    `[collection_type]`-annotated spike file directly into
+    stdlib/std/collections/ (RAII-cleaned up) and confirms it appears in
+    `rediscoverStdlibCollectionsSurfacesForTesting()` with
+    domain==Collections and no dedicated enum member -- it passed,
+    reconfirming Phase 1's registry-level genericity for a TODO-4684-style
+    spike is intact. This is the only sense in which "zero code changes
+    beyond the .prime declaration" is honestly verifiable today: it does
+    NOT extend to isKeyValueSurfaceTypeName/isCollectionSurfaceValue
+    correctly classifying such a spike as key-value-vs-plain-collection,
+    because (per the registry-gap finding above) no registry signal
+    exists yet to do that generically for an arbitrary new type -- a spike
+    `[key_value_type]` file today would be recognized as *a* collection
+    surface but not distinguished from a plain `[collection_type]` one by
+    any of the wrappers. This gap is structural (missing registry
+    metadata), not something this leaf's helper-deletion/wrapper-swap
+    scope could close without new trait-category work its own stop_rule
+    excludes.
+    Verified via `./scripts/compile.sh --release`: a fresh clean run (full
+    ctest, not --rerun-failed), actively polled to completion (blocking
+    `while ps -p <pid>` loop, not idle-waited), passed 100% (1892 enabled
+    cases, 0 failures), with zero `error:`/`Error 1`/`Error 2` in the raw
+    build log.
 
 - [ ] TODO-4699: Add legacy-collection-branch reachability instrumentation
   - owner: ai
