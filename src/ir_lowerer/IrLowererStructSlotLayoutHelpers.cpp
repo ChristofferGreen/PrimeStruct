@@ -13,7 +13,6 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
-#include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
 
 namespace primec::ir_lowerer {
 
@@ -456,70 +455,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
                                     layoutStack,
                                     info,
                                     error)) {
-        layout.fields.push_back(info);
-        offset += info.slotCount;
-        continue;
-      }
-      if (isBuiltinVectorTypeName(binding.typeName)) {
-        recordLegacyCollectionBranchHitStructSlotLayoutVector();
-        info.structPath = normalizeVectorStructPath(binding.typeName);
-        info.slotCount = 3;
-        if (legacyCollectionBranchCountersEnabled()) {
-          StructSlotFieldInfo genericInfo;
-          std::string genericError;
-          const bool genericResolved = resolveNestedStructLayout(binding.typeName,
-                                                                  namespacePrefix,
-                                                                  collectStructLayoutFields,
-                                                                  resolveDefinitionNamespacePrefix,
-                                                                  resolveStructTypeName,
-                                                                  valueKindFromTypeName,
-                                                                  layoutCache,
-                                                                  layoutStack,
-                                                                  genericInfo,
-                                                                  genericError);
-          if (!genericResolved || genericInfo.structPath != info.structPath ||
-              genericInfo.slotCount != info.slotCount) {
-            recordLegacyCollectionBranchStructSlotLayoutDivergence(
-                "IrLowererStructSlotLayoutHelpers.cpp:resolveStructSlotLayoutFromDefinitionFields:isBuiltinVectorTypeName",
-                info.structPath,
-                info.slotCount,
-                genericResolved,
-                genericInfo.structPath,
-                genericInfo.slotCount);
-          }
-        }
-        layout.fields.push_back(info);
-        offset += info.slotCount;
-        continue;
-      }
-      if (normalizeCollectionBindingTypeName(binding.typeName) == "soa") {
-        recordLegacyCollectionBranchHitStructSlotLayoutSoa();
-        info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, "");
-        info.slotCount = 3;
-        if (legacyCollectionBranchCountersEnabled()) {
-          StructSlotFieldInfo genericInfo;
-          std::string genericError;
-          const bool genericResolved = resolveNestedStructLayout(binding.typeName,
-                                                                  namespacePrefix,
-                                                                  collectStructLayoutFields,
-                                                                  resolveDefinitionNamespacePrefix,
-                                                                  resolveStructTypeName,
-                                                                  valueKindFromTypeName,
-                                                                  layoutCache,
-                                                                  layoutStack,
-                                                                  genericInfo,
-                                                                  genericError);
-          if (!genericResolved || genericInfo.structPath != info.structPath ||
-              genericInfo.slotCount != info.slotCount) {
-            recordLegacyCollectionBranchStructSlotLayoutDivergence(
-                "IrLowererStructSlotLayoutHelpers.cpp:resolveStructSlotLayoutFromDefinitionFields:soa",
-                info.structPath,
-                info.slotCount,
-                genericResolved,
-                genericInfo.structPath,
-                genericInfo.slotCount);
-          }
-        }
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;

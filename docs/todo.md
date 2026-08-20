@@ -2608,7 +2608,7 @@ investigation chain's actively-productive leaves - see
       above) and a separate `ctest` pass with the flag on (described
       above); no deletions made per this task's stop_rule.
 
-- [ ] TODO-4700: Delete isBuiltinVectorTypeName/isBuiltinSoaVectorTypeName 3-slot branches and duplicate definition
+- [x] TODO-4700: Delete isBuiltinVectorTypeName/isBuiltinSoaVectorTypeName 3-slot branches and duplicate definition
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 4
@@ -2629,6 +2629,74 @@ investigation chain's actively-productive leaves - see
       before (verified by the surviving generic path).
   - stop_rule: Stop once both deletions land and tests pass; do not touch
     isExperimentalSoaVectorTypeName/isInternalSoaColumnTypeName in this leaf.
+  - progress_2026-08-20: Deleted both hardcoded 3-slot branches and the
+    duplicate definition; helper definitions themselves stay (still have
+    other live callers).
+    - Re-located by content: the two branches were the
+      `isBuiltinVectorTypeName(binding.typeName)` and
+      `normalizeCollectionBindingTypeName(binding.typeName) == "soa"`
+      checks (each setting `info.slotCount = 3`, plus TODO-4699's
+      dual-computation equivalence-check block) inside the per-field
+      enumeration loop of `resolveStructSlotLayoutFromDefinitionFields` in
+      `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp`. Deleted both
+      blocks in full (including their `legacyCollectionBranchCountersEnabled()`
+      equivalence-check bodies), letting control fall through directly to
+      the next check already present in that loop
+      (`valueKindFromTypeName(binding.typeName)` returning `Unknown` for
+      "vector"/"soa", then `resolveStructTypeName` +
+      recursive `resolveStructSlotLayoutFromDefinitionFields`) - this is
+      the same generic field-based resolution `resolveNestedStructLayout`
+      performs elsewhere in this function (confirmed by reading
+      `resolveNestedStructLayout`'s body: identical
+      `resolveStructTypeName` + recursive-layout-call shape), so no new
+      fallback code was written.
+    - The duplicate was `normalizeUninitializedVectorStructPath`'s
+      `isBuiltinVectorTypeName(typeName)` check (plus its
+      `recordLegacyCollectionBranchHitUninitializedStructInferenceDuplicate()`
+      counter call) in
+      `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`. Deleted
+      that if-block, letting the function fall through to its existing
+      next checks (`typeName == "Vector"`, then
+      `isExperimentalCollectionTypeName`, else return `typeName`
+      unchanged) - TODO-4699 recorded 0 hits for this branch across the
+      full suite, so this path was provably never exercised.
+    - Helper-definition check (fresh `grep -rn` over `src/`, per this
+      task's "before writing anything" instruction, run *after* deleting
+      the branches above): `isBuiltinVectorTypeName` and
+      `isBuiltinSoaVectorTypeName` still each have multiple live callers
+      remaining in `IrLowererStructSlotLayoutHelpers.cpp` -
+      `normalizeVectorStructPath` (used by `resolveSoaVectorFieldStructPath`
+      and by the inline/templated-field branches earlier in the same
+      per-field loop) and `resolveSoaVectorFieldStructPath` itself for
+      `isBuiltinSoaVectorTypeName`. So per this task's explicit
+      instruction, only the two dead branches were removed; both helper
+      *definitions* in `IrLowererStructSlotLayoutHelpers.cpp` were kept
+      as-is, unchanged, matching TODO-4670/TODO-4671's prior finding.
+      The duplicate definition in
+      `IrLowererUninitializedStructInference.cpp` (a separate,
+      independent function of the same name/body) had its only caller
+      removed by this same change, so that duplicate definition itself
+      was also deleted (it truly had zero remaining callers, unlike the
+      pair in `IrLowererStructSlotLayoutHelpers.cpp`).
+    - Also removed the now-unused
+      `#include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"`
+      from both files, since neither file calls any symbol from that
+      header any more after the branch deletions above. Left the
+      TODO-4699 counter functions themselves
+      (`recordLegacyCollectionBranchHitStructSlotLayoutVector/Soa`,
+      `recordLegacyCollectionBranchStructSlotLayoutDivergence`,
+      `recordLegacyCollectionBranchHitUninitializedStructInferenceDuplicate`)
+      and the `--benchmark-ir-lowerer-legacy-collection-branch-counters`
+      flag machinery untouched in
+      `IrLowererLegacyCollectionBranchCounters.{h,cpp}` -
+      out of this task's scope to retire that instrumentation surface.
+    - Verified via `./scripts/compile.sh --release`: fresh clean build
+      (full ctest, not `--rerun-failed`, actively polled to completion via
+      a blocking `while ps -p <pid>` loop, not idle-waited) - raw build
+      log grepped for `error:`/`Error 1`/`Error 2`, zero matches, and
+      `100% tests passed, 0 tests failed out of 1892`, confirming
+      identical slot layouts for vector/soa fields via the surviving
+      generic field-based path.
 
 - [ ] TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath/isCollectionVectorMetadataMethodPath branches
   - owner: ai

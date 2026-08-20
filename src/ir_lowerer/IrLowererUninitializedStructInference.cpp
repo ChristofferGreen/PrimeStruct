@@ -14,7 +14,6 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
-#include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
 
 namespace primec::ir_lowerer {
 
@@ -49,10 +48,6 @@ std::string forwardedEmptyKeyValueConstructorMemberName() {
     }
   }
   return std::string("map") + std::string("New");
-}
-
-bool isBuiltinVectorTypeName(const std::string &typeName) {
-  return isBuiltinCollectionTypeName(typeName, "vector");
 }
 
 std::string resolveSpecializedExperimentalVectorStructPath(
@@ -176,10 +171,6 @@ bool isForwardedKeyValueNewConstructor(const Expr &expr) {
 }
 
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
-  if (isBuiltinVectorTypeName(typeName)) {
-    recordLegacyCollectionBranchHitUninitializedStructInferenceDuplicate();
-    return vectorBuiltinStructNormalizedPath();
-  }
   if (typeName == "Vector") {
     return vectorBackingTypePath();
   }
