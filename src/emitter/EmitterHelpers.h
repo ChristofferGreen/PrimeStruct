@@ -157,9 +157,15 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, std::string> &nameMap);
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isCollectionVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
-bool isKeyValueStorageValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
-// TODO-4694: shared trait wrapper helpers unioning the collection/key-value
-// value-classification helpers above. See EmitterBuiltinCollectionInferenceHelpers.cpp.
+// TODO-4698: shared trait wrapper helpers. isCollectionSurfaceValue unions
+// the collection-value-classification helpers above (isCollectionVectorValue,
+// isArrayValue), each of which still has real, deliberately-narrow callers
+// elsewhere (see EmitterBuiltinCollectionInferenceHelpers.cpp) and so cannot
+// be retired. isKeyValueSurfaceValue's own body is the sole remaining
+// key-value-value classifier -- the former isKeyValueStorageValue primitive
+// it used to forward to had zero other callers after TODO-4697's migration,
+// so its body was inlined here directly and the primitive deleted. See
+// EmitterBuiltinCollectionInferenceHelpers.cpp.
 bool isCollectionSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isKeyValueSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);

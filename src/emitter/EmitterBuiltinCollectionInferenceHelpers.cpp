@@ -218,7 +218,32 @@ bool isCollectionVectorValue(const Expr &target, const std::unordered_map<std::s
   return isCollectionVectorValueLocal(target, localTypes);
 }
 
-bool isKeyValueStorageValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+// TODO-4694/TODO-4698: generically-named wrapper unioning today's
+// collection-value classification helpers (isCollectionVectorValue and
+// isArrayValue). Each of those two still has real, deliberately-narrow
+// callers elsewhere in src/emitter/ (documented in TODO-4697's progress
+// note -- e.g. isArrayCountCall/isVectorCapacityCall's vector-exclusive/
+// array-exclusive dispatch, the vector-only positional-reorder probes, and
+// the adjacent vector-vs-array branches in EmitterExprCollectionTypeHelpers.h
+// that each need the *single* collection kind, not the union) whose
+// semantics would be widened by migrating to the union, so this wrapper's
+// body still delegates to the two narrow primitives rather than a generic
+// registry query -- there is no query more precise than "call both and OR
+// them" that is also correct for every one of this wrapper's own callers.
+bool isCollectionSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  return isCollectionVectorValue(target, localTypes) || isArrayValue(target, localTypes);
+}
+
+// TODO-4694/TODO-4698: this used to be a thin `return
+// isKeyValueStorageValue(target, localTypes);` forward. TODO-4697 migrated
+// every other src/emitter/ call site of isKeyValueStorageValue to this
+// wrapper, leaving this forward as its only caller; with zero other callers
+// left, isKeyValueStorageValue added no value as a separate name, so its
+// body (itself already registry-backed via extractKeyValueCollectionTypesLocal
+// and isSurfaceCollectionName(..., KeyValueConstructors), not a hardcoded
+// type-name string match) is inlined directly here and the old primitive is
+// deleted.
+bool isKeyValueSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
     if (it == localTypes.end()) {
@@ -236,21 +261,6 @@ bool isKeyValueStorageValue(const Expr &target, const std::unordered_map<std::st
            target.templateArgs.size() == 2;
   }
   return false;
-}
-
-// TODO-4694: generically-named wrapper unioning today's collection-value
-// classification helpers (isCollectionVectorValue and isArrayValue).
-// Behavior-preserving; existing call sites are unchanged and continue to
-// use the original helpers directly until a later migration step.
-bool isCollectionSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  return isCollectionVectorValue(target, localTypes) || isArrayValue(target, localTypes);
-}
-
-// TODO-4694: generically-named wrapper for today's key-value-value
-// classification helper (isKeyValueStorageValue). Behavior-preserving;
-// existing call sites are unchanged.
-bool isKeyValueSurfaceValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  return isKeyValueStorageValue(target, localTypes);
 }
 
 bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
