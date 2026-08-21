@@ -988,6 +988,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/smoke/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp
     tests/unit/compile_run/smoke/test_compile_run_smoke_core_wasm_wasi_png_interlaced.cpp
     tests/unit/compile_run/smoke/test_compile_run_smoke_core_wasm_wasi_png_write.cpp
+    tests/unit/compile_run/smoke/test_compile_run_smoke_ring_buffer.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_core_lists.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp

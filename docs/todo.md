@@ -2833,7 +2833,7 @@ investigation chain's actively-productive leaves - see
       post-deletion rebuild was needed beyond the flag-off run already
       described.
 
-- [ ] TODO-4702: Add a second toy collection type (Deque or RingBuffer) purely in stdlib, zero C++
+- [x] TODO-4702: Add a second toy collection type (Deque or RingBuffer) purely in stdlib, zero C++
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 5 (proof)
@@ -2849,6 +2849,78 @@ investigation chain's actively-productive leaves - see
     - git diff for this change touches no path under src/** or include/**.
   - stop_rule: Stop once the type works end to end with a zero-C++ diff;
     do not add advanced operations beyond the minimal proof set.
+  - progress_2026-08-21: Chose RingBuffer over Deque (simpler: fixed
+    capacity at construction, push overwrites oldest once full, no
+    growth logic needed). Added `stdlib/std/collections/ring_buffer.prime`
+    with `[public struct collection_type] RingBuffer<T>()` (fields
+    `fieldCapacity`/`fieldHead`/`fieldCount`/`data`/`ownsData`, mirroring
+    `vector.prime`'s convention: only trivial field accessors plus
+    Copy/Move/Destroy live inside the struct block; real operations are
+    free functions taking the struct as an explicit first parameter) and
+    4 public free functions: `count<T>`, `capacity<T>`, `push<T>`
+    (overwrites the oldest slot once full), `at<T>` (indexed read, panics
+    out of range). `git diff --stat` confirmed zero changes under
+    `src/**`/`include/**` - only `CMakeLists.txt`,
+    `cmake/PrimeStructManagedCompileRunSmokeSuites.cmake` (a new
+    dedicated shard block was needed since the existing smoke-suite
+    `SOURCE_FILE` globs are per-file and none matched the new test file -
+    without one, the new TEST_CASEs would have silently never run under
+    ctest), `stdlib/std/collections/ring_buffer.prime`, and
+    `tests/unit/compile_run/smoke/test_compile_run_smoke_ring_buffer.cpp`
+    (3 TEST_CASEs) changed.
+    Two real, non-C++-fixable compiler-limitation findings surfaced
+    while building this, both worked around entirely in `.prime` source
+    (no C++ touched, acceptance still holds):
+    (1) Comparing/combining two bare `this.field`/`values.field` accesses
+    directly in one expression (e.g. `this.fieldCount ==
+    this.fieldCapacity`, or passing both as two separate bare-field
+    arguments to a helper call) fails semantic validation with
+    "dereference requires a pointer or reference" - the fix used
+    throughout this file (matching `vector.prime`'s own established
+    convention) is to always route field reads through single-field
+    `return<i32>`-style accessor methods (`values.field_count()`,
+    `values.field_capacity()`) and combine THEIR results, never combine
+    two raw field member-accesses directly.
+    (2) A function declared `[return<Reference<T>>]` that borrows a
+    struct field and returns the reference (e.g. `vectorBorrowSlot`'s
+    exact shape in `vector.prime`) fails "reference return requires
+    direct parameter reference or parameter-rooted borrow" when called
+    from a second function that then dereferences it, for ANY struct
+    outside the small set of paths some part of the semantic
+    analyzer apparently already special-cases - confirmed this is not
+    specific to RingBuffer's own code by copy-pasting `vector.prime`'s
+    literal `vectorSlotUnsafe`/`vectorBorrowSlot`/`vectorAt` triplet
+    verbatim into an isolated throwaway namespace and reproducing the
+    identical failure there too. Root-caused via a from-scratch minimal
+    repro outside the real stdlib tree (not itself a `src/`/`include/`
+    change, purely used to isolate the bug) rather than trial-and-error
+    on the real file. Worked around by keeping the borrow AND the final
+    dereference-to-value-copy inside the SAME function (`at<T>` borrows,
+    binds to a local `[Reference<T>] ref{...}`, then copies `*ref` into
+    a local before returning it) instead of splitting the borrow into
+    its own `Reference<T>`-returning helper - this fully avoids
+    propagating a `Reference<T>` across a function-call boundary. Also
+    discovered `.method()` call-sugar (e.g. `buf.push(...)`) hits a
+    third, separate limitation for this brand-new (non-vector/map/soa)
+    type - semantic resolution accepts `.count()`/`.push(...)` but IR
+    lowering then fails with "semantic-product method-call target
+    missing lowered definition" - since the task's acceptance criteria
+    don't require dot-syntax, worked around by using explicit calls
+    (`push<i32>(buf, value)`, `count<i32>(buf)`, etc.) throughout the
+    test file instead, which work completely (VM and native codegen
+    both verified). None of these three findings were patched in C++;
+    all three are documented here as real, pre-existing compiler gaps
+    for a future leaf to pick up if dot-syntax/inline-double-deref
+    support for arbitrary new collection types becomes a goal.
+    Updated `tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp`'s
+    exact-name-list assertion (from TODO-4686) to include `"RingBuffer"`
+    alongside the pre-existing 4 names, since the TODO-4685/4686
+    discovery mechanism now genuinely finds it with zero further edits -
+    this is exactly the acceptance criterion TODO-4689 set out to prove,
+    now demonstrated with a second real type, not just a temporary spike
+    fixture. Verified via `./scripts/compile.sh --release`: clean build
+    (raw log grepped for `error:`/`Error 1`/`Error 2`, zero matches) and
+    "no failing CTest cases".
 
 - [ ] TODO-4703: Add a diff-based zero-C++ gate script for new collection types
   - owner: ai

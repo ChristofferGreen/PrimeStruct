@@ -132,7 +132,7 @@ TEST_CASE("returns empty for a missing file") {
   CHECK(results.empty());
 }
 
-TEST_CASE("detects all 4 currently-annotated structs across the real stdlib collection files") {
+TEST_CASE("detects all annotated structs across the real stdlib collection files") {
   const auto perFile = primec::detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles();
 
   std::vector<std::string> foundNames;
@@ -143,7 +143,11 @@ TEST_CASE("detects all 4 currently-annotated structs across the real stdlib coll
   }
   std::sort(foundNames.begin(), foundNames.end());
 
-  const std::vector<std::string> expected = {"MapValue", "SoaColumn", "SoaVector", "Vector"};
+  // TODO-4702 added RingBuffer (stdlib/std/collections/ring_buffer.prime) as
+  // a second toy collection type, proving the discovery mechanism requires
+  // zero further edits here to pick up a genuinely new [collection_type]
+  // struct.
+  const std::vector<std::string> expected = {"MapValue", "RingBuffer", "SoaColumn", "SoaVector", "Vector"};
   CHECK(foundNames == expected);
 
   // Confirm MapValue is specifically detected as [key_value_type] and the

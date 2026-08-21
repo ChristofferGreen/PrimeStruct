@@ -48,3 +48,10 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   SOURCE_FILE "*test_compile_run_smoke_argv.cpp"
                                   TOTAL_CASES 25
                                   CASES_PER_SHARD 1)
+
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
+                                  TIMEOUT 900
+                                  SHARD_PREFIX "ring_buffer"
+                                  SOURCE_FILE "*test_compile_run_smoke_ring_buffer.cpp"
+                                  TOTAL_CASES 3
+                                  CASES_PER_SHARD 1)

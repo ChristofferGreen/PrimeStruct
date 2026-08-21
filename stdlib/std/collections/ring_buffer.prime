@@ -1,0 +1,156 @@
+// Minimal fixed-capacity ring buffer, added purely in stdlib to prove the
+// generic collection registry (see docs/todo.md TODO-4686 through TODO-4698)
+// lets a brand-new collection type be added with zero compiler (src/,
+// include/) changes. Deliberately kept to the minimal proof surface:
+// construct, push, count, at. Unlike Vector, capacity is fixed at
+// construction time; once full, push overwrites the oldest element instead
+// of growing, which is the classic ring-buffer behavior.
+import /std/collections/buffer_checked/*
+import /std/collections/buffer_unchecked/*
+import /std/panic/*
+
+namespace std {
+  namespace collections {
+  namespace ring_buffer {
+
+  // Wraps an index that is at most one lap past capacity back into
+  // [0, capacity). Callers only ever produce indices in [0, 2*capacity),
+  // so a single conditional subtraction is enough (no modulo operator
+  // needed).
+  [return<i32>]
+  ringBufferWrap([i32] index, [i32] capacity) {
+    if(index >= capacity) {
+      return(index - capacity)
+    }
+    return(index)
+  }
+
+  [public struct collection_type]
+  RingBuffer<T>() {
+    [i32 mut] fieldCapacity{0}
+    [i32 mut] fieldHead{0}
+    [i32 mut] fieldCount{0}
+    [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1)}
+    [bool mut] ownsData{true}
+
+    [return<i32>]
+    field_capacity() {
+      return(this.fieldCapacity)
+    }
+
+    [return<i32>]
+    field_head() {
+      return(this.fieldHead)
+    }
+
+    [return<i32>]
+    field_count() {
+      return(this.fieldCount)
+    }
+
+    [mut]
+    set_field_head([i32] value) {
+      this.fieldHead = value
+    }
+
+    [mut]
+    set_field_count([i32] value) {
+      this.fieldCount = value
+    }
+
+    [mut]
+    Copy([Reference<Self>] other) {
+      this.fieldCapacity = other.fieldCapacity
+      this.fieldHead = other.fieldHead
+      this.fieldCount = other.fieldCount
+      this.data = other.data
+      this.ownsData = false
+    }
+
+    [mut]
+    Move([Reference<Self>] other) {
+      this.fieldCapacity = other.fieldCapacity
+      this.fieldHead = other.fieldHead
+      this.fieldCount = other.fieldCount
+      this.data = other.data
+      this.ownsData = other.ownsData
+      other.ownsData = false
+    }
+
+    [mut effects(heap_alloc)]
+    Destroy() {
+      if(this.ownsData) {
+        [Pointer<uninitialized<T>>] dataPtr{this.data}
+        for([i32 mut] index{0}, index < this.fieldCount, index++) {
+          [i32] physical{ringBufferWrap(this.fieldHead + index, this.fieldCapacity)}
+          [Pointer<uninitialized<T>> mut] slot{bufferOffsetUnsafe<uninitialized<T>>(dataPtr, physical)}
+          drop(*slot)
+        }
+        bufferFreeUninitialized<T>(dataPtr)
+        this.ownsData = false
+        this.fieldCount = 0
+        this.fieldHead = 0
+      }
+    }
+  }
+
+  [public effects(heap_alloc), return<RingBuffer<T>>]
+  ring_buffer<T>([i32] capacity) {
+    [mut] allocCapacity{capacity}
+    if(allocCapacity <= 0) {
+      allocCapacity = 1
+    }
+    return(RingBuffer<T>{
+        [fieldCapacity] allocCapacity,
+        [fieldHead] 0,
+        [fieldCount] 0,
+        [data] bufferAlloc<uninitialized<T>>(allocCapacity),
+        [ownsData] true})
+  }
+
+  [public return<i32>]
+  count<T>([RingBuffer<T>] values) {
+    return(values.field_count())
+  }
+
+  [public return<i32>]
+  capacity<T>([RingBuffer<T>] values) {
+    return(values.field_capacity())
+  }
+
+  [public effects(heap_alloc), return<void>]
+  push<T>([RingBuffer<T> mut] values, [T] value) {
+    if(values.field_capacity() <= 0) {
+      panic(values.field_capacity())
+    }
+    [i32] physical{ringBufferWrap(values.field_head() + values.field_count(), values.field_capacity())}
+    [Pointer<uninitialized<T>> mut] slot{bufferOffsetUnsafe<uninitialized<T>>(values.data, physical)}
+    if(values.field_count() == values.field_capacity()) {
+      drop(*slot)
+      init(*slot, value)
+      values.set_field_head(ringBufferWrap(values.field_head() + 1, values.field_capacity()))
+    } else {
+      init(*slot, value)
+      values.set_field_count(values.field_count() + 1)
+    }
+  }
+
+  [return<Pointer<uninitialized<T>>>]
+  slotUnsafe<T>([RingBuffer<T>] values, [i32] index) {
+    if(index < 0 || index >= values.field_count()) {
+      panic(index)
+    }
+    [i32] physical{ringBufferWrap(values.field_head() + index, values.field_capacity())}
+    return(bufferOffsetUnsafe<uninitialized<T>>(values.data, physical))
+  }
+
+  [public return<T>]
+  at<T>([RingBuffer<T>] values, [i32] index) {
+    [Pointer<uninitialized<T>>] slot{slotUnsafe<T>(values, index)}
+    [Reference<T>] ref{borrow(*slot)}
+    [T] copy{*ref}
+    return(copy)
+  }
+  }
+  }
+}
