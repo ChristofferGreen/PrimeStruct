@@ -3570,6 +3570,70 @@ investigation chain's actively-productive leaves - see
     every magic static at all). Verified via
     `./scripts/compile.sh --release`: 1881/1881 tests passing with the
     reverted (no-reset) state, 0 regressions from this leaf.
+  - progress_2026-08-21 (still left open per stop_rule): Built the
+    higher-confidence exhaustiveness-verification step the 2026-08-13 note
+    above said a future attempt would need: a real, mechanical
+    poison-on-reset audit tool, not more manual grep-and-fix rounds.
+    Mechanism (default `OFF`, zero effect on any normal build - see
+    `docs/CompilerArenaAllocator.md`'s new 2026-08-21 subsection for full
+    detail): a `PRIMESTRUCT_ARENA_POISON_AUDIT` CMake option forces an
+    ASan build and makes `CompileArena::reset()` ASan-poison every byte a
+    scope touched and then permanently abandon that memory (never
+    reused/unpoisoned again) instead of rewinding and reusing it, so any
+    later stale read - at any point after the reset, not just in a narrow
+    window - crashes immediately with an exact stack trace. A companion
+    `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` option (auto-enabled by the
+    audit) re-wires `tests/unit/test_main.cpp`'s doctest listener to
+    construct one `ScopedCompileArena` per `TEST_CASE` again, exactly
+    TODO-5234's original design, so the audit exercises real reset churn.
+    Running the full `PrimeStruct_semantics_tests` binary under this
+    found and fixed four more real, previously-unwrapped magic statics
+    (`StdlibSurfaceRegistry.cpp`'s `registry()` table itself plus its two
+    dependent caches - outside the three directories this TODO's own
+    `implementation_notes` suggested searching; most of
+    `SoaPathHelpers.h`'s derived path-prefix statics, which had been
+    flagged as an unverified grep hit in the 2026-08-13 round and never
+    crash-confirmed until now; `SemanticsBuiltinPathHelpers.cpp`'s
+    `isCanonicalStdlibSoaHelperPath()` prefixes; and
+    `IrLowererLegacyCollectionBranchCounters.cpp`'s log-sink path),
+    each fixed with the same `systemHeapValue()` pattern. It then found a
+    structurally new, harder blocker: `third_party/doctest.h`'s own
+    internal `g_infoContexts` thread_local vector (used by every
+    `INFO()`/`CAPTURE()`/`MESSAGE()` call) has the exact same
+    "capacity survives across TEST_CASEs but a later reset reclaims its
+    backing buffer anyway" hazard as the thread_local caches the
+    2026-08-13 round already fixed - except this one lives inside a
+    vendored third-party library we do not author, so it cannot be fixed
+    by wrapping one of our own magic statics in `systemHeapValue()` at its
+    declaration; it would need a patch to `third_party/doctest.h` itself
+    (not attempted this round). This demonstrates the exhaustiveness risk
+    this TODO's `stop_rule` already worried about is not limited to this
+    repository's own source tree: overriding the *global*
+    `operator new`/`delete` puts every allocation any code makes during a
+    compile scope in scope for this hazard, including vendored
+    dependencies we cannot practically keep re-auditing as they change
+    upstream. Per this leaf's `stop_rule`, resets remain OFF by default
+    (`tests/unit/test_main.cpp` unchanged from the 2026-08-13 state) -
+    shipping on "fixed everything found so far" a second time, now
+    knowing the hazard extends into code we do not control, would repeat
+    exactly the mistake this stop_rule exists to prevent. What shipped
+    from this round: the four `systemHeapValue()` fixes above (all
+    unconditionally safe regardless of whether resets ever ship, same
+    reasoning as the 2026-08-13 fixes) and the reusable audit tooling
+    itself (both new CMake options default `OFF`). Verified via a FRESH
+    `./scripts/compile.sh --release` run (not `--rerun-failed`): **100%
+    tests passed, 0 tests failed out of 1898** (1972 registered, 74
+    pre-existing `Disabled`), 0 regressions. No VmHWM memory measurement
+    was taken this round since the reset design remains unshipped (the
+    CLI-only, never-reset arena's memory profile is unchanged from
+    TODO-5234's own measurement). If picked up again: fix the
+    `doctest.h` `g_infoContexts` hazard first (most likely a custom
+    allocator on that vector that always calls `std::malloc` directly,
+    bypassing the arena override), audit the rest of that ~7000-line
+    vendored file for other persistent state, then re-run this same
+    audit loop to convergence (zero poisoned-memory accesses on a full
+    `semantics`+`ir_pipeline` run) before reconsidering
+    `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` as a default.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai

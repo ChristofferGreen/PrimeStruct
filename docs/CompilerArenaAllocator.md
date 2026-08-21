@@ -479,6 +479,141 @@ during this investigation did not survive that specific case, see the git
 history for this leaf for the reasoning). Either is a substantially larger
 effort than this leaf's budget.
 
+### 2026-08-21 follow-up: built the poison-audit tool (a), still not enough to ship
+
+A later session built option (a) above - a real, mechanical
+exhaustiveness-audit tool, gated behind a new `PRIMESTRUCT_ARENA_POISON_AUDIT`
+CMake option (default `OFF`, never compiled into a shipped build) - rather
+than repeating more manual grep-and-fix rounds. Mechanism, in
+`src/support/CompileArena.cpp`'s `reset()`: under this flag (which also
+forces `-fsanitize=address` for the whole build),
+`CompileArena::reset()` does not rewind and reuse its chunks as it
+normally does. Instead it calls `__asan_poison_memory_region()` over every
+byte the ending scope touched and then **abandons the chunk list
+entirely** (never reused, always freshly `malloc`'d chunks from then on) -
+so poisoned bytes are never unpoisoned again for the rest of the process.
+This is deliberately stronger than "poison on reset, unpoison on next
+reuse" would be: since abandoned bytes stay poisoned forever, ASan catches
+a stale read of them whenever it happens, not only in the narrow window
+between one reset and the next allocation that happens to reuse the same
+address range - matching how the real corruption reports actually looked
+("the *next* scope's reset ... silently handed those exact bytes to a
+brand new object", i.e. the dangerous read came from an object that
+outlived the reset by an arbitrary number of further scopes, not from an
+in-between window). A companion (default `OFF`, `PRIMEC_TEST_ARENA_RESET_PER_CASE`
+via CMake option `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE`, auto-enabled by
+the audit option) doctest `IReporter` listener in
+`tests/unit/test_main.cpp` re-enables TODO-5234's original per-`TEST_CASE`
+`ScopedCompileArena` wiring so the audit actually exercises real reset
+churn. Both switches are fully inert in a normal build (everything they
+touch is behind `#if defined(...)` / CMake options that default off), so
+none of this changed default `./scripts/compile.sh --release`/CLI/test
+behavior.
+
+Running the full `PrimeStruct_semantics_tests` binary under this
+configuration found real, exact-stack-trace hazards on essentially every
+attempt, each fixed with the established `systemHeapValue()` pattern, in
+this order:
+
+1. `src/support/StdlibSurfaceRegistry.cpp`'s `registry()` - the
+   file-level surface-metadata table itself was an **unwrapped** magic
+   static (its backing `std::vector<StdlibSurfaceMetadata>` was
+   arena-allocated on first call), outside the three directories
+   (`src/semantics`, `src/ir_lowerer`, `src/parser`) the original TODO
+   text suggested searching and never touched by the 2026-08-13 round
+   above. Its two dependent caches
+   (`stdlibSurfaceSpellingIndex()`/`stdlibSurfaceMemberNameSet()`) had the
+   same problem.
+2. `include/primec/ir/SoaPathHelpers.h` - flagged as an *unverified*
+   grep hit in the 2026-08-13 round and never crash-confirmed; this round
+   confirmed it: `publicSoaFolder()`/`legacySoaFolder()`/etc. (the base
+   folder-name builders) were already wrapped, but nearly every helper
+   built *on top of* them (`legacyPrefix`, `canonicalPrefix`,
+   `specializedPrefix`, `typePrefix` and eight siblings) was not -
+   wrapping the base case is not enough when derived magic statics exist.
+3. `src/semantics/SemanticsBuiltinPathHelpers.cpp`'s
+   `compatibilityPrefix`/`publicPrefix` in
+   `isCanonicalStdlibSoaHelperPath()` - same "derived-from-a-wrapped-base
+   but itself unwrapped" pattern as (2).
+4. `src/ir_lowerer/IrLowererLegacyCollectionBranchCounters.cpp`'s
+   `path` (an opt-in benchmark log-sink path) - unwrapped.
+5. **`third_party/doctest.h`'s own `g_infoContexts`** (a
+   `DOCTEST_THREAD_LOCAL std::vector<IContextScope*>` doctest's library
+   code uses internally for every `INFO()`/`CAPTURE()`/`MESSAGE()` call) -
+   a structurally new finding, not a "fix" so much as a hard blocker. Its
+   backing array grows via the *same* overridden global `operator new`
+   as everything else in the process, so a `push_back` inside any
+   `TEST_CASE`'s body arena-allocates it; the vector's *size* returns to
+   0 between test cases (RAII push/pop) but, like `std::unordered_map`'s
+   bucket array in the 2026-08-13 round, its *capacity* (backing buffer)
+   is never released - so the following `TEST_CASE`'s reset reclaims that
+   buffer while doctest's own internal state still points at it, and the
+   next `INFO()`/`CAPTURE()` in *any later* `TEST_CASE` writes into
+   poisoned memory. This is not one of our own magic statics we can wrap
+   in `systemHeapValue()` at its declaration - it is **persistent state
+   inside a vendored third-party library** we do not author. It could
+   only be fixed by patching `third_party/doctest.h` itself (e.g. giving
+   `g_infoContexts` a custom allocator that always calls `std::malloc`
+   directly, bypassing the overridden global `operator new` entirely) -
+   not attempted this round.
+
+Finding (5) is the important result of this follow-up, more than any
+individual fix: it demonstrates that the "no practical way to enumerate
+every static that might get lazily constructed inside a compile scope"
+risk TODO-5234's own writeup already flagged is not limited to *our own*
+source tree. Overriding the *global* `operator new`/`operator delete`
+means every allocation any code makes while a compile scope is active is
+in scope for this hazard - including vendored dependencies
+(`third_party/doctest.h` here; conceivably libstdc++ internals too, e.g.
+locale/facet caching) that we cannot practically grep, audit, or keep
+re-auditing as they change upstream. The 2026-08-13 round's three-rounds
+of "each one finds a new, previously-unscoped class of hazard, the
+opposite of converging" repeated itself again this round (support-lib
+level, then header-only-lib level, then vendored-third-party-lib level in
+successive fix-rebuild-rerun cycles) - now with an additional, structurally
+harder tier (code this repository does not own) rather than a shrinking
+one.
+
+**What shipped from this round** (all unconditionally safe regardless of
+whether resets are ever turned on, by the same reasoning as the
+2026-08-13 round's fixes - they only change *where* an allocation lands,
+never *when* it's reclaimed): the four `systemHeapValue()` fixes in items
+1-4 above, and the reusable `PRIMESTRUCT_ARENA_POISON_AUDIT`/
+`PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` audit tooling itself (both default
+`OFF`, zero effect on any normal build). **What did not ship**: resets are
+still off in `tests/unit/test_main.cpp`'s default build, unchanged from
+TODO-5234/the 2026-08-13 round - the doctest-internal-state finding (5)
+means a genuinely new, harder class of hazard (vendored library internals)
+remains open, and shipping the reset design on "fixed everything found so
+far" would repeat the exact mistake TODO-5235's `stop_rule` already warned
+against, now with a hazard class we have even less unilateral control
+over. Full verification for this round: `./scripts/compile.sh --release`
+(fresh run, not `--rerun-failed`) - **100% tests passed, 0 tests failed
+out of 1898** (1972 registered, 74 pre-existing `Disabled`), confirming
+zero regressions from the four `systemHeapValue()` fixes and the
+default-off tooling additions. No before/after `VmHWM` memory measurement
+was taken this round since the reset design remains unshipped (the
+CLI-only, never-reset arena's memory profile is unchanged from TODO-5234's
+own measurement).
+
+If picked up again, the audit tool now exists and is reusable, so the
+next attempt's first move should be fixing (5) - most likely by patching
+`third_party/doctest.h` to route `g_infoContexts` (and auditing the rest
+of that ~7000-line vendored file for any other persistent thread_local/
+static state) around the arena override entirely - and then re-running
+the *same* audit loop (fix whatever ASan reports, rebuild, rerun the full
+`semantics` and `ir_pipeline` suites, repeat) until a full run reports
+zero poisoned-memory accesses. Only then would re-enabling
+`PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` by default be reasonable to
+consider, and even then the underlying risk this round surfaced - that
+*any* vendored dependency's internal state is implicitly in scope for this
+hazard, not just this repository's own source - is a standing property of
+the "override global operator new/delete, reset per compile scope" design
+itself, not something a finite number of fix rounds can retire once and
+for all. A structurally different design (option (b) above, still not
+attempted) remains the only way to remove that standing risk rather than
+keep managing it.
+
 ## TODO-5237: mimalloc evaluation - shipped, composes with the arena
 
 Status: implemented and shipped. `primec`/`primevm` now additionally link

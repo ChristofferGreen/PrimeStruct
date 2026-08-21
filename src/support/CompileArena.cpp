@@ -5,6 +5,25 @@
 #include <cstdlib>
 #include <new>
 
+// PRIMEC_ARENA_POISON_AUDIT: diagnostic-only exhaustiveness audit for the
+// TODO-5235 magic-static/reset hazard (see docs/CompilerArenaAllocator.md's
+// "TODO-5235" -> "If this is picked up again" section for the design this
+// implements). NEVER defined in a shipped build - only ever set explicitly
+// via the (default-OFF) PRIMESTRUCT_ARENA_POISON_AUDIT CMake option, which
+// also forces -fsanitize=address so the AddressSanitizer manual-poisoning
+// API below is actually linkable. See reset()'s audit branch for the full
+// mechanism.
+#if defined(PRIMEC_ARENA_POISON_AUDIT)
+#if defined(__has_feature)
+#if !__has_feature(address_sanitizer) && !defined(__SANITIZE_ADDRESS__)
+#error "PRIMEC_ARENA_POISON_AUDIT requires an AddressSanitizer build (-fsanitize=address)"
+#endif
+#elif !defined(__SANITIZE_ADDRESS__)
+#error "PRIMEC_ARENA_POISON_AUDIT requires an AddressSanitizer build (-fsanitize=address)"
+#endif
+#include <sanitizer/asan_interface.h>
+#endif
+
 // TODO-5233/TODO-5234/TODO-5235: see docs/CompilerArenaAllocator.md for the
 // full design history. Short version: an earlier iteration (TODO-5234)
 // reset the arena's free lists/bump cursor at every new compile scope (so a
@@ -110,6 +129,34 @@ public:
   // two remaining hazard classes (magic statics, persistent thread_local
   // caches) are kept out of arena memory in the first place.
   void reset() {
+#if defined(PRIMEC_ARENA_POISON_AUDIT)
+    // Diagnostic-only exhaustiveness audit (never compiled into a shipped
+    // build - see the file-top comment). Deliberately do NOT reuse any
+    // chunk this scope touched: poison every byte it handed out and then
+    // abandon the whole chunk list, so any future read of that memory - no
+    // matter how much later, not just in a narrow post-reset window - trips
+    // AddressSanitizer immediately with an exact stack trace. This is
+    // strictly stronger than "poison on reset, unpoison on reuse" would be:
+    // since abandoned bytes are never unpoisoned again, it catches a stale
+    // read whether it happens right after the reset (before anything
+    // reused those bytes) or much later after several more resets (which
+    // is closer to what the real corruption reports actually looked like -
+    // "the *next* scope's reset ... silently handed those exact bytes to a
+    // brand new object" - the read that mattered came from an object that
+    // outlived the reset, not from an in-between window). This defeats the
+    // entire point of resetting (bounded memory) - that's fine, it is a
+    // one-time audit tool, not a shipped allocation strategy.
+    for (Chunk *chunk = firstChunk_; chunk != nullptr; chunk = chunk->next) {
+      if (chunk->used > 0) {
+        __asan_poison_memory_region(chunk->data, chunk->used);
+      }
+    }
+    firstChunk_ = nullptr;
+    currentChunk_ = nullptr;
+    for (FreeNode *&head : freeLists_) {
+      head = nullptr;
+    }
+#else
     for (Chunk *chunk = firstChunk_; chunk != nullptr; chunk = chunk->next) {
       chunk->used = 0;
     }
@@ -117,6 +164,7 @@ public:
     for (FreeNode *&head : freeLists_) {
       head = nullptr;
     }
+#endif
   }
 
 private:

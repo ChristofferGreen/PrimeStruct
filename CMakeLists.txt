@@ -5,6 +5,29 @@ option(PRIMESTRUCT_BUILD_TESTS "Build PrimeStruct tests" ON)
 option(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE
        "Enable ThreadSanitizer instrumentation and semantics smoke target"
        OFF)
+# TODO-5235: one-time diagnostic exhaustiveness audit for the arena
+# magic-static/reset hazard - see docs/CompilerArenaAllocator.md's
+# "TODO-5235" section and src/support/CompileArena.cpp's reset(). NEVER
+# enable this for a shipped/committed build; it is only for a manual,
+# throwaway investigation run. Forces AddressSanitizer for the whole build
+# (needed for the manual poisoning API CompileArena.cpp uses under this
+# flag) and deliberately makes CompileArena::reset() abandon+poison memory
+# instead of reusing it, so it also defeats the arena's whole performance
+# purpose - do not combine with Release perf measurement.
+option(PRIMESTRUCT_ARENA_POISON_AUDIT
+       "TODO-5235 diagnostic only: ASan-poison arena memory on reset instead of reusing it, to audit for magic-static/reset corruption. Never enable for a shipped build."
+       OFF)
+# TODO-5235: experimental only - wires tests/unit/test_main.cpp's
+# per-TEST_CASE ScopedCompileArena listener into the semantics/ir_pipeline/
+# etc. doctest binaries, re-enabling TODO-5234's original reset-per-scope
+# design in those binaries. Off by default (matches the shipped, safe,
+# never-reset-in-tests state); PRIMESTRUCT_ARENA_POISON_AUDIT forces this on
+# regardless, since resets-never-happening makes the audit a no-op. Only
+# turn this on standalone (without the audit) once a poison-audit run has
+# already passed clean for the exact revision being built.
+option(PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE
+       "TODO-5235 experimental only: reset the compile arena once per doctest TEST_CASE in test binaries. Verify with PRIMESTRUCT_ARENA_POISON_AUDIT first."
+       OFF)
 # TODO-5237: fast general-purpose allocator for the primec/primevm CLI
 # binaries only (see docs/TestRuntimeOptimization.md's TODO-5237 entry and
 # docs/CompilerArenaAllocator.md's "TODO-5237" section for the full
@@ -53,6 +76,21 @@ if(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE)
   endif()
   add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
   add_link_options(-fsanitize=thread)
+endif()
+
+if(PRIMESTRUCT_ARENA_POISON_AUDIT)
+  if(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE)
+    message(FATAL_ERROR
+            "PRIMESTRUCT_ARENA_POISON_AUDIT and PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE cannot both be on (ASan and TSan cannot be combined)")
+  endif()
+  add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address)
+  add_compile_definitions(PRIMEC_ARENA_POISON_AUDIT)
+  set(PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE ON CACHE BOOL "" FORCE)
+endif()
+
+if(PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE)
+  add_compile_definitions(PRIMEC_TEST_ARENA_RESET_PER_CASE)
 endif()
 
 # TODO-5237: resolve mimalloc once, up front, so both primec's and

@@ -1015,7 +1015,13 @@ const StdlibSurfaceMetadata GfxErrorHelpersSurface = {
 // compile-time literal: a new discovered collection surface (helper +
 // constructor pair) grows this vector by 2 with no change here.
 const std::vector<StdlibSurfaceMetadata> &registry() {
-  static const std::vector<StdlibSurfaceMetadata> storage = [] {
+  // TODO-5235: this is a magic static (process-lifetime, computed once on
+  // first call) whose first call can happen from inside a compile scope -
+  // wrap its build in systemHeapValue() so its backing vector (and every
+  // heap allocation nested inside buildCollectionsSurfaceMetadata()) lands
+  // on the system heap, never arena memory, regardless of when the first
+  // call happens.
+  static const std::vector<StdlibSurfaceMetadata> storage = systemHeapValue([] {
     const std::vector<StdlibSurfaceMetadata> collectionsEntries =
         buildCollectionsSurfaceMetadata(CollectionsSurfaceData);
     verifyKnownCollectionSurfaceIdsResolved(collectionsEntries);
@@ -1029,7 +1035,7 @@ const std::vector<StdlibSurfaceMetadata> &registry() {
     built.push_back(GfxBufferHelpersSurface);
     built.push_back(GfxErrorHelpersSurface);
     return built;
-  }();
+  });
   return storage;
 }
 
@@ -1057,7 +1063,8 @@ bool matchesAny(std::span<const std::string_view> spellings, std::string_view sp
 // registry entry, matching stdlibSurfaceMatchesSpelling()'s behavior
 // exactly for every input, not just typical ones.
 const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> &stdlibSurfaceSpellingIndex() {
-  static const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> index = [] {
+  // TODO-5235: magic static - see registry()'s comment above.
+  static const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> index = systemHeapValue([] {
     std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> built;
     auto insertAll = [&](std::span<const std::string_view> spellings, const StdlibSurfaceMetadata *metadata) {
       for (const std::string_view spelling : spellings) {
@@ -1071,7 +1078,7 @@ const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> &stdli
       insertAll(metadata.loweringSpellings, &metadata);
     }
     return built;
-  }();
+  });
   return index;
 }
 
@@ -1088,14 +1095,16 @@ const std::unordered_map<std::string_view, const StdlibSurfaceMetadata *> &stdli
 // built exactly once and never resized afterward, so addresses into it
 // remain stable for the process lifetime.
 const std::unordered_set<std::string_view> &stdlibSurfaceMemberNameSet(const StdlibSurfaceMetadata &metadata) {
-  static const std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> cache = [] {
-    std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> built;
-    for (const StdlibSurfaceMetadata &entry : registry()) {
-      built.emplace(&entry,
-                    std::unordered_set<std::string_view>(entry.memberNames.begin(), entry.memberNames.end()));
-    }
-    return built;
-  }();
+  // TODO-5235: magic static - see registry()'s comment above.
+  static const std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> cache =
+      systemHeapValue([] {
+        std::unordered_map<const StdlibSurfaceMetadata *, std::unordered_set<std::string_view>> built;
+        for (const StdlibSurfaceMetadata &entry : registry()) {
+          built.emplace(&entry,
+                        std::unordered_set<std::string_view>(entry.memberNames.begin(), entry.memberNames.end()));
+        }
+        return built;
+      });
   return cache.at(&metadata);
 }
 

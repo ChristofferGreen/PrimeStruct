@@ -1,5 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 
+#include <optional>
+
+#include "primec/support/CompileArena.h"
 #include "primec/testing/TestScratch.h"
 #include "third_party/doctest.h"
 
@@ -34,6 +37,55 @@
 //     future attempt starts with a smaller remaining surface, but this
 //     binary still stays entirely on the system allocator, exactly as
 //     TODO-5234 shipped it.
+//
+// PRIMEC_TEST_ARENA_RESET_PER_CASE (default undefined - normal builds are
+// unaffected): a still-experimental, manually-opted-in build-time switch
+// used only for the TODO-5235 poison-audit investigation
+// (docs/CompilerArenaAllocator.md). When defined, this binary constructs
+// one primec::ScopedCompileArena per doctest TEST_CASE via the listener
+// below, re-enabling the exact reset-per-TEST_CASE design described above.
+// Do NOT define this for any build whose result is meant to be trusted
+// without first confirming, for that exact build, that the full suite
+// passes clean under PRIMESTRUCT_ARENA_POISON_AUDIT.
+#if defined(PRIMEC_TEST_ARENA_RESET_PER_CASE)
+namespace {
+
+class ArenaResetPerTestCaseListener : public doctest::IReporter {
+ public:
+  explicit ArenaResetPerTestCaseListener(const doctest::ContextOptions &) {}
+
+  void report_query(const doctest::QueryData &) override {}
+  void test_run_start() override {}
+  void test_run_end(const doctest::TestRunStats &) override {}
+
+  void test_case_start(const doctest::TestCaseData &) override {
+    scope_.emplace();
+  }
+  void test_case_reenter(const doctest::TestCaseData &) override {}
+  void test_case_end(const doctest::CurrentTestCaseStats &) override {
+    scope_.reset();
+  }
+  void test_case_exception(const doctest::TestCaseException &) override {}
+  void subcase_start(const doctest::SubcaseSignature &) override {}
+  void subcase_end() override {}
+  void log_assert(const doctest::AssertData &) override {}
+  void log_message(const doctest::MessageData &) override {}
+  void test_case_skipped(const doctest::TestCaseData &) override {}
+
+ private:
+  // In-place slot (no extra allocation of its own beyond the optional's
+  // inline storage) so construction/destruction order exactly mirrors
+  // ScopedCompileArena's RAII contract: constructed at test_case_start,
+  // destroyed at test_case_end (which is also where all of a TEST_CASE's
+  // SUBCASE re-enters have finished, per doctest's own IReporter contract).
+  std::optional<primec::ScopedCompileArena> scope_;
+};
+
+REGISTER_LISTENER("arena_reset_per_test_case", 1, ArenaResetPerTestCaseListener);
+
+}  // namespace
+#endif
+
 int main(int argc, char **argv) {
   primec::testing::ensureTestScratchEnvironment();
 

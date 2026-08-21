@@ -86,8 +86,10 @@ inline std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
   std::string canonicalPath = stripTemplateSpecializationSuffix(path);
   // TODO-5243: same fix as isLegacyOrCanonicalSoaHelperPath() below - these
   // two comparison targets are compile-time constants, precompute once.
-  static const std::string refPath = "/" + legacySoaFolder() + "/ref";
-  static const std::string refRefPath = "/" + legacySoaFolder() + "/ref_ref";
+  static const std::string refPath =
+      primec::systemHeapValue([] { return "/" + legacySoaFolder() + "/ref"; });
+  static const std::string refRefPath =
+      primec::systemHeapValue([] { return "/" + legacySoaFolder() + "/ref_ref"; });
   if (canonicalPath == refPath) {
     return collectionPath(legacySoaFolder(), "ref");
   }
@@ -99,8 +101,10 @@ inline std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
 
 inline std::string canonicalizeLegacySoaGetHelperPath(std::string_view path) {
   const std::string canonicalPath = canonicalizeLegacySoaRefHelperPath(path);
-  static const std::string getPath = "/" + legacySoaFolder() + "/get";
-  static const std::string getRefPath = "/" + legacySoaFolder() + "/get_ref";
+  static const std::string getPath =
+      primec::systemHeapValue([] { return "/" + legacySoaFolder() + "/get"; });
+  static const std::string getRefPath =
+      primec::systemHeapValue([] { return "/" + legacySoaFolder() + "/get_ref"; });
   if (canonicalPath == getPath) {
     return collectionPath(legacySoaFolder(), "get");
   }
@@ -128,9 +132,12 @@ inline bool isLegacyOrCanonicalSoaHelperPath(std::string_view path,
   // turns the hot no-match path into pure string_view comparisons with no
   // allocation, while leaving every branch's actual match semantics
   // byte-for-byte identical.
-  static const std::string legacyPrefix = "/" + legacySoaFolder() + "/";
-  static const std::string canonicalPrefix = collectionPath(legacySoaFolder()) + "/";
-  static const std::string publicPrefix = collectionPath(publicSoaFolder()) + "/";
+  static const std::string legacyPrefix =
+      primec::systemHeapValue([] { return "/" + legacySoaFolder() + "/"; });
+  static const std::string canonicalPrefix =
+      primec::systemHeapValue([] { return collectionPath(legacySoaFolder()) + "/"; });
+  static const std::string publicPrefix =
+      primec::systemHeapValue([] { return collectionPath(publicSoaFolder()) + "/"; });
   if (path.starts_with(legacyPrefix)) {
     return path.substr(legacyPrefix.size()) == helperName;
   }
@@ -147,10 +154,14 @@ inline bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
   // TODO-5243: precompute the four (compile-time-constant) comparison
   // targets once instead of rebuilding all four via concatenation on every
   // call - same fix as the sibling helpers above.
-  static const std::string legacyRef = collectionPath(legacySoaFolder(), "ref");
-  static const std::string legacyRefRef = collectionPath(legacySoaFolder(), "ref_ref");
-  static const std::string publicRef = collectionPath(publicSoaFolder(), "ref");
-  static const std::string publicRefRef = collectionPath(publicSoaFolder(), "ref_ref");
+  static const std::string legacyRef =
+      primec::systemHeapValue([] { return collectionPath(legacySoaFolder(), "ref"); });
+  static const std::string legacyRefRef =
+      primec::systemHeapValue([] { return collectionPath(legacySoaFolder(), "ref_ref"); });
+  static const std::string publicRef =
+      primec::systemHeapValue([] { return collectionPath(publicSoaFolder(), "ref"); });
+  static const std::string publicRefRef =
+      primec::systemHeapValue([] { return collectionPath(publicSoaFolder(), "ref_ref"); });
   return path == legacyRef || path == legacyRefRef || path == publicRef ||
          path == publicRefRef;
 }
@@ -161,10 +172,14 @@ inline bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   // three comparison targets are compile-time constants, precompute once
   // instead of rebuilding them (two collectionPath() concatenations plus a
   // memberPath() concatenation) on every single call.
-  static const std::string soaVectorRefPath = collectionPath(experimentalSoaFolder(), "soaVectorRef");
-  static const std::string soaVectorRefRefPath = collectionPath(experimentalSoaFolder(), "soaVectorRefRef");
-  static const std::string soaColumnRefPath = collection_paths::memberPath(
-      collection_paths::kInternalSoaStorageFolder, "soaColumnRef");
+  static const std::string soaVectorRefPath = primec::systemHeapValue(
+      [] { return collectionPath(experimentalSoaFolder(), "soaVectorRef"); });
+  static const std::string soaVectorRefRefPath = primec::systemHeapValue(
+      [] { return collectionPath(experimentalSoaFolder(), "soaVectorRefRef"); });
+  static const std::string soaColumnRefPath = primec::systemHeapValue([] {
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder,
+                                         "soaColumnRef");
+  });
   return canonicalPath == soaVectorRefPath || canonicalPath == soaVectorRefRefPath ||
          canonicalPath == soaColumnRefPath;
 }
@@ -176,10 +191,12 @@ inline bool isExperimentalColumnarVectorSpecializedTypePath(std::string_view pat
   // classification fan-out as its already-fixed siblings and was rebuilding
   // all three via allocation+concatenation on every call (1.00% of total
   // instructions on its own in a zero-SoA-usage profile). Precompute once.
-  static const std::string specializedPrefix =
-      collectionPath(publicSoaFolder(), soaBackingTypeName() + "__");
-  static const std::string specializedPrefixNoSlash = specializedPrefix.substr(1);
-  static const std::string specializedPrefixBare = soaBackingTypeName() + "__";
+  static const std::string specializedPrefix = primec::systemHeapValue(
+      [] { return collectionPath(publicSoaFolder(), soaBackingTypeName() + "__"); });
+  static const std::string specializedPrefixNoSlash =
+      primec::systemHeapValue([&] { return specializedPrefix.substr(1); });
+  static const std::string specializedPrefixBare =
+      primec::systemHeapValue([] { return soaBackingTypeName() + "__"; });
   return path.starts_with(specializedPrefix) ||
          path.starts_with(specializedPrefixNoSlash) ||
          path.starts_with(specializedPrefixBare);
@@ -189,16 +206,24 @@ inline bool isExperimentalColumnarVectorTypePath(std::string_view path) {
   // TODO-5244: same fix - typePrefix/typePrefixWithSlash and each
   // matchesTypePrefix() prefix pair are all compile-time constants,
   // precompute once instead of rebuilding on every call.
-  static const std::string typePrefix =
-      std::string("std") + "/" + "collections" + "/" +
-      publicSoaFolder() + "/" + soaBackingTypeName();
-  static const std::string typePrefixWithSlash = "/" + typePrefix;
-  static const std::string backingTypeTemplatePrefix = soaBackingTypeName() + "<";
-  static const std::string backingTypeSpecializedPrefix = soaBackingTypeName() + "__";
-  static const std::string typePrefixTemplatePrefix = typePrefix + "<";
-  static const std::string typePrefixSpecializedPrefix = typePrefix + "__";
-  static const std::string typePrefixWithSlashTemplatePrefix = typePrefixWithSlash + "<";
-  static const std::string typePrefixWithSlashSpecializedPrefix = typePrefixWithSlash + "__";
+  static const std::string typePrefix = primec::systemHeapValue([] {
+    return std::string("std") + "/" + "collections" + "/" +
+           publicSoaFolder() + "/" + soaBackingTypeName();
+  });
+  static const std::string typePrefixWithSlash =
+      primec::systemHeapValue([&] { return "/" + typePrefix; });
+  static const std::string backingTypeTemplatePrefix =
+      primec::systemHeapValue([] { return soaBackingTypeName() + "<"; });
+  static const std::string backingTypeSpecializedPrefix =
+      primec::systemHeapValue([] { return soaBackingTypeName() + "__"; });
+  static const std::string typePrefixTemplatePrefix =
+      primec::systemHeapValue([&] { return typePrefix + "<"; });
+  static const std::string typePrefixSpecializedPrefix =
+      primec::systemHeapValue([&] { return typePrefix + "__"; });
+  static const std::string typePrefixWithSlashTemplatePrefix =
+      primec::systemHeapValue([&] { return typePrefixWithSlash + "<"; });
+  static const std::string typePrefixWithSlashSpecializedPrefix =
+      primec::systemHeapValue([&] { return typePrefixWithSlash + "__"; });
   const bool matchesBackingType = path == soaBackingTypeName() ||
       path.rfind(std::string_view(backingTypeTemplatePrefix), 0) == 0 ||
       path.rfind(std::string_view(backingTypeSpecializedPrefix), 0) == 0;

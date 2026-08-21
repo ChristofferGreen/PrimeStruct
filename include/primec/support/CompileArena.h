@@ -1,24 +1,35 @@
 #pragma once
 
 // TODO-5233/TODO-5234/TODO-5235: scoped, resettable arena allocator used by
-// both the CLI binaries (primec/primevm) and, as of TODO-5235, the
-// long-lived doctest test binaries (semantics/ir_pipeline/etc.).
+// the CLI binaries (primec/primevm). TODO-5235 built the general escape
+// hatch below (SystemHeapScope / systemHeapValue / registerArenaResetCallback)
+// so that resets *could* also be made safe inside the long-lived doctest
+// test binaries (semantics/ir_pipeline/etc.), but that per-TEST_CASE reset
+// wiring has NOT shipped as of this writing - see
+// docs/CompilerArenaAllocator.md's "TODO-5235" section and
+// tests/unit/test_main.cpp's own file comment for why (three
+// fix-rebuild-rerun rounds each found a *different* magic-static hazard
+// class than the last, the opposite of the search converging). Test
+// binaries currently run entirely on the system allocator, exactly as
+// TODO-5234 shipped it; do not assume otherwise from this file alone.
 //
 // See docs/CompilerArenaAllocator.md for the full design writeup: the
 // allocation survey, an earlier "reset per compile" design that turned out
 // to be unsafe (magic-static corruption), and the general escape hatch
 // (SystemHeapScope / systemHeapValue / registerArenaResetCallback) that
-// TODO-5235 added to make resets safe. Summary of the public contract:
+// TODO-5235 added to make resets safe *when nothing arena-allocates a
+// process-lifetime value*. Summary of the public contract:
 //
 //   - ScopedCompileArena is an RAII guard marking "the arena is active for
 //     the duration of this scope." CLI binaries construct exactly one, near
-//     the top of main(), living for the whole process. Test binaries
-//     construct/destroy one per doctest TEST_CASE (see
-//     tests/unit/test_main.cpp's IReporter listener). Nesting is supported
-//     via a thread_local depth counter; when the outermost scope on a
-//     thread ends, that thread's arena is reset (bump cursor and free lists
-//     rewound to empty - the chunks themselves are kept and reused, not
-//     unmapped) and every callback registered via
+//     the top of main(), living for the whole process, and it never resets
+//     in practice since the process exits before it goes out of scope. A
+//     future per-TEST_CASE construction in test binaries (not yet wired -
+//     see above) would be the reset path this mechanism was built for.
+//     Nesting is supported via a thread_local depth counter; when the
+//     outermost scope on a thread ends, that thread's arena is reset (bump
+//     cursor and free lists rewound to empty - the chunks themselves are
+//     kept and reused, not unmapped) and every callback registered via
 //     registerArenaResetCallback() runs on that thread.
 //   - While at least one ScopedCompileArena is alive on a thread, that
 //     thread's small (<=4096-byte), default-alignment heap allocations are

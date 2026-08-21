@@ -937,9 +937,12 @@ bool isCanonicalStdlibSoaHelperPath(std::string_view path, std::string_view help
   // candidate considered, including for compiles with zero SoA usage
   // where the answer is always false - profiling showed these two
   // rebuilt via string concatenation on every call. Precompute once.
-  static const std::string compatibilityPrefix =
-      compatibilitySoaHelperTargetPath("") + "/";
-  static const std::string publicPrefix = publicSoaHelperTargetPath("") + "/";
+  // TODO-5235: built via systemHeapValue() so these magic statics' backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::string compatibilityPrefix = primec::systemHeapValue(
+      [] { return compatibilitySoaHelperTargetPath("") + "/"; });
+  static const std::string publicPrefix =
+      primec::systemHeapValue([] { return publicSoaHelperTargetPath("") + "/"; });
   return (canonicalPath.rfind(compatibilityPrefix, 0) == 0 ||
           canonicalPath.rfind(publicPrefix, 0) == 0) &&
          isLegacyOrCanonicalSoaHelperPath(canonicalPath, helperName);

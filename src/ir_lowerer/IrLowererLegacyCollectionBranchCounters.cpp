@@ -1,5 +1,7 @@
 #include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
 
+#include "primec/support/CompileArena.h"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -32,7 +34,9 @@ std::string logFileSinkPath() {
 }
 
 void appendLineToLogFileSink(const std::string &line) {
-  static const std::string path = logFileSinkPath();
+  // TODO-5235: built via systemHeapValue() so this magic static's backing
+  // memory is never arena-allocated - see docs/CompilerArenaAllocator.md.
+  static const std::string path = primec::systemHeapValue(logFileSinkPath);
   if (path.empty()) {
     return;
   }
