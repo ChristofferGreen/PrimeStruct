@@ -322,8 +322,12 @@ investigation chain's actively-productive leaves - see
   stdlib templates with up to 16 type parameters (measured at 426s for a
   single 16-column case, 1762s for the worst full shard) and shipped a
   CTest `TIMEOUT` override (300s -> 2400s) as the near-term fix, all 3
-  previously-timing-out shards now pass. TODO-4707 fixes the cross-test-case
-  pollution that currently forces small 10-case shards, TODO-4708 measures
+  previously-timing-out shards now pass. TODO-4707 (done) investigated the
+  cross-test-case pollution that motivated small 10-case shards and found
+  it no longer reproduces (resolved as a side effect of intervening
+  collection-decoupling work, not by a targeted fix - see its
+  `progress_2026-08-21` note), so pollution-freedom is confirmed for these
+  two suites; TODO-4708 measures
   fixed per-shard binary startup cost, TODO-4709 audits `compile_run`
   cases that only check pass/fail (candidates for downgrading off the full
   compile-and-execute path), TODO-4710 caches redundant stdlib `.prime`
@@ -3129,7 +3133,7 @@ investigation chain's actively-productive leaves - see
     and ctest summary reported "100% tests passed, 0 tests failed out of
     1898" (unchanged test count, confirming this was documentation-only).
 
-- [ ] TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
+- [x] TODO-4707: (RESOLVED) Fix cross-test-case pollution in whole-process doctest suites
   - owner: ai
   - created_at: 2026-07-15
   - phase: Test runtime optimization
@@ -3162,6 +3166,80 @@ investigation chain's actively-productive leaves - see
     increase CTest shard sizes in this leaf even though it becomes safe to
     do so — that's a follow-up once pollution-freedom is proven broadly,
     not just for these two known cases.
+  - progress_2026-08-21: Reproduction-first investigation, per this leaf's
+    own instructions, found both documented symptoms **no longer
+    reproduce** on current HEAD - no code change was needed to satisfy the
+    acceptance criteria. Verified thoroughly before concluding this,
+    against a fresh (not stale) build: the checked-out binary was ~5
+    commits behind HEAD (through TODO-4701/4702/4703/4704), so a full
+    `./scripts/compile.sh --release` was run first (clean: raw build log
+    grepped for `error:`/`Error 1`/`Error 2` with zero matches, ctest
+    summary "100% tests passed, 0 tests failed out of 1898"). Against the
+    resulting fresh binaries:
+    - `PrimeStruct_semantics_tests --test-suite=primestruct.semantics.calls_flow.collections`
+      (no `--first`/`--last`, the exact unsharded repro command the
+      original notes used): 1305/1305 passed, 0 failed - no trace of the
+      ~114-case artifact. Reran with `--order-by=rand --rand-seed=777` (a
+      stronger stress test than the original sequential-order repro, since
+      any residual pointer/registration-order-dependent state would be far
+      more likely to surface under randomized ordering): still 1305/1305
+      passed.
+    - `PrimeStruct_semantics_tests --test-suite=primestruct.semantics.imports`
+      (unsharded): 87/87 passed, including "import resolves std
+      collections experimental map wildcard surface" specifically. Reran
+      with `--order-by=rand` under two different seeds (12345, 999): both
+      87/87 passed.
+    - Cross-checked against CTest's own sharded invocation from the same
+      fresh build: `ctest -R calls_flow_collections_` 131/131 shards
+      passed; `ctest -R primestruct_semantics_imports` 87/87 shards
+      passed - identical pass sets to the unsharded runs, satisfying both
+      acceptance criteria exactly as written.
+    - Investigated what shared state *could* explain the originally
+      documented symptom before concluding this, rather than stopping at
+      "it happens to pass now": `tests/unit/test_main.cpp` deliberately
+      never constructs a `primec::ScopedCompileArena` (per TODO-5234/5235,
+      documented in `docs/CompilerArenaAllocator.md`), so none of the
+      three known thread_local caches
+      (`SemanticsBindingTypeHelpers.cpp`'s three memoization tables,
+      `StdlibSurfaceRegistry.cpp`'s resolved-path cache,
+      `SourceLocationMapper.cpp`'s cached-mapper-by-address) are ever
+      cleared between `TEST_CASE`s in these binaries - their
+      `registerArenaResetCallback()` registration is a no-op in practice
+      here. The first two are pure functions of their string input against
+      either no external state or immutable process-lifetime registry
+      data, so persisting across test cases is safe regardless of
+      ordering (confirmed by the randomized-order reruns above staying
+      green). `SourceLocationMapper.cpp`'s cache is keyed by the
+      `ExpandedSource&` pointer's raw address rather than content, which
+      its own code comment already flags as depending on address
+      non-reuse across compiles for correctness - a real, structurally
+      latent hazard - but it only affects diagnostic span/line remapping,
+      not the parse/validate pass-fail outcome itself (span remapping runs
+      strictly after the boolean result is already computed), so it does
+      not actually explain the previously-documented "expected-success
+      cases raise errors; expected-rejection cases silently validate"
+      symptom even if it were being hit. No evidence this cache is the
+      mechanism that ever caused the historical failures.
+    - Best-supported conclusion: the pollution documented in mid-July 2026
+      (`docs/failing_tests.md`'s "Methodology note" and "Flaky, not a real
+      failure" entries, both dated around 2026-07-13 through 2026-07-16)
+      was real at the time, but has since been resolved as an emergent
+      side effect of the extensive collection-decoupling/stdlib-resolution
+      work that landed across TODO-4650 through TODO-4705 (which
+      substantially reworked the same stdlib-surface-registry and
+      semantics-validation code this investigation's search focused on) -
+      not by any single targeted fix in this leaf, since no code change
+      was made. Did not attempt to bisect to an exact commit: the
+      acceptance criteria are about current behavior, both are now met and
+      independently reconfirmed via fresh build + sequential + randomized
+      unsharded runs + sharded cross-check, and bisecting historical
+      commits would cost multiple additional full rebuilds for
+      attribution only, not for closing this leaf's actual acceptance
+      criteria.
+    - `docs/failing_tests.md`'s "Methodology note" and "Flaky, not a real
+      failure" sections were updated with superseding notes pointing back
+      here rather than deleted, preserving the historical record.
+    - Per stop_rule, did not touch CTest shard sizes in this leaf.
 
 - [x] TODO-4708: (RESOLVED) Measure per-shard doctest binary startup/registration overhead
   - owner: ai

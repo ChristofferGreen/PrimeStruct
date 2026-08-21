@@ -322,6 +322,19 @@ regression. Prefer CTest's own sharded invocation
 check — it matches what the real gate runs and doesn't hit this
 cross-test-case pollution at all.
 
+**Superseded 2026-08-21 (TODO-4707):** the ~114-case whole-process artifact
+no longer reproduces. See TODO-4707's `progress_2026-08-21` entry in
+`docs/todo.md` for the full writeup - a fresh `./scripts/compile.sh
+--release` build plus direct unsharded
+`--test-suite=primestruct.semantics.calls_flow.collections` runs
+(sequential and `--order-by=rand`) all pass 1305/1305, matching the
+CTest-sharded (131/131 shard) result exactly. The "prefer CTest's sharded
+invocation" guidance above is still generally sound practice, but it is no
+longer required as a workaround for this specific pollution, which appears
+to have been resolved as a side effect of the intervening TODO-4650
+through TODO-4705 collection-decoupling/stdlib-resolution work rather than
+by any single targeted fix.
+
 ### Methodology note (2026-07-16): CTest `--output-on-failure` log slicing
 pitfall - not a real bug
 
@@ -412,6 +425,13 @@ repro first.
   between cases) rather than anything related to the 409 fix. Not touched
   since it never surfaces in the real `ctest` gate; noted here in case
   someone widens sharding later.
+  **Superseded 2026-08-21 (TODO-4707):** no longer reproduces. See
+  TODO-4707's `progress_2026-08-21` entry in `docs/todo.md` for the full
+  writeup - a fresh `./scripts/compile.sh --release` build plus direct
+  unsharded `--test-suite=primestruct.semantics.imports` runs (sequential
+  and `--order-by=rand` with two seeds) all pass 87/87 with this exact
+  test case included, matching the CTest-sharded result exactly. Left this
+  note in place for historical context; do not treat it as a live failure.
 
 ### Fixed in this session (2026-07-12)
 
@@ -617,7 +637,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-08-21T10:06:11Z`
+- Last updated: `2026-08-21T10:25:44Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
