@@ -1759,6 +1759,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_soa_surface_trace_zero_audit_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
+    NAME PrimeStruct_collection_audit_exemption_count_ratchet
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_collection_audit_exemption_count.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_collection_audit_exemption_count_ratchet PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_collection_audit_exemption_count_ratchet_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_collection_audit_exemption_count.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_collection_audit_exemption_count_ratchet_self_test PROPERTIES TIMEOUT 60)
+
+  add_test(
     NAME PrimeStruct_new_collection_zero_cpp_gate_self_test
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_new_collection_zero_cpp.py
             --repo-root ${CMAKE_SOURCE_DIR}

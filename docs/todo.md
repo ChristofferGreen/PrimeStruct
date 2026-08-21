@@ -2988,7 +2988,7 @@ investigation chain's actively-productive leaves - see
     "100% tests passed, 0 tests failed out of 1896", including
     `PrimeStruct_new_collection_zero_cpp_gate_self_test` passing.
 
-- [ ] TODO-4704: Add an exemption-count ratchet for check_vector_surface_traces.py
+- [x] TODO-4704: Add an exemption-count ratchet for check_vector_surface_traces.py
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 5 (proof)
@@ -3005,6 +3005,36 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once the ratchet exists; shrinking the baseline is
     handled per-leaf in Phases 2-4 by removing markers as files are
     migrated, not in this leaf.
+  - progress_2026-08-21: Added `scripts/check_collection_audit_exemption_count.py`.
+    It scans `include/` and `src/` (same `.h`/`.hpp`/`.cpp`/`.cc`/`.cxx`
+    suffix scope and "marker in first 10 lines" convention as
+    `check_vector_surface_traces.py`/`check_soa_surface_trace_inventory.py`)
+    for any of the four exemption markers currently in use across
+    `scripts/`: `vector-surface-audit: exempt`, `soa-surface-audit: exempt`,
+    `map-surface-audit: exempt`, and `collection-surface-audit: exempt`
+    (found by grepping all of `scripts/` for the `*-surface-audit: exempt`
+    pattern, not just the marker pair `check_vector_surface_traces.py`
+    itself recognizes). The stale "115 files as of 2026-07-06" figure in
+    this task's scope text was re-measured and found stale: the real
+    count as of 2026-08-21 is **126** files (extensive collection-decoupling
+    cleanup from TODO-4670/4681/4686-4703 shifted markers around between
+    2026-07-06 and now), and 126 is the baseline actually recorded in
+    `BASELINE_EXEMPT_FILE_COUNT`. Wired into CTest/CI in `CMakeLists.txt`
+    as `PrimeStruct_collection_audit_exemption_count_ratchet` (runs the
+    checker against the real repo tree) alongside
+    `PrimeStruct_collection_audit_exemption_count_ratchet_self_test`
+    (`tests/scripts/test_check_collection_audit_exemption_count.py`),
+    positioned next to the existing
+    `PrimeStruct_vector_surface_traces`/`PrimeStruct_soa_surface_trace_zero_audit`
+    pair. The self-test covers three cases: the real repo state passes
+    today; a fixture tree seeded with baseline+1 exempt files fails with
+    the count and baseline in stderr; and a fixture tree with exactly
+    baseline exempt files still passes. Verified with a fresh (non
+    `--rerun-failed`) `./scripts/compile.sh --release`: raw build log
+    grepped for `error:`/`Error 1`/`Error 2` with zero matches, and ctest
+    summary reported "100% tests passed, 0 tests failed out of 1898",
+    including both new tests passing. No exempt markers were removed or
+    added to any production file in this change, per the stop_rule.
 
 - [ ] TODO-4705: Correct stale Collection decoupling documentation
   - owner: ai
