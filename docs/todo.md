@@ -2922,7 +2922,7 @@ investigation chain's actively-productive leaves - see
     (raw log grepped for `error:`/`Error 1`/`Error 2`, zero matches) and
     "no failing CTest cases".
 
-- [ ] TODO-4703: Add a diff-based zero-C++ gate script for new collection types
+- [x] TODO-4703: Add a diff-based zero-C++ gate script for new collection types
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 5 (proof)
@@ -2938,6 +2938,55 @@ investigation chain's actively-productive leaves - see
   - stop_rule: Stop once the script exists and passes for one proof case;
     do not attempt to make it a general-purpose ongoing CI gate beyond
     this one recorded case yet.
+  - progress_2026-08-21: Added `scripts/check_new_collection_zero_cpp.py`
+    (CLI: `python3 scripts/check_new_collection_zero_cpp.py <before-ref>
+    <after-ref> [--root <path>]`, following the argparse/error-reporting
+    conventions of `scripts/check_soa_surface_trace_inventory.py`), which
+    runs `git diff --name-only <before-ref> <after-ref>` and fails
+    (non-zero exit, disallowed paths listed on stderr) unless every
+    changed path falls under an allowed prefix. Resolved a real
+    scope-text-vs-reality discrepancy: the literal `stdlib/**, tests/**,
+    docs/**` allowed set from this entry's own scope text does NOT
+    actually hold for TODO-4702's real commit range, since that commit
+    also touched `CMakeLists.txt` and
+    `cmake/PrimeStructManagedCompileRunSmokeSuites.cmake` - genuinely
+    required because this codebase has no test-file auto-discovery
+    (registering a new compile_run test source requires a CMakeLists.txt
+    entry, and the existing smoke shards match sources by an explicit
+    per-file SOURCE_FILE glob, so a new test file needs a new shard
+    block too), as TODO-4702's own progress note documents. Per this
+    session's established precedent (treat the acceptance criterion -
+    "passes against the TODO-4702 commit range" - as authoritative over
+    scope-text wording when the two conflict), expanded the allowed set
+    to `stdlib/**`, `tests/**`, `docs/**`, `cmake/**`, and the exact path
+    `CMakeLists.txt`, while deliberately keeping `src/**` and
+    `include/**` excluded (the actual compiler/VM source trees this gate
+    exists to protect). This reasoning is documented in full in the
+    script's own top-of-file docstring. Verified directly first:
+    `python3 scripts/check_new_collection_zero_cpp.py 2111c8b 0db6025`
+    passes ("7 changed path(s) ... all fall within the allowed set");
+    a negative smoke check against the TODO-4701 range (`7bf0886
+    2111c8b`, which touches `src/**`/`include/**`) correctly fails and
+    lists the disallowed paths. Wired into the test workflow with a
+    companion self-test, `tests/scripts/test_check_new_collection_zero_cpp.py`
+    (style matching `tests/scripts/test_check_soa_surface_trace_inventory.py`),
+    which invokes the checker against two fixed real commit ranges from
+    this repo's own history: the TODO-4702 range (2111c8b..0db6025,
+    positive case, must pass) and the TODO-4701 range (7bf0886..2111c8b,
+    negative case, must fail and name the specific disallowed
+    src/**/include/** paths); the self-test skips gracefully (exit 0) if
+    either ref is absent from the checkout's history. Registered as
+    CTest target `PrimeStruct_new_collection_zero_cpp_gate_self_test` in
+    `CMakeLists.txt`, following the existing `add_test`/
+    `set_tests_properties(... TIMEOUT 60)` pattern used by the other
+    checker self-tests. Per the stop_rule, this is a one-off proof-case
+    gate invoked directly with an explicit ref pair, not wired as an
+    always-on repo-wide CI gate scanning arbitrary revisions. Verified
+    via `./scripts/compile.sh --release` (fresh build, not
+    `--rerun-failed`): raw build log grepped for `error:`/`Error 1`/
+    `Error 2` with zero matches, and ctest summary reported
+    "100% tests passed, 0 tests failed out of 1896", including
+    `PrimeStruct_new_collection_zero_cpp_gate_self_test` passing.
 
 - [ ] TODO-4704: Add an exemption-count ratchet for check_vector_surface_traces.py
   - owner: ai
