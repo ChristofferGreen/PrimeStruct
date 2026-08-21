@@ -285,10 +285,22 @@ investigation chain's actively-productive leaves - see
 - Collection decoupling: move hardcoded collection knowledge from C++ to
   .prime files. ~75 production files have special-cased vector/map/soa
   logic. Phase 1 (manifest extension) complete: TODO-4656 through
-  TODO-4661, TODO-4672 through TODO-4675 done. Phase 2 (type-category
-  declarations) complete: TODO-4662 through TODO-4667 done. Phase 3
-  (generic slot layout): TODO-4668 and TODO-4669 done. Remaining: TODO-4670
-  (remove old alias branches when ready), TODO-4671 (cleanup dead helpers).
+  TODO-4661, TODO-4672 through TODO-4675 done (all 10 confirmed `[x]` in
+  `docs/todo_finished.md` with commit-hash evidence, re-verified
+  2026-08-21 per TODO-4705). Phase 2 (type-category declarations)
+  complete: TODO-4662 through TODO-4667 done. Phase 3 (generic slot
+  layout): TODO-4668 and TODO-4669 done, and TODO-4670/TODO-4671 (remove
+  old alias branches, cleanup dead helpers) are also done - TODO-4670 was
+  later superseded/extended by TODO-4700's evidence-based deletion of the
+  3-slot branches plus a duplicate definition TODO-4670's original scope
+  never covered (see TODO-4670's entry below for the cross-reference).
+  Phase 4 (evidence-based branch deletion) and Phase 5 (proof) are also
+  done: TODO-4699 through TODO-4702 landed the reachability
+  instrumentation, evidence-based deletions, and a second zero-C++ toy
+  collection type. This effort's top-level completion definition is
+  TODO-4703 (a diff-based zero-C++ gate script, passing against the
+  TODO-4702 commit range) and TODO-4704 (an audit-exemption-count ratchet
+  wired into CTest/CI) - both `[x]` below with commit-verified evidence.
   Full design document at `docs/CollectionDecoupling.md`. A separate
   registry-generalization track (`phase: Collection decoupling — Phase 1`
   on its own task blocks, not to be confused with the manifest-extension
@@ -1192,6 +1204,17 @@ investigation chain's actively-productive leaves - see
     via `./scripts/compile.sh --release`: clean build (no `error:`/
     `Error 1`/`Error 2` in the raw log) and
     `100% tests passed, 0 tests failed out of 1890`.
+  - note (TODO-4705, 2026-08-21): TODO-4700 later superseded/extended this
+    leaf's scope in practice. This TODO-4670 entry only ever covered the
+    two hardcoded 3-slot early-exit branches (`isBuiltinVectorTypeName`/
+    `isBuiltinSoaVectorTypeName` checks) in
+    `IrLowererStructSlotLayoutHelpers.cpp`, and left the helper
+    *definitions* in place. TODO-4700 went further: it deleted those same
+    two branches (re-derived independently by content since line numbers
+    had drifted) plus an independent duplicate definition of
+    `isBuiltinVectorTypeName` in `IrLowererUninitializedStructInference.cpp`
+    that this entry's original scope text never mentioned or covered. See
+    TODO-4700's entry above for the full evidence-based deletion.
 
 - [x] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
   - owner: ai
@@ -3036,7 +3059,7 @@ investigation chain's actively-productive leaves - see
     including both new tests passing. No exempt markers were removed or
     added to any production file in this change, per the stop_rule.
 
-- [ ] TODO-4705: Correct stale Collection decoupling documentation
+- [x] TODO-4705: Correct stale Collection decoupling documentation
   - owner: ai
   - created_at: 2026-07-06
   - phase: Collection decoupling — Phase 6 (doc hygiene)
@@ -3053,6 +3076,58 @@ investigation chain's actively-productive leaves - see
       source-verified completion status for TODO-4656 through TODO-4675.
   - stop_rule: Stop once both docs are corrected; do not re-scope any
     open TODO's acceptance criteria in this leaf.
+  - progress_2026-08-21: Re-verified every TODO-4656 through TODO-4675
+    against `docs/todo_finished.md` (finished_at + commit-hash evidence)
+    and `docs/todo.md` (`[x]` + progress notes). Result: this leaf's own
+    scope text was itself stale - it was filed 2026-07-06 claiming "only
+    4656/4658 are done", but by 2026-08-21 **all 20** of TODO-4656 through
+    TODO-4675 are genuinely done (confirmed table: 4656 [x] 2026-06-13,
+    4657 [x] 2026-06-13, 4658 [x] 2026-06-13, 4659 [x] 2026-06-13, 4660
+    [x] 2026-06-13, 4661 [x] 2026-06-13, 4662 [x], 4663 [x], 4664 [x],
+    4665 [x], 4666 [x], 4667 [x], 4668 [x], 4669 [x], 4670 [x]
+    progress_2026-08-19, 4671 [x] progress_2026-08-19, 4672 [x]
+    2026-06-13, 4673 [x] 2026-06-13, 4674 [x] 2026-06-13, 4675 [x]
+    2026-06-13). Fixed docs/todo.md's summary line (the "Collection
+    decoupling" bullet near the top) to state all 20 are done instead of
+    the old "Remaining: TODO-4670 ... TODO-4671" wording, and added the
+    TODO-4703/TODO-4704 top-level-completion-definition sentence there.
+    In docs/CollectionDecoupling.md: checked off all previously-unchecked
+    items in this range (TODO-4656, 4657, 4659, 4660, 4661, 4670, 4671,
+    4673, 4674 - not just the three named in this leaf's own now-stale
+    scope text, since the acceptance criterion covers the full
+    TODO-4656..TODO-4675 range) with evidence notes matching the doc's
+    existing citation style, each citing the specific docs/todo.md or
+    docs/todo_finished.md entry it was confirmed against; TODO-4658,
+    TODO-4672, and TODO-4675 were already `[x]` with evidence notes from
+    a prior pass, verified correct and left as-is. Updated the "Current
+    state (verified 2026-07-06)" section's stale "only TODO-4656 and
+    TODO-4658 are actually done" claim with a dated 2026-08-21 correction
+    paragraph (kept the original prose intact per this doc's own
+    historical-record convention, added the correction alongside it
+    rather than deleting it). Added the TODO-4670/TODO-4700 duplicate-
+    definition cross-reference as a `note` entry appended to TODO-4670's
+    block in docs/todo.md (TODO-4670 only ever covered the two 3-slot
+    early-exit branches in IrLowererStructSlotLayoutHelpers.cpp and left
+    the duplicate `isBuiltinVectorTypeName` definition in
+    IrLowererUninitializedStructInference.cpp untouched; TODO-4700 later
+    deleted that duplicate too, which TODO-4670's original scope text
+    never mentioned) and mirrored the same cross-reference into
+    TODO-4670's entry in docs/CollectionDecoupling.md. Recorded the
+    top-level completion definition in docs/CollectionDecoupling.md's
+    Phase 5 bullet: the effort is complete once (a) TODO-4703's
+    `scripts/check_new_collection_zero_cpp.py` passes against a real
+    commit range adding a new collection type (verified against
+    2111c8b..0db6025) and (b) TODO-4704's
+    `scripts/check_collection_audit_exemption_count.py` ratchet exists
+    and is wired into CTest/CI (baseline 126 exempt files as of
+    2026-08-21) - both true as of this pass, cross-referencing TODO-4703
+    and TODO-4704's `[x]` entries in docs/todo.md for full evidence; the
+    same sentence was added to docs/todo.md's summary line. No C++/Python
+    source was changed. Verified via `./scripts/compile.sh --release`
+    (fresh build, actively polled to completion, not idle-waited): raw
+    build log grepped for `error:`/`Error 1`/`Error 2` with zero matches,
+    and ctest summary reported "100% tests passed, 0 tests failed out of
+    1898" (unchanged test count, confirming this was documentation-only).
 
 - [ ] TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
   - owner: ai

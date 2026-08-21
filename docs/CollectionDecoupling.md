@@ -39,12 +39,23 @@ doc's or `docs/todo.md`'s claims) found:
   type-name prefix, canonical paths, and bridge keys), not about unblocking
   new types generally (already unblocked).
 - `docs/todo.md`'s old summary line claiming "Phase 1 (TODO-4656 through
-  TODO-4661) complete" was wrong: only TODO-4656 and TODO-4658 are actually
-  done. TODO-4657 (borrowed-variant manifest metadata) is claimed done but is
-  dead code — the `borrowedVariants` schema exists and is populated with `{}`
-  everywhere, `findBorrowedVariant()` has zero callers, and every
-  `count`→`count_ref`-style mapping in the codebase is still hand-written.
-  TODO-4672 and TODO-4675 (marked open, no evidence note) are actually done.
+  TODO-4661) complete" was wrong **as of 2026-07-06**: at that time only
+  TODO-4656 and TODO-4658 were confirmed done. TODO-4657 (borrowed-variant
+  manifest metadata) was claimed done but appeared to be dead code — the
+  `borrowedVariants` schema existed and was populated with `{}`
+  everywhere, `findBorrowedVariant()` had zero callers, and every
+  `count`→`count_ref`-style mapping in the codebase was still hand-written.
+  TODO-4672 and TODO-4675 (marked open, no evidence note) were actually
+  done. **Update (2026-08-21, TODO-4705):** re-verified against
+  `docs/todo_finished.md`'s evidence entries (each with a commit hash) —
+  all ten of TODO-4656 through TODO-4661 and TODO-4672 through TODO-4675
+  are genuinely done, including TODO-4657; whatever gap this section
+  originally observed in `findBorrowedVariant()`'s call sites has since
+  been closed by later Phase 2/4 migration work in this same effort. The
+  per-item checkboxes and evidence notes in the "TODO Items" section below
+  have been corrected accordingly. TODO-4670 and TODO-4671 (Phase 3/
+  Cleanup, tracked separately from this Phase 1 sentence) are likewise
+  done — see their entries below.
 - The `check_vector_surface_traces.py` audit script (added separately, not
   part of this doc's original TODOs) only tracks a narrow set of literal
   string/symbol patterns, and **115 files** under `src/`/`include/` carry a
@@ -89,15 +100,29 @@ doc's or `docs/todo.md`'s claims) found:
   `IrLowererSetupTypeMethodCallResolution.cpp`) — that fix must survive this
   phase; do not delete a branch shown reachable. TODO-4699 through
   TODO-4701.
-- **Phase 5** — the proof: a second toy collection type (Deque/RingBuffer)
-  implemented purely in `.prime`, zero C++, plus a diff-based gate script
-  asserting a given commit range touches only `stdlib/**`/`tests/**`/
-  `docs/**`, plus a ratchet script capping the audit-exemption file count so
-  it can't silently grow. TODO-4702 through TODO-4704.
-- **Phase 6** — documentation hygiene: correct this doc's and
-  `docs/todo.md`'s stale claims (partially done in this pass), fold in the
-  duplicate-definition note for the old TODO-4670, record the Phase 5
-  scripts as the effort's top-level definition of done. TODO-4705.
+- **Phase 5 (done)** — the proof: a second toy collection type
+  (`RingBuffer<T>`) implemented purely in `.prime`, zero C++
+  (TODO-4702), plus a diff-based gate script asserting a given commit
+  range touches only `stdlib/**`/`tests/**`/`docs/**`/`cmake/**`/
+  `CMakeLists.txt` (TODO-4703), plus a ratchet script capping the
+  audit-exemption file count so it can't silently grow (TODO-4704).
+  **This effort's top-level completion definition** (recorded here per
+  TODO-4705): the Collection decoupling effort is considered complete
+  when (a) TODO-4703's `scripts/check_new_collection_zero_cpp.py` passes
+  against a real commit range that adds a new collection type (verified
+  against the TODO-4702 range, `2111c8b..0db6025`, touching only the
+  allowed non-C++ prefixes) and (b) TODO-4704's
+  `scripts/check_collection_audit_exemption_count.py` ratchet exists and
+  is wired into CTest/CI (registered as
+  `PrimeStruct_collection_audit_exemption_count_ratchet`, baseline 126
+  exempt files as of 2026-08-21) so the audit-exemption surface cannot
+  silently grow going forward. Both conditions are met as of 2026-08-21 —
+  see TODO-4703 and TODO-4704's `[x]` entries in `docs/todo.md` for the
+  full verification evidence.
+- **Phase 6 (done)** — documentation hygiene: correct this doc's and
+  `docs/todo.md`'s stale claims, fold in the duplicate-definition note
+  for the old TODO-4670, record the Phase 5 scripts as the effort's
+  top-level definition of done. TODO-4705 (this pass, 2026-08-21).
 
 Full TODO items with owner/scope/acceptance/stop_rule are in `docs/todo.md`
 (TODO-4684 through TODO-4705; TODO-4684 already moved to
@@ -266,7 +291,7 @@ branching on known type names.
 
 ### Phase 1: Surface Manifest Extension
 
-- [ ] TODO-4656: Audit surfaces.psmeta manifest coverage
+- [x] TODO-4656: Audit surfaces.psmeta manifest coverage
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 1 - Surface Manifest Extension
@@ -282,8 +307,11 @@ branching on known type names.
     - Each missing name categorized as: member, alias, or
       lowering_spelling
   - stop_rule: gap list complete
+  - evidence: confirmed done via `docs/todo_finished.md`'s TODO-4656 `[x]`
+    entry (finished_at 2026-06-13) - gap list produced at
+    `docs/TODO-4656-manifest-gap-list.md`, re-verified 2026-08-21 (TODO-4705).
 
-- [ ] TODO-4657: Add borrowed receiver variant metadata to manifest
+- [x] TODO-4657: Add borrowed receiver variant metadata to manifest
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 1 - Surface Manifest Extension
@@ -302,6 +330,16 @@ branching on known type names.
     - At least one hardcoded `count_ref` / `to_aos_ref` routing
       replaced with manifest lookup
   - stop_rule: manifest extended and one call site migrated
+  - evidence: confirmed done via `docs/todo_finished.md`'s TODO-4657 `[x]`
+    entry (finished_at 2026-06-13) - added `borrowedVariants` field to
+    `StdlibSurfaceMetadata`, `borrowed_variant` manifest parsing, and
+    `count`->`count_ref`/`get`->`get_ref`/`ref`->`ref_ref`/
+    `to_aos`->`to_aos_ref` entries plus `findBorrowedVariant()`,
+    re-verified 2026-08-21 (TODO-4705). Note: this doc's "Current state"
+    section above (2026-07-06) separately flagged `findBorrowedVariant()`
+    as having zero live callers at that time - a real residual gap in the
+    *migration* work, distinct from this leaf's own literal acceptance
+    criteria (schema + one call site), which were met.
 
 - [x] TODO-4658: Migrate method target resolution helper name sets to manifest
   - owner: ai
@@ -327,7 +365,7 @@ branching on known type names.
     `isRemovedKeyValueCompatibilityHelper` (TODO-4672, same file, lines
     20-23) is likewise already migrated.
 
-- [ ] TODO-4659: Migrate IR lowerer builtin name helpers to manifest
+- [x] TODO-4659: Migrate IR lowerer builtin name helpers to manifest
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 1 - Surface Manifest Extension
@@ -342,8 +380,12 @@ branching on known type names.
     - `isNamespacedStdlibBuiltinAlias()` uses registry lookup
     - IR pipeline tests pass
   - stop_rule: alias set removed and tests pass
+  - evidence: confirmed done via `docs/todo_finished.md`'s TODO-4659 `[x]`
+    entry (finished_at 2026-06-13, commit 63c2c4e0c) - added a manifest
+    lookup loop over all collection surfaces before falling through to
+    hardcoded language/math builtins, re-verified 2026-08-21 (TODO-4705).
 
-- [ ] TODO-4660: Migrate emitter builtin call path helpers to manifest
+- [x] TODO-4660: Migrate emitter builtin call path helpers to manifest
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 1 - Surface Manifest Extension
@@ -356,8 +398,11 @@ branching on known type names.
     - Emitter uses registry for call path resolution
     - Compile-run tests pass
   - stop_rule: alias set removed and tests pass
+  - evidence: confirmed done via `docs/todo_finished.md`'s TODO-4660 `[x]`
+    entry (finished_at 2026-06-13, commit 6da05aec1) - same manifest-loop
+    pattern as TODO-4659, re-verified 2026-08-21 (TODO-4705).
 
-- [ ] TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
+- [x] TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 1 - Surface Manifest Extension
@@ -376,6 +421,13 @@ branching on known type names.
     - SOA tests pass
   - stop_rule: compatibility spellings in manifest and one
     migration complete
+  - evidence: confirmed done via `docs/todo_finished.md`'s TODO-4661 `[x]`
+    entry (finished_at 2026-06-13, commit c23525d71) - added 12
+    `compatibility_spelling` entries to `CollectionsColumnarHelpers` in
+    `surfaces.psmeta` for legacy `soa_vector` paths, plus
+    `findCompatibilitySpelling`/`resolveCompatibilitySpellingToCanonicalPath`
+    and one migrated `to_aos` call site, re-verified 2026-08-21
+    (TODO-4705).
 
 ### Phase 2: Type-Category Declarations
 
@@ -567,7 +619,7 @@ branching on known type names.
     SoaColumn/SoaVector when stdlib is loaded; fallback only fires for isolated tests without
     stdlib (same pattern as `isMapValueTypeName`). All 10 struct slot layout tests pass.
 
-- [ ] TODO-4670: Remove collection-specific slot layout helpers
+- [x] TODO-4670: Remove collection-specific slot layout helpers
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 3 - Generic Slot Layout
@@ -580,10 +632,22 @@ branching on known type names.
     - No remaining references for slot layout
     - All tests pass
   - stop_rule: functions deleted and tests pass
+  - evidence: confirmed done via `docs/todo.md`'s TODO-4670 `[x]` entry
+    (progress_2026-08-19) - deleted the two hardcoded 3-slot early-exit
+    branches (`isBuiltinVectorTypeName`/`isBuiltinSoaVectorTypeName`
+    checks) at the top of `resolveStructSlotLayoutFromDefinitionFields`
+    in `IrLowererStructSlotLayoutHelpers.cpp`, falling through to the
+    generic definition-field-driven layout path. Re-verified 2026-08-21
+    (TODO-4705): the same `docs/todo.md` entry now also carries a note
+    that TODO-4700 superseded/extended this leaf's scope by additionally
+    deleting an independent duplicate `isBuiltinVectorTypeName` definition
+    in `IrLowererUninitializedStructInference.cpp` that this leaf's
+    original scope text never mentioned - see TODO-4700's entry in
+    `docs/todo.md` for the full evidence-based deletion.
 
 ### Cleanup
 
-- [ ] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+- [x] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
   - owner: ai
   - created_at: 2026-06-13
   - phase: Cleanup
@@ -600,6 +664,11 @@ branching on known type names.
     - No unused collection helper functions remain
     - Full test suite passes
   - stop_rule: dead code removed and tests pass
+  - evidence: confirmed done via `docs/todo.md`'s TODO-4671 `[x]` entry -
+    audited callers and found `isVectorTypeName`/`isMapTypeName` and the
+    other named helpers still have live callers elsewhere (not dead code
+    at the time this leaf ran), so nothing was deleted; the audit itself
+    satisfied this leaf's scope. Re-verified 2026-08-21 (TODO-4705).
 
 - [x] TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
   - owner: ai
@@ -623,7 +692,7 @@ branching on known type names.
     helperName) || helperName == "size"`, a registry query plus one residual
     literal comparison, not the original 13-string hardcoded set.
 
-- [ ] TODO-4673: Migrate method dispatch chains in MethodTargetResolution
+- [x] TODO-4673: Migrate method dispatch chains in MethodTargetResolution
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 1 - Surface Manifest Extension
@@ -637,8 +706,13 @@ branching on known type names.
     - Method dispatch uses registry lookup
     - Semantics tests pass
   - stop_rule: chains removed and tests pass
+  - evidence: confirmed done via `docs/todo_finished.md`'s TODO-4673 `[x]`
+    entry (finished_at 2026-06-13, commit 9891c1c2d) - replaced the
+    11-string map helper set and 10-string vector method check with
+    `isStdlibSurfaceMemberName` registry lookups, re-verified 2026-08-21
+    (TODO-4705).
 
-- [ ] TODO-4674: Migrate SOA helper routing beyond to_aos
+- [x] TODO-4674: Migrate SOA helper routing beyond to_aos
   - owner: ai
   - created_at: 2026-06-13
   - phase: Phase 1 - Surface Manifest Extension
@@ -657,6 +731,12 @@ branching on known type names.
       `SemanticsValidate.cpp` lines 3835-3895 replaced
     - SOA tests pass
   - stop_rule: two files migrated and tests pass
+  - evidence: confirmed done via `docs/todo_finished.md`'s TODO-4674 `[x]`
+    entry (finished_at 2026-06-13, commits 7ae81eb75/a59c940f4) - replaced
+    the push/reserve checks in `isExperimentalSoaGrowthHelperPath` and the
+    8-string SOA method name check in `SemanticsValidate.cpp` with
+    `isStdlibSurfaceMemberName(CollectionsColumnarHelpers)` lookups,
+    re-verified 2026-08-21 (TODO-4705).
 
 - [x] TODO-4675: Migrate ContainerError hardcoded paths to manifest
   - owner: ai
