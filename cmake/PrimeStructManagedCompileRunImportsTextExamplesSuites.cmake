@@ -57,8 +57,16 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   RANGE_LAST 35
                                   CASES_PER_SHARD 2)
 
+# TODO-4711: reverted to the original 900s -
+# test_compile_run_bindings_and_examples.cpp uses the same
+# .primec_test_cache/ content-addressed native-compile cache as
+# primestruct.compile.run.emitters.cpp (see that suite's own note in
+# cmake/PrimeStructManagedCompileRunEmittersNativeCoreSuites.cmake for
+# the full explanation) - this leaf's real-time measurement reflected a
+# warm cache from earlier manual runs in the same session, not a
+# representative cold-cache cost.
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.bindings"
-                                  TIMEOUT 30
+                                  TIMEOUT 900
                                   SHARD_PREFIX "bindings"
                                   TOTAL_CASES 12
                                   CASES_PER_SHARD 1)

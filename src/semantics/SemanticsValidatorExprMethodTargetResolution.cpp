@@ -2866,6 +2866,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return failMethodTargetResolutionDiagnostic(
         "unknown method: " + explicitVectorHelperPath);
   }
+  // receiver.isMethodCall here means "was this call written with dot-call
+  // syntax" (see Ast.h), not "does this resolve to a method" - it does not
+  // rule out a bare-call-syntax vector-compatibility-helper call below.
   if (receiver.isMethodCall && !explicitVectorHelperPath.empty() && !isExplicitVectorFamilyReceiver &&
       isVectorCompatibilityHelperName(normalizedMethodName)) {
     if (hasDeclaredDefinitionPath(explicitVectorHelperPath) ||

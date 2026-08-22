@@ -132,6 +132,12 @@ struct Expr {
   std::vector<Transform> transforms;
   bool isBinding = false;
   bool isBraceConstructor = false;
+  // True when this call was written (or rewritten) as dot-call syntax,
+  // `receiver.method(args)`, false for bare-call syntax, `method(receiver,
+  // args)` - a spelling/call-form distinction, not "does this call resolve
+  // to a method" (a bare-call-syntax call can still resolve to a method,
+  // and vice versa). Easy to misread at a call site; see
+  // SemanticsValidatorExprMethodTargetResolution.cpp's TODO-4724 history.
   bool isMethodCall = false;
   bool isFieldAccess = false;
   bool isLambda = false;

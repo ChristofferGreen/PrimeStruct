@@ -4014,6 +4014,50 @@ investigation chain's actively-productive leaves - see
     every exception is intentional, measured, margined, and links to the
     tracking TODO for its actual root cause, which is what the stop_rule
     actually asks for.
+  - correction_2026-08-22b: The measurement methodology above had a real
+    flaw, caught by a subsequent full `./scripts/compile.sh --release`
+    run (done as due diligence while starting an unrelated leaf,
+    TODO-4724) that came back with 7 genuine `Timeout` failures, all in
+    `primestruct.compile.run.emitters.cpp` shards. Root-caused: that
+    suite's test file (`tests/unit/compile_run/emitters/test_compile_run_emitters.cpp`)
+    caches compiled native C++ fixture artifacts under a content-addressed
+    `.primec_test_cache/` directory inside the build dir
+    (`emittedCppFixtureCacheDir()`) - already a known source of variance
+    per `docs/failing_tests.md`'s existing note about intermittent
+    `Permission denied` races on that same cache under parallel
+    contention. This session's build directory had accumulated a *warm*
+    cache from many manual test runs earlier the same session, so the
+    "real measured time" this leaf's `ctest --output-on-failure` log
+    parsing captured for that suite (sub-second per case) was really
+    measuring a cache hit, not the cost of actually compiling the
+    generated C++. Confirmed directly: isolated a single case from a
+    failing shard and ran it standalone (only, no `--parallel`
+    contention) - it took **~7 minutes wall-clock** (real `cc1plus`
+    compiling generated C++ from scratch; verified via `/proc/<pid>`
+    inspection that it was genuinely CPU-bound compiling, not hung/
+    blocked), a >1000x discrepancy from the 0.05s the warm-cache data
+    showed for the same case. `primestruct.compile.run.bindings`
+    (`tests/unit/compile_run/bindings/test_compile_run_bindings_and_examples.cpp`)
+    uses the same cache dir and shares the same risk.
+    Fix: reverted both suites' `TIMEOUT` back to the original 900s in
+    `cmake/PrimeStructManagedCompileRunEmittersNativeCoreSuites.cmake`
+    and `cmake/PrimeStructManagedCompileRunImportsTextExamplesSuites.cmake`,
+    with a comment at each site explaining why (rather than attempting a
+    genuine cold-cache remeasurement this round - each cold case can
+    take minutes, so a full cold sweep of these two suites would itself
+    be a substantial, dedicated leaf of work). Every other suite this
+    leaf touched does not use this caching mechanism (confirmed via
+    `grep -rn "primec_test_cache\|emittedCppFixtureCacheDir"` across
+    `tests/unit/compile_run/` - only these two files match) and remains
+    unaffected. Re-verified via a full fresh
+    `./scripts/compile.sh --release`: 100% tests passed, 0 failed out of
+    1898. This is a cautionary note for any FUTURE attempt at these two
+    suites specifically: real per-suite timing captured from a
+    long-running interactive session with an already-warm build
+    directory is not a reliable proxy for a fresh/CI-cold one whenever a
+    suite relies on cross-run artifact caching - re-derive real numbers
+    from a deliberately-cleared `.primec_test_cache/`, not from
+    whatever's on disk from earlier work.
   - scope: Once real per-shard/per-suite runtimes are known from the
     groundwork leaves, lower the managed doctest suite `TIMEOUT` (currently
     300s via `addPrimeStructManagedDoctestSuite`, 600s via the older
@@ -8711,6 +8755,56 @@ investigation chain's actively-productive leaves - see
     TODO-4723's remaining cases in the same commit - land the
     decomposition behavior-preserving first, then any subsequent
     TODO-4723 fixes get to build on smaller, more legible functions.
+  - progress_2026-08-22: Landed the explicitly-called-out "near-zero-risk"
+    first step: `Expr::isMethodCall` (`include/primec/ast/Ast.h`) had no
+    doc comment explaining what it actually means (true = dot-call
+    syntax `receiver.method(args)`, false = bare-call syntax
+    `method(receiver, args)` - a spelling/call-form distinction, not "is
+    this a method call" semantically), confirmed by tracing where it's
+    set in `src/parser/ParserExpr.cpp`. Added a doc comment on the field
+    itself (fixes readability at all ~15 usage sites across the file,
+    not just the one this TODO's scope called out) plus a targeted
+    comment at the specific `receiver.isMethodCall` check
+    (`SemanticsValidatorExprMethodTargetResolution.cpp` ~line 2869) that
+    originally caused the misread. Comment-only, verified zero behavior
+    change: rebuilt and reran the full `PrimeStruct_semantics_tests`
+    binary directly (not through CTest's small shards) both with and
+    without the change (via `git stash`/`git stash pop` bisection) after
+    an unrelated pre-existing failure surfaced mid-verification (see
+    below) - identical pass/fail set either way, confirming the comment
+    change itself is inert.
+    That pre-existing failure, found only because this was the first
+    time in this session `PrimeStruct_semantics_tests` was run as one
+    unsharded binary rather than via CTest's small shards:
+    `test_semantics_trait_wrapper_helpers.cpp`'s "isKeyValueSurfaceTypeName
+    covers known-true and known-false anchor cases" asserted
+    `isKeyValueSurfaceTypeName("Map<i32, string>")` is true, but it's
+    actually false and, per the surrounding code, correctly so:
+    `isKeyValueCollectionTypeName`/`normalizeBindingTypeName`
+    (`SemanticsBindingTypeHelpers.cpp`) never strip a still-templated
+    spelling's `<...>` for `Map` (unlike `soa<...>`/`Buffer<...>`/
+    `Maybe<...>`, which do get that treatment in
+    `normalizeBindingTypeNameUncached`), and every real caller (e.g.
+    `returnsKeyValueCollectionType` in the same file) already splits off
+    template args via `splitTemplateTypeName` before classifying the
+    base - the function's actual, established contract (also pinned by
+    this same test file's other TEST_CASE, which explicitly lists
+    `"Map<i32, string>"` as a case the pre-existing "old union" helper
+    treats as non-matching) operates on an already-split base name, not
+    a full templated spelling. Fixed the test's wrong anchor expectation
+    (`CHECK` -> `CHECK_FALSE` with an explanatory comment) rather than
+    the implementation, since changing `isKeyValueCollectionTypeName`'s
+    behavior would be a much larger, riskier change reaching ~20 call
+    sites across the semantics/template-monomorphization subsystem, and
+    the function's own doc comment explicitly ties it to being
+    "behavior-preserving" (TODO-4694). Verified: full
+    `PrimeStruct_semantics_tests` now 2944/2944 cases, 13941/13941
+    assertions, 0 failed (was 2943/1 failed before this fix).
+    The larger decomposition (extracting the seams the scope/
+    implementation_notes list into named helpers) remains open - this
+    round only landed the low-risk documentation piece plus fixing the
+    incidentally-discovered pre-existing test bug, per this leaf's own
+    stop_rule's caution about extraction risk.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai
