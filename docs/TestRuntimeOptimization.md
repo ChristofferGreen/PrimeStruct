@@ -94,6 +94,28 @@ those are strong candidates for downgrading to
 `Semantics::validate()`-only, since they're not actually exercising
 runtime behavior at all.
 
+## Caveat: `CTestCostData.txt` is not reliable in this environment
+
+`build-*/Testing/Temporary/CTestCostData.txt` looks like it should be the
+obvious source for real per-test timing (that's its documented purpose
+elsewhere), but empirically, in whatever CMake/CTest version this
+environment runs (cmake 3.28.3), its recorded "cost" column does not
+behave like a normal rolling average. Reran one specific test 4 times in
+isolation (TODO-4711's investigation) and watched its cost entry:
+`126.294 -> 0.534666 -> 0.520858 -> 0.460184 -> 0.448668` as the run
+counter went 97->101, even though the test's own real elapsed time
+(52.48s, 52.02s, 46.08s, 45.38s per ctest's own "Passed X sec" report)
+barely moved. The recorded cost matches `this_run's_elapsed / run_count`
+almost exactly each time - not a genuine historical average (a real
+average over 97 runs at ~126s plus one 52s run cannot physically drop
+below ~123s). Reconstructing "real time" as `cost * count` doesn't
+recover a sane number either once `count` grows past the first few runs.
+**Do not use this file to size timeouts or judge suite speed here** -
+instead parse the real `Passed`/`Failed ... X sec` lines directly out of
+a `ctest --output-on-failure` log (see TODO-4711's note in `docs/todo.md`
+for the exact approach), which matches this repo's actual `--parallel 8`
+invocation and needs no reconstruction.
+
 ## Tracked work
 
 All actionable next steps here are now tracked as leaf TODOs in

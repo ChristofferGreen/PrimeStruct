@@ -3914,12 +3914,106 @@ investigation chain's actively-productive leaves - see
     unconditionally safe regardless of whether resets are ever enabled,
     same reasoning as every prior round.
 
-- [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
+- [x] TODO-4711 (RESOLVED to documented limit): Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai
   - created_at: 2026-07-15
   - phase: Test runtime optimization
   - parallel_track: test-runtime-timeout-tightening
   - depends_on: TODO-4707, TODO-4708, TODO-4709, TODO-4710
+  - progress_2026-08-22: First measured real per-suite wall-clock times
+    (via `ctest --output-on-failure`'s own "Passed X sec" lines from a
+    full `./scripts/compile.sh --release` run - 1898 tests, 100% passed).
+    Initially tried using `build-*/Testing/Temporary/CTestCostData.txt`
+    for this (it's the obvious source), but its numbers turned out to be
+    nonsensical: reran one specific slow-looking test 4 times in
+    isolation and watched its recorded "cost" - 126.294 -> 0.534666 ->
+    0.520858 -> 0.460184 -> 0.448668 as the run counter incremented
+    97->101, even though the test's own real elapsed time (52.48s,
+    52.02s, 46.08s, 45.38s per ctest's own report) barely changed. The
+    recorded "cost" empirically matches `this_run's_elapsed / run_count`
+    almost exactly every time, not a true rolling average (a real
+    average over 97 historical ~126s runs plus one 52s run could not
+    physically drop below ~123s) - this makes the file actively
+    misleading for sizing timeouts (a suite legitimately taking 0.05s
+    real can show a "cost" implying ~11000s once `cost*count` is
+    reconstructed, and vice versa) in whatever CMake/CTest version
+    combination this environment runs (cmake 3.28.3). Root cause not
+    further chased since a reliable alternative was available; worth a
+    one-line warning in `docs/TestRuntimeOptimization.md` for whoever
+    reaches for that file next expecting normal CTest cost-file
+    semantics.
+    Abandoned CTestCostData.txt entirely and parsed real per-test
+    "Passed/Failed ... X sec" lines straight out of the verification
+    run's own ctest log instead (authoritative, matches this repo's
+    actual `--parallel 8` invocation exactly, no reconstruction needed).
+    1898/1898 tests parsed; median 0.04s, p90 3.0s, only 13 suites over
+    30s and 5 over 60s (of which the 2 slowest, `semantic_memory_definition_worker_parity`
+    and `benchmark_harness`, are dedicated benchmark tests with their own
+    already-deliberate 1800s TIMEOUT for run-to-run variance headroom,
+    not "managed doctest suites" this leaf's scope covers - left
+    untouched).
+    Wrote a script that parses every `addPrimeStructDoctestSuite`/
+    `addPrimeStructManagedDoctestSuite` call across `CMakeLists.txt` and
+    all 9 `cmake/PrimeStructManaged*.cmake` files, predicts each call's
+    resulting CTest test name(s) (reproducing the shard-name-generation
+    logic from `addPrimeStructManagedDoctestSuite` itself, including its
+    `CASES_PER_SHARD` fan-out math), cross-references against the real
+    per-test times, and computes a new TIMEOUT as `round_up(max_observed
+    * 3, 30s)` (5x margin instead of 3x when fewer than half of a call's
+    predicted shard names had real data, e.g. platform-gated suites) -
+    only ever tightening (never loosening) an existing value. Applied via
+    exact byte-offset edits (each verified against the original text
+    before writing) rather than blind find/replace, since many suites
+    reuse the same old TIMEOUT value at multiple call sites. Also handled
+    the `CMakeLists.txt` `foreach(suite IN LISTS
+    PrimeStructCompileRunSuites)` fallback block separately (its calls
+    use `"${suite}"`, resolved per-call from the nearest enclosing
+    `if/elseif(suite STREQUAL "X")` in the same coordinate space to avoid
+    an offset bug from an earlier draft that sliced the block into a
+    separate string first).
+    Result: 157 automated edits across the 9 `cmake/PrimeStructManaged*.cmake`
+    files + 32 more in `CMakeLists.txt`'s compile-run fallback block (189
+    total), plus lowered the two remaining untuned shared defaults (`600`
+    in `addPrimeStructDoctestSuite`'s fallback, used verified-safe for the
+    semantics suites relying on it; the `semanticsTimeout`/`ParserTestSuites`
+    loop defaults) to `30`. 7 suites still exceed 60s even after
+    tightening (their real measured worst case is itself already >20s):
+    `primestruct.compile.run.emitters.cpp` (90s, measured 28.8s),
+    `primestruct.compile.run.examples` (120s, measured 31.9s),
+    `primestruct.compile.run.reflection_codegen` (210s, measured 68.5s,
+    70% shard coverage - some cases are platform-disabled),
+    `primestruct.compile.run.smoke` (360s, measured 110.9s - the slowest
+    managed suite in the repo), `primestruct.compile.run.vm.core` (2
+    call sites, 90s/150s, measured 22.1s/46.4s), and
+    `primestruct.compile.run.vm.collections` (180s, measured 53.9s).
+    Each has an inline `# TODO-4711:` comment at its call site stating
+    the measured worst case, the margin used, and pointing at
+    TODO-4710/TODO-5230 as the actual root-cause tracker (every one of
+    these is a `compile_run` suite - i.e. spawns a fresh `./primec`
+    subprocess per test case, the exact cost class TODO-4710 already
+    root-caused and TODO-5230 partially fixed). Two suite families
+    (`PrimeStructBackendTestSuites`, `PrimeStructTextFilterTestSuites`)
+    had zero real-time coverage in the one representative run (none of
+    their tests happened to appear in the parsed log, possibly disabled
+    by default in this build config) - left at their original TIMEOUT
+    600 rather than guessed at, since this leaf's `stop_rule` only asks
+    for *intentional, documented* timeouts, not blind tightening without
+    evidence; flagging here as the concrete follow-up if picked up again
+    (get real timing for those two families first, the same way as
+    everything else in this note, then apply the same formula).
+    Verified via a full, fresh `./scripts/compile.sh --release` after all
+    edits: 100% tests passed, 0 failed out of 1898 - confirms none of the
+    189 tightened timeouts introduced flakiness under this repo's actual
+    `--parallel 8` invocation. Committed and pushed to both
+    `claude/todo-implementation-f8ll5h` and `origin/master`.
+    Marking RESOLVED to documented limit (matching TODO-5230's precedent
+    for this phrasing): the acceptance text's literal "every suite <=60s"
+    is not quite met (7 suites still exceed it), but the stop_rule
+    explicitly permits this outcome ("do not force every suite to
+    exactly 30s... if its own root-cause fix hasn't landed yet") and
+    every exception is intentional, measured, margined, and links to the
+    tracking TODO for its actual root cause, which is what the stop_rule
+    actually asks for.
   - scope: Once real per-shard/per-suite runtimes are known from the
     groundwork leaves, lower the managed doctest suite `TIMEOUT` (currently
     300s via `addPrimeStructManagedDoctestSuite`, 600s via the older

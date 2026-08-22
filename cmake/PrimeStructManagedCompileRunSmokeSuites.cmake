@@ -3,7 +3,7 @@ list(APPEND PrimeStructManagedCompileRunSuites
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "core_paths_foundation"
                                   SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
                                   RANGE_FIRST 1
@@ -11,15 +11,21 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 900
+                                  TIMEOUT 60
                                   SHARD_PREFIX "core_paths_wasm_and_debug"
                                   SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
                                   RANGE_FIRST 32
                                   RANGE_LAST 62
                                   CASES_PER_SHARD 1)
 
+# TODO-4711: this shard's slowest case measured ~110.9s real wall-clock (the
+# worst of any managed doctest suite in this repo) - 360s = ~3x margin, well
+# above the 30s ceiling (see TODO-4710/TODO-5230 for the per-compile
+# subprocess cost root cause). Worth revisiting as a candidate for
+# CASES_PER_SHARD 1 (like its sibling shards above) if this stays the
+# long pole.
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 900
+                                  TIMEOUT 360
                                   SHARD_PREFIX "core_paths_newly_exposed_2026_07_16"
                                   SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
                                   RANGE_FIRST 63
@@ -27,7 +33,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 10)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "collective_paths_core"
                                   SOURCE_FILE "*test_compile_run_smoke_collective.cpp"
                                   RANGE_FIRST 1
@@ -35,7 +41,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "collective_paths_extended"
                                   SOURCE_FILE "*test_compile_run_smoke_collective.cpp"
                                   RANGE_FIRST 12
@@ -43,14 +49,14 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "argv_and_cli"
                                   SOURCE_FILE "*test_compile_run_smoke_argv.cpp"
                                   TOTAL_CASES 25
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "ring_buffer"
                                   SOURCE_FILE "*test_compile_run_smoke_ring_buffer.cpp"
                                   TOTAL_CASES 3

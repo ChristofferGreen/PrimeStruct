@@ -9,37 +9,37 @@ list(APPEND PrimeStructManagedCompileRunSuites
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.argv"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "argv"
                                   TOTAL_CASES 22
                                   CASES_PER_SHARD 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.control"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "control"
                                   TOTAL_CASES 29
                                   CASES_PER_SHARD 4)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.pointers"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "pointers"
                                   TOTAL_CASES 16
                                   CASES_PER_SHARD 2)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "math_builtins"
                                   SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                   RANGE_FIRST 1
                                   RANGE_LAST 22
                                   CASES_PER_SHARD 2)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "numeric_and_boolean_flow"
                                   SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                   RANGE_FIRST 23
                                   RANGE_LAST 34
                                   CASES_PER_SHARD 4)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "conversions_and_rejections"
                                   SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                   RANGE_FIRST 35
@@ -47,54 +47,54 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_n
                                   CASES_PER_SHARD 2)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "core_aliases_and_wrappers"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 1
                                   RANGE_LAST 63
                                   CASES_PER_SHARD 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "templated_wrapper_parity"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 64
                                   RANGE_LAST 141
                                   CASES_PER_SHARD 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "stdlib_collection_shims"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 142
                                   RANGE_LAST 180
                                   CASES_PER_SHARD 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "stdlib_collection_shims_extended"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 181
                                   RANGE_LAST 218)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "stdlib_collection_shims_accessors"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 219
                                   RANGE_LAST 257)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "user_shadow_and_receiver_precedence_core"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 258
                                   RANGE_LAST 296
                                   CASES_PER_SHARD 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "user_shadow_and_receiver_precedence_advanced"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 297
                                   RANGE_LAST 335
                                   CASES_PER_SHARD 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "growth_limits_and_map_access"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 336
@@ -102,12 +102,16 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collec
                                   CASES_PER_SHARD 5)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.imports"
-                                  TIMEOUT 900
+                                  TIMEOUT 30
                                   SHARD_PREFIX "imports"
                                   TOTAL_CASES 25
                                   CASES_PER_SHARD 5)
+# TODO-4711: measured ~68.5s real worst case for this shard (single-case
+# shards, TOTAL_CASES 23/CASES_PER_SHARD 1); 210s = ~3x margin, still above
+# the 30s ceiling (see TODO-4710/TODO-5230 for the per-compile subprocess
+# cost root cause).
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.reflection_codegen"
-                                  TIMEOUT 900
+                                  TIMEOUT 210
                                   SHARD_PREFIX "reflection_codegen"
                                   TOTAL_CASES 23
                                   CASES_PER_SHARD 1)
