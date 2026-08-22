@@ -3724,6 +3724,87 @@ investigation chain's actively-productive leaves - see
     environment, then aggregate results across shards to reach the same
     "zero poisoned access across the full suite" confidence bar without
     needing one giant process to survive the whole run.
+  - progress_2026-08-22b (still left open per stop_rule): Did the
+    "shard the poison-audit run" step the previous note called out.
+    Built a driver script running `PrimeStruct_semantics_tests` as 15
+    separate processes (`--first=N --last=M`, 200 cases per shard, all
+    2944 cases covered) with `ASAN_OPTIONS=symbolize=0:halt_on_error=1`;
+    this reliably avoids the sandbox's memory-cgroup OOM killer (each
+    shard is a short-lived process with bounded accumulated ASan
+    redzone/shadow state) and, for the first time in this investigation,
+    completed an actual full exhaustive sweep instead of a partial run.
+    Also switched the audit build to `-DCMAKE_BUILD_TYPE=RelWithDebInfo`
+    so `addr2line -f -C -i <offset>` resolves exact file:line and full
+    inline chains against crash stack offsets (the default Release/-O3
+    audit build has no line-level DWARF).
+    First full sweep surfaced one genuine `use-after-poison` hit (shard
+    covering cases 2601-2800; the other 14 shards only showed harmless
+    LeakSanitizer "byte(s) leaked" summaries, expected given the arena's
+    by-design non-freeing behavior). Root-caused via `addr2line` to
+    `ContextState::fullyTraversedSubcases` (an `unordered_set` cleared/
+    inserted once per TEST_CASE for the process lifetime) - fixed with
+    the same `PrimeStructSystemHeapAllocator<T>` pattern as
+    `g_infoContexts`, moving that allocator template's definition earlier
+    in the file (right after `namespace detail {` opens) so `ContextState`
+    can reference it.
+    Rebuilt, reran shard 2601-2800: crashed again, different offset.
+    Root-caused to `doctest::String::~String()` called during
+    `ContextState::subcaseStack`/`nextSubcaseStack`'s `.clear()` at
+    `test_case_start` - i.e. `doctest::String`'s own internal heap
+    buffer (allocated via plain `new char[]` in `String::allocate()`)
+    has the identical hazard, independent of whatever container holds
+    the `String`. Fixed by adding standalone
+    `primeStructSystemHeapAllocChars`/`primeStructSystemHeapFreeChars`
+    helpers (`std::malloc`/`std::free` directly) and routing all of
+    `String`'s heap-buffer alloc/dealloc sites through them (allocate(),
+    destructor, copy-assignment, `operator+=`'s two heap-touching
+    branches, move-assignment) - this covers every `ContextState` member
+    that stores a `String` in one patch, rather than needing a
+    container-by-container fix. Also proactively switched
+    `ContextState::filters`/`reporters_currently_used`/
+    `stringifiedContexts`/`subcaseStack`/`nextSubcaseStack` to
+    `PrimeStructSystemHeapAllocator` for their own backing storage
+    (`filters` deliberately excluded - it's populated once from argv at
+    process start, before any TEST_CASE runs, and switching its element
+    type would require templatizing `matchesAny()`/`parseCommaSepArgs()`
+    for no safety benefit since it's never touched again inside a
+    TEST_CASE). Templatized the free-function `hash(const
+    std::vector<SubcaseSignature>&, ...)` overloads on the allocator
+    type so they keep accepting `subcaseStack`/`nextSubcaseStack`.
+    Rebuilt, reran shard 2601-2800: crashed a THIRD time, again a
+    different offset. Root-caused to `ConsoleReporter::subcasesStack`
+    (doctest.h ~line 6077) via `subcase_start()`'s `push_back` -
+    a *different* long-lived container than any `ContextState` member:
+    the default-constructed `ConsoleReporter` (registered once in
+    `ContextState::reporters_currently_used`) keeps its own
+    `std::vector<SubcaseSignature>` that also accumulates across the
+    whole process lifetime. Fixed the same way
+    (`PrimeStructSystemHeapAllocator<SubcaseSignature>`). While there,
+    proactively fixed the structurally identical
+    `JUnitReporter::deepestSubcaseStackNames` (`std::vector<String>`,
+    same push_back/clear pattern) even though `JUnitReporter` is never
+    instantiated by PrimeStruct's own test binaries (only via an
+    explicit `-r=junit` CLI flag) - not crash-confirmed, but cheap and
+    mechanical given the pattern was already established; templatized
+    `appendSubcaseNamesToLastTestcase` on the allocator type to accept
+    it. Checked `XmlReporter` for the same shape of member - none found.
+    Rebuilt again, reran shard 2601-2800: clean (no crash). A full
+    15-shard re-sweep was in progress (to check the other 14 shards are
+    still clean and no fix regressed anything) when this note was
+    written; its outcome will be recorded in a follow-up note before
+    this task's checkbox is touched. Net count so far this round: 5
+    distinct hazard sites fixed in `third_party/doctest.h`
+    (`g_infoContexts`, `fullyTraversedSubcases`, `String`'s own heap
+    buffer, `ConsoleReporter::subcasesStack`,
+    `JUnitReporter::deepestSubcaseStackNames`) plus the allocator
+    relocation and two `hash()`/`appendSubcaseNamesToLastTestcase`
+    templatizations needed to keep call sites compiling. This is now
+    the 3rd time within this same investigation session (and per the
+    2026-08-13 note, at least the 4th time overall) that "fix the
+    latest crash, rerun" turned up a genuinely new, different hazard
+    class rather than converging - the non-convergence pattern the
+    stop_rule anticipates continues to hold, even with sharding solving
+    the earlier resource-ceiling blocker.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai

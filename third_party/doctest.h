@@ -3332,6 +3332,63 @@ namespace {
 } // namespace
 
 namespace detail {
+    // --- BEGIN PrimeStruct local patch (TODO-5235) ---
+    // Several doctest-internal containers are process-lifetime state
+    // (thread_local or reachable from the single process-lifetime
+    // ContextState/g_cs instance) that get mutated on every TEST_CASE, but
+    // PrimeStruct's compile arena allocator (see
+    // include/primec/support/CompileArena.h) can reset per compile scope
+    // (e.g. once per doctest TEST_CASE), reclaiming any memory a scope
+    // allocated. A container reuses its existing backing buffer whenever
+    // capacity already suffices, so if that buffer was allocated from an
+    // arena-served operator new while a scope was active, a later mutation
+    // after that scope's arena resets silently reads/writes into memory
+    // that has already been handed to something else - a real,
+    // previously-diagnosed corruption hazard
+    // (docs/CompilerArenaAllocator.md's "TODO-5235" section, which also
+    // has the full up-to-date list of which containers below are
+    // crash-confirmed vs. structurally-suspected-but-unconfirmed). This
+    // header is vendored, so these containers cannot be wrapped with
+    // PrimeStruct's own systemHeapValue()/SystemHeapScope escape hatch at
+    // their declaration the way our own code is; instead this allocator
+    // forces every (de)allocation for a container using it straight
+    // through std::malloc/std::free, bypassing the overridden global
+    // operator new/delete entirely (PrimeStruct's arena only intercepts
+    // operator new/delete, never plain malloc - see CompileArena.cpp's own
+    // bootstrap allocations for the same technique). Deliberately
+    // self-contained (no dependency on any PrimeStruct header) to keep
+    // this vendored file's diff against upstream doctest minimal and easy
+    // to re-apply after a future upgrade. Defined here, near the top of
+    // this namespace, so every container declared later in this namespace
+    // (not just g_infoContexts) can use it.
+    template <typename T>
+    struct PrimeStructSystemHeapAllocator {
+        using value_type = T;
+        PrimeStructSystemHeapAllocator() noexcept = default;
+        template <typename U>
+        PrimeStructSystemHeapAllocator(const PrimeStructSystemHeapAllocator<U>&) noexcept {}
+        T* allocate(std::size_t n) {
+            if(n > (std::size_t(-1) / sizeof(T)))
+                throw std::bad_alloc();
+            void* p = std::malloc(n * sizeof(T));
+            if(!p)
+                throw std::bad_alloc();
+            return static_cast<T*>(p);
+        }
+        void deallocate(T* p, std::size_t) noexcept { std::free(p); }
+    };
+    template <typename T, typename U>
+    bool operator==(const PrimeStructSystemHeapAllocator<T>&,
+                     const PrimeStructSystemHeapAllocator<U>&) noexcept {
+        return true;
+    }
+    template <typename T, typename U>
+    bool operator!=(const PrimeStructSystemHeapAllocator<T>&,
+                     const PrimeStructSystemHeapAllocator<U>&) noexcept {
+        return false;
+    }
+    // --- END PrimeStruct local patch (TODO-5235) ---
+
     DOCTEST_THREAD_LOCAL class
     {
         std::vector<std::streampos> stack;
@@ -3513,21 +3570,45 @@ using ticks_t = timer_large_integer::type;
         MultiLaneAtomic<int> numAssertsCurrentTest_atomic;
         MultiLaneAtomic<int> numAssertsFailedCurrentTest_atomic;
 
+        // TODO-5235: every ContextState container below is process-lifetime
+        // state, mutated once per TEST_CASE for the life of the process
+        // (see the PrimeStructSystemHeapAllocator comment near the top of
+        // this namespace for the full explanation of why that means its
+        // backing storage must never be arena-served). Each of these was
+        // individually crash-confirmed via the poison-audit tool
+        // (docs/CompilerArenaAllocator.md's "TODO-5235" section) on a
+        // sharded full-suite run - subcaseStack/nextSubcaseStack in
+        // particular via a use-after-poison inside
+        // std::vector<SubcaseSignature>::clear() at test_case_start, which
+        // is the backing array itself (not just the String buffer inside
+        // each SubcaseSignature, which is covered separately by
+        // String::allocate() below).
+        // NOTE: filters is intentionally left with the default allocator -
+        // matchesAny()/parseCommaSepArgs() below take `std::vector<String>&`
+        // by exact type, so switching filters' element type would require
+        // templatizing those signatures too. filters is populated once
+        // from argv near process start and never touched again inside a
+        // TEST_CASE, so it is not at risk from arena resets between test
+        // cases (unlike the members below, which are crash-confirmed).
         std::vector<std::vector<String>> filters = decltype(filters)(9); // 9 different filters
 
-        std::vector<IReporter*> reporters_currently_used;
+        std::vector<IReporter*, PrimeStructSystemHeapAllocator<IReporter*>> reporters_currently_used;
 
         assert_handler ah = nullptr;
 
         Timer timer;
 
-        std::vector<String> stringifiedContexts; // logging from INFO() due to an exception
+        std::vector<String, PrimeStructSystemHeapAllocator<String>>
+            stringifiedContexts; // logging from INFO() due to an exception
 
         // stuff for subcases
         bool reachedLeaf;
-        std::vector<SubcaseSignature> subcaseStack;
-        std::vector<SubcaseSignature> nextSubcaseStack;
-        std::unordered_set<unsigned long long> fullyTraversedSubcases;
+        std::vector<SubcaseSignature, PrimeStructSystemHeapAllocator<SubcaseSignature>> subcaseStack;
+        std::vector<SubcaseSignature, PrimeStructSystemHeapAllocator<SubcaseSignature>> nextSubcaseStack;
+        std::unordered_set<unsigned long long, std::hash<unsigned long long>,
+                            std::equal_to<unsigned long long>,
+                            PrimeStructSystemHeapAllocator<unsigned long long>>
+            fullyTraversedSubcases;
         size_t currentSubcaseDepth;
         Atomic<bool> shouldLogCurrentException;
 
@@ -3595,6 +3676,33 @@ using ticks_t = timer_large_integer::type;
 #endif // DOCTEST_CONFIG_DISABLE
 } // namespace detail
 
+// TODO-5235: String's heap buffer (below the small-string-optimization
+// threshold) is real, mutable process-lifetime state whenever a String
+// instance is stored in one of doctest's own persistent containers (e.g.
+// ContextState::filters/stringifiedContexts/subcaseStack/nextSubcaseStack -
+// see the PrimeStructSystemHeapAllocator comment near the top of
+// "namespace detail" above for the full explanation of why this matters
+// under PrimeStruct's compile arena allocator). String's buffer allocation
+// was previously plain `new char[]`/`delete[]`, which routes through the
+// overridden global operator new/delete and is therefore at risk of being
+// arena-served and later reclaimed by an arena reset while the String is
+// still alive. These two helpers force every String heap buffer straight
+// through std::malloc/std::free instead, bypassing that override entirely -
+// same technique and same reasoning as PrimeStructSystemHeapAllocator,
+// just usable here since String's allocation logic lives directly in
+// "namespace doctest", not inside "namespace detail" where that allocator
+// type is defined. Preserves `new[]`'s throw-on-failure contract (rather
+// than plain malloc's null-return) so String's own call sites don't need
+// to change their null-checking behavior (they currently have none, same
+// as before this patch).
+inline char* primeStructSystemHeapAllocChars(std::size_t n) {
+    void* p = std::malloc(n);
+    if(!p)
+        throw std::bad_alloc();
+    return static_cast<char*>(p);
+}
+inline void primeStructSystemHeapFreeChars(char* p) noexcept { std::free(p); }
+
 char* String::allocate(size_type sz) {
     if (sz <= last) {
         buf[sz] = '\0';
@@ -3604,7 +3712,7 @@ char* String::allocate(size_type sz) {
         setOnHeap();
         data.size = sz;
         data.capacity = data.size + 1;
-        data.ptr = new char[data.capacity];
+        data.ptr = primeStructSystemHeapAllocChars(data.capacity);
         data.ptr[sz] = '\0';
         return data.ptr;
     }
@@ -3632,7 +3740,7 @@ String::String() noexcept {
 
 String::~String() {
     if(!isOnStack())
-        delete[] data.ptr;
+        primeStructSystemHeapFreeChars(data.ptr);
 } // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 
 String::String(const char* in)
@@ -3651,7 +3759,7 @@ String::String(const String& other) { copy(other); }
 String& String::operator=(const String& other) {
     if(this != &other) {
         if(!isOnStack())
-            delete[] data.ptr;
+            primeStructSystemHeapFreeChars(data.ptr);
 
         copy(other);
     }
@@ -3671,7 +3779,7 @@ String& String::operator+=(const String& other) {
             setLast(last - total_size);
         } else {
             // alloc new chunk
-            char* temp = new char[total_size + 1];
+            char* temp = primeStructSystemHeapAllocChars(total_size + 1);
             // copy current data to new location before writing in the union
             memcpy(temp, buf, my_old_size); // skip the +1 ('\0') for speed
             // update data in union
@@ -3693,11 +3801,11 @@ String& String::operator+=(const String& other) {
             if(data.capacity <= total_size)
                 data.capacity = total_size + 1;
             // alloc new chunk
-            char* temp = new char[data.capacity];
+            char* temp = primeStructSystemHeapAllocChars(data.capacity);
             // copy current data to new location before releasing it
             memcpy(temp, data.ptr, my_old_size); // skip the +1 ('\0') for speed
             // release old chunk
-            delete[] data.ptr;
+            primeStructSystemHeapFreeChars(data.ptr);
             // update the rest of the union members
             data.size = total_size;
             data.ptr  = temp;
@@ -3718,7 +3826,7 @@ String::String(String&& other) noexcept {
 String& String::operator=(String&& other) noexcept {
     if(this != &other) {
         if(!isOnStack())
-            delete[] data.ptr;
+            primeStructSystemHeapFreeChars(data.ptr);
         memcpy(buf, other.buf, len);
         other.buf[0] = '\0';
         other.setLast();
@@ -4176,7 +4284,12 @@ namespace {
         return hash(hash(hash(sig.m_file), hash(sig.m_name.c_str())), sig.m_line);
     }
 
-    unsigned long long hash(const std::vector<SubcaseSignature>& sigs, size_t count) {
+    // TODO-5235: templatized on Allocator so this also accepts
+    // ContextState::subcaseStack/nextSubcaseStack, which use
+    // PrimeStructSystemHeapAllocator rather than std::allocator (see the
+    // comment on those members).
+    template <typename Allocator>
+    unsigned long long hash(const std::vector<SubcaseSignature, Allocator>& sigs, size_t count) {
         unsigned long long running = 0;
         auto end = sigs.begin() + count;
         for (auto it = sigs.begin(); it != end; it++) {
@@ -4185,7 +4298,8 @@ namespace {
         return running;
     }
 
-    unsigned long long hash(const std::vector<SubcaseSignature>& sigs) {
+    template <typename Allocator>
+    unsigned long long hash(const std::vector<SubcaseSignature, Allocator>& sigs) {
         unsigned long long running = 0;
         for (const SubcaseSignature& sig : sigs) {
             running = hash(running, hash(sig));
@@ -4574,58 +4688,6 @@ namespace detail {
            getExceptionTranslators().end())
             getExceptionTranslators().push_back(et);
     }
-
-    // --- BEGIN PrimeStruct local patch (TODO-5235) ---
-    // g_infoContexts is thread_local and its backing buffer is push_back'd/
-    // pop_back'd across every INFO()/CAPTURE()/MESSAGE() call for the life
-    // of the process, but PrimeStruct's compile arena allocator (see
-    // include/primec/support/CompileArena.h) can reset per compile scope
-    // (e.g. once per doctest TEST_CASE), reclaiming any memory a scope
-    // allocated. std::vector reuses its existing backing buffer whenever
-    // capacity already suffices, so if that buffer was allocated from an
-    // arena-served operator new while a scope was active, a later push_back
-    // after that scope's arena resets silently writes into memory that has
-    // already been handed to something else - a real, previously-diagnosed
-    // corruption hazard (docs/CompilerArenaAllocator.md's "TODO-5235"
-    // section). g_infoContexts lives inside this vendored header, so it
-    // cannot be wrapped with PrimeStruct's own systemHeapValue()/
-    // SystemHeapScope escape hatch at its declaration the way our own code
-    // is; instead this allocator forces every (de)allocation for this one
-    // vector straight through std::malloc/std::free, bypassing the
-    // overridden global operator new/delete entirely (PrimeStruct's arena
-    // only intercepts operator new/delete, never plain malloc - see
-    // CompileArena.cpp's own bootstrap allocations for the same technique),
-    // so this vector's buffer is never arena-served and therefore never at
-    // risk from an arena reset. Deliberately self-contained (no dependency
-    // on any PrimeStruct header) to keep this vendored file's diff against
-    // upstream doctest minimal and easy to re-apply after a future upgrade.
-    template <typename T>
-    struct PrimeStructSystemHeapAllocator {
-        using value_type = T;
-        PrimeStructSystemHeapAllocator() noexcept = default;
-        template <typename U>
-        PrimeStructSystemHeapAllocator(const PrimeStructSystemHeapAllocator<U>&) noexcept {}
-        T* allocate(std::size_t n) {
-            if(n > (std::size_t(-1) / sizeof(T)))
-                throw std::bad_alloc();
-            void* p = std::malloc(n * sizeof(T));
-            if(!p)
-                throw std::bad_alloc();
-            return static_cast<T*>(p);
-        }
-        void deallocate(T* p, std::size_t) noexcept { std::free(p); }
-    };
-    template <typename T, typename U>
-    bool operator==(const PrimeStructSystemHeapAllocator<T>&,
-                     const PrimeStructSystemHeapAllocator<U>&) noexcept {
-        return true;
-    }
-    template <typename T, typename U>
-    bool operator!=(const PrimeStructSystemHeapAllocator<T>&,
-                     const PrimeStructSystemHeapAllocator<U>&) noexcept {
-        return false;
-    }
-    // --- END PrimeStruct local patch (TODO-5235) ---
 
     DOCTEST_THREAD_LOCAL std::vector<IContextScope*, PrimeStructSystemHeapAllocator<IContextScope*>>
         g_infoContexts; // for logging with INFO()
@@ -5764,7 +5826,16 @@ namespace {
         XmlWriter xml;
         DOCTEST_DECLARE_MUTEX(mutex)
         Timer timer;
-        std::vector<String> deepestSubcaseStackNames;
+        // TODO-5235: same PrimeStruct arena-reset hazard as
+        // ContextState::subcaseStack/nextSubcaseStack and
+        // ConsoleReporter::subcasesStack (see those comments) - this
+        // reporter is long-lived and this vector is push_back()'d/clear()'d
+        // once per subcase/TEST_CASE for the life of the process. Not
+        // crash-confirmed (JUnitReporter is only instantiated when
+        // explicitly requested via -r=junit, which PrimeStruct's own test
+        // binaries don't do), but structurally identical to the confirmed
+        // ConsoleReporter::subcasesStack hazard, so fixed here too.
+        std::vector<String, PrimeStructSystemHeapAllocator<String>> deepestSubcaseStackNames;
 
         struct JUnitTestCaseData
         {
@@ -5814,7 +5885,11 @@ namespace {
                 testcases.emplace_back(classname, name);
             }
 
-            void appendSubcaseNamesToLastTestcase(std::vector<String> nameStack) {
+            // TODO-5235: templatized on Allocator so this also accepts
+            // JUnitReporter::deepestSubcaseStackNames below, which uses
+            // PrimeStructSystemHeapAllocator rather than std::allocator.
+            template <typename Allocator>
+            void appendSubcaseNamesToLastTestcase(const std::vector<String, Allocator>& nameStack) {
                 for(auto& curr: nameStack)
                     if(curr.size())
                         testcases.back().name += std::string("/") + curr.c_str();
@@ -6012,7 +6087,14 @@ namespace {
     {
         std::ostream&                 s;
         bool                          hasLoggedCurrentTestStart;
-        std::vector<SubcaseSignature> subcasesStack;
+        // TODO-5235: same PrimeStruct arena-reset hazard as
+        // ContextState::subcaseStack/nextSubcaseStack (see the comment on
+        // those members) - this reporter is long-lived (registered once
+        // in ContextState::reporters_currently_used) and this vector is
+        // push_back()'d/clear()'d once per subcase/TEST_CASE for the life
+        // of the process. Crash-confirmed via the poison-audit tool
+        // (docs/CompilerArenaAllocator.md's "TODO-5235" section).
+        std::vector<SubcaseSignature, PrimeStructSystemHeapAllocator<SubcaseSignature>> subcasesStack;
         size_t                        currentSubcaseLevel;
         DOCTEST_DECLARE_MUTEX(mutex)
 
