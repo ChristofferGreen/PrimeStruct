@@ -71,8 +71,8 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites | track: exe-backend-vector-at-precedence | surface: native-fastpath call classification
-- TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend | track: exe-backend-vector-removal | surface: exe backend vector runtime
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution
+- TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content | track: docs-lock-resync | surface: tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp
 
 Note (2026-08-22): synced this section - every entry previously listed
 here (TODO-4686/4690/4694/4707) is confirmed `[x]` resolved in the task
@@ -108,7 +108,6 @@ investigation chain's actively-productive leaves - see
 ### Immediate Next 10
 
 - TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
-- TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces (comment-clarity step landed; extraction still open)
@@ -395,7 +394,6 @@ while re-auditing the full queue this round; renumbering from 73 to
 avoid clashing with this list's own history.
 
 73. TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
-74. TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
 75. TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 76. TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 
@@ -5099,195 +5097,6 @@ avoid clashing with this list's own history.
     for whoever picks this back up; the call-expression-receiver repro
     above is a fast, already-verified starting point.
 
-- [ ] TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
-  - superseded_2026-08-05: re-checked both named TEST_CASEs
-    ("canonical vector indexed removal helpers with owned elements in
-    C++ emitter", "supports indexed vector removals with ownership
-    semantics in C++ emitter") - both pass currently, but not because
-    this TODO's original defect (wrong runtime VALUE, exit 1 returning 1
-    instead of 18) was fixed. Between this TODO being filed and now, the
-    symptom changed shape: `--emit=exe` no longer silently returns a
-    wrong value, it now crashes with "invalid indirect address in IR"
-    (exit 1) - a distinct, since-filed bug now tracked as TODO-4804
-    ("Struct value returned directly from
-    /std/collections/vector/at(.../at_unsafe(...) and immediately
-    field-accessed or method-chained crashes with '(un)aligned indirect
-    address in IR'"), which explicitly covers both these TEST_CASEs by
-    name in its own scope note. This TODO's own acceptance criterion
-    (returns the correct value, doesn't crash) is NOT met - the
-    underlying defect is still open, just superseded by a broader,
-    later-filed, currently-unfixed TODO. Leaving this open but pointing
-    at TODO-4804 as the actual tracking entry rather than duplicating
-    investigation here.
-  - owner: ai
-  - created_at: 2026-07-22
-  - phase: Hidden test failure remediation (emitters cluster)
-  - parallel_track: hidden-test-failures-emitters
-  - depends_on: (none)
-  - scope: `tests/unit/compile_run/test_compile_run_emitters_matrix_quaternion_support.cpp`
-    has 2 failing cases, both thin wrappers around shared conformance
-    helpers in `test_compile_run_vector_conformance_expectations.h` /
-    `test_compile_run_vector_conformance_experimental_expectations.h`:
-    "canonical vector indexed removal helpers with owned elements in
-    C++ emitter" and "supports indexed vector removals with ownership
-    semantics in C++ emitter". Both currently expect COMPILE REJECTION
-    for `emitMode == "exe"` (with diagnostic text like "vm backend only
-    supports numeric/bool/string vector literals" or a
-    `/std/collections/vector/push`-related message), but the source
-    now compiles successfully (rc=0) - this is a capability gain, not a
-    regression, consistent with several other same-session findings
-    where a previously-rejected construct now works. HOWEVER, unlike
-    those other cases, the RUNTIME RESULT is wrong, not just the
-    compile outcome: probed
-    `makeCanonicalVectorIndexedRemovalOwnershipConformanceSource()`'s
-    exact generated source directly against primec (`--emit=exe`,
-    compile rc=0, run rc=1). The SAME source's `expectVectorConformanceProgramRuns`
-    branch (used for other, currently-untested-here emit modes) expects
-    18, and manually re-deriving the arithmetic from the source's own
-    push/remove_at/remove_swap/vectorTakeSlot sequence (2-element
-    vector -> remove one -> count should be 1, survivor value read via
-    vectorTakeSlot without further mutating count) independently
-    confirms 18 is the semantically correct total
-    (`(1+9)+(1+7)=18`), not 1. This means struct-owned-element vector
-    indexed removal (`remove_at`/`remove_swap`) combined with
-    `vectorTakeSlot` produces an incorrect result specifically on the
-    "exe" emit path - a real correctness bug, not a diagnostic-text
-    drift, and NOT something to re-pin to "1" without understanding
-    the actual defect (per this session's standing discipline against
-    blind re-pinning of behavior that isn't understood). Not
-    investigated further than this due to session time budget - the
-    second failing case ("supports indexed vector removals...") uses a
-    structurally similar but distinct source generator
-    (`makeVectorIndexedRemovalOwnershipConformanceSource(mode, true)`
-    in the experimental-expectations header, parameterized over
-    `mode` in {"remove_at_drop", "remove_swap_relocation"} with
-    expected values 10 and 8) and was not yet probed at all.
-  - implementation_notes: likely starting point given the "vectorTakeSlot"
-    + `Destroy()` struct lifecycle interplay is the newest/least-tested
-    part of the source shape - trace whether `remove_at`/`remove_swap`
-    on a struct-typed vector element correctly decrements count exactly
-    once (not zero or twice) on the exe backend specifically, and
-    whether `vectorTakeSlot` reads without an additional implicit
-    removal. A result of exactly 1 (vs the correct 18) suggests most
-    terms in the final `plus(plus(...), plus(...))` evaluated to 0,
-    which could point at a `Destroy()`-triggered zeroing happening
-    earlier than intended, or a count/survivor read returning a
-    default rather than the actual relocated value.
-  - acceptance: both failing cases' existing "runs and returns N"
-    expectations for `emitMode == "exe"` are met with a runtime value
-    that's independently re-derived (not copied from what the compiler
-    currently produces) to match the source's actual push/remove/take
-    sequence, the way this TODO's own investigation did for the first
-    case (18, verified by hand from the source).
-  - stop_rule: do not re-pin either test's expected exe-mode value to
-    whatever primec currently outputs without first independently
-    re-deriving the correct expected value from the generated source's
-    own operations, the way this TODO's scope section already did for
-    the first case - a silent wrong-answer bug re-pinned to "match
-    current behavior" would permanently hide a real correctness defect
-    in vector ownership semantics.
-  - progress_2026-08-22: made substantial progress isolating the root
-    cause, though did not land a fix. Confirmed the symptom itself has
-    shifted again since the last note: both TEST_CASEs now compile
-    (rc=0) and RUN, but crash with "invalid indirect address in IR"
-    (exit 1) rather than returning a wrong value - the tests are
-    currently pinned to expect exactly this crash text, so they
-    "pass" without the underlying defect being fixed (confirmed this
-    is a real, still-open, separate defect from TODO-4804's fix, whose
-    own resolution note explicitly says so).
-    Bisected the minimal repro by hand (`primec --emit=exe`, ad-hoc
-    `.prime` probes, not committed) down from the full
-    `makeCanonicalVectorIndexedRemovalOwnershipConformanceSource()`
-    source to: a plain single-field struct (`Owned { [i32] value }`)
-    works fine through `push`/`at`/`remove_at`/`remove_swap`/
-    `vectorTakeSlot` on a `Vector<Owned>`. A struct-of-struct (`Wrapper
-    { [Owned] value }`, i.e. any struct with a NESTED struct field,
-    field order doesn't matter) works fine through `push`/`at` on
-    `Vector<Wrapper>`, but crashes on `vectorTakeSlot<Wrapper>` alone
-    (no `remove_at`/`remove_swap` needed to reproduce) - and crashes
-    identically whether or not the result is bound to a local, and
-    whether or not a field is subsequently read off it. So: the defect
-    is specifically "`take()`-ing a vector slot whose element type is a
-    struct occupying more than one IR slot" (any struct containing a
-    nested struct field will have `StructSlotLayout::totalSlots > 1`,
-    per `IrLowererStructSlotLayoutHelpers.cpp`'s recursive layout
-    computation - confirmed `totalSlots=3` for `Wrapper` via added-then-
-    removed debug instrumentation), on the exe/native backend
-    specifically (not yet checked on vm).
-    Traced `take(*slot)`'s lowering
-    (`IrLowererLowerEmitExprStorageHelpers.h`'s
-    `UninitializedStorageAccess::Location::Indirect` branch, reached via
-    `resolveUninitializedStorageAccessWithDefinitions`'s
-    `dereference(...)` handling in `IrLowererUninitializedTypeHelpers.cpp`)
-    and initially suspected a local-stack-frame under-sizing bug: this
-    branch (and ~14 other call sites sharing the same idiom across
-    `src/ir_lowerer/`) reserves `layout.totalSlots` contiguous IR local
-    slots via `nextLocal += layout.totalSlots`, then "touches" only the
-    FIRST reserved slot with a `PushI32`/`StoreLocal` pair - and since
-    both the VM interpreter (`computeVmKernelLocalCount`,
-    `VmExecutionKernel.cpp`) and the exe/C++ backend
-    (`computeLocalCount`, `IrToCppEmitter.cpp`) size a function's entire
-    local-variable frame by scanning for the MAX index any
-    `LoadLocal`/`StoreLocal` instruction actually references, touching
-    only the first slot of a multi-slot reservation looked like it would
-    under-count the frame by `totalSlots - 1`. Fixed this specific site
-    (touch `baseLocal + totalSlots - 1` instead of `baseLocal`),
-    rebuilt, and reproduced the SAME crash unchanged - **this
-    hypothesis turned out to be wrong** (or at least insufficient): a
-    debug-print confirmed the immediately-following `destPtrLocal =
-    allocTempLocal()` (used to store the copy destination's address)
-    already lands at index `baseLocal + totalSlots` and gets its own
-    `StoreLocal`, which incidentally already covers the needed range
-    regardless of the fix - explaining both why the fix didn't help
-    here AND why the other ~14 sites sharing this idiom aren't visibly
-    broken (most have an equivalent incidental higher-index touch right
-    after). Reverted this fix (`git checkout --`) since it didn't
-    resolve anything and isn't independently justified without a
-    confirmed-broken case to verify it against.
-    Redirected to the runtime's actual "invalid indirect address"
-    check (`VmHeapHelpers.cpp::resolveIndirectAddress`): addresses are
-    tagged (`kVmHeapAddressTag`, the top bit) to distinguish
-    heap-allocated memory from the local-variable frame, and a HEAP
-    address additionally requires falling within a `live`
-    `heapAllocations` entry's `[baseIndex, baseIndex+slotCount)` range.
-    Given local-frame sizing is confirmed NOT the problem, and the
-    struct COPY itself
-    (`emitStructCopyFromPtrs`/`IrLowererFlowControlHelpers.cpp`) is a
-    generic, struct-shape-agnostic per-slot loop that already works
-    correctly for other multi-slot-struct copies elsewhere in the
-    codebase, the most likely remaining explanation is a mismatch
-    between how the VECTOR's own heap buffer is originally ALLOCATED
-    (`push`/`vectorGrow`/`alloc<T>`) versus how `vectorSlotUnsafe`
-    computes a per-element BYTE OFFSET into that buffer
-    (`bufferOffsetUnsafe`'s slot-count-multiplier logic in
-    `IrLowererOperatorMemoryPointerHelpers.cpp`, confirmed to multiply
-    by `resolveStructSlotCount`'s recursively-computed multi-slot
-    count) - if the vector's own allocation sizing does NOT account for
-    `T` needing more than one slot per element the same way the offset
-    computation does, `push`/`at` reading/writing WITHIN the first
-    element or two could still land inside a generously-over-allocated
-    buffer (explaining why `push`+`at` alone showed no problem and
-    returned the correct value in this same investigation), while
-    `take()`'s specific liveness/heap-allocation-record interaction
-    (not yet identified precisely) trips the `allocation.live`/range
-    check. This is a real, credible, but NOT YET CONFIRMED hypothesis -
-    ran out of session budget before verifying it (would need to trace
-    `alloc<T>`/`vectorGrow`'s own element-size computation and compare
-    it directly against `resolveStructSlotCount`'s, or add targeted
-    debug output to `resolveIndirectAddress` itself to see the actual
-    failing address/allocation state at crash time).
-    Concrete next steps for whoever picks this up: (1) verify the
-    allocation-vs-offset element-size mismatch hypothesis directly
-    (compare `alloc<T>`'s emitted size computation against
-    `resolveStructSlotCount`'s result for the same `T=Wrapper`); (2) if
-    confirmed, the fix is almost certainly in whichever site computes
-    element byte-size for vector buffer allocation/growth, not in the
-    `take()`/`Indirect`-storage lowering this note spent most of its
-    time on; (3) the minimal repro (`vectorTakeSlot<Wrapper>` alone, no
-    removal needed) is much smaller and faster to iterate on than the
-    full conformance-source test file - reconstruct it from this note
-    rather than starting from the 44-line generated source again.
-
 - [x] TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
   - resolution (2026-07-29): investigated fully. `mapSingle<K,V>` and
     unqualified `mapPair(...)` (as a general constructor, not just nested
@@ -5960,6 +5769,55 @@ avoid clashing with this list's own history.
     2026-08-05 note ("not closing TODO-4743, acceptance target unmet") -
     this is further real progress on an already-accepted-as-diffuse
     residual, not a full close.
+- [ ] TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content
+  - owner: ai
+  - created_at: 2026-08-22
+  - phase: Documentation/test consistency
+  - parallel_track: docs-lock-resync
+  - depends_on: (none)
+  - scope: discovered while verifying TODO-4740's fix with a full
+    `./scripts/compile.sh --release` run:
+    `tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp`'s
+    "todo queue and skipped doctest debt stay source locked: ready-now
+    and priority lanes" TEST_CASE reads `docs/todo.md` at runtime and
+    asserts an exact, hardcoded literal for the "### Ready Now" section
+    (`TODO-4686`/`TODO-4690`/`TODO-4694`/`TODO-4707`) and the start of
+    "### Execution Queue" (`17. TODO-4650: ...`). Neither has matched
+    `docs/todo.md`'s actual content since commit `91a7b9d` ("docs/todo.md:
+    sync Ready Now/Immediate Next 10/Execution Queue with resolved
+    leaves"), which landed and was pushed earlier in the same session
+    that produced this TODO, before this leaf was filed - confirmed via
+    `git log --oneline -- docs/todo.md` that this commit predates any of
+    the current session's uncommitted work, so this is pre-existing
+    drift, not a regression introduced by TODO-4740's changes (verified
+    the reverse too: TODO-4740's own diff to `docs/todo.md` is
+    append-only, touching neither the "Ready Now" bullets nor the
+    "Execution Queue" numbered list this test locks).
+  - implementation_notes: the locking test file is ~1200 lines with
+    several hundred individual `CHECK` assertions pinning specific
+    substrings across `docs/todo.md` and `docs/todo_finished.md`
+    (Ready Now bullets, Execution Queue numbering, and a long tail of
+    "not present in todo.md" / "present in todo_finished.md" pairs for
+    already-closed leaves) - resyncing it properly requires reading the
+    full current `docs/todo.md` Ready Now/Immediate Next 10/Execution
+    Queue sections plus `docs/todo_finished.md`'s tail and updating the
+    locked literals to match, is a substantial standalone task, and is
+    explicitly out of scope for a single continuation turn already deep
+    into other work (same reasoning TODO-4740 itself used to defer
+    re-scoping TODO-4739). NOT attempted this round beyond identifying
+    and documenting the gap.
+  - acceptance: the "todo queue and skipped doctest debt stay source
+    locked" TEST_CASEs in this file pass against the CURRENT
+    `docs/todo.md`/`docs/todo_finished.md` content (not re-pinned to
+    some other stale snapshot), and stay in sync with whatever the
+    Ready Now/Immediate Next 10/Execution Queue sections say at the time
+    this is fixed.
+  - stop_rule: do not blindly regenerate every locked literal in this
+    file without reading the actual current `docs/todo.md`/
+    `docs/todo_finished.md` content each assertion is meant to verify -
+    the whole point of this test is to catch drift, so a mechanical
+    "make it pass" edit that doesn't verify each literal against real
+    content would defeat its purpose.
 - [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
   - owner: ai
   - created_at: 2026-07-27

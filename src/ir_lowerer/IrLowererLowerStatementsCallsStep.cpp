@@ -285,13 +285,17 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   // Must be resolved before defining lambdas that capture it.
   int32_t elemSlotCountForBuffer = 1;
   if (helperName == "push") {
-    if (payloadKind == LocalInfo::ValueKind::Unknown) {
-      // Struct push: resolve the element slot count from the payload struct layout.
-      if (!input.inferStructExprPath || !input.resolveStructSlotLayout) {
-        return VectorMutationStatementEmitResult::NotMatched;
-      }
-      const std::string payloadStructPath = input.inferStructExprPath(*payloadArg, localsIn);
-      if (payloadStructPath.empty()) {
+    // A struct-returning call's inferred ValueKind is not reliable here: ReturnInfo
+    // tags any non-array-of-struct struct return as an opaque Int64 handle (see
+    // IrLowererReturnInferenceHelpers.cpp), so inferExprKind() cannot be trusted to
+    // report Unknown for a struct payload. Probe the payload's struct type directly
+    // first; only fall back to payloadKind-based primitive handling when that fails.
+    std::string payloadStructPath;
+    if (input.inferStructExprPath) {
+      payloadStructPath = input.inferStructExprPath(*payloadArg, localsIn);
+    }
+    if (!payloadStructPath.empty()) {
+      if (!input.resolveStructSlotLayout) {
         return VectorMutationStatementEmitResult::NotMatched;
       }
       StructSlotLayoutInfo payloadLayout;
@@ -300,6 +304,8 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
         return VectorMutationStatementEmitResult::NotMatched;
       }
       elemSlotCountForBuffer = payloadLayout.totalSlots;
+    } else if (payloadKind == LocalInfo::ValueKind::Unknown) {
+      return VectorMutationStatementEmitResult::NotMatched;
     } else {
       // Primitive push: check type compatibility.
       if (payloadKind == LocalInfo::ValueKind::String ||

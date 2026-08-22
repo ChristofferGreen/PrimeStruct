@@ -532,26 +532,16 @@ TEST_CASE("canonical vector discard helpers with owned elements in C++ emitter")
 }
 
 TEST_CASE("canonical vector indexed removal helpers with owned elements in C++ emitter") {
-  // Verified current behavior: unlike the "vm" branch of
-  // expectCanonicalVectorIndexedRemovalOwnershipConformance (which
-  // still rejects at compile time), --emit=exe now compiles this
-  // source successfully and only crashes when the resulting
-  // executable actually runs ("invalid indirect address in IR",
-  // exit 1) - inlined here instead of reusing the shared
-  // compile-reject helper, which assumes the failure happens at
-  // compile time.
-  const std::string source = makeCanonicalVectorIndexedRemovalOwnershipConformanceSource();
-  const std::string srcPath =
-      writeTemp("vector_indexed_removal_canonical_ownership_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "vector_indexed_removal_canonical_ownership_exe_bin").string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runOutPath =
-      (testScratchPath("") / "vector_indexed_removal_canonical_ownership_exe_run.txt").string();
-  CHECK(runCommand(quoteShellArg(exePath) + " > " + quoteShellArg(runOutPath) + " 2>&1") == 1);
-  CHECK(readFile(runOutPath).find("invalid indirect address in IR") != std::string::npos);
+  // TODO-4740 (fixed): a struct-constructor-call push payload (e.g.
+  // Wrapper(Owned(1i32))) was misclassified by inferExprKind as an
+  // opaque Int64 "handle" (the sentinel ReturnInfo uses for any
+  // non-array-of-struct struct return), which caused the native
+  // vector-push fast path to under-allocate the backing heap buffer
+  // for struct elements needing more than one IR slot. --emit=exe now
+  // compiles and runs this source correctly; 18 is independently
+  // re-derived from the source's own push/remove_at/remove_swap/
+  // vectorTakeSlot sequence: (1+9)+(1+7)=18.
+  expectCanonicalVectorIndexedRemovalOwnershipConformance("exe");
 }
 
 TEST_CASE("rejects vector reserve with non-relocation-trivial elements in C++ emitter") {
@@ -624,31 +614,16 @@ main() {
 }
 
 TEST_CASE("supports indexed vector removals with ownership semantics in C++ emitter") {
-  // Verified current behavior: same underlying crash family as
-  // "canonical vector indexed removal helpers with owned elements"
-  // above - --emit=exe now compiles both the remove_at_drop and
-  // remove_swap_relocation sources successfully instead of rejecting
-  // them ("/std/collections/vector/push" diagnostic), and the
-  // resulting executables crash at runtime instead. Inlined here
-  // rather than reusing the shared compile-reject helper for the
-  // same reason as the canonical-ownership test above.
-  auto expectCrashes = [&](const std::string &mode, const std::string &expectedFragment) {
-    const std::string source = makeVectorIndexedRemovalOwnershipConformanceSource(mode);
-    const std::string srcPath =
-        writeTemp("vector_indexed_removal_ownership_" + mode + "_exe.prime", source);
-    const std::string exePath =
-        (testScratchPath("") / ("vector_indexed_removal_ownership_" + mode + "_exe_bin")).string();
-    const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                   quoteShellArg(exePath) + " --entry /main";
-    CHECK(runCommand(compileCmd) == 0);
-    const std::string runOutPath =
-        (testScratchPath("") / ("vector_indexed_removal_ownership_" + mode + "_exe_run.txt")).string();
-    CHECK(runCommand(quoteShellArg(exePath) + " > " + quoteShellArg(runOutPath) + " 2>&1") == 1);
-    CHECK(readFile(runOutPath).find(expectedFragment) != std::string::npos);
-  };
-
-  expectCrashes("remove_at_drop", "unaligned indirect address in IR");
-  expectCrashes("remove_swap_relocation", "invalid indirect address in IR");
+  // TODO-4740 (fixed): "remove_swap_relocation" no longer crashes on
+  // --emit=exe (its struct-of-struct push payload was affected by the
+  // same under-allocation bug as the canonical-ownership test above,
+  // now fixed) and returns the independently re-derived value 8.
+  // "remove_at_drop" still crashes with a distinct, still-open bug
+  // (TODO-4804's territory: a struct value returned directly from
+  // at()/at_unsafe() and immediately field-accessed), unaffected by
+  // this fix.
+  expectVectorIndexedRemovalOwnershipConformance("exe", "remove_at_drop", 10);
+  expectVectorIndexedRemovalOwnershipConformance("exe", "remove_swap_relocation", 8);
 }
 
 TEST_SUITE_END();

@@ -513,24 +513,10 @@ inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &
 }
 
 inline void expectCanonicalVectorIndexedRemovalOwnershipConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
-        "vector_indexed_removal_canonical_ownership_" + emitMode,
-        emitMode,
-        "VM error: invalid indirect address in IR",
-        "",
-        3);
-    return;
-  }
-  if (emitMode == "exe") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
-        "vector_indexed_removal_canonical_ownership_" + emitMode,
-        emitMode,
-        "vm backend only supports numeric/bool/string vector literals");
-    return;
-  }
+  // TODO-4740 (fixed): all emit modes now compile and run this source
+  // correctly; 18 is independently re-derived from the source's own
+  // push/remove_at/remove_swap/vectorTakeSlot sequence:
+  // (1+9)+(1+7)=18.
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
       "vector_indexed_removal_canonical_ownership_" + emitMode,

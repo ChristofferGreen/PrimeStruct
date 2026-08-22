@@ -241,23 +241,51 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
 inline void expectVectorIndexedRemovalOwnershipConformance(const std::string &emitMode,
                                                            const std::string &mode,
                                                            int expectedOut) {
-  if (emitMode == "vm") {
+  // TODO-4740 (fixed): the "remove_swap_relocation" mode's struct-of-struct
+  // push payload (Wrapper(Mover(...))) used to under-allocate its vector's
+  // backing heap buffer on both the vm and exe backends (the same root
+  // cause as expectCanonicalVectorIndexedRemovalOwnershipConformance
+  // above); both now compile and run correctly and return the
+  // independently re-derived expectedOut. The "remove_at_drop" mode's
+  // crash is a distinct, still-open bug (a struct value returned directly
+  // from at()/at_unsafe() and immediately field-accessed - TODO-4804's
+  // territory), unaffected by this fix, so it keeps its crash
+  // expectation.
+  if (mode == "remove_at_drop" && emitMode == "vm") {
     expectVectorConformanceCompileReject(
         makeVectorIndexedRemovalOwnershipConformanceSource(mode),
         "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
         emitMode,
-        mode == "remove_at_drop" ? "VM error: unaligned indirect address in IR"
-                                 : "VM error: invalid indirect address in IR",
+        "VM error: unaligned indirect address in IR",
         "",
         3);
     return;
   }
+  if (mode == "remove_at_drop" && emitMode == "exe") {
+    const std::string source = makeVectorIndexedRemovalOwnershipConformanceSource(mode);
+    const std::string nameStem = "vector_indexed_removal_ownership_" + mode + "_" + emitMode;
+    const std::string srcPath = writeTemp(nameStem + ".prime", source);
+    const std::string exePath = (testScratchPath("") / (nameStem + "_bin")).string();
+    const std::string compileCmd =
+        "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+    CHECK(runCommand(compileCmd) == 0);
+    const std::string runOutPath = (testScratchPath("") / (nameStem + "_run.txt")).string();
+    CHECK(runCommand(quoteShellArg(exePath) + " > " + quoteShellArg(runOutPath) + " 2>&1") == 1);
+    CHECK(readFile(runOutPath).find("unaligned indirect address in IR") != std::string::npos);
+    return;
+  }
+  if (emitMode == "vm") {
+    expectVectorConformanceProgramRuns(makeVectorIndexedRemovalOwnershipConformanceSource(mode),
+                                       "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
+                                       emitMode,
+                                       expectedOut);
+    return;
+  }
   if (emitMode == "exe") {
-    expectVectorConformanceCompileReject(
-        makeVectorIndexedRemovalOwnershipConformanceSource(mode),
-        "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
-        emitMode,
-        "/std/collections/vector/push");
+    expectVectorConformanceProgramRuns(makeVectorIndexedRemovalOwnershipConformanceSource(mode),
+                                       "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
+                                       emitMode,
+                                       expectedOut);
     return;
   }
   expectVectorConformanceProgramRuns(makeVectorIndexedRemovalOwnershipConformanceSource(mode, true),
