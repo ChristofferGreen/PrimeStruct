@@ -3805,6 +3805,114 @@ investigation chain's actively-productive leaves - see
     class rather than converging - the non-convergence pattern the
     stop_rule anticipates continues to hold, even with sharding solving
     the earlier resource-ceiling blocker.
+    Reran the full 15-shard sweep TWICE more after the
+    `ConsoleReporter`/`JUnitReporter` fix: both came back completely
+    clean - zero `use-after-poison` hits across all 15 shards, all 15
+    exits were LeakSanitizer's harmless "byte(s) leaked" summary only.
+    This is the first time in this investigation's entire history that
+    `PrimeStruct_semantics_tests` (2944 TEST_CASEs) has passed a
+    complete, exhaustive poison-audit sweep clean, and it reproduced on
+    a second independent run, ruling out ordering-dependent luck for
+    that binary specifically.
+    This task's own scope, however, explicitly names BOTH the
+    `semantics` AND `ir_pipeline` long-lived test binaries (see this
+    leaf's `stop_rule`) - `ir_pipeline` had never actually been audited
+    in any prior round of this investigation (all rounds so far only
+    ever built/ran `PrimeStruct_semantics_tests`). Built and sharded a
+    poison-audit run of `PrimeStruct_backend_ir_tests` (the binary that
+    actually contains the `tests/unit/ir_pipeline/**` sources, per
+    `CMakeLists.txt`; 1754 TEST_CASEs, 9 shards of 200). It is NOT
+    clean: shard 1601-1754 hit a `use-after-poison`, reproducible across
+    reruns. Bisected via repeated `--first=N --last=N` narrowing (not
+    addr2line this time - see below) down to a single TEST_CASE,
+    `semantics validate publishes module artifacts in import order`
+    (`test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp`),
+    reproducible running that ONE test case entirely alone (`--first`
+    and `--last` both pointing at it - confirmed via reading doctest.h's
+    own filter loop, third_party/doctest.h:7078-7081, that a
+    filtered-out/skipped TEST_CASE never calls `test_case_start`, so a
+    single-test run really does mean only one arena-reset cycle occurs
+    in the whole process).
+    First pass at this used `addr2line -f -C -i` the same way as every
+    doctest.h fix this round, which produced a stack that looked like
+    it was reading poisoned memory *during* the test's own compile
+    pipeline call (`runCompilePipeline` -> `monomorphizeTemplates` ->
+    `rewriteMonomorphizedDefinitions` -> `Definition`'s copy
+    constructor, which copies its `std::vector<Expr>` member) - which
+    would be architecturally impossible given only one arena scope is
+    ever active per TEST_CASE (nested scopes only reset at
+    `tls_scopeDepth == 0`, confirmed by reading
+    `ScopedCompileArena`'s ctor/dtor in `CompileArena.cpp:410-426`).
+    Re-ran with ASan's own symbolizer instead of manually
+    reconstructing frames via raw offsets (`ASAN_OPTIONS=halt_on_error=1`
+    without `symbolize=0`), and the real, authoritative stack tells a
+    completely different and self-consistent story: the READ happens in
+    `arenaDeallocate`/`operator delete` (`CompileArena.cpp:324`/`393`),
+    called from `__GI___call_tls_dtors` -> `__run_exit_handlers` ->
+    `__GI_exit` -> `_start` - i.e. this fires during **thread-local
+    object destruction at process exit**, not mid-test-body. The
+    *allocation* stack (where the freed memory was originally handed
+    out) is the `Definition`/`Expr` copy inside
+    `rewriteMonomorphizedDefinitions` during the test's own execution,
+    confirming the shape of the bug: something holds a pointer/reference
+    into that arena-allocated `Expr` data past the test's own
+    `test_case_end` reset (which already poisoned it), and a
+    thread_local object's destructor - which only runs once, at real
+    thread/process exit, not between TEST_CASEs - later calls `delete`
+    on it. This is structurally the exact same "thread_local cache
+    outliving a reset" hazard class TODO-5234/TODO-5235's earlier rounds
+    already found and fixed several instances of (see
+    `docs/CompilerArenaAllocator.md`), just a not-yet-identified new
+    instance, and one that (unlike every hazard fixed so far this
+    session) only manifests at process exit rather than during normal
+    execution - which is presumably why no earlier round caught it even
+    though `ir_pipeline` has apparently never actually been audited
+    before now.
+    Searched the obvious candidate locations for a `thread_local` (or
+    function-local `static`) holding a `Definition`/`Expr`/`Program` by
+    value anywhere reachable from `rewriteMonomorphizedDefinitions`,
+    `monomorphizeTemplates`, `SemanticsValidate.cpp`, or
+    `CompilePipeline.cpp` (grepped `thread_local` and `static` broadly
+    across `src/` and `include/`) - none of the existing, already-known
+    thread_local caches from earlier rounds
+    (`g_normalizeBindingTypeNameCache` and its neighbors in
+    `SemanticsBindingTypeHelpers.cpp`, `g_cachedMapper` in
+    `SourceLocationMapper.cpp`, the `StdlibSurfaceRegistry.cpp` cache)
+    hold AST node types by value, and no new candidate turned up by
+    grep. Did not find the actual thread_local object responsible.
+    Given the search surface here is effectively "any thread_local or
+    static anywhere in a large, unfamiliar-to-this-round part of the
+    codebase (monomorphization/semantic-validation internals) that
+    holds AST data and is destroyed at thread exit," this is exactly
+    the open-ended exhaustiveness problem this leaf's `stop_rule`
+    anticipates and explicitly permits stopping on rather than chasing
+    indefinitely. Stopping here per that stop_rule: resets remain OFF
+    by default (unchanged - `tests/unit/test_main.cpp` still never
+    constructs a `ScopedCompileArena` outside the opt-in
+    `PRIMEC_TEST_ARENA_RESET_PER_CASE` audit build), and this task's
+    checkbox stays `[ ]`. Net honest status: `PrimeStruct_semantics_tests`
+    is now confirmed clean (twice) under the poison audit; the doctest.h
+    vendored-library hazard class (5 distinct sites, all fixed this
+    round, verified via `git log` for this round's commit) appears
+    exhausted for that binary. `PrimeStruct_backend_ir_tests` is NOT
+    clean and has at least one unresolved, reproducible,
+    process-exit-time hazard in PrimeStruct's own semantics/
+    monomorphization code, not yet root-caused to a specific
+    thread_local declaration. If picked up again: the concrete next
+    step is finding that thread_local object - candidates not yet
+    checked include anything in `src/semantics/TemplateMonomorph*.cpp`'s
+    transitive includes beyond what a plain `grep thread_local` surfaces
+    (e.g. a cache reachable only through a class member initialized
+    lazily, or a cache in a header-only utility included from many
+    TUs), or instrumenting `CompileArena::deallocate`/`arenaDeallocate`
+    itself (e.g. a conditional breakpoint under `gdb` at
+    `CompileArena.cpp:324` filtered to the specific poisoned address
+    range, single-stepped through `__call_tls_dtors` to see exactly
+    which TLS object's destructor is on the stack, rather than inferring
+    it from static analysis alone - `gdb` was not attempted this round).
+    All fixes that did ship this round (5 doctest.h hazard sites) remain
+    unconditionally safe regardless of whether resets are ever enabled,
+    same reasoning as every prior round.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai
