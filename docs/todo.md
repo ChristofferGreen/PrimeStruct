@@ -4181,7 +4181,7 @@ investigation chain's actively-productive leaves - see
     here, per the stop_rule's explicit instruction. Treating this leaf
     as resolved to its documented limit.
 
-- [ ] TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
+- [x] TODO-4714 (RESOLVED): Fix named-argument call-form receiver dispatch for vector/map mutator helpers
   - owner: ai
   - created_at: 2026-07-15
   - phase: Hidden test failure remediation
@@ -4270,6 +4270,20 @@ investigation chain's actively-productive leaves - see
     something else not yet identified). 11 of the 32 cases in the
     target file remain unfixed even with the (reverted) broad version,
     also still open.
+  - resolution_2026-08-22: confirmed resolved, apparently as a side
+    effect of later work in this same phase (most likely the Collection
+    Decoupling effort, TODO-4656 through TODO-4705, or one of the
+    subsequent hidden-test-failure leaves - no single commit was
+    isolated as "the fix" since this was discovered via a routine
+    re-check while walking the Execution Queue, not a targeted
+    investigation). All 32/32 cases in
+    `test_semantics_calls_and_flow_collections_vector_helper_call_form_named_receivers.cpp`
+    now pass. Per the acceptance criteria, also reran the full
+    `primestruct.semantics.calls_flow.collections` suite: 1305/1305 test
+    cases, 4873/4873 assertions, 0 failed - matches TODO-4715's own
+    already-recorded 2026-08-05 green baseline exactly, confirming no
+    regression was reintroduced anywhere else in the suite in the
+    interim.
 
 - [x] TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters (RESOLVED)
   - resolution_summary (2026-08-05): this leaf's own scope was
