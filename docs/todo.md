@@ -70,10 +70,15 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4686: Detect [collection_type]/[key_value_type] struct declarations generically | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry struct-annotation scanning
-- TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
-- TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
-- TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation
+- TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites | track: exe-backend-vector-at-precedence | surface: native-fastpath call classification
+- TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend | track: exe-backend-vector-removal | surface: exe backend vector runtime
+- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution
+
+Note (2026-08-22): synced this section - every entry previously listed
+here (TODO-4686/4690/4694/4707) is confirmed `[x]` resolved in the task
+blocks below; see that round's Execution Queue progress notes for
+verification detail. Replaced with the genuinely-still-open leaves found
+while re-auditing the full numbered Execution Queue list this round.
 
 Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
 of TODO-5237/5238 - its own investigation trended away from convergence
@@ -102,28 +107,17 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-4708: Measure per-shard doctest binary startup/registration overhead
-- TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
-- TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
-- TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
-- TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
-- TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
-- TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
-- TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
-- TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
-- TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
-- TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
-- TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
-- TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
-- TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
 - TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
 - TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
-- TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
-- TODO-4742: Fix O(N) linear scan in hasDefinitionFamilyPath causing near-quadratic semantic validation cost on large stdlib imports
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
-- TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
-- TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
+- TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces (comment-clarity step landed; extraction still open)
+- TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
+
+Note (2026-08-22): synced this section against the task blocks below -
+every other entry previously listed here (TODO-4708/4709/4710/4711/4712/
+4713/4715/4723/4725/4726/4727/4728/4731/4741/4742/4748) is confirmed
+`[x]` resolved.
 
 ### Priority Lanes
 
@@ -388,62 +382,22 @@ investigation chain's actively-productive leaves - see
 
 ### Execution Queue
 
-17. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
-18. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
-19. TODO-4652: Split oversized single test case bodies (>1000 lines)
-20. TODO-4653: Add dedicated IrPrinter unit tests
-21. TODO-4654: Add [public] annotations to stdlib modules
-22. TODO-4655: Add compile-run tests for language level examples
-23. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
-24. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-25. TODO-4684: Spike a minimal zero-C++ collection type (done, see docs/todo_finished.md)
-26. TODO-4685: Directory-scan discovery of collection .prime files (done, see docs/todo_finished.md)
-27. TODO-4686: Generic `[collection_type]`/`[key_value_type]` struct detection
-28. TODO-4687: Generic canonicalPath/bridgeKey/prefix derivation + override syntax
-29. TODO-4688: Fold `deriveCollectionsSurfaces()`'s 3 blocks into one loop
-30. TODO-4689: Dynamically-sized registry storage, enum resolution by path
-31. TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site
-32. TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
-33. TODO-4692: Migrate soaVector* literal families to registry lookup
-34. TODO-4693: Clean up residual ContainerError string comparisons
-35. TODO-4694: Introduce shared trait wrapper helpers, behavior-preserving
-36. TODO-4695: Migrate semantics/ call sites to wrappers
-37. TODO-4696: Migrate ir_lowerer/ call sites to wrappers
-38. TODO-4697: Migrate emitter/ call sites to wrappers
-39. TODO-4698: Swap wrapper internals to generic registry/trait queries, delete old helpers
-40. TODO-4699: Add legacy-collection-branch reachability instrumentation
-41. TODO-4700: Delete 3-slot branches + duplicate definition, evidence-based
-42. TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath branches
-43. TODO-4702: Add second toy collection type, zero C++
-44. TODO-4703: Add diff-based zero-C++ gate script
-45. TODO-4704: Add audit-exemption-count ratchet script
-46. TODO-4705: Correct stale Collection decoupling documentation
-47. TODO-4707: Fix cross-test-case pollution in whole-process doctest suites
-48. TODO-4708: Measure per-shard doctest binary startup/registration overhead
-49. TODO-4709: Audit compile_run pass/fail-only cases for downgrade candidates
-50. TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
-50a. TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
-50b. TODO-5237: Evaluate a drop-in fast general-purpose allocator (mimalloc/jemalloc) as an alternative to the reset arena
-50c. TODO-5245: Convert stdlib surface registry's matchesAny() O(N) linear scan to O(1)/O(log N) lookup
-50d. TODO-5246: Continue profiling remaining allocation/hash/memcmp churn after TODO-5245
-51. TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
-52. TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
-53. TODO-4713: Diagnose and reduce SoaColumnsN monomorphization's non-linear cost
-54. TODO-4714: Fix named-argument call-form receiver dispatch for vector/map mutator helpers
-55. TODO-4715: Triage remaining calls_flow.collections hidden failures into clusters
-60. TODO-4723: Fix imported-helper diagnostics, nested-call "unknown call target", and rooted-helper-fallback rejection bugs (15 cases)
-61. TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces
-62. TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
-63. TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
-64. TODO-4727: Fix soa canonical-path (get/ref/reserve/to_aos) method routing through the full compile pipeline
-65. TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
-66. TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
-67. TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719
-68. TODO-5224: Build the per-module symbol manifest generator
-69. TODO-5248: Implement Maybe<Pointer<T>> fallible heap allocation (done, see docs/todo_finished.md)
-70. TODO-5249: Implement Reference<T, Capability>/Slice<T, Capability> capability-parameterized views (done, see docs/todo_finished.md)
-71. TODO-5250: Implement Slice<T, Capability> and a real slice(...) return type (done, see docs/todo_finished.md)
-72. TODO-5251: Extend Reference<T, Capability>/Pointer<T, Capability> support beyond function parameters (done, see docs/todo_finished.md)
+Note (2026-08-22): items 17-72 (TODO-4650 through TODO-5251) are all
+resolved as of this round - see each one's task block below (most moved
+to `docs/todo_finished.md`; a few left in place in this file with
+`[x] ... (RESOLVED)` markers and a resolution note, per this doc's
+existing convention for entries other leaves still cross-reference).
+Exceptions: TODO-4724 (comment-clarity step landed; the larger
+decomposition remains open) and TODO-5050 (shapes (a)/(b) resolved;
+shape (c) still open) - both still genuinely actionable, see their task
+blocks. Replaced this list with the next genuinely open items found
+while re-auditing the full queue this round; renumbering from 73 to
+avoid clashing with this list's own history.
+
+73. TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites
+74. TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
+75. TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
+76. TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 
 ### Task Blocks
 
