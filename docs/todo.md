@@ -5186,6 +5186,107 @@ avoid clashing with this list's own history.
     the first case - a silent wrong-answer bug re-pinned to "match
     current behavior" would permanently hide a real correctness defect
     in vector ownership semantics.
+  - progress_2026-08-22: made substantial progress isolating the root
+    cause, though did not land a fix. Confirmed the symptom itself has
+    shifted again since the last note: both TEST_CASEs now compile
+    (rc=0) and RUN, but crash with "invalid indirect address in IR"
+    (exit 1) rather than returning a wrong value - the tests are
+    currently pinned to expect exactly this crash text, so they
+    "pass" without the underlying defect being fixed (confirmed this
+    is a real, still-open, separate defect from TODO-4804's fix, whose
+    own resolution note explicitly says so).
+    Bisected the minimal repro by hand (`primec --emit=exe`, ad-hoc
+    `.prime` probes, not committed) down from the full
+    `makeCanonicalVectorIndexedRemovalOwnershipConformanceSource()`
+    source to: a plain single-field struct (`Owned { [i32] value }`)
+    works fine through `push`/`at`/`remove_at`/`remove_swap`/
+    `vectorTakeSlot` on a `Vector<Owned>`. A struct-of-struct (`Wrapper
+    { [Owned] value }`, i.e. any struct with a NESTED struct field,
+    field order doesn't matter) works fine through `push`/`at` on
+    `Vector<Wrapper>`, but crashes on `vectorTakeSlot<Wrapper>` alone
+    (no `remove_at`/`remove_swap` needed to reproduce) - and crashes
+    identically whether or not the result is bound to a local, and
+    whether or not a field is subsequently read off it. So: the defect
+    is specifically "`take()`-ing a vector slot whose element type is a
+    struct occupying more than one IR slot" (any struct containing a
+    nested struct field will have `StructSlotLayout::totalSlots > 1`,
+    per `IrLowererStructSlotLayoutHelpers.cpp`'s recursive layout
+    computation - confirmed `totalSlots=3` for `Wrapper` via added-then-
+    removed debug instrumentation), on the exe/native backend
+    specifically (not yet checked on vm).
+    Traced `take(*slot)`'s lowering
+    (`IrLowererLowerEmitExprStorageHelpers.h`'s
+    `UninitializedStorageAccess::Location::Indirect` branch, reached via
+    `resolveUninitializedStorageAccessWithDefinitions`'s
+    `dereference(...)` handling in `IrLowererUninitializedTypeHelpers.cpp`)
+    and initially suspected a local-stack-frame under-sizing bug: this
+    branch (and ~14 other call sites sharing the same idiom across
+    `src/ir_lowerer/`) reserves `layout.totalSlots` contiguous IR local
+    slots via `nextLocal += layout.totalSlots`, then "touches" only the
+    FIRST reserved slot with a `PushI32`/`StoreLocal` pair - and since
+    both the VM interpreter (`computeVmKernelLocalCount`,
+    `VmExecutionKernel.cpp`) and the exe/C++ backend
+    (`computeLocalCount`, `IrToCppEmitter.cpp`) size a function's entire
+    local-variable frame by scanning for the MAX index any
+    `LoadLocal`/`StoreLocal` instruction actually references, touching
+    only the first slot of a multi-slot reservation looked like it would
+    under-count the frame by `totalSlots - 1`. Fixed this specific site
+    (touch `baseLocal + totalSlots - 1` instead of `baseLocal`),
+    rebuilt, and reproduced the SAME crash unchanged - **this
+    hypothesis turned out to be wrong** (or at least insufficient): a
+    debug-print confirmed the immediately-following `destPtrLocal =
+    allocTempLocal()` (used to store the copy destination's address)
+    already lands at index `baseLocal + totalSlots` and gets its own
+    `StoreLocal`, which incidentally already covers the needed range
+    regardless of the fix - explaining both why the fix didn't help
+    here AND why the other ~14 sites sharing this idiom aren't visibly
+    broken (most have an equivalent incidental higher-index touch right
+    after). Reverted this fix (`git checkout --`) since it didn't
+    resolve anything and isn't independently justified without a
+    confirmed-broken case to verify it against.
+    Redirected to the runtime's actual "invalid indirect address"
+    check (`VmHeapHelpers.cpp::resolveIndirectAddress`): addresses are
+    tagged (`kVmHeapAddressTag`, the top bit) to distinguish
+    heap-allocated memory from the local-variable frame, and a HEAP
+    address additionally requires falling within a `live`
+    `heapAllocations` entry's `[baseIndex, baseIndex+slotCount)` range.
+    Given local-frame sizing is confirmed NOT the problem, and the
+    struct COPY itself
+    (`emitStructCopyFromPtrs`/`IrLowererFlowControlHelpers.cpp`) is a
+    generic, struct-shape-agnostic per-slot loop that already works
+    correctly for other multi-slot-struct copies elsewhere in the
+    codebase, the most likely remaining explanation is a mismatch
+    between how the VECTOR's own heap buffer is originally ALLOCATED
+    (`push`/`vectorGrow`/`alloc<T>`) versus how `vectorSlotUnsafe`
+    computes a per-element BYTE OFFSET into that buffer
+    (`bufferOffsetUnsafe`'s slot-count-multiplier logic in
+    `IrLowererOperatorMemoryPointerHelpers.cpp`, confirmed to multiply
+    by `resolveStructSlotCount`'s recursively-computed multi-slot
+    count) - if the vector's own allocation sizing does NOT account for
+    `T` needing more than one slot per element the same way the offset
+    computation does, `push`/`at` reading/writing WITHIN the first
+    element or two could still land inside a generously-over-allocated
+    buffer (explaining why `push`+`at` alone showed no problem and
+    returned the correct value in this same investigation), while
+    `take()`'s specific liveness/heap-allocation-record interaction
+    (not yet identified precisely) trips the `allocation.live`/range
+    check. This is a real, credible, but NOT YET CONFIRMED hypothesis -
+    ran out of session budget before verifying it (would need to trace
+    `alloc<T>`/`vectorGrow`'s own element-size computation and compare
+    it directly against `resolveStructSlotCount`'s, or add targeted
+    debug output to `resolveIndirectAddress` itself to see the actual
+    failing address/allocation state at crash time).
+    Concrete next steps for whoever picks this up: (1) verify the
+    allocation-vs-offset element-size mismatch hypothesis directly
+    (compare `alloc<T>`'s emitted size computation against
+    `resolveStructSlotCount`'s result for the same `T=Wrapper`); (2) if
+    confirmed, the fix is almost certainly in whichever site computes
+    element byte-size for vector buffer allocation/growth, not in the
+    `take()`/`Indirect`-storage lowering this note spent most of its
+    time on; (3) the minimal repro (`vectorTakeSlot<Wrapper>` alone, no
+    removal needed) is much smaller and faster to iterate on than the
+    full conformance-source test file - reconstruct it from this note
+    rather than starting from the 44-line generated source again.
 
 - [x] TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
   - resolution (2026-07-29): investigated fully. `mapSingle<K,V>` and
