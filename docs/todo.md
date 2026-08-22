@@ -4522,7 +4522,26 @@ investigation chain's actively-productive leaves - see
     the `/soa/push` hypothesis that motivated this stop_rule was refuted.
 
 
-- [ ] TODO-4725: Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
+- [x] TODO-4725 (RESOLVED): Triage and fix newly-exposed non-semantics test failures from TODO-4720's shard-config fix
+  - resolution_2026-08-22: this is a triage-only leaf (per its own
+    stop_rule: "once the failures are clustered and each cluster has
+    its own follow-up TODO... this TODO is done"). All identified
+    sub-clusters have follow-ups: (a) -> TODO-4726 (open), (b) ->
+    TODO-4727 (resolved, also covers this entry's one confirmed
+    cluster-(2) overlap case), (c) -> TODO-4728 (open). The remainder of
+    cluster (2) (73/121 "newly exposed" compile_run shards, originally
+    Timeout results) is no longer reproducible: a full, fresh
+    `./scripts/compile.sh --release` run today passed 100%, 0 failed out
+    of 1898 (confirmed via `/tmp/final_verify4.log`, captured while
+    closing out an unrelated TODO-4711 correction in this same round).
+    The one specific case checked by hand outside the CTest gate
+    (`primestruct.ir.pipeline.validation`'s "semantics validate
+    publishes module artifacts in import order",
+    `test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp:510`)
+    still fails via a raw, unsharded binary invocation, but this is
+    already documented in `docs/failing_tests.md` as a known flake that
+    does not reproduce under the real CTest-sharded release gate - not a
+    new finding, and out of scope for this triage-only leaf either way.
   - owner: ai
   - created_at: 2026-07-16
   - phase: Hidden test failure remediation
