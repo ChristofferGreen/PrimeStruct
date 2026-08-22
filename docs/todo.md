@@ -4649,7 +4649,19 @@ investigation chain's actively-productive leaves - see
     Both fixes committed together; full-suite regression logs and pass/
     fail counts recorded in `docs/failing_tests.md`'s 2026-07-16 section.
 
-- [ ] TODO-4726: Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
+- [x] TODO-4726 (RESOLVED): Fix remaining namespaced/rooted builtin-helper matching gaps (5 functions, 4 cases)
+  - resolution_2026-08-22: the last remaining case
+    (`ir_lowerer::getBuiltinArrayAccessName`, "ir lowerer access helper
+    rejects removed rooted vector access aliases" / "ir lowerer access
+    helper classifies namespaced access helpers") now passes - resolved
+    incidentally by other work landed later in this phase (this session
+    made no source change for it; discovered already-passing while
+    working the Execution Queue). Verified the full acceptance bar:
+    both named cases pass (40/40 assertions), the full
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    file is 95/95 (647/647 assertions), and `primestruct.compile.run.emitters.cpp`
+    is confirmed clean via today's full `./scripts/compile.sh --release`
+    run (100% passed, 0 failed out of 1898).
   - owner: ai
   - created_at: 2026-07-16
   - phase: Hidden test failure remediation
@@ -7161,7 +7173,26 @@ investigation chain's actively-productive leaves - see
        existing ~50-file native test suite. See the approved plan
        (`/root/.claude/plans/twinkling-foraging-charm.md` at time of
        writing) for the full phase breakdown.
-- [ ] TODO-4731: Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
+- [x] TODO-4731 (RESOLVED): Close the modern soa surface gaps (bare get template args, method mutators, canonical to_aos lowering, call-receiver method chains, legacy-path diagnostics)
+  - resolution_2026-08-22: all 5 named gaps are closed. (a)/(b)/(c)/(d)
+    were explicitly fixed and gated per the `progress_2026-07-18`
+    through `progress_2026-07-19c` notes below; (e) (the retired
+    `soa_vector` family leaking into diagnostics) was fixed as a side
+    effect of (d)'s fix for the same call shape, per
+    `progress_2026-07-18b`'s own note ("also the gap (e) leak shape for
+    this path"). The broader, generalized version of gap (e)/(f) this
+    leaf's own notes surfaced while re-pinning (borrowed-receiver
+    routing beyond the original probe shapes) was correctly forked into
+    its own leaf, TODO-5050, rather than solved twice - that leaf is
+    already tracked separately (currently partially resolved) and is
+    the right place for any further work in this area, not here.
+    Re-verified this leaf's own acceptance bar today:
+    `primestruct.semantics.calls_flow.collections` is fully clean
+    (1305/1305 cases, 4873/4873 assertions - confirmed earlier this
+    session while closing TODO-4714, strictly better than the 35-shard
+    failing baseline this leaf's own progress notes tracked against) and
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    is 95/95 (647/647 assertions).
   - owner: ai
   - created_at: 2026-07-18
   - phase: Hidden test failure remediation
@@ -7311,7 +7342,18 @@ investigation chain's actively-productive leaves - see
     diagnostic, and the uppercase-SoaVector case drops its retired
     internal_soa_vector import (previously masked by the metadata
     failure). Both files: 270/270 green.
-- [ ] TODO-4728: Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
+- [x] TODO-4728 (RESOLVED): Fix ir_lowerer effects-unit test fixtures missing semantic-product callable summaries
+  - resolution_2026-08-22: the last remaining case ("ir lowerer rejects
+    non-eliminated reflection query paths") now passes - resolved
+    incidentally by other work landed later in this phase (no source
+    change made this session; discovered already-passing while working
+    the Execution Queue). Also checked the related TODO-4729 case this
+    entry's own note flagged as sharing the identical failure class
+    ("ir lowerer preserves inline-call Result metadata from
+    caller-scoped parameter defaults") - also passes. Full acceptance
+    bar verified:
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+    is 95/95 (647/647 assertions).
   - owner: ai
   - created_at: 2026-07-16
   - phase: Hidden test failure remediation
