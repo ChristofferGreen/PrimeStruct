@@ -5073,6 +5073,31 @@ avoid clashing with this list's own history.
     now-passing/correct behavior in the same file - this bug is
     specific to vector, not a general direct-call-with-struct-return
     problem.
+  - progress_2026-08-22: re-confirmed this TODO is still genuinely
+    unresolved, not stale. Directly reproduced the call-expression-
+    receiver case (`/std/collections/vector/at([index] 2i32, [values]
+    wrapVector())` with a `return(plus(index, 30i32))` override) against
+    the current build: still returns 0, not the override's 32 - the
+    behavior the test file's own comment (line ~437-446 of
+    `test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp`)
+    already documents as "still-incorrect" and attributes to
+    "TODO-4805/4806". That attribution is imprecise: TODO-4805 (now
+    resolved) covered a different call shape (`array<i32>`-typed
+    helper-return receiver into `count(...)`, not `vector<i32>` into
+    `at(...)`), and TODO-4806 (still open) covers a different failure
+    mode entirely (a slash-method-call-chained `count(...)` failing to
+    LOWER with "struct parameter type mismatch", not a successfully-
+    lowered call silently returning the wrong VALUE). Neither entry's
+    scope, as written, actually covers this specific repro - it has no
+    precise dedicated tracking beyond this TODO itself. Did not attempt
+    a fix this round: this leaf's own stop_rule requires first mapping
+    the full set of `at`/`at_unsafe` classification call sites (at
+    least three, per the `implementation_notes` above) before another
+    patch attempt, which is a substantial, dedicated investigation on
+    its own - out of scope for a single continuation turn already deep
+    into a long session of other work. Left as the next concrete item
+    for whoever picks this back up; the call-expression-receiver repro
+    above is a fast, already-verified starting point.
 
 - [ ] TODO-4740: Investigate wrong runtime result for owned-element vector indexed removal on the exe backend
   - superseded_2026-08-05: re-checked both named TEST_CASEs
