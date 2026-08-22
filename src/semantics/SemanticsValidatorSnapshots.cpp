@@ -419,7 +419,7 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     return std::nullopt;
   }
 
-  std::string_view collectionFamily;
+  std::string collectionFamily;
   if (metadata == vectorHelperSurfaceMetadata() ||
       metadata == vectorConstructorSurfaceMetadata()) {
     collectionFamily = "vector";
@@ -441,7 +441,7 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     return std::nullopt;
   }
 
-  return std::pair<std::string, std::string>(std::string(collectionFamily),
+  return std::pair<std::string, std::string>(std::move(collectionFamily),
                                              std::string(helperName));
 }
 

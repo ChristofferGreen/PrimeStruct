@@ -3634,6 +3634,96 @@ investigation chain's actively-productive leaves - see
     audit loop to convergence (zero poisoned-memory accesses on a full
     `semantics`+`ir_pipeline` run) before reconsidering
     `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` as a default.
+  - progress_2026-08-22 (still left open per stop_rule): Did exactly the
+    "fix `doctest.h`'s `g_infoContexts` hazard first" step the
+    2026-08-21 note above called out as the next step. Checked upstream
+    first: pulled doctest v2.5.3 (latest release, current repo pin is
+    2.4.11) directly from GitHub and confirmed `g_infoContexts` is
+    byte-for-byte the same plain `thread_local std::vector<IContextScope*>`
+    with no allocator customization - an upgrade would not have fixed
+    this, so proceeded with a local patch instead. Patched
+    `third_party/doctest.h` (first-ever local modification to this
+    vendored file, clearly marked with a `PrimeStruct local patch
+    (TODO-5235)` comment block): added a small, self-contained
+    `PrimeStructSystemHeapAllocator<T>` (calls `std::malloc`/`std::free`
+    directly, bypassing the overridden global `operator new`/`delete`
+    entirely - deliberately not dependent on any PrimeStruct header, to
+    keep the vendored file's diff against upstream minimal) and changed
+    `g_infoContexts`'s one declaration site to use it. Verified the
+    change compiles cleanly under the `PRIMESTRUCT_ARENA_POISON_AUDIT`
+    ASan build.
+    Re-ran the poison-audit loop (full `PrimeStruct_semantics_tests`
+    binary, `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` on) to check whether
+    the doctest.h fix was sufficient. It surfaced two more real bugs -
+    but a DIFFERENT class than every hazard found so far, and unrelated
+    to the arena/g_infoContexts investigation itself: plain dangling
+    `std::string_view` bugs where a `std::string_view` local/parameter
+    was reassigned from a function that returns `std::string` **by
+    value** (`text = trimRequirementText(text)`-shaped code), leaving
+    the view pointing at a temporary that's destroyed at the end of that
+    statement - undefined behavior independent of any arena/reset
+    machinery, just never caught before because this was the first time
+    this binary ran under `-fsanitize=address
+    -fsanitize-address-use-after-scope`. Found and fixed both,
+    confirmed via `addr2line` against a `RelWithDebInfo` (`-g`) rebuild
+    of the audit binary for exact source lines (the default
+    `Release`/`-O3` audit build has no line-level DWARF, which made the
+    first crash much slower to root-cause than it needed to be - use
+    `-DCMAKE_BUILD_TYPE=RelWithDebInfo` for any future `-DPRIMESTRUCT_ARENA_POISON_AUDIT=ON`
+    build):
+    (1) `SemanticsValidatorSnapshots.cpp`'s
+    `collectionBridgeChoiceFromResolvedPath`: `std::string_view
+    collectionFamily; ... collectionFamily = internalSoaCollectionTypeName();`
+    (that function returns `std::string`) - changed `collectionFamily`'s
+    declared type to `std::string` and dropped the now-redundant
+    `std::string(collectionFamily)` wrap at its one use site.
+    (2) `RequirementPredicateFacts.cpp`'s `parseUnsignedRequirementInteger`:
+    `text = trimRequirementText(text)` where `text` is a `std::string_view`
+    parameter (`trimRequirementText` returns `std::string`) - replaced
+    with the same in-place `remove_prefix`/`remove_suffix` whitespace-trim
+    loop `trimRequirementText`'s own body already uses internally, so
+    `text` stays a view over the caller's original, still-live buffer
+    instead of round-tripping through a temporary `std::string`. Checked
+    the rest of this file's `trimRequirementText` call sites for the same
+    pattern (6 total) - the other 4 all assign into a genuine
+    `std::string` lvalue (by-value `std::string` parameters or explicitly
+    `std::string`-typed locals), so this was the only one.
+    Then hit a hard environmental wall, not a code problem: the audit
+    binary is one long-running process executing 2000+ TEST_CASEs under
+    full ASan instrumentation (redzones + shadow memory on every
+    allocation for the suite's whole runtime), and this sandbox's memory
+    cgroup OOM-killed it (confirmed via `dmesg`/`journalctl -k`:
+    "Memory cgroup out of memory... anon-rss:13920512kB" i.e. ~14GB
+    resident before the kill) partway through a run, with zero further
+    output - not a hang, not a hazard, a real resource ceiling this
+    environment enforces that a full single-process ASan run over this
+    suite's size cannot stay under. Retried multiple times
+    (with/without `ASAN_OPTIONS=symbolize=0` to rule out the external
+    `llvm-symbolizer` subprocess being the memory culprit - it wasn't,
+    both configurations eventually hit the same cgroup OOM kill).
+    Net result: 3 real fixes landed (the doctest.h allocator patch plus
+    the two dangling-view bugs), all independently verified safe via a
+    completely separate, normal (non-ASan, non-audit) fresh
+    `./scripts/compile.sh --release` run: **no failing CTest cases**,
+    build log clean of `error:`/`Error 1`/`Error 2`. But the audit could
+    NOT be driven to a clean, complete, zero-poisoned-access full-suite
+    pass in this environment - not because more hazards are known to
+    remain, but because the verification method itself (one long ASan
+    process over the whole suite) cannot finish here regardless of
+    correctness. Per this leaf's own stop_rule ("do not ship... without
+    achieving full confidence"), resets stay OFF by default -
+    `tests/unit/test_main.cpp` unchanged, `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE`
+    still opt-in only. The 3 fixes shipped this round are all
+    unconditionally safe regardless of whether resets are ever enabled
+    (same reasoning as every prior round's fixes). If picked up again:
+    the real blocker is now the AUDIT METHOD's own resource footprint,
+    not a specific remaining code hazard - consider sharding the
+    poison-audit run into smaller batches (e.g. one `TEST_SUITE` or
+    doctest `--first`/`--last` range per process) so each individual
+    audit process's ASan memory footprint stays small enough for this
+    environment, then aggregate results across shards to reach the same
+    "zero poisoned access across the full suite" confidence bar without
+    needing one giant process to survive the whole run.
 
 - [ ] TODO-4711: Tighten CTest TIMEOUT values toward the 30s ceiling
   - owner: ai

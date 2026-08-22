@@ -4575,7 +4575,60 @@ namespace detail {
             getExceptionTranslators().push_back(et);
     }
 
-    DOCTEST_THREAD_LOCAL std::vector<IContextScope*> g_infoContexts; // for logging with INFO()
+    // --- BEGIN PrimeStruct local patch (TODO-5235) ---
+    // g_infoContexts is thread_local and its backing buffer is push_back'd/
+    // pop_back'd across every INFO()/CAPTURE()/MESSAGE() call for the life
+    // of the process, but PrimeStruct's compile arena allocator (see
+    // include/primec/support/CompileArena.h) can reset per compile scope
+    // (e.g. once per doctest TEST_CASE), reclaiming any memory a scope
+    // allocated. std::vector reuses its existing backing buffer whenever
+    // capacity already suffices, so if that buffer was allocated from an
+    // arena-served operator new while a scope was active, a later push_back
+    // after that scope's arena resets silently writes into memory that has
+    // already been handed to something else - a real, previously-diagnosed
+    // corruption hazard (docs/CompilerArenaAllocator.md's "TODO-5235"
+    // section). g_infoContexts lives inside this vendored header, so it
+    // cannot be wrapped with PrimeStruct's own systemHeapValue()/
+    // SystemHeapScope escape hatch at its declaration the way our own code
+    // is; instead this allocator forces every (de)allocation for this one
+    // vector straight through std::malloc/std::free, bypassing the
+    // overridden global operator new/delete entirely (PrimeStruct's arena
+    // only intercepts operator new/delete, never plain malloc - see
+    // CompileArena.cpp's own bootstrap allocations for the same technique),
+    // so this vector's buffer is never arena-served and therefore never at
+    // risk from an arena reset. Deliberately self-contained (no dependency
+    // on any PrimeStruct header) to keep this vendored file's diff against
+    // upstream doctest minimal and easy to re-apply after a future upgrade.
+    template <typename T>
+    struct PrimeStructSystemHeapAllocator {
+        using value_type = T;
+        PrimeStructSystemHeapAllocator() noexcept = default;
+        template <typename U>
+        PrimeStructSystemHeapAllocator(const PrimeStructSystemHeapAllocator<U>&) noexcept {}
+        T* allocate(std::size_t n) {
+            if(n > (std::size_t(-1) / sizeof(T)))
+                throw std::bad_alloc();
+            void* p = std::malloc(n * sizeof(T));
+            if(!p)
+                throw std::bad_alloc();
+            return static_cast<T*>(p);
+        }
+        void deallocate(T* p, std::size_t) noexcept { std::free(p); }
+    };
+    template <typename T, typename U>
+    bool operator==(const PrimeStructSystemHeapAllocator<T>&,
+                     const PrimeStructSystemHeapAllocator<U>&) noexcept {
+        return true;
+    }
+    template <typename T, typename U>
+    bool operator!=(const PrimeStructSystemHeapAllocator<T>&,
+                     const PrimeStructSystemHeapAllocator<U>&) noexcept {
+        return false;
+    }
+    // --- END PrimeStruct local patch (TODO-5235) ---
+
+    DOCTEST_THREAD_LOCAL std::vector<IContextScope*, PrimeStructSystemHeapAllocator<IContextScope*>>
+        g_infoContexts; // for logging with INFO()
 
     ContextScopeBase::ContextScopeBase() {
         g_infoContexts.push_back(this);

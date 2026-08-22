@@ -564,7 +564,14 @@ TypeOperandResolution resolveTypeOperand(
 
 bool parseUnsignedRequirementInteger(std::string_view text,
                                      std::uint64_t &valueOut) {
-  text = trimRequirementText(text);
+  while (!text.empty() &&
+         std::isspace(static_cast<unsigned char>(text.front()))) {
+    text.remove_prefix(1);
+  }
+  while (!text.empty() &&
+         std::isspace(static_cast<unsigned char>(text.back()))) {
+    text.remove_suffix(1);
+  }
   if (text.empty()) {
     return false;
   }
