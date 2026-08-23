@@ -5284,6 +5284,79 @@ avoid clashing with this list's own history.
     instrumentation, rather than continuing to extend the increasingly
     unreliable code-location claims accumulated across this TODO's
     now-several investigation rounds.
+  - progress_2026-08-23c: did exactly that (traced fresh from the
+    confirmed minimal fact, ignoring prior rounds' line-level claims) and
+    found the actual STRUCTURAL reason the "bind-then-return" case works
+    while the "direct-return" case doesn't - not another isolated bug,
+    but a real architectural fork. Followed the call chain by hand from
+    `IrLowererLowerStatementsCalls.h`'s `emitEntryStatement` (which the
+    top-level per-statement driver, `runLowerStatementsEntryExecutionStep`,
+    calls for every top-level statement) through
+    `IrLowererLowerStatementsEntryStatementStep.cpp` (a thin wrapper) into
+    `emitStatement`'s REAL lambda body, which is assigned in
+    `IrLowererLowerStatementsBindings.h` (NOT
+    `IrLowererLowerStatementsExpr.h`, despite that file's name and the
+    prior round's debug print living there - confirmed by adding a fresh
+    print right after `resolveDefinitionCall(expr)` at
+    `IrLowererLowerStatementsExpr.h` line 26 and it NEVER firing for
+    either the override or the plain-builtin direct-return repro;
+    reverted, zero net diff). `IrLowererLowerStatementsBindings.h`'s
+    `emitStatement` special-cases `isReturnCall(stmt)` (line 1286) and,
+    for a plain scalar return with no struct/sum rewrite needed (our
+    case), calls `ir_lowerer::tryEmitReturnStatement`
+    (`IrLowererStatementBindingStatementEmit.cpp:395`), which - for a
+    non-inlined, non-Name-kind return value (our call expression) -
+    simply calls the SAME general `emitExpr(valueExpr, localsIn)` used
+    everywhere else (confirmed by reading the exact code: line 630,
+    `emitOpaqueReturnHandle(valueExpr) || emitExpr(valueExpr, localsIn)`,
+    and `emitOpaqueReturnHandle` bails out immediately for any non-`Name`
+    expr kind, which a call expression always is). So `return(callExpr)`
+    and `[auto] x{callExpr}` both ultimately call the identical
+    `emitExpr` on the identical call expression - the difference is NOT
+    in which top-level function handles the statement.
+    The actual fork is INSIDE `emitExpr` itself, at the boundary between
+    TAIL-position and non-tail-position call handling -
+    `IrLowererLowerEmitExprTailDispatch.h` (the file this TODO's earlier
+    rounds this session already traced, confirming
+    `tryEmitInlineCallDispatchWithLocals` returns `NotHandled` for our
+    exact repro) is specifically the TAIL-CALL dispatch fast path: a call
+    expression that is the direct argument of `return(...)` is in tail
+    position and goes through this specialized machinery (with its
+    now-twice-confirmed override-detection gaps - the
+    `arrayVectorTargetInfo`/`args.front()` positional assumption in
+    `IrLowererNativeTailDispatch.cpp`, and the `structPath`-emptiness
+    heuristic in `semanticKeyValueAccessHelperKeepsBuiltinReturn`); a
+    call expression bound to a local first (`[auto] x{callExpr}`) is NOT
+    in tail position for ITS OWN evaluation (something else - the
+    subsequent `return(x)` - is the actual tail call), so it never
+    enters this fast path and instead resolves through whichever general,
+    non-tail call-resolution logic `emitExpr` uses otherwise, which
+    correctly finds the override. (Did not trace that non-tail path in
+    equal depth this round - out of budget - but its correctness is
+    already established by the passing sibling test.)
+    This reframes the whole TODO precisely: it is not "four independent,
+    redundant classification sites to individually patch" as originally
+    scoped, and not "reorder args before classifying" as an earlier
+    round of THIS SAME continuation briefly concluded (see the
+    `progress_2026-08-23b` correction above) - it is "the tail-call fast
+    path in `IrLowererLowerEmtExprTailDispatch.h`/
+    `IrLowererNativeTailDispatch.cpp`/`IrLowererInlineNativeCallDispatch.cpp`
+    does not correctly detect and defer to a same-path override,
+    independent of whether the call is reordered/positional/wrapped -
+    only whether it happens to be in TAIL position". The two previously
+    confirmed bugs inside that fast path (positional `args.front()`
+    assumption; `structPath`-emptiness heuristic) are very likely BOTH
+    still real and relevant here, now understood as living specifically
+    within the tail-call-only branch, not the general call path. Did not
+    attempt a fix this round (same reasoning as prior rounds: this fast
+    path is large and heavily shared - even a scoped, "tail-position
+    override wins" special case risks changing behavior for other
+    already-passing tail-call shapes without a dedicated regression
+    pass). This is a genuinely deep architectural finding after five
+    total investigation rounds; recommend checking in with whoever is
+    driving before another round, since further "trace one more layer"
+    passes have diminishing marginal value without now sitting down to
+    design and land the actual fix.
 
 - [x] TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
   - resolution (2026-07-29): investigated fully. `mapSingle<K,V>` and
