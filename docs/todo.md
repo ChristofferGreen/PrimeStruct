@@ -5890,6 +5890,30 @@ avoid clashing with this list's own history.
     the whole point of this test is to catch drift, so a mechanical
     "make it pass" edit that doesn't verify each literal against real
     content would defeat its purpose.
+  - resolution_2026-08-22: ran the actual failing TEST_CASE with
+    `--output-on-failure` first (rather than assuming the whole ~1200-line
+    file needed a rewrite) and found only 3 of its 246 assertions were
+    actually failing - the vast majority of the file's several-hundred
+    "already resolved" checks were untouched by the Ready
+    Now/Immediate Next 10/Execution Queue resync that caused this drift.
+    Fixed each against the CURRENT `docs/todo.md` content (read directly,
+    not guessed): (1) the exact "### Ready Now" bullet literal, now
+    TODO-4739/4743/5255; (2) the "### Immediate Next 10" first-entry
+    literal, now TODO-4739's title; (3) the "### Execution Queue" numbered
+    list's first entry, now "73. TODO-4739: ...". For (3), split the
+    single header+first-entry literal into a loose header-presence check
+    plus a separate exact first-entry literal, mirroring the existing
+    "Ready Now" split at the top of this TEST_CASE (both sections keep a
+    free-text "Note (...)" paragraph between the header and the actual
+    list that intentionally isn't locked, per this TEST_CASE's own
+    existing comment) - the original single-literal form for Execution
+    Queue never accounted for that paragraph and would have needed
+    updating on every future Note-paragraph edit even without a real
+    queue-content change. Rebuilt and confirmed via
+    `ctest -R ...native_window_launcher_and_preflight_57_57
+    --output-on-failure`: 0 failed (was 3). Full
+    `./scripts/compile.sh --release` run to confirm zero regressions
+    elsewhere before closing.
 - [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
   - owner: ai
   - created_at: 2026-07-27

@@ -23,10 +23,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and
   // to changes that don't affect the actual queue content this check
   // cares about (see TODO-5237's resolution in docs/todo_finished.md).
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4686: Detect [collection_type]/[key_value_type] struct declarations generically | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry struct-annotation scanning\n"
-                  "- TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution\n"
-                  "- TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers\n"
-                  "- TODO-4707: Fix cross-test-case pollution in whole-process doctest suites | track: test-runtime-pollution-fix | surface: doctest suite process/case isolation\n") !=
+                  "- TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites | track: exe-backend-vector-at-precedence | surface: native-fastpath call classification\n"
+                  "- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution\n"
+                  "- TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content | track: docs-lock-resync | surface: tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp\n") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10") != std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
@@ -114,7 +113,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4708: Measure per-shard doctest binary startup/registration overhead") !=
+                  "- TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -143,8 +142,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and
                   "  checked read-only array slice construction surface. TODO-4609 added the\n"
                   "  first conservative view-escape diagnostic") !=
         std::string::npos);
-  CHECK(todo.find("### Execution Queue\n\n"
-                  "17. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs\n") !=
+  // Split into a loose header check and the exact first-entry literal,
+  // rather than one giant literal spanning the free-text "Note (...)"
+  // paragraph docs/todo.md keeps between the header and the numbered
+  // list (same reasoning as the "Ready Now" split above - that note's
+  // prose is expected to keep evolving independent of which TODOs are
+  // queued).
+  CHECK(todo.find("### Execution Queue") != std::string::npos);
+  CHECK(todo.find(
+            "73. TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
