@@ -5096,6 +5096,78 @@ avoid clashing with this list's own history.
     into a long session of other work. Left as the next concrete item
     for whoever picks this back up; the call-expression-receiver repro
     above is a fast, already-verified starting point.
+  - progress_2026-08-22b: found the precise defective heuristic for the
+    call-expression-receiver repro (the one used as the fast starting
+    point above), directly following on from TODO-4740's own discovery
+    that `inferExprKind`/return-kind inference in this codebase silently
+    conflates unrelated situations. Added temporary debug instrumentation
+    to `publishReturnFacts` (`SemanticPublicationBuilders.cpp`) to dump
+    every published return fact for path `/std/collections/vector/at` -
+    this DISPROVES the previous round's leading hypothesis (a
+    definitionPathId collision between the stdlib generic `at<T>` and
+    the user override, both an `insert_or_assign`d away in
+    `returnFactIndicesByDefinitionPathId`): only ONE return fact is ever
+    published for this path in the minimal repro
+    (`structPath="" semanticNodeId=<override's own id>`) - there is no
+    second, colliding stdlib-generic entry to lose to. Instrumentation
+    reverted (`git diff` confirmed zero net change) once this was
+    confirmed.
+    The REAL bug is in `semanticKeyValueAccessHelperKeepsBuiltinReturn`
+    (`IrLowererSemanticProductTargetAdapters.cpp:625-656`) itself: after
+    trimming/resolving `structPath` from the (correctly-resolved, single)
+    return fact, it does `if (structPath.empty()) { return true; }` -
+    i.e. "no struct return type recorded" is treated as "use the
+    builtin's access codegen, this isn't a real override". But
+    `structPath` is ONLY populated when a definition's return type is
+    itself a STRUCT; a plain scalar return (`return<int>`, as this
+    repro's `/std/collections/vector/at` override declares) legitimately
+    has an EMPTY `structPath` too - there is no way from this fact alone
+    to distinguish "no override exists, fall back to builtin" from
+    "a real override exists and returns a plain scalar". The function's
+    logic was evidently designed and validated only against
+    STRUCT-returning overrides (where a non-empty, non-collection
+    `structPath` unambiguously signals "override, don't use builtin
+    access") - it was never correct for a SCALAR-returning override,
+    which is exactly this repro's shape (`return(plus(index, 30i32))`,
+    an `int`). This is a materially different, narrower bug than the
+    "redundant, inconsistent classification sites" framing in this
+    TODO's own title suggested at first - fixing it doesn't require
+    unifying the four sites into one, it requires the ONE heuristic
+    function they (redundantly) share to answer a genuinely different
+    question ("does an override exist at all", independent of its return
+    type) than it currently answers ("does the resolved definition's
+    return type look like a struct").
+    Did not attempt a fix: the two currently-identified robust signals
+    for "is this literally the compiler's own generic template vs a
+    real user override" both require plumbing NOT currently available at
+    this call site (`IrLowererNativeTailDispatch.cpp` lines 977-989,
+    used for the direct-call `/vector/at` override-precedence check):
+    (a) comparing the resolved `Definition`'s `templateArgs` against
+    empty (stdlib's own `/std/collections/vector/at<T>` in
+    `stdlib/std/collections/vector.prime:354` is generic over `<T>`; any
+    literal-path override with a concrete, non-generic signature is
+    unambiguously NOT the builtin) - this needs `defMap`/`Definition`
+    access, which `tryEmitNativeCallTailDispatch`'s ~8 overloads do not
+    currently receive (only `semanticProgram`/`semanticIndex`); or (b)
+    publishing a new "is this the canonical builtin definition" boolean
+    through the semantic-product snapshot/publication pipeline
+    (`SemanticsValidatorSnapshots.cpp` ->
+    `SemanticPublicationBuilders.cpp` -> `SemanticProduct.h`/
+    `SemanticPublicationSurface.h`), which is a real schema addition
+    touching several files and every existing return-fact consumer.
+    Either fix has a real, non-trivial blast radius across the ~550+
+    passing emitters cases this TODO's own stop_rule already warns
+    about; landing one without a dedicated verification pass (not just
+    the single minimal repro) risks exactly the kind of silent
+    regression the earlier rounds of this investigation were trying to
+    avoid. Leaving unfixed, but this note narrows the remaining work
+    from "map four independent call sites and unify them" (this TODO's
+    original stop_rule) down to a much more concrete next step: extend
+    either `tryEmitNativeCallTailDispatch`'s signature with definition
+    lookup access, or the semantic-product return-fact schema with a
+    generic/builtin-identity flag, then use that (not `structPath`
+    emptiness) as `semanticKeyValueAccessHelperKeepsBuiltinReturn`'s (or
+    its replacement's) actual override-detection signal.
 
 - [x] TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
   - resolution (2026-07-29): investigated fully. `mapSingle<K,V>` and
