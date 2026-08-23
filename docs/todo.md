@@ -5228,11 +5228,62 @@ avoid clashing with this list's own history.
     `structPath`-emptiness bug from the previous note, this is more than
     a single-sitting change to land safely without a dedicated
     regression pass across the ~550+ passing emitters cases this TODO's
-    stop_rule already warns about repeatedly. Next continuation should
-    attempt the positional-arg fix FIRST (lower risk, narrower blast
-    radius, and independently useful even before the `structPath` fix
-    lands), verify it against the full emitters suite, then return to
-    the `structPath` fix as a separate, second change.
+    stop_rule already warns about repeatedly.
+  - progress_2026-08-23b: **correction to the previous note's "positional
+    arg" theory** - direct empirical testing shows argument order is NOT
+    the actual differentiator for the call-expression-receiver repro,
+    contradicting what the previous note concluded. Built three isolated
+    probes: (1) the original repro (`return(/std/collections/vector/at(
+    [index] 2i32, [values] wrapVector()))`, reordered, call-expression
+    receiver) -> wrong value; (2) the SAME override/call shape but with
+    the args in CANONICAL order (`return(/std/collections/vector/at(
+    values, 2i32))` against a plain local `values`, not reordered) ->
+    ALSO wrong (returns 7, the builtin's answer, not the override's
+    32/37) - proving reordering was never the deciding factor for a
+    directly-`return(...)`-wrapped call; (3) confirmed the sibling test
+    this TODO's very first round already had passing
+    (`[auto] inferred{/std/collections/vector/at([index] 0i32, [values]
+    values)}` then `return(inferred)` - i.e. the SAME reordered call,
+    but bound to a local first instead of returned directly) still
+    passes today (`exit=1`, matches the override). So the real
+    differentiator is "is this vector/at call the direct argument of a
+    `return(...)` statement" vs. "is it bound to a local first, then
+    returned separately" - matching this TODO's very first investigation
+    round's item #2/#3 (a distinct "return-statement fast path" in
+    `IrLowererLowerStatementsExpr.h`/`IrLowererLowerReturnEmitStage.cpp`)
+    far more precisely than the positional-arg theory did. However,
+    trying to re-locate that fast path's exact logic (guided by the
+    original round's line references) found the file has evolved since
+    that round (over a month of intervening commits): added temporary
+    debug instrumentation at the `isDirectVectorBuiltin`
+    override-precedence-relevant block the original notes pointed at
+    (`IrLowererLowerStatementsExpr.h`, the `directCallee != nullptr`
+    region around the `collectionMemberRoot("vector")` check) and it
+    NEVER FIRED for either the override or plain-builtin
+    directly-returned repro - `directCallee` must already be null by
+    the time this code is reached for a directly-`return(...)`-wrapped
+    vector `at` call, meaning this specific block is not actually where
+    the current bug lives; the real branch point is further upstream,
+    not yet located. Reverted the debug instrumentation (`git diff`
+    confirmed zero net change).
+    This is now the third investigation round that found the
+    previous round's specific code-location claim to be stale or
+    incomplete once directly tested - the underlying architecture
+    (which function actually handles a given call shape) appears to
+    have shifted enough since 2026-07-22 that line-level references
+    from that far back can no longer be trusted without re-verifying
+    against the current source first. Recommend the next continuation
+    start fresh from the CONFIRMED, current, minimal fact established
+    here - "a bare `return(/std/collections/vector/at(receiver,
+    index))` with a real override at that path returns the builtin's
+    value, not the override's, regardless of argument order or whether
+    the receiver is a local variable or a call expression; the same
+    call bound to a local first and returned separately correctly uses
+    the override" - and trace the return-statement lowering path for
+    THIS specific call shape from scratch with fresh debug
+    instrumentation, rather than continuing to extend the increasingly
+    unreliable code-location claims accumulated across this TODO's
+    now-several investigation rounds.
 
 - [x] TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
   - resolution (2026-07-29): investigated fully. `mapSingle<K,V>` and
