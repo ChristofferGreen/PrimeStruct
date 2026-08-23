@@ -5167,6 +5167,72 @@ avoid clashing with this list's own history.
     generic/builtin-identity flag, then use that (not `structPath`
     emptiness) as `semanticKeyValueAccessHelperKeepsBuiltinReturn`'s (or
     its replacement's) actual override-detection signal.
+  - progress_2026-08-23: found a SECOND, independent bug that also has to
+    be fixed before the call-expression-receiver repro can pass, tracing
+    the actual dispatch path with temporary debug instrumentation
+    (`fprintf` prints in `IrLowererLowerEmitExprTailDispatch.h` right
+    after its `tryEmitInlineCallDispatchWithLocals` call; reverted, zero
+    net diff confirmed via `git diff`). For the reordered-named-arg
+    repro (`/std/collections/vector/at([index] 2i32, [values]
+    wrapVector())`), `tryEmitInlineCallDispatchWithLocals`
+    (`IrLowererInlineNativeCallDispatch.cpp`) returns `NotHandled` - so
+    it never even reaches the `semanticKeyValueAccessHelperKeepsBuiltinReturn`
+    heuristic documented in the previous note; that heuristic lives
+    further down the fallback chain, in
+    `IrLowererNativeTailDispatch.cpp`. Traced why: at
+    `IrLowererNativeTailDispatch.cpp:807-810`, `arrayVectorTargetInfo`
+    (which gates the override-precedence check at lines 977-989 via
+    `arrayVectorTargetInfo.isVectorTarget`) is computed from
+    `expr.args.front()` UNCONDITIONALLY - for our reordered call,
+    `args.front()` is the `[index] 2i32` argument (a plain int literal,
+    not a vector), not the `[values] wrapVector()` receiver, so
+    `resolveArrayVectorAccessTargetInfo` correctly reports
+    `isVectorTarget=false` for what it was actually asked to classify -
+    the bug is that it was asked to classify the wrong argument. This
+    makes the ENTIRE override-detection block at lines 977-989
+    unreachable for reordered calls (the `arrayVectorTargetInfo.isVectorTarget`
+    gate at line 979 fails), so execution falls straight through to the
+    builtin `emitBuiltinArrayAccess` call, which ALSO reads
+    `expr.args[0]`/`expr.args[1]` positionally - explaining the
+    observed wrong runtime value (0): the builtin access logic runs
+    with the index and values arguments effectively swapped. This
+    positional-`args.front()`-assumption bug is exactly bug #1 already
+    named in this TODO's `implementation_notes` from the very first
+    investigation round, but this is the first time it's been traced
+    all the way through to confirm it's what ACTUALLY blocks this
+    specific repro (rather than assuming the `semanticKeyValueAccessHelperKeepsBuiltinReturn`
+    bug from the previous note is the sole blocker - it's a second,
+    independent, ALSO-necessary fix).
+    Both bugs must be fixed together for this repro to pass: fixing only
+    the positional-arg bug would make `arrayVectorTargetInfo.isVectorTarget`
+    correctly true for the reordered call, reaching the override-detection
+    block at last - but `semanticKeyValueAccessHelperKeepsBuiltinReturn`
+    would still hit its own empty-`structPath` fallback and (wrongly)
+    report "keep builtin return" for this scalar-returning override,
+    same as before. Fixing only the `structPath` bug wouldn't matter
+    either, since the block it lives in is unreachable without the
+    positional-arg fix first. Did not attempt either fix this round:
+    while the positional-arg fix itself looks narrowly scopeable (a
+    small named-arg-aware receiver-selection helper, mirroring
+    `selectVectorMutationArgs` in `IrLowererLowerStatementsCallsStep.cpp`
+    from TODO-4740's own fix, applied only to the 2-arg
+    non-method-call case so genuinely positional and already-correct
+    method-call/unreordered-named-arg calls see zero behavior change),
+    `arrayVectorTargetInfo` and `expr.args.front()` are read redundantly
+    at many more points throughout this same large, heavily-shared
+    function (not just line 807) for other access names (`at_ref`,
+    `at_unsafe_ref`, key-value cases, etc.), so a fully consistent fix
+    needs to touch several of those too or risks fixing detection while
+    leaving the final access emission still positionally wrong for
+    other reordered-arg shapes - combined with the still-unfixed
+    `structPath`-emptiness bug from the previous note, this is more than
+    a single-sitting change to land safely without a dedicated
+    regression pass across the ~550+ passing emitters cases this TODO's
+    stop_rule already warns about repeatedly. Next continuation should
+    attempt the positional-arg fix FIRST (lower risk, narrower blast
+    radius, and independently useful even before the `structPath` fix
+    lands), verify it against the full emitters suite, then return to
+    the `structPath` fix as a separate, second change.
 
 - [x] TODO-4741: Fix experimental Map<K,V> templated-call resolution failing on the exe backend (large cluster, ~30+ cases)
   - resolution (2026-07-29): investigated fully. `mapSingle<K,V>` and
