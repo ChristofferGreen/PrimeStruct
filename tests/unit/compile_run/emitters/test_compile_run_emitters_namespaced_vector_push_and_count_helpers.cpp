@@ -389,7 +389,13 @@ main() {
   // /std/collections/vector/at(...) path now correctly dispatch to the
   // user's own bool-returning definition instead of misrouting into the
   // builtin at() restriction check.
-  CHECK(runCommand(compileCmd) == 1);
+  // TODO-4739 (fixed): the dispatched override's own returned value (false)
+  // is now correctly propagated too - previously "1" was pinned here, but
+  // an ordinary user function returning `false` (auto-bound then returned,
+  // unrelated to vector/at entirely) independently confirms exit 0 is the
+  // correct mapping for `false`; "1" was a symptom of the override not
+  // actually being reached.
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("auto-inferred std namespaced access helper canonical definition in C++ emitter") {
@@ -410,8 +416,10 @@ main() {
       writeTemp("compile_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime",
                 source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  // TODO-4803 (fixed): see the sibling "canonical precedence" TEST_CASE above.
-  CHECK(runCommand(compileCmd) == 1);
+  // TODO-4803 (fixed): see the sibling "canonical precedence" TEST_CASE
+  // above. TODO-4739 (fixed): same value correction as that sibling case -
+  // exit 0 is the correct mapping for the override's returned `false`.
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("wrapper std namespaced access helper named receiver in C++ emitter") {
@@ -434,17 +442,18 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_std_namespaced_vector_access_named_receiver.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  // TODO-4803's named-argument misrouting itself is fixed (see the two
-  // TEST_CASEs above), but this case's expected "32" additionally needs a
-  // second, distinct fix: an /std/collections/vector/at(...) override whose
-  // return type is int (compatible with the builtin element accessor's
-  // return type) is silently NOT dispatched when the receiver is itself a
-  // call expression (a helper-return wrapper) rather than a plain variable -
-  // confirmed independent of argument order (the equivalent *positional*
-  // call reproduces identically). Tracked as TODO-4805/4806's same-path-
-  // shadow-not-dispatched family, not this TODO. Re-pinned to the verified
-  // current (still-incorrect) value.
-  CHECK(runCommand(compileCmd) == 0);
+  // TODO-4739 (fixed): the override is now correctly dispatched to
+  // regardless of the receiver being a call expression (a helper-return
+  // wrapper) rather than a plain variable, and regardless of argument
+  // order. Root cause: IrLowererInlineNativeCallDispatch.cpp's tail-call
+  // dispatch fast path deferred any direct "at"/"at_unsafe" call to the
+  // native builtin access path based purely on the call's textual shape,
+  // never checking whether the resolved definition was the compiler's own
+  // generic stdlib at<T> (which always resolves to a generated path with a
+  // "__t"/"__ov" specialization suffix once monomorphized) or a real,
+  // concrete user override (which keeps its own literal, unsuffixed
+  // path) - see TODO-4739's resolution note.
+  CHECK(runCommand(compileCmd) == 32);
 }
 
 TEST_CASE("std collections /std/collections/vector/at wrapper in C++ emitter") {

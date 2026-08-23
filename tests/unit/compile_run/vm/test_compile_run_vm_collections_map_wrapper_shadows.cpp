@@ -172,8 +172,18 @@ main() {
        "primec_vm_canonical_vector_access_builtin_string_count_shadow.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(errPath).empty());
+  // TODO-5256 (newly discovered while fixing TODO-4739): this override
+  // changes /std/collections/vector/at's return type from string to a
+  // plain i32; count(...)'s own codegen still assumes any "at" call
+  // syntactically returns a string handle and unconditionally
+  // dereferences it, so once TODO-4739's fix made the override actually
+  // dispatch (previously it was silently ignored, masking this gap), the
+  // raw returned int (7) gets treated as an address, producing a genuine
+  // VM crash instead of the previous silent (and equally not-really-
+  // correct) success. See TODO-5256 and the identical sibling case in
+  // test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp.
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath).find("unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("runs vm canonical vector unsafe access count shadow") {

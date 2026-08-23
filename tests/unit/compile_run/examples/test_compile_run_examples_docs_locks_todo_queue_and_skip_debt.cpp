@@ -23,8 +23,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and
   // to changes that don't affect the actual queue content this check
   // cares about (see TODO-5237's resolution in docs/todo_finished.md).
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites | track: exe-backend-vector-at-precedence | surface: native-fastpath call classification\n"
-                  "- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution\n") !=
+                  "- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution\n"
+                  "- TODO-5256: Fix count()'s hardcoded string-handle assumption for an \"at\"-shaped argument whose override changes the return type | track: count-at-override-typemismatch | surface: count() codegen for vector/at-shaped arguments\n") !=
         std::string::npos);
   CHECK(todo.find("TODO-5255") == std::string::npos);
   CHECK(todoFinished.find("TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content") !=
@@ -115,7 +115,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites") !=
+                  "- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -152,7 +152,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and
   // queued).
   CHECK(todo.find("### Execution Queue") != std::string::npos);
   CHECK(todo.find(
-            "73. TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites\n") !=
+            "75. TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix\n") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4739: Fix vector/at direct-call override precedence") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4739: Fix vector/at direct-call override precedence") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==

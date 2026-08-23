@@ -1221,6 +1221,26 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     if (expr.args.size() == 2 &&
         isSemanticOrLegacyVectorTarget(expr.args.front())) {
+      // A same-path user definition overriding the canonical
+      // /std/collections/vector/at(_unsafe) direct-call helper must win
+      // over the native builtin access path below. The compiler's own
+      // generic stdlib at<T> always resolves (once specialized for a
+      // concrete element type) to a generated path carrying a "__t"/"__ov"
+      // suffix (see stripGeneratedInlineHelperSuffix); a real user
+      // override keeps its own literal, unsuffixed declared path. Resolve
+      // the callee once up front and use that identity - not just the
+      // call's textual "at"/"at_unsafe" shape - to decide whether to
+      // defer to the native path.
+      const Definition *atCallee = resolveDefinitionCallFn(expr);
+      const bool isConcreteAtOverride =
+          atCallee != nullptr &&
+          stripGeneratedInlineHelperSuffix(std::string(atCallee->fullPath)) ==
+              atCallee->fullPath;
+      if (isConcreteAtOverride) {
+        return emitCanonicalInlineDefinitionCall(expr, *atCallee)
+                   ? InlineCallDispatchResult::Emitted
+                   : InlineCallDispatchResult::Error;
+      }
       std::string vectorHelperName;
       if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
           (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {
@@ -1236,8 +1256,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           rawLeaf == "at" || rawLeaf == "at_unsafe") {
         return InlineCallDispatchResult::NotHandled;
       }
-      if (const Definition *callee = resolveDefinitionCallFn(expr);
-          callee != nullptr) {
+      if (const Definition *callee = atCallee; callee != nullptr) {
         const size_t leafStart = callee->fullPath.find_last_of('/');
         std::string leaf = leafStart == std::string::npos
                                ? callee->fullPath

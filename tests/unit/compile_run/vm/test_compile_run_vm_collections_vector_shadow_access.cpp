@@ -701,7 +701,12 @@ main() {
   // /std/collections/vector/at(...) path now correctly dispatches to the
   // user's own bool-returning definition instead of misrouting into the
   // builtin at() restriction check.
-  CHECK(runCommand(runCmd) == 1);
+  // TODO-4739 (fixed): the dispatched override's own returned value
+  // (false) is now correctly propagated too - see the identical fix in
+  // test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp's
+  // sibling TEST_CASEs for the independent re-derivation that exit 0 is
+  // the correct mapping for `false`.
+  CHECK(runCommand(runCmd) == 0);
 }
 
 
