@@ -637,13 +637,11 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-08-22T21:00:06Z`
+- Last updated: `2026-08-23T06:19:22Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `1747`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_57_57`
+- Result: no failing CTest cases.
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes

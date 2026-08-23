@@ -24,8 +24,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked: ready-now and
   // cares about (see TODO-5237's resolution in docs/todo_finished.md).
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites | track: exe-backend-vector-at-precedence | surface: native-fastpath call classification\n"
-                  "- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution\n"
-                  "- TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content | track: docs-lock-resync | surface: tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp\n") !=
+                  "- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution\n") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-5255") == std::string::npos);
+  CHECK(todoFinished.find("TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10") != std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==

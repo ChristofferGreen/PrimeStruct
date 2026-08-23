@@ -72,7 +72,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4739: Fix vector/at direct-call override precedence - multiple redundant, inconsistent native-fastpath classification sites | track: exe-backend-vector-at-precedence | surface: native-fastpath call classification
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution
-- TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content | track: docs-lock-resync | surface: tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp
 
 Note (2026-08-22): synced this section - every entry previously listed
 here (TODO-4686/4690/4694/4707) is confirmed `[x]` resolved in the task
@@ -5841,79 +5840,6 @@ avoid clashing with this list's own history.
     2026-08-05 note ("not closing TODO-4743, acceptance target unmet") -
     this is further real progress on an already-accepted-as-diffuse
     residual, not a full close.
-- [ ] TODO-5255: Resync docs-lock test with docs/todo.md's Ready Now/Immediate Next 10/Execution Queue content
-  - owner: ai
-  - created_at: 2026-08-22
-  - phase: Documentation/test consistency
-  - parallel_track: docs-lock-resync
-  - depends_on: (none)
-  - scope: discovered while verifying TODO-4740's fix with a full
-    `./scripts/compile.sh --release` run:
-    `tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp`'s
-    "todo queue and skipped doctest debt stay source locked: ready-now
-    and priority lanes" TEST_CASE reads `docs/todo.md` at runtime and
-    asserts an exact, hardcoded literal for the "### Ready Now" section
-    (`TODO-4686`/`TODO-4690`/`TODO-4694`/`TODO-4707`) and the start of
-    "### Execution Queue" (`17. TODO-4650: ...`). Neither has matched
-    `docs/todo.md`'s actual content since commit `91a7b9d` ("docs/todo.md:
-    sync Ready Now/Immediate Next 10/Execution Queue with resolved
-    leaves"), which landed and was pushed earlier in the same session
-    that produced this TODO, before this leaf was filed - confirmed via
-    `git log --oneline -- docs/todo.md` that this commit predates any of
-    the current session's uncommitted work, so this is pre-existing
-    drift, not a regression introduced by TODO-4740's changes (verified
-    the reverse too: TODO-4740's own diff to `docs/todo.md` is
-    append-only, touching neither the "Ready Now" bullets nor the
-    "Execution Queue" numbered list this test locks).
-  - implementation_notes: the locking test file is ~1200 lines with
-    several hundred individual `CHECK` assertions pinning specific
-    substrings across `docs/todo.md` and `docs/todo_finished.md`
-    (Ready Now bullets, Execution Queue numbering, and a long tail of
-    "not present in todo.md" / "present in todo_finished.md" pairs for
-    already-closed leaves) - resyncing it properly requires reading the
-    full current `docs/todo.md` Ready Now/Immediate Next 10/Execution
-    Queue sections plus `docs/todo_finished.md`'s tail and updating the
-    locked literals to match, is a substantial standalone task, and is
-    explicitly out of scope for a single continuation turn already deep
-    into other work (same reasoning TODO-4740 itself used to defer
-    re-scoping TODO-4739). NOT attempted this round beyond identifying
-    and documenting the gap.
-  - acceptance: the "todo queue and skipped doctest debt stay source
-    locked" TEST_CASEs in this file pass against the CURRENT
-    `docs/todo.md`/`docs/todo_finished.md` content (not re-pinned to
-    some other stale snapshot), and stay in sync with whatever the
-    Ready Now/Immediate Next 10/Execution Queue sections say at the time
-    this is fixed.
-  - stop_rule: do not blindly regenerate every locked literal in this
-    file without reading the actual current `docs/todo.md`/
-    `docs/todo_finished.md` content each assertion is meant to verify -
-    the whole point of this test is to catch drift, so a mechanical
-    "make it pass" edit that doesn't verify each literal against real
-    content would defeat its purpose.
-  - resolution_2026-08-22: ran the actual failing TEST_CASE with
-    `--output-on-failure` first (rather than assuming the whole ~1200-line
-    file needed a rewrite) and found only 3 of its 246 assertions were
-    actually failing - the vast majority of the file's several-hundred
-    "already resolved" checks were untouched by the Ready
-    Now/Immediate Next 10/Execution Queue resync that caused this drift.
-    Fixed each against the CURRENT `docs/todo.md` content (read directly,
-    not guessed): (1) the exact "### Ready Now" bullet literal, now
-    TODO-4739/4743/5255; (2) the "### Immediate Next 10" first-entry
-    literal, now TODO-4739's title; (3) the "### Execution Queue" numbered
-    list's first entry, now "73. TODO-4739: ...". For (3), split the
-    single header+first-entry literal into a loose header-presence check
-    plus a separate exact first-entry literal, mirroring the existing
-    "Ready Now" split at the top of this TEST_CASE (both sections keep a
-    free-text "Note (...)" paragraph between the header and the actual
-    list that intentionally isn't locked, per this TEST_CASE's own
-    existing comment) - the original single-literal form for Execution
-    Queue never accounted for that paragraph and would have needed
-    updating on every future Note-paragraph edit even without a real
-    queue-content change. Rebuilt and confirmed via
-    `ctest -R ...native_window_launcher_and_preflight_57_57
-    --output-on-failure`: 0 failed (was 3). Full
-    `./scripts/compile.sh --release` run to confirm zero regressions
-    elsewhere before closing.
 - [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
   - owner: ai
   - created_at: 2026-07-27
