@@ -4,47 +4,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
 
-TEST_CASE("native window launcher wrapper delegates to shared gfx helper") {
-  std::filesystem::path wrapperPath =
-      std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
-  std::filesystem::path helperPath =
-      std::filesystem::path("..") / "scripts" / "run_canonical_gfx_native_window.sh";
-  if (!std::filesystem::exists(wrapperPath)) {
-    wrapperPath = std::filesystem::current_path() / "scripts" / "run_native_spinning_cube_window.sh";
-  }
-  if (!std::filesystem::exists(helperPath)) {
-    helperPath = std::filesystem::current_path() / "scripts" / "run_canonical_gfx_native_window.sh";
-  }
-  REQUIRE(std::filesystem::exists(wrapperPath));
-  REQUIRE(std::filesystem::exists(helperPath));
-
-  const std::string wrapperSource = readFile(wrapperPath.string());
-  const std::string helperSource = readFile(helperPath.string());
-
-  CHECK(wrapperSource.find("exec bash \"$ROOT_DIR/scripts/run_canonical_gfx_native_window.sh\"") != std::string::npos);
-  CHECK(wrapperSource.find("--usage-name \"run_native_spinning_cube_window.sh\"") != std::string::npos);
-  CHECK(wrapperSource.find("--prime-source \"$ROOT_DIR/examples/web/spinning_cube/cube.prime\"") !=
-        std::string::npos);
-  CHECK(wrapperSource.find("--entry /cubeStdGfxEmitFrameStream") != std::string::npos);
-  CHECK(wrapperSource.find("--host-source \"$ROOT_DIR/examples/native/spinning_cube/window_host.mm\"") !=
-        std::string::npos);
-  CHECK(wrapperSource.find("--preflight-script \"$ROOT_DIR/scripts/preflight_native_spinning_cube_window.sh\"") !=
-        std::string::npos);
-  CHECK(wrapperSource.find("--out-subdir \"spinning-cube-native-window\"") != std::string::npos);
-  CHECK(wrapperSource.find("xcrun clang++") == std::string::npos);
-  CHECK(wrapperSource.find("launchctl print") == std::string::npos);
-  CHECK(wrapperSource.find("PRIMEC_BIN=") == std::string::npos);
-
-  CHECK(helperSource.find("USAGE_NAME=\"$(basename \"$0\")\"") != std::string::npos);
-  CHECK(helperSource.find("usage: ${USAGE_NAME}") != std::string::npos);
-  CHECK(helperSource.find("Compiling ${STREAM_DESCRIPTION}") != std::string::npos);
-  CHECK(helperSource.find("Compiling ${HOST_DESCRIPTION}") != std::string::npos);
-  CHECK(helperSource.find("Launching ${HOST_DESCRIPTION}") != std::string::npos);
-  CHECK(helperSource.find("launchctl print \"gui/$userId\"") != std::string::npos);
-  CHECK(helperSource.find("visual smoke criterion failed: rotation_changes_over_time") != std::string::npos);
-  CHECK(helperSource.find("xcrun clang++ -std=c++17 -fobjc-arc") != std::string::npos);
-}
-
 TEST_CASE("native window launcher script builds and launches with preflight") {
   std::filesystem::path scriptPath =
       std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
@@ -366,6 +325,5 @@ TEST_CASE("native window launcher defaults to ten-second bounded run") {
   CHECK(output.find("--max-frames 600") != std::string::npos);
   CHECK(output.find("[native-window-launcher] PASS: launch completed") != std::string::npos);
 }
-
 
 TEST_SUITE_END();

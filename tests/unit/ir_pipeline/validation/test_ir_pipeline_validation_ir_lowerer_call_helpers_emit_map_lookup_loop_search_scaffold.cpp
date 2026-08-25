@@ -689,9 +689,4 @@ TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   CHECK(error == "native backend requires map lookup key type to match map key type");
 }
 
-TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
-#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_count_fallback_direct_call.h"
-#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_count_fallback_reordered_wrapped_receiver.h"
-}
-
 TEST_SUITE_END();

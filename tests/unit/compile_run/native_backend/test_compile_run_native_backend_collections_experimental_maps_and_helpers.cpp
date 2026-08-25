@@ -796,34 +796,6 @@ runHelperReturn() {
         std::string::npos);
 }
 
-TEST_CASE("native rejects experimental soa stdlib from-aos helper before typed bindings support") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/soa/*
-import /std/collections/internal_soa/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<Particle>] values{vector<Particle>(Particle(7i32), Particle(9i32))}
-  [SoaVector<Particle>] packed{soaVectorFromAos<Particle>(values)}
-  [Particle] second{soaVectorGet<Particle>(packed, 1i32)}
-  return(plus(soaVectorCount<Particle>(packed), second.x))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_from_aos.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_experimental_soa_from_aos_err.txt").string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("native runs experimental soa stdlib to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -914,30 +886,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/soa/to_aos") !=
         std::string::npos);
-}
-
-TEST_CASE("native no-import root soa to_aos bare and direct helper forms reject SoaVector-only canonical helper contract") {
-  const std::string source = R"(
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [soa<Particle>] values{soa<Particle>()}
-  [vector<Particle>] unpackedA{to_aos(values)}
-  [vector<Particle>] unpackedB{/to_aos(values)}
-  return(plus(count(unpackedA), count(unpackedB)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_root_soa_to_aos_forms.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_root_soa_to_aos_forms_err.txt").string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("native no-import root soa to_aos method helper forms reject during semantics") {
@@ -2296,43 +2244,6 @@ main() {
   CHECK(runCommand(exePath) == 38);
 }
 
-TEST_CASE("native rejects builtin helper-return soa ref_ref same-path helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<soa<Particle>>]
-cloneValues() {
-  return(soa<Particle>())
-}
-
-[effects(heap_alloc), return<int>]
-/soa/ref_ref([soa<Particle>] values, [vector<i32>] index) {
-  return(17i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] idx{vector<i32>(0i32)}
-  [soa<Particle>] values{cloneValues()}
-  return(plus(ref_ref(values, idx),
-              plus(values.ref_ref(idx), ref_ref(cloneValues(), idx))))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_builtin_soa_ref_ref_same_path.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_builtin_soa_ref_ref_same_path.err")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("native rejects helper-return experimental soa method shadows") {
   const std::string source = R"(
 import /std/collections/*
@@ -3528,7 +3439,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 59);
 }
-
 
 TEST_CASE("native experimental sixteen-column soa storage helpers") {
   const std::string source = R"(

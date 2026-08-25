@@ -792,22 +792,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects vm bare vector count method without imported helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(values.count())
-}
-)";
-  const std::string srcPath = writeTemp("vm_vector_count_method_import_requirement.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_count_method_import_requirement_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-}
-
 TEST_CASE("rejects vm wrapper vector count slash-method chains before receiver typing") {
   const std::string source = R"(
 namespace i32 {

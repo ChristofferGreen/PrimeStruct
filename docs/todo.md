@@ -6542,6 +6542,7 @@ avoid clashing with this list's own history.
     actually supposed to mean in this compiler's model - if the intended
     contract really is "always reject at compile time", implementing a
     runtime workaround instead would hide a real diagnostic gap.
+
 - [x] TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
   - owner: ai
   - created_at: 2026-07-29

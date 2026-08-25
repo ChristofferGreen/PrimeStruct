@@ -102,43 +102,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects user vector mutator shadow arg mismatch in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/vector/push([vector<i32> mut] values, [bool] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  push(values, 1i32)
-  values.push(2i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_user_vector_mutator_shadow_arg_mismatch.prime", source);
-
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("rejects user vector mutator call-form arg mismatch in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/vector/push([vector<i32> mut] values, [bool] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  push(values, 1i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_vector_mutator_call_shadow_mismatch.prime", source);
-
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("stdlib namespaced vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

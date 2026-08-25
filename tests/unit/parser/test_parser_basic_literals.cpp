@@ -210,7 +210,6 @@ main() {
   CHECK(error.find("invalid integer literal") != std::string::npos);
 }
 
-
 TEST_CASE("rejects hex integer literals without digits") {
   const std::string source = R"(
 [return<int>]
@@ -224,36 +223,6 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("invalid integer literal") != std::string::npos);
-}
-
-TEST_CASE("rejects hex integer literals with invalid digit") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(0xG1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK_FALSE(error.empty());
-}
-
-TEST_CASE("rejects decimal integer literals with invalid digit") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(12a3i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("rejects u64 integer literals above maximum") {

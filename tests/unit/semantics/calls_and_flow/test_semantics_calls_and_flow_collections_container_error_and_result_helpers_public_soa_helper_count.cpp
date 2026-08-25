@@ -770,20 +770,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("public soa wildcard import validates without collections import") {
-  const std::string source = R"(
-import /std/collections/soa/*
-
-[return<int>]
-/main() {
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("experimental soa stdlib helpers reject primitive element types") {
   const std::string source = R"(
 import /std/collections/soa/*
@@ -1023,6 +1009,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   INFO(error);
 }
-
 
 TEST_SUITE_END();

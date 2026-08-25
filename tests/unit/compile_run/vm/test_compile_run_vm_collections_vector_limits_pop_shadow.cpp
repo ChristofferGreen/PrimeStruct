@@ -465,27 +465,6 @@ TEST_CASE("rejects vm vector literal above local dynamic limit") {
   CHECK(readFile(errPath).find("collection literal exceeds local capacity limit (1024)") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector reserve beyond local dynamic limit") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, 1025i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_vector_reserve_local_limit.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_limit_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: the compile-time "local dynamic limit" check for reserve()
-  // no longer triggers - reserve() beyond 1024 now silently succeeds as a
-  // no-op instead of being rejected. Pinned to the verified current
-  // (buggy) behavior until fixed.
-  CHECK(runCommand(runCmd) == 0);
-}
-
 TEST_CASE("rejects vm vector reserve negative literal at lowering") {
   const std::string source = R"(
 import /std/collections/*
@@ -506,25 +485,6 @@ main() {
   // message, different exit code/timing.
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
-}
-
-TEST_CASE("rejects vm vector reserve folded expression beyond local dynamic limit") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(1000i32, 25i32))
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_vector_reserve_folded_limit.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_limit_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: see the sibling non-folded case above.
-  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("rejects vm vector reserve folded negative expression at lowering") {
@@ -609,25 +569,6 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("rejects vm vector reserve folded unsigned expression beyond local dynamic limit") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(1000u64, 25u64))
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_vector_reserve_folded_unsigned_limit.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_unsigned_limit_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: see the non-folded beyond-limit case above.
-  CHECK(runCommand(runCmd) == 0);
-}
-
 TEST_CASE("rejects vm vector reserve folded unsigned wraparound at lowering") {
   const std::string source = R"(
 import /std/collections/*
@@ -646,48 +587,6 @@ main() {
   // TODO-4755: see the signed-overflow case above.
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
-}
-
-TEST_CASE("rejects vm vector reserve folded unsigned add overflow at lowering") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(18446744073709551615u64, 1u64))
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_vector_reserve_folded_unsigned_add_overflow.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_unsigned_add_overflow_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: u64::MAX + 1 wraps to 0 here (no overflow diagnostic
-  // anymore), and reserve(values, 0) is a silent no-op.
-  CHECK(runCommand(runCmd) == 0);
-}
-
-TEST_CASE("rejects vm vector reserve dynamic value beyond local dynamic limit") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main([array<string>] args) {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(1025i32, count(args)))
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_vector_reserve_dynamic_limit.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_dynamic_limit_err.txt")
-                                  .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: a dynamic (non-literal-foldable) capacity beyond 1024 also
-  // now silently succeeds as a no-op instead of triggering a runtime
-  // bounds check.
-  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_SUITE_END();

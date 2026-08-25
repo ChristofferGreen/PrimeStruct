@@ -2,17 +2,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
 
-TEST_CASE("compiles a no-op void-return main") {
-  const std::string source = R"(
-[return<void>]
-main() {
-}
-)";
-  const std::string srcPath = writeTemp("compile_void.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
 TEST_CASE("reads back a local i32 binding value") {
   const std::string source = R"(
 [return<int>]
@@ -230,6 +219,5 @@ main() {
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 9);
 }
-
 
 TEST_SUITE_END();

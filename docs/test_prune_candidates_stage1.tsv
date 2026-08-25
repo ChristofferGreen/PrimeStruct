@@ -1,0 +1,440 @@
+file	line	score	test_name
+tests/unit/ast/test_ir_printer.cpp	10	2	ir printer prints empty program
+tests/unit/ast/test_ir_printer.cpp	17	3	ir printer prints single definition
+tests/unit/ast/test_ir_printer.cpp	29	3	ir printer prints definition with parameters
+tests/unit/ast/test_ir_printer.cpp	56	3	ir printer prints execution envelope
+tests/unit/ast/test_ir_printer.cpp	142	3	ir printer prints definition with template args
+tests/unit/compile_run/bindings/test_compile_run_bindings_basic.cpp	5	3	compiles a no-op void-return main
+tests/unit/compile_run/emitters/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp	276	3	C++ emitter infers wrapper access builtin fallback
+tests/unit/compile_run/emitters/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp	309	3	rejects inferred wrapper access key mismatch in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp	336	3	C++ emitter infers wrapper string access builtin fallback
+tests/unit/compile_run/emitters/test_compile_run_emitters_lambda_mutator_resolution.cpp	77	3	C++ emitter lambda mutator positional call resolves user helper
+tests/unit/compile_run/emitters/test_compile_run_emitters_lambda_mutator_resolution.cpp	126	3	C++ emitter lambda mutator bool positional call resolves user helper
+tests/unit/compile_run/emitters/test_compile_run_emitters_lambda_mutator_resolution.cpp	148	3	C++ emitter lambda mutator named call prefers values receiver
+tests/unit/compile_run/emitters/test_compile_run_emitters_lambda_mutator_resolution.cpp	172	3	C++ emitter lambda mutator rewrite keeps known vector receiver leading names
+tests/unit/compile_run/emitters/test_compile_run_emitters_lambda_mutator_resolution.cpp	491	3	C++ emitter statement mutator call-form rejects shadow helper
+tests/unit/compile_run/emitters/test_compile_run_emitters_lambda_mutator_resolution.cpp	530	3	C++ emitter statement mutator named call rejects shadow helper without import
+tests/unit/compile_run/emitters/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp	217	3	C++ emitter rejects alias slash-method vector count on string receiver before emission
+tests/unit/compile_run/emitters/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp	241	3	rejects alias slash-method vector count on string receiver in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_map_access_and_collection_rewrites.cpp	105	3	rejects user vector mutator shadow arg mismatch in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_map_access_and_collection_rewrites.cpp	124	3	rejects user vector mutator call-form arg mismatch in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp	461	3	C++ emitter rejects direct builtin count on canonical map access without helper before lowering
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp	65	3	auto-inferred std namespaced vector push canonical definition in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp	118	3	compiles std namespaced count helper canonical fallback in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp	143	3	std namespaced count expression canonical precedence in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp	167	3	compiles std namespaced count expression canonical fallback in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp	252	3	std namespaced capacity expression canonical precedence in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp	276	3	std namespaced capacity expression canonical fallback in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp	587	3	C++ emitter rejects later map receiver positional shadow without canonical reorder
+tests/unit/compile_run/emitters/test_compile_run_emitters_string_receiver_vector_access.cpp	32	2	rejects direct-call string vector access builtin fallback in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_string_receiver_vector_access.cpp	141	3	rejects slash-method string vector access builtin fallback in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_string_receiver_vector_access.cpp	345	3	keeps canonical direct-call map access struct method chain forwarding in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_string_receiver_vector_access.cpp	373	3	keeps canonical direct-call map unsafe struct method chain forwarding in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_pointer_pack_access.cpp	151	3	C++ emitter materializes variadic scalar pointer packs from borrowed pack field access
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_pointer_pack_access.cpp	221	3	C++ emitter materializes variadic struct pointer packs from borrowed pack field access
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_pointer_pack_access.cpp	301	3	C++ emitter materializes variadic scalar pointer packs from borrowed pack reference fields
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_pointer_pack_access.cpp	391	3	C++ emitter materializes variadic scalar pointer packs from indexed dereference receiver reference fields
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_pointer_pack_access.cpp	482	3	C++ emitter materializes variadic struct pointer packs from borrowed pack reference fields
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_reference_pack_access.cpp	9	3	C++ emitter materializes variadic struct reference packs from borrowed pack reference fields
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_reference_pack_access.cpp	256	3	C++ emitter materializes variadic borrowed uninitialized scalar packs with indexed init and take
+tests/unit/compile_run/emitters/test_compile_run_emitters_variadic_reference_pack_access.cpp	309	3	C++ emitter materializes variadic borrowed uninitialized struct packs with indexed init and take
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	66	3	rejects vector namespaced access slash methods without alias helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	212	3	rejects bare vector at methods without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	299	3	rejects wrapper bare vector at calls without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	371	3	rejects wrapper bare vector at_unsafe calls without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	396	3	rejects wrapper explicit vector access calls without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	480	3	rejects bare vector mutator call statements without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	500	3	rejects bare vector mutator method statements without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	520	3	rejects explicit vector mutator alias method statements without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp	684	3	rejects alias vector mutator methods with canonical-only helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_alias_template_forwarding.cpp	361	3	rejects vector alias compatibility template forwarding when unknown expected meets primitive binding in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_alias_template_forwarding.cpp	388	3	rejects vector alias compatibility template forwarding when unknown expected
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_alias_template_forwarding.cpp	510	3	rejects array alias templated forwarding to canonical vector helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_alias_template_forwarding.cpp	534	3	rejects stdlib templated vector count fallback to array alias in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp	176	3	rejects canonical direct-call vector capacity builtin fallback on map receiver in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp	317	3	rejects canonical slash-method vector capacity on map receiver in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp	400	3	rejects alias slash-method vector capacity on map receiver in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp	574	3	rejects wrapper vector count methods without helper before emission in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp	785	3	rejects wrapper bare vector count calls without helper in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp	97	3	C++ emitter keeps stdlib namespaced vector string access count fallback
+tests/unit/compile_run/emitters/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp	298	3	rejects stdlib namespaced vector access count for non-string element in C++ emitter
+tests/unit/compile_run/emitters/test_compile_run_emitters_wrapper_map_count_sugar.cpp	580	3	C++ emitter keeps canonical diagnostics on direct-call map access receivers
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	68	3	spinning cube native-window status avoids inactive TODO pointers
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	182	3	semantic-product docs avoid inactive Group 12 pointers
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	228	3	reflection metadata docs avoid inactive roadmap pointers
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	253	3	result payload docs avoid inactive follow-up pointers
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	280	3	graphics UI docs avoid inactive follow-up pointers
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	318	3	coding guidelines avoid inactive surface status pointers
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	355	3	stdlib style boundary docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	452	3	vector map bridge boundary docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	577	3	stdlib de-experimentalization policy docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	974	3	legacy soa compatibility rejection matrix stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1048	3	soa compatibility fixture migration boundary stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1100	3	arg-pack docs do not point at inactive TODO slices
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1295	3	source lock inventory keeps replacement surfaces explicit
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1324	3	status-only result bridge docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1373	3	Result helper compatibility adapter inventory stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1436	3	generic requirement predicate surface stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1644	3	safe pointer optionality docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1700	3	capability parameterized views docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_roadmap_and_collections.cpp	1777	3	task spawn wait prototype docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp	7	3	todo queue and skipped doctest debt stay source locked: ready-now and priority lanes
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_todo_queue_and_skip_debt.cpp	596	3	todo queue and skipped doctest debt stay source locked: execution queue and skip debt summary
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	7	2	constructor-shaped compatibility inventory stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	97	2	scene renderer ui producer contract stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	267	2	ui command list adapter docs stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	899	3	container error docs and helpers stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	1277	3	ppm image workflows keep explicit read locals
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	1330	3	png prelude image workflows keep explicit read locals
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	1411	3	png scanline bitstream and inflate helpers stay source locked to inferred locals
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	1517	3	png top-level read write workflows stay source locked to inferred locals
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	1612	3	gfx stdlib wrappers stay source locked to parser-safe locals
+tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp	1675	3	ui stdlib workflows stay source locked to inferred locals
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	97	3	spinning cube metal host pipeline config locks vertex descriptor wiring
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	148	3	spinning cube metal host software surface bridge stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	171	3	shared metal offscreen host helper stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	202	3	shared spinning cube simulation reference helper stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	222	3	shared browser runtime helper stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	240	3	browser spinning cube launcher wrapper stays thin over shared helper
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	397	3	metal spinning cube launcher wrapper stays thin over shared helper
+tests/unit/compile_run/examples/test_compile_run_examples_metal_and_browser_hosts.cpp	489	2	spinning cube vertexcolored snippets stay source locked
+tests/unit/compile_run/examples/test_compile_run_examples_native_launcher.cpp	7	3	native window launcher wrapper delegates to shared gfx helper
+tests/unit/compile_run/examples/test_compile_run_examples_spinning_cube_native.cpp	81	3	spinning cube stdlib gfx frame stream entry stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_spinning_cube_native.cpp	401	3	spinning cube native window host locks indexed cube pipeline resources
+tests/unit/compile_run/examples/test_compile_run_examples_spinning_cube_native.cpp	457	3	spinning cube native window host software surface bridge stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_spinning_cube_native.cpp	489	3	shared gfx contract header stays source locked
+tests/unit/compile_run/examples/test_compile_run_examples_spinning_cube_native.cpp	528	3	shared native metal window helper stays source locked
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp	799	3	native rejects experimental soa stdlib from-aos helper before typed bindings support
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp	919	3	native no-import root soa to_aos bare and direct helper forms reject SoaVector-only canonical helper contract
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp	2299	3	native rejects builtin helper-return soa ref_ref same-path helper
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp	325	2	rejects native stdlib collection shim vector new type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp	340	2	rejects native stdlib collection shim vector single type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp	374	2	rejects native stdlib collection shim vector pair type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp	408	2	rejects native stdlib collection shim vector triple type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp	442	2	rejects native stdlib collection shim vector quad type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp	109	3	rejects native array alias templated forwarding to canonical vector helper
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp	136	3	rejects native stdlib templated vector count fallback to array alias
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	37	3	rejects native templated stdlib map wrapper temporary key mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	57	3	rejects native templated stdlib map wrapper temporary index key mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	77	3	rejects native templated stdlib wrapper temporary syntax parity key mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	101	3	rejects native templated stdlib wrapper temporary syntax parity value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	133	3	rejects native templated stdlib wrapper temporary unsafe parity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	161	3	rejects native templated stdlib wrapper temporary unsafe parity value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	190	3	rejects native templated stdlib wrapper temporary unsafe parity arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	219	3	rejects native templated stdlib wrapper temporary unsafe parity missing arguments
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	247	3	rejects native templated stdlib wrapper temporary count capacity parity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	276	3	rejects native templated stdlib map wrapper temporary index value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	319	3	rejects native templated stdlib map wrapper temporary call value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	366	3	rejects native templated stdlib map wrapper temporary unsafe call value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	386	3	rejects native templated stdlib map wrapper temporary count key mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	406	3	rejects native templated stdlib map wrapper temporary count value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	426	3	rejects native templated stdlib map wrapper temporary call arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	446	3	rejects native templated stdlib map wrapper temporary call missing key argument
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	466	3	rejects native templated stdlib map wrapper temporary unsafe call arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	486	3	rejects native templated stdlib map wrapper temporary unsafe call missing key argument
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	506	3	rejects native templated stdlib map wrapper temporary count call arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	526	3	rejects native templated stdlib map wrapper temporary count method arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	546	3	rejects native templated stdlib map wrapper temporary method arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	566	3	rejects native templated stdlib map wrapper temporary method missing key argument
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	586	3	rejects native templated stdlib map wrapper temporary unsafe method arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp	606	3	rejects native templated stdlib map wrapper temporary unsafe method missing key argument
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	12	3	rejects native templated stdlib vector wrapper temporary call type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	56	3	rejects native templated stdlib vector wrapper temporary call arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	77	3	rejects native templated stdlib vector wrapper temporary call missing index
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	97	3	rejects native templated stdlib vector wrapper temporary unsafe call type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	141	3	rejects native templated stdlib vector wrapper temporary unsafe call arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	161	3	rejects native templated stdlib vector wrapper temporary unsafe call missing index
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	181	3	rejects native templated stdlib vector wrapper temporary count type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	201	3	rejects native templated stdlib vector wrapper temporary count call arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	222	3	rejects native templated stdlib vector wrapper temporary count method arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	243	3	rejects native templated stdlib vector wrapper temporary method arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	263	3	rejects native templated stdlib vector wrapper temporary method missing index
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	283	3	rejects native templated stdlib vector wrapper temporary unsafe method arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	303	3	rejects native templated stdlib vector wrapper temporary unsafe method missing index
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	323	3	rejects native templated stdlib vector wrapper temporary capacity type mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	343	3	rejects native templated stdlib vector wrapper temporary capacity call arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	364	3	rejects native templated stdlib vector wrapper temporary capacity method arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	385	3	rejects native templated stdlib vector wrapper temporary method index mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	405	3	rejects native templated stdlib vector wrapper temporary index mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp	425	3	rejects native templated stdlib vector wrapper temporary index value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp	50	3	rejects native user wrapper temporary unsafe parity shadow mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp	84	3	rejects native user wrapper temporary unsafe parity shadow value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp	121	3	rejects native user wrapper temporary unsafe parity shadow arity mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp	156	3	rejects native user wrapper temporary unsafe parity shadow missing arguments
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp	273	3	rejects native user wrapper temporary count capacity shadow value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp	398	3	rejects native user wrapper temporary syntax parity shadow mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp	433	3	rejects native user wrapper temporary syntax parity shadow value mismatch
+tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_map_and_vector_variadics.cpp	695	3	native rejects map constructor literal parity with canonical entries
+tests/unit/compile_run/smoke/test_compile_run_smoke_core_contracts_and_cli.cpp	7	3	graphics api contract doc-linked constraints stay locked
+tests/unit/compile_run/smoke/test_compile_run_smoke_core_contracts_and_cli.cpp	397	2	canonical gfx helpers remain behind private substrate boundary
+tests/unit/compile_run/test_compile_run_benchmark_harness.cpp	35	3	semantic memory benchmark fixtures are checked in
+tests/unit/compile_run/test_compile_run_glsl.cpp	566	3	glsl emitter allows entry args parameter
+tests/unit/compile_run/test_compile_run_glsl.cpp	886	3	glsl emitter accepts capabilities
+tests/unit/compile_run/test_compile_run_glsl.cpp	903	3	glsl emitter accepts support-matrix effects and capabilities
+tests/unit/compile_run/test_compile_run_glsl.cpp	1297	2	glsl emitter handles block expression return value
+tests/unit/compile_run/test_compile_run_glsl.cpp	1317	2	glsl emitter handles block expression early return
+tests/unit/compile_run/test_compile_run_glsl.cpp	1386	2	glsl emitter rejects explicit effects
+tests/unit/compile_run/test_compile_run_glsl.cpp	1401	2	glsl emitter rejects static bindings
+tests/unit/compile_run/test_compile_run_glsl.cpp	1418	3	glsl emitter rejects non-scalar bindings
+tests/unit/compile_run/test_compile_run_glsl.cpp	1454	2	glsl emitter rejects mixed boolean comparisons
+tests/unit/compile_run/test_compile_run_glsl.cpp	1471	2	glsl emitter rejects string literals
+tests/unit/compile_run/test_compile_run_glsl.cpp	1520	2	glsl emitter rejects non-void entry
+tests/unit/compile_run/test_compile_run_math_conformance.cpp	7	3	math conformance reference printer script
+tests/unit/compile_run/test_compile_run_math_conformance.cpp	26	2	math conformance PrimeStructc policy docs
+tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp	99	3	dump ast-semantic shows experimental map destroy cleanup
+tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp	1696	3	dump ast-semantic canonical soa to_aos_ref helper body uses canonical count_ref/get_ref loop compatibility
+tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp	1918	3	dump ast-semantic keeps helper-return builtin soa to_aos with same-path helper
+tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp	1970	3	dump ast-semantic rewrites global helper-return builtin soa reads to canonical helpers
+tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp	2015	3	dump ast-semantic rewrites method-like helper-return builtin soa reads to canonical helpers
+tests/unit/compile_run/text_filters/test_compile_run_text_filters_misc.cpp	256	3	main returns a literal bool value
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp	795	3	rejects vm bare vector count method without imported helper
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp	468	3	rejects vm vector reserve beyond local dynamic limit
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp	511	3	rejects vm vector reserve folded expression beyond local dynamic limit
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp	612	3	rejects vm vector reserve folded unsigned expression beyond local dynamic limit
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp	651	3	rejects vm vector reserve folded unsigned add overflow at lowering
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp	672	3	rejects vm vector reserve dynamic value beyond local dynamic limit
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_push_limit.cpp	29	3	rejects vm vector push beyond local dynamic limit
+tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_limits_push_limit.cpp	94	3	rejects vm vector literal count helper during lowering
+tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp	11	1	runs vm with user wrapper temporary at_unsafe shadow precedence
+tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp	186	1	runs vm with user wrapper temporary at shadow precedence
+tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp	220	1	runs vm with user wrapper temporary count capacity shadow precedence
+tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp	303	1	runs vm with user wrapper temporary index shadow precedence
+tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp	336	1	runs vm with user wrapper temporary syntax parity shadow precedence
+tests/unit/compile_run/vm/test_compile_run_vm_maps.cpp	35	3	runs vm with map count helper
+tests/unit/compile_run/vm/test_compile_run_vm_maybe.cpp	163	3	runs vm with Maybe present variant payload
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	1956	3	void main with local binding
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2355	3	exe emitter uses ir backend for f32 arithmetic subset
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2390	3	exe emitter uses ir backend for pointer indirect paths
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2406	3	exe emitter uses ir backend for heap alloc intrinsic
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2421	3	exe emitter uses ir backend for heap free intrinsic
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2438	3	exe emitter uses ir backend for heap realloc intrinsic
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2457	3	exe emitter uses ir backend for checked memory at intrinsic
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2476	3	exe emitter uses ir backend for unchecked memory at intrinsic
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2551	3	exe emitter uses ir backend for f64 comparison subset
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2564	3	exe emitter uses ir backend for f64 arithmetic subset
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2599	3	exe emitter uses ir backend for f64 conversion subset
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2632	3	exe emitter uses ir backend for f64 to i32 conversion
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2710	3	exe emitter uses ir backend for in-range f32/f64 to i64 truncation
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2748	3	exe emitter uses ir backend for in-range f32/f64 to u64 truncation
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2983	3	explicit void return
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	2995	3	exe emitter uses ir backend for file read subset
+tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp	3014	3	main with no return<> defaults to void
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends.cpp	29	1	core backend suite registration sentinel
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h	19	3	design doc records backend boundary policy
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h	34	3	design doc records semantic ownership boundary policy
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h	50	3	design doc records vector map bridge contract
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h	91	3	design doc records stdlib de-experimentalization policy
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h	119	3	design doc records soa public collection contract
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h	449	3	cmake splits primec library into subsystem targets
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h	670	3	managed backend suite sharding keeps lowering and runtime suites on focused binaries
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	1	2	semantics validator rebuilds base contexts behind explicit validation state
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	58	2	call target resolution reuses scoped scratch cache
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	126	2	method target resolution reuses scoped scratch cache
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	197	2	graph local auto facts use compact structured keys
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	325	2	type resolution graph builder is wired through semantics testing api
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	429	2	public semantic-product dump helper is available for pipeline tests
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	461	2	core IR test helpers expose semantic-product-aware lowering
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	481	2	public lowerer testing headers stay in sync with semantic-product helper declarations
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	629	3	public lowerer testing umbrellas keep alias owners ahead of users
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	712	2	public call dispatch testing header stays in sync with alias-policy helpers
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	733	2	graph snapshot suite uses semantic-product-aware lowering only
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	757	3	backend registry keeps semantic-product negative fixture families covered
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	793	2	ir lowerer header exposes only semantic-product-aware lowering entrypoint
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	807	2	semantic product routing facts have dedicated public headers
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	955	2	compile pipeline publishes an initial semantic product shell
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	1746	2	semantic snapshot shared traversal keeps direct and bridge ordering keys
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	1905	2	semantic product bridge path choices use helperNameId without helperName shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	1939	2	semantic product method call targets use resolvedPathId without resolvedPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	1974	2	semantic product callable summaries use fullPathId without fullPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2020	2	semantic product binding facts use resolvedPathId without resolvedPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2056	2	semantic product return facts use definitionPathId without definitionPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2090	2	semantic product local auto facts use initializerResolvedPathId without initializerResolvedPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2139	2	semantic product query facts use resolvedPathId without resolvedPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2175	2	semantic product try facts use operandResolvedPathId without operandResolvedPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2211	2	semantic product on_error facts use handlerPathId without handlerPath shadow field
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2395	2	semantic snapshot locals concrete-call canonicalization stays stable
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2439	2	semantic snapshot method targets concrete-call canonicalization stays stable
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2471	2	semantic snapshot shared traversal keeps callable summary and on_error ordering keys
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.h	2650	1	semantic snapshot traversal inventory avoids inactive next-candidate pointer
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_utilities.h	1	2	type resolver parity harness is wired through ir pipeline tests
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_utilities.h	43	2	strongly connected component utility is wired through semantics testing api
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_utilities.h	79	2	condensation dag utility is wired through semantics testing api
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1176	3	native pick payload locals use semantic-product variant metadata
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1245	2	native pick target sum resolution resolves interned type ids
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1437	2	native sum variant selection uses semantic-product payload metadata
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1698	2	native Result combinator sources use semantic-product query facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1749	2	native Result why direct-call sources use semantic-product query facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1796	2	native Result error direct-call sources use semantic-product query facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1843	2	native aggregate pointer dereference calls use semantic-product return facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1890	2	native location direct reference calls use semantic-product return facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	1937	2	native field receivers use semantic-product type facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2033	2	native packed Result payloads use semantic-product type facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2113	2	direct Result ok payload metadata uses semantic-product type facts first
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2168	2	native Result ok emission uses semantic-product payload facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2226	2	native try Result lowering uses semantic-product variant metadata
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2252	2	native try operand result metadata resolves interned query ids
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2303	2	native try fact result metadata resolves interned ids
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2366	2	for-condition auto bindings use semantic-product binding facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2390	2	local-auto statement bindings resolve interned binding ids
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp	2426	2	statement binding local info resolves interned binding ids
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp	7	2	statement binding sum lookup uses shared semantic type resolver
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp	50	3	native sum active payload helpers use semantic-product variant tags
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp	682	3	ir lowerer semantic-product completeness manifest covers routing facts
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp	2249	3	main routes cpp and exe through ir backend alias lookup
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp	2289	3	primevm uses shared ir preparation helper
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp	2323	3	primevm debug replay uses shared JSON parsing helpers
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp	2342	3	ir pipeline helper skips semantic product for non-consuming requests
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp	2358	3	semantics helper skips semantic product for non-consuming requests
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp	2374	2	backend entrypoint inventory avoids inactive follow-up pointer
+tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp	2391	2	symbol-id migration inventory avoids inactive follow-up pointer
+tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_borrowed_vectors.cpp	371	3	retired variadic map pack indexed contains rejects before lowering
+tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_borrowed_vectors.cpp	406	3	retired variadic map pack indexed tryAt rejects before lowering
+tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_borrowed_vectors.cpp	449	3	retired variadic map pack canonical count rejects before lowering
+tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_collection_refs.cpp	128	3	ir lowerer rejects variadic vector packs with indexed statement mutators
+tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_field_refs_and_maps.cpp	260	3	ir lowerer rejects variadic borrowed map packs with indexed count_ref helpers
+tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_pointer_maps.cpp	143	3	ir lowerer rejects variadic pointer map packs with indexed count_ref helpers
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp	233	3	emitter expr control if ternary fallback step emits conditional expression
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp	362	3	ir lowerer lower orchestrator stage order stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp	553	3	emitter emit setup source delegation stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp	580	3	emitter builtin collection inference source stays canonical
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp	778	2	soa pending diagnostics route through shared semantics helpers: builtin path and initializer inference
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp	1544	2	soa pending diagnostics route through shared semantics helpers: argument validation and method target resolution
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp	1998	2	soa pending diagnostics route through shared semantics helpers: collection access and statement lowering
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp	259	3	semantics validator expr source delegation stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp	727	2	template monomorph source delegation stays stable: include wiring and implicit template inference
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp	1528	2	template monomorph source delegation stays stable: expression rewrite and binding-call/method-target inference
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp	2334	2	template monomorph source delegation stays stable: experimental collection rewrites and definitions
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp	3164	3	emitter collection helper metadata delegation stays source locked
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp	3508	3	emitter collection fallback helpers stay scoped path aware
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_emit_map_lookup_loop_search_scaffold.cpp	692	3	ir lowerer call helpers handle non-method count fallback
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	115	2	ir lowerer vector type layout traces use generic collection helpers
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	632	2	soa field-view backend cleanup stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	711	2	vm heap helpers source delegation stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	792	2	vm numeric opcode helpers source delegation stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	856	2	vm control flow opcode helpers source delegation stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	4221	2	lowerer import aliases are delegated to frontend syntax helpers
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	4274	3	ir lowerer collection surfaces avoid bridge-key literals
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp	4336	3	ir lowerer collection literal diagnostics avoid vector-literal traces
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	9	2	ir lowerer collection helper rewrite guards explicit map defs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	71	2	ir lowerer materialized collection receivers use published helper queries
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	129	2	ir lowerer late collection constructor guards use published constructor queries
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	164	2	ir lowerer temp receiver method access skips builtin array lowering
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	218	2	ir lowerer direct soa wrapper dispatch uses canonical wrapper probes only
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	284	2	ir lowerer rewrites experimental vector constructor aliases before direct resolution
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	332	2	ir lowerer collection helper resolves vector aliases before direct definitions
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	373	2	ir lowerer prefers explicit experimental vector helper before struct constructor defs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	422	2	ir lowerer bare vector helper rewrites prefer semantic receiver facts
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	480	2	ir lowerer materialized collection receivers prefer semantic target facts
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	551	2	ir lowerer map constructor rewrite checks constructor surface before resolving defs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	582	2	ir lowerer constructor metadata helpers retire duplicated constructor tables
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	678	2	ir lowerer tail dispatch rewrite guards explicit map defs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	767	2	ir lowerer tail dispatch semantic query targets resolve interned type ids
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	809	2	ir lowerer internal soa metadata receivers resolve interned ids
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	881	2	ir lowerer statement expr has no inline builtin map insert family
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	906	2	ir lowerer inline map insert helper prefers semantic receiver facts
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	987	2	ir lowerer vector metadata inline helpers stay in prime definitions
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1020	2	ir lowerer skips builtin map insert rewrite for direct experimental map locals
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1061	2	ir lowerer statement collection receiver gates use semantic product ids first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1131	2	ir lowerer statement calls step receives semantic product adapters
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1186	2	ir lowerer statement direct vector receiver fallbacks use semantic target facts
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1253	2	ir lowerer inline dispatch map helper deferral uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1300	2	ir lowerer inline dispatch vector helper deferral uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1377	2	ir lowerer inline dispatch SoA vector fallback uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1436	2	ir lowerer inline dispatch collection access fallback uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1539	2	ir lowerer tail map insert rewrite uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1591	2	ir lowerer no longer synthesizes generated map value paths
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1633	2	ir lowerer tail explicit map helper rewrite uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1687	2	ir lowerer tail canonical experimental map helper rewrite uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1744	2	ir lowerer tail borrowed key/value receiver rewrite uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1802	2	ir lowerer native tail map access inference uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1839	2	ir lowerer native tail vector access inference uses semantic receiver facts first
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1889	2	ir lowerer direct expr and inference rewrites guard explicit map defs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1929	2	ir lowerer canonical map contains and tryAt rewrites stay recognized late
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	1972	2	ir lowerer late expression fallback guards explicit map helper defs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	2090	2	ir lowerer late expression canonical map helpers use path-family gates
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	2131	2	ir lowerer inline native dispatch prefers published canonical map access helpers
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	2170	2	ir lowerer synthetic method probes clear direct helper semantic targets
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	2220	2	ir lowerer binding normalization guards explicit map helper defs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	2251	2	ir lowerer statement binding args-pack initializer uses semantic target facts
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	2295	2	ir lowerer packed result buffer helpers normalize scoped gfx calls
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp	2324	2	ir lowerer rooted semantic rewrite fallback avoids helper allowlists
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_expr_emit_setup_dispatches_upload_readback_passthrough_step.cpp	561	2	emitter helpers struct types source stays free of map alias normalization
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp	116	2	ir lowerer flow helpers recover bool while conditions from builtin comparisons
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp	127	2	ir lowerer binding local info recovers bool comparison initializers
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp	136	2	ir lowerer binding local info clears struct paths for file handles
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp	143	2	ir lowerer statement bindings prefer struct constructor full paths
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp	157	2	ir lowerer statement bindings only rehydrate unresolved value structs
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp	165	2	ir lowerer storage helpers skip file handle struct copies
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_emission_source_delegation_stays.cpp	5	3	ir lowerer statement call emission source delegation stays stable
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp	215	3	ir lowerer native effects leave map values to ordinary lowering
+tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp	1459	3	emitter helper keeps parser-shaped rooted negate builtin
+tests/unit/misc/test_stdlib_map_ownership_collection_access_and_emitter_lowering.cpp	7	3	canonical map surface owns standalone stdlib implementation collection access and emitter lowering
+tests/unit/misc/test_stdlib_map_ownership_collection_access_and_emitter_lowering.cpp	766	3	canonical map surface owns standalone stdlib implementation collection access and emitter lowering: emitter and inference paths
+tests/unit/misc/test_stdlib_map_ownership_expr_method_and_collection_dispatch_inference.cpp	7	3	canonical map surface owns standalone stdlib implementation expr method and collection dispatch inference
+tests/unit/misc/test_stdlib_map_ownership_expr_method_and_collection_dispatch_inference.cpp	718	3	canonical map surface owns standalone stdlib implementation expr method and collection dispatch inference: dispatch and fallback paths
+tests/unit/misc/test_stdlib_map_ownership_ir_lowerer_inline_dispatch_and_result_helpers.cpp	7	3	canonical map surface owns standalone stdlib implementation ir lowerer inline dispatch and result helpers
+tests/unit/misc/test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp	680	3	canonical map surface owns standalone stdlib implementation map surface registry and template monomorph: template monomorph paths
+tests/unit/parser/test_execution_parsing.cpp	93	3	parses execution bracket-labeled arguments
+tests/unit/parser/test_parser_basic_literals.cpp	229	3	rejects hex integer literals with invalid digit
+tests/unit/parser/test_parser_basic_literals.cpp	244	3	rejects decimal integer literals with invalid digit
+tests/unit/parser/test_parser_errors_more_literals.cpp	319	3	import inside namespace fails
+tests/unit/parser/test_parser_errors_more_literals.cpp	337	3	import inside definition body fails
+tests/unit/semantics/bindings/test_semantics_bindings_assignments.cpp	349	3	literal statement validates
+tests/unit/semantics/bindings/test_semantics_bindings_core.cpp	459	3	bool binding validates
+tests/unit/semantics/bindings/test_semantics_bindings_core.cpp	472	3	string binding validates
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_access_indexing.h	221	3	unsafe string literal access rejects non-integer index
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_access_indexing.h	233	3	unsafe string literal access validates integer index
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	504	3	experimental three-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	524	3	experimental three-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	549	3	experimental four-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	569	3	experimental four-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	594	3	experimental five-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	614	3	experimental five-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	639	3	experimental six-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	659	3	experimental six-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	684	3	experimental seven-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	704	3	experimental seven-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	729	3	experimental eight-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	749	3	experimental eight-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	774	3	experimental nine-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	794	3	experimental nine-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	819	3	experimental ten-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	839	3	experimental ten-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	864	3	experimental eleven-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	884	3	experimental eleven-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	909	3	experimental twelve-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	929	3	experimental twelve-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	954	3	experimental thirteen-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	974	3	experimental thirteen-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	999	3	experimental fourteen-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	1019	3	experimental fourteen-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	1044	3	experimental fifteen-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	1064	3	experimental fifteen-column soa storage helpers validate ownership-sensitive elements
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_column_storage_experimental_soa.cpp	1090	3	experimental sixteen-column soa storage helpers validate on explicit column bindings
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_container_error_and_result_helpers_public_soa_helper_count.cpp	773	3	public soa wildcard import validates without collections import
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_vector_helper_reordered_expression.cpp	516	3	stdlib wrapper vector constructors keep mismatch diagnostics on public vector destinations
+tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_vector_helper_reordered_expression.cpp	532	3	stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	467	3	builtin negate arity mismatch fails
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	479	3	builtin comparison arity mismatch fails
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	491	3	builtin less_than arity mismatch fails
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	503	3	builtin equal arity mismatch fails
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	515	3	builtin greater_equal arity mismatch fails
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	527	3	builtin and arity mismatch fails
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	539	3	builtin not arity mismatch fails
+tests/unit/semantics/capabilities/test_semantics_capabilities_builtins.cpp	551	3	builtin clamp arity mismatch fails
+tests/unit/semantics/test_semantics_numeric_software.cpp	46	3	rejects mixed software and fixed arithmetic
+tests/unit/semantics/test_semantics_numeric_software.cpp	59	3	rejects mixed software numeric categories
+tests/unit/semantics/test_semantics_numeric_software.cpp	73	3	rejects ordered comparisons on complex
+tests/unit/semantics/test_semantics_numeric_software.cpp	87	3	rejects mixed complex and real comparisons
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph.cpp	303	2	type resolution graph perf soak (disabled by default)
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp	1752	2	explicit template-arg graph facts are consumed by inference cache
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp	1774	2	explicit template-arg graph facts are consumed by transform rewrites
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp	544	3	semantic product publishes struct and enum metadata
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp	1355	3	semantic product source locations stay aligned with AST-owned lowering facts
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp	2004	2	semantic product lowering keeps semantic meaning while source locations stay AST-owned
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp	29	2	type-resolution preparation reports template fact-cache hits
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp	309	2	semantic product publishes resolved method-call targets
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp	2059	2	semantic product method-call targets carry interned path ids
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_return_solver.cpp	419	3	graph type resolver answers result queries through shared return-binding inference
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_return_solver.cpp	505	3	graph type resolver preserves nested string helper inference through shared collection receiver classifiers
+tests/unit/semantics/type_resolution/test_semantics_type_resolution_return_solver.cpp	535	3	graph type resolver infers auto return kinds through shared collection receiver classifiers

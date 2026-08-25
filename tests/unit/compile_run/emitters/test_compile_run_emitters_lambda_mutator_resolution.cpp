@@ -74,28 +74,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter lambda mutator positional call resolves user helper") {
-  const std::string source = R"(
-/vector/push([vector<i32> mut] values, [i32] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  []() {
-    [vector<i32> mut] values{vector<i32>(1i32)}
-    push(5i32, values)
-    return(values.count())
-  }
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_positional_shadow.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_lambda_vector_mutator_positional_shadow.cpp").string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("rejects lambda std namespaced reordered mutator compatibility helper in C++ emitter") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [i32] value) { }
@@ -121,76 +99,6 @@ main() {
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(errPath).empty());
-}
-
-TEST_CASE("C++ emitter lambda mutator bool positional call resolves user helper") {
-  const std::string source = R"(
-/vector/push([vector<i32> mut] values, [bool] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  []() {
-    [vector<i32> mut] values{vector<i32>(1i32)}
-    push(true, values)
-    return(values.count())
-  }
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_bool_positional_shadow.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_lambda_vector_mutator_bool_positional_shadow.cpp").string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("C++ emitter lambda mutator named call prefers values receiver") {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/vector/push([vector<i32> mut] values, [vector<i32> mut] value) {
-  pop(values)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  holder{[]() {
-    [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-    [vector<i32> mut] payload{vector<i32>(7i32, 8i32)}
-    push([value] payload, [values] values)
-    return(values.count())
-  }}
-  return(holder())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_named_values_receiver.prime", source);
-
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("C++ emitter lambda mutator rewrite keeps known vector receiver leading names") {
-  const std::string source = R"(
-/i32/push([i32] value, [vector<i32> mut] values) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  []() {
-    [vector<i32> mut] values{vector<i32>(1i32)}
-    [i32] index{8i32}
-    push(values, index)
-    return(values.count())
-  }
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_known_receiver_no_reorder.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_lambda_vector_mutator_known_receiver_no_reorder.cpp")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter rejects lambda explicit vector mutator statements without helper before emission") {
@@ -488,26 +396,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("C++ emitter statement mutator call-form rejects shadow helper") {
-  const std::string source = R"(
-/vector/push([vector<i32> mut] values, [i32] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  push(values, 2i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_vector_mutator_call_shadow_precedence.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vector_mutator_call_shadow_precedence.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("canonical vector mutator named calls over imported user shadow helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -525,27 +413,6 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_call_shadow.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 3);
-}
-
-TEST_CASE("C++ emitter statement mutator named call rejects shadow helper without import") {
-  const std::string source = R"(
-/vector/push([vector<i32> mut] values, [vector<i32> mut] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  [vector<i32> mut] payload{vector<i32>(9i32, 10i32)}
-  push([value] payload, [values] values)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_values_receiver.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_vector_mutator_named_values_receiver.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects imported user vector mutator positional call shadow in C++ emitter") {

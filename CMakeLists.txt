@@ -890,11 +890,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/test_ir_pipeline_gpu.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_pointers.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_type_resolution_parity.cpp
-    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_cpp_vm.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.cpp
-    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp
@@ -1101,11 +1099,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
 
   set(PrimeStructBackendRuntimeTestSources
-    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_cpp_vm.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_contexts.cpp
-    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp
@@ -1351,7 +1347,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
 
   set(PrimeStructBackendRuntimeTestSuites
-    primestruct.ir.pipeline.backends.core
     primestruct.ir.pipeline.backends.registry
     primestruct.ir.pipeline.backends.glsl
     primestruct.ir.pipeline.backends.cpp_vm

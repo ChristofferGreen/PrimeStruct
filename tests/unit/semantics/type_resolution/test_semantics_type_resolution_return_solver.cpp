@@ -416,45 +416,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("graph type resolver answers result queries through shared return-binding inference") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<Result<array<i32>, ContainerError>>]
-valuesOkA() {
-  return(Result.ok(array<i32>(1i32, 2i32)))
-}
-
-[return<Result<array<i32>, ContainerError>>]
-valuesOkB() {
-  return(Result.ok(array<i32>(3i32, 4i32)))
-}
-
-[return<auto>]
-wrapStatus() {
-  [auto] status{
-    if(true,
-      then(){ return(valuesOkA()) },
-      else(){ return(valuesOkB()) })
-  }
-  return(status)
-}
-
-unexpectedWrapStatusError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-}
-
-[return<Result<int, ContainerError>> on_error<ContainerError, /unexpectedWrapStatusError>]
-main() {
-  [auto] values{try(wrapStatus())}
-  return(Result.ok(count(values)))
-}
-  )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
-}
-
 TEST_CASE("graph type resolver answers map receiver queries through shared type-text helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -500,66 +461,6 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-}
-
-TEST_CASE("graph type resolver preserves nested string helper inference through shared collection receiver classifiers") {
-  const std::string source = R"(
-[return<int>]
-packScore([args<string>] values) {
-  return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
-}
-
-[return<int> effects(heap_alloc)]
-vectorScore() {
-  [vector<string>] values{vector<string>("alpha"raw_utf8, "beta"raw_utf8)}
-  return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
-}
-
-[return<int> effects(heap_alloc)]
-mapScore() {
-  [map<i32, string>] values{map<i32, string>(1i32, "left"raw_utf8, 2i32, "right"raw_utf8)}
-  return(plus(values.at(1i32).count(), values.at_unsafe(2i32).count()))
-}
-
-[return<int> effects(heap_alloc)]
-main() {
-  return(plus(packScore("ab"raw_utf8, "cde"raw_utf8),
-              plus(vectorScore(), mapScore())))
-}
-  )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
-}
-
-TEST_CASE("graph type resolver infers auto return kinds through shared collection receiver classifiers") {
-  const std::string source = R"(
-[return<auto>]
-packScore([args<string>] values) {
-  return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
-}
-
-[return<auto> effects(heap_alloc)]
-vectorScore() {
-  [vector<string>] values{vector<string>("alpha"raw_utf8, "beta"raw_utf8)}
-  return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
-}
-
-[return<auto> effects(heap_alloc)]
-mapScore() {
-  [map<i32, string>] values{map<i32, string>(1i32, "left"raw_utf8, 2i32, "right"raw_utf8)}
-  return(plus(values.at(1i32).count(), values.at_unsafe(2i32).count()))
-}
-
-[return<i32> effects(heap_alloc)]
-main() {
-  return(plus(packScore("ab"raw_utf8, "cde"raw_utf8),
-              plus(vectorScore(), mapScore())))
-}
-  )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("graph type resolver shares borrowed indexed collection plumbing for soa auto returns") {

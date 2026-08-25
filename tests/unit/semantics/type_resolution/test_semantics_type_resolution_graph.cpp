@@ -300,40 +300,6 @@ main() {
   CHECK(snapshot.buildOverBudget == false);
 }
 
-TEST_CASE("type resolution graph perf soak (disabled by default)") {
-  if (std::getenv("PRIMESTRUCT_GRAPH_SOAK") == nullptr) {
-    return;
-  }
-
-  const std::string source = R"(
-[return<i32>]
-leaf([i32] value) {
-  return(value)
-}
-
-[return<i32>]
-main() {
-  [auto] value{0i32}
-  [auto] a{leaf(value)}
-  [auto] b{leaf(a)}
-  [auto] c{leaf(b)}
-  [auto] d{leaf(c)}
-  [auto] e{leaf(d)}
-  [auto] f{leaf(e)}
-  [auto] g{leaf(f)}
-  return(g)
-}
-)";
-
-  for (int index = 0; index < 200; ++index) {
-    std::string error;
-    primec::semantics::TypeResolutionGraphSnapshot snapshot;
-    REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(
-        parseProgram(source), "/main", error, snapshot));
-    CHECK(error.empty());
-  }
-}
-
 TEST_CASE("type resolution graph layer ordering stays consistent") {
   const std::string source = R"(
 [return<auto>]

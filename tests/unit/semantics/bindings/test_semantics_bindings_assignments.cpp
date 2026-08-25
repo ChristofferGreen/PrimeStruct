@@ -346,19 +346,6 @@ main() {
   CHECK(error.find("dereference requires a pointer or reference") != std::string::npos);
 }
 
-TEST_CASE("literal statement validates") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  1i32
-  return(2i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("pointer assignment requires mutable binding") {
   const std::string source = R"(
 [return<int>]

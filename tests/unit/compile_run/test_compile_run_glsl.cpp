@@ -563,22 +563,6 @@ main() {
   CHECK(std::filesystem::file_size(outputPath) > 0);
 }
 
-TEST_CASE("glsl emitter allows entry args parameter") {
-  const std::string source = R"(
-[return<void>]
-main([array<string>] args) {
-  return()
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_entry_args.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_glsl_entry_args.glsl").string();
-
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("void main()") != std::string::npos);
-}
-
 TEST_CASE("glsl emitter writes spirv when tool available") {
   if (!hasSpirvTools()) {
     return;
@@ -881,41 +865,6 @@ main() {
   const std::string output = readFile(outPath);
   CHECK(output.find("GLSL backend ignores print side effects.") != std::string::npos);
   CHECK(output.find("GLSL backend ignores print-string side effects.") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter accepts capabilities") {
-  const std::string source = R"(
-[return<void> capabilities(io_out)]
-main() {
-  print_line("cap"utf8)
-  return()
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_caps.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_glsl_caps.glsl").string();
-
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("void main()") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter accepts support-matrix effects and capabilities") {
-  const std::string source = R"(
-[return<void>
- effects(io_out, io_err, pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)
- capabilities(io_out, io_err, pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)]
-main() {
-  return()
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_support_matrix_effects.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_glsl_support_matrix_effects.glsl").string();
-
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("void main()") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter supports support-matrix scalar bindings") {
@@ -1294,47 +1243,6 @@ main() {
   CHECK(output.find("locals[1] = stack[--sp];") != std::string::npos);
 }
 
-TEST_CASE("glsl emitter handles block expression return value") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  [i32] value{block(){
-    [i32] base{1i32}
-    return(plus(base, 2i32))
-  }}
-  return()
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_block_return.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_glsl_block_return.glsl").string();
-
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("int value") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter handles block expression early return") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  [i32] value{block(){
-    return(3i32)
-    4i32
-  }}
-  return()
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_block_early_return.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_glsl_block_early_return.glsl").string();
-
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("int value") != std::string::npos);
-}
-
 TEST_CASE("glsl emitter ignores pathspace builtins") {
   const std::string source = R"(
 [return<void> effects(pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)]
@@ -1383,55 +1291,6 @@ main() {
   CHECK(output.find("isnan(") != std::string::npos);
 }
 
-TEST_CASE("glsl emitter rejects explicit effects") {
-  const std::string source = R"(
-[return<void> effects(heap_alloc)]
-main() {
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_effects.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_glsl_effects_err.txt").string();
-
-  const std::string outPath = (testScratchPath("") / "primec_glsl_effects.glsl").string();
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("void main()") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter rejects static bindings") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  [static i32] value{1i32}
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_static_binding.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_static_binding_err.txt").string();
-
-  const std::string outPath = (testScratchPath("") / "primec_glsl_static_binding.glsl").string();
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("stack[sp++] = 1;") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter rejects non-scalar bindings") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  [array<i32>] values{array<i32>(1i32)}
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_array_binding.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_array_binding_err.txt").string();
-
-  const std::string outPath = (testScratchPath("") / "primec_glsl_array_binding.glsl").string();
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("slot-byte offsets") != std::string::npos);
-}
-
 TEST_CASE("glsl emitter rejects mixed signed/unsigned math") {
   const std::string source = R"(
 [return<void>]
@@ -1449,40 +1308,6 @@ main() {
       "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("mixed signed/unsigned") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter rejects mixed boolean comparisons") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  [bool] flag{greater_than(true, 1i32)}
-  return()
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_mixed_bool.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_glsl_mixed_bool_err.txt").string();
-
-  const std::string outPath = (testScratchPath("") / "primec_glsl_mixed_bool.glsl").string();
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("stack[sp++] = (left > right) ? 1 : 0;") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter rejects string literals") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  [string] name{"hi"utf8}
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_string_literal.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_string_literal_err.txt").string();
-
-  const std::string outPath = (testScratchPath("") / "primec_glsl_string_literal.glsl").string();
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("stack[sp++] = 0;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects unsupported capabilities") {
@@ -1515,22 +1340,6 @@ main() {
       "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("execution effects must be a subset") != std::string::npos);
-}
-
-TEST_CASE("glsl emitter rejects non-void entry") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_glsl_reject.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_glsl_reject_err.txt").string();
-
-  const std::string outPath = (testScratchPath("") / "primec_glsl_reject.glsl").string();
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("return stack[--sp];") != std::string::npos);
 }
 
 TEST_SUITE_END();

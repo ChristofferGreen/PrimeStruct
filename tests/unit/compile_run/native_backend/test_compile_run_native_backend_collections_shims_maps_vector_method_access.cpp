@@ -322,36 +322,6 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects native stdlib collection shim vector new type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<bool>()}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_new_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
-TEST_CASE("rejects native stdlib collection shim vector single type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(false)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_single_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
 TEST_CASE("native stdlib collection shim vector pair") {
   const std::string source = R"(
 import /std/collections/*
@@ -369,21 +339,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 26);
-}
-
-TEST_CASE("rejects native stdlib collection shim vector pair type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, false)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_pair_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("native stdlib collection shim vector triple") {
@@ -405,21 +360,6 @@ main() {
   CHECK(runCommand(exePath) == 43);
 }
 
-TEST_CASE("rejects native stdlib collection shim vector triple type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, false)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_triple_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
 TEST_CASE("native stdlib collection shim vector quad") {
   const std::string source = R"(
 import /std/collections/*
@@ -437,21 +377,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 19);
-}
-
-TEST_CASE("rejects native stdlib collection shim vector quad type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, 3i32, false)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_quad_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("native stdlib collection shim map single") {

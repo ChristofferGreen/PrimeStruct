@@ -125,67 +125,6 @@ main() {
   CHECK(result == 14);
 }
 
-TEST_CASE("ir lowerer rejects variadic vector packs with indexed statement mutators") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-mutate_vectors([args<vector<i32>>] values) {
-  [vector<i32> mut] head{values[0i32]}
-  [vector<i32> mut] middle{values[1i32]}
-  [vector<i32> mut] tail{values[2i32]}
-  /std/collections/vector/push<i32>(head, 9i32)
-  /std/collections/vector/pop<i32>(head)
-  /std/collections/vector/reserve<i32>(middle, 6i32)
-  /std/collections/vector/clear<i32>(middle)
-  /std/collections/vector/remove_at<i32>(tail, 1i32)
-  /std/collections/vector/remove_swap<i32>(tail, 0i32)
-  return(plus(/std/collections/vector/count(head),
-              plus(/std/collections/vector/capacity(middle),
-                   /std/collections/vector/count(tail))))
-}
-
-[effects(heap_alloc), return<int>]
-forward([args<vector<i32>>] values) {
-  return(mutate_vectors([spread] values))
-}
-
-[effects(heap_alloc), return<int>]
-forward_mixed([args<vector<i32>>] values) {
-  [vector<i32>] extra{/std/collections/vector/vector<i32>(20i32)}
-  return(mutate_vectors(extra, [spread] values))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
-  [vector<i32>] a1{/std/collections/vector/vector<i32>(3i32)}
-  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32)}
-
-  [vector<i32>] b0{/std/collections/vector/vector<i32>(7i32)}
-  [vector<i32>] b1{vector<i32>(8i32, 9i32)}
-  [vector<i32>] b2{vector<i32>(10i32, 11i32, 12i32)}
-
-  [vector<i32>] c0{vector<i32>(13i32, 14i32)}
-  [vector<i32>] c1{vector<i32>(15i32, 16i32, 17i32)}
-
-  return(plus(mutate_vectors(a0, a1, a2),
-              plus(forward(b0, b1, b2),
-                   forward_mixed(c0, c1))))
-}
-)";
-  primec::Program program;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("ir lowerer materializes variadic array packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]

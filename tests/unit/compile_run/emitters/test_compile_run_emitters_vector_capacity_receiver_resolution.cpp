@@ -173,31 +173,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects canonical direct-call vector capacity builtin fallback on map receiver in C++ emitter") {
-  const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32))
-}
-
-[return<int>]
-main() {
-  return(/std/collections/vector/capacity(wrapMap()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_direct_vector_capacity_map_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_vector_capacity_map_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects canonical slash-method vector capacity same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -314,32 +289,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects canonical slash-method vector capacity on map receiver in C++ emitter") {
-  const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32))
-}
-
-[return<int>]
-main() {
-  return(wrapMap()./std/collections/vector/capacity())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_capacity_map_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_capacity_map_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") !=
-        std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects alias slash-method vector capacity same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -395,31 +344,6 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown method: /map/capacity") != std::string::npos);
-}
-
-TEST_CASE("rejects alias slash-method vector capacity on map receiver in C++ emitter") {
-  const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32))
-}
-
-[return<int>]
-main() {
-  return(wrapMap()./vector/capacity())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_capacity_map_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_capacity_map_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter infers wrapper collection builtin fallback") {
@@ -569,28 +493,6 @@ main() {
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
-}
-
-TEST_CASE("rejects wrapper vector count methods without helper before emission in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(wrapVector().count())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_count_method_deleted_stub_cpp.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_wrapper_vector_count_method_deleted_stub.txt").string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects wrapper vector count slash-method chains before receiver typing") {
@@ -780,30 +682,6 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
-}
-
-TEST_CASE("rejects wrapper bare vector count calls without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(count(wrapVector()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_bare_vector_count_call_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_count_call_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_SUITE_END();

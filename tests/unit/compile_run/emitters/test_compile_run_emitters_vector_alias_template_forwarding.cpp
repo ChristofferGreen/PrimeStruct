@@ -358,61 +358,6 @@ main() {
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("rejects vector alias compatibility template forwarding when unknown expected meets primitive binding in C++ emitter") {
-  const std::string source = R"(
-Marker() {}
-
-[return<int>]
-/vector/count([vector<i32>] values, [Marker] marker) {
-  return(7i32)
-}
-
-[return<int>]
-/std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
-  return(90i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  [i32] marker{1i32}
-  return(plus(/vector/count(values, marker), values.count(marker)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_binding.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
-}
-
-TEST_CASE("rejects vector alias compatibility template forwarding when unknown expected") {
-  const std::string source = R"(
-Marker() {}
-
-[return<int>]
-/vector/count([vector<i32>] values, [Marker] marker) {
-  return(7i32)
-}
-
-[return<int>]
-/std/collections/vector/count<T>([vector<T>] values, [vector<i32>] marker) {
-  return(90i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  [vector<i32>] marker{vector<i32>(1i32)}
-  return(plus(/vector/count(values, marker), values.count(marker)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_vector_envelope_binding.prime",
-                source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
-}
-
 TEST_CASE("rejects vector helper method expression legacy alias forwarding in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -505,55 +450,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
         std::string::npos);
-}
-
-TEST_CASE("rejects array alias templated forwarding to canonical vector helper in C++ emitter") {
-  const std::string source = R"(
-[return<int>]
-/array/count([vector<i32>] values) {
-  return(7i32)
-}
-
-[return<int>]
-/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
-  return(90i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(/array/count<i32>(values, true))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_array_alias_templated_vector_forwarding_rejected.prime", source);
-
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("rejects stdlib templated vector count fallback to array alias in C++ emitter") {
-  const std::string source = R"(
-[return<int>]
-/vector/count([vector<i32>] values) {
-  return(7i32)
-}
-
-[return<int>]
-/array/count<T>([vector<T>] values, [bool] marker) {
-  return(90i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(/std/collections/vector/count<i32>(values, true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_templated_vector_call_array_fallback_rejected.prime", source);
-
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("array alias count through same-path helper in C++ emitter") {

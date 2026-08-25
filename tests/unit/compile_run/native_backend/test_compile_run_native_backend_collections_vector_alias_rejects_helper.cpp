@@ -106,61 +106,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects native array alias templated forwarding to canonical vector helper") {
-  const std::string source = R"(
-[return<int>]
-/array/count([vector<i32>] values) {
-  return(7i32)
-}
-
-[return<int>]
-/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
-  return(90i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(/array/count<i32>(values, true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_array_alias_templated_vector_forwarding_rejected.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_array_alias_templated_vector_forwarding_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("rejects native stdlib templated vector count fallback to array alias") {
-  const std::string source = R"(
-[return<int>]
-/vector/count([vector<i32>] values) {
-  return(7i32)
-}
-
-[return<int>]
-/array/count<T>([vector<T>] values, [bool] marker) {
-  return(90i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(/std/collections/vector/count<i32>(values, true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_stdlib_templated_vector_call_array_fallback_rejected.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_templated_vector_call_array_fallback_exe")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("native array alias count through same-path helper") {
   const std::string source = R"(
 [return<int>]

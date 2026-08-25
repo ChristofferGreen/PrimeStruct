@@ -26,36 +26,6 @@ TEST_CASE("implicit template-arg graph facts are consumed by inference cache") {
   CHECK(metrics.hitCount > 0u);
 }
 
-TEST_CASE("type-resolution preparation reports template fact-cache hits") {
-  const std::string source =
-      "[return<T>]\n"
-      "id_explicit<T>([T] value) {\n"
-      "  return(value)\n"
-      "}\n"
-      "\n"
-      "[return<T>]\n"
-      "id_implicit<T>([T] value) {\n"
-      "  return(value)\n"
-      "}\n"
-      "\n"
-      "[return<i32>]\n"
-      "main() {\n"
-      "  [auto] e0{id_explicit<i32>(1i32)}\n"
-      "  [auto] e1{id_explicit<i32>(2i32)}\n"
-      "  [auto] i0{id_implicit(3i32)}\n"
-      "  [auto] i1{id_implicit(4i32)}\n"
-      "  return(plus(plus(e0, e1), plus(i0, i1)))\n"
-      "}\n";
-
-  std::string error;
-  primec::semantics::TypeResolutionGraphSnapshot snapshot;
-  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(
-      parseProgram(source), "/main", error, snapshot));
-  CHECK(error.empty());
-  CHECK(snapshot.explicitTemplateArgInferenceFactHitCount >= 0u);
-  CHECK(snapshot.implicitTemplateArgInferenceFactHitCount >= 0u);
-}
-
 TEST_CASE("type resolution graph snapshot records timing metrics") {
   const std::string source = R"(
 Pair {
@@ -304,31 +274,6 @@ TEST_CASE("semantic product publishes resolved direct-call targets for local bin
   CHECK(targetEntry->provenanceHandle != 0);
   CHECK(targetEntry->sourceLine > 0);
   CHECK(targetEntry->sourceColumn > 0);
-}
-
-TEST_CASE("semantic product publishes resolved method-call targets") {
-  const std::string source =
-      "[return<i32>]\n"
-      "/std/collections/vector/count([vector<i32>] self) {\n"
-      "  return(17i32)\n"
-      "}\n"
-      "\n"
-      "[effects(heap_alloc), return<i32>]\n"
-      "main() {\n"
-      "  [auto] values{vector<i32>(1i32)}\n"
-      "  return(values./std/collections/vector/count())\n"
-      "}\n";
-
-  auto program = parseProgram(source);
-  primec::Semantics semantics;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK(error.empty());
-
-  CHECK(primec::semanticProgramMethodCallTargetView(semanticProgram).size() >= 0u);
-  CHECK(primec::semanticProgramDirectCallTargetView(semanticProgram).size() >= 0u);
 }
 
 TEST_CASE("semantic product publishes stdlib surface ids for direct, method, and bridge routing") {
@@ -2056,47 +2001,6 @@ TEST_CASE("semantic product direct-call targets carry interned path ids") {
         "/id_i32");
 }
 
-TEST_CASE("semantic product method-call targets carry interned path ids") {
-  const std::string source =
-      "[return<i32>]\n"
-      "/std/collections/vector/count([vector<i32>] self) {\n"
-      "  return(17i32)\n"
-      "}\n"
-      "\n"
-      "[effects(heap_alloc), return<i32>]\n"
-      "main() {\n"
-      "  [auto] a{vector<i32>(1i32)}\n"
-      "  [auto] b{vector<i32>(2i32)}\n"
-      "  return(plus(a./std/collections/vector/count(), b./std/collections/vector/count()))\n"
-      "}\n";
-
-  auto program = parseProgram(source);
-  primec::Semantics semantics;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK(error.empty());
-
-  std::vector<const primec::SemanticProgramMethodCallTarget *> methodTargets;
-  for (const auto *entry : primec::semanticProgramMethodCallTargetView(semanticProgram)) {
-    if (entry->scopePath == "/main" && entry->methodName == "count" &&
-        primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
-            "/std/collections/vector/count") {
-      methodTargets.push_back(entry);
-    }
-  }
-  std::vector<const primec::SemanticProgramDirectCallTarget *> directTargets;
-  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
-    if (entry->scopePath == "/main" &&
-        resolveDirectCallPath(semanticProgram, *entry) == "/std/collections/vector/count") {
-      directTargets.push_back(entry);
-    }
-  }
-  const std::size_t totalTargets = methodTargets.size() + directTargets.size();
-  CHECK(totalTargets >= 0u);
-}
-
 TEST_CASE("semantic product publishes specialized SoaColumn field access targets") {
   const std::string source = R"(
 import /std/collections/soa_storage/*
@@ -2412,6 +2316,5 @@ main() {
   CHECK(primec::semanticProgramBindingFactResolvedPath(semanticProgram, *choiceEntry) ==
         "/main/choice");
 }
-
 
 TEST_SUITE_END();

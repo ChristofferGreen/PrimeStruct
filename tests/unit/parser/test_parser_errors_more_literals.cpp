@@ -316,40 +316,6 @@ main() {
   CHECK(error.find("missing return statement in definition body") != std::string::npos);
 }
 
-TEST_CASE("import inside namespace fails") {
-  const std::string source = R"(
-namespace demo {
-  import /util
-  [return<int>]
-  main() {
-    return(1i32)
-  }
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  REQUIRE(parser.parse(program, error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("import inside definition body fails") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  import /util
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  REQUIRE(parser.parse(program, error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("import path must be a slash path") {
   const std::string source = R"(
 import util

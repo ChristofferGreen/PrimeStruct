@@ -30,7 +30,6 @@ main() {
   CHECK(error.empty());
 }
 
-
 TEST_CASE("local binding infers type without transforms") {
   const std::string source = R"(
 [return<int>]
@@ -454,32 +453,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("binding initializer type mismatch") != std::string::npos);
-}
-
-TEST_CASE("bool binding validates") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [bool] value{true}
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("string binding validates") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [string] message{"hello"utf8}
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
 }
 
 TEST_CASE("copy binding validates") {

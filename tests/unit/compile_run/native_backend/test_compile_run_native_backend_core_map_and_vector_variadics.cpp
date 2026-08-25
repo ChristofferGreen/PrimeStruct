@@ -692,43 +692,5 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("native rejects map constructor literal parity with canonical entries") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] literal{map<i32, i32>(1i32, 11i32, 2i32, 13i32)}
-  [map<i32, i32>] directCtor{map<i32, i32>(3i32, 17i32, 4i32, 19i32)}
-  [map<i32, i32>] canonicalCtor{/std/collections/map/map<i32, i32>(
-      /std/collections/map/entry<i32, i32>(5i32, 23i32),
-      /std/collections/map/entry<i32, i32>(6i32, 29i32))}
-  [map<i32, i32>] canonicalSingle{/std/collections/map/map<i32, i32>(
-      /std/collections/map/entry<i32, i32>(7i32, 31i32))}
-  return(
-      plus(
-          plus(/std/collections/map/count<i32, i32>(literal),
-               /std/collections/map/count<i32, i32>(directCtor)),
-          plus(
-              plus(/std/collections/map/count<i32, i32>(canonicalCtor),
-                   /std/collections/map/count<i32, i32>(canonicalSingle)),
-              plus(
-                  /std/collections/map/at_unsafe<i32, i32>(literal, 1i32),
-                  plus(
-                      /std/collections/map/at_unsafe<i32, i32>(directCtor, 4i32),
-                      plus(
-                          /std/collections/map/at_unsafe<i32, i32>(canonicalCtor, 6i32),
-                          /std/collections/map/at_unsafe<i32, i32>(canonicalSingle, 7i32)))))))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_ctor_literal_parity.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_map_ctor_literal_parity.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_SUITE_END();
 #endif

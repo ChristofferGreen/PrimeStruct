@@ -253,18 +253,6 @@ main() {
   CHECK(runCommand(compileCmd) == 1);
 }
 
-TEST_CASE("main returns a literal bool value") {
-  const std::string source = R"(
-[return<bool>]
-main() {
-  return(true)
-}
-)";
-  const std::string srcPath = writeTemp("compile_bool_return.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 1);
-}
-
 TEST_CASE("greater_than() compares two bool values") {
   const std::string source = R"(
 [return<bool>]
@@ -397,7 +385,6 @@ main() {
   CHECK(runCommand(compileCmd) == 5);
 }
 
-
 TEST_CASE("convert<int>() truncates an f32 literal") {
   const std::string source = R"(
 [return<int>]
@@ -514,6 +501,5 @@ main() {
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 5);
 }
-
 
 TEST_SUITE_END();

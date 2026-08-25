@@ -62,28 +62,6 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
-TEST_CASE("auto-inferred std namespaced vector push canonical definition in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/push([vector<i32> mut] values, [string] value) {
-  return(false)
-}
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  [string] payload{"tag"raw_utf8}
-  [auto] inferred{/std/collections/vector/push([value] payload, [values] values)}
-  return(inferred)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_std_namespaced_vector_push_expr_named_receiver_canonical_definition_auto.prime",
-                source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
 TEST_CASE("rejects auto-inferred std namespaced count helper return mismatch in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -113,79 +91,6 @@ TEST_CASE("rejects auto-inferred std namespaced count helper return mismatch in 
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("return type mismatch: expected i32") != std::string::npos);
-}
-
-TEST_CASE("compiles std namespaced count helper canonical fallback in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/count([vector<i32>] values) {
-  return(false)
-}
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  [auto] inferred{/std/collections/vector/count(values)}
-  return(inferred)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_canonical_fallback_auto.prime",
-                                        source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_std_namespaced_vector_count_canonical_fallback_auto_err.txt")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-}
-
-TEST_CASE("std namespaced count expression canonical precedence in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/vector/count([vector<i32>] values) {
-  return(12i32)
-}
-
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/count([vector<i32>] values) {
-  return(false)
-}
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(/std/collections/vector/count(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_expr_receiver_precedence.prime",
-                                        source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
-TEST_CASE("compiles std namespaced count expression canonical fallback in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/count([vector<i32>] values) {
-  return(false)
-}
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(/std/collections/vector/count(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_expr_canonical_fallback.prime",
-                                        source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_err.txt")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("rejects std namespaced count non-builtin compatibility fallback in C++ emitter") {
@@ -247,49 +152,6 @@ main() {
 
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("std namespaced capacity expression canonical precedence in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/vector/capacity([vector<i32>] values) {
-  return(12i32)
-}
-
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/capacity([vector<i32>] values) {
-  return(false)
-}
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(/std/collections/vector/capacity(values))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_std_namespaced_vector_capacity_expr_receiver_precedence.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
-TEST_CASE("std namespaced capacity expression canonical fallback in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/capacity([vector<i32>] values) {
-  return(false)
-}
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(/std/collections/vector/capacity(values))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_std_namespaced_vector_capacity_expr_canonical_fallback.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("rejects user vector mutator bool positional call shadow in C++ emitter") {
@@ -583,35 +445,5 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
-
-TEST_CASE("C++ emitter rejects later map receiver positional shadow without canonical reorder") {
-  const std::string source = R"(
-[return<int>]
-/map/at([map<string, i32>] values, [string] key) {
-  return(86i32)
-}
-
-[return<int>]
-/string/at([string] values, [map<string, i32>] key) {
-  return(87i32)
-}
-
-[return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
-  return(at("only"raw_utf8, values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_map_access_later_receiver_precedence.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_map_access_later_receiver_precedence_err.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
-}
-
 
 TEST_SUITE_END();

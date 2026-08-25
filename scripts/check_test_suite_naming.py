@@ -19,8 +19,6 @@ EXPECTED_FILE_SUITES = {
     'tests/unit/compile_run/vm/test_compile_run_vm_maps.cpp': 'primestruct.compile.run.vm.maps',
     'tests/unit/compile_run/vm/test_compile_run_vm_math.cpp': 'primestruct.compile.run.vm.math',
     'tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp': 'primestruct.compile.run.vm.outputs',
-    'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends.cpp': 'primestruct.ir.pipeline.backends.core',
-    'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_graph_pilot.cpp': 'primestruct.ir.pipeline.backends.core',
     'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp': 'primestruct.ir.pipeline.backends.glsl',
     'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_cpp_vm.cpp': 'primestruct.ir.pipeline.backends.cpp_vm',
     'tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp': 'primestruct.ir.pipeline.backends.registry',

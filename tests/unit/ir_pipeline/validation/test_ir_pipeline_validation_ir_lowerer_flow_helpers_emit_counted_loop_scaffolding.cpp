@@ -1,34 +1,5 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
-#include <filesystem>
-#include <fstream>
-
-namespace {
-
-std::string readTextFile(const std::string &path) {
-  std::ifstream file(path);
-  if (!file.is_open()) {
-    const std::string marker = "PrimeStruct/";
-    const size_t markerPos = path.find(marker);
-    if (markerPos != std::string::npos) {
-      const std::filesystem::path repoRoot =
-          std::filesystem::path(__FILE__)
-              .parent_path()
-              .parent_path()
-              .parent_path()
-              .parent_path()
-              .parent_path();
-      const std::filesystem::path repoRelativePath =
-          path.substr(markerPos + marker.size());
-      file.open(repoRoot / repoRelativePath);
-    }
-  }
-  REQUIRE(file.is_open());
-  return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-}
-
-} // namespace
-
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("ir lowerer flow helpers emit counted loop scaffolding") {
@@ -111,65 +82,6 @@ TEST_CASE("ir lowerer flow helpers emit counted loop scaffolding") {
   CHECK(instructions[2].op == primec::IrOpcode::PushI64);
   CHECK(instructions[3].op == primec::IrOpcode::CmpNeI64);
   CHECK(instructions[4].op == primec::IrOpcode::JumpIfZero);
-}
-
-TEST_CASE("ir lowerer flow helpers recover bool while conditions from builtin comparisons") {
-  const std::string source = readTextFile(
-      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsLoops.h");
-  CHECK(source.find("if (condKind == LocalInfo::ValueKind::Unknown)") != std::string::npos);
-  CHECK(source.find("if (getBuiltinComparisonName(cond, builtinComparison))") != std::string::npos);
-  CHECK(source.find("condKind = LocalInfo::ValueKind::Bool;") != std::string::npos);
-  CHECK(source.find("if (condKind != LocalInfo::ValueKind::Bool)") != std::string::npos);
-  CHECK(source.find("error = \"while condition requires bool\"") != std::string::npos);
-  CHECK(source.find("error = \"for condition requires bool\"") != std::string::npos);
-}
-
-TEST_CASE("ir lowerer binding local info recovers bool comparison initializers") {
-  const std::string source = readTextFile(
-      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindingLocalInfo.h");
-  CHECK(source.find("if (info.valueKind == LocalInfo::ValueKind::Unknown)") != std::string::npos);
-  CHECK(source.find("if (getBuiltinComparisonName(init, builtinComparison))") != std::string::npos);
-  CHECK(source.find("info.valueKind = LocalInfo::ValueKind::Bool;") != std::string::npos);
-  CHECK(source.find("info.valueKind = LocalInfo::ValueKind::Int32;") != std::string::npos);
-}
-
-TEST_CASE("ir lowerer binding local info clears struct paths for file handles") {
-  const std::string source = readTextFile(
-      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindingLocalInfo.h");
-  CHECK(source.find("if (info.isFileHandle)") != std::string::npos);
-  CHECK(source.find("info.structTypeName.clear();") != std::string::npos);
-}
-
-TEST_CASE("ir lowerer statement bindings prefer struct constructor full paths") {
-  const std::string source = readTextFile(
-      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindings.h");
-  CHECK(source.find("info.structTypeName = initCallee->fullPath;") != std::string::npos);
-  CHECK(source.find("const std::string declaredStructSurface =") != std::string::npos);
-  CHECK(source.find("const std::string calleeStructSurface =") != std::string::npos);
-  CHECK(source.find("if (declaredStructSurface == calleeStructSurface)") != std::string::npos);
-  CHECK(source.find("if (init.isBraceConstructor &&") != std::string::npos);
-  CHECK(source.find("ir_lowerer::isStructDefinition(*initCallee))") != std::string::npos);
-  CHECK(source.find("initStruct = callee.fullPath;") != std::string::npos);
-  CHECK(source.find("} else if (initStruct.empty()) {") != std::string::npos);
-  CHECK(source.find("inferStructReturnPathFromDefinition(") != std::string::npos);
-}
-
-TEST_CASE("ir lowerer statement bindings only rehydrate unresolved value structs") {
-  const std::string source = readTextFile(
-      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindings.h");
-  CHECK(source.find("if (info.kind == LocalInfo::Kind::Value &&") != std::string::npos);
-  CHECK(source.find("info.valueKind == LocalInfo::ValueKind::Unknown &&") != std::string::npos);
-  CHECK(source.find("info.structTypeName.empty())") != std::string::npos);
-}
-
-TEST_CASE("ir lowerer storage helpers skip file handle struct copies") {
-  const std::string source = readTextFile(
-      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerEmitExprStorageHelpers.h");
-  CHECK(source.find("!storageInfo.isFileHandle && !storageInfo.structTypeName.empty()") !=
-        std::string::npos);
-  CHECK(source.find("!(access.pointer != nullptr && access.pointer->isFileHandle) &&") !=
-        std::string::npos);
-  CHECK(source.find("!access.typeInfo.structPath.empty()") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer flow helpers emit body statements") {

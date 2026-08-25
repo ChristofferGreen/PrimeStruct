@@ -31129,3 +31129,92 @@ real answer.
     confirm zero regressions across the complete suite.
   - finished_at: 2026-08-23
 
+
+- [x] TODO-5257: Delete the 440 near-useless TEST_CASEs identified by the full-suite test-quality audit
+  - owner: ai
+  - created_at: 2026-08-25
+  - finished_at: 2026-08-25
+  - phase: Test suite complexity/runtime reduction
+  - parallel_track: test-suite-prune-stage1
+  - depends_on: (none)
+  - scope: A full-coverage audit scored every one of the ~10,172
+    `TEST_CASE`s under `tests/unit/` (all 499 files) for test quality on a
+    1-10 scale, using a rubric where 1-3 means "nearly useless -
+    tautological, checks essentially nothing meaningful, is dead/disabled/
+    skipped, or is so trivial it could not realistically catch a
+    regression". 440 TEST_CASEs across 83 files scored 1-3. The full
+    per-test list (file, line, score, test name) is committed at
+    `docs/test_prune_candidates_stage1.tsv` (tab-separated, header row).
+    Deleted exactly these 440 TEST_CASEs from their source files. This was
+    a Stage 1 (safe/low-risk) cut only - it did not touch the much larger
+    population of tests scored 4-6 (real but weakly-asserting) or the
+    near-duplicate sibling clusters noted throughout the audit; those
+    remain a separate, not-yet-scoped follow-on (see notes).
+  - implementation_notes: 439 of the 440 deletions were mechanical
+    (locate the named `TEST_CASE` at/near its recorded line, delete the
+    balanced `{ ... }` block). One (`test_ir_pipeline_backends_graph_pilot.cpp`,
+    "graph type resolver pilot is wired through options and semantics
+    inference") was a single TEST_CASE whose body was split by `#include`
+    across three files purely to keep line counts down
+    (`test_ir_pipeline_backends_graph_pilot_contexts.h`,
+    `_utilities.h`) - deleted all three files and their two
+    `CMakeLists.txt` source-list entries by hand.
+  - acceptance:
+    - All 440 TEST_CASEs listed in
+      `docs/test_prune_candidates_stage1.tsv` were removed from their
+      source files (439 mechanically + 1 by hand, per above); no other
+      TEST_CASE was removed or altered.
+    - `./scripts/compile.sh --release` passes after the deletions.
+    - The tracked test-case count dropped by exactly 440
+      (`grep -rc "^TEST_CASE(" tests/unit | awk -F: '{s+=$2} END {print s}'`:
+      10172 before, 9732 after).
+  - stop_rule: Stopped once all 440 listed tests were deleted and the
+    release suite was green. Did not expand to score-4-6 tests or
+    near-duplicate-cluster consolidation - see notes for that follow-on.
+  - notes: Deleting these 440 tests surfaced three categories of
+    now-dead scaffolding that -Werror=unused-function caught at compile
+    time (not predictable from the audit alone, since the audit only
+    read TEST_CASE bodies, not whether their shared file-scope helpers
+    had other callers):
+    (1) Two files (`test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp`,
+    `test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`)
+    had a "shared fixture" struct+loader function that existed solely to
+    serve now-deleted sibling TEST_CASEs - deleted both dead blocks.
+    (2) One file (`test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp`)
+    had an anonymous-namespace `readTextFile` helper (plus its
+    `<filesystem>`/`<fstream>` includes) that only the deleted tests
+    called - deleted the whole block.
+    (3) Deleting `test_ir_pipeline_backends_graph_pilot.cpp` (see
+    implementation_notes) emptied the
+    `primestruct.ir.pipeline.backends.core` doctest suite entirely -
+    the only other file registered under that suite name
+    (`test_ir_pipeline_backends.cpp`) was itself a content-free
+    `TEST_SUITE_BEGIN`/`TEST_SUITE_END` pair with zero TEST_CASEs
+    (previously scored 1/10 by the audit as existing "only to keep a
+    test suite registered"), so deleted that file too and removed the
+    suite from `PrimeStructBackendRuntimeTestSuites` in
+    `CMakeLists.txt` and from `scripts/check_test_suite_naming.py`'s
+    `EXPECTED_FILE_SUITES` map (both guardrails failed loudly with a
+    clear message once the suite became phantom - fixed by removing the
+    stale registration rather than reintroducing a placeholder test).
+    Verification: full `./scripts/compile.sh --release` run passed
+    except for two pre-existing, unrelated failures also present before
+    this change - `PrimeStruct_primestruct_ir_pipeline_validation_cases_1321_1330`
+    ("semantics validate publishes module artifacts in import order",
+    `REQUIRE(maxArtifacts != nullptr)`), independently documented as
+    known flaky/build-mode-dependent in this file's 2026-08-16 TODO-4637
+    verification note and reproduced identically outside this change; and
+    `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`,
+    which timed out only under the full-suite's parallel load and passed
+    cleanly (20-29s) every time it was re-run in isolation. Neither
+    failure is caused by, or fixed by, this leaf.
+    Follow-on not done here: files where the audit's own justification
+    text called out tests as "near-duplicate"/"redundant" with siblings
+    (roughly 1,300 audit lines use this language, spanning far more than
+    440 tests, at scores mostly in the 4-8 range) were deliberately left
+    alone - turning "the audit's prose called this redundant" into a
+    precise, safe deletion list needs a real per-cluster review (deciding
+    which sibling in each family to keep), which is its own bounded
+    research pass and needs a committed candidate list (the same way
+    `docs/test_prune_candidates_stage1.tsv` was produced here) before it
+    can become an actionable leaf.

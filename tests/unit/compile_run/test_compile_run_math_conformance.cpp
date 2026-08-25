@@ -3,39 +3,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.math_conformance");
 
-
-TEST_CASE("math conformance reference printer script") {
-  if (!hasPython3()) {
-    return;
-  }
-  std::filesystem::path scriptPath = std::filesystem::current_path() / "tools" / "print_math_refs.py";
-  if (!std::filesystem::exists(scriptPath)) {
-    scriptPath = std::filesystem::current_path().parent_path() / "tools" / "print_math_refs.py";
-  }
-  CHECK(std::filesystem::exists(scriptPath));
-  const std::string outPath = (testScratchPath("") / "primec_math_refs.txt").string();
-  const std::string command = "python3 " + quoteShellArg(scriptPath.string()) +
-                              " --values sin=0.5 > " + quoteShellArg(outPath);
-  CHECK(runCommand(command) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("# Python") != std::string::npos);
-  CHECK(output.find("sin:") != std::string::npos);
-  CHECK(output.find("0.5") != std::string::npos);
-}
-
-TEST_CASE("math conformance PrimeStructc policy docs") {
-  std::filesystem::path specPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
-  if (!std::filesystem::exists(specPath)) {
-    specPath = std::filesystem::current_path().parent_path() / "docs" / "PrimeStruct.md";
-  }
-  CHECK(std::filesystem::exists(specPath));
-  const std::string contents = readFile(specPath.string());
-  CHECK(contents.find("tools/PrimeStructc") != std::string::npos);
-  CHECK(contents.find("PrimeStructc stays a minimal subset") != std::string::npos);
-  CHECK(contents.find("template codegen") != std::string::npos);
-  CHECK(contents.find("import version selection are explicitly out of scope for v1") != std::string::npos);
-}
-
 TEST_CASE("math conformance labeled output allowlist") {
   const std::string baselineText = "ok 1\nskip 0\n";
   const std::string candidateText = "ok 1\nskip 1\n";
@@ -463,7 +430,6 @@ TEST_CASE("math conformance float helpers compare tolerance") {
   CHECK_FALSE(floatsNear(infValue, negInfValue, 1e-6, 1e-6));
 }
 
-
 TEST_CASE("math conformance trig basics") {
   const std::string source = R"(
 import /std/math/*
@@ -820,7 +786,6 @@ main() {
 )";
   checkMathConformance(source, "math_conformance_exp_log_domains");
 }
-
 
 TEST_CASE("math conformance float64 basics") {
   const std::string source = R"(
@@ -1275,7 +1240,6 @@ main() {
 )";
   checkMathConformance(source, "math_conformance_misc");
 }
-
 
 TEST_CASE("math conformance stress grid") {
   const std::string source = R"(
@@ -1826,7 +1790,6 @@ main() {
   checkMathConformance(source, "math_conformance_dense_grid");
 }
 
-
 TEST_CASE("math conformance deterministic samples") {
   const std::string source = R"(
 import /std/math/*
@@ -2238,6 +2201,5 @@ main() {
 )";
   checkMathConformance(source, "math_conformance_atan2_edges");
 }
-
 
 TEST_SUITE_END();

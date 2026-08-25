@@ -214,54 +214,6 @@ main() {
   CHECK(runCommand(compileCmd) == 96);
 }
 
-TEST_CASE("C++ emitter rejects alias slash-method vector count on string receiver before emission") {
-  const std::string source = R"(
-[return<string>]
-wrapText() {
-  return("abc"raw_utf8)
-}
-
-[return<int>]
-main() {
-  return(wrapText()./vector/count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_count_string_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_string_deleted_stub.cpp")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("rejects alias slash-method vector count on string receiver in C++ emitter") {
-  const std::string source = R"(
-[return<string>]
-wrapText() {
-  return("abc"raw_utf8)
-}
-
-[return<int>]
-main() {
-  return(wrapText()./vector/count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_slash_vector_count_string_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_string_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("C++ emitter rejects alias slash-method vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]

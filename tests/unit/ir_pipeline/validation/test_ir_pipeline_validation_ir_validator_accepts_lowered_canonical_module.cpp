@@ -6,7 +6,6 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-
 TEST_CASE("ir validator accepts lowered canonical module") {
   const std::string source = R"(
 [return<int>]
@@ -210,37 +209,6 @@ TEST_CASE("ir lowerer effects unit rejects published runtime reflection prefligh
   CHECK_FALSE(primec::ir_lowerer::validateNativeNoRuntimeReflectionQueries(&semanticProgram, error));
   CHECK(error ==
         "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
-}
-
-TEST_CASE("ir lowerer native effects leave map values to ordinary lowering") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src"))
-          ? std::filesystem::path(".")
-          : std::filesystem::path("..");
-  const std::filesystem::path nativeEffectsHeader =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererNativeEffects.h";
-  const std::filesystem::path nativeEffectsSource =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererNativeEffects.cpp";
-
-  REQUIRE(std::filesystem::exists(nativeEffectsHeader));
-  REQUIRE(std::filesystem::exists(nativeEffectsSource));
-  const std::string header = readText(nativeEffectsHeader);
-  const std::string source = readText(nativeEffectsSource);
-
-  CHECK(header.find("validateNativeMapValueKinds") == std::string::npos);
-  CHECK(source.find("validateNativeMapValueKinds") == std::string::npos);
-  CHECK(source.find("native backend only supports numeric/bool/string map values") ==
-        std::string::npos);
 }
 
 TEST_CASE("ir lowerer gpu effects unit rejects published software numeric preflight facts") {
@@ -1456,15 +1424,6 @@ TEST_CASE("ir lowerer helper keeps namespaced convert builtin tails") {
   CHECK(builtin == "convert");
 }
 
-TEST_CASE("emitter helper keeps parser-shaped rooted negate builtin") {
-  primec::Expr negateCall;
-  negateCall.kind = primec::Expr::Kind::Call;
-  negateCall.name = "negate";
-  negateCall.namespacePrefix = "/";
-
-  CHECK(primec::emitter::isBuiltinNegate(negateCall));
-}
-
 TEST_CASE("emitter helpers keep parser-shaped std math builtins") {
   primec::Expr minCall;
   minCall.kind = primec::Expr::Kind::Call;
@@ -2515,7 +2474,6 @@ main() {
     CHECK(error.empty());
   }
 }
-
 
 TEST_CASE("canonical experimental wrapper to_aos slash-method lowers successfully") {
   const std::string source = R"(

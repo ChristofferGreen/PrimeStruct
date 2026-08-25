@@ -513,49 +513,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on public vector destinations") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<bool>(false)}
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.empty());
-}
-
-TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/vector/*
-
-[return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
-  return(values)
-}
-
-[return<Vector<i32>> effects(heap_alloc)]
-buildValues() {
-  return(/std/collections/vector/vector<i32>(2i32, false))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [Vector<i32>] values{wrapValues(buildValues())}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.empty());
-}
-
 TEST_CASE("stdlib wrapper vector constructors infer experimental auto locals and auto returns") {
   const std::string source = R"(
 import /std/collections/*
@@ -811,6 +768,5 @@ main() {
   INFO(error);
   CHECK(error.find("implicit template arguments conflict on /std/collections/vector/vector") != std::string::npos);
 }
-
 
 TEST_SUITE_END();

@@ -32,22 +32,6 @@ TEST_CASE("benchmark baseline artifact includes native allocator coverage") {
   CHECK(baseline.find("\"entry\": \"primestruct_cpp\"") != std::string::npos);
 }
 
-TEST_CASE("semantic memory benchmark fixtures are checked in") {
-  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
-  const std::filesystem::path fixtureRoot = repoRoot / "benchmarks" / "semantic_memory" / "fixtures";
-  REQUIRE(std::filesystem::exists(fixtureRoot));
-  CHECK(std::filesystem::exists(fixtureRoot / "math_star_repro.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "no_import.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "math_vector.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "math_vector_matrix.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "non_math_large_include.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "inline_math_body.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "imported_math_body.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "scale_1x.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "scale_2x.prime"));
-  CHECK(std::filesystem::exists(fixtureRoot / "scale_4x.prime"));
-}
-
 TEST_CASE("semantic memory benchmark helper keeps primary fixture first") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";

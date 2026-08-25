@@ -94,24 +94,6 @@ main() {
   CHECK(runCommand(compileCmd) == 57);
 }
 
-TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<string>] values{vector<string>("abc"raw_utf8)}
-  return(count(/std/collections/vector/at(values, 0i32)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_vector_string_access_count_fallback.prime", source);
-  const std::string outPath = (testScratchPath("") /
-                               "primec_cpp_stdlib_namespaced_vector_string_access_count_fallback.cpp")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-}
-
 TEST_CASE("rejects canonical vector access direct-call string count fallback in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -293,26 +275,6 @@ main() {
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
-}
-
-TEST_CASE("rejects stdlib namespaced vector access count for non-string element in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32)}
-  return(count(/std/collections/vector/at(values, 0i32)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_vector_access_count_non_string_reject.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_stdlib_namespaced_vector_access_count_non_string_reject.err")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("C++ emitter keeps canonical vector unsafe direct-call count via builtin string length") {

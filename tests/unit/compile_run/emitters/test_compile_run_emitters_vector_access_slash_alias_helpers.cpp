@@ -63,28 +63,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vector namespaced access slash methods without alias helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(values./vector/at(1i32),
-              values./vector/at_unsafe(2i32)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_access_slash_methods_alias_no_helper_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_vector_access_slash_methods_alias_no_helper_exe.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
-}
-
 TEST_CASE("rejects stdlib vector namespaced access slash methods without canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -209,24 +187,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects bare vector at methods without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.at(1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_method_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_at_method_deleted_stub.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects bare vector at_unsafe methods without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -296,30 +256,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects wrapper bare vector at calls without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(at(wrapVector(), 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_at_call_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_call_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects wrapper bare vector at_unsafe calls before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -361,53 +297,6 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_repin.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
-}
-
-TEST_CASE("rejects wrapper bare vector at_unsafe calls without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(at_unsafe(wrapVector(), 1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") !=
-        std::string::npos);
-}
-
-TEST_CASE("rejects wrapper explicit vector access calls without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/vector/at(wrapVector(), 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -473,68 +362,6 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
-}
-
-TEST_CASE("rejects bare vector mutator call statements without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  push(values, 4i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_call_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_mutator_call_deleted_stub.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
-        std::string::npos);
-}
-
-TEST_CASE("rejects bare vector mutator method statements without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  values.push(4i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_method_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_mutator_method_deleted_stub.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/push") !=
-        std::string::npos);
-}
-
-TEST_CASE("rejects explicit vector mutator alias method statements without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  values./vector/push(4i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_explicit_vector_mutator_alias_method_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_explicit_vector_mutator_alias_method_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
 }
@@ -677,32 +504,6 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
-}
-
-TEST_CASE("rejects alias vector mutator methods with canonical-only helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  values./vector/push(3i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_vector_mutator_method_canonical_only_same_path_reject_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_vector_mutator_method_canonical_only_same_path_reject_exe.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
 }

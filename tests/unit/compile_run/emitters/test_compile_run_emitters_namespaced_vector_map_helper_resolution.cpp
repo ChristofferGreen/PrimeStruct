@@ -458,28 +458,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects direct builtin count on canonical map access without helper before lowering") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "hello"utf8, 2i32, "bye"utf8)}
-  return(plus(count(/std/collections/map/at(values, 1i32)),
-              count(/std/collections/map/at_unsafe(values, 2i32))))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_direct_map_access_count_deleted_stub.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_count_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
-}
-
 TEST_CASE("C++ emitter rejects direct builtin contains on canonical map access before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

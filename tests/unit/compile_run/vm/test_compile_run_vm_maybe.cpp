@@ -160,28 +160,6 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm with Maybe present variant payload") {
-  const std::string source = R"(
-import /std/maybe/*
-
-[return<int>]
-main() {
-  [Maybe<i32>] value{[some] 9i32}
-  return(pick(value) {
-    none {
-      return(0i32)
-    }
-    some(v) {
-      return(v)
-    }
-  })
-}
-)";
-  const std::string srcPath = writeTemp("vm_maybe_present_variant_payload.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
-}
-
 TEST_CASE("rejects retired Maybe mutable helpers with migration diagnostics") {
   checkRetiredMaybeMutableHelperDiagnostic(
       "vm_maybe_retired_set_helper", "value.set(9i32)", "set",

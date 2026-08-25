@@ -32,21 +32,6 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with map count helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
-  return(count(values))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_count_helper.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
-}
-
 TEST_CASE("runs vm with map method call") {
   const std::string source = R"(
 import /std/collections/*

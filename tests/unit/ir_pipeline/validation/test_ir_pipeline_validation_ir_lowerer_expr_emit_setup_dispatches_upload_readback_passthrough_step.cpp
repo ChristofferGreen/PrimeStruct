@@ -558,29 +558,6 @@ TEST_CASE("emitter helpers types require explicit slashes for map import aliases
   CHECK(primec::emitter::bindingTypeToCpp("NonMapAlias", "/pkg", importAliases, structTypeMap) == "int");
 }
 
-TEST_CASE("emitter helpers struct types source stays free of map alias normalization") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-  const std::filesystem::path emitterStructTypesPath =
-      repoRoot / "src" / "emitter" / "EmitterHelpersStructTypes.cpp";
-  REQUIRE(std::filesystem::exists(emitterStructTypesPath));
-
-  const std::string source = readText(emitterStructTypesPath);
-  CHECK(source.find("normalize_map_import_alias_path") == std::string::npos);
-  CHECK(source.find("path.rfind(\"map/\", 0)") == std::string::npos);
-  CHECK(source.find("path.rfind(\"std/collections/map/\", 0)") == std::string::npos);
-  CHECK(source.find("return resolveFromMap(importIt->second);") != std::string::npos);
-}
-
 TEST_CASE("emitter helpers expose source Result cpp bridge types") {
   CHECK(primec::emitter::isResultBindingTypeName("Result"));
   CHECK(primec::emitter::isResultBindingTypeName("/std/result/Result"));

@@ -577,36 +577,4 @@ main() {
   CHECK(runCommand(compileCmd) == 10);
 }
 
-TEST_CASE("C++ emitter keeps canonical diagnostics on direct-call map access receivers") {
-  const std::string source = R"(
-[return<string>]
-/map/at([map<i32, string>] values, [i32] key) {
-  return("hello"utf8)
-}
-
-[return<int>]
-/std/collections/map/at([map<i32, string>] values, [i32] key) {
-  return(41i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
-  return(/std/collections/map/at(values, 1i32).count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_access_direct_call_string_receiver_diag.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_namespaced_map_access_direct_call_string_receiver_diag.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
-}
-
-
 TEST_SUITE_END();

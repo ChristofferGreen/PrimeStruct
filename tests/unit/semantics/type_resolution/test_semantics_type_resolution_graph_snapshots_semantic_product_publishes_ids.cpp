@@ -541,34 +541,6 @@ TEST_CASE("semantic product callable summaries reuse interned return kind ids") 
   CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, helperSummary->returnKindId) == "i32");
 }
 
-TEST_CASE("semantic product publishes struct and enum metadata") {
-  const std::string source =
-      "[public struct no_padding align_bytes(8)]\n"
-      "Packet() {\n"
-      "  [i32] left{1i32}\n"
-      "  [i64] right{2i64}\n"
-      "}\n"
-      "\n"
-      "[enum]\n"
-      "Mode {\n"
-      "  Idle\n"
-      "  Busy\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "main() {\n"
-      "  return(0i32)\n"
-      "}\n";
-
-  auto program = parseProgram(source);
-  primec::Semantics semantics;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  CHECK_FALSE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK_FALSE(error.empty());
-}
-
 TEST_CASE("semantic product publishes binding and return facts") {
   const std::string source =
       "Pair {\n"
@@ -1352,40 +1324,6 @@ main() {
   CHECK_FALSE(localAutoEntry->initializerDirectCallResolvedPath.empty());
 }
 
-TEST_CASE("semantic product source locations stay aligned with AST-owned lowering facts") {
-  const std::string source =
-      "Packet {\n"
-      "  [i32] left{1i32}\n"
-      "  [i64] right{2i64}\n"
-      "}\n"
-      "\n"
-      "[return<i32>]\n"
-      "pick([i32] value) {\n"
-      "  return(value)\n"
-      "}\n"
-      "\n"
-      "[return<i32>]\n"
-      "/vector/count([vector<i32>] self) {\n"
-      "  return(17i32)\n"
-      "}\n"
-      "\n"
-      "[return<i32>]\n"
-      "main([array<string>] argv) {\n"
-      "  [vector<i32>] values{vector<i32>()}\n"
-      "  [i32] direct{pick(1i32)}\n"
-      "  [i32] method{values.count()}\n"
-      "  [i32] bridge{count(values)}\n"
-      "  return(bridge)\n"
-      "}\n";
-  auto semanticAst = parseProgram(source);
-  primec::Semantics semantics;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  CHECK(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK(error.empty());
-}
-
 TEST_CASE("semantic product semantic ids stay deterministic across repeated validation runs") {
   const std::string source =
       "MyError {\n"
@@ -2001,142 +1939,6 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
   CHECK(error.empty());
 }
 
-TEST_CASE("semantic product lowering keeps semantic meaning while source locations stay AST-owned") {
-  const std::string source = R"(
-[return<i32>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32)}
-  [i32] method{values.count()}
-  return(method)
-}
-)";
-
-  auto semanticAst = parseProgram(source);
-  primec::Semantics semantics;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  CHECK_FALSE(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
-  CHECK_FALSE(error.empty());
-  return;
-
-  const auto *semanticDirectEntry =
-      findSemanticEntry(primec::semanticProgramDirectCallTargetView(semanticProgram),
-                        [](const primec::SemanticProgramDirectCallTarget &entry) {
-                          return entry.scopePath == "/main" && entry.callName == "id";
-                        });
-  const auto *semanticMethodEntry =
-      findSemanticEntry(primec::semanticProgramMethodCallTargetView(semanticProgram),
-                        [](const primec::SemanticProgramMethodCallTarget &entry) {
-                          return entry.scopePath == "/main" && entry.methodName == "count";
-                        });
-  const auto *semanticBridgeEntry =
-      findSemanticEntry(primec::semanticProgramBridgePathChoiceView(semanticProgram),
-                        [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
-                          return entry.scopePath == "/main" &&
-                                 primec::semanticProgramBridgePathChoiceHelperName(
-                                     semanticProgram, entry) == "count";
-                        });
-  const auto *semanticReturnEntry =
-      findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
-                        [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
-                          return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) ==
-                                 "/main";
-                        });
-  REQUIRE(semanticDirectEntry != nullptr);
-  REQUIRE(semanticMethodEntry != nullptr);
-  REQUIRE(semanticBridgeEntry != nullptr);
-  REQUIRE(semanticReturnEntry != nullptr);
-
-  primec::Program baselineAst = semanticAst;
-  primec::Program driftedAst = semanticAst;
-
-  primec::Definition *driftedMain = findDefinitionByPathMutable(driftedAst, "/main");
-  REQUIRE(driftedMain != nullptr);
-  REQUIRE(driftedMain->transforms.size() >= 2);
-
-  primec::Expr *directCallExpr =
-      findExprInDefinitionMutable(*driftedMain,
-                                  [](const primec::Expr &expr) {
-                                    return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
-                                           expr.name == "id";
-                                  });
-  primec::Expr *methodCallExpr =
-      findExprInDefinitionMutable(*driftedMain,
-                                  [](const primec::Expr &expr) {
-                                    return expr.kind == primec::Expr::Kind::Call && expr.isMethodCall &&
-                                           expr.name == "count";
-                                  });
-  primec::Expr *bridgeCallExpr =
-      findExprInDefinitionMutable(*driftedMain,
-                                  [](const primec::Expr &expr) {
-                                    return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
-                                           expr.name == "count";
-                                  });
-  primec::Expr *lookupCallExpr =
-      findExprInDefinitionMutable(*driftedMain,
-                                  [](const primec::Expr &expr) {
-                                    return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
-                                           expr.name == "lookup";
-                                  });
-  REQUIRE(directCallExpr != nullptr);
-  REQUIRE(methodCallExpr != nullptr);
-  REQUIRE(bridgeCallExpr != nullptr);
-  REQUIRE(lookupCallExpr != nullptr);
-  auto onErrorTransformIt =
-      std::find_if(driftedMain->transforms.begin(),
-                   driftedMain->transforms.end(),
-                   [](const primec::Transform &transform) { return transform.name == "on_error"; });
-  REQUIRE(onErrorTransformIt != driftedMain->transforms.end());
-
-  const int originalDirectLine = semanticDirectEntry->sourceLine;
-  const int originalDirectColumn = semanticDirectEntry->sourceColumn;
-  const int originalMethodLine = semanticMethodEntry->sourceLine;
-  const int originalMethodColumn = semanticMethodEntry->sourceColumn;
-  const int originalBridgeLine = semanticBridgeEntry->sourceLine;
-  const int originalBridgeColumn = semanticBridgeEntry->sourceColumn;
-
-  directCallExpr->name = "drifted_direct_name";
-  directCallExpr->sourceLine = 901;
-  directCallExpr->sourceColumn = 11;
-  methodCallExpr->name = "drifted_method_name";
-  methodCallExpr->sourceLine = 902;
-  methodCallExpr->sourceColumn = 13;
-  bridgeCallExpr->name = "drifted_bridge_name";
-  bridgeCallExpr->sourceLine = 903;
-  bridgeCallExpr->sourceColumn = 15;
-  lookupCallExpr->name = "drifted_lookup_name";
-  onErrorTransformIt->templateArgs[0] = "WrongError";
-  onErrorTransformIt->templateArgs[1] = "/wrongHandler";
-
-  CHECK(semanticDirectEntry->callName == "id");
-  CHECK(semanticMethodEntry->methodName == "count");
-  CHECK(primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, *semanticBridgeEntry) ==
-        "count");
-  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *semanticReturnEntry) ==
-        "/main");
-
-  primec::IrLowerer lowerer;
-  primec::IrModule baselineModule;
-  REQUIRE(lowerer.lower(baselineAst, &semanticProgram, "/main", defaults, defaults, baselineModule, error));
-  CHECK(error.empty());
-
-  primec::IrModule driftedModule;
-  REQUIRE(lowerer.lower(driftedAst, &semanticProgram, "/main", defaults, defaults, driftedModule, error));
-  CHECK(error.empty());
-
-  CHECK(serializeIrIgnoringSourceMapsAndDebug(baselineModule) ==
-        serializeIrIgnoringSourceMapsAndDebug(driftedModule));
-
-  CHECK(hasCanonicalSourceMapEntry(driftedModule, 901, 11));
-  CHECK(hasCanonicalSourceMapEntry(driftedModule, 902, 13));
-  CHECK(hasCanonicalSourceMapEntry(driftedModule, 903, 15));
-
-  CHECK_FALSE(hasCanonicalSourceMapEntry(driftedModule, originalDirectLine, originalDirectColumn));
-  CHECK_FALSE(hasCanonicalSourceMapEntry(driftedModule, originalMethodLine, originalMethodColumn));
-  CHECK_FALSE(hasCanonicalSourceMapEntry(driftedModule, originalBridgeLine, originalBridgeColumn));
-}
-
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
   const std::string source =
       "MyError {\n"
@@ -2439,6 +2241,5 @@ TEST_CASE("semantic product formatter keeps bridge-path-choice text parity for f
   const primec::SemanticProgram moduleIndexedProgram = makeProgram(true);
   CHECK(primec::formatSemanticProgram(moduleIndexedProgram) == primec::formatSemanticProgram(flatProgram));
 }
-
 
 TEST_SUITE_END();
