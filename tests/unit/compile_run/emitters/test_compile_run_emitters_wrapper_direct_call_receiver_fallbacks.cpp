@@ -34,8 +34,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      srcPath + ".compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.err";
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper canonical direct-call method receiver fallback without helper in C++ emitter") {
@@ -243,9 +247,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_count_arg_mismatch.prime", source);
+  const std::string errPath =
+      srcPath + ".compile_cpp_inferred_wrapper_string_count_arg_mismatch.err";
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("rejects inferred wrapper string access index mismatch in C++ emitter") {
@@ -265,9 +273,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_access_index_mismatch.prime", source);
+  const std::string errPath =
+      srcPath + ".compile_cpp_inferred_wrapper_string_access_index_mismatch.err";
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("at requires integer index") != std::string::npos);
 }
 
 TEST_CASE("rejects user wrapper temporary access shadow precedence in C++ emitter") {
@@ -368,14 +380,24 @@ main() {
   [i32] vectorUnsafeCall{at_unsafe(wrapVector(), 0i32)}
   [i32] vectorUnsafeMethod{wrapVector().at_unsafe(0i32)}
   return(plus(mapCall, plus(mapMethod, plus(mapIndex, plus(mapUnsafeCall, plus(mapUnsafeMethod,
-              plus(vectorCall, plus(vectorMethod, plus(vectorIndex, plus(vectorUnsafeCall, vectorUnsafeMethod)))))))))
+              plus(vectorCall, plus(vectorMethod, plus(vectorIndex, plus(vectorUnsafeCall, vectorUnsafeMethod))))))))))
 }
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_access_shadow_value_mismatch.prime", source);
+  const std::string errPath =
+      srcPath + ".compile_cpp_user_wrapper_temp_access_shadow_value_mismatch.err";
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  // The fixture's free-call `at(wrapMap(), ...)` form never reaches the
+  // /map/at override at all (same as the sibling "shadow precedence"
+  // test above) - it fails at the same unknown-call-target stage before
+  // the i32-vs-bool value mismatch this test's name describes could ever
+  // be exercised. Pinned to the real, current behavior; see TODO-5260.
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects non-vector capacity call target in C++ emitter") {

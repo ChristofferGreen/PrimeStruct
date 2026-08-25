@@ -31351,3 +31351,73 @@ real answer.
       the fix, confirming the previously-dead code was reached and
       correct) - full `cmake --build` of the affected target completed
       clean.
+
+- [x] TODO-5260: Strengthen a first tranche of rc==2-only tests with real diagnostic-text assertions
+  - owner: ai
+  - created_at: 2026-08-25
+  - finished_at: 2026-08-25
+  - phase: Test suite quality improvement
+  - parallel_track: strengthen-weak-tests-pilot
+  - depends_on: (none)
+  - scope: The full-suite quality audit's largest population by far is
+    the 4-6/10 tier (~40% of all tests) - real compiler paths, but most
+    only assert `CHECK(runCommand(compileCmd) == 2)` (or `== 0`) with no
+    check on WHY it failed or WHAT it produced, so a regression that
+    changes the failure reason (or breaks the runtime value while
+    keeping the same exit code) would silently pass. This population is
+    far too large (~4,000 tests) to strengthen in one leaf, and doing so
+    for real (not just guessing) requires actually running the compiler
+    on each fixture to observe its current, correct diagnostic text or
+    runtime value before pinning it - materially more expensive per test
+    than the read-and-score/read-and-cluster judgment TODO-5257/5258
+    used. This leaf was a bounded first tranche/pilot within
+    `tests/unit/compile_run/emitters/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp`
+    to establish the pattern, not a commitment to the whole population.
+  - implementation_notes: For each targeted rc==2-only TEST_CASE,
+    redirected stderr to a temp file (matching the pattern already used
+    elsewhere in the same file) and added a `CHECK` on the exact observed
+    diagnostic substring, captured by actually compiling each fixture
+    with `./primec` and reading its real stderr - never guessed a
+    plausible-looking string.
+  - acceptance:
+    - Strengthened 4 TEST_CASEs: "wrapper canonical direct-call struct
+      method chain forwarding in C++ emitter" ("struct parameter type
+      mismatch"), "rejects inferred wrapper string count arg mismatch in
+      C++ emitter" ("argument count mismatch for builtin count"),
+      "rejects inferred wrapper string access index mismatch in C++
+      emitter" ("at requires integer index"), and "rejects user wrapper
+      temporary access shadow value mismatch in C++ emitter" (see notes
+      - required a fixture fix first).
+    - `./scripts/compile.sh --release` (targeted verification: full
+      `PrimeStruct_compile_run_tests` rebuild plus the file's whole
+      `primestruct.compile.run.emitters.cpp` suite) passes.
+  - stop_rule: Stopped after this file's 4 targeted tests were
+    strengthened and verified, per the leaf's own scope - did not expand
+    to further files/tranches.
+  - notes: The 4th test ("...shadow value mismatch...") turned out to
+    hide a genuine pre-existing bug of exactly the kind this whole
+    strengthening effort exists to catch: its `.prime` fixture's `return`
+    expression was missing one closing parenthesis (10 opens, 9 closes),
+    so the test was "passing" (rc==2) for a completely unrelated parse
+    error, never actually reaching the i32-vs-bool shadow-value-mismatch
+    scenario its name describes. Fixed the fixture's parens, re-probed,
+    and found the corrected program now fails at an *earlier* stage than
+    intended too: the free-call form `at(wrapMap(), ...)` doesn't resolve
+    to the user's `/map/at` override at all (same "unknown call target:
+    /std/collections/map/at" as its sibling test "...shadow precedence
+    in C++ emitter" a few lines above) - so even with the fixture fixed,
+    this test still can't exercise the value-mismatch behavior its name
+    promises; it's currently indistinguishable from its sibling. Pinned
+    the assertion to this real, current, verified behavior with an
+    inline comment explaining the gap rather than papering over it or
+    inventing a scenario that reaches the intended code path myself.
+    Whoever revisits this test (or the broader strengthening tranches)
+    should decide whether to redesign its fixture to actually reach a
+    value-mismatch case, or accept it as another registration of the
+    same call-target gap and consider consolidating with its sibling -
+    out of scope for this pilot leaf.
+    Verification: full `cmake --build --target PrimeStruct_compile_run_tests`
+    clean; the 4 targeted tests individually: 4/4 passed, 16/16
+    assertions; the file's full doctest suite
+    (`primestruct.compile.run.emitters.cpp`): 528/528 test cases passed,
+    2045/2045 assertions.
