@@ -31307,3 +31307,47 @@ real answer.
     `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`,
     which timed out only under the full-suite's parallel load and passed
     cleanly (17-30s) every time it was re-run in isolation.
+
+- [x] TODO-5259: Remove two stray `return;` statements making half of two TEST_CASEs dead code
+  - owner: ai
+  - created_at: 2026-08-25
+  - finished_at: 2026-08-25
+  - phase: Test suite complexity/runtime reduction
+  - parallel_track: dead-test-body-registry-semantic-lowerer
+  - depends_on: (none)
+  - scope: `test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp`'s
+    "native pick call target sum resolution uses query facts" (was line 64)
+    and "native pick method target sum resolution uses query facts" (was
+    line 199) each had an unconditional `return;` right after their first
+    few assertions, making the remaining ~70 lines of each test - real IR
+    lowering plus two staleness/incompleteness rejection checks on the
+    semantic-product pick-target query facts - permanently dead code that
+    never ran. Found during the full-suite test-quality audit (scored
+    2/10 for this reason) but out of scope for the score-based Stage 1
+    prune since deleting the dead half would have thrown away real,
+    already-written coverage rather than fixing the actual bug.
+  - acceptance:
+    - Both `return;` statements were removed and the previously-dead
+      assertions now execute.
+    - `./scripts/compile.sh --release` passes with both tests' full
+      bodies running (not just their first few lines).
+  - stop_rule: Stopped once both tests ran to completion and passed - the
+    previously-dead halves turned out to be correct, no underlying bug
+    found.
+  - notes: This was one of two known instances of "dead TEST_CASE body
+    via a stray `return;`" surfaced by the original quality audit; a
+    third instance
+    (`test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp`,
+    5 TEST_CASEs) was already resolved as a side effect of TODO-5257 (all
+    5 scored 1/10 and were in that leaf's deletion list). A suite-wide
+    grep for bare `return;` turned up 258 occurrences across 41 files,
+    but the large majority are legitimate early-exit guards (e.g.
+    `if (!file.is_open()) { ...; return; }`) rather than this dead-code
+    defect - not exhaustively re-audited here.
+    Verification: `./PrimeStruct_backend_runtime_tests
+    --test-case="native pick call target sum resolution uses query
+    facts,native pick method target sum resolution uses query facts"`
+    - both tests pass, 37/37 assertions (up from the ~14 that ran before
+      the fix, confirming the previously-dead code was reached and
+      correct) - full `cmake --build` of the affected target completed
+      clean.

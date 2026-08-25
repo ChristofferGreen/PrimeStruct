@@ -61,7 +61,6 @@ main() {
           semanticProductTargets, "/makeChoice");
   REQUIRE(makeChoiceReturn != nullptr);
   CHECK(makeChoiceReturn->bindingTypeText == "Choice");
-  return;
 
   primec::Options options;
   options.entryPath = "/main";
@@ -196,7 +195,6 @@ main() {
           semanticProductTargets, "/Picker/makeChoice");
   REQUIRE(makeChoiceReturn != nullptr);
   CHECK(makeChoiceReturn->bindingTypeText == "Choice");
-  return;
 
   primec::Options options;
   options.entryPath = "/main";
