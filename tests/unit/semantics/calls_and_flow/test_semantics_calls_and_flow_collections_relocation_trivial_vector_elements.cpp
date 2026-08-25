@@ -487,36 +487,6 @@ TEST_CASE("reserve bool capacity keeps routed unknown target diagnostics") {
   checkInvalidReserve("values.reserve(true)", "unknown method: /std/collections/vector/reserve");
 }
 
-TEST_CASE("bare vector reserve template specialization keeps canonical unknown target without import") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve<i32>(values, 8i32)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
-}
-
-TEST_CASE("bare vector reserve arity mismatch keeps canonical unknown target without import") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
-}
-
 TEST_CASE("bare vector reserve validates through vector helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -564,27 +534,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("reserve rejects retired mutable soa parameter spelling") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<void>]
-touch([soa_vector<Particle> mut] values) {
-  reserve(values, 8i32)
-}
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("pop rejects retired soa parameter spelling before helper target") {
   const std::string source = R"(
 Particle() {
@@ -605,46 +554,6 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
   CHECK(error.find("unknown call target") != std::string::npos);
-}
-
-TEST_CASE("reserve call uses user-defined vector helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<void>]
-/vector/reserve([vector<i32> mut] values, [i32] capacity) {
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  reserve(values, 3i32)
-  return(count(values))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("reserve method keeps user-defined vector helper precedence") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<void>]
-/vector/reserve([vector<i32> mut] values, [i32] capacity) {
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  values.reserve(3i32)
-  return(count(values))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
 }
 
 TEST_CASE("capacity method keeps same-path vector helper precedence") {
@@ -683,22 +592,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /vector/pop") != std::string::npos);
-}
-
-TEST_CASE("bare vector pop validates through imported stdlib helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  pop(values)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
 }
 
 TEST_CASE("pop allows non-drop-trivial vector element types") {

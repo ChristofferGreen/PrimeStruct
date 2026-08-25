@@ -52,18 +52,6 @@ main() {
   CHECK(error.find("argument count mismatch for builtin convert") != std::string::npos);
 }
 
-TEST_CASE("convert unsupported template arg fails") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(convert<u32>(1i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type") != std::string::npos);
-}
-
 TEST_CASE("convert rejects decimal target") {
   const std::string source = R"(
 [return<decimal>]
@@ -76,35 +64,11 @@ main() {
   CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
-TEST_CASE("convert rejects integer target") {
-  const std::string source = R"(
-[return<integer>]
-main() {
-  return(convert<integer>(1i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
-}
-
 TEST_CASE("convert<bool> accepts u64 literal") {
   const std::string source = R"(
 [return<bool>]
 main() {
   return(convert<bool>(1u64))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("convert<bool> accepts float operand") {
-  const std::string source = R"(
-[return<bool>]
-main() {
-  return(convert<bool>(1.5f))
 }
 )";
   std::string error;

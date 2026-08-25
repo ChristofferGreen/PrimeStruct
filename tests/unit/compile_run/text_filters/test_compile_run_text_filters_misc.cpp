@@ -176,19 +176,6 @@ main() {
   CHECK(runCommand(compileCmd) == 4);
 }
 
-TEST_CASE("clamp() bounds an i64 value") {
-  const std::string source = R"(
-import /std/math/*
-[return<i64>]
-main() {
-  return(clamp(9i64, 2i64, 6i64))
-}
-)";
-  const std::string srcPath = writeTemp("compile_clamp_i64.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 6);
-}
-
 TEST_CASE("clamp() with mixed i32/i64 bound operands") {
   const std::string source = R"(
 import /std/math/*
@@ -198,19 +185,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_clamp_i64_mixed.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 6);
-}
-
-TEST_CASE("clamp() bounds a u64 value") {
-  const std::string source = R"(
-import /std/math/*
-[return<u64>]
-main() {
-  return(clamp(9u64, 2u64, 6u64))
-}
-)";
-  const std::string srcPath = writeTemp("compile_clamp_u64.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 6);
 }
@@ -226,19 +200,6 @@ main() {
   const std::string srcPath = writeTemp("compile_clamp_f32.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 1);
-}
-
-TEST_CASE("clamp() bounds an f64 value") {
-  const std::string source = R"(
-import /std/math/*
-[return<int>]
-main() {
-  return(convert<int>(clamp(2.5f64, 1.0f64, 2.0f64)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_clamp_f64.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("bare true literal returns as bool") {
@@ -349,21 +310,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_pairs.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 4);
-}
-
-TEST_CASE("canonical map constructor") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
-  return(at(values, 3i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_map_whitespace_pairs.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 4);
 }

@@ -230,27 +230,6 @@ main() {
       {"unknown call target: /std/collections/vector/push"});
 }
 
-TEST_CASE("C++ emitter lambda mutator mismatch rejects call-form helper") {
-  const std::string source = R"(
-/vector/push([vector<i32> mut] values, [bool] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  []() {
-    [vector<i32> mut] values{vector<i32>()}
-    push(values, 1i32)
-    return(0i32)
-  }
-  return(0i32)
-}
-)";
-  expectCollectDiagnosticsFailure(
-      "exe",
-      "compile_cpp_lambda_vector_mutator_call_mismatch",
-      source,
-      {"unknown call target: /std/collections/vector/push"});
-}
-
 TEST_CASE("import alias in C++ emitter") {
   const std::string source = R"(
 import /util
@@ -315,19 +294,6 @@ main([array<string>] args) {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(outPath) == "alpha\n");
-}
-
-TEST_CASE("array index sugar with u64") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  return(values[1u64])
-}
-)";
-  const std::string srcPath = writeTemp("compile_array_index_u64.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 7);
 }
 
 TEST_CASE("vector helpers in C++ emitter") {

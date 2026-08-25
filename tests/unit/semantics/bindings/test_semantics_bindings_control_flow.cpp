@@ -97,22 +97,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("repeat validates bool count") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32 mut] value{0i32}
-  repeat(true) {
-    assign(value, 7i32)
-  }
-  return(value)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("block expression validates and introduces scope") {
   const std::string source = R"(
 [return<int>]
@@ -334,19 +318,6 @@ main() {
   CHECK(error.find("block does not accept arguments") != std::string::npos);
 }
 
-TEST_CASE("block requires body arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  block()
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block requires block arguments") != std::string::npos);
-}
-
 TEST_CASE("block scope does not leak bindings") {
   const std::string source = R"(
 [return<int>]
@@ -412,20 +383,6 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-}
-
-TEST_CASE("repeat rejects string count") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  repeat("nope"utf8) {
-  }
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("repeat count requires integer or bool") != std::string::npos);
 }
 
 TEST_SUITE_END();

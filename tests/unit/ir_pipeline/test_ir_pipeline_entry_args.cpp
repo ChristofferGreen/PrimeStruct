@@ -55,29 +55,6 @@ main([array<string>] args) {
   CHECK(sawPrintArgvUnsafe);
 }
 
-TEST_CASE("ir lowerer supports entry args print unsafe u64 index") {
-  const std::string source = R"(
-[return<int> effects(io_out)]
-main([array<string>] args) {
-  print_line(at_unsafe(args, 1u64))
-  return(0i32)
-}
-)";
-  std::string error;
-  primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-  REQUIRE(module.functions.size() == 1);
-  bool sawPrintArgvUnsafe = false;
-  for (const auto &inst : module.functions[0].instructions) {
-    if (inst.op == primec::IrOpcode::PrintArgvUnsafe) {
-      sawPrintArgvUnsafe = true;
-      break;
-    }
-  }
-  CHECK(sawPrintArgvUnsafe);
-}
-
 TEST_CASE("ir lowerer tracks unsafe argv bindings") {
   const std::string source = R"(
 [return<int> effects(io_out)]

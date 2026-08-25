@@ -175,66 +175,6 @@ execute_repeat(2i32)
   CHECK(error.find("copy transform is not allowed on executions") != std::string::npos);
 }
 
-TEST_CASE("execution rejects mut transform") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-[mut]
-execute_repeat(2i32)
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mut transform is not allowed on executions") != std::string::npos);
-}
-
-TEST_CASE("execution rejects restrict transform") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-[restrict]
-execute_repeat(2i32)
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("restrict transform is not allowed on executions") != std::string::npos);
-}
-
-TEST_CASE("execution rejects unsafe transform") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-[unsafe]
-execute_repeat(2i32)
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsafe transform is not allowed on executions") != std::string::npos);
-}
-
 TEST_CASE("execution rejects placement transforms") {
   const char *placements[] = {"stack", "heap", "buffer"};
   for (const auto *placement : placements) {

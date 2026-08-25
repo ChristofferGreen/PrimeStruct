@@ -979,29 +979,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("struct brace constructor accepts labeled arguments") {
-  const std::string source = R"(
-[struct]
-thing() {
-  [i32] value{1i32}
-  [i32] count{2i32}
-}
-
-[return<int>]
-use([thing] item) {
-  return(item.count)
-}
-
-[return<int>]
-main() {
-  return(use(thing{[count] 3i32, [value] 4i32}))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("struct brace constructor accepts multiple positional arguments") {
   const std::string source = R"(
 [struct]

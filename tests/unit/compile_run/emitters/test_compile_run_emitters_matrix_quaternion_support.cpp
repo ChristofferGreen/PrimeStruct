@@ -514,19 +514,6 @@ main() {
   CHECK(runCommand(compileCmd) == 7);
 }
 
-TEST_CASE("array unsafe access with u64 index in C++ emitter") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  return(at_unsafe(values, 1u64))
-}
-)";
-  const std::string srcPath = writeTemp("compile_array_unsafe_u64_exe.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 7);
-}
-
 TEST_CASE("canonical vector discard helpers with owned elements in C++ emitter") {
   expectCanonicalVectorDiscardOwnershipConformance("exe");
 }

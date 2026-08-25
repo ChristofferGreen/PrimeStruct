@@ -199,23 +199,6 @@ main() {
   CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("vector literal missing template arg fails") {
-  const std::string source = R"(
-[return<int>]
-use([vector<i32>] x) {
-  return(1i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(use(vector(1i32)))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("collection literal requires exactly one template argument") != std::string::npos);
-}
-
 TEST_CASE("soa literal missing template arg fails") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -369,41 +352,11 @@ main() {
   CHECK(error.find("array literal requires element type i32") != std::string::npos);
 }
 
-TEST_CASE("vector literal type mismatch fails") {
-  const std::string source = R"(
-[return<int>]
-use([vector<i32>] x) {
-  return(1i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(use(vector<i32>(1i32, "hi"utf8)))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("collection literal requires element type i32") != std::string::npos);
-}
-
 TEST_CASE("array literal rejects software numeric type") {
   const std::string source = R"(
 [return<int>]
 main() {
   array<decimal>(convert<decimal>(1.0f32))
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
-}
-
-TEST_CASE("vector literal rejects software numeric type") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  vector<decimal>(convert<decimal>(1.0f32))
   return(1i32)
 }
 )";
@@ -554,22 +507,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("unsafe map access validates key type") {
-  const std::string source = R"(
-import /std/collections/map
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32)}
-  return(at_unsafe(values, "nope"utf8))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
-  CHECK(error.find("map literal") == std::string::npos);
-}
-
 TEST_CASE("string map access rejects numeric index") {
   const std::string source = R"(
 import /std/collections/*
@@ -583,21 +520,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("at requires string map key") != std::string::npos);
-}
-
-TEST_CASE("unsafe string map access rejects numeric index") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
-  return(at_unsafe(values, 1i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at_unsafe requires string map key") != std::string::npos);
 }
 
 TEST_CASE("map access accepts matching key type") {
@@ -624,22 +546,6 @@ main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
   [map<i32, string>] keys{map<i32, string>(1i32, "a"utf8)}
   return(at(values, at(keys, 1i32)))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("unsafe map access accepts string key expression") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
-  [map<i32, string>] keys{map<i32, string>(1i32, "a"utf8)}
-  return(at_unsafe(values, at(keys, 1i32)))
 }
 )";
   std::string error;

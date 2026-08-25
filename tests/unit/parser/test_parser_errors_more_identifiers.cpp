@@ -252,51 +252,6 @@ return() {
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
-TEST_CASE("class keyword cannot name definition") {
-  const std::string source = R"(
-[return<int>]
-class() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword") != std::string::npos);
-}
-
-TEST_CASE("control keyword cannot name definition") {
-  const std::string source = R"(
-[return<int>]
-if() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword") != std::string::npos);
-}
-
-TEST_CASE("match keyword cannot name definition") {
-  const std::string source = R"(
-[return<int>]
-match() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword") != std::string::npos);
-}
-
 TEST_CASE("reserved keyword cannot name parameter") {
   const std::string source = R"(
 [return<int>]
@@ -370,22 +325,6 @@ TEST_CASE("reserved keyword rejected in type identifier") {
 [return<int>]
 main() {
   [array<return>] values{array<i32>(1i32)}
-  return(0i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword") != std::string::npos);
-}
-
-TEST_CASE("control keyword rejected in type identifier") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<for>] values{array<i32>(1i32)}
   return(0i32)
 }
 )";

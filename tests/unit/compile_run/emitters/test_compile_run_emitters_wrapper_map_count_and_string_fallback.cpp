@@ -255,28 +255,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects wrapper vector alias direct-call count without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<string>>]
-wrapValues() {
-  return(vector<string>("abc"raw_utf8))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(count(/vector/at(wrapValues(), 0i32)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_access_count_receiver_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_vector_access_count_receiver_deleted_stub_exe_repin.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter keeps canonical vector unsafe direct-call count via builtin string length") {
   const std::string source = R"(
 [return<int>]

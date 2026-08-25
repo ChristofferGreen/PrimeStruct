@@ -42,40 +42,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects native auto-inferred named vector push expression receiver precedence in semantics") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/vector/push([vector<i32> mut] values, [string] value) {
-  return(11i32)
-}
-
-[effects(heap_alloc), return<int>]
-/string/push([vector<i32> mut] values, [string] value) {
-  return(99i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  [string] payload{"tag"raw_utf8}
-  [auto] inferred{push([value] payload, [values] values)}
-  return(inferred)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_user_vector_push_expr_named_receiver_precedence_auto.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_user_vector_push_expr_named_receiver_precedence_auto.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("push is only supported as a statement") !=
-        std::string::npos);
-}
-
 TEST_CASE("rejects native auto-inferred std namespaced vector push compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -139,73 +105,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
-}
-
-TEST_CASE("native auto-inferred std namespaced count uses compatibility alias precedence") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/vector/count([vector<i32>] values) {
-  return(12i32)
-}
-
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/count([vector<i32>] values) {
-  return(false)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  [auto] inferred{/std/collections/vector/count(values)}
-  return(inferred)
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_std_namespaced_vector_count_receiver_precedence_auto.prime",
-                                        source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_std_namespaced_vector_count_receiver_precedence_auto_exe")
-          .string();
-
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_native_std_namespaced_vector_count_receiver_precedence_auto_out.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
-}
-
-TEST_CASE("native auto-inferred std namespaced count canonical fallback uses builtin count") {
-  const std::string source = R"(
-[effects(heap_alloc), return<bool>]
-/std/collections/vector/count([vector<i32>] values) {
-  return(false)
-}
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  [auto] inferred{/std/collections/vector/count(values)}
-  return(inferred)
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_std_namespaced_vector_count_canonical_fallback_auto.prime",
-                                        source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_std_namespaced_vector_count_canonical_fallback_auto_exe")
-          .string();
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_native_std_namespaced_vector_count_canonical_fallback_auto_out.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("native std namespaced count expression uses compatibility alias precedence") {
@@ -568,7 +467,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
 }
-
 
 TEST_SUITE_END();
 #endif

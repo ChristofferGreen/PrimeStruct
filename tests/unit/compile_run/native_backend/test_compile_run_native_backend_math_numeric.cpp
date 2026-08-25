@@ -19,22 +19,6 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("native clamp() bounds an i64 value") {
-  const std::string source = R"(
-import /std/math/*
-[return<bool>]
-main() {
-  return(equal(clamp(9i64, 2i64, 6i64), 6i64))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_clamp_i64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_native_clamp_i64_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
-}
-
 TEST_CASE("native math abs/sign/min/max") {
   const std::string source = R"(
 import /std/math/*

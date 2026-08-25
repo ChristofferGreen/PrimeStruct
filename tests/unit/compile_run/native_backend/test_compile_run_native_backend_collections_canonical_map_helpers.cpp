@@ -232,35 +232,6 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native stdlib map at unsafe alias fallback without import") {
-  const std::string source = R"(
-[effects(heap_alloc), return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 4i32))
-}
-
-[effects(heap_alloc), return<int>]
-/map/at_unsafe([map<i32, i32>] values, [i32] index) {
-  return(67i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/at_unsafe(wrapMap(), 1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_stdlib_namespaced_map_at_unsafe_alias_fallback.prime", source);
-  const std::string outPath = (testScratchPath("") /
-                               "primec_native_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
-}
-
 TEST_CASE("compiles native bare map count through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -336,33 +307,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles native bare map at_unsafe through canonical helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
-  return(17i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(at_unsafe(values, 1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_bare_map_at_unsafe_with_canonical_helper.prime", source);
-  const std::string outPath = (testScratchPath("") /
-                               "primec_native_bare_map_at_unsafe_with_canonical_helper_out.txt")
-                                  .string();
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_bare_map_at_unsafe_with_canonical_helper_exe")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
 TEST_CASE("rejects native bare map at call without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -384,31 +328,6 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
-}
-
-TEST_CASE("rejects native bare map at_unsafe call without helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(at_unsafe(values, 1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_bare_map_at_unsafe_without_helper_reject.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_native_bare_map_at_unsafe_without_helper_reject_out.txt")
-          .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_bare_map_at_unsafe_without_helper_reject_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("native map namespaced count method runs through canonical helper") {

@@ -50,36 +50,6 @@ main() {
   CHECK(error.find("transform group requires parentheses") != std::string::npos);
 }
 
-TEST_CASE("semantic transform group requires parentheses") {
-  const std::string source = R"(
-[semantic<foo>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("transform group requires parentheses") != std::string::npos);
-}
-
-TEST_CASE("semantic transform group with comments requires parentheses") {
-  const std::string source = R"(
-[semantic /* gap */ <foo>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("transform group requires parentheses") != std::string::npos);
-}
-
 TEST_CASE("transform arguments cannot be empty") {
   const std::string source = R"(
 [effects()]
@@ -587,23 +557,6 @@ namespace return {
   CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
 }
 
-TEST_CASE("namespace identifier cannot be control keyword") {
-  const std::string source = R"(
-namespace else {
-  [return<int>]
-  main() {
-    return(1i32)
-  }
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
-}
-
 TEST_CASE("unexpected end of file inside namespace block") {
   const std::string source = R"(
 namespace demo {
@@ -625,21 +578,6 @@ TEST_CASE("reserved keyword cannot name argument") {
 [return<int>]
 main() {
   return(foo([return] 1i32))
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
-}
-
-TEST_CASE("control keyword cannot name argument") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(foo([while] 1i32))
 }
 )";
   primec::Lexer lexer(source);

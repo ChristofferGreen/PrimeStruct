@@ -4,7 +4,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-
 TEST_CASE("binding inference from if expression feeding method call") {
   const std::string source = R"(
 namespace i64 {
@@ -295,36 +294,6 @@ main([array<string>] args) {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with argv i64 index") {
-  const std::string source = R"(
-[return<int> effects(io_out)]
-main([array<string>] args) {
-  print_line(args[1i64])
-  return(args.count())
-}
-)";
-  const std::string srcPath = writeTemp("vm_argv_i64.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_vm_argv_i64_out.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath) == "alpha\n");
-}
-
-TEST_CASE("runs vm with argv u64 index") {
-  const std::string source = R"(
-[return<int> effects(io_out)]
-main([array<string>] args) {
-  print_line(args[1u64])
-  return(args.count())
-}
-)";
-  const std::string srcPath = writeTemp("vm_argv_u64.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_vm_argv_u64_out.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath) == "alpha\n");
-}
-
 TEST_CASE("runs vm with argv error output") {
   const std::string source = R"(
 [return<int> effects(io_err)]
@@ -340,7 +309,6 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha\n");
 }
 
-
 TEST_CASE("runs vm with argv error output without newline") {
   const std::string source = R"(
 [return<int> effects(io_err)]
@@ -355,38 +323,6 @@ main([array<string>] args) {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha");
-}
-
-TEST_CASE("runs vm with argv error output u64 index") {
-  const std::string source = R"(
-[return<int> effects(io_err)]
-main([array<string>] args) {
-  print_error(args[1u64])
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_argv_error_u64.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_argv_error_u64_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta 2> " + errPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(errPath) == "alpha");
-}
-
-TEST_CASE("runs vm with argv line error output u64 index") {
-  const std::string source = R"(
-[return<int> effects(io_err)]
-main([array<string>] args) {
-  print_line_error(args[1u64])
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_argv_line_error_u64.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_argv_line_error_u64_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta 2> " + errPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(errPath) == "alpha\n");
 }
 
 TEST_CASE("runs vm with argv unsafe error output") {
@@ -420,6 +356,5 @@ main([array<string>] args) {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha\n");
 }
-
 
 TEST_SUITE_END();

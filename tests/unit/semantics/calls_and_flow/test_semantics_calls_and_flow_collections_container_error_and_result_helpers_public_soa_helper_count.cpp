@@ -78,38 +78,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("mapTryAt helper reports retired bool map helper diagnostics") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/map/*
-
-[return<Result<bool, ContainerError>>]
-main() {
-  [map<string, bool>] values{map<string, bool>("left"raw_utf8, true)}
-  return(/std/collections/map/tryAt<string, bool>(values, "left"raw_utf8))
-}
-)";
-  std::string error;
-  REQUIRE(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("mapTryAt helper reports retired string map helper diagnostics") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/map/*
-
-[return<Result<string, ContainerError>>]
-main() {
-  [map<string, string>] values{map<string, string>("left"raw_utf8, "alpha"utf8)}
-  return(/std/collections/map/tryAt<string, string>(values, "left"raw_utf8))
-}
-)";
-  std::string error;
-  REQUIRE(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("bare vector count call resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -877,48 +845,6 @@ main() {
   return(soaVectorCount<Particle>(packed))
 }
 )";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("experimental soa stdlib to-aos helper validates on reflect-enabled struct elements") {
-  const std::string source = R"(
-import /std/collections/soa/*
-import /std/collections/soa/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<vector<Particle>>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(soaVectorToAos<Particle>(values))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("experimental soa stdlib to-aos method validates on wrapper surface") {
-  const std::string source = R"(
-import /std/collections/soa/*
-import /std/collections/soa/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<vector<Particle>>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(values.to_aos())
-}
-  )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());

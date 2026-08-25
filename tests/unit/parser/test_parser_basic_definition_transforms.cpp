@@ -23,25 +23,6 @@ main() {
   CHECK(transforms[2].templateArgs[1] == "i32");
 }
 
-TEST_CASE("parses reflection transforms on struct definitions") {
-  const std::string source = R"(
-[struct reflect generate(Equal, DebugPrint)]
-Widget() {
-  [i32] value{1i32}
-}
-)";
-  const auto program = parseProgram(source);
-  REQUIRE(program.definitions.size() == 1);
-  const auto &transforms = program.definitions[0].transforms;
-  REQUIRE(transforms.size() == 3);
-  CHECK(transforms[0].name == "struct");
-  CHECK(transforms[1].name == "reflect");
-  CHECK(transforms[2].name == "generate");
-  REQUIRE(transforms[2].arguments.size() == 2);
-  CHECK(transforms[2].arguments[0] == "Equal");
-  CHECK(transforms[2].arguments[1] == "DebugPrint");
-}
-
 TEST_CASE("parses reflection generate list for all v1 helpers") {
   const std::string source = R"(
 [struct reflect generate(Equal, NotEqual, Default, IsDefault, Clone, DebugPrint)]

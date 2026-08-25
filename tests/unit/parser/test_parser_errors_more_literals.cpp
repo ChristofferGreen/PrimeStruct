@@ -135,21 +135,6 @@ main() {
   CHECK(error.find("ascii string literal contains non-ASCII characters") != std::string::npos);
 }
 
-TEST_CASE("raw ascii string literal rejects non-ASCII characters") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  print_line("héllo"raw_ascii)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("ascii string literal contains non-ASCII characters") != std::string::npos);
-}
-
 TEST_CASE("raw string literal rejects embedded quotes") {
   const std::string source = R"(
 [return<void>]
@@ -424,21 +409,6 @@ TEST_CASE("slash path rejects reserved keyword segment") {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("reserved keyword cannot be used as identifier: return") != std::string::npos);
-}
-
-TEST_CASE("slash path rejects control keyword segment") {
-  const std::string source = R"(
-[return<int>]
-/demo/if/widget() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword cannot be used as identifier: if") != std::string::npos);
 }
 
 TEST_CASE("slash path requires leading slash") {

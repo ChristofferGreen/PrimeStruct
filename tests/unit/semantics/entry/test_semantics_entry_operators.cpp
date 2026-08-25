@@ -16,18 +16,6 @@ main() {
   CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
 }
 
-TEST_CASE("arithmetic rejects string operands") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(multiply("nope"utf8, 1i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
-}
-
 TEST_CASE("arithmetic rejects struct operands") {
   const std::string source = R"(
 thing() {
@@ -420,18 +408,6 @@ TEST_CASE("arithmetic rejects mixed signed/unsigned operands") {
 [return<i64>]
 main() {
   return(plus(1i64, 2u64))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
-}
-
-TEST_CASE("arithmetic multiply rejects mixed signed/unsigned operands") {
-  const std::string source = R"(
-[return<i64>]
-main() {
-  return(multiply(3i64, 4u64))
 }
 )";
   std::string error;

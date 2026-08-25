@@ -2763,20 +2763,6 @@ main([array<string>] args) {
   CHECK(runCommand(argvCmd) == 3);
 }
 
-TEST_CASE("count(args) helper reflects passed argv") {
-  const std::string source = R"(
-[return<int>]
-main([array<string>] args) {
-  return(count(args))
-}
-)";
-  const std::string srcPath = writeTemp("compile_args_count_helper.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 1);
-  const std::string argvCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta";
-  CHECK(runCommand(argvCmd) == 3);
-}
-
 TEST_CASE("argv error output in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_err)]
@@ -3003,18 +2989,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_count_helper.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 3);
-}
-
-TEST_CASE("array literal count helper") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(count(array<i32>(1i32, 2i32, 3i32)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_array_literal_count_helper.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 3);
 }

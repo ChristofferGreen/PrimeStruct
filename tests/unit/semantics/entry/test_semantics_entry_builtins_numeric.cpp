@@ -64,64 +64,12 @@ main() {
   CHECK(error.find("argument count") != std::string::npos);
 }
 
-TEST_CASE("min argument count fails") {
-  const std::string source = R"(
-import /std/math/*
-[return<int>]
-main() {
-  return(min(2i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count") != std::string::npos);
-}
-
-TEST_CASE("abs argument count fails") {
-  const std::string source = R"(
-import /std/math/*
-[return<int>]
-main() {
-  return(abs(2i32, 3i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count") != std::string::npos);
-}
-
-TEST_CASE("saturate argument count fails") {
-  const std::string source = R"(
-import /std/math/*
-[return<int>]
-main() {
-  return(saturate(2i32, 3i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count") != std::string::npos);
-}
-
 TEST_CASE("clamp rejects mixed int/float operands") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
 main() {
   return(clamp(1i32, 0.5f, 2i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mixed int/float") != std::string::npos);
-}
-
-TEST_CASE("min rejects mixed int/float operands") {
-  const std::string source = R"(
-import /std/math/*
-[return<int>]
-main() {
-  return(min(1i32, 0.5f))
 }
 )";
   std::string error;
@@ -148,19 +96,6 @@ import /std/math/*
 [return<int>]
 main() {
   return(sign(true))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("numeric") != std::string::npos);
-}
-
-TEST_CASE("saturate rejects bool operand") {
-  const std::string source = R"(
-import /std/math/*
-[return<int>]
-main() {
-  return(saturate(true))
 }
 )";
   std::string error;
@@ -223,18 +158,6 @@ main() {
   CHECK(error.find("boolean operators require bool operands") != std::string::npos);
 }
 
-TEST_CASE("boolean operators reject unsigned operands") {
-  const std::string source = R"(
-[return<bool>]
-main() {
-  return(and(0u64, 1u64))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
-}
-
 TEST_CASE("not accepts bool operand") {
   const std::string source = R"(
 [return<bool>]
@@ -245,18 +168,6 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-}
-
-TEST_CASE("boolean operators reject float operands") {
-  const std::string source = R"(
-[return<bool>]
-main() {
-  return(and(1.0f, true))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
 }
 
 TEST_CASE("convert requires template argument") {

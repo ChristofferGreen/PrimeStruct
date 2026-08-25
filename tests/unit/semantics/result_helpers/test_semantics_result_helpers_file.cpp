@@ -121,28 +121,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib FileError camelCase eof wrapper covers direct and method access") {
-  const std::string source = R"(
-import /std/file/*
-
-[return<void>]
-main() {
-  [FileError] eofErr{fileReadEof()}
-  [FileError] otherErr{1i32}
-  [bool] directEof{FileError.isEof(eofErr)}
-  [bool] methodEof{eofErr.isEof()}
-  [bool] helperOther{fileErrorIsEof(otherErr)}
-  [bool] methodOther{otherErr.isEof()}
-  if(and(and(directEof, methodEof), and(not(helperOther), not(methodOther))),
-     then(){ return() },
-     else(){ return() })
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("builtin FileError why method rejects explicit arguments without imported wrapper") {
   const std::string source = R"(
 [return<void>]

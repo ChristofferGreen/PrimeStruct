@@ -31218,3 +31218,92 @@ real answer.
     research pass and needs a committed candidate list (the same way
     `docs/test_prune_candidates_stage1.tsv` was produced here) before it
     can become an actionable leaf.
+
+- [x] TODO-5258: Delete the 470 near-duplicate TEST_CASEs identified by the Stage 2 test-suite dedup review
+  - owner: ai
+  - created_at: 2026-08-25
+  - finished_at: 2026-08-25
+  - phase: Test suite complexity/runtime reduction
+  - parallel_track: test-suite-prune-stage2
+  - depends_on: TODO-5257
+  - scope: TODO-5257 (Stage 1) deleted the 440 TEST_CASEs an earlier
+    full-suite quality audit scored 1-3/10. That same audit separately
+    flagged, in prose only, a much larger population of tests as
+    "near-duplicate"/"redundant" with siblings (roughly 1,300 audit
+    lines, scores mostly 4-8/10) - too vague to act on directly. A
+    follow-on Stage 2 review (32 parallel sub-agents, one per ~8 flagged
+    files) re-read every one of those 256 flagged files' actual TEST_CASE
+    bodies from scratch (not trusting the old audit's prose) and, file by
+    file, grouped TEST_CASEs into genuine near-duplicate clusters -
+    2+ tests asserting the same logical behavior via an interchangeable
+    axis (e.g. the same check repeated for vector/array/map, i32/i64/u64,
+    at/at_unsafe, or Pair/Triple/Quad/Quint arity names) where a
+    regression in one member would almost certainly also break its
+    siblings. For each cluster it chose 1-2 representatives to keep and
+    flagged the rest for deletion, conservatively: it explicitly left
+    unflagged any pair that only superficially resembled its sibling but
+    actually asserted a different value/diagnostic or exercised a
+    plausibly-independent code path (many of the 256 files ended with
+    zero candidates on this closer reading). The resulting 470-row
+    candidate list (file, line, test name, which sibling test is being
+    kept as the representative, and why) is committed at
+    `docs/test_prune_candidates_stage2.tsv` (tab-separated, header row).
+    Deleted exactly the 470 TEST_CASEs listed there.
+  - implementation_notes: 465 of the 470 deletions were mechanical
+    (locate the named `TEST_CASE` at/near its recorded line, delete the
+    balanced `{ ... }` block; extended the Stage 1 script to also match
+    multi-line `TEST_CASE(\n    "name") {` forms). 5 required by-hand
+    handling: one TEST_CASE
+    (`test_ir_pipeline_backends_glsl_narrowed_f64.h`'s "glsl-ir backend
+    writes file-open-append stub source") was split across two `.h`
+    fragments `#include`d back-to-back into
+    `test_ir_pipeline_backends_glsl.cpp` - deleted its portion from both
+    fragment files by hand, which also shifted the remaining line numbers
+    inside `test_ir_pipeline_backends_glsl_file_close.h` for the other 3
+    delete candidates in that file, since the TSV's line numbers were
+    captured before this edit - corrected those 3 rows' recorded lines
+    to match. A first pass at the manual split-file edit also
+    accidentally deleted the closing brace of an adjacent, non-flagged
+    TEST_CASE ("glsl-ir backend writes file-open-write stub source"),
+    caught by re-running the deletion script's dry-run/brace-balance
+    check afterward and fixed by restoring the missing `}`.
+  - acceptance:
+    - All 470 TEST_CASEs listed in `docs/test_prune_candidates_stage2.tsv`
+      were removed from their source files; no other TEST_CASE was
+      removed or altered, and no `cluster_representative_kept` test was
+      deleted (verified via a pre-deletion validation pass that checked
+      every kept-representative name still existed in its file and
+      wasn't itself in that file's delete list).
+    - `./scripts/compile.sh --release` passes after the deletions - a
+      full clean `cmake --build . -- -k` pass completed 100% with zero
+      compile errors, and the CTest run's only two failures are the same
+      pre-existing, unrelated issues already present before this change
+      (see verification below).
+    - The tracked test-case count dropped by exactly 470 relative to its
+      post-TODO-5257 value: 9,732 before, 9,262 after.
+  - stop_rule: Stopped once all 470 listed tests were deleted and the
+    release suite was green modulo the two pre-existing failures. Did
+    not expand to review or delete the tests the Stage 2 pass
+    deliberately left unflagged.
+  - notes: This closes out both halves of the test-suite-prune effort
+    scoped in TODO-5257's own notes (score-based Stage 1, redundancy-
+    based Stage 2). Combined with TODO-5257, the two leaves removed 910
+    of the original 10,172 TEST_CASEs (~9%) while, per both reviews'
+    explicit conservative bias, leaving every test that exercises a
+    plausibly-independent code path or asserts a genuinely distinct value
+    untouched.
+    Verification: full clean rebuild (`cmake --build . -- -k`) completed
+    with zero errors after two rounds of fixing now-dead scaffolding
+    (none found this round via the same unused-function heuristic used
+    for TODO-5257 - the `-Werror=unused-function` compile itself came
+    back clean). Full `./scripts/compile.sh --release` run: two CTest
+    failures, both confirmed pre-existing and unrelated to this change -
+    `PrimeStruct_primestruct_ir_pipeline_validation_cases_1311_1320`
+    ("semantics validate publishes module artifacts in import order",
+    the same `REQUIRE(maxArtifacts != nullptr)` failure independently
+    documented as flaky/build-mode-dependent in this file's 2026-08-16
+    TODO-4637 verification note, now under a shifted shard number since
+    the total test count changed), and
+    `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`,
+    which timed out only under the full-suite's parallel load and passed
+    cleanly (17-30s) every time it was re-run in isolation.

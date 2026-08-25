@@ -185,24 +185,6 @@ main() {
   CHECK(runCommand(runCmd) == 98);
 }
 
-TEST_CASE("keeps vm builtin string at_unsafe method over user shadow") {
-  const std::string source = R"(
-[return<int>]
-/string/at_unsafe([string] values, [i32] index) {
-  return(72i32)
-}
-
-[return<int>]
-main() {
-  [string] text{"abc"utf8}
-  return(text.at_unsafe(1i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_user_string_at_unsafe_method_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 98);
-}
-
 TEST_CASE("rejects vm user vector at_unsafe call shadow during semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -257,24 +239,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_call_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 98);
-}
-
-TEST_CASE("keeps vm builtin string at method over user shadow") {
-  const std::string source = R"(
-[return<int>]
-/string/at([string] values, [i32] index) {
-  return(84i32)
-}
-
-[return<int>]
-main() {
-  [string] text{"abc"utf8}
-  return(text.at(1i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_user_string_at_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 98);
 }

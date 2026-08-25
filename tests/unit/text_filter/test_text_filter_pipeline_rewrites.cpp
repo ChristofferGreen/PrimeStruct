@@ -248,26 +248,6 @@ TEST_CASE("leaves map bracket syntax outside collection rewrites") {
   CHECK(output.find("map<i32,i32>{1i32,2i32}") == std::string::npos);
 }
 
-TEST_CASE("keeps vector literal braces") {
-  const std::string source = "main(){ return(vector<i32>{1i32,2i32}) }\n";
-  primec::TextFilterPipeline pipeline;
-  std::string output;
-  std::string error;
-  CHECK(pipeline.apply(source, output, error));
-  CHECK(error.empty());
-  CHECK(output.find("vector<i32>{1i32,2i32}") != std::string::npos);
-}
-
-TEST_CASE("rewrites vector literal brackets to braces") {
-  const std::string source = "main(){ return(vector<i32>[1i32,2i32]) }\n";
-  primec::TextFilterPipeline pipeline;
-  std::string output;
-  std::string error;
-  CHECK(pipeline.apply(source, output, error));
-  CHECK(error.empty());
-  CHECK(output.find("vector<i32>{1i32,2i32}") != std::string::npos);
-}
-
 TEST_CASE("map bracket syntax only gets generic operator rewrites") {
   const std::string source = "main(){ return(map<i32, i32>[1i32=2i32, 3i32=4i32]) }\n";
   primec::TextFilterPipeline pipeline;

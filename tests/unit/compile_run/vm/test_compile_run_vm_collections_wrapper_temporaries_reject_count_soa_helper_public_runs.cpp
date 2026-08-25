@@ -336,28 +336,6 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm public soa to_aos explicit helper is a vector target") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/soa/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
-  return(/std/collections/vector/capacity(/std/collections/soa/to_aos<Particle>(values)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("vm_public_soa_to_aos_vector_capacity.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 1);
-}
-
 TEST_CASE("vm public soa read helpers route through wrapper paths") {
   const std::string source = R"(
 import /std/collections/*
@@ -1319,6 +1297,5 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
-
 
 TEST_SUITE_END();

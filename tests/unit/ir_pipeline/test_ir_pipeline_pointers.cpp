@@ -263,38 +263,6 @@ main() {
   CHECK(result == 4);
 }
 
-TEST_CASE("ir lowers pointer minus u64 offsets") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] first{4i32}
-  [i32] second{9i32}
-  return(dereference(minus(location(second), 16u64)))
-}
-)";
-  std::string error;
-  primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  bool sawSub = false;
-  for (const auto &inst : module.functions[0].instructions) {
-    if (inst.op == primec::IrOpcode::SubI64) {
-      sawSub = true;
-      break;
-    }
-  }
-  CHECK(sawSub);
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  bool ok = vm.execute(module, result, error);
-  INFO(error);
-  REQUIRE(ok);
-  CHECK(error.empty());
-  CHECK(result == 4);
-}
-
 TEST_CASE("ir lowers pointer minus negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
@@ -350,29 +318,6 @@ main() {
   CHECK(result == 9);
 }
 
-TEST_CASE("pointer minus uses byte offsets in VM") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] first{4i32}
-  [i32] second{9i32}
-  return(dereference(minus(location(second), 16i32)))
-}
-)";
-  std::string error;
-  primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  bool ok = vm.execute(module, result, error);
-  INFO(error);
-  REQUIRE(ok);
-  CHECK(error.empty());
-  CHECK(result == 4);
-}
-
 TEST_CASE("pointer plus accepts negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
@@ -403,38 +348,6 @@ main() {
   [i32] first{4i32}
   [i32] second{9i32}
   return(dereference(plus(location(first), 16i64)))
-}
-)";
-  std::string error;
-  primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  bool sawPushI64 = false;
-  for (const auto &inst : module.functions[0].instructions) {
-    if (inst.op == primec::IrOpcode::PushI64) {
-      sawPushI64 = true;
-      break;
-    }
-  }
-  CHECK(sawPushI64);
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  bool ok = vm.execute(module, result, error);
-  INFO(error);
-  REQUIRE(ok);
-  CHECK(error.empty());
-  CHECK(result == 9);
-}
-
-TEST_CASE("pointer plus accepts u64 offsets via PushI64") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] first{4i32}
-  [i32] second{9i32}
-  return(dereference(plus(location(first), 16u64)))
 }
 )";
   std::string error;

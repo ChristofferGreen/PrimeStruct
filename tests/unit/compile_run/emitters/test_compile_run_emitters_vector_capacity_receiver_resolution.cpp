@@ -52,29 +52,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/capacity") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on array receiver") {
-  const std::string source = R"(
-[return<int>]
-/std/collections/vector/capacity([array<i32>] values) {
-  return(93i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
-  return(items./std/collections/vector/capacity())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_local_canonical_slash_vector_capacity_array_same_path_helper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_compile_cpp_local_canonical_slash_vector_capacity_array_same_path_helper_repin.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/capacity") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter keeps alias direct-call vector capacity same-path helper on array receiver") {
   const std::string source = R"(
 [return<array<i32>>]
@@ -148,31 +125,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects alias direct-call vector capacity on array receiver without helper in C++ emitter") {
-  const std::string source = R"(
-[return<array<i32>>]
-wrapArray() {
-  return(array<i32>(1i32, 2i32))
-}
-
-[return<int>]
-main() {
-  return(/vector/capacity(wrapArray()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_direct_vector_capacity_array_unknown_target.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_direct_vector_capacity_array_unknown_target.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/capacity") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects canonical slash-method vector capacity same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -198,37 +150,6 @@ main() {
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/capacity") != std::string::npos);
-}
-
-TEST_CASE("C++ emitter rejects canonical slash-method vector capacity same-path helper on array receiver") {
-  const std::string source = R"(
-[return<array<i32>>]
-wrapArray() {
-  return(array<i32>(1i32, 2i32, 3i32))
-}
-
-[return<int>]
-/std/collections/vector/capacity([array<i32>] values) {
-  return(95i32)
-}
-
-[return<int>]
-main() {
-  return(wrapArray()./std/collections/vector/capacity())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_capacity_array_same_path_helper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_capacity_array_same_path_helper.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/capacity") !=
-        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects canonical slash-method vector capacity same-path helper on string receiver") {
@@ -393,24 +314,6 @@ main() {
   CHECK(runCommand(compileCmd) == 3);
 }
 
-TEST_CASE("C++ emitter keeps bare vector capacity methods on same-path helper") {
-  const std::string source = R"(
-[return<int>]
-/vector/capacity([vector<i32>] values) {
-  return(15i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.capacity())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 3);
-}
-
 TEST_CASE("C++ emitter keeps bare vector count methods on emitter fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -438,37 +341,6 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_count_method_deleted_stub_exe.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 3);
-}
-
-TEST_CASE("C++ emitter rejects bare vector capacity methods before emitter fallback") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.capacity())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path_reject.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_same_path_reject.txt").string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-}
-
-TEST_CASE("rejects bare vector capacity methods without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.capacity())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path_reject_exe.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 3);
 }

@@ -702,52 +702,5 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("native uses stdlib experimental Buffer allocation readback path") {
-  const std::string source = R"(
-import /std/gfx/experimental/*
-
-[effects(gpu_dispatch), return<int>]
-main() {
-  [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
-  [array<i32>] out{data.readback()}
-  [i32] bufferCount{/std/gfx/experimental/Buffer/count(data)}
-  [i32] outputCount{out.count()}
-  return(plus(bufferCount, outputCount))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_experimental_gfx_buffer_allocation_readback.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_gfx_buffer_allocation_readback").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
-}
-
-TEST_CASE("native uses canonical stdlib Buffer allocation readback path") {
-  const std::string source = R"(
-import /std/gfx/*
-
-[effects(gpu_dispatch), return<int>]
-main() {
-  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
-  [array<i32>] out{data.readback()}
-  [i32] bufferCount{/std/gfx/Buffer/count(data)}
-  [i32] outputCount{out.count()}
-  return(plus(bufferCount, outputCount))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_canonical_gfx_buffer_allocation_readback.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_canonical_gfx_buffer_allocation_readback").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
-}
-
-
 TEST_SUITE_END();
 #endif

@@ -104,26 +104,6 @@ task(1i32)
   CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
 }
 
-TEST_CASE("static transforms are rejected on executions") {
-  const std::string source = R"(
-[return<int>]
-task([i32] x) {
-  return(x)
-}
-
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[static]
-task(1i32)
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
-}
-
 TEST_CASE("reflection transforms are rejected on executions") {
   const char *reflectionTransforms[] = {"reflect", "generate(Equal)"};
   for (const auto *reflectionTransform : reflectionTransforms) {
@@ -300,23 +280,6 @@ TEST_CASE("builtin and rejects float operands") {
 [return<bool>]
 main() {
   return(and(1.5f, true))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
-}
-
-TEST_CASE("builtin and rejects struct operands") {
-  const std::string source = R"(
-thing() {
-  [i32] value{1i32}
-}
-
-[return<bool>]
-main() {
-  [thing] item{1i32}
-  return(and(item, true))
 }
 )";
   std::string error;

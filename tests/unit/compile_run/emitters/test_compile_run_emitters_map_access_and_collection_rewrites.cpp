@@ -163,28 +163,6 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
 }
 
-TEST_CASE("rejects array namespaced vector at_unsafe alias in C++ emitter") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  [i32] tailValue{/array/at_unsafe(values, 1i32)}
-  return(tailValue)
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_at_unsafe_alias.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_array_namespaced_vector_at_unsafe_alias_out.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
-}
-
 TEST_CASE("rejects wrapper array namespaced vector at alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -205,29 +183,6 @@ main() {
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
-}
-
-TEST_CASE("rejects wrapper array namespaced vector at_unsafe alias in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(4i32, 5i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/array/at_unsafe(wrapVector(), 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_wrapper_array_namespaced_vector_at_unsafe_alias.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_wrapper_array_namespaced_vector_at_unsafe_alias_out.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects array namespaced vector count builtin alias in C++ emitter") {

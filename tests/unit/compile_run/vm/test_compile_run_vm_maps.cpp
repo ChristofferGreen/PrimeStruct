@@ -99,22 +99,6 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm u64 map access helpers without canonical helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [map<u64, i32>] values{/std/collections/map/map<u64, i32>(2u64, 7i32, 11u64, 5i32)}
-  return(plus(at(values, 2u64), at_unsafe(values, 11u64)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_u64_access.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_map_u64_access_err.txt").string();
-  const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-}
-
 TEST_CASE("rejects vm map constructor odd args") {
   const std::string source = R"(
 import /std/collections/*

@@ -5,7 +5,6 @@
 
 #include <algorithm>
 
-
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.effects");
 
 namespace {
@@ -459,7 +458,6 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("not all control paths return") != std::string::npos);
 }
-
 
 TEST_CASE("return after partial if validates") {
   const std::string source = R"(
@@ -998,18 +996,6 @@ main() {
   CHECK(error.find("io_err") != std::string::npos);
 }
 
-TEST_CASE("print_line_error requires io_err effect") {
-  const std::string source = R"(
-[effects(io_out)]
-main() {
-  print_line_error("oops"utf8)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("io_err") != std::string::npos);
-}
-
 TEST_CASE("notify requires pathspace_notify effect") {
   const std::string source = R"(
 main() {
@@ -1411,67 +1397,6 @@ main() {
   CHECK(error.find("print_line does not accept block arguments") != std::string::npos);
 }
 
-
-TEST_CASE("print_line rejects missing arguments") {
-  const std::string source = R"(
-[effects(io_out)]
-main() {
-  print_line()
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("print_line requires exactly one argument") != std::string::npos);
-}
-
-TEST_CASE("print_error rejects missing arguments") {
-  const std::string source = R"(
-[effects(io_err)]
-main() {
-  print_error()
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("print_error requires exactly one argument") != std::string::npos);
-}
-
-TEST_CASE("print_error rejects block arguments") {
-  const std::string source = R"(
-[effects(io_err)]
-main() {
-  print_error("oops"utf8) { 1i32 }
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("print_error does not accept block arguments") != std::string::npos);
-}
-
-TEST_CASE("print_line_error rejects missing arguments") {
-  const std::string source = R"(
-[effects(io_err)]
-main() {
-  print_line_error()
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("print_line_error requires exactly one argument") != std::string::npos);
-}
-
-TEST_CASE("print_line_error rejects block arguments") {
-  const std::string source = R"(
-[effects(io_err)]
-main() {
-  print_line_error("oops"utf8) { 1i32 }
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("print_line_error does not accept block arguments") != std::string::npos);
-}
-
 TEST_CASE("array literal rejects block arguments") {
   const std::string source = R"(
 [return<int>]
@@ -1518,21 +1443,6 @@ TEST_CASE("print accepts string array access") {
 main() {
   [array<string>] values{array<string>("hi"utf8)}
   print_line(values[0i32])
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("print accepts string map access") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(io_out)]
-main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "hi"utf8)}
-  print_line(values[1i32])
 }
 )";
   std::string error;
@@ -1664,32 +1574,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("requires an integer/bool or string literal/binding argument") != std::string::npos);
-}
-
-TEST_CASE("print_error accepts bool binding") {
-  const std::string source = R"(
-[effects(io_err)]
-main() {
-  [bool] ready{true}
-  print_error(ready)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("print_line_error accepts bool binding") {
-  const std::string source = R"(
-[effects(io_err)]
-main() {
-  [bool] ready{true}
-  print_line_error(ready)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
 }
 
 TEST_CASE("default effects allow print") {

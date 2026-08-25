@@ -73,32 +73,6 @@ main() {
   CHECK(error.find("loop body requires a block envelope") != std::string::npos);
 }
 
-TEST_CASE("while rejects named arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  while([condition] true, do(){ })
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
-}
-
-TEST_CASE("for rejects named arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  for([init] [i32 mut] i{0i32}, [condition] less_than(i, 2i32), [step] assign(i, plus(i, 1i32)), do(){ })
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
-}
-
 TEST_CASE("for accepts comma separators") {
   const std::string source = R"(
 [return<int>]
@@ -126,33 +100,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("loop does not accept template arguments") != std::string::npos);
-}
-
-TEST_CASE("while rejects template arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  while<bool>(true) { }
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("while does not accept template arguments") != std::string::npos);
-}
-
-TEST_CASE("for rejects template arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  for<i32>([i32 mut] i{0i32} less_than(i, 2i32) assign(i, plus(i, 1i32))) {
-  }
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("for does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("brace constructor values validate") {
@@ -212,22 +159,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("loop accepts u64 count") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32 mut] total{0i32}
-  loop(2u64) {
-    assign(total, plus(total, 1i32))
-  }
-  return(total)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("for accepts semicolon separators") {
   const std::string source = R"(
 [return<int>]
@@ -271,38 +202,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("loop is only supported as a statement") != std::string::npos);
-}
-
-TEST_CASE("while rejected in value blocks") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  value{
-    while(true) { }
-    1i32
-  }
-  return(value)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("while is only supported as a statement") != std::string::npos);
-}
-
-TEST_CASE("for rejected in value blocks") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  value{
-    for([i32 mut] i{0i32} less_than(i, 2i32) assign(i, plus(i, 1i32))) { }
-    1i32
-  }
-  return(value)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("for is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("for condition accepts binding") {

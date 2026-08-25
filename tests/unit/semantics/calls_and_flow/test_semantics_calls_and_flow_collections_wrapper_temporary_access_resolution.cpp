@@ -196,25 +196,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map wrapper temporary unsafe access validates direct stdlib helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-wrapMapAuto() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(values)
-}
-
-[return<int>]
-main() {
-  return(/std/collections/map/at_unsafe(wrapMapAuto(), 1i32))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("map wrapper temporary access keeps canonical key diagnostics") {
   const std::string source = R"(
 import /std/collections/*
@@ -318,18 +299,6 @@ TEST_CASE("count preserves missing receiver call-target diagnostics") {
 [return<int>]
 main() {
   return(count(missing()))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: missing") != std::string::npos);
-}
-
-TEST_CASE("capacity preserves missing receiver call-target diagnostics") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(capacity(missing()))
 }
 )";
   std::string error;
@@ -665,144 +634,6 @@ main() {
   CHECK(error.find("unknown method: /Counter/count") != std::string::npos);
 }
 
-TEST_CASE("capacity method keeps unknown method on non-collection receiver") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-[return<int>]
-main() {
-  [Counter] counter{Counter()}
-  return(counter.capacity())
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/capacity") != std::string::npos);
-}
-
-TEST_CASE("capacity method keeps unknown method on non-collection wrapper temporary") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-makeCounter() {
-  [Counter] counter{Counter()}
-  return(counter)
-}
-
-[return<int>]
-main() {
-  return(makeCounter().capacity())
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/capacity") != std::string::npos);
-}
-
-TEST_CASE("capacity call keeps unknown method on non-collection receiver") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-[return<int>]
-main() {
-  [Counter] counter{Counter()}
-  return(capacity(counter))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/capacity") != std::string::npos);
-}
-
-TEST_CASE("capacity call keeps unknown method on non-collection wrapper temporary") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-makeCounter() {
-  [Counter] counter{Counter()}
-  return(counter)
-}
-
-[return<int>]
-main() {
-  return(capacity(makeCounter()))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/capacity") != std::string::npos);
-}
-
-TEST_CASE("at call keeps unknown method on non-collection receiver") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-[return<int>]
-main() {
-  [Counter] counter{Counter()}
-  at(counter, 0i32)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/at") != std::string::npos);
-}
-
-TEST_CASE("at call keeps unknown method on non-collection wrapper temporary") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-makeCounter() {
-  [Counter] counter{Counter()}
-  return(counter)
-}
-
-[return<int>]
-main() {
-  at(makeCounter(), 0i32)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/at") != std::string::npos);
-}
-
-TEST_CASE("at_unsafe call keeps unknown method on non-collection wrapper temporary") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-makeCounter() {
-  [Counter] counter{Counter()}
-  return(counter)
-}
-
-[return<int>]
-main() {
-  at_unsafe(makeCounter(), 0i32)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/at_unsafe") != std::string::npos);
-}
-
 TEST_CASE("push call keeps unknown method on non-collection receiver") {
   const std::string source = R"(
 Counter {
@@ -820,28 +651,6 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
   CHECK(error.find("unknown call target: push") != std::string::npos);
-}
-
-TEST_CASE("reserve method keeps unknown method on wrapper temporary") {
-  const std::string source = R"(
-Counter {
-  [i32] value{0i32}
-}
-
-makeCounter() {
-  [Counter mut] counter{Counter()}
-  return(counter)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  makeCounter().reserve(2i32)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/reserve") != std::string::npos);
 }
 
 TEST_CASE("at method validates on array binding") {

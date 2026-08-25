@@ -71,23 +71,6 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("user definition named vector call is not treated as builtin collection target") {
-  const std::string source = R"(
-[return<int>]
-vector<T>([T] value) {
-  return(1i32)
-}
-
-[return<int>]
-main() {
-  return(at(vector<i32>(9i32), 0i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
-}
-
 TEST_CASE("user definition named map call is not treated as builtin collection target") {
   const std::string source = R"(
 [return<int>]
@@ -139,6 +122,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown method: /i32/at") != std::string::npos);
 }
-
 
 TEST_SUITE_END();

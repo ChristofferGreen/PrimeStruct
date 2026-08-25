@@ -15,18 +15,6 @@ main() {
   CHECK(program.definitions[0].fullPath == "/main");
 }
 
-TEST_CASE("parses definition without return transform") {
-  const std::string source = R"(
-main() {
-  return(7i32)
-}
-)";
-
-  const auto program = parseProgram(source);
-  CHECK(program.definitions.size() == 1);
-  CHECK(program.definitions[0].fullPath == "/main");
-}
-
 TEST_CASE("parses definition with omitted parameter envelopes") {
   const std::string source = R"(
 run_countdown(start) {
@@ -48,19 +36,6 @@ run_countdown(start) {
 TEST_CASE("parses definition without parameter list") {
   const std::string source = R"(
 [return<int>]
-main {
-  return(7i32)
-}
-)";
-
-  const auto program = parseProgram(source);
-  REQUIRE(program.definitions.size() == 1);
-  CHECK(program.definitions[0].fullPath == "/main");
-  CHECK(program.definitions[0].parameters.empty());
-}
-
-TEST_CASE("parses definition without parameter list and return transform") {
-  const std::string source = R"(
 main {
   return(7i32)
 }

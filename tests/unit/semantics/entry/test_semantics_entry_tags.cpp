@@ -37,23 +37,6 @@ main() {
   CHECK(error.find("pod definitions cannot contain handle or gpu_lane fields") != std::string::npos);
 }
 
-TEST_CASE("pod and gpu_lane tags conflict on definitions") {
-  const std::string source = R"(
-[pod gpu_lane]
-Thing() {
-  [i32] value{1i32}
-}
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pod definitions cannot be tagged as handle or gpu_lane") != std::string::npos);
-}
-
 TEST_CASE("handle and gpu_lane tags conflict on definitions") {
   const std::string source = R"(
 [handle gpu_lane]

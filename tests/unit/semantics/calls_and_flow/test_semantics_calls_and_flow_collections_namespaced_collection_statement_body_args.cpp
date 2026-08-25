@@ -241,34 +241,6 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced slash method temporary pointer diagnostics keep array-qualified pointer target") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] value{1i32}
-  location(value)./array/count(true) { 1i32 }
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/array/count") !=
-        std::string::npos);
-}
-
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics keep unknown vector count target for temporary pointers") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] value{1i32}
-  return(location(value)./std/collections/vector/count(true) { 1i32 })
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
-}
-
 TEST_CASE("array namespaced method body-arg diagnostics normalize helper-returned reference receiver target") {
   const std::string source = R"(
 [return<Reference<i32>>]
@@ -340,52 +312,6 @@ main() {
   return(/vector/borrow(location(value)).count(true) { 1i32 })
 }
 )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
-}
-
-TEST_CASE("array namespaced method expression body-arg helper-returned reference keeps rooted borrow diagnostic") {
-  const std::string source = R"(
-[return<Reference<i32>>]
-/std/collections/vector/borrow([Reference<i32>] ref) {
-  return(ref)
-}
-
-[return<int>]
-/Reference/count([Reference<i32>] self, [bool] marker) {
-  return(7i32)
-}
-
-[return<int>]
-main() {
-  [i32] value{1i32}
-  return(/vector/borrow(location(value)).count(true) { 1i32 })
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
-}
-
-TEST_CASE("array namespaced method expression body-arg helper mismatch keeps rooted borrow diagnostic") {
-  const std::string source = R"(
-[return<Reference<i32>>]
-/std/collections/vector/borrow([Reference<i32>] ref) {
-  return(ref)
-}
-
-[return<int>]
-/Reference/count([Reference<i32>] self, [i32] marker) {
-  return(7i32)
-}
-
-[return<int>]
-main() {
-  [i32] value{1i32}
-  return(/vector/borrow(location(value)).count(true) { 1i32 })
-}
-  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);

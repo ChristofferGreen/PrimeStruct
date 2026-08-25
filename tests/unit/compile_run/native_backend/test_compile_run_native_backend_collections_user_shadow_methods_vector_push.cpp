@@ -98,27 +98,6 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("native user array constructor shadow") {
-  const std::string source = R"(
-[return<int>]
-array([i32] value) {
-  return(value)
-}
-
-[return<int>]
-main() {
-  return(array([value] 9i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_user_array_constructor_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_array_constructor_shadow_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
-}
-
 TEST_CASE("native user map constructor shadow") {
   const std::string source = R"(
 [return<int>]
@@ -150,40 +129,6 @@ main() {
   const std::string srcPath = writeTemp("native_builtin_vector_constructor_named_args.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_native_builtin_vector_constructor_named_args_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
-}
-
-TEST_CASE("rejects native builtin array constructor named arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(array([value] 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("native_builtin_array_constructor_named_args.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_builtin_array_constructor_named_args_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
-}
-
-TEST_CASE("rejects native builtin map constructor named arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(map([key] 1i32, [value] 2i32))
-}
-)";
-  const std::string srcPath = writeTemp("native_builtin_map_constructor_named_args.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_builtin_map_constructor_named_args_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -245,25 +190,6 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
-}
-
-TEST_CASE("rejects native removed vector access alias at_unsafe named arguments") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(/vector/at_unsafe([values] values, [index] 0i32))
-}
-)";
-  const std::string srcPath = writeTemp("native_removed_vector_access_alias_at_unsafe_named_args.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_removed_vector_access_alias_at_unsafe_named_args_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native namespaced vector count with soa literal target") {
@@ -337,31 +263,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 4);
-}
-
-TEST_CASE("native user array constructor block shadow") {
-  const std::string source = R"(
-[return<int>]
-array([i32] value) {
-  return(value)
-}
-
-[return<int>]
-main() {
-  [i32 mut] result{0i32}
-  array(9i32) {
-    assign(result, 5i32)
-  }
-  return(result)
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_user_array_constructor_block_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_array_constructor_block_shadow_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("native user vector push call shadow") {
@@ -557,7 +458,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("push is only supported as a statement") != std::string::npos);
 }
-
 
 TEST_SUITE_END();
 #endif

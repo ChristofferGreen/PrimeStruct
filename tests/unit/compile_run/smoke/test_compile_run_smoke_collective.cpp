@@ -4,7 +4,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-
 TEST_CASE("import after definitions") {
   const std::string source = R"(
 namespace util {
@@ -222,46 +221,6 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("binding inferring i64") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [mut] value{1i64}
-  assign(value, plus(value, 2i64))
-  return(convert<i32>(value))
-}
-)";
-  const std::string srcPath = writeTemp("compile_infer_i64_binding.prime", source);
-  const std::string nativePath = (testScratchPath("") / "primec_infer_i64_binding_native").string();
-
-  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runVmCmd) == 3);
-
-  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 3);
-}
-
-TEST_CASE("binding inferring u64") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [mut] value{1u64}
-  assign(value, plus(value, 2u64))
-  return(convert<i32>(value))
-}
-)";
-  const std::string srcPath = writeTemp("compile_infer_u64_binding.prime", source);
-  const std::string nativePath = (testScratchPath("") / "primec_infer_u64_binding_native").string();
-
-  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runVmCmd) == 3);
-
-  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 3);
-}
-
 TEST_CASE("binding inferring array type") {
   const std::string source = R"(
 [return<int>]
@@ -363,7 +322,6 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-
 TEST_CASE("map bracket indexing reads a value") {
   const std::string source = R"(
 import /std/collections/*
@@ -385,27 +343,6 @@ main() {
   CHECK(runCommand(nativePath) == 20);
 }
 
-TEST_CASE("map indexing with u64 keys") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<u64, i32>] values{map<u64, i32>(1u64, 7i32, 9u64, 1i32)}
-  return(values[1u64])
-}
-)";
-  const std::string srcPath = writeTemp("compile_map_u64_indexing.prime", source);
-  const std::string nativePath = (testScratchPath("") / "primec_map_u64_indexing_native").string();
-
-  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runVmCmd) == 7);
-
-  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 7);
-}
-
 TEST_CASE("string-keyed map indexing in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -421,26 +358,6 @@ main() {
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCppCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports indexing into string literals or string bindings") !=
-        std::string::npos);
-}
-
-TEST_CASE("string-keyed map indexing checks missing key in C++ emitter") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
-  return(values["missing"utf8])
-}
-)";
-  const std::string srcPath = writeTemp("compile_map_string_bounds.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_map_string_bounds_err.txt").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("native backend only supports indexing into string literals or string bindings") !=
         std::string::npos);
@@ -559,6 +476,5 @@ main() {
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 4);
 }
-
 
 TEST_SUITE_END();

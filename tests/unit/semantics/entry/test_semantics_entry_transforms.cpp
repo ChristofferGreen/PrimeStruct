@@ -137,18 +137,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map return accepts array value type during semantics validation") {
-  const std::string source = R"(
-[return<map<string, array<i32>>>]
-main() {
-  return(map<string, array<i32>>())
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("return transform rejects duplicate return") {
   const std::string source = R"(
 [return<int>, return<int>]

@@ -106,18 +106,6 @@ main() {
   CHECK(error.find("argument count mismatch for builtin at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("unsafe array access rejects block arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(at_unsafe(array<i32>(1i32), 0i32) { 1i32 })
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target") != std::string::npos);
-}
-
 TEST_CASE("array access rejects non-integer index") {
   const std::string source = R"(
 [return<int>]
@@ -161,30 +149,6 @@ TEST_CASE("string access validates integer index") {
 main() {
   [string] text{"hello"utf8}
   return(at(text, 0i32))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("string literal access rejects non-integer index") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(at("hello"utf8, "nope"utf8))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires integer index") != std::string::npos);
-}
-
-TEST_CASE("string literal access validates integer index") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(at("hello"utf8, 1i32))
 }
 )";
   std::string error;

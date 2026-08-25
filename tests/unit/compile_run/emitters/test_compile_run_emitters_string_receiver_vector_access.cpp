@@ -376,49 +376,6 @@ main() {
   CHECK(readFile(outPath).find("error") == std::string::npos);
 }
 
-TEST_CASE("prefers canonical bare map unsafe method struct chain forwarding in C++ emitter") {
-  const std::string source = R"(
-CanonicalMarker {
-  [i32] value
-}
-
-AliasMarker {
-  [i32] value
-}
-
-[return<AliasMarker>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(AliasMarker(plus(key, 40i32)))
-}
-
-[return<CanonicalMarker>]
-/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(CanonicalMarker(key))
-}
-
-[return<int>]
-/CanonicalMarker/tag([CanonicalMarker] self) {
-  return(self.value)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
-  return(values.at_unsafe(2i32).tag())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence.prime", source);
-  const std::string outPath = (testScratchPath("") /
-                               "primec_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence.out")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("error") == std::string::npos);
-}
-
 TEST_CASE("keeps canonical bare map method non-struct diagnostics in C++ emitter") {
   const std::string source = R"(
 Marker {

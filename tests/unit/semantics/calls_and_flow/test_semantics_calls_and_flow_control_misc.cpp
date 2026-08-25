@@ -340,58 +340,6 @@ main() {
   CHECK(error.find("loop does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("while rejects template arguments in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  while<bool>(true, do(){ })
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("while does not accept template arguments") != std::string::npos);
-}
-
-TEST_CASE("for rejects template arguments in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  for<i32>([i32 mut] i{0i32}, less_than(i, 2i32), assign(i, plus(i, 1i32)), do(){ })
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("for does not accept template arguments") != std::string::npos);
-}
-
-TEST_CASE("while requires condition and body in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  while(true)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("while requires condition and body") != std::string::npos);
-}
-
-TEST_CASE("for requires init condition step and body in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  for([i32 mut] i{0i32}, less_than(i, 2i32), assign(i, plus(i, 1i32)))
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("for requires init, condition, step, and body") != std::string::npos);
-}
-
 TEST_CASE("repeat rejects named arguments in suite") {
   const std::string source = R"(
 [return<int>]
@@ -434,36 +382,6 @@ main() {
   CHECK(error.find("loop does not accept trailing block arguments") != std::string::npos);
 }
 
-TEST_CASE("while rejects trailing block arguments in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  while(true, do(){ }) {
-    [i32] temp{0i32}
-  }
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("while does not accept trailing block arguments") != std::string::npos);
-}
-
-TEST_CASE("for rejects trailing block arguments in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  for([i32 mut] i{0i32}, less_than(i, 1i32), assign(i, plus(i, 1i32)), do(){ }) {
-    [i32] temp{0i32}
-  }
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("for does not accept trailing block arguments") != std::string::npos);
-}
-
 TEST_CASE("loop count requires integer in suite") {
   const std::string source = R"(
 [return<int>]
@@ -490,19 +408,6 @@ main() {
   CHECK(error.find("while condition requires bool") != std::string::npos);
 }
 
-TEST_CASE("for condition expression requires bool in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  for([i32 mut] i{0i32}, 1i32, assign(i, plus(i, 1i32)), do(){ })
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("for condition requires bool") != std::string::npos);
-}
-
 TEST_CASE("for condition binding requires bool in suite") {
   const std::string source = R"(
 [return<int>]
@@ -522,32 +427,6 @@ TEST_CASE("loop count expression validation failure in suite") {
 [return<int>]
 main() {
   loop(missingCount, do(){ })
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown identifier") != std::string::npos);
-}
-
-TEST_CASE("while condition expression validation failure in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  while(missingCond, do(){ })
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown identifier") != std::string::npos);
-}
-
-TEST_CASE("for condition expression validation failure in suite") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  for([i32 mut] i{0i32}, missingCond, assign(i, plus(i, 1i32)), do(){ })
   return(0i32)
 }
 )";

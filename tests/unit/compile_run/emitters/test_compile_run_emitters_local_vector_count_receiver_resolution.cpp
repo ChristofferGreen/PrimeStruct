@@ -298,28 +298,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects alias slash-method vector count on map receiver before emission") {
-  const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32))
-}
-
-[return<int>]
-main() {
-  return(wrapMap()./vector/count())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_map_deleted_stub_repin.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
-}
-
 TEST_CASE("rejects alias slash-method vector count on map receiver in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -437,28 +415,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects alias slash-method vector count on array receiver with rooted target before emission") {
-  const std::string source = R"(
-[return<array<i32>>]
-wrapArray() {
-  return(array<i32>(1i32, 2i32, 3i32))
-}
-
-[return<int>]
-main() {
-  return(wrapArray()./vector/count())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_alias_slash_vector_count_array_deleted_stub.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_compile_cpp_alias_slash_vector_count_array_deleted_stub_repin.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
-}
-
 TEST_CASE("rejects alias slash-method vector count on array receiver with rooted target in C++ emitter") {
   const std::string source = R"(
 [return<array<i32>>]
@@ -502,32 +458,6 @@ main() {
       writeTemp("compile_cpp_canonical_direct_vector_count_string_same_path_helper.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 92);
-}
-
-TEST_CASE("C++ emitter rejects canonical direct-call vector count on string receiver before emission") {
-  const std::string source = R"(
-[return<string>]
-wrapText() {
-  return("abc"raw_utf8)
-}
-
-[return<int>]
-main() {
-  return(/std/collections/vector/count(wrapText()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_direct_vector_count_string_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_vector_count_string_deleted_stub.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects canonical direct-call vector count on string receiver in C++ emitter") {
@@ -579,32 +509,6 @@ main() {
   CHECK(runCommand(compileCmd) == 95);
 }
 
-TEST_CASE("C++ emitter rejects alias direct-call vector count on string receiver before emission") {
-  const std::string source = R"(
-[return<string>]
-wrapText() {
-  return("abc"raw_utf8)
-}
-
-[return<int>]
-main() {
-  return(/vector/count(wrapText()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_direct_vector_count_string_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_direct_vector_count_string_deleted_stub.cpp")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string out = readFile(outPath);
-  CHECK(out.find("unknown call target: /vector/count") != std::string::npos);
-}
-
 TEST_CASE("rejects alias direct-call vector count on string receiver in C++ emitter") {
   const std::string source = R"(
 [return<string>]
@@ -652,32 +556,6 @@ main() {
       writeTemp("compile_cpp_alias_direct_vector_count_array_same_path_helper.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 99);
-}
-
-TEST_CASE("C++ emitter rejects alias direct-call vector count on array receiver before emission") {
-  const std::string source = R"(
-[return<array<i32>>]
-wrapArray() {
-  return(array<i32>(1i32, 2i32, 3i32))
-}
-
-[return<int>]
-main() {
-  return(/vector/count(wrapArray()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_direct_vector_count_array_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_direct_vector_count_array_deleted_stub.cpp")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string out = readFile(outPath);
-  CHECK(out.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias direct-call vector count on array receiver in C++ emitter") {
@@ -731,32 +609,6 @@ main() {
   // dispatches on an array<i32> helper-return receiver, matching the
   // sibling string-receiver case above.
   CHECK(runCommand(compileCmd) == 93);
-}
-
-TEST_CASE("C++ emitter rejects canonical direct-call vector count on array receiver before emission") {
-  const std::string source = R"(
-[return<array<i32>>]
-wrapArray() {
-  return(array<i32>(1i32, 2i32, 3i32))
-}
-
-[return<int>]
-main() {
-  return(/std/collections/vector/count(wrapArray()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_direct_vector_count_array_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_vector_count_array_deleted_stub.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects canonical direct-call vector count on array receiver in C++ emitter") {

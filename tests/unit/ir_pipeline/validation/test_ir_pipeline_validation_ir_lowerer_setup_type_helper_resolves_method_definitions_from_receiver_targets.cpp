@@ -653,40 +653,6 @@ TEST_CASE("ir lowerer setup type helper rejects canonical soa access fallback to
   CHECK(error == "unknown method: /std/collections/soa/ref");
 }
 
-TEST_CASE("ir lowerer setup type helper rejects canonical soa mutator fallback to rooted aliases") {
-  primec::Definition soaPushDef;
-  soaPushDef.fullPath = "/soa/push";
-  primec::Definition soaReserveDef;
-  soaReserveDef.fullPath = "/soa/reserve";
-  std::string error;
-
-  const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/soa/push", &soaPushDef},
-      {"/soa/reserve", &soaReserveDef},
-  };
-
-  // TODO-4900: same missing canonical-preference gap as the access-helper
-  // test above, for the mutator helpers.
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "push", "soa", "", defMap, error) == &soaPushDef);
-  CHECK(error.empty());
-
-  error.clear();
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "push", "std/collections/soa", "", defMap, error) == nullptr);
-  CHECK(error == "unknown method: /std/collections/soa/push");
-
-  error.clear();
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "reserve", "soa", "", defMap, error) == &soaReserveDef);
-  CHECK(error.empty());
-
-  error.clear();
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "reserve", "std/collections/soa", "", defMap, error) == nullptr);
-  CHECK(error == "unknown method: /std/collections/soa/reserve");
-}
-
 TEST_CASE("ir lowerer setup type helper rejects canonical soa to_aos fallback to rooted alias") {
   primec::Definition rootedToAosDef;
   rootedToAosDef.fullPath = "/to_aos";

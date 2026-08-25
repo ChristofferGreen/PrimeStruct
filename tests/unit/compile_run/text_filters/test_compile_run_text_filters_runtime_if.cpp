@@ -242,18 +242,6 @@ main() {
   CHECK(runCommand(compileCmd) == 9);
 }
 
-TEST_CASE("runs if expression in vm") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(if(false, then(){ 4i32 }, else(){ 9i32 }))
-}
-)";
-  const std::string srcPath = writeTemp("vm_if_expr.prime", source);
-  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runVmCmd) == 9);
-}
-
 TEST_CASE("if block sugar in return expression") {
   const std::string source = R"(
 [return<int>]

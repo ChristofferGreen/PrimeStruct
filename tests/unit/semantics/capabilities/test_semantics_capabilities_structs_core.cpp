@@ -4,7 +4,6 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.effects");
 
-
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
 [return<int>]
@@ -24,7 +23,6 @@ task(1i32)
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-
 
 TEST_CASE("execution capabilities transform validates") {
   const std::string source = R"(
@@ -282,18 +280,6 @@ main() {
   CHECK(error.find("align_bytes requires exactly one integer argument") != std::string::npos);
 }
 
-TEST_CASE("align_kbytes rejects wrong argument count") {
-  const std::string source = R"(
-[align_kbytes(4, 8), return<int>]
-main() {
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("align_kbytes requires exactly one integer argument") != std::string::npos);
-}
-
 TEST_CASE("align_kbytes rejects template arguments") {
   const std::string source = R"(
 [align_kbytes<i32>(4), return<int>]
@@ -306,18 +292,6 @@ main() {
   CHECK(error.find("align_kbytes does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("align_kbytes validates integer argument") {
-  const std::string source = R"(
-[align_kbytes(4), return<int>]
-main() {
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("align_kbytes accepts hex literal") {
   const std::string source = R"(
 [align_kbytes(0x10), return<int>]
@@ -328,18 +302,6 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-}
-
-TEST_CASE("align_kbytes rejects non-integer argument") {
-  const std::string source = R"(
-[align_kbytes(foo), return<int>]
-main() {
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("align_kbytes requires a positive integer argument") != std::string::npos);
 }
 
 TEST_CASE("struct transform validates without args") {
@@ -616,6 +578,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("struct transform does not accept arguments") != std::string::npos);
 }
-
 
 TEST_SUITE_END();

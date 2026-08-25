@@ -365,26 +365,6 @@ main() {
   CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("experimental gfx profile literals keep deterministic reject") {
-  const std::string source = R"(
-import /std/gfx/experimental/*
-
-[effects(io_err)]
-log_gfx_error([GfxError] err) {
-  print_line_error(GfxError.why(err))
-}
-
-[return<int> on_error<GfxError, /log_gfx_error>]
-main() {
-  [Device] device{Device{[profile] "metal-osx"utf8}?}
-  return(device.token)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown named argument: profile") != std::string::npos);
-}
-
 TEST_CASE("experimental gfx device constructor entry point validates through stdlib helper") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -570,39 +550,6 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-}
-
-TEST_CASE("experimental gfx pipeline entry point rejects unsupported vertex_type") {
-  const std::string source = R"(
-import /std/gfx/experimental/*
-
-[struct]
-VertexPlain() {
-  [i32] x{0i32}
-}
-
-[effects(io_err)]
-log_gfx_error([GfxError] err) {
-  print_line_error(GfxError.why(err))
-}
-
-[return<int> on_error<GfxError, /log_gfx_error>]
-main() {
-  [Device] device{Device()?}
-  [Pipeline] pipeline{
-    device.create_pipeline(
-      [shader] ShaderLibrary.CubeBasic,
-      [vertex_type] VertexPlain,
-      [color_format] ColorFormat.Bgra8Unorm,
-      [depth_format] DepthFormat.Depth32F
-    )?
-  }
-  return(pipeline.token)
-}
-  )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("experimental gfx create_pipeline currently supports only VertexColored") != std::string::npos);
 }
 
 TEST_CASE("canonical gfx pipeline entry point rejects unsupported vertex_type") {

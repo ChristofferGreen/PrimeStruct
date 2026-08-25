@@ -223,24 +223,6 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("vm experimental vector method at_unsafe checks positive out-of-range index") {
-  const std::string source = R"(
-import /std/collections/vector/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 9i32)}
-  return(values.at_unsafe(2i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_experimental_vector_method_at_unsafe_oob.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_vector_method_at_unsafe_oob_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
-}
-
 TEST_CASE("vm experimental vector at checks positive out-of-range index") {
   const std::string source = R"(
 import /std/collections/vector/*
@@ -254,24 +236,6 @@ main() {
   const std::string srcPath = writeTemp("vm_experimental_vector_at_oob.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_vector_at_oob_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
-}
-
-TEST_CASE("vm experimental vector method at checks positive out-of-range index") {
-  const std::string source = R"(
-import /std/collections/vector/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 9i32)}
-  return(values.at(2i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_experimental_vector_method_at_oob.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_vector_method_at_oob_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -524,22 +488,6 @@ main() {
   CHECK(readFile(outPath) == "7\n");
 }
 
-TEST_CASE("vm array unsafe access with u64 index") {
-  const std::string source = R"(
-[return<int> effects(io_out)]
-main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  print_line(at_unsafe(values, 1u64))
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_array_unsafe_u64.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_vm_array_unsafe_u64_out.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "7\n");
-}
-
 TEST_CASE("vm argv access checks bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -722,26 +670,6 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_argv_call_bounds.prime", source);
   const std::string errPath = (testScratchPath("") / "primec_vm_argv_call_bounds_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  checkEntryArgumentStringRestriction(readFile(errPath));
-}
-
-TEST_CASE("rejects vm argv call argument unsafe") {
-  const std::string source = R"(
-[return<void> effects(io_out)]
-echo([string] msg) {
-  print_line(msg)
-}
-
-[return<int> effects(io_out)]
-main([array<string>] args) {
-  echo(at_unsafe(args, 9i32))
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_argv_call_unsafe.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_vm_argv_call_unsafe_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   checkEntryArgumentStringRestriction(readFile(errPath));

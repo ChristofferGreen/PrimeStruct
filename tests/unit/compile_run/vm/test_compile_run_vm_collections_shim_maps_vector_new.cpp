@@ -23,21 +23,6 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector single type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(false)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_single_bool_tail.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
-}
-
 TEST_CASE("runs vm with stdlib collection shim vector pair") {
   const std::string source = R"(
 import /std/collections/*
@@ -68,36 +53,6 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector triple") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(10i32, 20i32, 30i32)}
-  return(plus(plus(/std/collections/vector/at<i32>(values, 2i32), /std/collections/vector/at_unsafe<i32>(values, 0i32)), /std/collections/vector/count<i32>(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_triple.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 43);
-}
-
-TEST_CASE("rejects vm stdlib collection shim vector triple type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, false)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_triple_bool_tail.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
-}
-
 TEST_CASE("runs vm with stdlib collection shim vector quad") {
   const std::string source = R"(
 import /std/collections/*
@@ -111,40 +66,6 @@ main() {
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 19);
-}
-
-TEST_CASE("rejects vm stdlib collection shim vector quad type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, 3i32, false)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad_bool_tail.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
-}
-
-TEST_CASE("rejects vm bare stdlib collection shim map single") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 21i32)}
-  return(plus(/std/collections/map/at<string, i32>(values, "only"raw_utf8), /std/collections/map/count<string, i32>(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_single.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
 }
 
 TEST_CASE("rejects vm bare stdlib collection shim map single bool value conversion") {
@@ -164,27 +85,6 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
-}
-
-TEST_CASE("rejects vm stdlib collection shim map single key type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<i32, i32>] values{mapSingle<i32, i32>("oops"raw_utf8, 4i32)}
-  return(/std/collections/map/count<i32, i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_key_mismatch.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_stdlib_collection_shim_map_single_key_mismatch.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  const std::string error = readFile(errPath);
-  CHECK(error.find("unknown call target: mapSingle") != std::string::npos);
 }
 
 TEST_CASE("rejects vm bare stdlib collection shim map new") {
@@ -637,48 +537,6 @@ main() {
   CHECK(error.find("unknown call target: mapDouble") != std::string::npos);
 }
 
-TEST_CASE("rejects vm bare stdlib collection shim map single standalone string keys") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 21i32)}
-  return(plus(plus(/std/collections/map/at<string, i32>(values, "only"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "only"raw_utf8)),
-      /std/collections/map/count<string, i32>(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_standalone_string_key.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_stdlib_collection_shim_map_single_standalone_string_key.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
-}
-
-TEST_CASE("rejects vm stdlib collection shim map single standalone key type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<i32, i32>] values{mapSingle<i32, i32>("oops"raw_utf8, 4i32)}
-  return(/std/collections/map/count<i32, i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_standalone_key_mismatch.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_stdlib_collection_shim_map_single_standalone_key_mismatch.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  const std::string error = readFile(errPath);
-  CHECK(error.find("unknown call target: mapSingle") != std::string::npos);
-}
-
 TEST_CASE("rejects vm bare stdlib collection shim map pair standalone") {
   const std::string source = R"(
 import /std/collections/*
@@ -761,70 +619,5 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("unknown call target: mapPair") != std::string::npos);
 }
-
-TEST_CASE("rejects vm bare stdlib collection shim map double standalone string keys") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(plus(/std/collections/map/at<string, i32>(values, "right"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "left"raw_utf8)),
-      /std/collections/map/count<string, i32>(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_double_standalone_string_key.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_stdlib_collection_shim_map_double_standalone_string_key.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapDouble") != std::string::npos);
-}
-
-TEST_CASE("rejects vm stdlib collection shim map double standalone key type mismatch") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<i32, i32>] values{mapDouble<i32, i32>(1i32, 2i32, "oops"raw_utf8, 4i32)}
-  return(/std/collections/map/count<i32, i32>(values))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_double_standalone_key_mismatch.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_stdlib_collection_shim_map_double_standalone_key_mismatch.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  const std::string error = readFile(errPath);
-  CHECK(error.find("unknown call target: mapDouble") != std::string::npos);
-}
-
-TEST_CASE("rejects vm bare stdlib collection shim map triple standalone string keys") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{
-    mapTriple<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32)}
-  return(plus(plus(/std/collections/map/at<string, i32>(values, "c"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
-      /std/collections/map/count<string, i32>(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_triple_standalone_string_key.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_stdlib_collection_shim_map_triple_standalone_string_key.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapTriple") != std::string::npos);
-}
-
 
 TEST_SUITE_END();

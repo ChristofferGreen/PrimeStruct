@@ -243,35 +243,6 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
-TEST_CASE("rejects vm canonical vector unsafe method access count shadow") {
-  const std::string source = R"(
-[return<int>]
-/string/count([string] values) {
-  return(91i32)
-}
-
-[return<string>]
-/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
-  return("abc"raw_utf8)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32)}
-  return(values.at_unsafe(0i32).count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("vm_canonical_vector_unsafe_method_access_count_shadow_reject.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_canonical_vector_unsafe_method_access_count_shadow_reject.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 91);
-  CHECK(readFile(errPath).empty());
-}
-
 TEST_CASE("rejects vm slash-method vector access string count fallback") {
   const std::string source = R"(
 [return<int>]
@@ -300,40 +271,6 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
        "primec_vm_slash_method_vector_access_string_count_fallback.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
-}
-
-TEST_CASE("vm keeps slash-method vector access unknown-method diagnostics") {
-  const std::string source = R"(
-[return<int>]
-/string/count([string] values) {
-  return(91i32)
-}
-
-[return<string>]
-/std/collections/vector/at([vector<i32>] values, [i32] index) {
-  return("abc"raw_utf8)
-}
-
-[return<string>]
-/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
-  return("abc"raw_utf8)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32)}
-  return(plus(values./vector/at(0i32).count(),
-              values./std/collections/vector/at_unsafe(0i32).count()))
-}
-)";
-  const std::string srcPath = writeTemp("vm_slash_method_vector_access_primitive_count_diag.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_slash_method_vector_access_primitive_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);

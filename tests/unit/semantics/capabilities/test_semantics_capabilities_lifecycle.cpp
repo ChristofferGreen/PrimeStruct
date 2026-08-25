@@ -35,24 +35,6 @@ use() {
   CHECK(error.empty());
 }
 
-TEST_CASE("gpu_lane transform marks struct definitions") {
-  const std::string source = R"(
-[gpu_lane]
-main() {
-  [i32] value{1i32}
-}
-
-[return<int>]
-use() {
-  [main] item{1i32}
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/use", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("struct transform rejects parameters") {
   const std::string source = R"(
 [struct]
@@ -398,22 +380,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("mut transform does not accept arguments on /thing/Create") != std::string::npos);
-}
-
-TEST_CASE("lifecycle helpers reject non-struct parents") {
-  const std::string source = R"(
-[return<int>]
-thing() {
-  return(1i32)
-}
-
-[return<void>]
-/thing/Create() {
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/thing", error));
-  CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
 }
 
 TEST_CASE("this is not available outside lifecycle helpers") {

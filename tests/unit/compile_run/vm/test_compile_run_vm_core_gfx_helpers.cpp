@@ -4,7 +4,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
 
-
 #if defined(EACCES)
 TEST_CASE("vm maps FileError.why codes") {
   const std::string source =
@@ -431,42 +430,6 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
-TEST_CASE("vm uses stdlib experimental Buffer allocation readback path") {
-  const std::string source = R"(
-import /std/gfx/experimental/*
-
-[effects(gpu_dispatch), return<int>]
-main() {
-  [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
-  [array<i32>] out{data.readback()}
-  [i32] bufferCount{/std/gfx/experimental/Buffer/count(data)}
-  [i32] outputCount{out.count()}
-  return(plus(bufferCount, outputCount))
-}
-)";
-  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_allocation_readback.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 6);
-}
-
-TEST_CASE("vm uses canonical stdlib Buffer allocation readback path") {
-  const std::string source = R"(
-import /std/gfx/*
-
-[effects(gpu_dispatch), return<int>]
-main() {
-  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
-  [array<i32>] out{data.readback()}
-  [i32] bufferCount{/std/gfx/Buffer/count(data)}
-  [i32] outputCount{out.count()}
-  return(plus(bufferCount, outputCount))
-}
-)";
-  const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_allocation_readback.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 6);
-}
-
 TEST_CASE("vm uses stdlib experimental Buffer upload helpers") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -593,6 +556,5 @@ main() {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "EOF\nEOF\n");
 }
-
 
 TEST_SUITE_END();

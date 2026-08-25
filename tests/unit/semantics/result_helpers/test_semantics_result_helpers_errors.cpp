@@ -268,23 +268,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("stdlib ContainerError receiver methods reject unexpected arguments") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<void>]
-main() {
-  [ContainerError] err{containerMissingKey()}
-  [Result<ContainerError>] status{err.status(true)}
-  return()
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /std/collections/ContainerError/status") !=
-        std::string::npos);
-}
-
 TEST_CASE("stdlib ContainerError camelCase constructor helpers reject unexpected arguments") {
   const std::string source = R"(
 import /std/collections/*
@@ -299,21 +282,6 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for /std/collections/ContainerError/missingKey") !=
         std::string::npos);
-}
-
-TEST_CASE("stdlib ContainerError why wrapper rejects non container errors") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<void>]
-main() {
-  [string] why{/ContainerError/why(true)}
-  return()
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /ContainerError/why parameter err") != std::string::npos);
 }
 
 TEST_SUITE_END();

@@ -133,87 +133,6 @@ main() {
   CHECK(runCommand(exePath) == 46);
 }
 
-TEST_CASE("native array alias capacity through same-path helper") {
-  const std::string source = R"(
-[return<int>]
-/array/capacity([vector<i32>] values, [bool] marker) {
-  return(48i32)
-}
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/array/capacity(wrapVector(), true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_array_alias_capacity_same_path_wrapper_vector.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_array_alias_capacity_same_path_wrapper_vector_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
-}
-
-TEST_CASE("native array alias at through same-path helper") {
-  const std::string source = R"(
-[return<int>]
-/array/at([vector<i32>] values, [i32] index, [bool] marker) {
-  return(48i32)
-}
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/array/at(wrapVector(), 1i32, true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_array_alias_at_same_path_wrapper_vector.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_array_alias_at_same_path_wrapper_vector_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
-}
-
-TEST_CASE("native array alias at_unsafe through same-path helper") {
-  const std::string source = R"(
-[return<int>]
-/array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
-  return(50i32)
-}
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/array/at_unsafe(wrapVector(), 1i32, true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_array_alias_at_unsafe_same_path_wrapper_vector.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_array_alias_at_unsafe_same_path_wrapper_vector_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 50);
-}
-
 TEST_CASE("native array alias slash-method helpers through same-path helpers") {
   const std::string source = R"(
 Marker {
@@ -525,88 +444,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("native bare vector at_unsafe through imported stdlib helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 4i32)}
-  return(at_unsafe(values, 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_bare_vector_at_unsafe_imported.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_bare_vector_at_unsafe_imported_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
-}
-
-TEST_CASE("rejects native bare vector at_unsafe without imported helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 4i32)}
-  return(at_unsafe(values, 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_bare_vector_at_unsafe_import_requirement.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_bare_vector_at_unsafe_import_requirement_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
-}
-
-TEST_CASE("rejects native bare vector at_unsafe method without imported helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 4i32)}
-  return(values.at_unsafe(1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_bare_vector_at_unsafe_method_import_requirement.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_bare_vector_at_unsafe_method_import_requirement_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
-}
-
-TEST_CASE("rejects native wrapper temporary vector at_unsafe method without helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(1i32, 4i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(wrapVector().at_unsafe(1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_wrapper_vector_at_unsafe_method_import_requirement.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_wrapper_vector_at_unsafe_method_import_requirement_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") !=
-        std::string::npos);
-}
-
 TEST_CASE("native bare vector count through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -716,37 +553,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects native wrapper vector capacity slash-method chains before receiver typing") {
-  const std::string source = R"(
-namespace i32 {
-  [return<int>]
-  tag([i32] value) {
-    return(plus(value, 1i32))
-  }
-}
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(1i32, 2i32, 3i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(wrapVector()./vector/capacity().tag())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_wrapper_vector_capacity_slash_chain_unknown_method.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_wrapper_vector_capacity_slash_chain_unknown_method_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
-}
-
 TEST_CASE("rejects native local alias slash-method vector capacity on string receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -765,26 +571,6 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /string/capacity") != std::string::npos);
-}
-
-TEST_CASE("rejects native local alias slash-method vector capacity on array receiver") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
-  return(items./vector/capacity())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_local_alias_slash_vector_capacity_array_no_helper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_local_alias_slash_vector_capacity_array_no_helper_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/capacity") != std::string::npos);
 }
 
 TEST_CASE("native stdlib collection shim helpers") {

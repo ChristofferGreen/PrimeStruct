@@ -25,22 +25,6 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("native array access with u64 index") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  return(values[1u64])
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_array_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_native_array_u64_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
-}
-
 TEST_CASE("native array access rejects negative index") {
   const std::string source = R"(
 [return<int>]
@@ -70,22 +54,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_array_unsafe.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_native_array_unsafe_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
-}
-
-TEST_CASE("native array unsafe access with u64 index") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  return(at_unsafe(values, 1u64))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_array_unsafe_u64.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_native_array_unsafe_u64_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -371,31 +339,6 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native array namespaced vector at_unsafe alias") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  [i32] tailValue{/array/at_unsafe(values, 1i32)}
-  return(tailValue)
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_array_namespaced_vector_at_unsafe_alias.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_array_namespaced_vector_at_unsafe_alias_out.txt")
-          .string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_array_namespaced_vector_at_unsafe_alias_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
-}
-
 TEST_CASE("rejects native wrapper array namespaced vector at alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -418,32 +361,6 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
-}
-
-TEST_CASE("rejects native wrapper array namespaced vector at_unsafe alias") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(4i32, 5i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/array/at_unsafe(wrapVector(), 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_wrapper_array_namespaced_vector_at_unsafe_alias.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_wrapper_array_namespaced_vector_at_unsafe_alias_out.txt")
-          .string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_wrapper_array_namespaced_vector_at_unsafe_alias_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native array namespaced vector count builtin alias") {

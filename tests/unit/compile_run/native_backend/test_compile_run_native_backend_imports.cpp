@@ -308,14 +308,6 @@ TEST_CASE("emit-diagnostics reports legacy include alias rejection payload") {
   CHECK(primevmDiagnostics.find("Import error: ") == std::string::npos);
 }
 
-TEST_CASE("single-quoted import expansion") {
-  const std::string libPath = writeTemp("compile_lib_single.prime", "[return<int>]\nhelper(){ return(6i32) }\n");
-  const std::string source = "import<'" + libPath + "'>\n[return<int>]\nmain(){ return(helper()) }\n";
-  const std::string srcPath = writeTemp("compile_include_single.prime", source);
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 6);
-}
-
 TEST_CASE("with duplicate imports ignored") {
   const std::string libPath = writeTemp("compile_lib_dupe.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string source = "import<\"" + libPath + "\">\nimport<\"" + libPath +

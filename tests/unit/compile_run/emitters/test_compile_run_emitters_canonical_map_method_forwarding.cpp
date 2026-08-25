@@ -230,35 +230,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
-TEST_CASE("rejects std-namespaced vector unsafe method alias access receiver fallback without helper in C++ emitter") {
-  const std::string source = R"(
-namespace i32 {
-  [return<int>]
-  tag([i32] value) {
-    return(plus(value, 40i32))
-  }
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values./std/collections/vector/at_unsafe(1i32).tag())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_unsafe_receiver_fallback_reject.prime",
-                source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_std_namespaced_vector_method_alias_access_unsafe_receiver_fallback_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds") {
   const std::string source = R"(
 namespace i32 {
@@ -291,47 +262,6 @@ main() {
       writeTemp("compile_cpp_vector_alias_count_explicit_template_wrapper_canonical_return.prime", source);
   const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_alias_count_explicit_template_wrapper_canonical_return.err")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
-        std::string::npos);
-}
-
-TEST_CASE("C++ emitter keeps canonical diagnostics for explicit-template vector count wrappers") {
-  const std::string source = R"(
-namespace i32 {
-  [return<int>]
-  tag([i32] value, [bool] marker) {
-    return(value)
-  }
-}
-
-/vector/count([vector<i32>] values, [bool] marker) {
-}
-
-[return<int>]
-/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
-  return(41i32)
-}
-
-[return<auto>]
-project([vector<i32>] values) {
-  return(/vector/count<i32>(values, true))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(project(values).tag(1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_count_explicit_template_wrapper_canonical_diagnostic.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_vector_alias_count_explicit_template_wrapper_canonical_diagnostic.err")
                                   .string();
 
   const std::string compileCmd =

@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-
 TEST_SUITE_BEGIN("primestruct.semantics.imports");
 
 TEST_CASE("import brings immediate children into root") {
@@ -23,7 +22,6 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-
 
 TEST_CASE("import resolves definitions declared before import") {
   const std::string source = R"(
@@ -100,39 +98,9 @@ main() {
                    "use /std/collections/vector/*") != std::string::npos);
 }
 
-TEST_CASE("direct experimental vector exact import is rejected") {
-  const std::string source = R"(
-import /std/collections/experimental_vector/vector
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("direct import of /std/collections/experimental_vector/* is not supported; "
-                   "use /std/collections/vector/*") != std::string::npos);
-}
-
 TEST_CASE("direct experimental map wildcard import is rejected") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("direct import of /std/collections/experimental_map/* is not supported; "
-                   "use /std/collections/map/*") != std::string::npos);
-}
-
-TEST_CASE("direct experimental map exact import is rejected") {
-  const std::string source = R"(
-import /std/collections/experimental_map/map
 
 [return<int>]
 main() {
@@ -715,19 +683,6 @@ main() {
 TEST_CASE("import rejects unknown wildcard path") {
   const std::string source = R"(
 import /missing/*
-[return<int>]
-main() {
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown import path: /missing/*") != std::string::npos);
-}
-
-TEST_CASE("import rejects unknown single-segment path") {
-  const std::string source = R"(
-import /missing
 [return<int>]
 main() {
   return(1i32)

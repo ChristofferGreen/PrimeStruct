@@ -2089,28 +2089,6 @@ main() {
   CHECK(readFile(outPath).find("soa_vector") == std::string::npos);
 }
 
-TEST_CASE("dump ast_semantic alias works") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_dump_ast_semantic_alias.prime", source);
-  const std::string hyphenOut =
-      (testScratchPath("") / "primec_dump_ast_semantic_hyphen.txt").string();
-  const std::string underscoreOut =
-      (testScratchPath("") / "primec_dump_ast_semantic_underscore.txt").string();
-
-  const std::string hyphenCmd =
-      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(hyphenOut);
-  const std::string underscoreCmd =
-      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast_semantic > " + quoteShellArg(underscoreOut);
-  CHECK(runCommand(hyphenCmd) == 0);
-  CHECK(runCommand(underscoreCmd) == 0);
-  CHECK(readFile(hyphenOut) == readFile(underscoreOut));
-}
-
 TEST_CASE("dump type_graph alias works and prints graph output") {
   const std::string source = R"(
 [return<auto>]

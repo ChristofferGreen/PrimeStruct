@@ -787,26 +787,6 @@ TEST_CASE("resolves versioned import with single quotes") {
   CHECK(source.find("INCLUDE_SINGLE_QUOTE_120") == std::string::npos);
 }
 
-TEST_CASE("rejects versioned legacy include alias") {
-  const std::string srcPath = writeTemp("main_legacy_version_alias.prime", "include<'/lib.prime', version='1.2'>\n");
-
-  std::string source;
-  std::string error;
-  primec::ImportResolver resolver;
-  CHECK_FALSE(resolver.expandImports(srcPath, source, error));
-  CHECK(error == "legacy include<...> is no longer supported; use import<...>");
-}
-
-TEST_CASE("rejects version-first legacy include alias") {
-  const std::string srcPath = writeTemp("main_legacy_version_first_alias.prime", "include<version='1.2', '/lib.prime'>\n");
-
-  std::string source;
-  std::string error;
-  primec::ImportResolver resolver;
-  CHECK_FALSE(resolver.expandImports(srcPath, source, error));
-  CHECK(error == "legacy include<...> is no longer supported; use import<...>");
-}
-
 TEST_CASE("ignores duplicate imports") {
   const std::string marker = "LIB_B_MARKER";
   const std::string libPath = writeTemp("lib_b.prime",

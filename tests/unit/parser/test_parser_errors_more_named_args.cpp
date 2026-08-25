@@ -38,31 +38,6 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("named args for pointer helpers fail in parser") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] value{1i32}
-  return(dereference([ptr] location(value)))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
-}
-
-TEST_CASE("named args for count fail in parser") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(count([values] array<i32>(1i32, 2i32)))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
-}
-
 TEST_CASE("named args for pathspace builtins fail in parser") {
   const std::string source = R"(
 [return<void> effects(pathspace_notify, pathspace_insert, pathspace_take)]
@@ -90,30 +65,6 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("named argument must be a simple identifier") != std::string::npos);
-}
-
-TEST_CASE("named args for array access fail in parser") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(at([items] array<i32>(1i32, 2i32), [index] 1i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
-}
-
-TEST_CASE("named args for unsafe array access fail in parser") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(at_unsafe([items] array<i32>(1i32, 2i32), [index] 1i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("execution positional argument after named parses") {

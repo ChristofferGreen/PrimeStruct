@@ -180,74 +180,6 @@ main() {
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
-TEST_CASE("primec collect-diagnostics keeps user array arg-shape diagnostics") {
-  const std::string source = R"(
-[return<i32>]
-array([i32] value) {
-  return(value)
-}
-[return<i32>]
-bad() {
-  array(value=1i32, value=2i32)
-  array()
-  return(0i32)
-}
-[return<i32>]
-main() {
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("primec_collect_diagnostics_semantic_intra_definition_array_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_collect_diagnostics_semantic_intra_definition_array_shadow_err.json")
-          .string();
-
-  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-}
-
-TEST_CASE("primevm collect-diagnostics keeps user array arg-shape diagnostics") {
-  const std::string source = R"(
-[return<i32>]
-array([i32] value) {
-  return(value)
-}
-[return<i32>]
-bad() {
-  array(value=1i32, value=2i32)
-  array()
-  return(0i32)
-}
-[return<i32>]
-main() {
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_array_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primevm_collect_diagnostics_semantic_intra_definition_array_shadow_err.json")
-          .string();
-
-  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-}
-
 TEST_CASE("primec collect-diagnostics keeps user map arg-shape diagnostics") {
   const std::string source = R"(
 [return<i32>]
@@ -418,111 +350,6 @@ main() {
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
-TEST_CASE("primec collect-diagnostics keeps user wrapper unsafe arg-type diagnostics in definition scope") {
-  const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32))
-}
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(3i32, 4i32))
-}
-
-[return<i32>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(key)
-}
-
-[effects(heap_alloc), return<i32>]
-/vector/at_unsafe([vector<i32>] values, [i32] index) {
-  return(index)
-}
-
-[return<i32>]
-bad() {
-  at_unsafe(wrapMap(), true)
-  wrapVector().at_unsafe(true)
-  return(0i32)
-}
-
-[return<i32>]
-main() {
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow_err.json")
-          .string();
-
-  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at_unsafe\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-}
-
-TEST_CASE("primevm collect-diagnostics keeps user wrapper unsafe arg-type diagnostics in definition scope") {
-  const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32))
-}
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(3i32, 4i32))
-}
-
-[return<i32>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(key)
-}
-
-[effects(heap_alloc), return<i32>]
-/vector/at_unsafe([vector<i32>] values, [i32] index) {
-  return(index)
-}
-
-[return<i32>]
-bad() {
-  at_unsafe(wrapMap(), true)
-  wrapVector().at_unsafe(true)
-  return(0i32)
-}
-
-[return<i32>]
-main() {
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow.prime",
-                source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow_err.json")
-          .string();
-
-  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at_unsafe\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-}
-
 TEST_CASE("primec collect-diagnostics keeps user wrapper at arg-shape diagnostics in definition scope") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -624,6 +451,5 @@ main() {
   CHECK(diagnostics.find("\"message\":\"unknown call target: /std/collections/map/at\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
-
 
 TEST_SUITE_END();

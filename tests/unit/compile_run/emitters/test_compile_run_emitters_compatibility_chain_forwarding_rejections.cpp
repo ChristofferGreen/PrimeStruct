@@ -77,42 +77,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects map unsafe compatibility call struct method chain primitive argument diagnostics in C++ emitter") {
-  const std::string source = R"(
-Marker {
-  [i32] value
-}
-
-[return<Marker>]
-/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(Marker(key))
-}
-
-[return<int>]
-/i32/tag([i32] self, [bool] marker) {
-  return(self)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
-  return(/map/at_unsafe(values, 2i32).tag(1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") !=
-        std::string::npos);
-}
-
 TEST_CASE("rejects vector alias access auto wrapper canonical struct-return forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
@@ -354,49 +318,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter rejects vector unsafe method alias access struct method forwarding") {
-  const std::string source = R"(
-Marker {
-  [i32] value
-}
-
-[return<Marker>]
-/vector/at_unsafe([vector<i32>] values, [i32] index) {
-  return(Marker(index))
-}
-
-[return<int>]
-/Marker/tag([Marker] self) {
-  return(self.value)
-}
-
-[return<auto>]
-project([vector<i32>] values) {
-  return(values./vector/at_unsafe(2i32).tag())
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(project(values))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding.prime",
-                source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string error = readFile(errPath);
-  CHECK((error.find("field access requires struct receiver") != std::string::npos ||
-         error.find("argument type mismatch for /Marker/tag parameter self") != std::string::npos));
-}
-
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
@@ -424,70 +345,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown method: /vector/at") != std::string::npos);
-}
-
-TEST_CASE("accepts vector unsafe method alias access field expression with struct receiver in C++ emitter") {
-  const std::string source = R"(
-Marker {
-  [i32] value
-}
-
-[return<Marker>]
-/vector/at_unsafe([vector<i32>] values, [i32] index) {
-  return(Marker(index))
-}
-
-[return<auto>]
-project([vector<i32>] values) {
-  return(values./vector/at_unsafe(2i32).value)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(project(values))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_method_alias_access_unsafe_field_expression_same_path_struct_receiver_diag.prime",
-                source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("rejects vector unsafe method alias access receiver fallback without helper in C++ emitter") {
-  const std::string source = R"(
-namespace i32 {
-  [return<int>]
-  tag([i32] value) {
-    return(plus(value, 40i32))
-  }
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values./vector/at_unsafe(1i32).tag())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_method_alias_access_unsafe_receiver_fallback_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_unsafe_receiver_fallback_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("runs vector method alias struct-return precedence in C++ emitter") {
@@ -612,6 +469,5 @@ main() {
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
-
 
 TEST_SUITE_END();

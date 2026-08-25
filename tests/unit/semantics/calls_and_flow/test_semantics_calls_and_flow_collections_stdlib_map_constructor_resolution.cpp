@@ -476,35 +476,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper map helpers validate experimental map value receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/map/*
-
-[effects(io_err)]
-unexpectedWrapperExperimentalMapValueError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapValueError>]
-main() {
-  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
-  [i32 mut] total{plus(/std/collections/map/count(values), found)}
-  assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
-  assign(total, plus(total, /std/collections/map/at_unsafe(values, "right"raw_utf8)))
-  if(/std/collections/map/contains(values, "left"raw_utf8),
-     then() { assign(total, plus(total, 1i32)) },
-     else() { })
-  return(Result.ok(total))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("canonical stdlib map helpers validate constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
@@ -550,35 +521,6 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
   CHECK(error.find("unknown call target: /std/collections/mapPair") != std::string::npos);
-}
-
-TEST_CASE("stdlib namespaced map constructor validates explicit experimental map binding helpers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/map/*
-
-[effects(io_err)]
-unexpectedCanonicalExperimentalMapConstructorError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapConstructorError>]
-main() {
-  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
-  [i32 mut] total{plus(/std/collections/map/count(values), found)}
-  assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
-  assign(total, plus(total, /std/collections/map/at_unsafe(values, "right"raw_utf8)))
-  if(/std/collections/map/contains(values, "left"raw_utf8),
-     then() { assign(total, plus(total, 1i32)) },
-     else() { })
-  return(Result.ok(total))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
 }
 
 TEST_CASE("explicit stdlib map constructor validates mixed values on experimental map bindings") {

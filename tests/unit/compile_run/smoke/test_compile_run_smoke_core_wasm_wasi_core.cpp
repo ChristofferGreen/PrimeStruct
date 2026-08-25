@@ -350,35 +350,4 @@ main() {
   CHECK(readFile(compileErrPath).find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi invalid ppm write requires heap_alloc for vector literal") {
-  const std::filesystem::path tempRoot =
-      testScratchPath("") / "primec_wasm_ppm_write_invalid_runtime";
-  std::error_code ec;
-  std::filesystem::remove_all(tempRoot, ec);
-  std::filesystem::create_directories(tempRoot, ec);
-  REQUIRE(!ec);
-
-  const std::string source = R"(
-import /std/image/*
-import /std/collections/*
-
-[effects(io_out, file_write), return<int>]
-main() {
-  [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32)}
-  [Result<ImageError>] status{/std/image/ppm/write("output.ppm"utf8, 2i32, 1i32, pixels)}
-  print_line(Result.why(status))
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_emit_wasm_ppm_write_invalid.prime", source);
-  const std::string wasmPath = (tempRoot / "ppm_write_invalid.wasm").string();
-  const std::string compileErrPath = (tempRoot / "ppm_write_invalid_compile_err.txt").string();
-  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
-                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 2);
-  CHECK(!std::filesystem::exists(wasmPath));
-  CHECK(readFile(compileErrPath).find("collection literal requires heap_alloc effect") != std::string::npos);
-}
-
-
 TEST_SUITE_END();

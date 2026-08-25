@@ -75,27 +75,6 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
-TEST_CASE("native argv error output u64 index") {
-  const std::string source = R"(
-[return<int> effects(io_err)]
-main([array<string>] args) {
-  print_error(args[1u64])
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_args_error_u64.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_args_error_u64_exe").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_args_error_u64_err.txt").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha 2> " + errPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(errPath) == "alpha");
-}
-
 TEST_CASE("native argv unsafe error output") {
   const std::string source = R"(
 [return<int> effects(io_err)]

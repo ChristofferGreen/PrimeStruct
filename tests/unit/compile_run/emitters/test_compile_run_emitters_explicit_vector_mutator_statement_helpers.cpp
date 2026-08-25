@@ -90,32 +90,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects alias vector mutator statements with canonical-only helper before emission") {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  /vector/push(values, 3i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_alias_vector_mutator_canonical_only_same_path_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_alias_vector_mutator_canonical_only_same_path_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects alias reordered vector mutator statements with canonical-only helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
@@ -166,33 +140,6 @@ main() {
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
-}
-
-TEST_CASE("C++ emitter rejects canonical vector mutator statements with alias-only helper before emission") {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/vector/push([vector<i32> mut] values, [i32] value) {
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  /std/collections/vector/push(values, 3i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_vector_mutator_alias_only_same_path_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_vector_mutator_alias_only_same_path_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
-        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects canonical reordered vector mutator statements with alias-only helper before emission") {

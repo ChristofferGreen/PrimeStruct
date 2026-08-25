@@ -4,7 +4,6 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.effects");
 
-
 TEST_CASE("reflection transforms validate on struct definitions") {
   const std::string source = R"(
 [struct reflect generate(Equal, DebugPrint)]
@@ -538,28 +537,5 @@ main() {
   REQUIRE(returnExpr.kind == primec::Expr::Kind::BoolLiteral);
   CHECK_FALSE(returnExpr.boolValue);
 }
-
-TEST_CASE("generate NotEqual rejects existing helper collision") {
-  const std::string source = R"(
-[struct reflect generate(NotEqual)]
-Pair() {
-  [i32] x{1i32}
-}
-
-[return<bool>]
-/Pair/NotEqual([Pair] left, [Pair] right) {
-  return(false)
-}
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("generated reflection helper already exists: /Pair/NotEqual") != std::string::npos);
-}
-
 
 TEST_SUITE_END();

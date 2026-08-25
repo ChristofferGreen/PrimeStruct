@@ -435,94 +435,6 @@ execute_repeat(vector(value=1i32, value=2i32), vector())
   CHECK(semanticCount == 1);
 }
 
-TEST_CASE("primec collect-diagnostics keeps execution array arg-shape diagnostics") {
-  const std::string source = R"(
-[return<i32>]
-array([i32] value) {
-  return(value)
-}
-
-[return<i32>]
-main() {
-  return(0i32)
-}
-
-[return<void>]
-execute_repeat([i32] a, [i32] b) {
-  return()
-}
-
-execute_repeat(array(value=1i32, value=2i32), array())
-)";
-  const std::string srcPath =
-      writeTemp("primec_collect_diagnostics_semantic_intra_execution_array_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_collect_diagnostics_semantic_intra_execution_array_shadow_err.json")
-          .string();
-
-  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 1);
-}
-
-TEST_CASE("primevm collect-diagnostics keeps execution array arg-shape diagnostics") {
-  const std::string source = R"(
-[return<i32>]
-array([i32] value) {
-  return(value)
-}
-
-[return<i32>]
-main() {
-  return(0i32)
-}
-
-[return<void>]
-execute_repeat([i32] a, [i32] b) {
-  return()
-}
-
-execute_repeat(array(value=1i32, value=2i32), array())
-)";
-  const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_semantic_intra_execution_array_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primevm_collect_diagnostics_semantic_intra_execution_array_shadow_err.json")
-          .string();
-
-  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 1);
-}
-
 TEST_CASE("primec collect-diagnostics keeps execution wrapper at_unsafe arg-shape diagnostics") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -581,6 +493,5 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
   }
   CHECK(semanticCount == 1);
 }
-
 
 TEST_SUITE_END();

@@ -2670,42 +2670,6 @@ Particle() {
   CHECK(error == "unknown method: /std/collections/soa/field_view/x");
 }
 
-TEST_CASE("semantics rejects soa field-view direct-call index shape before lowerer") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<void>]
-/use([soa<Particle>] values) {
-  values.x(0i32)
-}
-)";
-  primec::Program program;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "unknown method: /std/collections/soa/field_view/x");
-}
-
-TEST_CASE("semantics rejects soa field-view call-form index shape before lowerer") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<void>]
-/use([soa<Particle>] values) {
-  x(values, 0i32)
-}
-)";
-  primec::Program program;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "unknown method: /std/collections/soa/field_view/x");
-}
-
 TEST_CASE("semantics rejects soa get method named args before lowerer") {
   const std::string source = R"(
 Particle() {
@@ -2715,24 +2679,6 @@ Particle() {
 [return<void>]
 /use([soa<Particle>] values) {
   values.get([index] 0i32)
-}
-)";
-  primec::Program program;
-  primec::SemanticProgram semanticProgram;
-  std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "named arguments not supported for builtin calls");
-}
-
-TEST_CASE("semantics rejects soa ref method named args before lowerer") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<void>]
-/use([soa<Particle>] values) {
-  values.ref([index] 0i32)
 }
 )";
   primec::Program program;
@@ -3008,34 +2954,6 @@ TEST_CASE("ir lowerer entry setup uses native effects surface when requested") {
                                                      entryCapabilityMask,
                                                      error));
   CHECK(error == "native backend does not support effect: unsupported_effect on /main");
-}
-
-TEST_CASE("ir lowerer entry setup uses gpu effects surface when requested") {
-  primec::Program program;
-  primec::Definition entryDef;
-  entryDef.fullPath = "/main";
-
-  primec::Transform badEffects;
-  badEffects.name = "effects";
-  badEffects.arguments = {"unsupported_effect"};
-  entryDef.transforms.push_back(badEffects);
-  program.definitions.push_back(entryDef);
-
-  const primec::Definition *entryDefOut = nullptr;
-  uint64_t entryEffectMask = 0;
-  uint64_t entryCapabilityMask = 0;
-  std::string error;
-  CHECK_FALSE(primec::ir_lowerer::runLowerEntrySetup(program,
-                                                     nullptr,
-                                                     "/main",
-                                                     {},
-                                                     {},
-                                                     primec::IrValidationTarget::Glsl,
-                                                     entryDefOut,
-                                                     entryEffectMask,
-                                                     entryCapabilityMask,
-                                                     error));
-  CHECK(error == "gpu backend does not support effect: unsupported_effect on /main");
 }
 
 TEST_CASE("ir lowerer effects unit keeps nested expression effect checks syntax owned") {

@@ -1108,41 +1108,4 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("vector method count rejects stdlib /std/collections/vector/count alias-only helper") {
-  const std::string source = R"(
-[return<int>]
-/std/collections/vector/count<T>([vector<T>] values) {
-  return(33i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.count())
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("vector method capacity rejects stdlib /std/collections/vector/capacity alias-only helper") {
-  const std::string source = R"(
-[return<int>]
-/std/collections/vector/capacity<T>([vector<T>] values) {
-  return(33i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.capacity())
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-
 TEST_SUITE_END();

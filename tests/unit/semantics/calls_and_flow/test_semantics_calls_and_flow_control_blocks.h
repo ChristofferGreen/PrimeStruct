@@ -93,21 +93,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("block expression with parens validates") {
-  const std::string source = R"(
-[return<bool>]
-main() {
-  return(block() {
-    [mut] value{"hello"utf8}
-    equal(value, "hello"utf8)
-  })
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("block expression allows return value") {
   const std::string source = R"(
 [return<int>]

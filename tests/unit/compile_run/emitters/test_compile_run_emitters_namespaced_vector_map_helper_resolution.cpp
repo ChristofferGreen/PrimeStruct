@@ -436,28 +436,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects canonical direct map access without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(plus(/std/collections/map/at(values, 1i32),
-              /std/collections/map/at_unsafe(values, 1i32)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_direct_map_access_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_deleted_stub_exe.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects direct builtin contains on canonical map access before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -480,28 +458,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
-TEST_CASE("rejects direct builtin contains on canonical map access without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, map<i32, i32>>] values{map<i32, map<i32, i32>>()}
-  return(plus(contains(/std/collections/map/at(values, 1i32), 2i32),
-              contains(/std/collections/map/at_unsafe(values, 2i32), 3i32)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_direct_map_access_contains_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_contains_deleted_stub.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects wrapper-returned map access contains receivers before deleted stubs") {
   const std::string source = R"(
 [return</std/collections/map<i32, map<i32, i32>>>]
@@ -518,29 +474,6 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_repin.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
-}
-
-TEST_CASE("rejects wrapper-returned slash-method map access contains without helper in C++ emitter") {
-  const std::string source = R"(
-[return</std/collections/map<i32, map<i32, i32>>>]
-wrapMap() {
-  return(map<i32, map<i32, i32>>())
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(plus(contains(wrapMap()./std/collections/map/at(1i32), 2i32),
-              contains(wrapMap()./std/collections/map/at_unsafe(2i32), 3i32)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe_repin.err").string();
 
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
