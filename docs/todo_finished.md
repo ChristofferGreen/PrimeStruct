@@ -31421,3 +31421,59 @@ real answer.
     assertions; the file's full doctest suite
     (`primestruct.compile.run.emitters.cpp`): 528/528 test cases passed,
     2045/2045 assertions.
+
+- [x] TODO-5261: Strengthen tranche 2 of rc==2-only tests, incl. one fixed exit-code-as-value false rejection
+  - owner: ai
+  - created_at: 2026-08-25
+  - finished_at: 2026-08-25
+  - phase: Test suite quality improvement
+  - parallel_track: strengthen-weak-tests-pilot
+  - depends_on: (none)
+  - scope: Second tranche of the TODO-5260 pattern, this time in
+    `tests/unit/compile_run/emitters/test_compile_run_emitters_canonical_map_helper_calls.cpp`.
+    Two straightforward: "rejects map unnamespaced contains through
+    compatibility helper when canonical helper is absent in C++ emitter"
+    and "rejects map unnamespaced tryAt through compatibility helper in
+    C++ emitter without on_error" both only checked
+    `readFile(errPath).empty() == false`, no text match - strengthened to
+    the real observed "unknown call target: /std/collections/map/..."
+    diagnostic for each. The third, "canonical direct map tryAt struct
+    method chain in C++ emitter", turned out to be a genuinely misleading
+    test once investigated: it asserted `CHECK(runCommand(...) == 2)`
+    plus empty combined stdout/stderr, reading as "expects a silent
+    compile rejection" - but `--emit=vm` via `primec` actually runs the
+    compiled program, and there is no compile error at all here; exit
+    code 2 was the program's own computed return value
+    (`CanonicalMarker(key).tag()` with `key=2i32`), coincidentally equal
+    to this test suite's compile-error exit code, confirmed by changing
+    the fixture's key to 99 and observing exit code 99 instead.
+  - implementation_notes: For the two straightforward cases, same pattern
+    as TODO-5260 - observed the real diagnostic by compiling each fixture
+    directly and reading stderr. For the misleading third case, changed
+    the fixture's `key` argument from `2i32` to `51i32` (a value that
+    cannot be confused with this codebase's compile-error exit codes 2/3
+    or success 0, and differs from what the non-canonical alias override
+    would compute, `key + 40 = 91`), changed the assertion from `== 2`
+    to `== 51`, and added an inline comment explaining the
+    exit-code-as-return-value mechanism so a future reader doesn't
+    reintroduce the same misreading.
+  - acceptance:
+    - All 3 targeted TEST_CASEs' assertions are backed by actually-observed
+      compiler behavior on their exact fixtures.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stopped after this file's 3 targeted tests were
+    strengthened and verified.
+  - notes: The discovery in the third test is a real instance of the
+    "misleading test" defect pattern raised earlier in this session (name/
+    behavior mismatch) - it surfaced as a side effect of strengthening
+    rather than a dedicated audit for that pattern, which was never run
+    at full-suite scale. If further tranches turn up more instances of
+    "exit code doubles as both an error code and a valid return value,"
+    that's worth flagging as a design smell in the test helpers
+    (`runCommand`'s int-only return makes this ambiguity easy to
+    introduce) rather than just fixing one test at a time.
+    Verification: `cmake --build --target PrimeStruct_compile_run_tests`
+    clean; the 3 targeted tests individually: 3/3 passed, 12/12
+    assertions; the file's full doctest suite
+    (`primestruct.compile.run.emitters.cpp`): 528/528 test cases passed,
+    2045/2045 assertions (same file/suite as TODO-5260, run together).

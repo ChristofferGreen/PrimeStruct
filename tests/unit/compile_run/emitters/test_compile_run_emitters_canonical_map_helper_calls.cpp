@@ -322,7 +322,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(!readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") !=
+        std::string::npos);
 }
 
 TEST_CASE("map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter") {
@@ -417,7 +418,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(!readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/tryAt") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects map unnamespaced tryAt preferring canonical helper over compatibility alias in C++ emitter without on_error") {
@@ -698,7 +700,7 @@ AliasMarker {
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
-  return(/std/collections/map/tryAt(values, 2i32).tag())
+  return(/std/collections/map/tryAt(values, 51i32).tag())
 }
 )";
   const std::string srcPath =
@@ -709,7 +711,14 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
+  // This compiles and RUNS successfully (there is no compile error here) -
+  // the process exit code is the program's own computed return value, not
+  // a compiler diagnostic code. The canonical `/std/collections/map/tryAt`
+  // override wins over the compatibility-alias `/map/tryAt` override, so
+  // `.tag()` returns `key` (51) via CanonicalMarker, not `key + 40` (91)
+  // via AliasMarker - 51 was chosen specifically so it can't be confused
+  // with this test binary's compile-error exit codes (2, 3) or success (0).
+  CHECK(runCommand(compileCmd) == 51);
   CHECK(readFile(outPath).empty());
 }
 
