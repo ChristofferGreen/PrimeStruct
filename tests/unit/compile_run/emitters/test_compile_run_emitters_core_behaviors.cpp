@@ -823,9 +823,14 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda.prime", source);
   const std::string outPath = (testScratchPath("") / "primec_lambda.cpp").string();
+  const std::string errPath = (testScratchPath("") / "primec_lambda.err").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product local-auto fact: /main -> local holder") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter preserves explicit lambda captures") {
@@ -840,9 +845,14 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_explicit.prime", source);
   const std::string outPath = (testScratchPath("") / "primec_lambda_explicit.cpp").string();
+  const std::string errPath = (testScratchPath("") / "primec_lambda_explicit.err").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product local-auto fact: /main -> local holder") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

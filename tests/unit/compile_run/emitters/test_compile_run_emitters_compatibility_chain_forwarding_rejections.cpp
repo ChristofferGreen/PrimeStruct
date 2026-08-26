@@ -205,8 +205,7 @@ main() {
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK((error.find("field access requires struct receiver") != std::string::npos ||
-         error.find("argument type mismatch for /Marker/tag parameter self") != std::string::npos));
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter self") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access canonical-only helper routing with array receiver diagnostics in C++ emitter") {
@@ -302,7 +301,7 @@ Marker {
 
 [return<auto>]
 project([vector<i32>] values) {
-  return(values./vector/at(2i32).value)
+  return(values./vector/at(58i32).value)
 }
 
 [effects(heap_alloc), return<int>]
@@ -315,7 +314,10 @@ main() {
       writeTemp("compile_cpp_vector_method_alias_access_field_expression_same_path_struct_receiver_diag.prime",
                 source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  // No compile error here - this compiles and runs; the exit code is the
+  // program's own computed return value (Marker(58).value == 58), chosen
+  // to avoid colliding with this suite's compile-error exit codes (2, 3).
+  CHECK(runCommand(compileCmd) == 58);
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
@@ -370,13 +372,17 @@ CanonicalMarker {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.at(2i32).value)
+  return(values.at(63i32).value)
 }
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_struct_field_alias_precedence.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  // No compile error - canonical /std/collections/vector/at wins over the
+  // alias override, so the exit code is CanonicalMarker(63).value == 63,
+  // not AliasMarker(63 + 40).value == 103; 63 avoids colliding with this
+  // suite's compile-error exit codes (2, 3).
+  CHECK(runCommand(compileCmd) == 63);
 }
 
 TEST_CASE("rejects canonical vector method access struct forwarding in C++ emitter") {
@@ -427,13 +433,15 @@ Marker {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.at_unsafe(2i32).value)
+  return(values.at_unsafe(71i32).value)
 }
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_unsafe_method_field_forwarding.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  // No compile error - exit code is the computed Marker(71).value == 71,
+  // chosen to avoid colliding with this suite's compile-error exit codes.
+  CHECK(runCommand(compileCmd) == 71);
 }
 
 TEST_CASE("runs canonical map slash-method struct method chain forwarding in C++ emitter") {
@@ -454,7 +462,7 @@ Marker {
 
 [return<auto>]
 project([map<i32, i32>] values) {
-  return(values./std/collections/map/at(2i32).tag())
+  return(values./std/collections/map/at(84i32).tag())
 }
 
 [effects(heap_alloc), return<int>]
@@ -467,7 +475,9 @@ main() {
       writeTemp("compile_cpp_map_method_alias_access_struct_method_chain_canonical_forwarding.prime",
                 source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  // No compile error - exit code is the computed Marker(84).tag() == 84,
+  // chosen to avoid colliding with this suite's compile-error exit codes.
+  CHECK(runCommand(compileCmd) == 84);
 }
 
 TEST_SUITE_END();

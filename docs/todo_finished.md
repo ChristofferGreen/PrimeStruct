@@ -31477,3 +31477,129 @@ real answer.
     assertions; the file's full doctest suite
     (`primestruct.compile.run.emitters.cpp`): 528/528 test cases passed,
     2045/2045 assertions (same file/suite as TODO-5260, run together).
+
+- [x] TODO-5262: Strengthen tranche 3 of rc==2-only tests - fixed 4 exit-code-as-value false rejections
+  - owner: ai
+  - created_at: 2026-08-25
+  - finished_at: 2026-08-25
+  - phase: Test suite quality improvement
+  - parallel_track: strengthen-weak-tests-pilot
+  - depends_on: (none)
+  - scope: Third tranche of the TODO-5260/5261 pattern, this time in
+    `tests/unit/compile_run/emitters/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp`.
+    All 4 targeted TEST_CASEs (audit-flagged as "only checks rc==2, no
+    value or diagnostic content verified") turned out to be instances of
+    the SAME defect TODO-5261 found once: `--emit=vm` runs the compiled
+    program, there is no compile error, and the exit code is the
+    program's own computed return value - which happened, in every one
+    of these 4 fixtures, to equal 2 by construction (each builds a
+    `Marker`/`CanonicalMarker` whose `.value`/`.tag()` echoes back the
+    literal `2i32` index/key the test author picked as an arbitrary
+    "small number"). None of the 4 test names actually claim a rejection
+    (3 say "runs...", 1 says "runs canonical..."), so this is a case
+    where the test author's own chosen sample value silently degenerated
+    the check into "exit code == 2", indistinguishable from a rejection
+    check to a reader skimming `CHECK(runCommand(compileCmd) == 2)` - a
+    much higher hit rate (4/4) than TODO-5260/5261's mix, all from one
+    file.
+  - implementation_notes: For each, confirmed the real mechanism by
+    changing the fixture's index/key literal and observing the exit code
+    track it 1:1, then picked a final literal in the 50-99 range (safely
+    away from this codebase's compile-error exit codes 2/3 and from 0)
+    and updated the `CHECK` to the corresponding computed value, with an
+    inline comment noting there is no compile error and explaining the
+    exit-code-as-return-value mechanism.
+  - acceptance:
+    - All 4 targeted TEST_CASEs' assertions are backed by actually-observed
+      compiler behavior (confirmed by varying the input and re-observing).
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stopped after this file's 4 targeted tests were
+    strengthened and verified.
+  - notes: Given this tranche's 4/4 hit rate for the exact same defect
+    class TODO-5261 found once, this specific sub-pattern - a
+    `CHECK(runCommand(...) == 2)` with no accompanying diagnostic-text or
+    output-emptiness assertion, in a fixture that builds a struct whose
+    field/method echoes back a small literal - looks like it may be
+    common enough across the remaining ~4,000-test population to be
+    worth a dedicated, narrower grep-and-verify pass (search for
+    `== 2)` or `== 0)` assertions with no `errPath`/diagnostic check
+    nearby, cross-referenced against fixtures using a literal `2i32`)
+    rather than continuing file-by-file at random.
+    Verification: `cmake --build --target PrimeStruct_compile_run_tests`
+    clean; the file's full doctest suite
+    (`primestruct.compile.run.emitters.cpp`): 528/528 test cases passed,
+    2045/2045 assertions.
+
+- [x] TODO-5263: Strengthen tranche 4 of rc==2-only tests across 10 emitter files (19 tests, 3 more false rejections)
+  - owner: ai
+  - created_at: 2026-08-25
+  - finished_at: 2026-08-25
+  - phase: Test suite quality improvement
+  - parallel_track: strengthen-weak-tests-pilot
+  - depends_on: (none)
+  - scope: Fourth tranche of the TODO-5260/5261/5262 pattern. Grepped
+    `tests/unit/compile_run/emitters/*.cpp` for
+    `CHECK(runCommand(compileCmd) == 2);` not immediately followed by a
+    diagnostic-text/errPath check, which surfaced 27 candidates across
+    ~19 files. About half turned out to be false positives from the grep
+    heuristic (already had a real check slightly further down, or used a
+    local `checkFileContains`/JSON-diagnostics helper the grep missed) -
+    left untouched. Of the genuine 19:
+    - 16 got a real diagnostic-text assertion added, backed by actually
+      compiling the fixture and observing stderr (files: matrix_quaternion_support.cpp
+      x2, core_behaviors.cpp x2, vector_capacity_receiver_resolution.cpp
+      x1, local_vector_count_receiver_resolution.cpp x3,
+      map_access_and_collection_rewrites.cpp x1,
+      namespaced_vector_map_helper_resolution.cpp x3,
+      namespaced_vector_push_and_count_helpers.cpp x1,
+      lambda_mutator_resolution.cpp x2, plus one existing weak
+      disjunctive OR-check in compatibility_chain_forwarding_rejections.cpp
+      tightened to the single real branch).
+    - 3 more turned out to be the same exit-code-as-value false-rejection
+      pattern TODO-5261/5262 found: `map_access_and_collection_rewrites.cpp`'s
+      "C++ emitter access rewrite keeps known collection receiver leading
+      names" (real vector element value, was coincidentally 2),
+      `namespaced_vector_push_and_count_helpers.cpp`'s "C++ emitter
+      mutator rewrite keeps known vector receiver leading names" (real
+      post-push vector count, was coincidentally 2), and
+      `string_receiver_vector_access.cpp`'s "C++ emitter keeps canonical
+      vector unsafe access field expression forwarding" (real struct
+      field value, was coincidentally 2) - all fixed the same way as
+      TODO-5261/5262: changed the fixture's literal to a value that can't
+      collide with this suite's exit-code conventions, updated the
+      `CHECK`, and added an explanatory comment.
+  - implementation_notes: Used a small extraction+probe script
+    (`/tmp/extract_and_probe.py` in this session's scratch, not
+    committed) to pull each candidate's embedded `.prime` fixture and
+    `--emit=`/`--entry` flags straight out of the C++ source and compile
+    it directly, rather than re-deriving them by hand each time - sped up
+    triage across the ~19 genuine candidates considerably. Same
+    verification discipline as prior tranches: every added assertion
+    reflects an actually-observed compiler run, not a guess.
+  - acceptance:
+    - All 19 targeted TEST_CASEs' assertions are backed by
+      actually-observed compiler behavior.
+    - `./scripts/compile.sh --release` passes; the file's full doctest
+      suite (`primestruct.compile.run.emitters.cpp`) passes with an
+      increased assertion count (2045 -> 2055) and unchanged test-case
+      count (528).
+  - stop_rule: Stopped after this tranche.
+  - notes: Running tally across TODO-5260 through TODO-5263: 33 weak
+    tests strengthened, of which 9 were genuinely misleading
+    exit-code-as-value false rejections and 2 more were fixture bugs/
+    unreachable-code defects (TODO-5260's missing-paren case). That's
+    roughly a third of all touched tests turning out to be more than
+    "just weak" - a real defect was hiding underneath. The
+    `compile_run/emitters/` directory alone likely has more instances of
+    both the "no diagnostic check" and "exit-code coincidentally matches
+    a small literal in the fixture" patterns; a scripted sweep (grep for
+    `== 2)`/`== 0)` assertions across the whole `tests/unit/compile_run/`
+    tree, not just `emitters/`, cross-referenced with which ones lack a
+    nearby diagnostic check) would likely find more of both at similar
+    yield, but was not run at that scale here.
+    Verification: `cmake --build --target PrimeStruct_compile_run_tests`
+    clean; the file's full doctest suite
+    (`primestruct.compile.run.emitters.cpp`): 528/528 test cases passed,
+    2055/2055 assertions. Full `./scripts/compile.sh --release`: green
+    apart from the same two pre-existing unrelated failures already
+    present before this change.

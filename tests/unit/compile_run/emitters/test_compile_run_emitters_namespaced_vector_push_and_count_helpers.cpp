@@ -149,9 +149,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_namespaced_count_non_builtin_array_fallback_rejected.prime", source);
+  const std::string errPath =
+      srcPath + ".compile_cpp_vector_namespaced_count_non_builtin_array_fallback_rejected.err";
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects user vector mutator bool positional call shadow in C++ emitter") {
@@ -187,7 +191,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
   [i32] index{7i32}
   push(values, index)
   return(/std/collections/vector/count<i32>(values))
@@ -195,7 +199,13 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_mutator_known_receiver_no_reorder.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  // No compile error - the builtin vector `push` is used (not rewritten
+  // to the reversed-argument-order /i32/push override, which would be a
+  // no-op), so the exit code is the real post-push count: 3 initial
+  // elements + 1 pushed == 4; chosen (over the original 1-element
+  // fixture, whose count would have coincidentally been 2) to avoid
+  // colliding with this suite's compile-error exit codes.
+  CHECK(runCommand(compileCmd) == 4);
 }
 
 TEST_CASE("rejects user vector access named call shadow in C++ emitter") {

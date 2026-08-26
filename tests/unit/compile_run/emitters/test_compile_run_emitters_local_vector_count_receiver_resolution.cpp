@@ -106,6 +106,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on array receiver in C++ emitter") {
@@ -126,6 +127,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps rooted vector count same-path helper on string receiver") {
@@ -170,6 +172,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps rooted vector count same-path helper on array receiver") {

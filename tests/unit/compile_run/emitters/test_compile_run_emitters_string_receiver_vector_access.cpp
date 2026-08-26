@@ -278,7 +278,7 @@ Marker {
 
 [return<auto>]
 project([vector<i32>] values) {
-  return(/std/collections/vector/at_unsafe(values, 2i32).value)
+  return(/std/collections/vector/at_unsafe(values, 61i32).value)
 }
 
 [effects(heap_alloc), return<int>]
@@ -290,7 +290,9 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_unsafe_field_expression_forwarding.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  // No compile error - exit code is the computed Marker(61).value == 61,
+  // chosen to avoid colliding with this suite's compile-error exit codes.
+  CHECK(runCommand(compileCmd) == 61);
 }
 
 TEST_CASE("keeps canonical direct-call map access primitive diagnostics in C++ emitter") {

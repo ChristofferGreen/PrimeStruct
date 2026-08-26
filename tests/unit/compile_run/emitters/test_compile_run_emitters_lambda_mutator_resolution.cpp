@@ -69,9 +69,14 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_shadow_precedence.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_lambda_vector_mutator_shadow_precedence.cpp").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_lambda_vector_mutator_shadow_precedence.err").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects lambda std namespaced reordered mutator compatibility helper in C++ emitter") {
@@ -98,7 +103,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects lambda explicit vector mutator statements without helper before emission") {

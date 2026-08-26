@@ -28,7 +28,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects canonical map access positional reorder") {
@@ -92,14 +93,18 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [vector<i32>] values{vector<i32>(1i32, 73i32)}
   [i32] index{1i32}
   return(at(values, index))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_access_known_receiver_no_reorder.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  // No compile error - the builtin vector `at` is used (not rewritten to
+  // the user's reversed-argument-order /i32/at override), so the exit
+  // code is the real element value, values[1] == 73; chosen to avoid
+  // colliding with this suite's compile-error exit codes (2, 3).
+  CHECK(runCommand(compileCmd) == 73);
 }
 
 TEST_CASE("stdlib namespaced vector helpers in C++ emitter") {

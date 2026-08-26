@@ -322,9 +322,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_string_compare.prime", source);
+  const std::string errPath = srcPath + ".compile_cpp_string_compare.err";
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend does not support string comparisons") !=
+        std::string::npos);
 }
 
 TEST_CASE("string map values in C++ emitter") {
@@ -339,9 +343,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_string_map_values.prime", source);
+  const std::string errPath = srcPath + ".compile_string_map_values.err";
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("power/log builtins in C++ emitter") {
