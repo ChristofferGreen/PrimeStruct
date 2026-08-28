@@ -3,6 +3,15 @@
 namespace primec::semantics {
 namespace {
 
+// Mirror of the IR-lowerer's isEmptyBraceBlockArgument: the parser represents
+// an empty brace-constructor argument list as a single empty block() call, so
+// argument ordering must skip it or zero-field struct constructors (e.g.
+// `tuple<>{}`) spuriously report an argument count mismatch.
+bool isEmptyBraceBlockArgument(const Expr &arg) {
+  return arg.kind == Expr::Kind::Call && arg.name == "block" &&
+         arg.args.empty() && arg.bodyArguments.empty() && arg.hasBodyArguments;
+}
+
 size_t resolveNamedParamIndex(const std::vector<ParameterInfo> &params, const std::string &name) {
   for (size_t p = 0; p < params.size(); ++p) {
     if (params[p].name == name) {
@@ -53,6 +62,9 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
   ordered.assign(params.size(), nullptr);
   size_t positionalIndex = 0;
   for (size_t i = 0; i < args.size(); ++i) {
+    if (isEmptyBraceBlockArgument(args[i])) {
+      continue;
+    }
     if (i < argNames.size() && argNames[i].has_value()) {
       const std::string &name = *argNames[i];
       const size_t index = resolveNamedParamIndex(params, name);

@@ -651,6 +651,25 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
     return true;
   };
   (void)reinterpretSingleBlockBindingAsConstructor();
+  // Surface parsing can hand the initializer over as an already-shaped
+  // lower-case constructor call (`[thing] item{thing{}}`) without the nested
+  // binding marker the block-wrapped reinterpretation above expects. When the
+  // call target matches the type pin and carries the canonical empty-block
+  // construction argument, mark it as a brace constructor so lowering treats
+  // it as construction instead of execution.
+  if (!binding.args.empty()) {
+    Expr &front = binding.args.front();
+    const Expr *blockArg =
+        front.args.size() == 1 && front.args.front().kind == Expr::Kind::Call &&
+                front.args.front().name == "block" && front.args.front().hasBodyArguments
+            ? &front.args.front()
+            : nullptr;
+    if (!typeName.empty() && !isVectorBindingTypeName(typeName) && !front.isBinding &&
+        !front.isBraceConstructor && blockArg != nullptr &&
+        matchesBindingTypeName(front.name, typeName)) {
+      front.isBraceConstructor = true;
+    }
+  }
   if (hasSingleInitializer && (!hasBlockInitializer || typeName.empty() ||
                                !isVectorBindingTypeName(typeName))) {
     return true;
