@@ -356,6 +356,30 @@ bool pathContainsParentTraversal(const std::filesystem::path &path) {
   return false;
 }
 
+// std::filesystem::exists() matches case-insensitively on case-insensitive
+// filesystems (the macOS default), so a stdlib module-root key derived from
+// an imported symbol name (e.g. "/std/maybe/Maybe" from "import
+// /std/maybe/Maybe") can spuriously "exist" against a differently-cased
+// sibling file (stdlib's actual "maybe.prime"), stealing the file from the
+// correctly-cased parent module key that should have claimed it. Require an
+// exact-case match against the real directory entry before accepting it.
+bool existsWithExactCase(const std::filesystem::path &path, std::error_code &ec) {
+  if (!std::filesystem::exists(path, ec)) {
+    return false;
+  }
+  const std::filesystem::path parent = path.parent_path();
+  const std::string wantName = path.filename().string();
+  for (const auto &entry : std::filesystem::directory_iterator(parent, ec)) {
+    if (ec) {
+      return false;
+    }
+    if (entry.path().filename().string() == wantName) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool appendStdlibModuleManifestEntry(StdlibModuleManifest &manifest,
                                      const std::filesystem::path &manifestPath,
                                      const std::string &root,
@@ -784,7 +808,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
       if (!appendSpecificFile && !std::filesystem::exists(moduleRoot, ec)) {
         std::filesystem::path moduleFile = moduleRoot;
         moduleFile += ".prime";
-        if (std::filesystem::exists(moduleFile, ec)) {
+        if (existsWithExactCase(moduleFile, ec)) {
           moduleRoot = std::move(moduleFile);
         } else {
           continue;
