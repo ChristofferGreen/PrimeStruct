@@ -263,7 +263,7 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
         makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
         "vector_wrapper_constructor_receiver_" + emitMode,
         emitMode,
-        "call=/std/collections/vector/count");
+        "count requires array, vector, map, or string target");
     return;
   }
 
@@ -301,27 +301,14 @@ inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
-        "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
-        emitMode,
-        "unknown named argument: second");
-    return;
-  }
-  if (emitMode == "native") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
-        "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
-        emitMode,
-        "call=/std/collections/vector/count");
-    return;
-  }
-  expectVectorConformanceProgramRuns(
+  // Named arguments on canonical vector constructor calls are now rejected
+  // at semantic validation for every receiver shape (PSC1005 tier), so the
+  // historical native-only lowerer fragment no longer applies.
+  expectVectorConformanceCompileReject(
       makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
       "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
       emitMode,
-      16);
+      "unknown named argument: second");
 }
 
 inline void expectCanonicalVectorNamespaceTypeMismatchReject(const std::string &emitMode) {
@@ -378,11 +365,14 @@ inline void expectCanonicalVectorNamespaceExplicitBindingReject(const std::strin
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsExplicitBindingConformance(const std::string &emitMode) {
-  expectVectorConformanceProgramRuns(
+  // Named arguments on canonical vector constructor calls are rejected at
+  // semantic validation now (PSC1005 tier), including the explicit-binding
+  // shape this case historically ran successfully.
+  expectVectorConformanceCompileReject(
       makeCanonicalVectorNamespaceNamedArgsExplicitBindingRejectSource(),
       "vector_namespace_canonical_named_args_binding_" + emitMode,
       emitMode,
-      2);
+      "unknown named argument: second");
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject(const std::string &emitMode) {

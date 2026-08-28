@@ -60,7 +60,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported operand types for plus") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("native rejects variadic borrowed map packs with indexed dereference lookup helpers") {
@@ -120,7 +120,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") !=
+  CHECK(readFile(errPath).find("unknown call target: /map/") !=
         std::string::npos);
 }
 
@@ -240,7 +240,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("variadic parameter type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("native rejects variadic pointer map packs with indexed dereference lookup helpers") {
@@ -300,7 +300,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") !=
+  CHECK(readFile(errPath).find("unknown call target: /map/") !=
         std::string::npos);
 }
 

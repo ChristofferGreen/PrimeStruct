@@ -56,12 +56,13 @@ main() {
       (testScratchPath("") /
        "primec_native_canonical_map_method_slash_return_type_receiver.err")
           .string();
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_canonical_map_method__exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 73);
 }
 
 TEST_CASE("rejects native canonical map access helpers on wrapper slash return receiver") {
@@ -93,12 +94,13 @@ main() {
       (testScratchPath("") /
        "primec_native_canonical_map_access_helpers_wrapper_slash_return_receiver.err")
           .string();
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_canonical_map_access__exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 166);
 }
 
 TEST_CASE("rejects native canonical map access helper key mismatch on wrapper slash return receiver") {
@@ -124,7 +126,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+  CHECK(readFile(outPath).find(
+            "Semantic error: unknown call target: /map/at [PSC1005]") !=
         std::string::npos);
 }
 

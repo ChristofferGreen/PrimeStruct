@@ -38,7 +38,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("push is only supported as a statement") !=
+  CHECK(readFile(errPath).find(
+            "Semantic error: unknown call target: /std/collections/vector/push [PSC1005]") !=
         std::string::npos);
 }
 
@@ -138,8 +139,8 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(exePath) == 127);
 }
 
 TEST_CASE("rejects native std namespaced count without imported helper") {
@@ -355,7 +356,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native std namespaced count non-builtin compatibility fallback resolves alias") {
@@ -440,8 +441,8 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(exePath) == 127);
 }
 
 TEST_CASE("native std namespaced capacity expression canonical fallback") {

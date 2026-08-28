@@ -1518,6 +1518,27 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
   }
+  // TODO-5256: reject count() over an "at"-shaped call whose resolved return
+  // type is not a string. The resolved semantic product already records the
+  // override's actual result type, so this check works no matter which
+  // dispatch path later handles the call; without it the raw scalar was
+  // dereferenced as a string handle at runtime ("unaligned indirect address").
+  if ((count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
+       isSimpleCallName(expr, "count")) &&
+      expr.args.size() == 1) {
+    const Expr &guardedCountTarget = expr.args.front();
+    std::string guardedAccessName;
+    if (guardedCountTarget.kind == Expr::Kind::Call &&
+        guardedCountTarget.args.size() == 2 &&
+        getBuiltinArrayAccessName(guardedCountTarget, guardedAccessName) &&
+        (guardedAccessName == "at" || guardedAccessName == "at_unsafe") &&
+        classifySemanticStringCountTarget(guardedCountTarget, semanticProgram,
+                                          semanticIndex) ==
+            SemanticStringCountTargetResolution::NonString) {
+      error = "count() argument resolves to a non-string value";
+      return CountAccessCallEmitResult::Error;
+    }
+  }
   const bool explicitPublishedVectorCountCall =
       isExplicitPublishedVectorMetadataCall(expr, "count");
   const bool explicitPublishedKeyValueCountCall =
@@ -2039,15 +2060,19 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (isCountLikeCall()) {
     const Expr &target = expr.args.front();
     std::string vectorAccessName;
-    if (target.kind == Expr::Kind::Call && target.sourceIsMethodCall &&
-        target.args.size() == 2 &&
+    if (target.kind == Expr::Kind::Call && target.args.size() == 2 &&
         getBuiltinArrayAccessName(target, vectorAccessName) &&
         (vectorAccessName == "at" || vectorAccessName == "at_unsafe")) {
       const SemanticStringCountTargetResolution semanticStringTarget =
           classifySemanticStringCountTarget(target, semanticProgram,
                                             semanticIndex);
+      // TODO-5256: an "at"-shaped argument only lowers as a string-character
+      // count when the resolved access really yields a string handle. When
+      // semantics classified it as anything else (e.g. a user override of
+      // /std/collections/vector/at returning a scalar), reject at compile
+      // time instead of letting later lowering dereference the raw value.
       if (semanticStringTarget == SemanticStringCountTargetResolution::NonString) {
-        error = "native backend only supports entry argument indexing";
+        error = "count() argument resolves to a non-string value";
         return CountAccessCallEmitResult::Error;
       }
       if (semanticStringTarget == SemanticStringCountTargetResolution::String &&

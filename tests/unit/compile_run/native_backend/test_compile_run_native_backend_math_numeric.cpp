@@ -439,12 +439,15 @@ main() {
   const std::string srcPath = writeTemp("compile_native_math_explicit_imports.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_native_math_explicit_imports.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_math_explicit_imports_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support return type on /std/math/ColorRGB/toSRGB") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  // The historical unsupported-return rejection is gone: the explicit math
+  // import surface now lowers fully. min(7,3) + convert<int>(pi) == 3 + 3.
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
 }
 
 TEST_CASE("native pow() on f32 operands") {

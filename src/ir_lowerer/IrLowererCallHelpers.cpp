@@ -12,6 +12,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include <cstdio>
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
@@ -452,7 +453,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
       ++positionalIndex;
     }
     if (positionalIndex >= ordered.size()) {
-      error = "argument count mismatch for " + callName;
+      error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-1]\n");
       return false;
     }
     ordered[positionalIndex] = &callExpr.args[i];
@@ -467,7 +468,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
       ordered[i] = &params[i].args.front();
       continue;
     }
-    error = "argument count mismatch for " + callName;
+    error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-2]\n");
     return false;
   }
   return true;
@@ -534,7 +535,7 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
       continue;
     }
     if (positionalIndex >= params.size()) {
-      error = "argument count mismatch for " + callName;
+      error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-3]\n");
       return false;
     }
     ordered[positionalIndex] = &callExpr.args[i];
@@ -552,7 +553,7 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
       ordered[i] = &params[i].args.front();
       continue;
     }
-    error = "argument count mismatch for " + callName;
+    error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-4]\n");
     return false;
   }
 

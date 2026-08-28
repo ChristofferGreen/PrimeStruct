@@ -370,7 +370,9 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     emitTrapIfStackTrue(input.emitVectorCapacityExceeded);
   };
   auto emitReallocDataToCapacity = [&](int32_t valuesPtrLocal, int32_t capacityLocal) {
+    const int32_t dataFieldAddrLocal = input.allocTempLocal();
     emitFieldAddress(valuesPtrLocal, 3);
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataFieldAddrLocal)});
     emitFieldLoad(valuesPtrLocal, 3);
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
     if (elemSlotCountForBuffer > 1) {
@@ -378,6 +380,10 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
       instructions.push_back({IrOpcode::MulI32, 0});
     }
     instructions.push_back({IrOpcode::HeapRealloc, 0});
+    const int32_t newDataLocal = input.allocTempLocal();
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(newDataLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataFieldAddrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(newDataLocal)});
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
     emitFieldStoreFromLocal(valuesPtrLocal, 2, capacityLocal);

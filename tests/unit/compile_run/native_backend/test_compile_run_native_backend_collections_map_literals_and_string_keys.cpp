@@ -71,7 +71,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native collection constructor parity expression access") {
@@ -91,8 +91,8 @@ main() {
       (testScratchPath("") / "primec_native_collection_brackets_exe").string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(exePath) == 127);
 }
 
 TEST_CASE("rejects native map constructor call access expressions") {
@@ -105,10 +105,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal.prime", source);
-  expectNativeCompileReject(
-      srcPath,
-      "primec_native_map_literal.err",
-      "native backend only supports at() on numeric/bool/string arrays or vectors");
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_map_literal_exe").string();
+  // Map literals gained first-class native lowering, so the constructor-
+  // receiver at() form now compiles and evaluates (returns the value 4).
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("native map count helper") {

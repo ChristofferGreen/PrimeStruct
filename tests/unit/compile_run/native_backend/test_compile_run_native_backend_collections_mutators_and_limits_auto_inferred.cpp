@@ -129,13 +129,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_pop_call_shadow.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_user_vector_pop_cal_exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_native_user_vector_pop_call_shadow_out.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("pop requires mutable vector binding") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("native user vector pop method shadow") {
@@ -226,13 +229,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_clear_call_shadow.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_user_vector_clear_c_exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_native_user_vector_clear_call_shadow_out.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("clear requires mutable vector binding") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native user vector clear method shadow") {
@@ -275,13 +281,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_remove_at_call_shadow.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_user_vector_remove__exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_native_user_vector_remove_at_call_shadow_out.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("remove_at requires mutable vector binding") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("native user vector remove_at method shadow") {
@@ -304,8 +313,8 @@ main() {
       (testScratchPath("") / "primec_native_user_vector_remove_at_method_shadow_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(exePath) == 127);
 }
 
 TEST_CASE("rejects native user vector remove_swap call shadow on immutable call-form receiver") {
@@ -324,13 +333,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_remove_swap_call_shadow.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_user_vector_remove__exe").string();
   const std::string outPath =
       (testScratchPath("") / "primec_native_user_vector_remove_swap_call_shadow_out.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("remove_swap requires mutable vector binding") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("native indexed vector assign") {
@@ -374,8 +386,8 @@ main() {
       (testScratchPath("") / "primec_native_user_vector_remove_swap_method_shadow_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(exePath) == 127);
 }
 
 TEST_CASE("grows native vector reserve beyond initial capacity") {

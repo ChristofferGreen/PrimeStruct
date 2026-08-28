@@ -26,7 +26,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects native vector literal above local dynamic limit") {
@@ -73,13 +73,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_local_limit.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") / "primec_native_vector_reserve_limit_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native vector push past former local dynamic limit") {
@@ -116,13 +116,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_negative_literal.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") / "primec_native_vector_reserve_negative_literal_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native vector reserve folded expression beyond local dynamic limit") {
@@ -137,13 +137,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_limit.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") / "primec_native_vector_reserve_folded_limit_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects native vector reserve folded negative expression at lowering") {
@@ -158,13 +158,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_negative.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") / "primec_native_vector_reserve_folded_negative_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native vector reserve folded signed overflow at lowering") {
@@ -179,14 +179,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_signed_overflow.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_vector_reserve_fold_exe").string();
   const std::string errPath = (testScratchPath("") /
                                "primec_native_vector_reserve_folded_signed_overflow_err.txt")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native vector reserve folded negate negative at lowering") {
@@ -201,14 +204,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_negate_negative.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_vector_reserve_fold_exe").string();
   const std::string errPath = (testScratchPath("") /
                                "primec_native_vector_reserve_folded_negate_negative_err.txt")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native vector reserve folded negate overflow at lowering") {
@@ -223,14 +229,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_negate_overflow.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_vector_reserve_fold_exe").string();
   const std::string errPath = (testScratchPath("") /
                                "primec_native_vector_reserve_folded_negate_overflow_err.txt")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native vector reserve folded unsigned expression beyond local dynamic limit") {
@@ -245,13 +254,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_unsigned_limit.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") / "primec_native_vector_reserve_folded_unsigned_limit_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects native vector reserve folded unsigned wraparound at lowering") {
@@ -266,13 +275,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_unsigned_wrap.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") / "primec_native_vector_reserve_folded_unsigned_wrap_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native vector reserve folded unsigned add overflow at lowering") {
@@ -287,14 +296,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_unsigned_add_overflow.prime", source);
+
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_vector_reserve_fold_exe").string();
   const std::string errPath = (testScratchPath("") /
                                "primec_native_vector_reserve_folded_unsigned_add_overflow_err.txt")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects native vector reserve dynamic value beyond local dynamic limit") {
@@ -316,9 +328,9 @@ main([array<string>] args) {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  // Dynamic vector storage landed: reserving beyond the former local limit
+  // now succeeds, so the historical OOB-trap pin no longer applies.
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects native vector push beyond local dynamic limit") {
@@ -342,9 +354,9 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector push allocation failed (out of memory)\n");
+  // Dynamic vector storage landed: pushing past the former local limit now
+  // grows the vector, so the historical OOM-trap pin no longer applies.
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native vector shrink helpers") {

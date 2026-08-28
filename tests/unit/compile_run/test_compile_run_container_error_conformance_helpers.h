@@ -78,17 +78,18 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 10);
-  // native additionally truncates every print_line(string) call here to a
-  // single character - a second, separate bug from the temporary-field-
-  // access one above (also worth its own investigation under TODO-4752).
+  // Native previously truncated every print_line(string) call here to a
+  // single character (a second, separate bug from the temporary-field-access
+  // one above, tracked under TODO-4752). String printing parity with the VM
+  // has since landed, so both modes must now see the full contract text.
   CHECK(readFile(outPath) ==
-        "c\n"
-        "c\n"
-        "c\n"
-        "c\n"
-        "c\n"
-        "c\n"
-        "c\n"
-        "c\n"
-        "c\n");
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container error\n");
 }

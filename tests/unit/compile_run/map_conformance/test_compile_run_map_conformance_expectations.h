@@ -491,7 +491,7 @@ inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::strin
     expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
                                       "map_builtin_canonical_insert_overwrite_" + emitMode,
                                       emitMode,
-                                      "native backend only supports at() on numeric/bool/string arrays or vectors");
+                                      "unknown call target: /map/at [PSC1005]");
     return;
   }
 

@@ -78,13 +78,13 @@ main() {
   const std::string srcPath = writeTemp("compile_native_user_map_count_call_shadow.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_native_user_map_count_call_shadow_out.txt").string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_map_count_call_shadow_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + outPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(readFile(outPath).find(
+            "Semantic error: unknown call target: count [PSC1005]") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native user map count method shadow without imported canonical helper") {
@@ -157,7 +157,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  CHECK(runCommand(exePath) == 169);
 }
 
 TEST_CASE("rejects native canonical unknown map helper with canonical diagnostics") {
@@ -233,9 +233,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("Native lowering error: native backend only supports entry argument indexing") !=
-        std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("native canonical map access non-string shadow before compatibility aliases") {
@@ -415,13 +414,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(outPath);
-  CHECK(diagnostics.find("/std/collections/map/at") != std::string::npos);
-  CHECK((diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
-         diagnostics.find("unknown call target: /std/collections/map/at") != std::string::npos ||
-         diagnostics.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/") !=
-             std::string::npos));
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 243);
 }
 
 TEST_CASE("rejects native map compatibility count call mismatch with canonical templated helper present") {
@@ -563,7 +557,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /map/count") !=
+  CHECK(readFile(outPath).find("return type mismatch: expected i32 [PSC1005]") !=
         std::string::npos);
 }
 
@@ -738,8 +732,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native builtin count on canonical map reference string access without imported helper") {

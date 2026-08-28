@@ -242,10 +242,13 @@ main() {
       (testScratchPath("") /
        "primec_native_canonical_vector_access_unsafe_count_shadow_reject.err")
           .string();
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_canonical_vector_unsa_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects native canonical vector method access builtin string count shadow") {
@@ -272,10 +275,13 @@ main() {
       (testScratchPath("") /
        "primec_native_canonical_vector_method_access_builtin_string_count_shadow.err")
           .string();
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_canonical_vector_meth_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects native canonical vector unsafe method access count shadow") {
@@ -302,12 +308,13 @@ main() {
       (testScratchPath("") /
        "primec_native_canonical_vector_unsafe_method_access_count_shadow_reject.err")
           .string();
+  const std::string exePath =
+      (testScratchPath("") / "rejects_native_canonical_vector_unsa_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects native direct wrapper-returned canonical map access count shadow") {
@@ -556,7 +563,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+  CHECK(readFile(errPath).find(
+            "Semantic error: unknown call target: /std/collections/map/count [PSC1005]") !=
         std::string::npos);
 }
 
@@ -746,12 +754,13 @@ main() {
 }
   )";
   const std::string srcPath = writeTemp("compile_native_user_array_capacity_call_shadow.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") / "primec_native_user_array_capacity_call_shadow.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 66);
 }
 
 TEST_CASE("native user array capacity method shadow") {
