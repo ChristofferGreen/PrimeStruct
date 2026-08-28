@@ -1,5 +1,7 @@
 #include "IrLowererLowerSumHelpers.h"
 
+#include <algorithm>
+
 #include "IrLowererCountAccessClassifiers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
@@ -15,19 +17,15 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
                                      LowerReturnEmitStageState &stateOutIn,
                                      const CallResolutionAdapters &callResolutionAdaptersIn,
                                      std::string &errorIn)
-    : setupStage(setupStageIn),
-      stateOut(stateOutIn),
-      callResolutionAdapters(callResolutionAdaptersIn),
+    : callResolutionAdapters(callResolutionAdaptersIn),
       error(errorIn),
       function(setupStageIn.function),
       nextLocal(setupStageIn.nextLocal),
-      structNames(setupStageIn.structNames),
       defMap(setupStageIn.defMap),
       emitExpr(stateOutIn.emitExpr),
       emitStatement(stateOutIn.emitStatement),
       allocTempLocal(stateOutIn.allocTempLocal),
       resolveDefinitionCall(stateOutIn.resolveDefinitionCall),
-      emitStructCopySlots(stateOutIn.emitStructCopySlots),
       resolveStructTypeName(
           setupStageIn.setupLocalsOrchestration.setupTypeAndStructTypeAdapters
               .structTypeResolutionAdapters.resolveStructTypeName),

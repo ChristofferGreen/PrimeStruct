@@ -55,10 +55,10 @@ public:
 private:
   const SemanticProductIndex * semanticIndexPtr();
 
-  LowerSetupStageState &setupStage;
-  LowerReturnEmitStageState &stateOut;
+  [[maybe_unused]] LowerSetupStageState &setupStage;
+  [[maybe_unused]] LowerReturnEmitStageState &stateOut;
   const CallResolutionAdapters &callResolutionAdapters;
-  std::string &error;
+  [[maybe_unused]] std::string &error;
   const SemanticProgram *const &semanticProgram;
   std::unordered_map<std::string, const Definition *> &defMap;
   const ResolveExprPathFn &resolveExprPath;

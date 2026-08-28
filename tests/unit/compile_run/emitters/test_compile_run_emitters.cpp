@@ -38,7 +38,8 @@ std::string emittedCppCacheSalt() {
   std::error_code ec;
   const auto primecSize = std::filesystem::file_size(primecPath, ec);
   const auto primecMtime = std::filesystem::last_write_time(primecPath, ec).time_since_epoch().count();
-  return std::string(CacheVersion) + "|" + std::to_string(primecSize) + "|" + std::to_string(primecMtime);
+  return std::string(CacheVersion) + "|" + std::to_string(primecSize) + "|" +
+         std::to_string(static_cast<long long>(primecMtime));
 }
 
 bool acquireCacheBuildLock(const std::filesystem::path &lockDir, const std::filesystem::path &artifactPath) {

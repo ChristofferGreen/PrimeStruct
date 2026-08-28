@@ -13,7 +13,7 @@ static std::string spinningCubeBackendProbeCacheSignature(const std::filesystem:
     ec.clear();
     const auto lastWrite = std::filesystem::last_write_time(path, ec);
     signature += "\nmtime=";
-    signature += ec ? "missing" : std::to_string(lastWrite.time_since_epoch().count());
+    signature += ec ? "missing" : std::to_string(static_cast<long long>(lastWrite.time_since_epoch().count()));
   };
 
   appendPathStamp(cubePath);

@@ -1,5 +1,7 @@
 #include "third_party/doctest.h"
 
+#include <algorithm>
+
 #include "../test_semantics_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.semantics.effects");

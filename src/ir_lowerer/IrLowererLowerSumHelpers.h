@@ -118,19 +118,15 @@ public:
   LoweredSumPickEmitResult tryEmitPickStatement(const Expr &stmt, LocalMap &localsIn);
 
 private:
-  LowerSetupStageState &setupStage;
-  LowerReturnEmitStageState &stateOut;
   const CallResolutionAdapters &callResolutionAdapters;
   std::string &error;
   IrFunction &function;
   int32_t &nextLocal;
-  std::unordered_set<std::string> &structNames;
   std::unordered_map<std::string, const Definition *> &defMap;
   const std::function<bool(const Expr &, const LocalMap &)> &emitExpr;
   const std::function<bool(const Expr &, LocalMap &)> &emitStatement;
   const std::function<int32_t()> &allocTempLocal;
   const ResolveDefinitionCallFn &resolveDefinitionCall;
-  const std::function<bool(int32_t, int32_t, int32_t)> &emitStructCopySlots;
   const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName;
   const std::function<bool(const std::string &, StructSlotLayout &)> &resolveStructSlotLayout;
   const ResolveExprPathFn &resolveExprPath;

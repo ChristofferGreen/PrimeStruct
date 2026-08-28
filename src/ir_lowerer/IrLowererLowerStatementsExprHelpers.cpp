@@ -22,16 +22,13 @@ StatementsExprContext::StatementsExprContext(LowerSetupStageState &setupStageIn,
                                               LowerReturnEmitStageState &stateOutIn,
                                               const CallResolutionAdapters &callResolutionAdaptersIn,
                                               std::string &errorIn)
-    : setupStage(setupStageIn),
-      stateOut(stateOutIn),
-      callResolutionAdapters(callResolutionAdaptersIn),
+    : callResolutionAdapters(callResolutionAdaptersIn),
       error(errorIn),
       function(setupStageIn.function),
       semanticProgram(callResolutionAdaptersIn.semanticProgram),
       defMap(setupStageIn.defMap),
       emitExpr(stateOutIn.emitExpr),
       allocTempLocal(stateOutIn.allocTempLocal),
-      inferExprKind(setupStageIn.inferenceSetupBootstrap.inferExprKind),
       inferStructExprPath(
           setupStageIn.setupLocalsOrchestration.uninitializedResolutionAdapters
               .inferStructExprPath),

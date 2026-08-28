@@ -332,7 +332,7 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /File/write_line parameter value") !=
         std::string::npos);
-  CHECK(error.find("expected i32") != std::string::npos);
+  CHECK(error.find("expected string") != std::string::npos);
 }
 
 TEST_CASE("stdlib File camelCase helpers cover imported method and slash-call wrappers") {

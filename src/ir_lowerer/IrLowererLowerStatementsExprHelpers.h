@@ -68,8 +68,6 @@ public:
   std::string experimentalCollectionMemberPath(std::string_view collectionName, std::string_view memberName);
 
 private:
-  LowerSetupStageState &setupStage;
-  LowerReturnEmitStageState &stateOut;
   const CallResolutionAdapters &callResolutionAdapters;
   std::string &error;
   IrFunction &function;
@@ -77,7 +75,6 @@ private:
   std::unordered_map<std::string, const Definition *> &defMap;
   const std::function<bool(const Expr &, const LocalMap &)> &emitExpr;
   const std::function<int32_t()> &allocTempLocal;
-  const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind;
   const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath;
   const ResolveExprPathFn &resolveExprPath;
   const ResolveDefinitionCallFn &resolveDefinitionCall;
