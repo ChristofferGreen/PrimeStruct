@@ -6528,6 +6528,30 @@ avoid clashing with this list's own history.
     calling `count()` on a plain `i32` is nonsensical) rather than making
     the runtime path merely not-crash - consider that framing before
     picking an implementation approach.
+  - notes: triaged 2026-08-26 - standalone repro confirmed
+    (`--emit=vm` run of the TEST_CASE's source exits 3 with
+    "unaligned indirect address in IR: 7"). Semantic-product dump shows the
+    resolved facts already carry the truth (`query_facts` for the at-call:
+    query_type_text="i32", binding_type_text="i32"), so the fix does NOT need
+    new semantic plumbing - classification via
+    `classifySemanticStringCountTarget` returns NonString today. However, a
+    defensive compile-time reject placed at the top of
+    `tryEmitCountAccessCall` did not intercept this shape: VM trace shows the
+    crash comes from LoadIndirect over the marshalled argument slot inside
+    /main's own lowered body (the count call is inlined without routing
+    through tryEmitCountAccessCall's string-count branch). Next investigator
+    should instrument the inline-definition-call argument marshalling for
+    `[string]` parameters (`emitInlineDefinitionCall` in
+    IrLowererLowerStatementsExpr.h / IrLowererInlineNativeCallDispatch.cpp)
+    rather than the count-access helpers.
+  - related_evidence (2026-08-26, vector mutator limits): the sibling cluster
+    "vector reserve/push limit" tests are 90% re-greened by re-pinning to
+    landed behavior (folded expressions compile and hit runtime traps; only
+    literal negative/beyond-limit keep compile-time rejects). Two stragglers
+    fail ONLY on stderr text: expected exact "array index out of bounds\n" /
+    "vector push allocation failed (out of memory)\n" arrive empty while exit
+    codes match. The runtime error-print channel for these traps needs
+    checking (emitRuntimeError path -> VmExecution/IrToCpp VM stderr).
   - acceptance: `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`'s
     "rejects canonical vector access direct-call string count fallback in
     C++ emitter" TEST_CASE either (a) gets a clear compile-time diagnostic

@@ -637,13 +637,18 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-08-26T13:48:25Z`
+- Last updated: `2026-08-28T06:43:55Z`
 - Build type: `Release`
 - Build dir: `build-release`
-- Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
+- Command: `ctest --test-dir build-release --output-on-failure --parallel 16`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
   - `206`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_1311_1320`
+  - `381`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_101_110`
+  - `382`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_111_120`
+  - `640`: `PrimeStruct_primestruct_semantics_type_resolution_graph_type_resolution_graph_151_160`
+  - `787`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_newly_exposed_2026_07_16_63_72`
+  - `1312`: `PrimeStruct_primestruct_compile_run_native_backend_core_core_135_135`
   - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
 <!-- compile.sh:failing-tests:end -->
 
