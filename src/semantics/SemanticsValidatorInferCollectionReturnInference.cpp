@@ -767,17 +767,29 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       std::string elemType;
       std::string keyType;
       std::string valueType;
-      if (candidate.isMethodCall && !isExplicitAccessAlias &&
-          (builtinAccessName == "at" || builtinAccessName == "at_unsafe")) {
-        std::string resolvedMethodTarget;
+      if (builtinAccessName == "at" || builtinAccessName == "at_unsafe") {
+        // A user override registered at the canonical vector access path
+        // has its own declared return type, whether it's called via
+        // method-call syntax (`values.at(...)`) or a fully-qualified
+        // direct call - defer to that instead of assuming the access
+        // still returns the receiver's element type below.
+        std::string resolvedAccessTarget;
         bool isBuiltinMethod = false;
-        if (resolveMethodTarget(params, locals, candidate.namespacePrefix,
-                                receiver, candidate.name,
-                                resolvedMethodTarget, isBuiltinMethod) &&
-            (isStdNamespacedVectorCompatibilityHelperPath(resolvedMethodTarget, "at") ||
-             isStdNamespacedVectorCompatibilityHelperPath(resolvedMethodTarget, "at_unsafe"))) {
+        bool haveResolvedAccessTarget = false;
+        if (candidate.isMethodCall && !isExplicitAccessAlias) {
+          haveResolvedAccessTarget =
+              resolveMethodTarget(params, locals, candidate.namespacePrefix,
+                                  receiver, candidate.name,
+                                  resolvedAccessTarget, isBuiltinMethod);
+        } else {
+          resolvedAccessTarget = resolveCalleePath(candidate);
+          haveResolvedAccessTarget = !resolvedAccessTarget.empty();
+        }
+        if (haveResolvedAccessTarget &&
+            (isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at") ||
+             isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at_unsafe"))) {
           std::string declaredReturnType;
-          if (inferNonTemplateDefinitionReturnType(resolvedMethodTarget,
+          if (inferNonTemplateDefinitionReturnType(resolvedAccessTarget,
                                                    declaredReturnType)) {
             currentTypeTextOut = declaredReturnType;
             return true;

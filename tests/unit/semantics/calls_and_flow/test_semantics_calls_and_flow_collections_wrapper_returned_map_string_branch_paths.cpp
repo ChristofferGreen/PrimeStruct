@@ -355,7 +355,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical vector access count call keeps builtin string helper shadow") {
+TEST_CASE("canonical vector access count call rejects builtin string helper shadow after override") {
   const std::string source = R"(
 [return<bool>]
 /string/count([string] values) {
@@ -374,9 +374,14 @@ main() {
   return(inferred)
 }
 )";
+  // TODO-5256: this override changes /std/collections/vector/at's return
+  // type from string to a plain i32, so the string-count builtin shadow no
+  // longer applies here - /string/count's [string] parameter correctly
+  // rejects the i32 argument at compile time.
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /string/count parameter values: expected string") !=
+        std::string::npos);
 }
 
 TEST_CASE("canonical vector unsafe access count call keeps primitive diagnostics") {

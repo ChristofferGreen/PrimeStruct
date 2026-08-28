@@ -71,7 +71,10 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution
-- TODO-5256: Fix count()'s hardcoded string-handle assumption for an "at"-shaped argument whose override changes the return type | track: count-at-override-typemismatch | surface: count() codegen for vector/at-shaped arguments
+
+Note (2026-08-28): TODO-5256 (count()'s hardcoded string-handle assumption
+for an "at"-shaped argument whose override changes the return type) has
+resolved - see `docs/todo_finished.md`.
 
 Note (2026-08-22): synced this section - every entry previously listed
 here (TODO-4686/4690/4694/4707) is confirmed `[x]` resolved in the task
@@ -108,9 +111,10 @@ investigation chain's actively-productive leaves - see
 
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
-- TODO-5256: Fix count()'s hardcoded string-handle assumption for an "at"-shaped argument whose override changes the return type
 - TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces (comment-clarity step landed; extraction still open)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
+
+Note (2026-08-28): TODO-5256 has resolved - see `docs/todo_finished.md`.
 
 Note (2026-08-22): synced this section against the task blocks below -
 every other entry previously listed here (TODO-4708/4709/4710/4711/4712/
@@ -394,7 +398,9 @@ avoid clashing with this list's own history.
 
 75. TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 76. TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
-77. TODO-5256: Fix count()'s hardcoded string-handle assumption for an "at"-shaped argument whose override changes the return type
+
+Note (2026-08-28): item 77 (TODO-5256) has resolved - see
+`docs/todo_finished.md`.
 
 ### Task Blocks
 
@@ -6486,86 +6492,6 @@ avoid clashing with this list's own history.
        (TODO-4748) rather than folded into this one, since fixing it is a
        `WasmEmitterControlFlow.cpp`-focused investigation with its own
        scope, not a TODO-4747 real-call concern.
-- [ ] TODO-5256: Fix count()'s hardcoded string-handle assumption for an "at"-shaped argument whose override changes the return type
-  - owner: ai
-  - created_at: 2026-08-23
-  - phase: Compiler correctness (native fast-path type assumptions)
-  - parallel_track: count-at-override-typemismatch
-  - depends_on: (none)
-  - scope: discovered while landing TODO-4739's fix (direct-call
-    `/std/collections/vector/at(_unsafe)` override precedence).
-    `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`'s
-    "rejects canonical vector access direct-call string count fallback in
-    C++ emitter" TEST_CASE declares a user override of
-    `/std/collections/vector/at` whose return type is `i32` (not the
-    canonical element type for `vector<string>`, which the builtin
-    `at()` would return as `string`), then calls
-    `count(/std/collections/vector/at(values, 0i32))`. Before TODO-4739's
-    fix, this override was silently never dispatched to at all (the exact
-    bug TODO-4739 fixed), which masked this test's real problem: once the
-    override IS correctly dispatched (as it now is), `count(...)`'s own
-    codegen - which decides how to handle its argument purely from the
-    call's textual "at"-shaped syntax, assuming any such call always
-    evaluates to a string handle requiring an indirect dereference -
-    receives the override's raw returned scalar (`7`) instead and tries
-    to dereference it as an address, crashing with "unaligned indirect
-    address in IR". This is a genuine, pre-existing latent bug in
-    `count()`'s classification of its argument's return type (the type
-    mismatch was always there; it was simply never exercised while the
-    override was unreachable) - not something TODO-4739's fix introduced
-    from nothing, but a distinct area of the compiler
-    (`count()`'s own argument-type handling, not `at()`'s
-    override-dispatch precedence) that needs its own investigation.
-  - implementation_notes: likely entry points are wherever `count(...)`
-    classifies its argument as "an at()-shaped call, therefore assume
-    string" - search for the count-access classification helpers in
-    `IrLowererCountAccessHelpers.cpp`/`IrLowererNativeTailDispatch.cpp`
-    (`tryEmitCountAccessCall` and friends) for logic that decides how to
-    load/dereference a nested "at" call's result without checking its
-    ACTUAL resolved return kind. This TODO's own test file's name
-    ("rejects...") suggests the truly correct fix may be a compile-time
-    type-mismatch diagnostic (reject the program at compile time, since
-    calling `count()` on a plain `i32` is nonsensical) rather than making
-    the runtime path merely not-crash - consider that framing before
-    picking an implementation approach.
-  - notes: triaged 2026-08-26 - standalone repro confirmed
-    (`--emit=vm` run of the TEST_CASE's source exits 3 with
-    "unaligned indirect address in IR: 7"). Semantic-product dump shows the
-    resolved facts already carry the truth (`query_facts` for the at-call:
-    query_type_text="i32", binding_type_text="i32"), so the fix does NOT need
-    new semantic plumbing - classification via
-    `classifySemanticStringCountTarget` returns NonString today. However, a
-    defensive compile-time reject placed at the top of
-    `tryEmitCountAccessCall` did not intercept this shape: VM trace shows the
-    crash comes from LoadIndirect over the marshalled argument slot inside
-    /main's own lowered body (the count call is inlined without routing
-    through tryEmitCountAccessCall's string-count branch). Next investigator
-    should instrument the inline-definition-call argument marshalling for
-    `[string]` parameters (`emitInlineDefinitionCall` in
-    IrLowererLowerStatementsExpr.h / IrLowererInlineNativeCallDispatch.cpp)
-    rather than the count-access helpers.
-  - related_evidence (2026-08-26, vector mutator limits): the sibling cluster
-    "vector reserve/push limit" tests are 90% re-greened by re-pinning to
-    landed behavior (folded expressions compile and hit runtime traps; only
-    literal negative/beyond-limit keep compile-time rejects). Two stragglers
-    fail ONLY on stderr text: expected exact "array index out of bounds\n" /
-    "vector push allocation failed (out of memory)\n" arrive empty while exit
-    codes match. The runtime error-print channel for these traps needs
-    checking (emitRuntimeError path -> VmExecution/IrToCpp VM stderr).
-  - acceptance: `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`'s
-    "rejects canonical vector access direct-call string count fallback in
-    C++ emitter" TEST_CASE either (a) gets a clear compile-time diagnostic
-    for the type mismatch (preferred, matching the test's own name) with
-    the test updated accordingly, or (b) is independently re-derived to a
-    correct, non-crashing runtime value if a compile-time reject isn't the
-    right call - either way, not re-pinned to the current crash text
-    without one of these two outcomes.
-  - stop_rule: do not re-pin this test's expectation to some OTHER runtime
-    crash text or a different silently-wrong value without first
-    understanding what `count()` on a non-string/non-collection value is
-    actually supposed to mean in this compiler's model - if the intended
-    contract really is "always reject at compile time", implementing a
-    runtime workaround instead would hide a real diagnostic gap.
 
 - [x] TODO-4748: Fix wasm backend's if/else control-flow codegen (wrong branch taken or validation failure)
   - owner: ai

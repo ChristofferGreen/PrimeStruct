@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <memory>
 #include <string>
@@ -54,6 +55,33 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
     std::string builtinName;
     if (!getBuiltinArrayAccessName(target, builtinName) || target.args.size() != 2) {
       return false;
+    }
+    {
+      // The compiler-builtin vector `at`/`at_unsafe` have no defMap_ entry
+      // of their own (their return type is inferred from the receiver's
+      // element type by the branches below). A user override registered at
+      // this exact canonical vector access path does have one, with its
+      // own declared return type - defer to that instead of assuming the
+      // override still returns the receiver's element type. Scoped to the
+      // canonical vector path only: map access has its own same-path
+      // shadow precedence handled elsewhere, which resolveCalleePath does
+      // not replicate.
+      const std::string resolvedAccessTarget = resolveCalleePath(target);
+      auto accessOverrideDefIt =
+          (isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at") ||
+           isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at_unsafe"))
+              ? defMap_.find(resolvedAccessTarget)
+              : defMap_.end();
+      if (accessOverrideDefIt != defMap_.end() && accessOverrideDefIt->second != nullptr) {
+        if (!ensureDefinitionReturnKindReady(*accessOverrideDefIt->second)) {
+          return false;
+        }
+        auto accessOverrideKindIt = returnKinds_.find(resolvedAccessTarget);
+        if (accessOverrideKindIt != returnKinds_.end() &&
+            accessOverrideKindIt->second != ReturnKind::Unknown) {
+          return accessOverrideKindIt->second == ReturnKind::String;
+        }
+      }
     }
     if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
       std::string elemType;

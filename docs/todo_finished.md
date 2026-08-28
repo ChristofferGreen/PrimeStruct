@@ -31603,3 +31603,117 @@ real answer.
     2055/2055 assertions. Full `./scripts/compile.sh --release`: green
     apart from the same two pre-existing unrelated failures already
     present before this change.
+
+- [x] TODO-5256: Fix count()'s hardcoded string-handle assumption for an "at"-shaped argument whose override changes the return type
+  - owner: ai
+  - created_at: 2026-08-23
+  - finished_at: 2026-08-28
+  - evidence: root cause was argument-type *inference* (not IR codegen):
+    `inferQueryExprTypeText`'s builtin-array-access branch in
+    `SemanticsValidatorInferCollectionReturnInference.cpp` only consulted a
+    user override's declared return type for method-call syntax
+    (`values.at(...)`), never for a fully-qualified direct call
+    (`/std/collections/vector/at(values, ...)`) - so the direct-call form
+    fell through to inferring the receiver's element type ("string")
+    regardless of the override. A second, independent instance of the same
+    gap lived in the `resolveStringTarget` dispatch resolver
+    (`SemanticsValidatorInferCollectionStringResolver.cpp`), scoped to the
+    canonical vector access path only (map access has its own same-path
+    shadow precedence, confirmed by a regression run, that a broader fix
+    would have broken). Both now defer to the override's declared return
+    type via `defMap_`/`returnKinds_` lookups before falling back to
+    element-type inference. Outcome matches the acceptance's preferred
+    option (a): `count(/std/collections/vector/at(values, 0i32))` with an
+    i32-returning override now fails at compile time with "argument type
+    mismatch for /string/count parameter values: expected string" instead
+    of crashing. Updated the three tests that were pinned to the old
+    crash/silent-pass behavior (one in
+    `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`,
+    one identical sibling in
+    `test_compile_run_vm_collections_map_wrapper_shadows.cpp`, and one in
+    `test_semantics_calls_and_flow_collections_wrapper_returned_map_string_branch_paths.cpp`
+    that had silently asserted the old wrong-but-passing behavior).
+    Verified via `./scripts/compile.sh --release`: no new failures versus
+    the pre-fix baseline (confirmed by reproducing each remaining failure
+    against an unmodified checkout); the pre-existing
+    `PrimeStruct_vector_surface_traces` compiler-independence audit
+    initially caught a canonical-vector-path string literal left in an
+    explanatory comment, fixed by rewording, and passes clean now.
+  - phase: Compiler correctness (native fast-path type assumptions)
+  - parallel_track: count-at-override-typemismatch
+  - depends_on: (none)
+  - scope: discovered while landing TODO-4739's fix (direct-call
+    `/std/collections/vector/at(_unsafe)` override precedence).
+    `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`'s
+    "rejects canonical vector access direct-call string count fallback in
+    C++ emitter" TEST_CASE declares a user override of
+    `/std/collections/vector/at` whose return type is `i32` (not the
+    canonical element type for `vector<string>`, which the builtin
+    `at()` would return as `string`), then calls
+    `count(/std/collections/vector/at(values, 0i32))`. Before TODO-4739's
+    fix, this override was silently never dispatched to at all (the exact
+    bug TODO-4739 fixed), which masked this test's real problem: once the
+    override IS correctly dispatched (as it now is), `count(...)`'s own
+    codegen - which decides how to handle its argument purely from the
+    call's textual "at"-shaped syntax, assuming any such call always
+    evaluates to a string handle requiring an indirect dereference -
+    receives the override's raw returned scalar (`7`) instead and tries
+    to dereference it as an address, crashing with "unaligned indirect
+    address in IR". This is a genuine, pre-existing latent bug in
+    `count()`'s classification of its argument's return type (the type
+    mismatch was always there; it was simply never exercised while the
+    override was unreachable) - not something TODO-4739's fix introduced
+    from nothing, but a distinct area of the compiler
+    (`count()`'s own argument-type handling, not `at()`'s
+    override-dispatch precedence) that needs its own investigation.
+  - implementation_notes: likely entry points are wherever `count(...)`
+    classifies its argument as "an at()-shaped call, therefore assume
+    string" - search for the count-access classification helpers in
+    `IrLowererCountAccessHelpers.cpp`/`IrLowererNativeTailDispatch.cpp`
+    (`tryEmitCountAccessCall` and friends) for logic that decides how to
+    load/dereference a nested "at" call's result without checking its
+    ACTUAL resolved return kind. This TODO's own test file's name
+    ("rejects...") suggests the truly correct fix may be a compile-time
+    type-mismatch diagnostic (reject the program at compile time, since
+    calling `count()` on a plain `i32` is nonsensical) rather than making
+    the runtime path merely not-crash - consider that framing before
+    picking an implementation approach.
+  - notes: triaged 2026-08-26 - standalone repro confirmed
+    (`--emit=vm` run of the TEST_CASE's source exits 3 with
+    "unaligned indirect address in IR: 7"). Semantic-product dump shows the
+    resolved facts already carry the truth (`query_facts` for the at-call:
+    query_type_text="i32", binding_type_text="i32"), so the fix does NOT need
+    new semantic plumbing - classification via
+    `classifySemanticStringCountTarget` returns NonString today. However, a
+    defensive compile-time reject placed at the top of
+    `tryEmitCountAccessCall` did not intercept this shape: VM trace shows the
+    crash comes from LoadIndirect over the marshalled argument slot inside
+    /main's own lowered body (the count call is inlined without routing
+    through tryEmitCountAccessCall's string-count branch). Next investigator
+    should instrument the inline-definition-call argument marshalling for
+    `[string]` parameters (`emitInlineDefinitionCall` in
+    IrLowererLowerStatementsExpr.h / IrLowererInlineNativeCallDispatch.cpp)
+    rather than the count-access helpers.
+  - related_evidence (2026-08-26, vector mutator limits): the sibling cluster
+    "vector reserve/push limit" tests are 90% re-greened by re-pinning to
+    landed behavior (folded expressions compile and hit runtime traps; only
+    literal negative/beyond-limit keep compile-time rejects). Two stragglers
+    fail ONLY on stderr text: expected exact "array index out of bounds\n" /
+    "vector push allocation failed (out of memory)\n" arrive empty while exit
+    codes match. The runtime error-print channel for these traps needs
+    checking (emitRuntimeError path -> VmExecution/IrToCpp VM stderr).
+  - acceptance: `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`'s
+    "rejects canonical vector access direct-call string count fallback in
+    C++ emitter" TEST_CASE either (a) gets a clear compile-time diagnostic
+    for the type mismatch (preferred, matching the test's own name) with
+    the test updated accordingly, or (b) is independently re-derived to a
+    correct, non-crashing runtime value if a compile-time reject isn't the
+    right call - either way, not re-pinned to the current crash text
+    without one of these two outcomes.
+  - stop_rule: do not re-pin this test's expectation to some OTHER runtime
+    crash text or a different silently-wrong value without first
+    understanding what `count()` on a non-string/non-collection value is
+    actually supposed to mean in this compiler's model - if the intended
+    contract really is "always reject at compile time", implementing a
+    runtime workaround instead would hide a real diagnostic gap.
+

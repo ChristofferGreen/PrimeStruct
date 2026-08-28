@@ -119,20 +119,16 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  // TODO-5256 (newly discovered while fixing TODO-4739): this override
-  // changes /std/collections/vector/at's return type from string to a
-  // plain i32, but count(...)'s own codegen still assumes any "at" call
-  // syntactically returns a string handle and unconditionally dereferences
-  // it - so once TODO-4739's fix made the override actually dispatch
-  // (previously it was silently ignored, masking this gap), the raw
-  // returned int (7) gets treated as an address, producing a genuine VM
-  // crash instead of the previous silent (and equally not-really-correct)
-  // "0". This test's own name ("rejects...") suggests the truly correct
-  // fix is a compile-time type-mismatch diagnostic, not a runtime crash
-  // or a silent 0 - that fix is out of scope here; re-pinned to the
-  // current, honestly-crashing behavior pending TODO-5256.
-  CHECK(runCommand(compileCmd) == 3);
-  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
+  // TODO-5256: this override changes /std/collections/vector/at's return
+  // type from string to a plain i32. count(...)'s argument-type inference
+  // now honors that override's declared return type for both method-call
+  // and fully-qualified direct-call syntax, so /string/count's [string]
+  // parameter correctly rejects the i32 argument at compile time instead of
+  // treating the raw returned int as a string handle and dereferencing it.
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find(
+            "argument type mismatch for /string/count parameter values: expected string") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects wrapper vector direct-call count receivers before deleted access stubs") {
