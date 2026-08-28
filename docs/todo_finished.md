@@ -31717,3 +31717,51 @@ real answer.
     contract really is "always reject at compile time", implementing a
     runtime workaround instead would hide a real diagnostic gap.
 
+
+- [x] TODO-5264: Fix false-premise "publishes module artifacts in import order" IR pipeline test (CTest case #206)
+  - owner: ai
+  - created_at: 2026-08-28
+  - finished_at: 2026-08-28
+  - phase: Test correctness (release-gate failure triage, docs/todo.md rule 13)
+  - scope: `docs/failing_tests.md`'s tracked failure
+    `PrimeStruct_primestruct_ir_pipeline_validation_cases_1311_1320`
+    (CTest case 206) deterministically failed
+    `test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp`'s
+    "semantics validate publishes module artifacts in import order" with
+    `REQUIRE(maxArtifacts != nullptr)`.
+  - evidence: the test imported `/std/math/max` and `/std/math/abs` as its
+    two "distinct modules" to check import-order publication for. Both are
+    pure compiler-builtin math intrinsics (`SemanticsBuiltinPathHelpers.cpp`
+    et al.) with no backing `.prime` file - confirmed via
+    `--dump-stage=semantic-product` that no `Definition` or
+    `callable_summaries` entry with `full_path="/std/math/max"` (or `abs`)
+    is ever produced, so `SemanticPublicationBuilderState::
+    ensureModuleResolvedArtifacts` never gets called with that exact path
+    and `findModuleArtifacts(semanticProgram, "/std/math/max")` was always
+    going to return `nullptr` - a false premise in the test, not a compiler
+    regression (`git log` shows this test file has had exactly one commit
+    since it was authored, so the builtins must never have had callable
+    summaries during this test's lifetime, or another change silently
+    stopped registering placeholder definitions for builtin math imports;
+    either way, testing import-order publication against two builtins with
+    no file-backed definition can't validate what the test claims to
+    validate). Reproduced deterministically (3/3 runs), not flaky.
+  - fix: replaced the two builtin math imports with two real, file-backed
+    stdlib definitions from different source files -
+    `/std/math/Vec2/length` (`stdlib/std/math/vector.prime`) and
+    `/std/math/srgbToLinearChannel` (`stdlib/std/math/color.prime`) -
+    verified via the same `--dump-stage=semantic-product` dump that both
+    produce `callable_summaries` entries with the expected exact
+    `full_path`, preserving the test's original import-order-publication
+    intent while testing it against a premise that actually holds.
+  - acceptance: `PrimeStruct_backend_ir_tests --test-case="semantics
+    validate publishes module artifacts in import order"` passes (17/17
+    assertions); full `PrimeStruct_backend_ir_tests` run drops from 2
+    failures to the 1 pre-existing, independently-confirmed-unrelated
+    "ir lowerer supports map method calls" failure; full
+    `./scripts/compile.sh --release` run has only the pre-existing,
+    independently-confirmed-unrelated
+    `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_63_64`
+    failure remaining (CTest case #206 no longer appears in
+    `docs/failing_tests.md`'s managed failing-cases block).
+  - stop_rule: n/a - resolved.

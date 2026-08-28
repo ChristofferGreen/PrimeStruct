@@ -456,13 +456,22 @@ main() {
 }
 
 TEST_CASE("semantics validate publishes module artifacts in import order") {
+  // Uses two real, file-backed stdlib definitions from different source
+  // files (rather than /std/math/max and /std/math/abs, which are pure
+  // compiler builtins with no Definition/callable-summary entry of their
+  // own and therefore never produce a module artifact keyed by their own
+  // path) so the import-order mechanism under test actually has two
+  // distinct, individually-importable module artifacts to compare.
   const std::string source = R"(
-import /std/math/max
-import /std/math/abs
+import /std/math/Vec2/length
+import /std/math/srgbToLinearChannel
 
 [return<i32>]
 main() {
-  return(plus(max(3i32, 1i32), abs(-4i32)))
+  [/std/math/Vec2] v{/std/math/Vec2{3.0, 4.0}}
+  [f32] len{v.length()}
+  [f32] channel{srgbToLinearChannel(0.5)}
+  return(convert<i32>(len + channel))
 }
 )";
 
@@ -502,16 +511,16 @@ main() {
   const primec::SemanticProgram &semanticProgram = output.semanticProgram;
 
   const auto *rootArtifacts = findModuleArtifacts(semanticProgram, "/");
-  const auto *maxArtifacts =
-      findModuleArtifacts(semanticProgram, "/std/math/max");
-  const auto *absArtifacts =
-      findModuleArtifacts(semanticProgram, "/std/math/abs");
+  const auto *lengthArtifacts =
+      findModuleArtifacts(semanticProgram, "/std/math/Vec2/length");
+  const auto *channelArtifacts =
+      findModuleArtifacts(semanticProgram, "/std/math/srgbToLinearChannel");
   REQUIRE(rootArtifacts != nullptr);
-  REQUIRE(maxArtifacts != nullptr);
-  REQUIRE(absArtifacts != nullptr);
+  REQUIRE(lengthArtifacts != nullptr);
+  REQUIRE(channelArtifacts != nullptr);
 
-  CHECK(rootArtifacts->identity.stableOrder < maxArtifacts->identity.stableOrder);
-  CHECK(maxArtifacts->identity.stableOrder < absArtifacts->identity.stableOrder);
+  CHECK(rootArtifacts->identity.stableOrder < lengthArtifacts->identity.stableOrder);
+  CHECK(lengthArtifacts->identity.stableOrder < channelArtifacts->identity.stableOrder);
 
   const auto rootIt = std::find_if(
       semanticProgram.moduleResolvedArtifacts.begin(),
@@ -519,23 +528,23 @@ main() {
       [](const primec::SemanticProgramModuleResolvedArtifacts &module) {
         return module.identity.moduleKey == "/";
       });
-  const auto maxIt = std::find_if(
+  const auto lengthIt = std::find_if(
       semanticProgram.moduleResolvedArtifacts.begin(),
       semanticProgram.moduleResolvedArtifacts.end(),
       [](const primec::SemanticProgramModuleResolvedArtifacts &module) {
-        return module.identity.moduleKey == "/std/math/max";
+        return module.identity.moduleKey == "/std/math/Vec2/length";
       });
-  const auto absIt = std::find_if(
+  const auto channelIt = std::find_if(
       semanticProgram.moduleResolvedArtifacts.begin(),
       semanticProgram.moduleResolvedArtifacts.end(),
       [](const primec::SemanticProgramModuleResolvedArtifacts &module) {
-        return module.identity.moduleKey == "/std/math/abs";
+        return module.identity.moduleKey == "/std/math/srgbToLinearChannel";
       });
   REQUIRE(rootIt != semanticProgram.moduleResolvedArtifacts.end());
-  REQUIRE(maxIt != semanticProgram.moduleResolvedArtifacts.end());
-  REQUIRE(absIt != semanticProgram.moduleResolvedArtifacts.end());
-  CHECK(rootIt < maxIt);
-  CHECK(maxIt < absIt);
+  REQUIRE(lengthIt != semanticProgram.moduleResolvedArtifacts.end());
+  REQUIRE(channelIt != semanticProgram.moduleResolvedArtifacts.end());
+  CHECK(rootIt < lengthIt);
+  CHECK(lengthIt < channelIt);
 
   CHECK(anySemanticEntry(
       rootArtifacts->callableSummaryIndices,
@@ -546,20 +555,20 @@ main() {
                    "/main";
       }));
   CHECK(anySemanticEntry(
-      maxArtifacts->callableSummaryIndices,
+      lengthArtifacts->callableSummaryIndices,
       [&](std::size_t index) {
         return index < semanticProgram.callableSummaries.size() &&
                primec::semanticProgramCallableSummaryFullPath(
                    semanticProgram, semanticProgram.callableSummaries[index]) ==
-                   "/std/math/max";
+                   "/std/math/Vec2/length";
       }));
   CHECK(anySemanticEntry(
-      absArtifacts->callableSummaryIndices,
+      channelArtifacts->callableSummaryIndices,
       [&](std::size_t index) {
         return index < semanticProgram.callableSummaries.size() &&
                primec::semanticProgramCallableSummaryFullPath(
                    semanticProgram, semanticProgram.callableSummaries[index]) ==
-                   "/std/math/abs";
+                   "/std/math/srgbToLinearChannel";
       }));
 }
 
