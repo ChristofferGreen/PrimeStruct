@@ -71,6 +71,7 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution
+- TODO-5265: Fix generic-template-specialization parameter-type cross-contamination between sibling instantiations of a mutually-recursive stdlib overload pair | track: template-specialization-cross-contamination | surface: TemplateMonomorphImplicitTemplateInference.cpp / TemplateMonomorphContext.cpp
 
 Note (2026-08-28): TODO-5256 (count()'s hardcoded string-handle assumption
 for an "at"-shaped argument whose override changes the return type) has
@@ -111,6 +112,7 @@ investigation chain's actively-productive leaves - see
 
 - TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
+- TODO-5265: Fix generic-template-specialization parameter-type cross-contamination between sibling instantiations of a mutually-recursive stdlib overload pair
 - TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces (comment-clarity step landed; extraction still open)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
 
@@ -398,11 +400,102 @@ avoid clashing with this list's own history.
 
 75. TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 76. TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
+78. TODO-5265: Fix generic-template-specialization parameter-type cross-contamination between sibling instantiations of a mutually-recursive stdlib overload pair
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
 
 ### Task Blocks
+
+- [ ] TODO-5265: Fix generic-template-specialization parameter-type cross-contamination between sibling instantiations of a mutually-recursive stdlib overload pair
+  - owner: ai
+  - created_at: 2026-08-28
+  - phase: Compiler correctness (generic monomorphization state isolation)
+  - parallel_track: template-specialization-cross-contamination
+  - depends_on: (none)
+  - scope: discovered while triaging `docs/failing_tests.md`'s tracked
+    failure `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_63_64`
+    (`test_semantics_result_helpers_file.cpp`'s "stdlib File snake_case
+    direct write_line overload mix rejects mismatched cached value types"
+    TEST_CASE). `stdlib/std/file/file.prime` declares a mutually-recursive
+    generic overload pair: `/File/write_line<Mode, T>([File<Mode>] self,
+    [T] value) { return(/File/writeLine(self, value)) }` and
+    `/File/writeLine<Mode, T>([File<Mode>] self, [T] value) {
+    return(self.write_line(value)) }`. Calling
+    `/File/write_line<Write, i32>(file, 7i32)` alone, or
+    `/File/write_line<Write, string>(file, text)` alone, each compiles
+    cleanly (confirmed via standalone repros and
+    `--dump-stage=ast-semantic`, which shows each independently produces
+    a correctly and distinctly mangled specialization:
+    `/File/writeLine__ov2__t1aaf4e2bd1c3a0c2([File<Write>] self, [i32]
+    value)` for T=i32, `/File/writeLine__ov2__t369e084662ebebcd(
+    [File<Write>] self, [string] value)` for T=string). Calling BOTH in
+    the same function fails: the `t369e084662ebebcd` (string)
+    specialization's own body ends up reporting "argument type mismatch
+    for /File/write_line parameter value: expected i32" - i.e. the
+    STRING specialization's internal call to the mutually-recursive
+    partner gets validated as if its `value` parameter were i32, not
+    string. This is deterministic and NOT program-order-dependent:
+    swapping which call appears first in source still fails with
+    "expected i32" (not "expected string") every time (verified 3+ runs
+    each direction) - so this is not ordinary cache-miss-then-pollution
+    from an earlier call bleeding into a later one; something about
+    processing the T=i32 and T=string specializations of this
+    mutually-recursive pair together (regardless of source order)
+    consistently corrupts the string specialization specifically.
+  - implementation_notes: start in
+    `src/semantics/TemplateMonomorphImplicitTemplateInference.cpp`
+    (~line 1007-1085): the implicit-template-arg-inference cache key
+    (`ctx.implicitTemplateArgInferenceFacts`, keyed by
+    `implicitInferenceFactKey`) is built from
+    `ctx.currentDefinitionPath` (the enclosing definition being
+    rewritten) plus each ordered argument's inferred type text. Verify
+    whether `ctx.currentDefinitionPath` (set in
+    `TemplateMonomorphDefinitionRewrites.cpp`'s `rewriteDefinition`,
+    `ctx.currentDefinitionPath = def.fullPath`) is actually the
+    *specialized* path (e.g. `.../writeLine__ov2__t369e...`) or still the
+    *generic base* path (`.../writeLine`) at the point the inner
+    `self.write_line(value)`/`self.writeLine(value)` call is being
+    resolved during each specialization's body rewrite - if it's the
+    base path, both specializations produce identical or
+    insufficiently-distinct fact keys and one clobbers/shadows the
+    other's cached inferred args in `ctx.implicitTemplateArgInferenceFacts`.
+    Also check `src/semantics/TemplateMonomorphContext.cpp`'s
+    `instantiateTemplate` (the `specializationCache.emplace(key, ...)`
+    before recursing, used as the mutual-recursion guard) for whether the
+    guard's key correctly distinguishes the two mutually-recursive
+    template families' per-T instantiation identity across the
+    interleaved recursive calls (`write_line<Write,i32>` ->
+    `writeLine<Write,i32>` -> back into `write_line` family resolution,
+    and independently the same chain for `<Write,string>`) rather than
+    assuming the two chains never interleave within one validation pass.
+    A standalone repro is at the two source snippets in this TODO's
+    linked TEST_CASE (also reproducible directly via `./primec
+    --emit=vm <file> --entry /main` on the combined-both-calls source).
+  - acceptance:
+    - `test_semantics_result_helpers_file.cpp`'s "stdlib File snake_case
+      direct write_line overload mix rejects mismatched cached value
+      types" TEST_CASE is updated to assert the CORRECT behavior once
+      understood: either (a) both calls compile with no error (if mixing
+      T=i32 and T=string instantiations of a mutually-recursive generic
+      pair is meant to be valid - the more likely correct contract, since
+      each compiles fine alone and there's no principled reason mixing
+      concrete T's in one function should fail), with the current
+      "expected i32"/"expected string" false-rejection assertions
+      replaced by a check that the program validates cleanly, or (b) a
+      clear, correctly-typed diagnostic if there's a genuine reason mixed
+      instantiations must be rejected (rename the TEST_CASE and its
+      assertions to match whichever contract is confirmed correct rather
+      than re-pinning to more incidental error text).
+    - No new failures in the surrounding `primestruct.semantics.result_helpers`
+      suite or `./scripts/compile.sh --release`.
+  - stop_rule: do not re-pin this test's expectation to a THIRD different
+    incidental error string without first identifying the actual root
+    cause in the implicit-template-arg-inference or
+    specialization-identity caching described above - the goal is
+    understanding why two independently-valid generic instantiations
+    interfere when combined, not just matching whatever text the compiler
+    currently happens to print.
 
 - [x] TODO-4635: Derive the collection surface registry from stdlib declarations
   - owner: ai
