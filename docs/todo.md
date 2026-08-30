@@ -628,6 +628,89 @@ Note (2026-08-28): item 77 (TODO-5256) has resolved - see
     heuristic currently applies when `locals == nullptr`. Land BOTH fixes
     together (or verify the second is unnecessary once the first change's
     downstream effects are fully understood) before re-attempting.
+  - implementation_notes: (round 4, 2026-08-30) **round 3's premise was
+    wrong - do not repeat it.** Re-applied round 3's narrowed `self`-bypass
+    fix, confirmed (again) it fixes the original repro alone. Investigated
+    the second, adjacent regression round 3 flagged
+    ("...camelCase helpers cover imported method and slash-call wrappers")
+    with gdb rather than guessing: `selectRequirementAwareHelperOverloadPath`
+    was a red herring (round 3's TODO text speculating about it was
+    unverified guesswork, written without actually tracing this second
+    failure - confirmed via gdb that `candidates.size() <= 1` universally
+    for `write_line`/`writeLine`, so that function's multi-candidate
+    disambiguation logic is never even reached; it has nothing to do with
+    type-specialization identity, only same-arity *non-generic* overload
+    families). The real second-failure mechanism: the *outer*,
+    non-`self`-receiver call path in `preferredFileMethodTarget`'s general
+    tail (`return stdlibPath;`, the bare "/File/write_line" with no
+    `__ovN` arity suffix) suffers the identical "doesn't match
+    `ctx.templateDefs`'s arity-suffixed keys" problem as the `self` path
+    round 3 fixed - so `file.writeLine(text)`-style direct method calls
+    (receiver != `self`) ALSO never trigger real per-call-site
+    instantiation. Wrapping that tail in `selectHelperOverloadPath` too
+    (mirroring round 3's `self`-branch fix) made that second failure's
+    minimal repro (`/File/writeLine<Write, i32>(file, 7i32)` plus
+    `file.writeLine(text)` in one function, no explicit `self.` anywhere)
+    compile clean, and the full `PrimeStruct_semantics_tests` suite came
+    back 2740/2740 green.
+    **But this combined fix (both branches) causes a NEW, WORSE failure**:
+    `PrimeStruct_compile_run_tests`'s "vm uses stdlib File helper
+    wrappers"/"...open helper wrappers"/"...string helper wrappers" (3
+    tests) now fail with `VM lowering error: vm backend does not support
+    recursive calls: /File/write_line__ov2__t<hash>` - GENUINE infinite
+    mutual recursion, reproducible with a SINGLE call,
+    `/File/write_line<Write, i32>(file, 66i32)` alone (no combination
+    with any other T needed). This forced a fundamental correction to
+    round 3's understanding: **the `self`-receiver builtin-alias bypass
+    in `preferredFileMethodTarget` is not itself a bug to route around -
+    it is the mechanism that terminates `write_line<Mode,T>` <->
+    `writeLine<Mode,T>`'s otherwise-unconditional mutual generic
+    recursion** (`write_line`'s body calls `/File/writeLine(self,
+    value)`; `writeLine`'s body calls `self.write_line(value)`; with
+    both resolved "normally" through real template instantiation, as
+    round 3+4's fix did, each specialization recursively demands the
+    other's same-`T` specialization forever - the compile-time
+    specialization-cache guard stops *creating new Definitions*, but the
+    generated IR call graph still has write_line<T> directly calling
+    writeLine<T> directly calling write_line<T>, an unconditional 2-cycle
+    the VM backend correctly refuses to lower). Reverted BOTH branches
+    of round 3+4's fix entirely (`git checkout --` on
+    `TemplateMonomorphMethodTargets.cpp` and the test file) rather than
+    land a change that trades a semantic-validation false-rejection for
+    a hard VM lowering crash on previously-working file I/O - confirmed
+    `git status --short` empty after revert and the "vm uses stdlib File
+    helper wrappers" family passes again on the reverted tree.
+    **Corrected direction for round 5**: the low-level `/file/write_line`
+    alias bypass must stay in place for the mutual-recursion-breaking
+    role it actually serves. The bug is specifically in what happens
+    when a call resolves to that alias but the alias itself has no
+    `ctx.sourceDefs` entry (confirmed in round 3): it falls through to
+    `resolveCalleePath(expr, namespacePrefix, ctx)`
+    (`TemplateMonomorphTypeResolution.cpp:735`), which lands on the
+    *bare, unspecialized* `/File/write_line__ov2` family definition
+    rather than a concrete per-caller-`T` specialization. That fallback
+    path is where a real fix belongs: rather than triggering full
+    generic re-instantiation (which reintroduces the mutual-recursion
+    problem this round discovered), the fallback needs to resolve
+    `value`'s ACTUAL type at the specific call site being validated (the
+    caller already knows `T` - it's the currently-being-specialized
+    enclosing definition's own bound template argument) and validate/
+    codegen against THAT concrete type directly, without ever
+    re-entering `write_line<->writeLine` generic call resolution for the
+    inner `self.write_line(value)`/`/File/writeLine(self,value)` calls
+    specifically. In other words: the low-level alias target itself
+    likely needs to be genuinely polymorphic/pre-typed per its caller's
+    substituted `T` (a stringification/native-write dispatch keyed by the
+    concrete type, resolved once during the ENCLOSING specialization's
+    own template binding, not re-derived generically at the recursive
+    call site). This is a more invasive, `stdlib/std/file/file.prime`-plus-
+    compiler design question, not a small isolated resolver patch -
+    consider whether the stdlib's own `write_line`/`writeLine` mutual
+    pair should be restructured (e.g. have exactly one of the two ever
+    call into the low-level primitive, with the other purely
+    forwarding, so there is only ever one recursion-breaking hop instead
+    of relying on the `self`-name-based heuristic to guess when to stop)
+    as an alternative to a purely compiler-side fix.
   - acceptance:
     - `test_semantics_result_helpers_file.cpp`'s "stdlib File snake_case
       direct write_line overload mix rejects mismatched cached value
