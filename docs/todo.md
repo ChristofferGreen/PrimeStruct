@@ -510,6 +510,124 @@ Note (2026-08-28): item 77 (TODO-5256) has resolved - see
     A standalone repro is at the two source snippets in this TODO's
     linked TEST_CASE (also reproducible directly via `./primec
     --emit=vm <file> --entry /main` on the combined-both-calls source).
+  - implementation_notes: (round 3, 2026-08-30) used gdb (a debug build at
+    `build-debug/primec`, `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug`)
+    exactly as round 2 recommended, and found the true root cause via
+    conditional breakpoints/`commands` auto-print scripts (see
+    `/tmp/gdb_script*.txt` pattern used this round - not preserved on disk,
+    recreate similarly): breakpointing
+    `TemplateMonomorphExpressionRewrite.cpp`'s `isTemplateDef` block
+    (~line 3499, `expr.name = specializedPath`) confirmed it is NEVER hit
+    for the inner `self.write_line(value)` call at all. Breakpointing
+    `resolveMethodCallTemplateTarget` (`TemplateMonomorphMethodTargets.cpp:105`)
+    and the line right after its call site
+    (`TemplateMonomorphExpressionRewrite.cpp:3221`) showed why:
+    `methodPath` resolves to `/file/write_line` (lowercase) for this call,
+    not `/File/write_line__ov2` - because of a DELIBERATE heuristic in
+    `TemplateMonomorphMethodTargets.cpp`'s `preferredFileMethodTarget`
+    lambda (~line 510-529): `if (receiver.kind == Expr::Kind::Name &&
+    receiver.name == "self") { return builtinPath; }` unconditionally
+    routes ANY `self.write`/`self.write_line`/`self.close` call to a
+    lowercase `/file/...` builtin-compatibility alias with no
+    `ctx.sourceDefs`/`ctx.templateDefs` entry of its own, specifically to
+    prevent infinite self-recursion for e.g. `/File/write`'s own body
+    calling `self.write(...)` or `/File/close` calling `self.close(...)`
+    (confirmed via `grep` over `stdlib/std/file/file.prime`: `write` and
+    `close` genuinely call themselves via `self.`, so the guard is needed
+    THERE). But `normalizeFileMethodName("writeLine") == "write_line"`
+    unifies "writeLine" and "write_line" into the SAME guarded name set,
+    so `/File/writeLine<Mode,T>`'s body calling `self.write_line(value)` -
+    a legitimate CROSS-family call to a *different* definition, not
+    self-recursion at all - gets swept into the same bypass. Once routed
+    to the builtin alias, `ctx.templateDefs.count(methodPath)` (checked
+    later at the `isTemplateDef` line, using the un-canonicalized alias)
+    is false, so implicit per-call-site template instantiation never
+    triggers; the call instead falls through to a fallback
+    `resolveCalleePath(expr, namespacePrefix, ctx)` re-derivation
+    (`TemplateMonomorphTypeResolution.cpp:735`, confirmed via gdb
+    breakpoint on `TemplateMonomorphCoreUtilities.cpp:631`
+    `selectRequirementAwareHelperOverloadPath`, which showed
+    `resolvedPath=/File/write_line -> /File/write_line__ov2` for every
+    hit) that lands on the bare, UNSPECIALIZED arity-family definition
+    `/File/write_line__ov2` (or `writeLine__ov2`) - never a `__t<hash>`
+    concrete specialization. Whichever caller reaches that shared
+    unspecialized slot's parameter type first (validation-side, not
+    monomorphization-side - not fully traced) apparently pins it, which
+    is the actual "expected i32" symptom.
+    **Verified fix that resolves the originally-reported bug**: narrow
+    the `self` bypass to true same-name self-recursion only - compare the
+    RAW (non-normalized) called name against the enclosing definition's
+    own raw leaf name (strip `ctx.currentDefinitionPath` to its last
+    `/`-segment, then strip from the first of `__ov` or `__t`, whichever
+    comes first - single-overload families like `close` skip straight to
+    `__t<hash>` with no `__ovN` marker, so checking only for `__ov` under-
+    strips and reintroduces a *worse* bug, infinite VM-unsupported
+    recursion on `/File/close`; check both markers). When it's NOT
+    self-recursion, resolve via `selectHelperOverloadPath(expr, "/File/" +
+    normalizedHelperName, ctx)` (arity-specific) instead of the bare
+    family path, confined to that one branch only - leave the general
+    (non-`self`) tail of `preferredFileMethodTarget` byte-for-byte
+    unchanged. This is a small, mechanically verifiable patch (roughly
+    20-25 lines) that made the original combined-write_line-and-writeLine
+    repro compile and run cleanly (`EXIT: 0`), and fixed 7 of the 8 tests
+    a broader, WRONG first attempt at this fix had broken (see below).
+    **Why this fix was NOT landed**: verifying against the full
+    `PrimeStruct_semantics_tests` suite surfaced a SEPARATE, adjacent,
+    previously-passing test regressed by the fix:
+    `test_semantics_result_helpers_file.cpp`'s "stdlib File camelCase
+    helpers cover imported method and slash-call wrappers". Minimal
+    repro (reduces to just two calls in one function, no explicit
+    `self.` anywhere in the user source - both are top-level calls into
+    the `writeLine` family with different T, confirmed to compile clean
+    on the unmodified baseline via `git stash`):
+    ```
+    import /std/file/*
+    [effects(file_write), return<void>]
+    write_out([File<Write>] file, [string] text) {
+      [Result<FileError>] a{/File/writeLine<Write, i32>(file, 7i32)}
+      [Result<FileError>] b{file.writeLine(text)}
+      return()
+    }
+    ```
+    With the fix applied, this fails with the SAME "expected i32" symptom
+    at the `file.writeLine(text)` call site itself (not inside a nested
+    self-call this time) - because fixing `self.write_line(...)` to
+    correctly trigger real `write_line<Write,i32>` AND
+    `write_line<Write,string>` specializations (as a side effect of
+    properly resolving `writeLine`'s own body during ITS OWN
+    specialization) now populates `ctx.helperOverloads`/family-candidate
+    state that a SEPARATE, adjacent, pre-existing bug in same-arity
+    multi-candidate selection (`TemplateMonomorphCoreUtilities.cpp`'s
+    `selectRequirementAwareHelperOverloadPath`,
+    `typeDifferentiatedGroup`/`evaluateRequirementOverloadViability` path,
+    ~line 624-684) apparently cannot correctly disambiguate for a call
+    site outside the specialization that created the family members. This
+    scenario was silently never exercised before because the `self`
+    bypass bug meant `write_line`'s type-specific specializations were
+    essentially never created via this path at all. In short: the round-3
+    fix is real progress and directly, narrowly correct for its target,
+    but it unmasks a second, distinct latent bug rather than being
+    sufficient on its own - landing it alone would flip a currently-green
+    test red, which rule 13's spirit forbids. Reverted cleanly (`git
+    stash` + `git stash drop`, confirmed `git status --short` empty and
+    `git diff` empty against this round's start) rather than land a
+    known-regressive change.
+    Next investigator: reapply round 3's `self`-bypass narrowing (it's
+    correct and necessary), but ALSO fix
+    `selectRequirementAwareHelperOverloadPath`'s multi-candidate,
+    same-arity, different-type disambiguation to work correctly when
+    called from a plain top-level call site (not nested inside another
+    specialization) - likely needs `locals`/`params` threaded through
+    from more call sites into `resolveCalleePath`/`selectHelperOverloadPath`
+    (both currently have optional/defaulted `locals`/`params` parameters
+    that are frequently passed as `nullptr`, e.g. at
+    `TemplateMonomorphExpressionRewrite.cpp:3523` and `:3528`), so
+    `evaluateRequirementOverloadViability` can actually check each
+    same-arity candidate's parameter type against the call's real
+    argument type instead of falling back to whatever ambiguous/first-seen
+    heuristic currently applies when `locals == nullptr`. Land BOTH fixes
+    together (or verify the second is unnecessary once the first change's
+    downstream effects are fully understood) before re-attempting.
   - acceptance:
     - `test_semantics_result_helpers_file.cpp`'s "stdlib File snake_case
       direct write_line overload mix rejects mismatched cached value
