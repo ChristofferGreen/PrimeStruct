@@ -1396,26 +1396,72 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
              candidate.rfind(specializedPrefix, 0) == 0 ||
              candidate.rfind(overloadPrefix, 0) == 0;
     };
+    // When a call target only resolves to a template family's bare or
+    // arity-only path (e.g. a same-T mutually-recursive self-call that
+    // bypasses normal specialization resolution, per stdlib File's
+    // write_line<->writeLine pair), multiple __t<hash> specializations of
+    // that family can coexist in defMap_/paramsByDef_. Picking the first
+    // one found in map order is nondeterministic with respect to which
+    // concrete T the caller actually means. The enclosing definition being
+    // validated is itself a specialization of the same template family
+    // (write_line and writeLine share their __t<hash> suffix for the same
+    // T), so prefer a family member carrying that same specialization
+    // suffix before falling back to map order.
+    std::string activeSpecializationSuffix;
+    if (currentDefinitionContext_ != nullptr) {
+      const size_t suffixPos = currentDefinitionContext_->fullPath.find("__t");
+      if (suffixPos != std::string::npos) {
+        activeSpecializationSuffix =
+            currentDefinitionContext_->fullPath.substr(suffixPos);
+      }
+    }
+    auto matchesActiveSpecialization = [&](std::string_view candidate) {
+      return !activeSpecializationSuffix.empty() &&
+             candidate.size() >= activeSpecializationSuffix.size() &&
+             candidate.compare(candidate.size() - activeSpecializationSuffix.size(),
+                                activeSpecializationSuffix.size(),
+                                activeSpecializationSuffix) == 0;
+    };
     auto it = defMap_.find(resolved);
     const Definition *resolvedDefinition =
         it != defMap_.end() ? it->second : nullptr;
     if (resolvedDefinition == nullptr && hasDefinitionFamilyPath(resolved)) {
+      const Definition *firstMatch = nullptr;
       for (const auto &def : program_.definitions) {
-        if (matchesResolvedFamilyPath(def.fullPath, resolved)) {
+        if (!matchesResolvedFamilyPath(def.fullPath, resolved)) {
+          continue;
+        }
+        if (firstMatch == nullptr) {
+          firstMatch = &def;
+        }
+        if (matchesActiveSpecialization(def.fullPath)) {
           resolvedDefinition = &def;
           break;
         }
       }
+      if (resolvedDefinition == nullptr) {
+        resolvedDefinition = firstMatch;
+      }
     }
     auto calleeParamsIt = paramsByDef_.find(resolved);
     if (calleeParamsIt == paramsByDef_.end() && hasDefinitionFamilyPath(resolved)) {
+      auto firstMatchIt = paramsByDef_.end();
       for (auto candidateIt = paramsByDef_.begin();
            candidateIt != paramsByDef_.end();
            ++candidateIt) {
-        if (matchesResolvedFamilyPath(candidateIt->first, resolved)) {
+        if (!matchesResolvedFamilyPath(candidateIt->first, resolved)) {
+          continue;
+        }
+        if (firstMatchIt == paramsByDef_.end()) {
+          firstMatchIt = candidateIt;
+        }
+        if (matchesActiveSpecialization(candidateIt->first)) {
           calleeParamsIt = candidateIt;
           break;
         }
+      }
+      if (calleeParamsIt == paramsByDef_.end()) {
+        calleeParamsIt = firstMatchIt;
       }
     }
     if (!expr.isMethodCall && isResolvedKeyValueConstructorPath(resolved) &&
