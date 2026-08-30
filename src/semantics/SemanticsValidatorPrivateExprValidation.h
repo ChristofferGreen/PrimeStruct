@@ -440,6 +440,14 @@
                            const std::string &methodName,
                            std::string &resolvedOut,
                            bool &isBuiltinOut);
+  // TODO-4724: extracted from resolveMethodTarget's body - resolves a
+  // method call on a declared sum type by trying the sum's canonical
+  // path, its as-spelled path, and its bare leaf name, each joined with
+  // the method name, in that order.
+  bool resolveDeclaredSumMethodTarget(const std::string &sumPath,
+                                      const std::string &normalizedMethodName,
+                                      std::string &resolvedOut,
+                                      bool &isBuiltinOut) const;
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

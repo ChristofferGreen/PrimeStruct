@@ -8169,6 +8169,52 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     round only landed the low-risk documentation piece plus fixing the
     incidentally-discovered pre-existing test bug, per this leaf's own
     stop_rule's caution about extraction risk.
+  - progress_2026-08-30: landed the first real extraction step (seam (1)
+    from this task's own implementation_notes: "sum-type method target
+    candidates"). `resolveMethodTarget`'s local
+    `resolveDeclaredSumMethodTarget` lambda (previously defined inline
+    around line 744, with a single call site ~3000 lines later at line
+    3751) was a clean, self-contained candidate: it only touched
+    `sumNames_` (member), a shadowing local `hasDefinitionFamilyPath`
+    lambda whose body is a verbatim behavioral match for the real
+    `SemanticsValidator::hasDefinitionFamilyPath` member (confirmed by
+    direct comparison - both check `defMap_`/`definitionFamilyPathIndex()`
+    then the `<`/`__t`/`__ov` prefix variants via
+    `anyDefinitionFamilyPathStartsWith`), and the real members
+    `hasDefinitionPath`/`hasImportedDefinitionPath`. Extracted it to a
+    new private member function
+    `SemanticsValidator::resolveDeclaredSumMethodTarget(sumPath,
+    normalizedMethodName, resolvedOut, isBuiltinOut) const`
+    (declared in `SemanticsValidatorPrivateExprValidation.h`, defined in
+    `SemanticsValidatorExprMethodTargetResolution.cpp` right before
+    `resolveMethodTarget` itself, matching the file's existing pattern for
+    `hasDeclaredDefinitionPath` immediately above it) - identical body,
+    with the local lambda's captured `hasDefinitionFamilyPath` shadow
+    replaced by an implicit `this->` call to the real member (verified
+    behaviorally equivalent, not just assumed). The call site became
+    `resolveDeclaredSumMethodTarget(resolvedType, normalizedMethodName,
+    resolvedOut, isBuiltinOut)`, passing what were previously captures as
+    explicit arguments. Verification (per this task's own stop_rule -
+    revert on ANY behavior change, not just failures): full
+    `PrimeStruct_semantics_tests` 2740/2740 (0 failed, byte-identical
+    pass count to a same-session baseline rebuild via `git stash`);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the 1 failure is the
+    already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (0 failed). Wall-clock timing was compared directly against a same-
+    session baseline rebuild (both suites run via `time` back-to-back on
+    this machine) to rule out a hidden performance regression the way
+    TODO-5050's shape (c) attempt this same session turned out to have:
+    baseline `PrimeStruct_semantics_tests` 3m13.9s vs this change's
+    3m31.4s - within normal run-to-run noise for this environment (this
+    session separately observed multi-minute swings on unmodified builds
+    too), not the order-of-magnitude blowup shape (c) showed. This is
+    seam (1) of 4 from the implementation_notes; seams (2)-(4) (pointer/
+    reference-returning-definition receiver resolution, the vector-
+    compatibility-family special cases, and the primitive/struct/sum-type
+    generic fallback) remain open, each its own bounded next step -
+    continue one seam at a time per this task's stop_rule, verifying the
+    same three-suite regression set (plus a timed comparison) after each.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai

@@ -210,6 +210,60 @@ bool SemanticsValidator::hasDeclaredDefinitionPath(const std::string &path) cons
   return false;
 }
 
+bool SemanticsValidator::resolveDeclaredSumMethodTarget(
+    const std::string &sumPath,
+    const std::string &normalizedMethodName,
+    std::string &resolvedOut,
+    bool &isBuiltinOut) const {
+  if (sumPath.empty() || sumNames_.count(sumPath) == 0) {
+    return false;
+  }
+  auto stripGeneratedLeafSuffix = [](std::string path) {
+    const size_t leafStart = path.find_last_of('/');
+    const size_t searchStart =
+        leafStart == std::string::npos ? 0 : leafStart + 1;
+    const size_t generatedSuffix = path.find("__", searchStart);
+    if (generatedSuffix != std::string::npos) {
+      path.erase(generatedSuffix);
+    }
+    return path;
+  };
+  auto appendCandidate = [](std::vector<std::string> &candidates,
+                            std::string candidate) {
+    if (!candidate.empty() &&
+        std::find(candidates.begin(), candidates.end(), candidate) ==
+            candidates.end()) {
+      candidates.push_back(std::move(candidate));
+    }
+  };
+
+  std::vector<std::string> candidates;
+  const std::string canonicalSumPath = stripGeneratedLeafSuffix(sumPath);
+  if (canonicalSumPath != sumPath) {
+    appendCandidate(candidates,
+                    canonicalSumPath + "/" + normalizedMethodName);
+  }
+  appendCandidate(candidates, sumPath + "/" + normalizedMethodName);
+  const size_t leafStart = canonicalSumPath.find_last_of('/');
+  const std::string leafName = leafStart == std::string::npos
+                                   ? canonicalSumPath
+                                   : canonicalSumPath.substr(leafStart + 1);
+  if (!leafName.empty()) {
+    appendCandidate(candidates, "/" + leafName + "/" + normalizedMethodName);
+  }
+
+  for (const std::string &candidate : candidates) {
+    if (hasDefinitionFamilyPath(candidate) ||
+        hasDefinitionPath(candidate) ||
+        hasImportedDefinitionPath(candidate)) {
+      resolvedOut = candidate;
+      isBuiltinOut = false;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -741,55 +795,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             "sum-backed Maybe<T> has no mutable helper " + normalizedMethodName +
             "; " + replacement);
       };
-  auto resolveDeclaredSumMethodTarget = [&](const std::string &sumPath) -> bool {
-    if (sumPath.empty() || sumNames_.count(sumPath) == 0) {
-      return false;
-    }
-    auto stripGeneratedLeafSuffix = [](std::string path) {
-      const size_t leafStart = path.find_last_of('/');
-      const size_t searchStart =
-          leafStart == std::string::npos ? 0 : leafStart + 1;
-      const size_t generatedSuffix = path.find("__", searchStart);
-      if (generatedSuffix != std::string::npos) {
-        path.erase(generatedSuffix);
-      }
-      return path;
-    };
-    auto appendCandidate = [](std::vector<std::string> &candidates,
-                              std::string candidate) {
-      if (!candidate.empty() &&
-          std::find(candidates.begin(), candidates.end(), candidate) ==
-              candidates.end()) {
-        candidates.push_back(std::move(candidate));
-      }
-    };
-
-    std::vector<std::string> candidates;
-    const std::string canonicalSumPath = stripGeneratedLeafSuffix(sumPath);
-    if (canonicalSumPath != sumPath) {
-      appendCandidate(candidates,
-                      canonicalSumPath + "/" + normalizedMethodName);
-    }
-    appendCandidate(candidates, sumPath + "/" + normalizedMethodName);
-    const size_t leafStart = canonicalSumPath.find_last_of('/');
-    const std::string leafName = leafStart == std::string::npos
-                                     ? canonicalSumPath
-                                     : canonicalSumPath.substr(leafStart + 1);
-    if (!leafName.empty()) {
-      appendCandidate(candidates, "/" + leafName + "/" + normalizedMethodName);
-    }
-
-    for (const std::string &candidate : candidates) {
-      if (hasDefinitionFamilyPath(candidate) ||
-          hasDefinitionPath(candidate) ||
-          hasImportedDefinitionPath(candidate)) {
-        resolvedOut = candidate;
-        isBuiltinOut = false;
-        return true;
-      }
-    }
-    return false;
-  };
   auto resolveCollectionVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     auto extractValueBinding = [&](const BindingInfo &binding) {
@@ -3748,7 +3753,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (resolvedType.empty()) {
     resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
   }
-  if (resolveDeclaredSumMethodTarget(resolvedType)) {
+  if (resolveDeclaredSumMethodTarget(resolvedType, normalizedMethodName, resolvedOut,
+                                     isBuiltinOut)) {
     return true;
   }
   if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
