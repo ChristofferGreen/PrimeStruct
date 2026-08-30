@@ -70,7 +70,15 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix | track: semantics-call-resolution-perf | surface: semantics call/definition resolution
+(none currently - see the Note below and `### Immediate Next 10`)
+
+Note (2026-08-30): TODO-4743 (diffuse per-call resolution cost left over
+after TODO-4742's hasDefinitionFamilyPath fix) has resolved - see
+`docs/todo_finished.md`. Its own five leaf-level rounds never hit the
+acceptance target, but TODO-5226's separate lazy-stdlib-import default
+flip (2026-08-12) eliminated the whole-file text-splicing cost class this
+task was chasing; re-measured 2026-08-30 at ~6-7ms (was ~12s), decisively
+beating the ~2-5s target.
 
 Note (2026-08-30): TODO-5265 (generic-template-specialization
 parameter-type cross-contamination between sibling instantiations of a
@@ -114,10 +122,12 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces (comment-clarity step landed; extraction still open)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
+
+Note (2026-08-30): TODO-4743 has resolved (superseded by TODO-5226's
+lazy-stdlib-import default flip) - see `docs/todo_finished.md`.
 
 Note (2026-08-28): TODO-5256 has resolved - see `docs/todo_finished.md`.
 
@@ -401,12 +411,13 @@ blocks. Replaced this list with the next genuinely open items found
 while re-auditing the full queue this round; renumbering from 73 to
 avoid clashing with this list's own history.
 
-75. TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
 76. TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
 Note (2026-08-30): item 78 (TODO-5265) has resolved - see
+`docs/todo_finished.md`.
+Note (2026-08-30): item 75 (TODO-4743) has resolved - see
 `docs/todo_finished.md`.
 
 ### Task Blocks
@@ -5171,370 +5182,6 @@ Note (2026-08-30): item 78 (TODO-5265) has resolved - see
     share or differ from this same root cause; do not conflate the two
     when verifying this TODO's acceptance criteria, and do not assume
     fixing this one automatically fixes TODO-4713's cases too.
-- [ ] TODO-4743: Reduce diffuse per-call resolution cost left over after TODO-4742's hasDefinitionFamilyPath fix
-  - owner: ai
-  - created_at: 2026-07-26
-  - phase: Compiler performance
-  - parallel_track: semantic-validation-perf
-  - depends_on: TODO-4742
-  - scope: after TODO-4742 fixed the single dominant O(N)-scan
-    bottleneck in `hasDefinitionFamilyPath`, `import /std/image/*` with
-    zero calls dropped from ~41.4s to ~22-23s (`--emit=vm`) - a real
-    1.87x win, but still well above the ~2-5s TODO-4742 acceptance
-    target implied by comparison against `import /std/collections/vector`
-    (~1.6s). A second gdb stack-sampling round (8 samples, same
-    methodology as TODO-4742's original profiling: `gdb -p <pid> -batch
-    -ex "bt"` against a running `--emit=vm /tmp/img_import_only.prime`
-    process) found no single dominant function this time - samples
-    landed across several structurally different call sites:
-    `resolveDirectSoaVectorOrExperimentalBorrowedReceiver`/
-    `resolveSoaVectorOrExperimentalBorrowedReceiver`/
-    `resolveExprCollectionAccessTarget` (soa/collection-access receiver
-    resolution, called from `prepareExprCollectionDispatchSetup` in
-    SemanticsValidatorExprCollectionDispatchSetup.cpp:110);
-    `findStdlibSurfaceMetadataByResolvedPath`'s own `std::find_if` linear
-    scan over the static `Registry` array
-    (StdlibSurfaceRegistry.cpp:1172-1198) - `Registry` is only 11
-    entries, so this is cheap per call but is invoked from ~15+
-    call sites across semantics/ir_lowerer/emitter, so the cost is in
-    aggregate call volume, not scan size;
-    `primec::collection_paths::moduleRoot`/`modulePrefix` string
-    concatenation (include/primec/StdlibCollectionPaths.h:75,85);
-    `isStdNamespacedVectorCompatibilityHelperPath`/
-    `isStdNamespacedVectorCompatibilityDirectCall`
-    (SemanticsValidatorInferCollectionCompatibilityInternal.h:126,140);
-    `std::function` construction inside
-    `makeBuiltinCollectionDispatchResolvers`
-    (SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp:439); and
-    generic heap allocation/`std::char_traits::copy` churn. Separately
-    (not yet profiled, but confirmed to exist by direct code reading, so
-    listed here rather than re-discovered later): 6 independent local-
-    lambda reimplementations of the same O(N)-scan-over-`program_.
-    definitions`-or-`paramsByDef_` pattern that TODO-4742 fixed in the
-    member-function version, still present in
-    SemanticsValidatorExprMethodTargetResolution.cpp:221,
-    SemanticsValidatorBuildCallResolution.cpp:84 (already has a partial
-    scoped cache via `callTargetResolutionScratch_.
-    definitionFamilyPathCache`), SemanticsValidatorExprCallResolution.cpp:118,
-    SemanticsValidatorExprPreDispatchDirectCalls.cpp:324,
-    TemplateMonomorphExpressionRewrite.h:1456, and
-    TemplateMonomorphMethodTargets.h:141 (the latter two scan the
-    smaller `ctx.sourceDefs`/`ctx.helperOverloads`, not
-    `program_.definitions`, so may be lower priority).
-  - implementation_notes: this is a broader, multi-site investigation,
-    not a single bounded fix like TODO-4742 - do not treat it as one
-    leaf. Recommended split before implementing: (1) apply
-    `SemanticsValidator::definitionFamilyPathIndex()` (added by
-    TODO-4742) to the 6 duplicate lambdas above instead of leaving them
-    with their own O(N) scans, since the index and its invalidation
-    already exist; (2) evaluate whether
-    `findStdlibSurfaceMetadataByResolvedPath` benefits from a
-    `std::unordered_map<std::string, const StdlibSurfaceMetadata*>`
-    memoization cache keyed by resolved path (built lazily, since
-    `Registry` itself is static/immutable at 11 entries - the win is
-    memoizing repeated queries for the same path, not shrinking N); (3)
-    profile the soa/collection-access-resolution and `std::function`
-    per-call-site construction cost separately before deciding whether
-    either is fixable without a larger refactor. Re-run the same
-    gdb-sampling technique after each change to check whether the cost
-    keeps redistributing (diminishing returns) or a new single dominant
-    site emerges.
-  - acceptance:
-    - `import /std/image/*` with zero calls, `--emit=vm`, reaches within
-      a small constant multiple of the `import /std/collections/vector`
-      baseline (~2-5s), matching TODO-4742's original target.
-    - Full `compile_run` CTest suite shows the identical failing-test-
-      name set before and after (same diff methodology as TODO-4742).
-    - A fresh gdb-sampling round after this work shows no single
-      function taking more than a small fraction of sampled stack
-      frames, or if one does, it is documented as a further follow-up
-      rather than left unexplained.
-  - stop_rule: if after implementing notes (1)-(3) the wall time is
-    still not within the ~2-5s target, stop and report the residual as
-    an architectural limitation of the text-splicing whole-program
-    validation model (the same class of problem TODO-4735 investigated
-    and declined to fix at the leaf level) rather than continuing to
-    chase individual call sites indefinitely.
-  - notes: direct follow-up to TODO-4742; do not duplicate TODO-4742's
-    own scope (the `hasDefinitionFamilyPath` member-function fix is
-    already done) - this covers everything the second profiling round
-    found still costly after that fix landed.
-  - progress_2026-07-26: implemented notes (1) and (2). (1) Added
-    `SemanticsValidator::anyDefinitionFamilyPathStartsWith(prefix)` (a
-    thin wrapper around the existing `definitionFamilyPathIndex()` +
-    `lower_bound`) and used it to replace the O(N)-scan bodies of the 4
-    duplicate `hasDefinitionFamilyPath` lambdas that scan
-    `program_.definitions`/`paramsByDef_` directly:
-    SemanticsValidatorExprMethodTargetResolution.cpp:221,
-    SemanticsValidatorBuildCallResolution.cpp:84,
-    SemanticsValidatorExprCallResolution.cpp:118, and
-    SemanticsValidatorExprPreDispatchDirectCalls.cpp:324 (the latter had
-    a redundant *double* scan - once over `program_.definitions`, once
-    over `paramsByDef_` - collapsed to one index query, since
-    `paramsByDef_`'s key set was confirmed identical to
-    `program_.definitions`'s fullPath set: `buildParameters()`
-    unconditionally assigns `paramsByDef_[def.fullPath]` for every def
-    in `program_.definitions`, so scanning either container or the
-    union index gives the same answer). The other 2 duplicates
-    (TemplateMonomorphExpressionRewrite.h:1456,
-    TemplateMonomorphMethodTargets.h:141) were left alone as noted -
-    they scan the smaller `ctx.sourceDefs`/`ctx.helperOverloads`, a
-    different container the index doesn't cover. (2) Added a
-    `thread_local std::unordered_map<std::string, const
-    StdlibSurfaceMetadata*>` memoization cache inside
-    `findStdlibSurfaceMetadataByResolvedPath`
-    (src/StdlibSurfaceRegistry.cpp) - safe unconditionally since
-    `Registry` is static, immutable data for the process lifetime, so
-    no invalidation logic is needed; `thread_local` avoids a data race
-    against the opt-in parallel definition-validation worker path.
-    Measured impact (both builds on the same machine/container, to
-    avoid the cross-container noise below): `import /std/image/*` with
-    zero calls, `--emit=vm`, went from ~34.85s avg (2 runs, TODO-4742-
-    only) to ~32.92s avg (2 runs, with (1)+(2)) - a real but modest
-    ~5.5% further improvement, not the order-of-magnitude hoped for.
-    (Note: the ~22-23s figure recorded in TODO-4742/4743's earlier
-    scope came from a different container instance with different
-    underlying hardware and is not directly comparable to these
-    ~33-35s numbers - always re-baseline on the same machine before
-    computing a before/after ratio.) A fresh 8-sample gdb round after
-    (1)+(2) found no single application function dominating anymore -
-    all 8 samples landed in generic allocator/string primitives
-    (`_int_malloc`, `operator new`, `basic_string` ctor/dtor,
-    `__memcpy_evex`, `__strlen_evex`). Walking up the stack from these
-    samples traced the largest identifiable contributor to
-    `std::unordered_map<std::string, BindingInfo>` (i.e. `locals`)
-    being deep-copied into lambda closures via `[=, this]` capture in
-    `makeBuiltinCollectionDispatchResolvers` and
-    `populateBuiltinCollectionDispatchBufferAndMapResolvers`
-    (SemanticsValidatorInferCollections.cpp - 13 lambdas capture
-    `[=, this]` or `[=]`, several stored onto a `state` struct that
-    outlives the local scope). This is item (3) from the implementation
-    plan, and per the stop_rule it is where this task stops rather than
-    being fixed here: `[=, this]` is not obviously a mistake - at least
-    one call site (SemanticsValidatorExprDispatchBootstrap.cpp:94)
-    stores the returned resolvers into an out-parameter
-    (`bootstrapOut.dispatchResolvers`) that escapes the calling
-    function's stack frame, so those particular closures need owned
-    copies of `params`/`locals` to stay valid; that file's *own*
-    lambdas already use the safer pattern (raw `paramsPtr`/`localsPtr`
-    capture) for exactly this reason. Whether the other ~17 call sites
-    of `makeBuiltinCollectionDispatchResolvers` all consume the
-    returned resolvers synchronously within the same stack frame (safe
-    to convert to pointer/reference capture) or not needs a per-call-
-    site lifetime audit before any capture-mode change - getting this
-    wrong introduces a dangling-reference bug, not a slowdown. That
-    audit, plus fixing whichever sites are safe to fix, is the
-    concrete next step; not attempted in this pass given the risk/time
-    profile. Regression check: focused subset
-    (`compile_run.*(template|overload|special|imports_operations_and_collections|collections)`)
-    run against the (1)+(2) build; matched the same pre-existing
-    failure names found in TODO-4742's verification, no regressions.
-  - progress_2026-07-27: completed the `[=, this]` lifetime audit (item
-    3) and implemented the resulting fix. Audit: read all 18 call sites
-    of `makeBuiltinCollectionDispatchResolvers` and confirmed every one
-    consumes the returned resolvers purely synchronously within the
-    same calling function (constructed as a local, used inline, never
-    stored on a class member or returned to a grandparent caller) -
-    including `SemanticsValidatorExprDispatchBootstrap.cpp:94`, which
-    looked risky (`bootstrapOut` is an out-parameter) but turned out to
-    just land in the caller's own stack-local `ExprDispatchBootstrap`
-    (`SemanticsValidatorExpr.cpp:845`), used and discarded within that
-    same `validateExpr` call - same pattern as every other site. `params`
-    traces back to `paramsByDef_` (a `SemanticsValidator` member, stable
-    for the whole validation pass); `locals` traces back to a
-    definition-scoped map owned several frames up, stable for the whole
-    definition's validation and never mutated by these read-only
-    expression-inference helpers. Both outlive every call site's
-    synchronous use, so reference-capturing them is safe. `adapters`
-    does NOT get the same treatment - `makeBuiltinCollectionDispatchResolvers`'s
-    third parameter has a default argument (`= {}`), so 2 call sites
-    (SemanticsValidatorExprFieldResolution.cpp:339,
-    SemanticsValidatorResultHelpers.cpp:622) bind a temporary to it
-    whose lifetime ends at the end of the full call expression -
-    reference-capturing `adapters` would dangle for those sites, so it
-    stays value-captured everywhere.
-    Fix: `makeBuiltinCollectionDispatchResolvers`'s internal lambdas
-    chain together (`resolveBindingTarget`/`inferCallBinding` used
-    directly by name inside the `state->resolveXXX` closures, each
-    previously `[=, this]`-copying the caller's `locals` hashmap and
-    `params` vector afresh - compounding, since `inferCallBinding` itself
-    embeds another copy of `resolveBindingTarget`). Rather than rewrite
-    full capture lists (risking silently dropping a capture the
-    blanket `[=]` currently supplies), added explicit `&params, &locals`
-    overrides on top of the existing `[=, this]`/`[=]` default capture -
-    C++ allows mixing a default capture with explicit reference
-    overrides for specific names - on the 15 lambdas that directly
-    reference `params`/`locals` in their own body (verified each one
-    individually across
-    src/semantics/SemanticsValidatorInferCollections.cpp (9),
-    SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp (5), and
-    SemanticsValidatorInferCollectionStringResolver.cpp (1)); left the
-    4 lambdas that don't touch params/locals directly
-    (`resolveMethodOwnerPath`,
-    `resolveDereferencedIndexedArgsPackElementType`,
-    `resolveWrappedIndexedArgsPackElementType`,
-    `isDirectCanonicalVectorAccessCallOnBuiltinReceiver`) untouched.
-    Measured: `import /std/image/*` with zero calls, `--emit=vm`, went
-    from ~34.85s (TODO-4742-only baseline, this machine) to ~17.5s avg
-    (2 runs: 17.890s, 17.028s) - roughly 2x faster than the (1)+(2)-only
-    state (~32.92s) and ~2x faster than the original baseline.
-    Verification (given the lifetime-audit risk profile - a wrong
-    capture-mode change is a dangling-reference bug, not a slowdown):
-    (a) ran the reproduction case through the ASan build
-    (`build-asan`) - clean exit, no AddressSanitizer report; (b) ran a
-    ~241-test ASan-instrumented regression subset
-    (`compile_run.*(template|overload|special|imports_operations_and_collections|collections|sum)`)
-    at `-j4`; stopped it after ~23/241 (extrapolated full run ~4.5h,
-    not worth the wall time) but it surfaced a genuine, PRE-EXISTING
-    memory-safety bug unrelated to this change - filed as TODO-4744 -
-    plus a cluster of map-count assertion failures
-    (`vm_collections_array_and_wrapper_shadows`) that reproduce
-    identically with and without this session's capture-mode changes
-    (differentially tested by stashing the changes, rebuilding the
-    ASan binary at commit `ff65491`, and re-running the same standalone
-    doctest range - byte-identical failure); (c) ran the full non-ASan
-    focused regression subset (241 tests) against the final build - 61
-    failed, byte-identical failing-test-name set to the (1)+(2)-only
-    run, zero new failures, zero regressions.
-    TODO-4743 invokes its own stop_rule here: after implementing all
-    three planned items (duplicate-scan reuse, stdlib-registry
-    memoization, and now the `[=, this]` lifetime audit + fix), wall
-    time is at ~17.5s, still well above the ~2-5s target. Per the
-    stop_rule, reporting this as a residual architectural-cost
-    limitation rather than opening a new unscoped audit: the remaining
-    cost is presumably the same class of diffuse per-call resolution
-    overhead the second gdb profiling round found (soa/collection-access
-    receiver resolution, generic string/allocation churn across the
-    ~15+ call sites of `findStdlibSurfaceMetadataByResolvedPath` and
-    friends), inherent to the text-splicing whole-program validation
-    model TODO-4735 already investigated and declined to fix at the
-    leaf level. Not closing TODO-4743 (acceptance target unmet), but
-    treating further chasing here as needing fresh scoping/justification
-    rather than an open thread to keep pulling on.
-  - progress_2026-08-05: obtained the "fresh scoping" the prior note
-    called for - a real profiler (`valgrind --tool=callgrind`, not
-    statistical gdb sampling) was available in this session's
-    environment. Profiled the 12-column `SoaColumnsN` monomorphization
-    case (TODO-4713's slow case, structurally the same
-    compat-path-resolution hot path this TODO already implicated).
-    `callgrind_annotate` self-cost breakdown: no single function exceeds
-    ~6.3% of total instructions (`stripResolvedPathSpecializationSuffix`
-    at 6.26%, everything else at or below ~2%, with generic
-    malloc/free/memcpy/strlen primitives making up a large chunk of the
-    top-20) - this is a real, instrumented confirmation of the diffuse-
-    cost conclusion already reached by gdb sampling, not a new finding,
-    but removes any doubt that statistical sampling missed a
-    concentrated hotspot. Found and fixed two additional small, safe,
-    verified wins while reading the profile: (1)
-    `experimentalSoaStorageTypePath`/
-    `templateMonomorphExperimentalSoaHelperPrefix`
-    (`SemanticsBuiltinPathHelpers.cpp`,
-    `TemplateMonomorphCoreUtilities.h`) were pure zero-argument (or
-    argument-independent per call) functions rebuilding the same string
-    via concatenation on every call from deep inside the per-expression-
-    node monomorphization recursion - memoized via function-local
-    `static const` (safe: both inputs are process-lifetime-immutable);
-    (2) `stripResolvedPathSpecializationSuffix`
-    (`StdlibSurfaceRegistry.cpp`) ran two substring `rfind("__t")`/
-    `rfind("__ov")` scans unconditionally - added a cheap `find("__") ==
-    npos` early return, since neither marker can match without a literal
-    "__" present (behavior-preserving: verified the existing early-return
-    path already handled "no marker found" identically). Measured
-    impact on the 16-column case: ~64s -> ~57s, a real but modest ~11%
-    further improvement - confirms the diffuse-cost diagnosis rather
-    than revealing a new dominant bottleneck (the callgrind numbers
-    predicted this: the top self-cost function was only ~6%, so no
-    single fix could move the needle dramatically). Verified via full
-    3-suite run: `PrimeStruct_compile_run_tests` 2940/2940,
-    `PrimeStruct_semantics_tests` 2940/2940,
-    `PrimeStruct_backend_ir_tests` 1739/1741 (2 pre-existing unrelated
-    failures only) - zero regressions from either change.
-    **Formally invoking this TODO's own stop_rule now**: the profiler-
-    backed diagnosis this note provides confirms (with real
-    instrumentation, not just statistical sampling) that the remaining
-    cost after TODO-4742 + this TODO's three implemented items + this
-    session's two additional micro-optimizations is genuinely diffuse
-    across dozens of small string/allocation/lookup operations
-    integral to the compat-path-resolution architecture
-    (`docs/CompatPathResolutionConsolidation.md`), not a fixable leaf-
-    level bug. Per the stop_rule, NOT attempting the broader compat-path
-    consolidation rewrite here - that is explicitly out of scope for
-    this leaf and would need its own coordinated effort. Treating the
-    ~2-5s acceptance target as not achievable without that larger,
-    separately-scoped rewrite; the achieved state (TODO-4742's 1.87x +
-    this TODO's cumulative further ~2.6x, i.e. roughly 5x faster than
-    the original baseline, with a profiler-verified diffuse-cost
-    diagnosis on record) is the accepted final state for this leaf.
-  - cross_reference_2026-08-09: re-encountered this exact cost class
-    while attacking the highest-cost `CTestCostData.txt` entries per
-    user request. `smoke_core_paths_newly_exposed_2026_07_16_113_122`
-    (~95s, 8 "gfx ... across backends" tests) and several `vm.core`
-    shards (35-59s, `ImageError` helper tests) both trace to the same
-    root cause this TODO already diagnosed: `import /std/gfx/experimental/*`
-    costs ~5.2s per `primec` invocation even with a totally unused,
-    empty `main()` (vs ~0.25s with no import), and narrowing to a single
-    symbol import made no difference (~4.3s) - confirming (as this TODO
-    already found for `/std/image/*`) the cost is inherent to processing
-    the whole imported module, not proportional to actual usage.
-  - progress_2026-08-10: user explicitly asked to fix this TODO and
-    authorized the large compat-path-resolution consolidation rewrite
-    if needed. Checked `docs/CompatPathResolutionConsolidation.md` first
-    and found **that rewrite already landed** (Steps 0 through 2c all
-    marked Complete, with real commits) in a separate work stream
-    (the `docs/OverloadResolutionPrototype.md` Phase 0 prerequisite)
-    sometime after this TODO's own 2026-08-05 stop_rule invocation -
-    but it didn't fix the gfx/image import slowness, because that cost
-    turned out to live in a different function than what the
-    consolidation targeted (compat-spelling classification, not general
-    call-path resolution). Fresh `gdb` sampling on the gfx-import repro
-    found a real, previously-undiagnosed inefficiency:
-    `SemanticsValidator::resolveCalleePath`'s `hasDefinitionFamilyPath`
-    lambda cached its answer in `CallTargetResolutionScratch` - an arena
-    that gets destroyed and rebuilt every time validation moves to a
-    different definition/execution "owner". But the answer (does a
-    resolved path exist as a definition anywhere in the program) only
-    depends on `defMap_`/`definitionFamilyPathIndex_`, both fully built
-    once and never mutated for the whole validation pass (per the
-    existing comment on `definitionFamilyPathIndex_`) - so every new
-    definition validated was rebuilding identical answers from scratch.
-    Fix: added `definitionFamilyPathAnswerCache_`, a plain
-    `SemanticsValidator`-lifetime-persistent
-    `std::unordered_map<std::string, bool>` (not arena-scoped, not
-    thread_local), and had the lambda consult it directly instead of
-    the per-owner cache. Safe under the opt-in parallel
-    definition-validation worker path too: verified
-    `SemanticsValidatorPassesDefinitions.cpp` constructs a completely
-    separate `SemanticsValidator worker(...)` instance per worker
-    thread (not a shared instance), so there is no cross-thread mutable
-    state to race on. Also memoized the zero-argument
-    `publicSoaFolder()`/`legacySoaFolder()`/`experimentalSoaFolder()`/
-    `soaBackingTypeName()` helpers in `include/primec/SoaPathHelpers.h`
-    with function-local `static const` strings (same pattern as this
-    TODO's 2026-08-05 fixes), since they were rebuilding fixed strings
-    via concatenation on every call.
-    Measured: gfx-import repro (`--dump-stage semantic-product`) went
-    from ~5.2s to ~3.2s (~38%, almost entirely from the cache fix - the
-    soa-folder memoization alone only accounted for ~0.1s of that). The
-    TODO's own original `/std/image/*` case (`--emit=vm`, matching this
-    TODO's historical measurement methodology) went from ~17.5s (this
-    TODO's previously "accepted final state") to ~12.0s - a further
-    ~31% improvement on top of the already-landed 5x. **Still short of
-    the ~2-5s acceptance target** - a fresh profiling round after this
-    fix shows the same diffuse pattern this TODO already characterized
-    (`soa_paths::collectionPath` string-building, generic
-    malloc/memcpy/hashtable-lookup churn, no single dominant function),
-    confirming the fix addressed a real, distinct, previously-missed
-    inefficiency rather than duplicating already-exhausted work, but
-    the underlying diffuse-cost diagnosis and its own stop_rule (no
-    further leaf-level fix without a much larger, differently-scoped
-    rewrite of the whole-program validation model itself, not just
-    compat-path resolution) still stands. Verified via a full
-    `ctest --parallel 4` run: zero new failures beyond the pre-existing,
-    unrelated `PrimeStruct_vector_surface_traces` gate-script failure.
-    Leaving this TODO's checkbox unresolved, consistent with its own
-    2026-08-05 note ("not closing TODO-4743, acceptance target unmet") -
-    this is further real progress on an already-accepted-as-diffuse
-    residual, not a full close.
 - [ ] TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase epic; recursion support included)
   - owner: ai
   - created_at: 2026-07-27
