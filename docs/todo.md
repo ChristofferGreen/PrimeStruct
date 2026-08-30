@@ -443,32 +443,70 @@ Note (2026-08-28): item 77 (TODO-5256) has resolved - see
     processing the T=i32 and T=string specializations of this
     mutually-recursive pair together (regardless of source order)
     consistently corrupts the string specialization specifically.
-  - implementation_notes: start in
-    `src/semantics/TemplateMonomorphImplicitTemplateInference.cpp`
-    (~line 1007-1085): the implicit-template-arg-inference cache key
-    (`ctx.implicitTemplateArgInferenceFacts`, keyed by
-    `implicitInferenceFactKey`) is built from
-    `ctx.currentDefinitionPath` (the enclosing definition being
-    rewritten) plus each ordered argument's inferred type text. Verify
-    whether `ctx.currentDefinitionPath` (set in
-    `TemplateMonomorphDefinitionRewrites.cpp`'s `rewriteDefinition`,
-    `ctx.currentDefinitionPath = def.fullPath`) is actually the
-    *specialized* path (e.g. `.../writeLine__ov2__t369e...`) or still the
-    *generic base* path (`.../writeLine`) at the point the inner
-    `self.write_line(value)`/`self.writeLine(value)` call is being
-    resolved during each specialization's body rewrite - if it's the
-    base path, both specializations produce identical or
-    insufficiently-distinct fact keys and one clobbers/shadows the
-    other's cached inferred args in `ctx.implicitTemplateArgInferenceFacts`.
-    Also check `src/semantics/TemplateMonomorphContext.cpp`'s
-    `instantiateTemplate` (the `specializationCache.emplace(key, ...)`
-    before recursing, used as the mutual-recursion guard) for whether the
-    guard's key correctly distinguishes the two mutually-recursive
-    template families' per-T instantiation identity across the
-    interleaved recursive calls (`write_line<Write,i32>` ->
-    `writeLine<Write,i32>` -> back into `write_line` family resolution,
-    and independently the same chain for `<Write,string>`) rather than
-    assuming the two chains never interleave within one validation pass.
+  - implementation_notes: (round 2, 2026-08-29) instrumented and ruled out
+    two strong candidate hypotheses - do NOT re-investigate these without
+    new evidence:
+    - `ctx.implicitTemplateArgInferenceFacts` (`TemplateMonomorphImplicitTemplateInference.cpp`
+      ~line 1007): traced live via stderr instrumentation. `ctx.currentDefinitionPath`
+      IS already the *specialized* path at this point (e.g.
+      `/File/write_line__ov2__t369e084662ebebcd`, not the generic base),
+      so the fact keys for the two specializations are correctly distinct
+      (`.../write_line__ov2__t1aaf4e2bd1c3a0c2|/File/writeLine__ov2|...ordered:File<Write>;i32...`
+      vs. the `t369e...`/`string` equivalent) and each correctly infers
+      `Write, i32` / `Write, string` respectively - no collision here.
+    - `TemplateMonomorphContext.cpp`'s `instantiateTemplate`/
+      `specializationCache`: traced live with indented call-tree logging.
+      Both the i32 and the string instantiation chains are structurally
+      IDENTICAL and correctly isolated: `write_line<T>` ENTER/CREATING ->
+      nested `writeLine<T>` ENTER/CREATING/EXIT -> a second `writeLine<T>`
+      ENTER that CACHE HITs -> `write_line<T>` EXIT, for both T=i32 and
+      T=string, with correctly distinct cache keys and specialized paths
+      throughout. No asymmetry, no collision.
+    - Also ruled out: `Expr`/`Definition` (`include/primec/ast/Ast.h`) are
+      pure value types (no pointer/shared_ptr members) and
+      `specializeTemplateDefinitionFamily`'s `Definition clone = def;`
+      (`TemplateMonomorphTemplateSpecialization.cpp` ~line 266) is
+      therefore a true deep copy - the two specializations' body `Expr`
+      trees are NOT aliased/shared objects, so a naive
+      "mutate-shared-node" theory doesn't hold either.
+    - Pinpointed the actual failure site instead: the diagnostic comes
+      from `SemanticsValidatorExprArgumentValidation.cpp`'s
+      `validateArgumentTypeAgainstParam`, the generic non-string
+      "expected TYPE" fallback at ~line 338-343 (`if
+      (isStringExprForArgumentValidation(arg, dispatchResolvers)) {
+      ...expected + expectedTypeText... }`). This confirms the CALLEE
+      that got resolved for the inner `self.write_line(value)` call
+      *inside the T=string specialization's own body* is genuinely the
+      **i32 sibling specialization** (its declared parameter type really
+      is i32) - `value`'s actual type (string) is correctly inferred, it's
+      the call TARGET that's wrong, not the type inference. So the defect
+      is in whatever resolves/rewrites that inner call's target during or
+      after monomorphization, not in argument-type inference or the
+      specialization-creation machinery itself.
+    - Next investigator: look at how the AST call node for
+      `self.write_line(value)` inside `writeLine<Mode,T>`'s body gets its
+      *callee* rewritten/resolved - `TemplateMonomorphExpressionRewrite.cpp`
+      ~line 3489-3531 (`expr.resolvedCallPath = rewrittenMethodPath` /
+      `methodPath` resolution around the `instantiateTemplate(methodPath,
+      expr.templateArgs, ...)` call at ~3490) is the most promising area:
+      unlike the *outer*, explicitly-typed calls
+      (`write_line<Write,i32>(...)`/`write_line<Write,string>(...)`,
+      which the compiler-generated `main()` call sites have explicit
+      template args and were shown above to resolve correctly), the
+      *inner*, implicit-argument call `self.write_line(value)` inside the
+      generic body relies on `methodPath`/`resolveMethodCallTemplateTarget`
+      resolving to the concrete specialization matching *this* specific
+      enclosing instantiation's `T`, not just "some" `write_line`
+      specialization; check whether whatever produces `methodPath` here
+      is scoped by the current specialization identity or falls back to a
+      family-wide/first-seen resolution once multiple concrete siblings
+      exist in `ctx.sourceDefs`. Since round 1 and round 2's hypotheses
+      are both eliminated, this needs actual breakpoint-level debugging
+      (gdb/lldb on `primec`) rather than further stderr-print archaeology
+      - a debug build with `-g` stepping through
+      `specializeTemplateDefinitionFamily` -> `rewriteDefinition` ->
+      whatever expression-rewrite path touches the `self.write_line(value)`
+      node inside the T=string clone would settle this in one session.
     A standalone repro is at the two source snippets in this TODO's
     linked TEST_CASE (also reproducible directly via `./primec
     --emit=vm <file> --entry /main` on the combined-both-calls source).
