@@ -12421,6 +12421,96 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     epic's established methodology) - these are subtle routing-precedence
     bugs in code with a documented history of "seemingly small fixes
     causing regressions" (see TODO-4731's own progress notes).
+  - implementation_notes (round 2026-08-30): root-caused shape (c) via
+    gdb plus temporary instrumentation (a `fprintf` inside the
+    `helperReturnSoaRefHelper`-gated block in
+    `TemplateMonomorphExpressionRewrite.cpp`, and inside
+    `inferCollectionReceiverFamilyForRewrite`'s two return paths in the
+    same file; both fully removed before this note was written, `git
+    diff` confirms clean). Trace: for the explicit rooted-path repro
+    (`/std/collections/soa/get_ref(holder.pickBorrowed(location(values)),
+    1i32)`, receiver a method call returning `Reference<soa<Particle>>`),
+    the guard at `TemplateMonomorphExpressionRewrite.cpp:2089-2094`
+    (`!resolvesSoaReceiverForRewrite(expr.args.front())`) evaluates true
+    - i.e. the receiver is judged NOT soa-like - and the call hard-fails
+    with the dead `/std/collections/soa_vector/get_ref` diagnostic before
+    ever reaching normal call resolution (confirmed via a `bt` at
+    `SemanticsBuiltinPathHelpers.cpp`'s `soaUnavailableMethodDiagnostic`,
+    called directly from that failing branch). `resolvesSoaReceiverForRewrite`
+    delegates to `inferCollectionReceiverFamilyForRewrite`, which DOES
+    correctly infer the receiver's type as `Reference<soa<Particle>>` and
+    unwraps it to the family string `"soa"` (confirmed via the temporary
+    instrumentation: `inferBindingTypeForMonomorph OK typeName=Reference
+    typeTemplateArg=soa<Particle> family=soa`) - but
+    `isTemplateMonomorphSoaReceiverType(receiverTypeName)`
+    (`TemplateMonomorphCoreUtilities.cpp:41-43`) compares that family
+    string against `templateMonomorphSoaReceiverTypeName()`, which
+    resolves to `internalSoaCollectionTypeName()` ==
+    `soa_paths::legacySoaFolder()` == the literal string `"soa_vector"`
+    (`include/primec/ir/SoaPathHelpers.h:21-24`) - NOT `"soa"`. So `"soa"
+    == "soa_vector"` is false, and a genuinely valid soa receiver is
+    rejected. Root cause is exactly one missing case in
+    `normalizeCollectionReceiverTypeName`
+    (`TemplateMonomorphCollectionCompatibilityPaths.cpp:215-250`): it
+    already maps the legacy/capitalized spelling `"Vector"` to the
+    canonical `"vector"` and the experimental soa-vector type-path
+    spelling to `templateMonomorphSoaReceiverTypeName()`, but never maps
+    the plain public surface keyword `"soa"` (what `soa<T>`/
+    `Reference<soa<T>>` actually normalize to after unwrapping) to that
+    same canonical family name - an asymmetry with the vector case, where
+    the bare canonical spelling already equals the target output so no
+    extra case was needed.
+    Attempted fix: added `if (value == "soa" || value.rfind("soa__", 0)
+    == 0) { return templateMonomorphSoaReceiverTypeName(); }` alongside
+    the existing experimental-soa-path case. Verified this fixes BOTH the
+    minimal shape (c) repro and the full three-shape combined repro from
+    `hasVisiblePublicSoaHelperDefinition`'s test fixture (both now
+    `--dump-stage=semantic-product` exit 0, no diagnostic).
+    **However, this fix is NOT safe to land**: it causes a severe
+    slowdown/hang in `PrimeStruct_semantics_tests`. Full suite run never
+    completed (interrupted after 130s+ at 99% CPU, vs the suite's normal
+    well-under-a-minute runtime); bisected via per-suite timeouts to
+    `primestruct.semantics.calls_flow.collections`, which alone times out
+    at 20s (vs its normal ~1-2s). Every individual test case in that
+    suite passes in isolation and quickly (verified all 240
+    soa-tagged cases individually, each well under 5s) - the slowdown
+    only manifests when many "experimental soa"-prefixed tests run in
+    the same process in sequence (`--test-case="experimental soa*"`
+    alone times out at 20s with zero output before the timeout, vs
+    passing instantly as an isolated pair). This is consistent with (not
+    yet proven to be) the diffuse per-call-resolution / cross-test-case
+    state-accumulation cost class already characterized by TODO-4743 and
+    TODO-4712's "cross-test-case pollution" note: previously,
+    `resolvesSoaReceiverForRewrite` incorrectly rejected these borrowed
+    soa receivers and short-circuited into the (buggy but cheap) hard-
+    failure path; correctly recognizing them now routes many more exprs
+    through the full soa-specific resolution machinery
+    (`makeBuiltinCollectionDispatchResolvers`/
+    `BuiltinCollectionDispatchResolverAdapters` construction appeared
+    repeatedly in `gdb -p <pid> -batch -ex bt` samples taken while the
+    hang was in progress), which is apparently quadratic-or-worse in
+    something that accumulates across same-process test cases. **Fully
+    reverted** (`git checkout --
+    src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp`,
+    confirmed via `git status --short`/`git diff --stat` both empty) -
+    landing a correctness fix that turns a fast, always-passing suite
+    into one that hangs is not an acceptable trade, per this epic's
+    standing discipline of never landing a fix that regresses another
+    gate.
+  - stop_rule (updated again): shape (c)'s root cause is now precisely
+    known (the missing `"soa"` -> `templateMonomorphSoaReceiverTypeName()`
+    case in `normalizeCollectionReceiverTypeName`) and the one-line fix
+    is known to work correctness-wise - what remains is characterizing
+    and fixing (or working around) the pre-existing performance
+    pathology in the soa dispatch-resolver construction path that this
+    fix newly exercises at scale, which is squarely TODO-4743's territory
+    (now closed/superseded, see its own notes) rather than this task's.
+    A future session should NOT re-attempt this exact one-line fix in
+    isolation without first addressing (or at least profiling) why
+    `calls_flow.collections`'s ~120 soa test cases go from ~1-2s to a
+    20s+ timeout when this fix is active - most likely by profiling with
+    `perf`/`callgrind` on `--test-case="experimental soa*"` specifically,
+    the smallest reproducer found this round.
 
 - [x] TODO-5200 (RESOLVED): finish TODO-4900's remaining ir_pipeline sub-cluster-2 shards with real production/test fixes, not just triage
   - owner: ai
