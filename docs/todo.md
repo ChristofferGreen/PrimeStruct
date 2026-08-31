@@ -8473,6 +8473,61 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     is out of the way and the remaining capture list is easier to see
     clearly. Not attempted this round - deferred per the stop_rule's
     "do not guess" caution given the capture surface size found here.
+  - progress_2026-08-31: landed seam (4a), the first of the two-step split
+    this task's own implementation_notes recommended - the narrower
+    `typeName`/`typeTemplateArg` receiver-type-inference sub-block
+    (originally lines 3537-3605 pre-extraction, ending right before the
+    `typeMatches(typeName, "File")` check so `typeMatches`/
+    `isFileMethodName` stay untouched in `resolveMethodTarget`'s own
+    body). Confirmed via the same extract-to-scratch-file-and-grep method
+    as the seam (4) investigation that this narrower slice touches only
+    one local lambda (`withPreservedError`) plus real
+    `SemanticsValidator` members (`findParamBinding`,
+    `inferBindingTypeFromInitializer`, `inferDefinitionReturnBinding`,
+    `inferStructReturnPath`, `inferExprReturnKind`, `typeNameForReturnKind`,
+    `resolveCalleePath`), the `defMap_` member variable, and free
+    functions (`normalizeBindingTypeName`,
+    `isSpecializedExperimentalKeyValueBackingTypeForMethodTargets`) - no
+    hub lambdas involved, unlike the tail's remainder. Since
+    `withPreservedError` itself is trivial (only touches the `error_`
+    member - confirmed by reading its full body, 7 lines) and is used at
+    one other call site elsewhere in `resolveMethodTarget` (line ~3422 in
+    the then-current numbering, outside this seam's scope), promoted it
+    to a real private member function `SemanticsValidator::withPreservedError`
+    too rather than threading it through as a parameter, and (matching
+    the established pattern) left the local lambda `withPreservedError`
+    in place with its original name/signature, its body reduced to a
+    thin `return this->withPreservedError(fn);` forwarder so its other
+    call site needed no changes. Added the new member function
+    `void inferMethodTargetReceiverType(params, locals, receiver,
+    typeNameOut, typeTemplateArgOut)` (non-const - transitively calls
+    several non-const members) to
+    `SemanticsValidatorPrivateExprValidation.h` /
+    `SemanticsValidatorExprMethodTargetResolution.cpp`, a faithful port
+    of the original inline block with `typeName`/`typeTemplateArg`
+    becoming output reference parameters. Unlike seams (1)-(3), this
+    replaces inline procedural code directly (not a named local lambda),
+    so the call site itself changed from ~69 lines of inline logic to a
+    3-line declare-then-call
+    (`std::string typeName; std::string typeTemplateArg;
+    inferMethodTargetReceiverType(params, locals, receiver, typeName,
+    typeTemplateArg);`). Verified: `primec`-only build clean (zero
+    warnings) on the first attempt; the shape (c) repros still reproduce
+    the unchanged pre-existing "unknown method:
+    /std/collections/soa_vector/get_ref" diagnostic; full
+    `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the same already-documented
+    pre-existing "ir lowerer supports map method calls" flake, unrelated);
+    `PrimeStruct_compile_run_tests` 2678/2678 (0 failed, run from
+    `build-release/` per the cwd gotcha noted in progress_2026-08-30c).
+    Seam (4)'s remaining, larger piece - the dispatch-on-typeName body
+    from (post-this-extraction) the `typeMatches(typeName, "File")` check
+    through the function's end, which still touches the 15 remaining
+    local lambdas/hubs this task's seam (4) implementation_notes
+    inventoried (`setCollectionMethodTarget`,
+    `setPreferredKeyValueMethodTarget`, and the rest) - remains open and
+    should get its own dedicated round given that capture surface's size,
+    per the same stop_rule caution.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai

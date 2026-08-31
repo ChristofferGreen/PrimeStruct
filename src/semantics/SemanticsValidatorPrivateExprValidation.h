@@ -505,6 +505,26 @@
       const MethodTargetCollectionResolvers &resolvers,
       std::string &resolvedOut,
       bool &isBuiltinOut);
+  // TODO-4724 seam (4a): extracted from resolveMethodTarget's body - runs
+  // error_ under a saved/restored snapshot while probing a speculative
+  // inference call whose own failure diagnostic must not leak into the
+  // caller's own diagnostic if the probe doesn't pan out.
+  bool withPreservedError(const std::function<bool()> &fn);
+  // TODO-4724 seam (4a): extracted from resolveMethodTarget's body - the
+  // first, narrower half of the "primitive/struct/sum-type generic
+  // fallback" tail (see this task's own implementation_notes for why the
+  // full tail's capture surface was too large to extract in one step).
+  // Infers a method-call receiver's type name/template argument from
+  // scratch via direct param/local binding lookup, then (in order)
+  // initializer inference, definition-return-type inference, struct-return
+  // inference, and a general ReturnKind fallback - stopping at the first
+  // one that produces a non-empty type name.
+  void inferMethodTargetReceiverType(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &receiver,
+      std::string &typeNameOut,
+      std::string &typeTemplateArgOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

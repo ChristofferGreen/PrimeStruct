@@ -620,6 +620,90 @@ std::optional<bool> SemanticsValidator::tryResolveExplicitCanonicalVectorCountMe
                                           explicitVectorHelperPath);
 }
 
+bool SemanticsValidator::withPreservedError(const std::function<bool()> &fn) {
+  const std::string previousError = error_;
+  error_.clear();
+  const bool ok = fn();
+  error_.clear();
+  error_ = previousError;
+  return ok;
+}
+
+void SemanticsValidator::inferMethodTargetReceiverType(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &receiver,
+    std::string &typeNameOut,
+    std::string &typeTemplateArgOut) {
+  if (receiver.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+      typeNameOut = paramBinding->typeName;
+      typeTemplateArgOut = paramBinding->typeTemplateArg;
+    } else {
+      auto it = locals.find(receiver.name);
+      if (it != locals.end()) {
+        typeNameOut = it->second.typeName;
+        typeTemplateArgOut = it->second.typeTemplateArg;
+      }
+    }
+  }
+  if (typeNameOut.empty()) {
+    if (receiver.kind == Expr::Kind::Call) {
+      BindingInfo inferredReceiverBinding;
+      if (withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(
+                receiver, params, locals, inferredReceiverBinding);
+          }) &&
+          !inferredReceiverBinding.typeName.empty()) {
+        typeNameOut = normalizeBindingTypeName(inferredReceiverBinding.typeName);
+        typeTemplateArgOut = inferredReceiverBinding.typeTemplateArg;
+      }
+    }
+  }
+  if (typeNameOut.empty()) {
+    if (receiver.kind == Expr::Kind::Call) {
+      auto defIt = defMap_.find(resolveCalleePath(receiver));
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        BindingInfo inferredReturn;
+        if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+          typeNameOut = normalizeBindingTypeName(inferredReturn.typeName);
+          typeTemplateArgOut = inferredReturn.typeTemplateArg;
+        }
+      }
+    }
+  }
+  if (typeNameOut.empty()) {
+    std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
+    if (!inferredStruct.empty()) {
+      std::string normalizedStruct = normalizeBindingTypeName(inferredStruct);
+      if (!normalizedStruct.empty() && normalizedStruct.front() != '/') {
+        normalizedStruct.insert(normalizedStruct.begin(), '/');
+      }
+      if (normalizedStruct == "/map" ||
+          isSpecializedExperimentalKeyValueBackingTypeForMethodTargets(normalizedStruct)) {
+        typeNameOut = "/map";
+      } else {
+        typeNameOut = inferredStruct;
+      }
+    }
+  }
+  if (typeNameOut.empty()) {
+    ReturnKind inferredKind = inferExprReturnKind(receiver, params, locals);
+    std::string inferred;
+    if (inferredKind == ReturnKind::Array) {
+      inferred = inferStructReturnPath(receiver, params, locals);
+      if (inferred.empty()) {
+        inferred = typeNameForReturnKind(inferredKind);
+      }
+    } else {
+      inferred = typeNameForReturnKind(inferredKind);
+    }
+    if (!inferred.empty()) {
+      typeNameOut = inferred;
+    }
+  }
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -2423,12 +2507,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget});
   };
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return this->withPreservedError(fn);
   };
   auto explicitHelperFamilyHasCompatibleReceiver =
       [&](std::string_view path, std::string_view receiverFamily) -> bool {
@@ -3536,73 +3615,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
 
   std::string typeName;
   std::string typeTemplateArg;
-  if (receiver.kind == Expr::Kind::Name) {
-    if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
-      typeName = paramBinding->typeName;
-      typeTemplateArg = paramBinding->typeTemplateArg;
-    } else {
-      auto it = locals.find(receiver.name);
-      if (it != locals.end()) {
-        typeName = it->second.typeName;
-        typeTemplateArg = it->second.typeTemplateArg;
-      }
-    }
-  }
-  if (typeName.empty()) {
-    if (receiver.kind == Expr::Kind::Call) {
-      BindingInfo inferredReceiverBinding;
-      if (withPreservedError([&]() {
-            return inferBindingTypeFromInitializer(
-                receiver, params, locals, inferredReceiverBinding);
-          }) &&
-          !inferredReceiverBinding.typeName.empty()) {
-        typeName = normalizeBindingTypeName(inferredReceiverBinding.typeName);
-        typeTemplateArg = inferredReceiverBinding.typeTemplateArg;
-      }
-    }
-  }
-  if (typeName.empty()) {
-    if (receiver.kind == Expr::Kind::Call) {
-      auto defIt = defMap_.find(resolveCalleePath(receiver));
-      if (defIt != defMap_.end() && defIt->second != nullptr) {
-        BindingInfo inferredReturn;
-        if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-          typeName = normalizeBindingTypeName(inferredReturn.typeName);
-          typeTemplateArg = inferredReturn.typeTemplateArg;
-        }
-      }
-    }
-  }
-  if (typeName.empty()) {
-    std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
-    if (!inferredStruct.empty()) {
-      std::string normalizedStruct = normalizeBindingTypeName(inferredStruct);
-      if (!normalizedStruct.empty() && normalizedStruct.front() != '/') {
-        normalizedStruct.insert(normalizedStruct.begin(), '/');
-      }
-      if (normalizedStruct == "/map" ||
-          isSpecializedExperimentalKeyValueBackingTypeForMethodTargets(normalizedStruct)) {
-        typeName = "/map";
-      } else {
-        typeName = inferredStruct;
-      }
-    }
-  }
-  if (typeName.empty()) {
-    ReturnKind inferredKind = inferExprReturnKind(receiver, params, locals);
-    std::string inferred;
-    if (inferredKind == ReturnKind::Array) {
-      inferred = inferStructReturnPath(receiver, params, locals);
-      if (inferred.empty()) {
-        inferred = typeNameForReturnKind(inferredKind);
-      }
-    } else {
-      inferred = typeNameForReturnKind(inferredKind);
-    }
-    if (!inferred.empty()) {
-      typeName = inferred;
-    }
-  }
+  inferMethodTargetReceiverType(params, locals, receiver, typeName, typeTemplateArg);
   if (typeMatches(typeName, "File") && isFileMethodName(normalizedMethodName)) {
     resolvedOut = preferredFileHelperTarget(normalizedMethodName,
                                            currentValidationState_.context.definitionPath);
