@@ -8405,6 +8405,74 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     a new boundary/design rather than moving an existing self-contained
     block - a fresh read-through dedicated to that seam should precede
     any extraction attempt, per this task's stop_rule.
+  - implementation_notes (round 2026-08-31, read-only investigation, no
+    code changes): did that dedicated read-through for seam (4). Good
+    news first: the boundary is cleaner than expected - `typeName` and
+    `typeTemplateArg` are declared fresh (`std::string typeName;`) at
+    what is now line 3537 (post-seam-(3) line numbers), and every
+    identifier used from that point through the function's closing brace
+    at line 3901 (365 lines) is either a `resolveMethodTarget` parameter,
+    a local computed earlier in the function, a real `SemanticsValidator`
+    member (callable via implicit `this->`, no threading needed), a
+    free function in this file's anonymous namespace (also directly
+    callable), or one of the function's own local lambdas - confirmed by
+    extracting the block to a scratch file and grepping every
+    `identifier(` call pattern against `auto NAME = [...]` definitions
+    and `.h` member declarations across `src/semantics/`. So this really
+    is what the original scope note called "the primitive/struct/sum-type
+    generic fallback": a single, self-contained final resolution phase
+    that infers a receiver type from scratch (`typeName`/`typeTemplateArg`,
+    via `receiver`/`params`/`locals` - direct binding lookup, then
+    initializer inference, then return-type inference, then struct-return
+    inference, then a general `ReturnKind` fallback) and dispatches on it.
+    The bad news: the *capture surface* is much larger than any of
+    seams (1)-(3). Scalar locals used: `normalizedMethodName` (61 uses),
+    `canonicalCollectionHelperName` (11), `explicitVectorHelperPath` (6),
+    `explicitKeyValueHelperPath` (2), `traceFileErrorResult` (1), plus
+    `callNamespacePrefix` and the function's own `receiver`/`params`/
+    `locals`/`resolvedOut`/`isBuiltinOut` (all trivial to pass through
+    unchanged as explicit parameters/refs). Local lambdas used: 17 -
+    `canonicalVectorHelperTarget`, `exprKindName`,
+    `failMethodTargetResolutionDiagnostic`,
+    `isCanonicalKeyValueAccessMethodName`,
+    `maybeFailRetiredMaybeMutableHelperForType`,
+    `preferredBorrowedSoaHelperTargetForCollectionMethod`,
+    `resolveExperimentalKeyValueTarget`,
+    `resolveExplicitRootKeyValueMethodPath`, `resolveStructTypePath`,
+    `resolveSumTypePath`, `rootedVectorMethodPath`,
+    `setCollectionMethodTarget`, `setPreferredKeyValueMethodTarget`,
+    `stampFileErrorResultFailure`, `typeMatches`, `withPreservedError`,
+    `bindingTypeTextForResolution` - more than double seam (3)'s 7 and
+    over twice seam (2)'s 7-field resolver bundle, and two of them
+    (`setCollectionMethodTarget`, `setPreferredKeyValueMethodTarget`) are
+    themselves the large pre-existing hub lambdas seam (2)'s own
+    precursor round already had to reckon with (82 and 17 call sites
+    respectively within the whole function), each with their own
+    multi-lambda dependency webs. Mechanically the same
+    struct-of-`std::function`-references pattern used for seams (2)-(3)
+    would still work here (a ~20-field "fallback resolvers" bundle plus
+    5-6 scalar parameters), but a single commit wiring up and verifying
+    that many captures at once is a materially higher-risk change than
+    any prior seam in this task, and the two nested-hub lambdas mean any
+    mistake in the new function's forwarding logic could plausibly
+    surface as a subtle behavior change only in combinations of receiver
+    shape + method name that the 2740/1644/2678-case regression suites
+    happen not to hit dead-center - exactly the class of risk this task's
+    stop_rule exists to guard against. Recommend a future round split
+    this into two steps rather than one, mirroring how seam (3) reused
+    seam (2)'s precursor work: first extract just the `typeName`/
+    `typeTemplateArg` inference sub-block (lines 3537-3611, ends at the
+    `File` early-return) into its own small member function - it has a
+    much narrower capture surface (`withPreservedError`,
+    `inferBindingTypeFromInitializer`, `findParamBinding`\-shaped direct
+    lookups, `inferDefinitionReturnBinding`, `inferStructReturnPath`,
+    `inferExprReturnKind`, `typeNameForReturnKind`, all either members or
+    a couple of small lambdas) and returns just `typeName`/
+    `typeTemplateArg` - then tackle the larger dispatch-on-typeName
+    remainder (3612-3901) as a second step once that inference sub-block
+    is out of the way and the remaining capture list is easier to see
+    clearly. Not attempted this round - deferred per the stop_rule's
+    "do not guess" caution given the capture surface size found here.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai
