@@ -704,6 +704,84 @@ void SemanticsValidator::inferMethodTargetReceiverType(
   }
 }
 
+std::string SemanticsValidator::resolveSumTypePath(
+    const std::string &typeText, const std::string &namespacePrefix) const {
+  if (const Definition *sumDef =
+          resolveSumDefinitionForTypeText(typeText, namespacePrefix)) {
+    if (typeText.find('<') != std::string::npos &&
+        sumDef->fullPath.find("__t") == std::string::npos) {
+      std::string typeBase;
+      std::string typeArgs;
+      if (splitTemplateTypeName(normalizeBindingTypeName(typeText),
+                                typeBase, typeArgs) &&
+          !typeArgs.empty()) {
+        uint64_t hash = 1469598103934665603ULL;
+        for (const char ch : typeArgs) {
+          if (std::isspace(static_cast<unsigned char>(ch))) {
+            continue;
+          }
+          hash ^= static_cast<uint64_t>(static_cast<unsigned char>(ch));
+          hash *= 1099511628211ULL;
+        }
+        std::ostringstream candidate;
+        candidate << sumDef->fullPath << "__t" << std::hex << hash;
+        if (sumNames_.count(candidate.str()) > 0) {
+          return candidate.str();
+        }
+      }
+      if (auto specializedIt =
+              uniqueSpecializationPathByBase_.find(sumDef->fullPath);
+          specializedIt != uniqueSpecializationPathByBase_.end() &&
+          sumNames_.count(specializedIt->second) > 0) {
+        return specializedIt->second;
+      }
+    }
+    return sumDef->fullPath;
+  }
+  return "";
+}
+
+bool SemanticsValidator::maybeFailRetiredMaybeMutableHelperForType(
+    const std::string &typeName, const std::string &typeTemplateArg,
+    const std::string &normalizedMethodName, const Expr &receiver,
+    bool &handledOut) {
+  handledOut = false;
+  if (!isRetiredMaybeMutableHelperName(normalizedMethodName)) {
+    return false;
+  }
+  const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+  std::string normalizedBaseTypeName = normalizedTypeName;
+  if (!normalizedBaseTypeName.empty() && normalizedBaseTypeName.front() == '/') {
+    normalizedBaseTypeName.erase(normalizedBaseTypeName.begin());
+  }
+  const std::string typeTextForResolution =
+      (typeName.empty() || typeTemplateArg.empty())
+          ? typeName
+          : typeName + "<" + typeTemplateArg + ">";
+  std::string resolvedMaybeType =
+      resolveSumTypePath(typeTextForResolution, receiver.namespacePrefix);
+  if (resolvedMaybeType.empty()) {
+    resolvedMaybeType = resolveSumTypePath(typeName, receiver.namespacePrefix);
+  }
+  if (!isMaybeSumTypePath(resolvedMaybeType) &&
+      !isMaybeSumTypePath(normalizedTypeName) &&
+      !isMaybeSumTypePath(normalizedBaseTypeName)) {
+    return false;
+  }
+  handledOut = true;
+  std::string replacement;
+  if (normalizedMethodName == "set") {
+    replacement = "use some<T>(value) or Maybe<T>{[some] value} instead";
+  } else if (normalizedMethodName == "clear") {
+    replacement = "use Maybe<T>{} or none<T>() instead";
+  } else {
+    replacement = "use pick(value) and rebind the Maybe explicitly instead";
+  }
+  return failExprDiagnostic(receiver,
+      "sum-backed Maybe<T> has no mutable helper " + normalizedMethodName +
+      "; " + replacement);
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -1164,76 +1242,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   auto resolveSumTypePath = [&](const std::string &typeText,
                                 const std::string &namespacePrefix) -> std::string {
-    if (const Definition *sumDef =
-            resolveSumDefinitionForTypeText(typeText, namespacePrefix)) {
-      if (typeText.find('<') != std::string::npos &&
-          sumDef->fullPath.find("__t") == std::string::npos) {
-        std::string typeBase;
-        std::string typeArgs;
-        if (splitTemplateTypeName(normalizeBindingTypeName(typeText),
-                                  typeBase, typeArgs) &&
-            !typeArgs.empty()) {
-          uint64_t hash = 1469598103934665603ULL;
-          for (const char ch : typeArgs) {
-            if (std::isspace(static_cast<unsigned char>(ch))) {
-              continue;
-            }
-            hash ^= static_cast<uint64_t>(static_cast<unsigned char>(ch));
-            hash *= 1099511628211ULL;
-          }
-          std::ostringstream candidate;
-          candidate << sumDef->fullPath << "__t" << std::hex << hash;
-          if (sumNames_.count(candidate.str()) > 0) {
-            return candidate.str();
-          }
-        }
-        if (auto specializedIt =
-                uniqueSpecializationPathByBase_.find(sumDef->fullPath);
-            specializedIt != uniqueSpecializationPathByBase_.end() &&
-            sumNames_.count(specializedIt->second) > 0) {
-          return specializedIt->second;
-        }
-      }
-      return sumDef->fullPath;
-    }
-    return "";
+    return this->resolveSumTypePath(typeText, namespacePrefix);
   };
   auto maybeFailRetiredMaybeMutableHelperForType =
       [&](const std::string &typeName,
           const std::string &typeTemplateArg,
           bool &handledOut) {
-        handledOut = false;
-        if (!isRetiredMaybeMutableHelperName(normalizedMethodName)) {
-          return false;
-        }
-        const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
-        std::string normalizedBaseTypeName = normalizedTypeName;
-        if (!normalizedBaseTypeName.empty() && normalizedBaseTypeName.front() == '/') {
-          normalizedBaseTypeName.erase(normalizedBaseTypeName.begin());
-        }
-        std::string resolvedMaybeType = resolveSumTypePath(
-            bindingTypeTextForResolution(typeName, typeTemplateArg),
-            receiver.namespacePrefix);
-        if (resolvedMaybeType.empty()) {
-          resolvedMaybeType = resolveSumTypePath(typeName, receiver.namespacePrefix);
-        }
-        if (!isMaybeSumTypePath(resolvedMaybeType) &&
-            !isMaybeSumTypePath(normalizedTypeName) &&
-            !isMaybeSumTypePath(normalizedBaseTypeName)) {
-          return false;
-        }
-        handledOut = true;
-        std::string replacement;
-        if (normalizedMethodName == "set") {
-          replacement = "use some<T>(value) or Maybe<T>{[some] value} instead";
-        } else if (normalizedMethodName == "clear") {
-          replacement = "use Maybe<T>{} or none<T>() instead";
-        } else {
-          replacement = "use pick(value) and rebind the Maybe explicitly instead";
-        }
-        return failMethodTargetResolutionDiagnostic(
-            "sum-backed Maybe<T> has no mutable helper " + normalizedMethodName +
-            "; " + replacement);
+        return this->maybeFailRetiredMaybeMutableHelperForType(
+            typeName, typeTemplateArg, normalizedMethodName, receiver, handledOut);
       };
   auto resolveCollectionVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();

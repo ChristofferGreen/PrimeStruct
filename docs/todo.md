@@ -8528,6 +8528,57 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     `setPreferredKeyValueMethodTarget`, and the rest) - remains open and
     should get its own dedicated round given that capture surface's size,
     per the same stop_rule caution.
+  - progress_2026-08-31b: chipped one more small, low-risk piece off
+    seam (4b)'s remainder rather than attempting the whole 15-lambda
+    dispatch body at once. Within that remainder, `maybeFailRetiredMaybeMutableHelperForType`
+    (the "reject a retired Maybe<T> in-place mutation helper call"
+    check, invoked at 3 call sites in the tail) turned out to have a much
+    narrower dependency chain than its neighbors once traced fully: it
+    calls `resolveSumTypePath` (a local lambda used at 4 call sites
+    total, itself depending only on the real member
+    `resolveSumDefinitionForTypeText` plus the `sumNames_`/
+    `uniqueSpecializationPathByBase_` member variables - no further local
+    lambdas), the free functions `isRetiredMaybeMutableHelperName` and
+    `isMaybeSumTypePath` (both file-scope, capture-free), and
+    `failMethodTargetResolutionDiagnostic` (the established
+    `failExprDiagnostic(receiver, ...)` forwarder pattern already used by
+    seams (2)-(3)). The one remaining dependency,
+    `bindingTypeTextForResolution`, is itself a capture-free one-liner
+    (`typeName + "<" + typeTemplateArg + ">"`, guarding the
+    either-empty case) - rather than promoting or threading it, its logic
+    was inlined directly into the new function (double-checked against
+    the original's exact empty-guard semantics, since a naive
+    `typeTemplateArg.empty() ? typeName : typeName + "<" + typeTemplateArg + ">"`
+    rewrite would wrongly produce `"<arg>"` instead of `""` when
+    `typeName` itself is empty - caught and fixed before building, not
+    after a test failure). Promoted `resolveSumTypePath` to a real
+    `const` private member function (safe - it and
+    `resolveSumDefinitionForTypeText` are both read-only) and added the
+    new non-const member `maybeFailRetiredMaybeMutableHelperForType(typeName,
+    typeTemplateArg, normalizedMethodName, receiver, handledOut)` (both
+    declared in `SemanticsValidatorPrivateExprValidation.h`, defined in
+    `SemanticsValidatorExprMethodTargetResolution.cpp` right before
+    `resolveMethodTarget`, matching the established placement). As with
+    every prior seam, the original local lambdas were kept in place
+    (same names/signatures, so their other call sites elsewhere in the
+    tail needed no changes) with bodies reduced to thin forwarders.
+    Verified: `primec`-only build clean (zero warnings, including the
+    fixed empty-guard rewrite); the shape (c) repros still reproduce the
+    unchanged pre-existing "unknown method:
+    /std/collections/soa_vector/get_ref" diagnostic; full
+    `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the same already-documented
+    pre-existing "ir lowerer supports map method calls" flake, unrelated);
+    `PrimeStruct_compile_run_tests` 2678/2678 (0 failed, run from
+    `build-release/` per the cwd gotcha noted in progress_2026-08-30c).
+    Seam (4b)'s remainder is still large - the dispatch-on-typeName body
+    still routes through `setCollectionMethodTarget`/
+    `setPreferredKeyValueMethodTarget` and about a dozen other local
+    lambdas - but this round's approach (find the single narrowest-capture
+    lambda within the remainder, promote its own dependency chain first,
+    repeat) is a workable, lower-risk way to keep chipping at it
+    incrementally rather than needing one large bespoke-struct commit;
+    continue that same pattern in future rounds.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai

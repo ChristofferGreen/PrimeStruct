@@ -525,6 +525,26 @@
       const Expr &receiver,
       std::string &typeNameOut,
       std::string &typeTemplateArgOut);
+  // TODO-4724 seam (4b), step 1: promoted from resolveMethodTarget's own
+  // local lambda (used at 4 call sites across the function's tail, not
+  // just by maybeFailRetiredMaybeMutableHelperForType below) - resolves a
+  // (possibly templated) type text to a declared sum type's definition
+  // path, preferring a matching template specialization's own mangled
+  // path over the generic base path when one exists and is registered.
+  std::string resolveSumTypePath(const std::string &typeText,
+                                  const std::string &namespacePrefix) const;
+  // TODO-4724 seam (4b), step 1: extracted from resolveMethodTarget's body
+  // - rejects a call to one of the retired Maybe<T> in-place mutation
+  // helpers (set/clear/etc.) on a sum-backed Maybe<T> receiver with a
+  // diagnostic naming the non-mutating replacement API, leaving handledOut
+  // false (and returning false) for every other receiver/method-name
+  // combination so callers can fall through to the rest of resolveMethodTarget's
+  // own dispatch.
+  bool maybeFailRetiredMaybeMutableHelperForType(const std::string &typeName,
+                                                  const std::string &typeTemplateArg,
+                                                  const std::string &normalizedMethodName,
+                                                  const Expr &receiver,
+                                                  bool &handledOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,
