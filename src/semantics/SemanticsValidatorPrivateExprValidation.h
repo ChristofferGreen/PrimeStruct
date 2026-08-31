@@ -545,6 +545,21 @@
                                                   const std::string &normalizedMethodName,
                                                   const Expr &receiver,
                                                   bool &handledOut);
+  // TODO-4724 seam (4b), step 2: promoted from resolveMethodTarget's own
+  // local lambda (used at 11 call sites throughout the function) - walks a
+  // type name up through progressively shorter namespace-prefix scopes
+  // looking for a declared struct with that scoped path, then falls back
+  // to an import alias. Deliberately NOT named resolveStructTypePath (the
+  // exact name of both the local lambda it replaces and an unrelated
+  // free function overload declared in SemanticsHelpers.h taking a third
+  // structTypes-set parameter, called unqualified from dozens of other
+  // SemanticsValidator member function bodies elsewhere in this class) -
+  // a same-named 2-arg member function would hide that free function via
+  // C++ member-name-hiding rules and break every one of those unqualified
+  // 3-arg call sites at compile time. The local lambda in
+  // resolveMethodTarget keeps its own name/signature and forwards here.
+  std::string resolveMethodTargetStructTypePath(
+      const std::string &typeName, const std::string &namespacePrefix) const;
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

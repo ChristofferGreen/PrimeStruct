@@ -8579,6 +8579,57 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     repeat) is a workable, lower-risk way to keep chipping at it
     incrementally rather than needing one large bespoke-struct commit;
     continue that same pattern in future rounds.
+  - progress_2026-08-31c: seam (4b) step 2, continuing the same
+    narrowest-capture-first pattern. `resolveStructTypePath` (used at 11
+    call sites throughout `resolveMethodTarget`) turned out to be
+    completely self-contained - walks a type name up through
+    progressively shorter namespace-prefix scopes checking `structNames_`
+    for a declared struct, then falls back to an `importAliases_` lookup;
+    no other local lambdas involved, only the two member variables.
+    Found and avoided a real landmine while promoting it: this exact
+    name, `resolveStructTypePath`, is ALSO the name of an unrelated
+    3-argument free function declared in `SemanticsHelpers.h` (takes an
+    explicit `structTypes` set instead of reading `structNames_`
+    implicitly) that is called unqualified, with 3 arguments, from
+    roughly 70 call sites spread across dozens of other
+    `SemanticsValidator` member function bodies in the codebase - a
+    same-named 2-argument member function on `SemanticsValidator` would,
+    per C++'s member-name-hiding rule (a member name hides every
+    outer-scope overload of that name regardless of arity, once found by
+    unqualified lookup inside a member function body), silently break
+    every one of those ~70 3-argument call sites at compile time. Caught
+    this by explicitly grepping for the free function's other call sites
+    *before* writing the extraction, not after a build failure - the
+    lambda-vs-member investigation habit established in seams (1)-(3)
+    (verify a name's real identity before reusing it) paid for itself
+    here. Named the new member function `resolveMethodTargetStructTypePath`
+    instead (documented inline why, so a future round doesn't
+    accidentally rename it back to the colliding name) and kept the
+    local lambda `resolveStructTypePath` in `resolveMethodTarget` in
+    place, unchanged name/signature, its body reduced to a one-line
+    forwarder - so all 11 of ITS OWN call sites needed no changes either.
+    (Aside: also found, while investigating, that a completely separate
+    third copy of this same "walk namespace scopes checking a struct-name
+    set" logic exists as its own independently-named local lambda inside
+    `SemanticsValidatorPassesStructLayouts.cpp` - not touched, out of
+    scope for this task, but worth flagging for a future dedup pass.)
+    Verified: `primec`-only build clean (zero warnings, and specifically
+    zero of the ~70 hiding-collision errors this round was watching for);
+    the shape (c) repros still reproduce the unchanged pre-existing
+    "unknown method: /std/collections/soa_vector/get_ref" diagnostic;
+    full `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the same already-documented
+    pre-existing "ir lowerer supports map method calls" flake, unrelated);
+    `PrimeStruct_compile_run_tests` 2678/2678 (0 failed, run from
+    `build-release/` per the cwd gotcha noted in progress_2026-08-30c).
+    Seam (4b)'s remainder is still large (still includes
+    `setCollectionMethodTarget`/`setPreferredKeyValueMethodTarget` and
+    the rest); continue the same narrowest-capture-first approach in
+    future rounds, and when reusing an existing local-lambda name for a
+    new member function, always grep the whole `src/semantics/` tree for
+    other unqualified callers of that exact name first - a name collision
+    with an unrelated free function used elsewhere in the class is a real,
+    easy-to-miss risk this task's own extraction pattern creates.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai

@@ -782,6 +782,52 @@ bool SemanticsValidator::maybeFailRetiredMaybeMutableHelperForType(
       "; " + replacement);
 }
 
+std::string SemanticsValidator::resolveMethodTargetStructTypePath(
+    const std::string &typeName, const std::string &namespacePrefix) const {
+  if (typeName.empty()) {
+    return "";
+  }
+  if (!typeName.empty() && typeName[0] == '/') {
+    return typeName;
+  }
+  std::string current = namespacePrefix;
+  while (true) {
+    if (!current.empty()) {
+      std::string scoped = current + "/" + typeName;
+      if (structNames_.count(scoped) > 0) {
+        return scoped;
+      }
+      if (current.size() > typeName.size()) {
+        const size_t start = current.size() - typeName.size();
+        if (start > 0 && current[start - 1] == '/' &&
+            current.compare(start, typeName.size(), typeName) == 0 &&
+            structNames_.count(current) > 0) {
+          return current;
+        }
+      }
+    } else {
+      std::string root = "/" + typeName;
+      if (structNames_.count(root) > 0) {
+        return root;
+      }
+    }
+    if (current.empty()) {
+      break;
+    }
+    const size_t slash = current.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      current.clear();
+    } else {
+      current.erase(slash);
+    }
+  }
+  auto importIt = importAliases_.find(typeName);
+  if (importIt != importAliases_.end()) {
+    return importIt->second;
+  }
+  return "";
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -1174,48 +1220,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   auto resolveStructTypePath = [&](const std::string &typeName,
                                    const std::string &namespacePrefix) -> std::string {
-    if (typeName.empty()) {
-      return "";
-    }
-    if (!typeName.empty() && typeName[0] == '/') {
-      return typeName;
-    }
-    std::string current = namespacePrefix;
-    while (true) {
-      if (!current.empty()) {
-        std::string scoped = current + "/" + typeName;
-        if (structNames_.count(scoped) > 0) {
-          return scoped;
-        }
-        if (current.size() > typeName.size()) {
-          const size_t start = current.size() - typeName.size();
-          if (start > 0 && current[start - 1] == '/' &&
-              current.compare(start, typeName.size(), typeName) == 0 &&
-              structNames_.count(current) > 0) {
-            return current;
-          }
-        }
-      } else {
-        std::string root = "/" + typeName;
-        if (structNames_.count(root) > 0) {
-          return root;
-        }
-      }
-      if (current.empty()) {
-        break;
-      }
-      const size_t slash = current.find_last_of('/');
-      if (slash == std::string::npos || slash == 0) {
-        current.clear();
-      } else {
-        current.erase(slash);
-      }
-    }
-    auto importIt = importAliases_.find(typeName);
-    if (importIt != importAliases_.end()) {
-      return importIt->second;
-    }
-    return "";
+    return this->resolveMethodTargetStructTypePath(typeName, namespacePrefix);
   };
   auto normalizedTypeLeafName = [](std::string value) {
     value = normalizeBindingTypeName(value);
