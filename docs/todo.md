@@ -8325,6 +8325,86 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     function pattern if their own dependency inventories turn out
     similarly shaped - check that before assuming a third bespoke
     extraction design is needed.
+  - progress_2026-08-30c: landed seam (3) (the vector-compatibility-family
+    receiver-classification cluster), reusing seam (2)'s
+    `MethodTargetCollectionResolvers` pattern as anticipated. First
+    investigated the other outstanding hub, `setPreferredKeyValueMethodTarget`
+    (17 call sites), as an alternative seam (3) candidate, but found it
+    more deeply entangled than seam (2)'s hub: it calls
+    `preferredKeyValueMethodTarget`, which itself depends on 3 further
+    local lambdas (`borrowedKeyValueHelperNameForReceiver`,
+    `resolveExperimentalKeyValueTarget`, `isCanonicalKeyValueReceiver`),
+    and `resolveExperimentalKeyValueTarget` depends on yet another
+    (`resolveFieldBindingTarget`) - a deeper dependency chain than seam
+    (2)'s, so deferred it and instead extracted the vector-compatibility-
+    family cluster: 7 mutually-calling local lambdas
+    (`preferExplicitCanonicalVectorHelperForReceiver`,
+    `classifyExplicitVectorHelperReceiver`, `withPreservedError`,
+    `classifyExplicitVectorHelperParam`,
+    `explicitHelperFamilyHasCompatibleReceiver`,
+    `hasReceiverCompatibleExplicitVectorHelperPath`,
+    `tryResolveExplicitCanonicalVectorCountMethodTarget`, ~lines 2409-2581
+    pre-extraction) that classify a receiver's collection family
+    (vector/soa/array/string/map) and check whether an explicitly-spelled
+    vector-compat helper path's parameter type is compatible with a given
+    receiver. Left `withPreservedError` untouched (trivial, 7 lines, only
+    touches the `error_` member - not worth extracting). Extended
+    `MethodTargetCollectionResolvers` from 7 to 8 fields (added
+    `resolveCollectionVectorValueTarget`, needed by 3 of the 6 extracted
+    functions but not part of seam (2)'s original bundle) and added 6 new
+    private member functions to `SemanticsValidatorPrivateExprValidation.h`
+    / `SemanticsValidatorExprMethodTargetResolution.cpp`:
+    `classifyVectorCompatHelperParamFamily`,
+    `explicitVectorCompatHelperFamilyHasCompatibleReceiver`,
+    `classifyExplicitVectorHelperReceiver`,
+    `hasReceiverCompatibleExplicitVectorHelperPath`,
+    `preferExplicitCanonicalVectorHelperForReceiver`, and
+    `tryResolveExplicitCanonicalVectorCountMethodTarget` (the last two
+    non-const, since they transitively call `failExprDiagnostic`, a
+    non-const member - the original lambdas called it indirectly via the
+    local `failMethodTargetResolutionDiagnostic` wrapper, which isn't
+    available inside a real member function, so those call sites were
+    rewritten to call `failExprDiagnostic(receiverExpr, ...)` directly,
+    the same real member the wrapper itself forwarded to). As with seams
+    (1)-(2), the original local lambdas were kept in place (same names/
+    signatures, all their existing call sites elsewhere in
+    `resolveMethodTarget` unchanged) but their bodies reduced to thin
+    forwarders into the new members, constructing a
+    `MethodTargetCollectionResolvers{...}` literal inline where needed
+    (safe for the same full-expression-temporary-lifetime reason
+    documented in progress_2026-08-30b). One extra fix was required
+    beyond the mechanical forwarding: `classifyExplicitVectorHelperParam`
+    turned out, after the swap, to have zero remaining call sites within
+    `resolveMethodTarget` (its sole caller,
+    `explicitHelperFamilyHasCompatibleReceiver`, was itself replaced with
+    a forwarder that calls the new member function directly, bypassing
+    the local lambda) - `-Werror=unused-but-set-variable` caught this
+    immediately on the first `primec`-only build, and the now-dead local
+    lambda was deleted outright rather than kept as a no-op wrapper.
+    Verified: `primec`-only build clean (zero warnings) after that one
+    fix; the shape (c) repros
+    (`/tmp/repro_soa_shapec.prime`/`_min.prime`) still reproduce the
+    unchanged pre-existing "unknown method:
+    /std/collections/soa_vector/get_ref" diagnostic; full
+    `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the 1 failure is the same
+    already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (0 failed) - note the compile_run binary must be invoked with its cwd
+    set to `build-release/` (it shells out to `./primec` with a relative
+    path), not the repo root, or every subprocess-invoking case spuriously
+    fails with exit code 127 ("command not found") - hit this the first
+    run this round and re-ran correctly from `build-release/` before
+    treating the result as a real regression signal. This is seam (3) of
+    4 (well, of 4-plus-the-hub-extraction-itself); seam (4) (the
+    primitive/struct/sum-type generic fallback) remains open - noted in
+    this task's own implementation_notes that unlike seams (1)-(3), that
+    tail portion of `resolveMethodTarget` (~lines 3690-3759 in the
+    original, pre-any-extraction numbering) is not itself wrapped in a
+    pre-existing named lambda, so extracting it will require originating
+    a new boundary/design rather than moving an existing self-contained
+    block - a fresh read-through dedicated to that seam should precede
+    any extraction attempt, per this task's stop_rule.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai

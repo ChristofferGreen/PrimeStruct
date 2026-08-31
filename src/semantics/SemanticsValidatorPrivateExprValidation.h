@@ -462,6 +462,7 @@
     const std::function<bool(const Expr &)> &resolveStringTarget;
     const std::function<bool(const Expr &)> &resolveKeyValueTarget;
     const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget;
+    const std::function<bool(const Expr &, std::string &)> &resolveCollectionVectorValueTarget;
   };
   // TODO-4724: extracted from resolveMethodTarget's body (was the local
   // lambda `setCollectionMethodTarget`, seam (2)'s hub-lambda precursor -
@@ -477,6 +478,33 @@
       const MethodTargetCollectionResolvers &resolvers,
       std::string &resolvedOut,
       bool &isBuiltinOut) const;
+  // TODO-4724 seam (3): extracted from resolveMethodTarget's body - the
+  // "explicit vector-namespaced helper path vs. receiver family"
+  // classification cluster. These 6 mutually-calling helpers classify a
+  // receiver's collection family (vector/soa/array/string/map) and check
+  // whether an explicitly-spelled vector-compat helper path's own
+  // parameter type is compatible with a given receiver - used throughout
+  // resolveMethodTarget wherever an explicit `/std/collections/vector/...`
+  // (or soa-surface) spelling needs validating against the actual
+  // receiver shape.
+  std::string classifyVectorCompatHelperParamFamily(const BindingInfo &binding) const;
+  bool explicitVectorCompatHelperFamilyHasCompatibleReceiver(
+      std::string_view path, std::string_view receiverFamily) const;
+  std::string classifyExplicitVectorHelperReceiver(
+      const Expr &receiverExpr, const MethodTargetCollectionResolvers &resolvers) const;
+  bool hasReceiverCompatibleExplicitVectorHelperPath(
+      const std::string &path, const Expr &receiverExpr,
+      const MethodTargetCollectionResolvers &resolvers) const;
+  bool preferExplicitCanonicalVectorHelperForReceiver(
+      const Expr &receiverExpr, const std::string &explicitVectorHelperPath,
+      const MethodTargetCollectionResolvers &resolvers) const;
+  std::optional<bool> tryResolveExplicitCanonicalVectorCountMethodTarget(
+      const Expr &receiverExpr,
+      const std::string &explicitVectorHelperPath,
+      const std::string &normalizedMethodName,
+      const MethodTargetCollectionResolvers &resolvers,
+      std::string &resolvedOut,
+      bool &isBuiltinOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

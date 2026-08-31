@@ -439,6 +439,187 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
   return true;
 }
 
+std::string SemanticsValidator::classifyVectorCompatHelperParamFamily(
+    const BindingInfo &binding) const {
+  std::string elemType;
+  std::string keyType;
+  std::string valueType;
+  if (extractCollectionVectorElementType(binding, elemType)) {
+    return legacyExperimentalVectorCompatibilityFamilyName();
+  }
+  if (extractKeyValueCollectionTypes(binding, keyType, valueType)) {
+    return "map";
+  }
+  const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+  if (normalizedType == "vector" ||
+      isInternalSoaCollectionTypeName(normalizedType) ||
+      normalizedType == "array" || normalizedType == "string") {
+    return normalizedType;
+  }
+  return {};
+}
+
+bool SemanticsValidator::explicitVectorCompatHelperFamilyHasCompatibleReceiver(
+    std::string_view path, std::string_view receiverFamily) const {
+  const std::string pathText(path);
+  auto paramsMatchReceiver = [&](const std::vector<ParameterInfo> &helperParams) {
+    return !helperParams.empty() &&
+           classifyVectorCompatHelperParamFamily(helperParams.front().binding) == receiverFamily;
+  };
+  auto definitionMatchesReceiver = [&](const Definition &def) {
+    if (def.parameters.empty()) {
+      return false;
+    }
+    BindingInfo binding;
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    if (!parseBindingInfo(def.parameters.front(), def.namespacePrefix,
+                          structNames_, importAliases_, binding,
+                          restrictType, parseError, &sumNames_)) {
+      return false;
+    }
+    return classifyVectorCompatHelperParamFamily(binding) == receiverFamily;
+  };
+  if (auto paramsIt = paramsByDef_.find(pathText);
+      paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
+    return true;
+  }
+  const std::string overloadPrefix = pathText + "__ov";
+  const std::string specializationPrefix = pathText + "__t";
+  for (const auto &def : program_.definitions) {
+    if (def.fullPath != pathText &&
+        def.fullPath.rfind(overloadPrefix, 0) != 0 &&
+        def.fullPath.rfind(specializationPrefix, 0) != 0) {
+      continue;
+    }
+    if (auto paramsIt = paramsByDef_.find(def.fullPath);
+        paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
+      return true;
+    }
+    if (definitionMatchesReceiver(def)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string SemanticsValidator::classifyExplicitVectorHelperReceiver(
+    const Expr &receiverExpr, const MethodTargetCollectionResolvers &resolvers) const {
+  std::string elemType;
+  if (resolvers.resolveCollectionVectorValueTarget(receiverExpr, elemType)) {
+    return legacyExperimentalVectorCompatibilityFamilyName();
+  }
+  if (resolvers.resolveVectorTarget(receiverExpr, elemType)) {
+    return "vector";
+  }
+  if (resolvers.resolveSoaVectorTarget(receiverExpr, elemType)) {
+    return internalSoaCollectionTypeName();
+  }
+  if (resolvers.resolveArrayTarget(receiverExpr, elemType)) {
+    return "array";
+  }
+  if (resolvers.resolveStringTarget(receiverExpr)) {
+    return "string";
+  }
+  if (resolvers.resolveKeyValueTarget(receiverExpr)) {
+    return "map";
+  }
+  return {};
+}
+
+bool SemanticsValidator::hasReceiverCompatibleExplicitVectorHelperPath(
+    const std::string &path, const Expr &receiverExpr,
+    const MethodTargetCollectionResolvers &resolvers) const {
+  const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr, resolvers);
+  if (receiverFamily.empty()) {
+    return false;
+  }
+  return explicitVectorCompatHelperFamilyHasCompatibleReceiver(path, receiverFamily);
+}
+
+bool SemanticsValidator::preferExplicitCanonicalVectorHelperForReceiver(
+    const Expr &receiverExpr, const std::string &explicitVectorHelperPath,
+    const MethodTargetCollectionResolvers &resolvers) const {
+  if (explicitVectorHelperPath.empty()) {
+    return false;
+  }
+  std::string elemType;
+  if (isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)) {
+    return resolvers.resolveCollectionVectorValueTarget(receiverExpr, elemType);
+  }
+  if (splitSoaSurfaceHelperPath(explicitVectorHelperPath, nullptr, nullptr)) {
+    return resolvers.resolveSoaVectorTarget(receiverExpr, elemType);
+  }
+  return false;
+}
+
+std::optional<bool> SemanticsValidator::tryResolveExplicitCanonicalVectorCountMethodTarget(
+    const Expr &receiverExpr,
+    const std::string &explicitVectorHelperPath,
+    const std::string &normalizedMethodName,
+    const MethodTargetCollectionResolvers &resolvers,
+    std::string &resolvedOut,
+    bool &isBuiltinOut) {
+  if (explicitVectorHelperPath.empty() ||
+      !isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) ||
+      normalizedMethodName != "count") {
+    return std::nullopt;
+  }
+  const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr, resolvers);
+  if (receiverFamily != "string" && receiverFamily != "array" &&
+      receiverFamily != "map") {
+    return std::nullopt;
+  }
+  // A map receiver that is a call expression to a function with an
+  // *explicit* map-typed return annotation (e.g. [return<map<i32, i32>>])
+  // always rejects the explicit vector-namespaced count spelling with the
+  // map-family "unknown call target" diagnostic, even if a same-path
+  // helper exists for map - unlike array/string wrapper receivers, which
+  // do accept a matching same-path helper (see "...keeps wrapper
+  // array/string same-path helper" tests), and unlike a map receiver
+  // whose type comes from body-inference rather than an explicit
+  // annotation (e.g. [effects(heap_alloc)] with no return<> - see
+  // "wrapper temporary canonical vector count slash-method rejects map
+  // receiver"), which keeps the older "unknown method: <explicit path>"
+  // diagnostic instead.
+  if (receiverFamily == "map" && receiverExpr.kind == Expr::Kind::Call) {
+    const std::string calleePath = resolveCalleePath(receiverExpr);
+    auto calleeDefIt = defMap_.find(calleePath);
+    bool hasExplicitMapReturnAnnotation = false;
+    if (calleeDefIt != defMap_.end() && calleeDefIt->second != nullptr) {
+      for (const auto &transform : calleeDefIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string arg;
+        const std::string normalizedBase =
+            splitTemplateTypeName(transform.templateArgs.front(), base, arg)
+                ? normalizeBindingTypeName(base)
+                : normalizeBindingTypeName(transform.templateArgs.front());
+        if (normalizedBase == "map") {
+          hasExplicitMapReturnAnnotation = true;
+          break;
+        }
+      }
+    }
+    if (hasExplicitMapReturnAnnotation) {
+      return failExprDiagnostic(receiverExpr,
+          "unknown call target: " +
+          canonicalKeyValueCompatibilityPrefixOrFallback() + "/" +
+          normalizedMethodName);
+    }
+  }
+  if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath,
+                                                    receiverExpr, resolvers)) {
+    resolvedOut = explicitVectorHelperPath;
+    isBuiltinOut = false;
+    return true;
+  }
+  return failExprDiagnostic(receiverExpr, "unknown method: " +
+                                          explicitVectorHelperPath);
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -2010,7 +2191,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         MethodTargetCollectionResolvers{
             resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
             resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-            resolveArgsPackAccessTarget},
+            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
         resolvedOut, isBuiltinOut);
   };
   auto canonicalVectorHelperTarget = [](std::string_view helperName) {
@@ -2226,39 +2407,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return canonicalFallback;
   };
   auto preferExplicitCanonicalVectorHelperForReceiver = [&](const Expr &receiverExpr) -> bool {
-    if (explicitVectorHelperPath.empty()) {
-      return false;
-    }
-    std::string elemType;
-    if (isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)) {
-      return resolveCollectionVectorValueTarget(receiverExpr, elemType);
-    }
-    if (splitSoaSurfaceHelperPath(explicitVectorHelperPath, nullptr, nullptr)) {
-      return resolveSoaVectorTarget(receiverExpr, elemType);
-    }
-    return false;
+    return this->preferExplicitCanonicalVectorHelperForReceiver(
+        receiverExpr, explicitVectorHelperPath,
+        MethodTargetCollectionResolvers{
+            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget});
   };
   auto classifyExplicitVectorHelperReceiver = [&](const Expr &receiverExpr) -> std::string {
-    std::string elemType;
-    if (resolveCollectionVectorValueTarget(receiverExpr, elemType)) {
-      return legacyExperimentalVectorCompatibilityFamilyName();
-    }
-    if (resolveVectorTarget(receiverExpr, elemType)) {
-      return "vector";
-    }
-    if (resolveSoaVectorTarget(receiverExpr, elemType)) {
-      return internalSoaCollectionTypeName();
-    }
-    if (resolveArrayTarget(receiverExpr, elemType)) {
-      return "array";
-    }
-    if (resolveStringTarget(receiverExpr)) {
-      return "string";
-    }
-    if (resolveKeyValueTarget(receiverExpr)) {
-      return "map";
-    }
-    return {};
+    return this->classifyExplicitVectorHelperReceiver(
+        receiverExpr,
+        MethodTargetCollectionResolvers{
+            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget});
   };
   auto withPreservedError = [&](const std::function<bool()> &fn) {
     const std::string previousError = error_;
@@ -2268,135 +2430,28 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     error_ = previousError;
     return ok;
   };
-  auto classifyExplicitVectorHelperParam = [&](const BindingInfo &binding) -> std::string {
-    std::string elemType;
-    std::string keyType;
-    std::string valueType;
-    if (extractCollectionVectorElementType(binding, elemType)) {
-      return legacyExperimentalVectorCompatibilityFamilyName();
-    }
-    if (extractKeyValueCollectionTypes(binding, keyType, valueType)) {
-      return "map";
-    }
-    const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
-    if (normalizedType == "vector" ||
-        isInternalSoaCollectionTypeName(normalizedType) ||
-        normalizedType == "array" || normalizedType == "string") {
-      return normalizedType;
-    }
-    return {};
-  };
   auto explicitHelperFamilyHasCompatibleReceiver =
       [&](std::string_view path, std::string_view receiverFamily) -> bool {
-    const std::string pathText(path);
-    auto paramsMatchReceiver = [&](const std::vector<ParameterInfo> &helperParams) {
-      return !helperParams.empty() &&
-             classifyExplicitVectorHelperParam(helperParams.front().binding) == receiverFamily;
-    };
-    auto definitionMatchesReceiver = [&](const Definition &def) {
-      if (def.parameters.empty()) {
-        return false;
-      }
-      BindingInfo binding;
-      std::optional<std::string> restrictType;
-      std::string parseError;
-      if (!parseBindingInfo(def.parameters.front(), def.namespacePrefix,
-                            structNames_, importAliases_, binding,
-                            restrictType, parseError, &sumNames_)) {
-        return false;
-      }
-      return classifyExplicitVectorHelperParam(binding) == receiverFamily;
-    };
-    if (auto paramsIt = paramsByDef_.find(pathText);
-        paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
-      return true;
-    }
-    const std::string overloadPrefix = pathText + "__ov";
-    const std::string specializationPrefix = pathText + "__t";
-    for (const auto &def : program_.definitions) {
-      if (def.fullPath != pathText &&
-          def.fullPath.rfind(overloadPrefix, 0) != 0 &&
-          def.fullPath.rfind(specializationPrefix, 0) != 0) {
-        continue;
-      }
-      if (auto paramsIt = paramsByDef_.find(def.fullPath);
-          paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
-        return true;
-      }
-      if (definitionMatchesReceiver(def)) {
-        return true;
-      }
-    }
-    return false;
+    return this->explicitVectorCompatHelperFamilyHasCompatibleReceiver(path, receiverFamily);
   };
   auto hasReceiverCompatibleExplicitVectorHelperPath = [&](const std::string &path,
                                                            const Expr &receiverExpr) {
-    const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr);
-    if (receiverFamily.empty()) {
-      return false;
-    }
-    return explicitHelperFamilyHasCompatibleReceiver(path, receiverFamily);
+    return this->hasReceiverCompatibleExplicitVectorHelperPath(
+        path, receiverExpr,
+        MethodTargetCollectionResolvers{
+            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget});
   };
   auto tryResolveExplicitCanonicalVectorCountMethodTarget = [&](const Expr &receiverExpr)
       -> std::optional<bool> {
-    if (explicitVectorHelperPath.empty() ||
-        !isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) ||
-        normalizedMethodName != "count") {
-      return std::nullopt;
-    }
-    const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr);
-    if (receiverFamily != "string" && receiverFamily != "array" &&
-        receiverFamily != "map") {
-      return std::nullopt;
-    }
-    // A map receiver that is a call expression to a function with an
-    // *explicit* map-typed return annotation (e.g. [return<map<i32, i32>>])
-    // always rejects the explicit vector-namespaced count spelling with the
-    // map-family "unknown call target" diagnostic, even if a same-path
-    // helper exists for map - unlike array/string wrapper receivers, which
-    // do accept a matching same-path helper (see "...keeps wrapper
-    // array/string same-path helper" tests), and unlike a map receiver
-    // whose type comes from body-inference rather than an explicit
-    // annotation (e.g. [effects(heap_alloc)] with no return<> - see
-    // "wrapper temporary canonical vector count slash-method rejects map
-    // receiver"), which keeps the older "unknown method: <explicit path>"
-    // diagnostic instead.
-    if (receiverFamily == "map" && receiverExpr.kind == Expr::Kind::Call) {
-      const std::string calleePath = resolveCalleePath(receiverExpr);
-      auto calleeDefIt = defMap_.find(calleePath);
-      bool hasExplicitMapReturnAnnotation = false;
-      if (calleeDefIt != defMap_.end() && calleeDefIt->second != nullptr) {
-        for (const auto &transform : calleeDefIt->second->transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          std::string base;
-          std::string arg;
-          const std::string normalizedBase =
-              splitTemplateTypeName(transform.templateArgs.front(), base, arg)
-                  ? normalizeBindingTypeName(base)
-                  : normalizeBindingTypeName(transform.templateArgs.front());
-          if (normalizedBase == "map") {
-            hasExplicitMapReturnAnnotation = true;
-            break;
-          }
-        }
-      }
-      if (hasExplicitMapReturnAnnotation) {
-        return failMethodTargetResolutionDiagnostic(
-            "unknown call target: " +
-            canonicalKeyValueCompatibilityPrefixOrFallback() + "/" +
-            normalizedMethodName);
-      }
-    }
-    if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath,
-                                                      receiverExpr)) {
-      resolvedOut = explicitVectorHelperPath;
-      isBuiltinOut = false;
-      return true;
-    }
-    return failMethodTargetResolutionDiagnostic("unknown method: " +
-                                                explicitVectorHelperPath);
+    return this->tryResolveExplicitCanonicalVectorCountMethodTarget(
+        receiverExpr, explicitVectorHelperPath, normalizedMethodName,
+        MethodTargetCollectionResolvers{
+            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+        resolvedOut, isBuiltinOut);
   };
   auto tryRedirectConcreteExperimentalSoaMethodTarget =
       [&](const std::string &resolvedType) -> bool {
