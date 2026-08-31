@@ -8215,6 +8215,46 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     generic fallback) remain open, each its own bounded next step -
     continue one seam at a time per this task's stop_rule, verifying the
     same three-suite regression set (plus a timed comparison) after each.
+  - implementation_notes (round 2026-08-30, continued - read-only
+    investigation, no code changes): attempted to start seam (2)
+    (`resolveExplicitDirectCallReturnMethodTarget`, currently defined
+    ~line 2415, a ~100-line lambda handling method calls whose receiver
+    is a direct call to a function returning `Reference<T>`/`Pointer<T>`)
+    and found it, unlike seam (1), is NOT a clean single-dependency
+    extraction candidate: it calls `setCollectionMethodTarget` (defined
+    ~line 1832, itself capturing ~15 further outer-scope names including
+    `receiver` - the enclosing function's own parameter -
+    `explicitRemovedMethodPath`, and half a dozen other local
+    `resolve*Target` lambdas) and reads/writes the shared local
+    `resolvedOut`/`isBuiltinOut` output refs plus the mutable local
+    `canonicalCollectionHelperName`. A systematic scan of every
+    single-call-site local lambda in `resolveMethodTarget` (Python
+    regex pass counting `auto NAME = [&]` definitions against `NAME(`
+    call counts) found the same problem recurs: nearly every
+    substantial block (seam (2)'s own candidate,
+    `resolveArgsPackElementMethodTarget`, `setIndexedArgsPackKeyValueMethodTarget`,
+    etc.) routes through one of two "hub" lambdas -
+    `setCollectionMethodTarget` (82 call sites within the function) or
+    `setPreferredKeyValueMethodTarget` (17 call sites) - both of which
+    themselves have deep, multi-lambda dependency webs. The only
+    single-call-site lambdas with near-zero captures (e.g.
+    `isStaticBinding`, a 7-line, capture-free helper) are too small to
+    meaningfully advance this task's "under a few hundred lines"
+    acceptance target. Conclusion for a future session: seams (2)-(4)
+    are not independently extractable in their current form without
+    first extracting `setCollectionMethodTarget` and
+    `setPreferredKeyValueMethodTarget` themselves into member functions
+    (or an injected struct of resolver callbacks) - a materially larger
+    and riskier precursor step than seam (1) was, in the same spirit as
+    TODO-4747's own "driver refactor toward Phase 1" precursor work
+    (see that task's Step 1-4 progress notes for the established
+    methodology: extract one cohesive concern per commit, verify via
+    byte-identical output/pass-count comparison, not just "tests still
+    pass"). Do not attempt seams (2)-(4) as originally scoped without
+    first doing that hub-lambda extraction, and do not guess at how to
+    thread `setCollectionMethodTarget`'s ~15 dependencies through a
+    member-function signature without first inventorying them the way
+    TODO-4747's Step 4a inventoried its own fragment-splice variables.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai
