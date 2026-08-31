@@ -8630,6 +8630,40 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     other unqualified callers of that exact name first - a name collision
     with an unrelated free function used elsewhere in the class is a real,
     easy-to-miss risk this task's own extraction pattern creates.
+  - progress_2026-08-31d: seam (4b) step 3, same pattern again.
+    `preferredBorrowedSoaHelperTargetForCollectionMethod` (single call
+    site) resolves a canonical SoA collection helper name to its
+    borrowed-receiver variant via a registry lookup
+    (`findBorrowedVariant`, a capture-free free function in
+    `StdlibSurfaceRegistry.cpp`) before composing the preferred internal
+    SoA helper target path (`preferredSoaHelperTargetForCollectionType`,
+    an existing `const` member) - no other local lambdas involved.
+    Grepped for other unqualified callers of the exact name first (per
+    the lesson from step 2's near-miss) and found none, so promoted it
+    to a `const` member function using its own original name unchanged
+    - no collision risk this time. The local lambda in
+    `resolveMethodTarget` keeps its name/signature, body reduced to a
+    one-line forwarder. Verified: `primec`-only build clean; the shape
+    (c) repros unchanged; full `PrimeStruct_semantics_tests` 2740/2740
+    (0 failed); `PrimeStruct_backend_ir_tests` 1643/1644 (the same
+    already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (0 failed, run from `build-release/`). Remaining candidates in seam
+    (4b)'s remainder are now mostly either already-thin one-line
+    forwarders to free functions (`canonicalVectorHelperTarget`,
+    `rootedVectorMethodPath` - not worth touching further), tiny
+    string-comparison predicates (`isCanonicalKeyValueAccessMethodName`,
+    `isValueSurfaceAccessMethodName` - safe but very low value per
+    extraction), or the deeply-entangled hubs
+    (`setCollectionMethodTarget`, `setPreferredKeyValueMethodTarget`,
+    `resolveExperimentalKeyValueTarget`,
+    `resolveExplicitRootKeyValueMethodPath`, `stampFileErrorResultFailure`)
+    already flagged as high-risk/high-effort in this task's own
+    implementation_notes. The narrowest-capture-first vein is close to
+    mined out at this point - a future round should either accept
+    diminishing returns on a few more trivial predicates, or take on
+    one of the entangled hubs with a dedicated multi-step precursor
+    inventory (matching how seam (2)'s own hub was handled).
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai

@@ -828,6 +828,21 @@ std::string SemanticsValidator::resolveMethodTargetStructTypePath(
   return "";
 }
 
+std::string SemanticsValidator::preferredBorrowedSoaHelperTargetForCollectionMethod(
+    std::string helperName) const {
+  // TODO-4691: all four branches now resolve via the registry-backed
+  // borrowed-variant lookup instead of hardcoded literal reassignment
+  // (TODO-4690 migrated only the "count" branch; this migrates the
+  // rest of this lambda's chain).
+  if (const std::string_view borrowedVariant = findBorrowedVariant(
+          StdlibSurfaceId::CollectionsColumnarHelpers, helperName);
+      !borrowedVariant.empty()) {
+    helperName = std::string(borrowedVariant);
+  }
+  return preferredSoaHelperTargetForCollectionType(
+      helperName, internalSoaCollectionTypePath(true));
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -1109,17 +1124,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   auto preferredBorrowedSoaHelperTargetForCollectionMethod =
       [&](std::string helperName) {
-        // TODO-4691: all four branches now resolve via the registry-backed
-        // borrowed-variant lookup instead of hardcoded literal reassignment
-        // (TODO-4690 migrated only the "count" branch; this migrates the
-        // rest of this lambda's chain).
-        if (const std::string_view borrowedVariant = findBorrowedVariant(
-                StdlibSurfaceId::CollectionsColumnarHelpers, helperName);
-            !borrowedVariant.empty()) {
-          helperName = std::string(borrowedVariant);
-        }
-        return preferredSoaHelperTargetForCollectionType(
-            helperName, internalSoaCollectionTypePath(true));
+        return this->preferredBorrowedSoaHelperTargetForCollectionMethod(
+            std::move(helperName));
       };
   auto exprKindName = [](Expr::Kind kind) -> const char * {
     switch (kind) {

@@ -560,6 +560,12 @@
   // resolveMethodTarget keeps its own name/signature and forwards here.
   std::string resolveMethodTargetStructTypePath(
       const std::string &typeName, const std::string &namespacePrefix) const;
+  // TODO-4724 seam (4b), step 3: promoted from resolveMethodTarget's own
+  // local lambda (single call site) - resolves a canonical SoA collection
+  // helper name to its borrowed-receiver variant (registry-backed lookup)
+  // before composing the preferred internal SoA helper target path for it.
+  std::string preferredBorrowedSoaHelperTargetForCollectionMethod(
+      std::string helperName) const;
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,
