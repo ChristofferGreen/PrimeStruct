@@ -8255,6 +8255,76 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     thread `setCollectionMethodTarget`'s ~15 dependencies through a
     member-function signature without first inventorying them the way
     TODO-4747's Step 4a inventoried its own fragment-splice variables.
+  - progress_2026-08-30b: did that precursor extraction. Inventoried
+    `setCollectionMethodTarget`'s complete dependency set by reading its
+    full ~164-line body (plus its own nested
+    `shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod` lambda):
+    3 scalars (`explicitRemovedMethodPath`, `normalizedMethodName`,
+    `receiver`), 2 output refs (`resolvedOut`/`isBuiltinOut`), 7
+    resolver callbacks (`resolveVectorTarget`, `resolveArgsPackCountTarget`,
+    `resolveSoaVectorTarget`, `resolveArrayTarget`, `resolveStringTarget`,
+    `resolveKeyValueTarget`, `resolveArgsPackAccessTarget` - confirmed
+    each one's exact signature by reading its own definition, not
+    guessing), plus a stateless one-line predicate
+    (`isValueSurfaceAccessMethodName`, no capture at all, inlined into
+    the extraction instead of threaded through) and only real
+    `SemanticsValidator` members otherwise (`hasDeclaredDefinitionPath`,
+    `preferVectorStdlibHelperPath` - confirmed a genuine member via
+    `SemanticsValidatorCollectionHelperRewrites.cpp:316`, not another
+    local-lambda shadow -, `defMap_`, `hasImportedDefinitionPath`,
+    `shouldBuiltinValidateCurrentMapWrapperHelper`, and
+    `hasDefinitionFamilyPath` - reused the same local-shadow-equals-real-
+    member fact seam (1) already established, so `this->hasDefinitionFamilyPath`
+    is safe here too). Deliberately did NOT reuse the existing, unrelated
+    `BuiltinCollectionDispatchResolvers` struct (used by general
+    expression validation - see its own doc comment) even though its
+    field names/types mostly match: TODO-4724's own scope explicitly
+    keeps receiver-type resolution separate from that shared compat-path
+    consolidation, and it's also missing an equivalent of
+    `resolveArgsPackCountTarget`. Instead added a small,
+    purpose-built `MethodTargetCollectionResolvers` struct (7 const
+    reference-to-`std::function` fields) plus the new member function
+    `resolveExplicitOrCanonicalCollectionMethodTarget(path,
+    explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers,
+    resolvedOut, isBuiltinOut) const`, both declared in
+    `SemanticsValidatorPrivateExprValidation.h` next to seam (1)'s own
+    declaration. Given `setCollectionMethodTarget` has 82 call sites
+    within `resolveMethodTarget` (not 1, unlike seam (1)'s
+    `resolveDeclaredSumMethodTarget`), left the local lambda `setCollectionMethodTarget`
+    in place with its original name and signature, but reduced its body
+    to a single thin forwarding call into the new member function - so
+    none of the 82 call sites needed to change, only the lambda's own
+    ~164-line body did. Verified the aggregate-initialization of
+    `MethodTargetCollectionResolvers` from a mix of already-`std::function`-typed
+    locals (`resolveVectorTarget`, `resolveSoaVectorTarget`,
+    `resolveStringTarget`) and raw-lambda-typed locals
+    (`resolveArgsPackCountTarget`, `resolveArrayTarget`,
+    `resolveKeyValueTarget`, `resolveArgsPackAccessTarget`) is safe: the
+    raw lambdas convert to temporary `std::function`s bound to the
+    struct's reference members, and since the whole
+    `MethodTargetCollectionResolvers{...}` construction is itself a
+    temporary passed directly as a function argument (not a named
+    variable), those inner temporaries live for the duration of the
+    enclosing full-expression - which covers the entire synchronous call
+    into `resolveExplicitOrCanonicalCollectionMethodTarget` - so no
+    dangling reference. Compiled clean with zero warnings/errors on the
+    first attempt (both the narrower `primec`-only build and the full
+    release build). Verified: the shape (c) minimal/combined repros from
+    this same round's earlier TODO-5050 work still reproduce the exact
+    same pre-existing "unknown method: /std/collections/soa_vector/get_ref"
+    diagnostic unchanged (a useful incidental consistency check, since
+    that repro exercises this exact code path); full
+    `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the 1 failure is the same
+    already-documented pre-existing "ir lowerer supports map method
+    calls" flake); `PrimeStruct_compile_run_tests` 2678/2678 (0 failed).
+    This is seam (2) of 4 (well, of 4-plus-the-hub-extraction-itself) -
+    seams (3)-(4) (the vector-compatibility-family special cases, and
+    the primitive/struct/sum-type generic fallback) can now potentially
+    reuse this same new `MethodTargetCollectionResolvers` struct/member-
+    function pattern if their own dependency inventories turn out
+    similarly shaped - check that before assuming a third bespoke
+    extraction design is needed.
 
 - [x] TODO-4749: (RESOLVED) Fix `.at()`/`.at_unsafe()` method-call sugar on canonical `map<K,V>` resolving to the wrong namespace (`/map/at` instead of `/std/collections/map/at`)
   - owner: ai

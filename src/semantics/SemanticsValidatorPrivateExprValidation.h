@@ -448,6 +448,35 @@
                                       const std::string &normalizedMethodName,
                                       std::string &resolvedOut,
                                       bool &isBuiltinOut) const;
+  // TODO-4724: bundles resolveMethodTarget's own local receiver-shape
+  // resolver lambdas (distinct from, and not to be confused with, the
+  // shared BuiltinCollectionDispatchResolvers used by general expression
+  // validation - see that struct's own comment) so
+  // resolveExplicitOrCanonicalCollectionMethodTarget below can be a
+  // proper member function instead of a function-local lambda.
+  struct MethodTargetCollectionResolvers {
+    const std::function<bool(const Expr &, std::string &)> &resolveVectorTarget;
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackCountTarget;
+    const std::function<bool(const Expr &, std::string &)> &resolveSoaVectorTarget;
+    const std::function<bool(const Expr &, std::string &)> &resolveArrayTarget;
+    const std::function<bool(const Expr &)> &resolveStringTarget;
+    const std::function<bool(const Expr &)> &resolveKeyValueTarget;
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget;
+  };
+  // TODO-4724: extracted from resolveMethodTarget's body (was the local
+  // lambda `setCollectionMethodTarget`, seam (2)'s hub-lambda precursor -
+  // see this task's own implementation_notes) - the "explicit removed/
+  // compat collection helper path vs. canonical stdlib path" resolution
+  // hub, called from every branch that resolves a vector/soa/array/
+  // string/key-value method-call target to a concrete path.
+  bool resolveExplicitOrCanonicalCollectionMethodTarget(
+      const std::string &path,
+      const std::string &explicitRemovedMethodPath,
+      const std::string &normalizedMethodName,
+      const Expr &receiver,
+      const MethodTargetCollectionResolvers &resolvers,
+      std::string &resolvedOut,
+      bool &isBuiltinOut) const;
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

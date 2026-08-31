@@ -264,6 +264,181 @@ bool SemanticsValidator::resolveDeclaredSumMethodTarget(
   return false;
 }
 
+bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
+    const std::string &path,
+    const std::string &explicitRemovedMethodPath,
+    const std::string &normalizedMethodName,
+    const Expr &receiver,
+    const MethodTargetCollectionResolvers &resolvers,
+    std::string &resolvedOut,
+    bool &isBuiltinOut) const {
+  auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
+    return helperName == "at" || helperName == "at_unsafe";
+  };
+  auto shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod = [&]() {
+    if (explicitRemovedMethodPath.empty()) {
+      return false;
+    }
+    const bool isExplicitArrayCompatibilityPath =
+        explicitRemovedMethodPath.rfind("/array/", 0) == 0;
+    std::string ignoredElemType;
+    const bool isCanonicalStdVectorPath =
+        isCanonicalVectorCompatibilityPath(explicitRemovedMethodPath);
+    if (normalizedMethodName == "count") {
+      if (isExplicitArrayCompatibilityPath) {
+        return false;
+      }
+      if (isCanonicalStdVectorPath) {
+        return resolvers.resolveVectorTarget(receiver, ignoredElemType);
+      }
+      return resolvers.resolveArgsPackCountTarget(receiver, ignoredElemType) ||
+             resolvers.resolveVectorTarget(receiver, ignoredElemType) ||
+             resolvers.resolveSoaVectorTarget(receiver, ignoredElemType) ||
+             resolvers.resolveArrayTarget(receiver, ignoredElemType) ||
+             resolvers.resolveStringTarget(receiver);
+    }
+    if (normalizedMethodName == "count_ref") {
+      if (isExplicitArrayCompatibilityPath || isCanonicalStdVectorPath) {
+        return false;
+      }
+      return resolvers.resolveSoaVectorTarget(receiver, ignoredElemType) ||
+             resolvers.resolveKeyValueTarget(receiver);
+    }
+    if (normalizedMethodName == "capacity") {
+      if (isExplicitArrayCompatibilityPath) {
+        return false;
+      }
+      if (isCanonicalStdVectorPath) {
+        return resolvers.resolveVectorTarget(receiver, ignoredElemType) ||
+               resolvers.resolveSoaVectorTarget(receiver, ignoredElemType);
+      }
+      return resolvers.resolveVectorTarget(receiver, ignoredElemType) ||
+             resolvers.resolveSoaVectorTarget(receiver, ignoredElemType);
+    }
+    if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
+      const bool isVectorReceiver = resolvers.resolveVectorTarget(receiver, ignoredElemType);
+      if (isVectorReceiver) {
+        return false;
+      }
+      if (isCanonicalStdVectorPath) {
+        return false;
+      }
+      return resolvers.resolveArgsPackAccessTarget(receiver, ignoredElemType);
+    }
+    return false;
+  };
+  if (!explicitRemovedMethodPath.empty() &&
+      isRootedVectorHelperPath(explicitRemovedMethodPath) &&
+      hasDeclaredDefinitionPath(explicitRemovedMethodPath)) {
+    resolvedOut = explicitRemovedMethodPath;
+    isBuiltinOut = false;
+    return true;
+  }
+  if (!explicitRemovedMethodPath.empty() &&
+      path.rfind("/string/", 0) == 0 &&
+      isValueSurfaceAccessMethodName(normalizedMethodName)) {
+    resolvedOut = explicitRemovedMethodPath;
+    isBuiltinOut = false;
+    return true;
+  }
+  if (!explicitRemovedMethodPath.empty() &&
+      path.rfind("/array/", 0) == 0) {
+    std::string ignoredElemType;
+    const bool isArgsPackArrayBuiltin =
+        (normalizedMethodName == "count" &&
+         resolvers.resolveArgsPackCountTarget(receiver, ignoredElemType)) ||
+        (isValueSurfaceAccessMethodName(normalizedMethodName) &&
+         resolvers.resolveArgsPackAccessTarget(receiver, ignoredElemType));
+    if (isArgsPackArrayBuiltin) {
+      resolvedOut = path;
+      isBuiltinOut = true;
+      return true;
+    }
+  }
+  if (!explicitRemovedMethodPath.empty() && path.rfind("/string/", 0) != 0) {
+    if (shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod()) {
+      resolvedOut = explicitRemovedMethodPath;
+      isBuiltinOut = true;
+      return true;
+    }
+    resolvedOut = explicitRemovedMethodPath;
+    isBuiltinOut = false;
+    return true;
+  }
+  resolvedOut = preferVectorStdlibHelperPath(path);
+  if (resolvedOut.rfind("/array/", 0) == 0 &&
+      defMap_.count(resolvedOut) == 0 &&
+      !hasDeclaredDefinitionPath(resolvedOut)) {
+    isBuiltinOut = true;
+    return true;
+  }
+  const std::string resolvedSoaRefCanonical =
+      canonicalizeLegacySoaRefHelperPath(resolvedOut);
+  auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
+    const size_t specializationSuffix = canonicalPath.find("__");
+    if (specializationSuffix != std::string::npos) {
+      canonicalPath.erase(specializationSuffix);
+    }
+    return canonicalPath;
+  };
+  auto isCanonicalSoaHelperPath = [](const std::string &candidate,
+                                     std::string_view helperName) {
+    return isCanonicalStdlibSoaHelperPath(candidate, helperName);
+  };
+  const std::string resolvedSoaCountCanonical =
+      canonicalizeSoaHelperPath(resolvedOut);
+  const std::string resolvedSoaGetCanonical =
+      canonicalizeLegacySoaGetHelperPath(resolvedOut);
+  const bool matchesSoaToAosHelperPath =
+      isCanonicalStdlibSoaHelperPath(resolvedOut, "to_aos");
+  const bool matchesBorrowedSoaToAosHelperPath =
+      isCanonicalStdlibSoaHelperPath(resolvedOut, "to_aos_ref");
+  const bool matchesBuiltinSoaCollectionHelper =
+      isCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count") ||
+      isCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count_ref") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical,
+                                       "get_ref") ||
+      matchesSoaToAosHelperPath ||
+      matchesBorrowedSoaToAosHelperPath ||
+      isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical);
+  const bool hasImportedBuiltinSoaCollectionHelper =
+      hasImportedDefinitionPath(resolvedOut) ||
+      (resolvedSoaCountCanonical != resolvedOut &&
+       hasImportedDefinitionPath(resolvedSoaCountCanonical)) ||
+      (resolvedSoaGetCanonical != resolvedOut &&
+       hasImportedDefinitionPath(resolvedSoaGetCanonical)) ||
+      (resolvedSoaRefCanonical != resolvedOut &&
+       hasImportedDefinitionPath(resolvedSoaRefCanonical));
+  const bool hasLocalBuiltinSoaCollectionHelperDefinition =
+      defMap_.count(resolvedOut) != 0 ||
+      (resolvedSoaCountCanonical != resolvedOut &&
+       defMap_.count(resolvedSoaCountCanonical) != 0) ||
+      (resolvedSoaGetCanonical != resolvedOut &&
+       defMap_.count(resolvedSoaGetCanonical) != 0) ||
+      (resolvedSoaRefCanonical != resolvedOut &&
+       defMap_.count(resolvedSoaRefCanonical) != 0);
+  if (matchesBuiltinSoaCollectionHelper &&
+      hasImportedBuiltinSoaCollectionHelper &&
+      !hasLocalBuiltinSoaCollectionHelperDefinition) {
+    isBuiltinOut = true;
+    return true;
+  }
+  std::string resolvedCanonicalKeyValueHelperName;
+  if (resolveCanonicalKeyValueHelperNameFromSpelling(
+          resolvedOut, resolvedCanonicalKeyValueHelperName) &&
+      isCanonicalMapBuiltinMethodHelper(resolvedCanonicalKeyValueHelperName) &&
+      (this->shouldBuiltinValidateCurrentMapWrapperHelper(
+           resolvedCanonicalKeyValueHelperName) ||
+       hasImportedDefinitionPath(resolvedOut))) {
+    isBuiltinOut = true;
+    return true;
+  }
+  isBuiltinOut = !this->hasDefinitionFamilyPath(resolvedOut) &&
+                 !hasImportedDefinitionPath(resolvedOut);
+  return true;
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -1829,169 +2004,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
 
   std::string elemType;
-  auto setCollectionMethodTarget = [&](const std::string &path) {
-    auto shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod = [&]() {
-      if (explicitRemovedMethodPath.empty()) {
-        return false;
-      }
-      const bool isExplicitArrayCompatibilityPath =
-          explicitRemovedMethodPath.rfind("/array/", 0) == 0;
-      std::string ignoredElemType;
-      const bool isCanonicalStdVectorPath =
-          isCanonicalVectorCompatibilityPath(explicitRemovedMethodPath);
-      if (normalizedMethodName == "count") {
-        if (isExplicitArrayCompatibilityPath) {
-          return false;
-        }
-        if (isCanonicalStdVectorPath) {
-          return resolveVectorTarget(receiver, ignoredElemType);
-        }
-        return resolveArgsPackCountTarget(receiver, ignoredElemType) ||
-               resolveVectorTarget(receiver, ignoredElemType) ||
-               resolveSoaVectorTarget(receiver, ignoredElemType) ||
-               resolveArrayTarget(receiver, ignoredElemType) ||
-               resolveStringTarget(receiver);
-      }
-      if (normalizedMethodName == "count_ref") {
-        if (isExplicitArrayCompatibilityPath || isCanonicalStdVectorPath) {
-          return false;
-        }
-        return resolveSoaVectorTarget(receiver, ignoredElemType) ||
-               resolveKeyValueTarget(receiver);
-      }
-      if (normalizedMethodName == "capacity") {
-        if (isExplicitArrayCompatibilityPath) {
-          return false;
-        }
-        if (isCanonicalStdVectorPath) {
-          return resolveVectorTarget(receiver, ignoredElemType) ||
-                 resolveSoaVectorTarget(receiver, ignoredElemType);
-        }
-        return resolveVectorTarget(receiver, ignoredElemType) ||
-               resolveSoaVectorTarget(receiver, ignoredElemType);
-      }
-      if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
-        const bool isVectorReceiver = resolveVectorTarget(receiver, ignoredElemType);
-        if (isVectorReceiver) {
-          return false;
-        }
-        if (isCanonicalStdVectorPath) {
-          return false;
-        }
-        return resolveArgsPackAccessTarget(receiver, ignoredElemType);
-      }
-      return false;
-    };
-    if (!explicitRemovedMethodPath.empty() &&
-        isRootedVectorHelperPath(explicitRemovedMethodPath) &&
-        hasDeclaredDefinitionPath(explicitRemovedMethodPath)) {
-      resolvedOut = explicitRemovedMethodPath;
-      isBuiltinOut = false;
-      return true;
-    }
-    if (!explicitRemovedMethodPath.empty() &&
-        path.rfind("/string/", 0) == 0 &&
-        isValueSurfaceAccessMethodName(normalizedMethodName)) {
-      resolvedOut = explicitRemovedMethodPath;
-      isBuiltinOut = false;
-      return true;
-    }
-    if (!explicitRemovedMethodPath.empty() &&
-        path.rfind("/array/", 0) == 0) {
-      std::string ignoredElemType;
-      const bool isArgsPackArrayBuiltin =
-          (normalizedMethodName == "count" &&
-           resolveArgsPackCountTarget(receiver, ignoredElemType)) ||
-          (isValueSurfaceAccessMethodName(normalizedMethodName) &&
-           resolveArgsPackAccessTarget(receiver, ignoredElemType));
-      if (isArgsPackArrayBuiltin) {
-        resolvedOut = path;
-        isBuiltinOut = true;
-        return true;
-      }
-    }
-    if (!explicitRemovedMethodPath.empty() && path.rfind("/string/", 0) != 0) {
-      if (shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod()) {
-        resolvedOut = explicitRemovedMethodPath;
-        isBuiltinOut = true;
-        return true;
-      }
-      resolvedOut = explicitRemovedMethodPath;
-      isBuiltinOut = false;
-      return true;
-    }
-    resolvedOut = preferVectorStdlibHelperPath(path);
-    if (resolvedOut.rfind("/array/", 0) == 0 &&
-        defMap_.count(resolvedOut) == 0 &&
-        !hasDeclaredDefinitionPath(resolvedOut)) {
-      isBuiltinOut = true;
-      return true;
-    }
-    const std::string resolvedSoaRefCanonical =
-        canonicalizeLegacySoaRefHelperPath(resolvedOut);
-    auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
-      const size_t specializationSuffix = canonicalPath.find("__");
-      if (specializationSuffix != std::string::npos) {
-        canonicalPath.erase(specializationSuffix);
-      }
-      return canonicalPath;
-    };
-    auto isCanonicalSoaHelperPath = [](const std::string &candidate,
-                                       std::string_view helperName) {
-      return isCanonicalStdlibSoaHelperPath(candidate, helperName);
-    };
-    const std::string resolvedSoaCountCanonical =
-        canonicalizeSoaHelperPath(resolvedOut);
-    const std::string resolvedSoaGetCanonical =
-        canonicalizeLegacySoaGetHelperPath(resolvedOut);
-    const bool matchesSoaToAosHelperPath =
-        isCanonicalStdlibSoaHelperPath(resolvedOut, "to_aos");
-    const bool matchesBorrowedSoaToAosHelperPath =
-        isCanonicalStdlibSoaHelperPath(resolvedOut, "to_aos_ref");
-    const bool matchesBuiltinSoaCollectionHelper =
-        isCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count") ||
-        isCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count_ref") ||
-        isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
-        isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical,
-                                         "get_ref") ||
-        matchesSoaToAosHelperPath ||
-        matchesBorrowedSoaToAosHelperPath ||
-        isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical);
-    const bool hasImportedBuiltinSoaCollectionHelper =
-        hasImportedDefinitionPath(resolvedOut) ||
-        (resolvedSoaCountCanonical != resolvedOut &&
-         hasImportedDefinitionPath(resolvedSoaCountCanonical)) ||
-        (resolvedSoaGetCanonical != resolvedOut &&
-         hasImportedDefinitionPath(resolvedSoaGetCanonical)) ||
-        (resolvedSoaRefCanonical != resolvedOut &&
-         hasImportedDefinitionPath(resolvedSoaRefCanonical));
-    const bool hasLocalBuiltinSoaCollectionHelperDefinition =
-        defMap_.count(resolvedOut) != 0 ||
-        (resolvedSoaCountCanonical != resolvedOut &&
-         defMap_.count(resolvedSoaCountCanonical) != 0) ||
-        (resolvedSoaGetCanonical != resolvedOut &&
-         defMap_.count(resolvedSoaGetCanonical) != 0) ||
-        (resolvedSoaRefCanonical != resolvedOut &&
-         defMap_.count(resolvedSoaRefCanonical) != 0);
-    if (matchesBuiltinSoaCollectionHelper &&
-        hasImportedBuiltinSoaCollectionHelper &&
-        !hasLocalBuiltinSoaCollectionHelperDefinition) {
-      isBuiltinOut = true;
-      return true;
-    }
-    std::string resolvedCanonicalKeyValueHelperName;
-    if (resolveCanonicalKeyValueHelperNameFromSpelling(
-            resolvedOut, resolvedCanonicalKeyValueHelperName) &&
-        isCanonicalMapBuiltinMethodHelper(resolvedCanonicalKeyValueHelperName) &&
-        (this->shouldBuiltinValidateCurrentMapWrapperHelper(
-             resolvedCanonicalKeyValueHelperName) ||
-         hasImportedDefinitionPath(resolvedOut))) {
-      isBuiltinOut = true;
-      return true;
-    }
-    isBuiltinOut = !hasDefinitionFamilyPath(resolvedOut) &&
-                   !hasImportedDefinitionPath(resolvedOut);
-    return true;
+  auto setCollectionMethodTarget = [&](const std::string &path) -> bool {
+    return resolveExplicitOrCanonicalCollectionMethodTarget(
+        path, explicitRemovedMethodPath, normalizedMethodName, receiver,
+        MethodTargetCollectionResolvers{
+            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+            resolveArgsPackAccessTarget},
+        resolvedOut, isBuiltinOut);
   };
   auto canonicalVectorHelperTarget = [](std::string_view helperName) {
     return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
