@@ -566,6 +566,70 @@
   // before composing the preferred internal SoA helper target path for it.
   std::string preferredBorrowedSoaHelperTargetForCollectionMethod(
       std::string helperName) const;
+  // TODO-4724 seam (4c): the "preferred key-value method target" hub chain
+  // - setPreferredKeyValueMethodTarget's own multi-lambda dependency web,
+  // extracted bottom-up (each function below only calls the ones already
+  // promoted above it, plus real members/free functions - verified by
+  // reading every dependency's own definition, not assumed). All names
+  // reused verbatim from resolveMethodTarget's own local lambdas after
+  // confirming (by grepping every .cpp/.h in src/semantics/) that none of
+  // them collide with an unrelated free function or struct-field name
+  // called unqualified from another SemanticsValidator member body - see
+  // resolveMethodTargetStructTypePath's own comment above for why that
+  // check matters. bindingTypeText was deliberately NOT promoted (it
+  // collides with an unrelated free function of the same name used
+  // elsewhere in this class) - its trivial two-line body is inlined
+  // directly into isWrappedKeyValueReceiver below instead.
+  bool resolveFieldBindingTarget(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &target, BindingInfo &bindingOut);
+  bool extractWrappedPointeeType(const std::string &typeText,
+                                 std::string &pointeeTypeOut) const;
+  bool extractExperimentalKeyValueFieldTypes(const BindingInfo &binding,
+                                             std::string &keyTypeOut,
+                                             std::string &valueTypeOut) const;
+  bool isWrappedKeyValueTypeText(const std::string &typeText) const;
+  bool extractAnyKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut,
+                               std::string &valueTypeOut) const;
+  bool resolveIndexedArgsPackElementType(
+      const Expr &target, std::string &elemTypeOut,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) const;
+  bool resolveDereferencedIndexedArgsPackElementType(
+      const Expr &target, std::string &elemTypeOut,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) const;
+  bool resolveWrappedIndexedArgsPackElementType(
+      const Expr &target, std::string &elemTypeOut,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) const;
+  bool isWrappedKeyValueReceiver(
+      const Expr &receiverExpr, const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  bool isCanonicalKeyValueReceiver(
+      const Expr &receiverExpr, const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
+  bool resolveExperimentalKeyValueTarget(
+      const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
+  std::string borrowedKeyValueHelperNameForReceiver(
+      const Expr &receiverExpr, const std::string &helperName,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  std::string preferredKeyValueMethodTarget(
+      const Expr &receiverExpr, const std::string &helperName,
+      const std::string &explicitKeyValueHelperPath,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  bool setPreferredKeyValueMethodTarget(
+      const Expr &receiverExpr, const std::string &helperName,
+      const std::string &explicitKeyValueHelperPath, const Expr &receiver,
+      const std::string &explicitRemovedMethodPath, const std::string &normalizedMethodName,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+      bool &isBuiltinOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

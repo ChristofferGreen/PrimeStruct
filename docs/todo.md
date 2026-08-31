@@ -2831,6 +2831,87 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     diminishing returns on a few more trivial predicates, or take on
     one of the entangled hubs with a dedicated multi-step precursor
     inventory (matching how seam (2)'s own hub was handled).
+  - progress_2026-08-31e: took on the entangled hub, seam (4c) - the
+    "preferred key-value method target" chain rooted at
+    `setPreferredKeyValueMethodTarget` (17 call sites), following seam
+    (2)'s own precursor-inventory methodology: read every dependency's
+    own definition bottom-up before writing any extraction, rather than
+    assuming. Full chain, extracted in dependency order (each function
+    below only calls ones already promoted above it): `resolveFieldBindingTarget`
+    (9 call sites; wraps the real member `resolveStructFieldBinding`),
+    `extractWrappedPointeeType` (4 call sites; pure, capture-free besides
+    free functions), `extractExperimentalKeyValueFieldTypes` (5 call
+    sites; only real members/free functions plus a small nested nested
+    lambda kept inline), `isWrappedKeyValueTypeText` (depends on the
+    prior two), `extractAnyKeyValueTypes` (11 call sites; trivial
+    `||` of a free function and the prior extraction),
+    `resolveIndexedArgsPackElementType`/`resolveDereferencedIndexedArgsPackElementType`/
+    `resolveWrappedIndexedArgsPackElementType` (10+ call sites combined;
+    needed threading the existing `resolveArgsPackAccessTarget` local
+    `std::function` through as an explicit parameter rather than the
+    whole `MethodTargetCollectionResolvers` struct, since only that one
+    field was actually used), `isWrappedKeyValueReceiver`,
+    `isCanonicalKeyValueReceiver`, `resolveExperimentalKeyValueTarget`,
+    `borrowedKeyValueHelperNameForReceiver`, `preferredKeyValueMethodTarget`,
+    and finally `setPreferredKeyValueMethodTarget` itself (which now
+    takes the full `MethodTargetCollectionResolvers` struct, since its
+    own fallback path calls `resolveExplicitOrCanonicalCollectionMethodTarget`
+    directly rather than through the local `setCollectionMethodTarget`
+    forwarder). Two real landmines found and avoided before writing any
+    code, both by grepping every `.cpp`/`.h` in `src/semantics/` for each
+    candidate name's other unqualified callers first (the lesson from
+    seam (4b) step 2's near-miss, applied proactively this time): (1)
+    `resolveFieldBindingTarget` is ALSO the name of a genuine free
+    function in `TemplateMonomorphAssignmentTargetResolution.h` (7-arg,
+    `Context&`-taking signature) - confirmed safe only because every
+    `SemanticsValidator` member function that calls it unqualified
+    (3 files total) already shadows it with its own independent local
+    lambda, so none of those call sites would resolve differently after
+    adding the member; (2) `bindingTypeText` (a 2-line binding-to-string
+    helper used inside `isWrappedKeyValueReceiver`'s own nested
+    `isWrappedBinding` lambda) IS a genuine collision - a free function
+    of the same name exists in `SemanticsValidateSoaBindingExtraction.h`
+    - so it was deliberately NOT promoted; its trivial body is inlined
+    directly into the new `isWrappedKeyValueReceiver` member instead
+    (documented inline so a future round doesn't reintroduce the
+    collision by "cleaning up" the inline copy). A third, more subtle
+    bug was caught before building at all, not by the compiler: the
+    original `setPreferredKeyValueMethodTarget` lambda's final fallback
+    line, `return setCollectionMethodTarget(preferredKeyValueHelper);`,
+    implicitly captured `resolveMethodTarget`'s own `explicitRemovedMethodPath`
+    and `normalizedMethodName` locals via `setCollectionMethodTarget`'s
+    own closure - the first draft of the new member function silently
+    dropped these (passing empty strings to
+    `resolveExplicitOrCanonicalCollectionMethodTarget` instead), which
+    would have been a genuine behavior change specifically on this one
+    fallback path; caught by re-reading the original lambda's full body
+    a second time before compiling, not discovered via a failing test.
+    Fixed by threading both through as explicit parameters. All original
+    local lambdas were kept in place (same names/signatures, all 17+
+    external call sites unchanged) as thin forwarders; 5 of them
+    (`extractExperimentalKeyValueFieldTypes`, `isWrappedKeyValueTypeText`,
+    `isWrappedKeyValueReceiver`, `borrowedKeyValueHelperNameForReceiver`,
+    `isCanonicalKeyValueReceiver`) turned out to have zero remaining
+    callers within `resolveMethodTarget` once their own sole callers
+    switched to calling the new members directly - `-Werror=unused-but-
+    set-variable` caught this on the first build attempt (same pattern
+    as seam (3)'s `classifyExplicitVectorHelperParam` cleanup), and all
+    5 were deleted outright. Verified: `primec`-only build clean; the
+    shape (c) repros unchanged; full `PrimeStruct_semantics_tests`
+    2740/2740 (0 failed); `PrimeStruct_backend_ir_tests` 1643/1644 (the
+    same already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (0 failed, run from `build-release/`). This closes out the
+    `setPreferredKeyValueMethodTarget` hub entirely - `setCollectionMethodTarget`
+    (seam (2)'s own hub, already extracted) and `stampFileErrorResultFailure`
+    (low-value, entangled with rarely-hit error-tracing state) remain as
+    the last real holdouts in seam (4b)'s original remainder, plus the
+    still-untouched seam (4b) dispatch-on-typeName body itself (the part
+    of the tail that doesn't route through any hub at all) and seam (4)'s
+    still-open tail-fallback primitive/struct/sum-type generic dispatch.
+    A future round should re-audit what remains now that this hub is
+    gone - the remaining surface may be small enough for a final push to
+    close this task out entirely.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
