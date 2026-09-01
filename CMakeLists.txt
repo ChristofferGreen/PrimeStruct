@@ -270,6 +270,12 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp
   src/semantics/SemanticsValidatorExprCollectionAccessSetup.cpp
   src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp
+  src/semantics/SemanticsValidatorMethodTargetResolutionDetail.cpp
+  src/semantics/SemanticsValidatorMethodTargetVectorResolvers.cpp
+  src/semantics/SemanticsValidatorMethodTargetStringResolver.cpp
+  src/semantics/SemanticsValidatorMethodTargetKeyValueResolvers.cpp
+  src/semantics/SemanticsValidatorMethodTargetArgsPackResolvers.cpp
+  src/semantics/SemanticsValidatorMethodTargetStructSumResolvers.cpp
   src/semantics/SemanticsValidatorExprDirectCollectionFallbacks.cpp
   src/semantics/SemanticsValidatorExprPostAccessPrechecks.cpp
   src/semantics/SemanticsValidatorExprBuiltinContextSetup.cpp

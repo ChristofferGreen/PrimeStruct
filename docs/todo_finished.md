@@ -41554,3 +41554,150 @@ real answer.
     so no other existing test's behavior changes).
 
 
+
+**Todo Completion (September 1, 2026) — TODO-5270..5274**
+- [x] TODO-5270: Move the vector/array/soa method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: TODO-4724's seams (1)-(9) promoted most of
+    `resolveMethodTarget`'s logic from local lambdas into real
+    `SemanticsValidator` private members, but every one of them still
+    lives in the same 4300+ line
+    `SemanticsValidatorExprMethodTargetResolution.cpp` file - the file
+    itself has not gotten smaller, just more function boundaries inside
+    it. This leaf moves the vector/array/soa-shaped resolver family to a
+    new `SemanticsValidatorMethodTargetVectorResolvers.cpp`.
+  - evidence: Moved 14 functions (`classifyVectorCompatHelperParamFamily`,
+    `explicitVectorCompatHelperFamilyHasCompatibleReceiver`,
+    `classifyExplicitVectorHelperReceiver`,
+    `hasReceiverCompatibleExplicitVectorHelperPath`,
+    `preferExplicitCanonicalVectorHelperForReceiver`,
+    `tryResolveExplicitCanonicalVectorCountMethodTarget`,
+    `preferredBorrowedSoaHelperTargetForCollectionMethod`,
+    `resolveBorrowedVectorReceiver`, `resolveVectorTarget`,
+    `resolveSoaVectorTarget`, `resolveArrayTarget`,
+    `resolveCollectionVectorValueTarget`,
+    `preferredBorrowedSoaAccessHelperTarget`,
+    `tryRedirectConcreteExperimentalSoaMethodTarget`,
+    `resolveCollectionVectorMetadataMethodTarget`, `explicitVectorMethodPath`
+    - a couple more than the original scope list named, found via a full
+    function-by-function dependency trace done together with TODO-5271
+    through TODO-5274) to the new file verbatim (no body/signature/name
+    changes). This family had zero dependencies on the file's former
+    anonymous-namespace helper functions, so it required no shared-header
+    plumbing. `primec` build clean (new file builds with zero warnings
+    under -Werror); full `PrimeStruct_semantics_tests` 2740/2740 (0
+    failed), `PrimeStruct_backend_ir_tests` 1643/1644 (the same
+    pre-existing "ir lowerer supports map method calls" flake, unrelated),
+    `PrimeStruct_compile_run_tests` 2678/2678 (0 failed) - verified once
+    together with TODO-5271..5274 in the same build/test round since all
+    five moves shared one prerequisite (the
+    `SemanticsValidatorMethodTargetResolutionDetail.h`/`.cpp` shared
+    helper split, needed by the key-value/args-pack/struct-sum families
+    and by the code remaining in the main file) and were completed in one
+    working session; the shape (c) and `/vector/push` regression repros
+    were also re-checked and are unchanged.
+  - stop_rule: Pure move, zero behavior change - satisfied.
+
+- [x] TODO-5271: Move the string method-target resolver out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move `resolveStringTarget` out of
+    `SemanticsValidatorExprMethodTargetResolution.cpp` into a new
+    `SemanticsValidatorMethodTargetStringResolver.cpp`.
+  - evidence: Moved verbatim, zero anonymous-namespace-helper dependency
+    (confirmed by dependency trace). Verified together with
+    TODO-5270/5272/5273/5274 - see TODO-5270's evidence note for the
+    shared build/test verification detail (primec build clean; full
+    `PrimeStruct_semantics_tests` 2740/2740, `PrimeStruct_backend_ir_tests`
+    1643/1644 known flake, `PrimeStruct_compile_run_tests` 2678/2678; both
+    standalone repros unchanged).
+  - stop_rule: Pure move, zero behavior change - satisfied.
+
+- [x] TODO-5272: Move the key-value method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move the key-value-shaped resolver family to a new
+    `SemanticsValidatorMethodTargetKeyValueResolvers.cpp`.
+  - evidence: Moved 15 functions (`extractExperimentalKeyValueFieldTypes`,
+    `isWrappedKeyValueTypeText`, `extractAnyKeyValueTypes`,
+    `isWrappedKeyValueReceiver`, `isCanonicalKeyValueReceiver`,
+    `resolveExperimentalKeyValueTarget`,
+    `borrowedKeyValueHelperNameForReceiver`, `preferredKeyValueMethodTarget`,
+    `setPreferredKeyValueMethodTarget`, `resolveKeyValueTarget`,
+    `resolveMethodTargetKeyValueValueType`,
+    `getDirectKeyValueHelperCompatibilityPath`, `explicitKeyValueMethodPath`,
+    `setIndexedArgsPackKeyValueMethodTarget`,
+    `resolveExplicitRootKeyValueMethodPath`) verbatim. This family had the
+    heaviest dependency on the file's former anonymous-namespace helpers
+    (10 of the 16), most of which were also needed by code staying in the
+    main file (`resolveMethodTarget`, `resolveMethodTargetGenericFallback`,
+    `resolveExplicitOrCanonicalCollectionMethodTarget`), so those 16
+    helpers were promoted from a per-TU anonymous namespace into a new
+    shared internal header/source pair,
+    `SemanticsValidatorMethodTargetResolutionDetail.h`/`.cpp`, in a
+    dedicated `primec::semantics::method_target_detail` nested namespace
+    (verified via a project-wide grep that the namespace name was unused,
+    so no collision risk). Every TU that needs any of them (the main
+    file plus the key-value/args-pack/struct-sum family files) pulls
+    them in with `using namespace method_target_detail;` so no call
+    sites needed renaming. Verified together with TODO-5270/5271/5273/
+    5274 - see TODO-5270's evidence note for the shared build/test
+    verification detail.
+  - stop_rule: Pure move, zero behavior change - satisfied.
+
+- [x] TODO-5273: Move the args-pack method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move the args-pack-shaped resolver family to a new
+    `SemanticsValidatorMethodTargetArgsPackResolvers.cpp`.
+  - evidence: Moved `resolveIndexedArgsPackElementType`,
+    `resolveDereferencedIndexedArgsPackElementType`,
+    `resolveWrappedIndexedArgsPackElementType`,
+    `resolveArgsPackElementMethodTarget`, `extractCollectionElementType`
+    verbatim; this family needed exactly one shared helper
+    (`isFileMethodName`, also needed by the main file), pulled in via
+    `SemanticsValidatorMethodTargetResolutionDetail.h` per TODO-5272's
+    evidence note. Verified together with TODO-5270/5271/5272/5274 - see
+    TODO-5270's evidence note for the shared build/test verification
+    detail.
+  - stop_rule: Pure move, zero behavior change - satisfied.
+
+- [x] TODO-5274: Move the struct/sum-type-path method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move the struct/sum-type-path-shaped resolver family to a new
+    `SemanticsValidatorMethodTargetStructSumResolvers.cpp`.
+  - evidence: Moved `resolveDeclaredSumMethodTarget`, `resolveSumTypePath`,
+    `maybeFailRetiredMaybeMutableHelperForType`,
+    `resolveMethodTargetStructTypePath`, `resolveFieldBindingTarget`,
+    `extractWrappedPointeeType` verbatim; this family needed two shared
+    helpers (`isMaybeSumTypePath`, `isRetiredMaybeMutableHelperName`,
+    both also needed by the main file), pulled in via
+    `SemanticsValidatorMethodTargetResolutionDetail.h` per TODO-5272's
+    evidence note. Verified together with TODO-5270/5271/5272/5273 - see
+    TODO-5270's evidence note for the shared build/test verification
+    detail. `SemanticsValidatorExprMethodTargetResolution.cpp` itself
+    shrank from ~4300 lines to ~2349 lines across all five moves plus the
+    detail-header extraction.
+  - stop_rule: Pure move, zero behavior change - satisfied.
