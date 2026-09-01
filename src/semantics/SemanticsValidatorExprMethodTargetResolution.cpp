@@ -1280,6 +1280,281 @@ bool SemanticsValidator::resolveBorrowedVectorReceiver(
   return true;
 }
 
+bool SemanticsValidator::resolveVectorTarget(
+    const Expr &target, std::string &elemType,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) {
+  if (target.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      if (paramBinding->typeName == "vector" && !paramBinding->typeTemplateArg.empty()) {
+        elemType = paramBinding->typeTemplateArg;
+        return true;
+      }
+      return false;
+    }
+    auto it = locals.find(target.name);
+    if (it != locals.end() && it->second.typeName == "vector" &&
+        !it->second.typeTemplateArg.empty()) {
+      elemType = it->second.typeTemplateArg;
+      return true;
+    }
+    return false;
+  }
+  BindingInfo fieldBinding;
+  if (resolveFieldBindingTarget(params, locals, target, fieldBinding) &&
+      fieldBinding.typeName == "vector" && !fieldBinding.typeTemplateArg.empty()) {
+    elemType = fieldBinding.typeTemplateArg;
+    return true;
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string indexedElemType;
+    if ((resolveIndexedArgsPackElementType(target, indexedElemType, resolveArgsPackAccessTarget) ||
+         resolveWrappedIndexedArgsPackElementType(target, indexedElemType,
+                                                  resolveArgsPackAccessTarget) ||
+         resolveDereferencedIndexedArgsPackElementType(target, indexedElemType,
+                                                        resolveArgsPackAccessTarget)) &&
+        extractCollectionElementType(indexedElemType, "vector", elemType)) {
+      return true;
+    }
+    std::string collectionTypePath;
+    if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
+        collectionTypePath == "/vector") {
+      std::vector<std::string> args;
+      if (resolveCallCollectionTemplateArgs(target, "vector", params, locals, args) &&
+          args.size() == 1) {
+        elemType = args.front();
+        return true;
+      }
+      std::string collectionName;
+      if (getBuiltinCollectionName(target, collectionName) &&
+          collectionName == "vector" &&
+          target.templateArgs.size() == 1) {
+        elemType = target.templateArgs.front();
+        return true;
+      }
+      return false;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(target));
+    if (defIt != defMap_.end() && defIt->second != nullptr) {
+      BindingInfo inferredReturn;
+      if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+          normalizeBindingTypeName(inferredReturn.typeName) == "vector" &&
+          !inferredReturn.typeTemplateArg.empty()) {
+        elemType = inferredReturn.typeTemplateArg;
+        return true;
+      }
+    }
+    const std::string resolvedTarget = resolveCalleePath(target);
+    const bool matchesSoaToAosTarget =
+        ((target.isMethodCall && target.name == "to_aos") ||
+         (!target.isMethodCall && isSimpleCallName(target, "to_aos"))) ||
+        isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
+    const bool matchesBorrowedSoaToAosTarget =
+        ((target.isMethodCall && target.name == "to_aos_ref") ||
+         (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref"))) ||
+        isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
+    if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
+        target.args.size() == 1) {
+      std::string sourceElemType;
+      const Expr &source = target.args.front();
+      if (resolveSoaVectorTarget(source, sourceElemType, params, locals,
+                                 resolveArgsPackAccessTarget)) {
+        elemType = sourceElemType;
+        return true;
+      }
+      if (source.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, source.name)) {
+          if (!isInternalSoaCollectionTypeName(paramBinding->typeName) ||
+              paramBinding->typeTemplateArg.empty()) {
+            return false;
+          }
+          sourceElemType = paramBinding->typeTemplateArg;
+        } else {
+          auto it = locals.find(source.name);
+          if (it == locals.end() ||
+              !isInternalSoaCollectionTypeName(it->second.typeName) ||
+              it->second.typeTemplateArg.empty()) {
+            return false;
+          }
+          sourceElemType = it->second.typeTemplateArg;
+        }
+      } else if (source.kind == Expr::Kind::Call) {
+        std::string sourceCollectionTypePath;
+        if (defMap_.find(resolveCalleePath(source)) == defMap_.end()) {
+          std::string collection;
+          if (getBuiltinCollectionName(source, collection) &&
+              isInternalSoaCollectionTypeName(collection) &&
+              source.templateArgs.size() == 1) {
+            sourceElemType = source.templateArgs.front();
+          }
+          if (sourceElemType.empty() &&
+              (((!source.isMethodCall && isSimpleCallName(source, "to_soa")) ||
+                resolveCalleePath(source) == "/to_soa") &&
+               source.args.size() == 1)) {
+            if (!resolveVectorTarget(source.args.front(), sourceElemType, params, locals,
+                                     resolveArgsPackAccessTarget)) {
+              return false;
+            }
+          }
+        } else if (!resolveCallCollectionTypePath(source, params, locals, sourceCollectionTypePath) ||
+                   !isInternalSoaCollectionTypePath(sourceCollectionTypePath)) {
+          return false;
+        } else {
+          std::vector<std::string> sourceArgs;
+          if (resolveCallCollectionTemplateArgs(source,
+                                               internalSoaCollectionTypeName(),
+                                               params,
+                                               locals,
+                                               sourceArgs) &&
+              sourceArgs.size() == 1) {
+            sourceElemType = sourceArgs.front();
+          }
+        }
+      } else {
+        return false;
+      }
+      if (!sourceElemType.empty()) {
+        elemType = sourceElemType;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveSoaVectorTarget(
+    const Expr &target, std::string &elemType,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) {
+  auto extractValueBinding = [&](const BindingInfo &binding) {
+    if (isInternalSoaCollectionTypeName(binding.typeName) &&
+        !binding.typeTemplateArg.empty()) {
+      elemType = binding.typeTemplateArg;
+      return true;
+    }
+    return extractExperimentalSoaVectorElementType(binding, elemType);
+  };
+  auto resolveInlineBorrowedValue = [&](const Expr &candidate) -> bool {
+    auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
+      if (valueExpr.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
+          return extractValueBinding(*paramBinding);
+        }
+        auto it = locals.find(valueExpr.name);
+        return it != locals.end() && extractValueBinding(it->second);
+      }
+      if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
+        return false;
+      }
+      BindingInfo inferredBinding;
+      std::string inferredTypeText;
+      if (inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText)) {
+        std::string base;
+        std::string argText;
+        const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
+        if (splitTemplateTypeName(normalizedType, base, argText)) {
+          inferredBinding.typeName = normalizeBindingTypeName(base);
+          inferredBinding.typeTemplateArg = argText;
+        } else {
+          inferredBinding.typeName = normalizedType;
+          inferredBinding.typeTemplateArg.clear();
+        }
+        if (extractValueBinding(inferredBinding)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (!candidate.isBinding &&
+        isSimpleCallName(candidate, "location") &&
+        candidate.args.size() == 1) {
+      return resolveValueExpr(candidate.args.front());
+    }
+    if (!candidate.isBinding &&
+        isSimpleCallName(candidate, "dereference") &&
+        candidate.args.size() == 1) {
+      const Expr &borrowedExpr = candidate.args.front();
+      return borrowedExpr.kind == Expr::Kind::Call &&
+             !borrowedExpr.isBinding &&
+             isSimpleCallName(borrowedExpr, "location") &&
+             borrowedExpr.args.size() == 1 &&
+             resolveValueExpr(borrowedExpr.args.front());
+    }
+    return false;
+  };
+  if (target.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      return extractValueBinding(*paramBinding);
+    }
+    auto it = locals.find(target.name);
+    if (it != locals.end()) {
+      return extractValueBinding(it->second);
+    }
+    return false;
+  }
+  BindingInfo fieldBinding;
+  if (resolveFieldBindingTarget(params, locals, target, fieldBinding) &&
+      extractValueBinding(fieldBinding)) {
+    return true;
+  }
+  if (target.kind == Expr::Kind::Call) {
+    if (resolveInlineBorrowedValue(target)) {
+      return true;
+    }
+    std::string indexedElemType;
+    if ((resolveIndexedArgsPackElementType(target, indexedElemType, resolveArgsPackAccessTarget) ||
+         resolveWrappedIndexedArgsPackElementType(target, indexedElemType,
+                                                  resolveArgsPackAccessTarget) ||
+         resolveDereferencedIndexedArgsPackElementType(target, indexedElemType,
+                                                        resolveArgsPackAccessTarget)) &&
+        extractCollectionElementType(indexedElemType,
+                                     internalSoaCollectionTypeName(),
+                                     elemType)) {
+      return true;
+    }
+    std::string collectionTypePath;
+    if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
+        isInternalSoaCollectionTypePath(collectionTypePath)) {
+      std::vector<std::string> args;
+      if (resolveCallCollectionTemplateArgs(target,
+                                           internalSoaCollectionTypeName(),
+                                           params,
+                                           locals,
+                                           args) &&
+          args.size() == 1) {
+        elemType = args.front();
+      }
+      return true;
+    }
+    if (((!target.isMethodCall && isSimpleCallName(target, "to_soa")) ||
+         resolveCalleePath(target) == "/to_soa") &&
+        target.args.size() == 1) {
+      return resolveVectorTarget(target.args.front(), elemType, params, locals,
+                                 resolveArgsPackAccessTarget);
+    }
+    BindingInfo inferredBinding;
+    std::string inferredTypeText;
+    if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+      std::string base;
+      std::string argText;
+      const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        inferredBinding.typeName = normalizeBindingTypeName(base);
+        inferredBinding.typeTemplateArg = argText;
+      } else {
+        inferredBinding.typeName = normalizedType;
+        inferredBinding.typeTemplateArg.clear();
+      }
+      if (extractValueBinding(inferredBinding)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool SemanticsValidator::resolveArrayTarget(
     const Expr &target, std::string &elemType, const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -2952,277 +3227,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return this->resolveDereferencedIndexedArgsPackElementType(target, elemTypeOut,
                                                                 resolveArgsPackAccessTarget);
   };
-  auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {
-    return this->resolveWrappedIndexedArgsPackElementType(target, elemTypeOut,
-                                                           resolveArgsPackAccessTarget);
-  };
-  auto extractCollectionElementType = [&](const std::string &typeText,
-                                          const std::string &expectedBase,
-                                          std::string &elemTypeOut) -> bool {
-    return this->extractCollectionElementType(typeText, expectedBase, elemTypeOut);
-  };
   auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
     return this->resolveArrayTarget(target, elemType, params, locals, resolveArgsPackAccessTarget);
   };
-  std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
+  std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget =
+      [&](const Expr &target, std::string &elemType) -> bool {
+    return this->resolveSoaVectorTarget(target, elemType, params, locals,
+                                        resolveArgsPackAccessTarget);
+  };
   std::function<bool(const Expr &, std::string &)> resolveVectorTarget =
       [&](const Expr &target, std::string &elemType) -> bool {
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        if (paramBinding->typeName == "vector" && !paramBinding->typeTemplateArg.empty()) {
-          elemType = paramBinding->typeTemplateArg;
-          return true;
-        }
-        return false;
-      }
-      auto it = locals.find(target.name);
-      if (it != locals.end() && it->second.typeName == "vector" &&
-          !it->second.typeTemplateArg.empty()) {
-        elemType = it->second.typeTemplateArg;
-        return true;
-      }
-      return false;
-    }
-    BindingInfo fieldBinding;
-    if (resolveFieldBindingTarget(target, fieldBinding) && fieldBinding.typeName == "vector" &&
-        !fieldBinding.typeTemplateArg.empty()) {
-      elemType = fieldBinding.typeTemplateArg;
-      return true;
-    }
-    if (target.kind == Expr::Kind::Call) {
-      std::string indexedElemType;
-      if ((resolveIndexedArgsPackElementType(target, indexedElemType) ||
-           resolveWrappedIndexedArgsPackElementType(target, indexedElemType) ||
-           resolveDereferencedIndexedArgsPackElementType(target, indexedElemType)) &&
-          extractCollectionElementType(indexedElemType, "vector", elemType)) {
-        return true;
-      }
-      std::string collectionTypePath;
-      if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          collectionTypePath == "/vector") {
-        std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target, "vector", params, locals, args) &&
-            args.size() == 1) {
-          elemType = args.front();
-          return true;
-        }
-        std::string collectionName;
-        if (getBuiltinCollectionName(target, collectionName) &&
-            collectionName == "vector" &&
-            target.templateArgs.size() == 1) {
-          elemType = target.templateArgs.front();
-          return true;
-        }
-        return false;
-      }
-      auto defIt = defMap_.find(resolveCalleePath(target));
-      if (defIt != defMap_.end() && defIt->second != nullptr) {
-        BindingInfo inferredReturn;
-        if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
-            normalizeBindingTypeName(inferredReturn.typeName) == "vector" &&
-            !inferredReturn.typeTemplateArg.empty()) {
-          elemType = inferredReturn.typeTemplateArg;
-          return true;
-        }
-      }
-      const std::string resolvedTarget = resolveCalleePath(target);
-      const bool matchesSoaToAosTarget =
-          ((target.isMethodCall && target.name == "to_aos") ||
-           (!target.isMethodCall && isSimpleCallName(target, "to_aos"))) ||
-          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
-      const bool matchesBorrowedSoaToAosTarget =
-          ((target.isMethodCall && target.name == "to_aos_ref") ||
-           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref"))) ||
-          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
-      if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
-          target.args.size() == 1) {
-        std::string sourceElemType;
-        const Expr &source = target.args.front();
-        if (resolveSoaVectorTarget(source, sourceElemType)) {
-          elemType = sourceElemType;
-          return true;
-        }
-        if (source.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding = findParamBinding(params, source.name)) {
-            if (!isInternalSoaCollectionTypeName(paramBinding->typeName) ||
-                paramBinding->typeTemplateArg.empty()) {
-              return false;
-            }
-            sourceElemType = paramBinding->typeTemplateArg;
-          } else {
-            auto it = locals.find(source.name);
-            if (it == locals.end() ||
-                !isInternalSoaCollectionTypeName(it->second.typeName) ||
-                it->second.typeTemplateArg.empty()) {
-              return false;
-            }
-            sourceElemType = it->second.typeTemplateArg;
-          }
-        } else if (source.kind == Expr::Kind::Call) {
-          std::string sourceCollectionTypePath;
-          if (defMap_.find(resolveCalleePath(source)) == defMap_.end()) {
-            std::string collection;
-            if (getBuiltinCollectionName(source, collection) &&
-                isInternalSoaCollectionTypeName(collection) &&
-                source.templateArgs.size() == 1) {
-              sourceElemType = source.templateArgs.front();
-            }
-            if (sourceElemType.empty() &&
-                (((!source.isMethodCall && isSimpleCallName(source, "to_soa")) ||
-                  resolveCalleePath(source) == "/to_soa") &&
-                 source.args.size() == 1)) {
-              if (!resolveVectorTarget(source.args.front(), sourceElemType)) {
-                return false;
-              }
-            }
-          } else if (!resolveCallCollectionTypePath(source, params, locals, sourceCollectionTypePath) ||
-                     !isInternalSoaCollectionTypePath(sourceCollectionTypePath)) {
-            return false;
-          } else {
-            std::vector<std::string> sourceArgs;
-            if (resolveCallCollectionTemplateArgs(source,
-                                                 internalSoaCollectionTypeName(),
-                                                 params,
-                                                 locals,
-                                                 sourceArgs) &&
-                sourceArgs.size() == 1) {
-              sourceElemType = sourceArgs.front();
-            }
-          }
-        } else {
-          return false;
-        }
-        if (!sourceElemType.empty()) {
-          elemType = sourceElemType;
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-  resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
-    auto extractValueBinding = [&](const BindingInfo &binding) {
-      if (isInternalSoaCollectionTypeName(binding.typeName) &&
-          !binding.typeTemplateArg.empty()) {
-        elemType = binding.typeTemplateArg;
-        return true;
-      }
-      return extractExperimentalSoaVectorElementType(binding, elemType);
-    };
-    auto resolveInlineBorrowedValue = [&](const Expr &candidate) -> bool {
-      auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
-        if (valueExpr.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
-            return extractValueBinding(*paramBinding);
-          }
-          auto it = locals.find(valueExpr.name);
-          return it != locals.end() && extractValueBinding(it->second);
-        }
-        if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
-          return false;
-        }
-        BindingInfo inferredBinding;
-        std::string inferredTypeText;
-        if (inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText)) {
-          std::string base;
-          std::string argText;
-          const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
-          if (splitTemplateTypeName(normalizedType, base, argText)) {
-            inferredBinding.typeName = normalizeBindingTypeName(base);
-            inferredBinding.typeTemplateArg = argText;
-          } else {
-            inferredBinding.typeName = normalizedType;
-            inferredBinding.typeTemplateArg.clear();
-          }
-          if (extractValueBinding(inferredBinding)) {
-            return true;
-          }
-        }
-        return false;
-      };
-      if (!candidate.isBinding &&
-          isSimpleCallName(candidate, "location") &&
-          candidate.args.size() == 1) {
-        return resolveValueExpr(candidate.args.front());
-      }
-      if (!candidate.isBinding &&
-          isSimpleCallName(candidate, "dereference") &&
-          candidate.args.size() == 1) {
-        const Expr &borrowedExpr = candidate.args.front();
-        return borrowedExpr.kind == Expr::Kind::Call &&
-               !borrowedExpr.isBinding &&
-               isSimpleCallName(borrowedExpr, "location") &&
-               borrowedExpr.args.size() == 1 &&
-               resolveValueExpr(borrowedExpr.args.front());
-      }
-      return false;
-    };
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractValueBinding(*paramBinding);
-      }
-      auto it = locals.find(target.name);
-      if (it != locals.end()) {
-        return extractValueBinding(it->second);
-      }
-      return false;
-    }
-    BindingInfo fieldBinding;
-    if (resolveFieldBindingTarget(target, fieldBinding) &&
-        extractValueBinding(fieldBinding)) {
-      return true;
-    }
-    if (target.kind == Expr::Kind::Call) {
-      if (resolveInlineBorrowedValue(target)) {
-        return true;
-      }
-      std::string indexedElemType;
-      if ((resolveIndexedArgsPackElementType(target, indexedElemType) ||
-           resolveWrappedIndexedArgsPackElementType(target, indexedElemType) ||
-           resolveDereferencedIndexedArgsPackElementType(target, indexedElemType)) &&
-          extractCollectionElementType(indexedElemType,
-                                       internalSoaCollectionTypeName(),
-                                       elemType)) {
-        return true;
-      }
-      std::string collectionTypePath;
-      if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          isInternalSoaCollectionTypePath(collectionTypePath)) {
-        std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target,
-                                             internalSoaCollectionTypeName(),
-                                             params,
-                                             locals,
-                                             args) &&
-            args.size() == 1) {
-          elemType = args.front();
-        }
-        return true;
-      }
-      if (((!target.isMethodCall && isSimpleCallName(target, "to_soa")) ||
-           resolveCalleePath(target) == "/to_soa") &&
-          target.args.size() == 1) {
-        return resolveVectorTarget(target.args.front(), elemType);
-      }
-      BindingInfo inferredBinding;
-      std::string inferredTypeText;
-      if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
-        std::string base;
-        std::string argText;
-        const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
-        if (splitTemplateTypeName(normalizedType, base, argText)) {
-          inferredBinding.typeName = normalizeBindingTypeName(base);
-          inferredBinding.typeTemplateArg = argText;
-        } else {
-          inferredBinding.typeName = normalizedType;
-          inferredBinding.typeTemplateArg.clear();
-        }
-        if (extractValueBinding(inferredBinding)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return this->resolveVectorTarget(target, elemType, params, locals,
+                                     resolveArgsPackAccessTarget);
   };
   auto resolveExperimentalKeyValueTarget = [&](const Expr &target,
                                           std::string &keyTypeOut,

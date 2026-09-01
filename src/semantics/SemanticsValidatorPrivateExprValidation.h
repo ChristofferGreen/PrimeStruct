@@ -649,6 +649,17 @@
       const Expr &candidate, std::string &elemTypeOut,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals);
+  // TODO-4724 seam (7): mutually-recursive pair promoted verbatim.
+  bool resolveVectorTarget(
+      const Expr &target, std::string &elemType,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  bool resolveSoaVectorTarget(
+      const Expr &target, std::string &elemType,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
   bool resolveCollectionVectorValueTarget(
       const Expr &target, std::string &elemTypeOut,
       const std::vector<ParameterInfo> &params,

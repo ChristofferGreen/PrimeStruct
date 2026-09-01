@@ -3184,6 +3184,57 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     self-contained/recursive promotion candidates:
     `resolveVectorTarget` (~260 lines, the single largest remaining) and
     `resolveStringTarget`.
+  - progress_2026-08-31k: seam (7) - promoted the mutually-recursive
+    `resolveVectorTarget`/`resolveSoaVectorTarget` pair (the largest
+    remaining full-bodied lambdas, ~260 lines combined) to real private
+    members, `bool resolveVectorTarget(target, elemType, params, locals,
+    resolveArgsPackAccessTarget)` and the analogous
+    `resolveSoaVectorTarget`. Each depended only on `params`/`locals`
+    (explicit parameters), the `resolveArgsPackAccessTarget` `std::function`
+    (kept as an explicit parameter rather than promoted, matching the
+    established `resolveArrayTarget` pattern, since it closes over
+    `resolveMethodTarget`'s own `currentValidationState_`-derived
+    `resolveCurrentDefinitionParamBinding` lambda), and already-promoted
+    members (`resolveFieldBindingTarget`, `resolveIndexedArgsPackElementType`,
+    `resolveWrappedIndexedArgsPackElementType`,
+    `resolveDereferencedIndexedArgsPackElementType`,
+    `extractCollectionElementType`, `extractExperimentalSoaVectorElementType`)
+    plus ordinary free functions/member state used unqualified elsewhere in
+    this file already. Mutual recursion is trivial for two real member
+    functions - each just calls the other via the implicit `this`, unlike
+    the original `std::function`-typed lambda pair which needed a
+    forward-declared empty `resolveSoaVectorTarget` variable bound by
+    reference so `resolveVectorTarget`'s closure could call it before it was
+    assigned. Collision check: anchored `SemanticsValidator::resolveVectorTarget(`
+    and `SemanticsValidator::resolveSoaVectorTarget(` definition greps both
+    came back clean (no pre-existing members). A plain call-site grep found
+    unqualified calls to both names in ~30 other files across
+    `src/semantics/` - all of them own-function-scope local lambdas of the
+    same name (the same name-hiding pattern already validated safe in
+    seams (4d)/(6)), not member calls; the explicit 5-argument signature
+    of the new members also means any caller lacking its own local shadow
+    would fail to compile (a safe, loud error) rather than silently
+    rebinding, since none of those call sites pass 5 arguments matching
+    this signature. After extraction, two now-orphaned local forwarder
+    lambdas in `resolveMethodTarget`'s remaining body
+    (`resolveWrappedIndexedArgsPackElementType`, `extractCollectionElementType`)
+    were removed once the compiler flagged them as unused (their only
+    call sites had moved into the new members); `resolveDereferencedIndexedArgsPackElementType`
+    was confirmed still used at two other call sites in the remaining body
+    and kept. Verified: `primec`-only build clean; the shape (c) repros
+    unchanged; the `/vector/push` bare-call regression repro still
+    correctly rejected; full `PrimeStruct_semantics_tests` 2740/2740 (0
+    failed); `PrimeStruct_backend_ir_tests` 1643/1644 (the same
+    already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (0 failed, run from `build-release/`).
+    `resolveMethodTarget`'s own body is now ~1496 lines (was ~1755 after
+    seam (6)) - crossed below 1500 lines for the first time this session
+    (was ~2846 at the start of the continue-until-done phase). A future
+    round should re-measure for the next-largest remaining full-bodied
+    lambda or straight-line block and continue applying whichever of the
+    seam (1)-(4f) lambda-promotion pattern or the seam (5) structural-split
+    pattern best fits what's found.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
