@@ -70,7 +70,22 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-(none currently - see the Note below and `### Immediate Next 10`)
+- TODO-5270: Move the vector/array/soa method-target resolver family into its own file (parallel_track: resolveMethodTarget-file-split)
+- TODO-5271: Move the string method-target resolver into its own file (parallel_track: resolveMethodTarget-file-split)
+- TODO-5272: Move the key-value method-target resolver family into its own file (parallel_track: resolveMethodTarget-file-split)
+- TODO-5273: Move the args-pack method-target resolver family into its own file (parallel_track: resolveMethodTarget-file-split)
+- TODO-5274: Move the struct/sum-type-path method-target resolver family into its own file (parallel_track: resolveMethodTarget-file-split)
+
+Note (2026-09-01): TODO-5270 through TODO-5274 are the top-priority
+follow-on to TODO-4724's seams (5)-(9) - each is an independently
+verifiable pure file-move touching a different resolver family (no two
+touch the same functions), so all five are listed together despite
+sharing a `parallel_track`. TODO-5275 (retire the forwarder-lambda
+scaffolding), TODO-5276 (retire the MethodTargetCollectionResolvers
+std::function indirection), TODO-5277 (properly promote
+`explicitRemovedCollectionMethodPathLocal`), and TODO-5278 (direct unit
+tests for the promoted resolvers) all depend on these five landing first
+and are queued in `### Immediate Next 10` below.
 
 Note (2026-08-30): TODO-4743 (diffuse per-call resolution cost left over
 after TODO-4742's hasDefinitionFamilyPath fix) has resolved - see
@@ -122,9 +137,27 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
+- TODO-5270: Move the vector/array/soa method-target resolver family into its own file
+- TODO-5271: Move the string method-target resolver into its own file
+- TODO-5272: Move the key-value method-target resolver family into its own file
+- TODO-5273: Move the args-pack method-target resolver family into its own file
+- TODO-5274: Move the struct/sum-type-path method-target resolver family into its own file
+- TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding (depends on TODO-5270-5274)
+- TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection (depends on TODO-5275)
+- TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name (depends on TODO-5275)
+- TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members (depends on TODO-5270-5274)
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
-- TODO-4724: Decompose the 2800+ line resolveMethodTarget function into smaller, traceable pieces (comment-clarity step landed; extraction still open)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
+
+Note (2026-09-01): TODO-4724 (decompose resolveMethodTarget) has made
+substantial progress this session (seams (5)-(9), ~2846 -> ~1371 lines)
+and is superseded at the top of this list by its own natural follow-on
+work, TODO-5270 through TODO-5278, which move the now-promoted resolver
+functions out of the file entirely and finish retiring the incremental
+scaffolding those seams left behind. TODO-4724's task block remains open
+below for any further seam work (e.g. structural splits of the
+remaining straight-line dispatch) that doesn't fit those follow-on
+leaves.
 
 Note (2026-08-30): TODO-4743 has resolved (superseded by TODO-5226's
 lazy-stdlib-import default flip) - see `docs/todo_finished.md`.
@@ -412,6 +445,15 @@ while re-auditing the full queue this round; renumbering from 73 to
 avoid clashing with this list's own history.
 
 76. TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
+79. TODO-5270: Move the vector/array/soa method-target resolver family into its own file
+80. TODO-5271: Move the string method-target resolver into its own file
+81. TODO-5272: Move the key-value method-target resolver family into its own file
+82. TODO-5273: Move the args-pack method-target resolver family into its own file
+83. TODO-5274: Move the struct/sum-type-path method-target resolver family into its own file
+84. TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding
+85. TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection
+86. TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name
+87. TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
@@ -3304,6 +3346,289 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     with small (<30-line) lambda promotions is still worth the
     per-round verification overhead versus returning to seam (5)-style
     structural splitting of the remaining straight-line dispatch blocks.
+
+- [ ] TODO-5270: Move the vector/array/soa method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: TODO-4724's seams (1)-(9) promoted most of
+    `resolveMethodTarget`'s logic from local lambdas into real
+    `SemanticsValidator` private members, but every one of them still
+    lives in the same 4300+ line
+    `SemanticsValidatorExprMethodTargetResolution.cpp` file - the file
+    itself has not gotten smaller, just more function boundaries inside
+    it. This leaf moves the vector/array/soa-shaped resolver family to a
+    new `SemanticsValidatorMethodTargetVectorResolvers.cpp` (plus a
+    matching declarations move, or an include split, in
+    `SemanticsValidatorPrivateExprValidation.h` if that header also gets
+    split - keep the header split minimal/mechanical, do not redesign
+    the class layout). As of 2026-09-01 the family includes (not
+    exhaustive - re-derive by reading the current file, since seam work
+    may have added more since this was written):
+    `resolveBorrowedVectorReceiver`, `resolveVectorTarget`,
+    `resolveSoaVectorTarget`, `resolveArrayTarget`,
+    `resolveCollectionVectorValueTarget`,
+    `preferredBorrowedSoaHelperTargetForCollectionMethod`,
+    `preferredBorrowedSoaAccessHelperTarget`,
+    `resolveCollectionVectorMetadataMethodTarget`,
+    `classifyVectorCompatHelperParamFamily`,
+    `explicitVectorCompatHelperFamilyHasCompatibleReceiver`,
+    `classifyExplicitVectorHelperReceiver`,
+    `hasReceiverCompatibleExplicitVectorHelperPath`,
+    `preferExplicitCanonicalVectorHelperForReceiver`,
+    `explicitVectorMethodPath`. This is a pure move (cut/paste plus
+    `#include`/build-file wiring), not a rewrite - do not change any
+    function body, signature, or name while moving it.
+  - implementation_notes: Match the existing file-per-family convention
+    already used elsewhere in `src/semantics/` (e.g.
+    `SemanticsValidatorInferCollectionCompatibility.cpp`,
+    `SemanticsValidatorInferCollectionStringResolver.cpp`) for naming
+    and header placement. Add the new `.cpp` to whatever CMake target
+    list currently builds `SemanticsValidatorExprMethodTargetResolution.cpp`
+    (check `CMakeLists.txt`/glob rules - this repo may glob `src/**/*.cpp`
+    automatically, in which case no build-file edit is needed, but
+    verify rather than assume).
+  - acceptance: `SemanticsValidatorExprMethodTargetResolution.cpp` no
+    longer contains the moved functions; the new file builds as part of
+    the normal `primec` target with no new warnings; full
+    `PrimeStruct_semantics_tests` (2740/2740), `PrimeStruct_backend_ir_tests`
+    (1643/1644, same pre-existing "ir lowerer supports map method calls"
+    flake), and `PrimeStruct_compile_run_tests` (2678/2678) are
+    unchanged from current baseline.
+  - stop_rule: Pure move, zero behavior change. If any test outcome
+    changes, stop and re-check the move for an accidental edit (a
+    dropped `using` alias, a changed include order that shadows a name
+    differently) rather than treating it as an acceptable side effect.
+
+- [ ] TODO-5271: Move the string method-target resolver out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move `resolveStringTarget` (promoted in TODO-4724 seam (8))
+    out of `SemanticsValidatorExprMethodTargetResolution.cpp` into a new
+    `SemanticsValidatorMethodTargetStringResolver.cpp`. This is the
+    smallest of the family-split leaves - a good first one to do if
+    validating the split pattern before applying it to the larger
+    families in TODO-5270/5272/5273. Pure move, no body/signature/name
+    changes.
+  - acceptance: `SemanticsValidatorExprMethodTargetResolution.cpp` no
+    longer contains `resolveStringTarget`; new file builds cleanly as
+    part of the `primec` target; full `PrimeStruct_semantics_tests`
+    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
+    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+  - stop_rule: Pure move, zero behavior change - any test delta means
+    stop and find the accidental edit rather than accept the change.
+
+- [ ] TODO-5272: Move the key-value method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move the key-value-shaped resolver family to a new
+    `SemanticsValidatorMethodTargetKeyValueResolvers.cpp`. As of
+    2026-09-01 (not exhaustive - re-derive by reading the current file):
+    `extractExperimentalKeyValueFieldTypes`, `isWrappedKeyValueTypeText`,
+    `extractAnyKeyValueTypes`, `isWrappedKeyValueReceiver`,
+    `isCanonicalKeyValueReceiver`, `resolveExperimentalKeyValueTarget`,
+    `borrowedKeyValueHelperNameForReceiver`, `preferredKeyValueMethodTarget`,
+    `setPreferredKeyValueMethodTarget`, `resolveKeyValueTarget`,
+    `resolveMethodTargetKeyValueValueType`,
+    `getDirectKeyValueHelperCompatibilityPath`, `explicitKeyValueMethodPath`,
+    `setIndexedArgsPackKeyValueMethodTarget`,
+    `resolveExplicitRootKeyValueMethodPath`. Pure move, no body/
+    signature/name changes.
+  - acceptance: `SemanticsValidatorExprMethodTargetResolution.cpp` no
+    longer contains the moved functions; new file builds cleanly as part
+    of the `primec` target; full `PrimeStruct_semantics_tests`
+    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
+    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+  - stop_rule: Pure move, zero behavior change - any test delta means
+    stop and find the accidental edit rather than accept the change.
+
+- [ ] TODO-5273: Move the args-pack method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move the args-pack-shaped resolver family to a new
+    `SemanticsValidatorMethodTargetArgsPackResolvers.cpp`. As of
+    2026-09-01 (not exhaustive - re-derive by reading the current file):
+    `resolveIndexedArgsPackElementType`,
+    `resolveDereferencedIndexedArgsPackElementType`,
+    `resolveWrappedIndexedArgsPackElementType`,
+    `resolveArgsPackElementMethodTarget`, `extractCollectionElementType`.
+    Pure move, no body/signature/name changes.
+  - acceptance: `SemanticsValidatorExprMethodTargetResolution.cpp` no
+    longer contains the moved functions; new file builds cleanly as part
+    of the `primec` target; full `PrimeStruct_semantics_tests`
+    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
+    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+  - stop_rule: Pure move, zero behavior change - any test delta means
+    stop and find the accidental edit rather than accept the change.
+
+- [ ] TODO-5274: Move the struct/sum-type-path method-target resolver family out of SemanticsValidatorExprMethodTargetResolution.cpp into its own file
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-4724
+  - scope: Move the struct/sum-type-path-shaped resolver family to a new
+    `SemanticsValidatorMethodTargetStructSumResolvers.cpp`. As of
+    2026-09-01 (not exhaustive - re-derive by reading the current file):
+    `resolveDeclaredSumMethodTarget`, `resolveSumTypePath`,
+    `maybeFailRetiredMaybeMutableHelperForType`,
+    `resolveMethodTargetStructTypePath`, `resolveFieldBindingTarget`,
+    `extractWrappedPointeeType`. Pure move, no body/signature/name
+    changes.
+  - acceptance: `SemanticsValidatorExprMethodTargetResolution.cpp` no
+    longer contains the moved functions; new file builds cleanly as part
+    of the `primec` target; full `PrimeStruct_semantics_tests`
+    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
+    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+  - stop_rule: Pure move, zero behavior change - any test delta means
+    stop and find the accidental edit rather than accept the change.
+
+- [ ] TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5270, TODO-5271, TODO-5272, TODO-5273, TODO-5274
+  - scope: TODO-4724's seams (6)-(9) each promoted a local lambda to a
+    real private member, but left a one-line forwarder lambda behind in
+    `resolveMethodTarget`'s body (e.g.
+    `auto resolveVectorTarget = [&](...) { return this->resolveVectorTarget(...); };`)
+    purely so sibling closures could keep calling it under its original
+    captured name during incremental extraction. Once the file-split
+    leaves (TODO-5270 through TODO-5274) land, every caller of these
+    forwarders is either gone (moved to the new files, calling the real
+    member directly) or is itself inside `resolveMethodTarget` and can
+    be updated to call `this->foo(...)`/`foo(...)` directly instead of
+    going through the local shim. This leaf removes every such
+    now-redundant forwarder lambda and updates their call sites to call
+    the real member directly.
+  - implementation_notes: After the forwarders are gone, also add a
+    short comment block at the top of `resolveMethodTarget` explaining
+    its dispatch order (why File is checked before
+    collection-vector-metadata before the generic fallback, etc.) - this
+    is exactly the kind of non-obvious "why" that's worth writing down
+    once, per this repo's own comment-usage guidance, rather than making
+    every future reader re-derive it from the code.
+  - acceptance: `resolveMethodTarget`'s own body contains no forwarder
+    lambdas whose only statement is `return this->X(...)` /`return X(...)`
+    with unchanged arguments; a short dispatch-order comment exists at
+    the top of the function; full `PrimeStruct_semantics_tests`
+    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
+    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+  - stop_rule: Pure refactor, zero behavior change - any test delta
+    means stop and revert rather than adjust the test.
+
+- [ ] TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection in favor of direct member calls
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5275
+  - scope: `MethodTargetCollectionResolvers`
+    (`SemanticsValidatorPrivateExprValidation.h`) bundles 8
+    `std::function` fields so that functions needing several collection
+    resolvers can take one struct parameter. This made sense when the
+    fields were genuinely runtime-swappable local lambdas; now that
+    TODO-4724's seams have promoted most of them to real
+    `SemanticsValidator` members, passing them around as
+    type-erased `std::function`s is pure indirection overhead with no
+    remaining benefit - it also means a reader has to chase through a
+    struct literal to find out which concrete function actually runs.
+    Replace call sites that build a `MethodTargetCollectionResolvers`
+    purely to immediately pass it into a function that calls the real
+    members directly instead, and delete the struct once nothing
+    constructs it anymore (verify with a repo-wide grep, not just the
+    call sites visible from `resolveMethodTarget`, since
+    `SemanticsValidatorCollectionHelperRewrites.cpp` and others may also
+    reference it).
+  - acceptance: `MethodTargetCollectionResolvers` either no longer
+    exists (if all uses were eliminated) or its remaining uses are
+    genuinely load-bearing (documented in a `notes:` field on this task
+    explaining why, if any survive); full `PrimeStruct_semantics_tests`
+    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
+    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+  - stop_rule: Pure refactor, zero behavior change - any test delta
+    means stop and revert rather than adjust the test.
+
+- [ ] TODO-5277: Promote explicitRemovedCollectionMethodPathLocal under a permanent collision-safe name
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5275
+  - scope: `explicitRemovedCollectionMethodPathLocal` (~120 lines) is
+    the one remaining large local lambda in `resolveMethodTarget`,
+    deliberately left local during TODO-4724's seam (4d): an earlier
+    attempt to promote it under the name `explicitRemovedCollectionMethodPath`
+    silently collided with a pre-existing, unrelated
+    `SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_view, std::string_view)`
+    member in `SemanticsValidatorInferCollectionCompatibility.cpp` (an
+    overload, not a build error - it compiled clean and silently
+    rebound unrelated callers, breaking 16 semantics tests). It was
+    reverted and renamed with a `Local` suffix purely to avoid
+    re-colliding, not because it can't be promoted. This leaf promotes
+    it properly: pick a genuinely distinct, descriptive name (not just
+    `...Local` or `...V2`), run the anchored
+    `SemanticsValidator::<name>(` definition grep across all of
+    `src/semantics/` *before* writing any code (per the methodology
+    this collision established), and only then extract it to a real
+    private member the same way seams (6)-(9) did.
+  - implementation_notes: Add a one-line comment at the new member's
+    declaration referencing this collision history, so a future reader
+    doesn't casually rename it back to something that collides again.
+  - acceptance: `explicitRemovedCollectionMethodPathLocal` is a real
+    `SemanticsValidator` private member under its new name, not a local
+    lambda; full `PrimeStruct_semantics_tests` (2740/2740),
+    `PrimeStruct_backend_ir_tests` (1643/1644, same known flake), and
+    `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+  - stop_rule: Pure refactor, zero behavior change - if this extraction
+    changes even one test's outcome, stop immediately (this is the exact
+    failure mode seam (4d) hit once already), revert, and re-verify the
+    anchored collision grep before retrying under a different name.
+
+- [ ] TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
+  - owner: ai
+  - created_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5270, TODO-5271, TODO-5272, TODO-5273, TODO-5274
+  - scope: TODO-4724's seams promoted roughly a dozen resolver functions
+    (`resolveVectorTarget`, `resolveSoaVectorTarget`,
+    `resolveBorrowedVectorReceiver`, `resolveArrayTarget`,
+    `resolveStringTarget`, `resolveArgsPackElementMethodTarget`, and
+    others - see the file-split leaves above for the fuller inventory)
+    to real, independently callable `SemanticsValidator` members, but
+    their correctness is still verified only indirectly, through the
+    full `PrimeStruct_semantics_tests`/`PrimeStruct_compile_run_tests`
+    pipeline. Add focused unit tests that construct a minimal
+    `SemanticsValidator` fixture and call each of these members directly
+    with representative param/local/receiver shapes (including at least
+    one edge case per function - e.g. a reference-to-vector receiver for
+    `resolveBorrowedVectorReceiver`, an args-pack-element receiver for
+    `resolveVectorTarget`). This is additive test coverage, not a
+    refactor - do not change any production code in this leaf.
+  - acceptance: at least one new doctest `TEST_CASE` exists per promoted
+    member listed above, each exercising a behavior not already pinned
+    by an existing end-to-end `.prime` test case; new tests pass; full
+    `PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`, and
+    `PrimeStruct_compile_run_tests` counts are unchanged except for the
+    new test cases' own additions.
+  - stop_rule: If reaching a function requires exposing private state or
+    otherwise distorting the class's public shape just to make it
+    testable, stop and prefer a `friend`-scoped or same-translation-unit
+    test file over changing the class's real access boundaries for
+    test-only convenience.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
