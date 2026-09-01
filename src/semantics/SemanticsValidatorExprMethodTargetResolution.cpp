@@ -1207,6 +1207,79 @@ bool SemanticsValidator::extractCollectionElementType(const std::string &typeTex
   return true;
 }
 
+bool SemanticsValidator::resolveBorrowedVectorReceiver(
+    const Expr &candidate, std::string &elemTypeOut,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
+  auto extractBorrowedVectorType = [&](const BindingInfo &binding) {
+    const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+    if (normalizedType == "vector" && !binding.typeTemplateArg.empty()) {
+      elemTypeOut = binding.typeTemplateArg;
+      return true;
+    }
+    if ((normalizedType != "Reference" && normalizedType != "Pointer") ||
+        binding.typeTemplateArg.empty()) {
+      return false;
+    }
+    std::string pointeeBase;
+    std::string pointeeArgText;
+    const std::string normalizedPointee =
+        normalizeBindingTypeName(binding.typeTemplateArg);
+    if (!splitTemplateTypeName(normalizedPointee, pointeeBase,
+                               pointeeArgText)) {
+      return false;
+    }
+    if (normalizeBindingTypeName(pointeeBase) != "vector" ||
+        pointeeArgText.empty()) {
+      return false;
+    }
+    elemTypeOut = pointeeArgText;
+    return true;
+  };
+  if (candidate.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+      return extractBorrowedVectorType(*paramBinding);
+    }
+    if (auto localIt = locals.find(candidate.name); localIt != locals.end()) {
+      return extractBorrowedVectorType(localIt->second);
+    }
+  }
+  if (candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
+      isSimpleCallName(candidate, "location") && candidate.args.size() == 1) {
+    return resolveBorrowedVectorReceiver(candidate.args.front(), elemTypeOut, params, locals);
+  }
+  if (candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
+      isSimpleCallName(candidate, "dereference") && candidate.args.size() == 1) {
+    return resolveBorrowedVectorReceiver(candidate.args.front(), elemTypeOut, params, locals);
+  }
+  std::string inferredTypeText;
+  if (!inferQueryExprTypeText(candidate, params, locals, inferredTypeText) ||
+      inferredTypeText.empty()) {
+    return false;
+  }
+  const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedType, base, argText)) {
+    return false;
+  }
+  const std::string normalizedBase = normalizeBindingTypeName(base);
+  if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+    return false;
+  }
+  std::string pointeeBase;
+  std::string pointeeArgText;
+  const std::string normalizedPointee = normalizeBindingTypeName(argText);
+  if (!splitTemplateTypeName(normalizedPointee, pointeeBase, pointeeArgText)) {
+    return false;
+  }
+  if (normalizeBindingTypeName(pointeeBase) != "vector" || pointeeArgText.empty()) {
+    return false;
+  }
+  elemTypeOut = pointeeArgText;
+  return true;
+}
+
 bool SemanticsValidator::resolveArrayTarget(
     const Expr &target, std::string &elemType, const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -2769,74 +2842,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return this->isCanonicalKeyValueAccessMethodName(helperName);
   };
   std::function<bool(const Expr &, std::string &)> resolveBorrowedVectorReceiver =
-      [&](const Expr &candidate, std::string &elemTypeOut) {
-    auto extractBorrowedVectorType = [&](const BindingInfo &binding) {
-      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
-      if (normalizedType == "vector" && !binding.typeTemplateArg.empty()) {
-        elemTypeOut = binding.typeTemplateArg;
-        return true;
-      }
-      if ((normalizedType != "Reference" && normalizedType != "Pointer") ||
-          binding.typeTemplateArg.empty()) {
-        return false;
-      }
-      std::string pointeeBase;
-      std::string pointeeArgText;
-      const std::string normalizedPointee =
-          normalizeBindingTypeName(binding.typeTemplateArg);
-      if (!splitTemplateTypeName(normalizedPointee, pointeeBase,
-                                 pointeeArgText)) {
-        return false;
-      }
-      if (normalizeBindingTypeName(pointeeBase) != "vector" ||
-          pointeeArgText.empty()) {
-        return false;
-      }
-      elemTypeOut = pointeeArgText;
-      return true;
-    };
-    if (candidate.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
-        return extractBorrowedVectorType(*paramBinding);
-      }
-      if (auto localIt = locals.find(candidate.name); localIt != locals.end()) {
-        return extractBorrowedVectorType(localIt->second);
-      }
-    }
-    if (candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
-        isSimpleCallName(candidate, "location") && candidate.args.size() == 1) {
-      return resolveBorrowedVectorReceiver(candidate.args.front(), elemTypeOut);
-    }
-    if (candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
-        isSimpleCallName(candidate, "dereference") && candidate.args.size() == 1) {
-      return resolveBorrowedVectorReceiver(candidate.args.front(), elemTypeOut);
-    }
-    std::string inferredTypeText;
-    if (!inferQueryExprTypeText(candidate, params, locals, inferredTypeText) ||
-        inferredTypeText.empty()) {
-      return false;
-    }
-    const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
-    std::string base;
-    std::string argText;
-    if (!splitTemplateTypeName(normalizedType, base, argText)) {
-      return false;
-    }
-    const std::string normalizedBase = normalizeBindingTypeName(base);
-    if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
-      return false;
-    }
-    std::string pointeeBase;
-    std::string pointeeArgText;
-    const std::string normalizedPointee = normalizeBindingTypeName(argText);
-    if (!splitTemplateTypeName(normalizedPointee, pointeeBase, pointeeArgText)) {
-      return false;
-    }
-    if (normalizeBindingTypeName(pointeeBase) != "vector" || pointeeArgText.empty()) {
-      return false;
-    }
-    elemTypeOut = pointeeArgText;
-    return true;
+      [&](const Expr &candidate, std::string &elemTypeOut) -> bool {
+    return this->resolveBorrowedVectorReceiver(candidate, elemTypeOut, params, locals);
   };
   auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
     return this->preferredBorrowedSoaAccessHelperTarget(helperName);

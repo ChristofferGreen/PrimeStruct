@@ -3149,6 +3149,41 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     explicit parameter list following this same pattern), continuing
     toward the "under a few hundred lines" acceptance target - still a
     long way off, but the rate of progress per round has not slowed.
+  - progress_2026-08-31j: seam (6) - promoted `resolveBorrowedVectorReceiver`,
+    a self-contained, recursive local lambda (~190 lines) captured only
+    `params`/`locals`/`candidate`/`elemTypeOut` plus already-available
+    member/free functions (`findParamBinding`, `normalizeBindingTypeName`,
+    `splitTemplateTypeName`, `inferQueryExprTypeText`), matching the
+    original seams (1)-(4f) lambda-promotion pattern rather than the
+    structural-split pattern of seam (5). Recursion (it calls itself for
+    `location(...)`/`dereference(...)` wrapper receivers) is unproblematic
+    for a real member function - it just calls itself via the implicit
+    `this`, unlike a `std::function` lambda which needs to be declared
+    before assignment to recurse. Promoted to
+    `bool resolveBorrowedVectorReceiver(const Expr &candidate, std::string
+    &elemTypeOut, const std::vector<ParameterInfo> &params, const
+    std::unordered_map<std::string, BindingInfo> &locals)`, following the
+    same explicit-params style already used for `resolveArrayTarget`;
+    original call site now a one-line forwarder. Collision check: an
+    anchored `SemanticsValidator::resolveBorrowedVectorReceiver(` grep
+    found no pre-existing member (clean to promote); a plain call-site
+    grep found unqualified `resolveBorrowedVectorReceiver(...)` calls in
+    `SemanticsValidatorInferMethodResolution.cpp` too, but confirmed safe
+    (name-hiding, not collision) since that file defines its own local
+    `std::function` lambda of the same name in the same function scope
+    that already shadows the new member for all of its own call sites.
+    Verified: `primec`-only build clean; the shape (c) repros unchanged;
+    the `/vector/push` bare-call regression repro still correctly
+    rejected; full `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the same already-documented
+    pre-existing "ir lowerer supports map method calls" flake, unrelated);
+    `PrimeStruct_compile_run_tests` 2678/2678 (0 failed, run from
+    `build-release/`). `resolveMethodTarget`'s own body is now ~1755 lines (was ~1821
+    after seam (5)). Remaining full-bodied `std::function`-typed lambdas
+    in `resolveMethodTarget` worth checking next round for similar
+    self-contained/recursive promotion candidates:
+    `resolveVectorTarget` (~260 lines, the single largest remaining) and
+    `resolveStringTarget`.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai

@@ -644,6 +644,11 @@
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  // TODO-4724 seam (6): self-contained recursive lambda promoted verbatim.
+  bool resolveBorrowedVectorReceiver(
+      const Expr &candidate, std::string &elemTypeOut,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   bool resolveCollectionVectorValueTarget(
       const Expr &target, std::string &elemTypeOut,
       const std::vector<ParameterInfo> &params,
