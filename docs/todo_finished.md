@@ -41824,3 +41824,60 @@ real answer.
   - stop_rule: Investigation task - satisfied by documenting the finding
     rather than forcing a risky mechanical change past what could be
     safely verified in one bounded round.
+
+**Todo Completion (September 1, 2026) — TODO-5277**
+- [x] TODO-5277: Promote explicitRemovedCollectionMethodPathLocal under a permanent collision-safe name
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5275
+  - scope: `explicitRemovedCollectionMethodPathLocal` (~80 lines by the
+    time this leaf started) was the one remaining large local lambda in
+    `resolveMethodTarget`, deliberately left local during TODO-4724's
+    seam (4d) after an earlier promotion attempt under the name
+    `explicitRemovedCollectionMethodPath` silently collided with a
+    pre-existing, unrelated member of that exact name. Promote it
+    properly under a genuinely distinct name, checked with the anchored
+    collision grep first.
+  - evidence: Ran `grep -rn "SemanticsValidator::explicitRemovedCollectionMethodPathForCallNamespace("`
+    across `src/semantics/` before writing any code - clean, no
+    collision (also re-confirmed the original colliding member,
+    `SemanticsValidator::explicitRemovedCollectionMethodPath` in
+    `SemanticsValidatorInferCollectionCompatibility.cpp`, still exists
+    unrelated and untouched). Promoted to
+    `std::string explicitRemovedCollectionMethodPathForCallNamespace(const std::string &rawMethodName, const std::string &callNamespacePrefix) const`
+    in `SemanticsValidatorExprMethodTargetResolution.cpp`, with its
+    dependencies called directly (the member functions
+    `isUnrootedVectorHelperPath`/`stripUnrootedVectorHelperPrefix`/
+    `rootedVectorHelperPath` instead of via their local-lambda wrapper
+    names, and the free/shared-header functions
+    `isCanonicalVectorCompatibilityNamespace`,
+    `isKeyValueHelperImportAliasNamespaceForMethodTargets`,
+    `canonicalKeyValueHelperNamespaceLocal`,
+    `isUnrootedCanonicalVectorCompatibilityPath`,
+    `stripUnrootedCanonicalVectorCompatibilityPrefix`,
+    `metadataBackedKeyValueHelperRootAliasMethodName`,
+    `resolveCanonicalKeyValueHelperNameFromSpelling`,
+    `isRemovedKeyValueCompatibilityHelper`,
+    `rootedKeyValueHelperAliasPathForMethodTargets`,
+    `isRemovedVectorCompatibilityHelper`,
+    `canonicalVectorCompatibilityHelperPathOrFallback` - all
+    already-available header-declared functions, unchanged). Added a
+    comment at the new member's declaration in
+    `SemanticsValidatorPrivateExprValidation.h` documenting the seam
+    (4d) collision history per this task's implementation_notes. The
+    now-orphaned `rootedVectorMethodPath` local forwarder lambda
+    (only used inside the removed block) was also removed once the
+    compiler flagged it unused; `startsWithRootVectorMethodPrefix`/
+    `stripRootVectorMethodPrefix` were confirmed still used elsewhere
+    in `resolveMethodTarget` and kept. Verified: `primec` build clean;
+    the shape (c) repros unchanged; the `/vector/push` bare-call
+    regression repro (the exact diagnostic family seam (4d) broke) still
+    correctly rejected with "unknown call target: /vector/push"; full
+    `PrimeStruct_semantics_tests` 2740/2740, `PrimeStruct_backend_ir_tests`
+    1643/1644 (known pre-existing flake), `PrimeStruct_compile_run_tests`
+    2678/2678.
+  - stop_rule: Pure refactor, zero behavior change - satisfied, no test
+    delta at any point in this leaf.

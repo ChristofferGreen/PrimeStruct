@@ -974,6 +974,87 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
   return true;
 }
 
+std::string SemanticsValidator::explicitRemovedCollectionMethodPathForCallNamespace(
+    const std::string &rawMethodName, const std::string &callNamespacePrefix) const {
+  std::string candidate = rawMethodName;
+  if (!candidate.empty() && candidate.front() == '/') {
+    candidate.erase(candidate.begin());
+  }
+  std::string normalizedPrefix = callNamespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+  std::string_view helperName;
+  bool isStdNamespacedVectorHelper = false;
+  bool isStdNamespacedKeyValueHelper = false;
+  std::string resolvedCanonicalKeyValueHelperName;
+  std::string compatibilityCollection;
+  if (normalizedPrefix == "array") {
+    helperName = candidate;
+    compatibilityCollection = "array";
+  } else if (normalizedPrefix == "vector") {
+    helperName = candidate;
+    compatibilityCollection = "vector";
+  } else if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix)) {
+    helperName = candidate;
+    isStdNamespacedVectorHelper = true;
+    compatibilityCollection = "vector";
+  } else if (isKeyValueHelperImportAliasNamespaceForMethodTargets(
+                 normalizedPrefix)) {
+    helperName = candidate;
+    compatibilityCollection = "map";
+  } else if (normalizedPrefix == canonicalKeyValueHelperNamespaceLocal()) {
+    helperName = candidate;
+    isStdNamespacedKeyValueHelper = true;
+    compatibilityCollection = "map";
+  } else if (candidate.rfind("array/", 0) == 0) {
+    helperName = std::string_view(candidate).substr(std::string_view("array/").size());
+    compatibilityCollection = "array";
+  } else if (isUnrootedVectorHelperPath(candidate)) {
+    helperName = stripUnrootedVectorHelperPrefix(candidate);
+    compatibilityCollection = "vector";
+  } else if (isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
+    helperName = stripUnrootedCanonicalVectorCompatibilityPrefix(candidate);
+    isStdNamespacedVectorHelper = true;
+    compatibilityCollection = "vector";
+  } else if (const std::string rootAliasHelperName =
+                 metadataBackedKeyValueHelperRootAliasMethodName(candidate);
+             !rootAliasHelperName.empty()) {
+    helperName = rootAliasHelperName;
+    compatibilityCollection = "map";
+  } else if (resolveCanonicalKeyValueHelperNameFromSpelling(
+                 candidate, resolvedCanonicalKeyValueHelperName)) {
+    helperName = resolvedCanonicalKeyValueHelperName;
+    isStdNamespacedKeyValueHelper = true;
+    compatibilityCollection = "map";
+  }
+  if (helperName.empty()) {
+    return "";
+  }
+  if (compatibilityCollection == "map") {
+    if (isStdNamespacedKeyValueHelper) {
+      return "";
+    }
+    if (!isRemovedKeyValueCompatibilityHelper(helperName)) {
+      return "";
+    }
+    return rootedKeyValueHelperAliasPathForMethodTargets(helperName);
+  }
+  if (!isRemovedVectorCompatibilityHelper(helperName)) {
+    return "";
+  }
+  if (isStdNamespacedVectorHelper) {
+    return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+  }
+  if (compatibilityCollection == "array") {
+    return "/array/" + std::string(helperName);
+  }
+  if (compatibilityCollection == "vector") {
+    return rootedVectorHelperPath(helperName);
+  }
+  return "/" + candidate;
+}
+
 // Dispatch order (TODO-4724/TODO-5275): this function tries progressively
 // more general receiver-typing strategies until one resolves the method
 // call's target definition path, in this order:
@@ -1022,92 +1103,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto stripRootedVectorMethodPrefix = [&](std::string_view path) {
     return stripRootedVectorHelperPrefix(path);
   };
-  auto rootedVectorMethodPath = [&](std::string_view helperName) {
-    return rootedVectorHelperPath(helperName);
-  };
-  auto explicitRemovedCollectionMethodPathLocal =
-      [&](const std::string &rawMethodName) -> std::string {
-    std::string candidate = rawMethodName;
-    if (!candidate.empty() && candidate.front() == '/') {
-      candidate.erase(candidate.begin());
-    }
-    std::string normalizedPrefix = callNamespacePrefix;
-    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-      normalizedPrefix.erase(normalizedPrefix.begin());
-    }
-    std::string_view helperName;
-    bool isStdNamespacedVectorHelper = false;
-    bool isStdNamespacedKeyValueHelper = false;
-    std::string resolvedCanonicalKeyValueHelperName;
-    std::string compatibilityCollection;
-    if (normalizedPrefix == "array") {
-      helperName = candidate;
-      compatibilityCollection = "array";
-    } else if (normalizedPrefix == "vector") {
-      helperName = candidate;
-      compatibilityCollection = "vector";
-    } else if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix)) {
-      helperName = candidate;
-      isStdNamespacedVectorHelper = true;
-      compatibilityCollection = "vector";
-    } else if (isKeyValueHelperImportAliasNamespaceForMethodTargets(
-                   normalizedPrefix)) {
-      helperName = candidate;
-      compatibilityCollection = "map";
-    } else if (normalizedPrefix == canonicalKeyValueHelperNamespaceLocal()) {
-      helperName = candidate;
-      isStdNamespacedKeyValueHelper = true;
-      compatibilityCollection = "map";
-    } else if (candidate.rfind("array/", 0) == 0) {
-      helperName = std::string_view(candidate).substr(std::string_view("array/").size());
-      compatibilityCollection = "array";
-    } else if (startsWithRootVectorMethodPrefix(candidate)) {
-      helperName = stripRootVectorMethodPrefix(candidate);
-      compatibilityCollection = "vector";
-    } else if (isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
-      helperName = stripUnrootedCanonicalVectorCompatibilityPrefix(candidate);
-      isStdNamespacedVectorHelper = true;
-      compatibilityCollection = "vector";
-    } else if (const std::string rootAliasHelperName =
-                   metadataBackedKeyValueHelperRootAliasMethodName(candidate);
-               !rootAliasHelperName.empty()) {
-      helperName = rootAliasHelperName;
-      compatibilityCollection = "map";
-    } else if (resolveCanonicalKeyValueHelperNameFromSpelling(
-                   candidate, resolvedCanonicalKeyValueHelperName)) {
-      helperName = resolvedCanonicalKeyValueHelperName;
-      isStdNamespacedKeyValueHelper = true;
-      compatibilityCollection = "map";
-    }
-    if (helperName.empty()) {
-      return "";
-    }
-    if (compatibilityCollection == "map") {
-      if (isStdNamespacedKeyValueHelper) {
-        return "";
-      }
-      if (!isRemovedKeyValueCompatibilityHelper(helperName)) {
-        return "";
-      }
-      return rootedKeyValueHelperAliasPathForMethodTargets(helperName);
-    }
-    if (!isRemovedVectorCompatibilityHelper(helperName)) {
-      return "";
-    }
-    if (isStdNamespacedVectorHelper) {
-      return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
-    }
-    if (compatibilityCollection == "array") {
-      return "/array/" + std::string(helperName);
-    }
-    if (compatibilityCollection == "vector") {
-      return rootedVectorMethodPath(helperName);
-    }
-    return "/" + candidate;
-  };
-
   const std::string explicitRemovedMethodPath =
-      explicitRemovedCollectionMethodPathLocal(methodName);
+      explicitRemovedCollectionMethodPathForCallNamespace(methodName, callNamespacePrefix);
   const std::string explicitVectorHelperPath =
       explicitVectorMethodPath(methodName, callNamespacePrefix);
   const std::string explicitKeyValueHelperPath =

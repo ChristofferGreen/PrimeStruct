@@ -673,6 +673,20 @@
       const std::function<bool(const Expr &, const std::string &)>
           &setPreferredKeyValueMethodTarget,
       std::string &resolvedOut, bool &isBuiltinOut);
+  // TODO-4724 seam (10)/TODO-5277: promoted from the local lambda
+  // `explicitRemovedCollectionMethodPathLocal`, itself renamed during
+  // TODO-4724 seam (4d) after the original name
+  // `explicitRemovedCollectionMethodPath` was found to silently collide
+  // (as a legal C++ overload, not a build error) with a pre-existing,
+  // unrelated member of that exact name in
+  // SemanticsValidatorInferCollectionCompatibility.cpp - see that seam's
+  // progress note in docs/todo_finished.md for the full incident. This
+  // name was checked with an anchored `SemanticsValidator::<name>(`
+  // definition grep across all of src/semantics/ before being chosen;
+  // do not rename this back to `explicitRemovedCollectionMethodPath` or
+  // any other spelling without repeating that check.
+  std::string explicitRemovedCollectionMethodPathForCallNamespace(
+      const std::string &rawMethodName, const std::string &callNamespacePrefix) const;
   bool resolveCollectionVectorValueTarget(
       const Expr &target, std::string &elemTypeOut,
       const std::vector<ParameterInfo> &params,

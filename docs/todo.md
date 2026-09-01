@@ -70,24 +70,24 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name (parallel_track: resolveMethodTarget-file-split)
 - TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members (parallel_track: resolveMethodTarget-file-split)
 
-Note (2026-09-01): TODO-5270 through TODO-5275 have all resolved - see
+Note (2026-09-01): TODO-5270 through TODO-5277 have all resolved - see
 `docs/todo_finished.md`. `SemanticsValidatorExprMethodTargetResolution.cpp`
-shrank from ~4300 to ~2334 lines across the five file-split moves (plus
+shrank from ~4300 to ~2300 lines across the five file-split moves (plus
 a new shared `SemanticsValidatorMethodTargetResolutionDetail.h`/`.cpp`
-pair) and TODO-5275's forwarder-lambda cleanup (16 of 22 forwarders
-removed). TODO-5276 (retire the MethodTargetCollectionResolvers
-indirection) has also resolved, but as an investigation rather than a
-code change: it found that a full retirement is a second decomposition
-project of comparable size to TODO-4724 itself (2 of the struct's 8
-fields were never promoted to real members, none of the ~10 functions
-taking the struct currently take `params`/`locals`, and 2 of those ~10
-are also called from `SemanticsValidatorInferMethodResolution.cpp`'s own
-separate, un-audited copy of this same local-lambda-scaffolding pattern)
-- see `docs/todo_finished.md` for the full finding and a suggested
-follow-up scoping if it's judged worth doing later.
+pair), TODO-5275's forwarder-lambda cleanup (16 of 22 forwarders
+removed), and TODO-5277's promotion of the last large local lambda
+(`explicitRemovedCollectionMethodPathLocal`, the seam (4d) scar) under
+the collision-safe name
+`explicitRemovedCollectionMethodPathForCallNamespace`. TODO-5276
+(retire the MethodTargetCollectionResolvers indirection) resolved as an
+investigation rather than a code change: it found that a full
+retirement is a second decomposition project of comparable size to
+TODO-4724 itself - see `docs/todo_finished.md` for the full finding and
+a suggested follow-up scoping if it's judged worth doing later. Only
+TODO-5278 (direct unit tests for the promoted resolvers) remains open
+from this batch.
 
 Note (2026-08-30): TODO-4743 (diffuse per-call resolution cost left over
 after TODO-4742's hasDefinitionFamilyPath fix) has resolved - see
@@ -139,7 +139,6 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name
 - TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
@@ -147,9 +146,9 @@ investigation chain's actively-productive leaves - see
 Note (2026-09-01): TODO-4724 (decompose resolveMethodTarget) has made
 substantial progress this session (seams (5)-(9), ~2846 -> ~1371 lines)
 and is superseded at the top of this list by its own natural follow-on
-work, TODO-5270 through TODO-5278. TODO-5270 through TODO-5276 have all
+work, TODO-5270 through TODO-5278. TODO-5270 through TODO-5277 have all
 resolved (TODO-5276 as a documented investigation, not a code change -
-see `docs/todo_finished.md`) and TODO-5277/5278 remain open here.
+see `docs/todo_finished.md`) and only TODO-5278 remains open here.
 TODO-4724's task block remains open below for any further seam work
 (e.g. structural splits of the remaining straight-line dispatch) that
 doesn't fit those follow-on leaves.
@@ -454,7 +453,7 @@ Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
 Note (2026-08-30): item 78 (TODO-5265) has resolved - see
 `docs/todo_finished.md`.
-Note (2026-09-01): items 79-85 (TODO-5270 through TODO-5276) have
+Note (2026-09-01): items 79-86 (TODO-5270 through TODO-5277) have
 resolved - see `docs/todo_finished.md`.
 Note (2026-08-30): item 75 (TODO-4743) has resolved - see
 `docs/todo_finished.md`.
@@ -3343,42 +3342,6 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     with small (<30-line) lambda promotions is still worth the
     per-round verification overhead versus returning to seam (5)-style
     structural splitting of the remaining straight-line dispatch blocks.
-
-- [ ] TODO-5277: Promote explicitRemovedCollectionMethodPathLocal under a permanent collision-safe name
-  - owner: ai
-  - created_at: 2026-09-01
-  - phase: Maintainability / tech debt
-  - parallel_track: resolveMethodTarget-file-split
-  - depends_on: TODO-5275
-  - scope: `explicitRemovedCollectionMethodPathLocal` (~120 lines) is
-    the one remaining large local lambda in `resolveMethodTarget`,
-    deliberately left local during TODO-4724's seam (4d): an earlier
-    attempt to promote it under the name `explicitRemovedCollectionMethodPath`
-    silently collided with a pre-existing, unrelated
-    `SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_view, std::string_view)`
-    member in `SemanticsValidatorInferCollectionCompatibility.cpp` (an
-    overload, not a build error - it compiled clean and silently
-    rebound unrelated callers, breaking 16 semantics tests). It was
-    reverted and renamed with a `Local` suffix purely to avoid
-    re-colliding, not because it can't be promoted. This leaf promotes
-    it properly: pick a genuinely distinct, descriptive name (not just
-    `...Local` or `...V2`), run the anchored
-    `SemanticsValidator::<name>(` definition grep across all of
-    `src/semantics/` *before* writing any code (per the methodology
-    this collision established), and only then extract it to a real
-    private member the same way seams (6)-(9) did.
-  - implementation_notes: Add a one-line comment at the new member's
-    declaration referencing this collision history, so a future reader
-    doesn't casually rename it back to something that collides again.
-  - acceptance: `explicitRemovedCollectionMethodPathLocal` is a real
-    `SemanticsValidator` private member under its new name, not a local
-    lambda; full `PrimeStruct_semantics_tests` (2740/2740),
-    `PrimeStruct_backend_ir_tests` (1643/1644, same known flake), and
-    `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
-  - stop_rule: Pure refactor, zero behavior change - if this extraction
-    changes even one test's outcome, stop immediately (this is the exact
-    failure mode seam (4d) hit once already), revert, and re-verify the
-    anchored collision grep before retrying under a different name.
 
 - [ ] TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
   - owner: ai
