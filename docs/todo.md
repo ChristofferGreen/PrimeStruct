@@ -3083,6 +3083,72 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     dispatch-splitting, not just further lambda-by-lambda extraction)
     once the remaining full-bodied lambdas are mostly gone and what's
     left is dominated by inline straight-line dispatch code.
+  - progress_2026-08-31i: seam (5) - the first structural split, per the
+    user's explicit choice to "attempt structural split now" once pure
+    lambda-extraction hit diminishing returns. Unlike seams (1)-(4f),
+    this extracted straight-line dispatch code that was never wrapped in
+    a lambda: the ~350-line "generic fallback" tail of `resolveMethodTarget`
+    (from the `inferMethodTargetReceiverType` call through the function's
+    final `resolvedOut = resolvedType + "/" + normalizedMethodName; return
+    true;`) was promoted wholesale into a new private member,
+    `resolveMethodTargetGenericFallback`, taking the full set of locals
+    the tail depended on as explicit parameters (including the
+    `MethodTargetCollectionResolvers` struct and two `std::function`
+    diagnostic-tracing callbacks - `failMethodTargetResolutionDiagnostic`
+    and `stampFileErrorResultFailure` - that close over `resolveMethodTarget`'s
+    own `error_`/trace state and so were threaded through rather than
+    promoted themselves). Two small pure helpers the tail depended on were
+    also promoted as their own new members: `exprKindName` (a stateless
+    `Expr::Kind` name lookup - initially named `exprKindNameForMethodTarget`
+    then renamed to plain `exprKindName` after an anchored-definition grep
+    confirmed zero collisions) and `resolveExplicitRootKeyValueMethodPath`
+    (still called from an earlier, non-extracted call site in
+    `resolveMethodTarget` too, so kept as a real shared member rather than
+    inlined into the new function). All three new names were checked via
+    the seam (4d)-established anchored `SemanticsValidator::<name>(`
+    definition grep before writing any code - all clean, no collisions.
+    After extraction, three now-orphaned local lambdas
+    (`normalizedTypeLeafName`, `typeMatches`, `bindingTypeTextForResolution`)
+    were removed from `resolveMethodTarget`'s remaining body (confirmed via
+    grep to have zero remaining callers), plus two more
+    (`preferredBorrowedSoaHelperTargetForCollectionMethod` and
+    `resolveSumTypePath` forwarder lambdas) that the compiler itself
+    flagged as newly-unused (`-Werror=unused-but-set-variable`) once their
+    only call sites moved into the new function - both were thin
+    `this->`-forwarding lambdas of already-promoted members, so removing
+    them was pure dead-code cleanup, not a behavior change.
+    **New failure mode hit and fixed this round** (distinct from seam
+    (4d)'s naming-collision class): porting the tail's two calls to the
+    already-promoted `maybeFailRetiredMaybeMutableHelperForType` member
+    verbatim from their original closure form initially compiled with
+    only 3 of the member's 5 required arguments - inside the original
+    local-lambda tail, `normalizedMethodName` and `receiver` were
+    implicitly available via closure capture, but the real member
+    requires them as explicit parameters. This is a class of bug specific
+    to converting closure-form code into a real function call (missing
+    previously-implicit captures), not a name collision, and was caught
+    immediately by the compiler (a hard build error, not a silent
+    behavior change) rather than requiring the regression suite. Fixed by
+    adding `normalizedMethodName, receiver,` to both call sites. Verified:
+    `primec`-only build clean; the shape (c) repros unchanged; the
+    `/vector/push` bare-call regression repro (from seam (4d)) re-checked
+    again and still correctly rejected with "unknown call target:
+    /vector/push"; full `PrimeStruct_semantics_tests` 2740/2740 (0
+    failed); `PrimeStruct_backend_ir_tests` 1643/1644 (the same
+    already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678 (0
+    failed, run from `build-release/`). `resolveMethodTarget`'s own body
+    is now ~1821 lines (was ~2140 after seam (4f), ~2846 at the start of
+    this session's continue-until-done phase); the new
+    `resolveMethodTargetGenericFallback` is ~350 lines. This is the
+    largest single-round reduction yet (~320 lines) and confirms
+    structural splitting is viable as a pattern once self-contained
+    lambdas are exhausted. A future round should look for the next
+    structural boundary in the remaining ~1821 lines (likely another
+    contiguous straight-line block that can be given its own name and
+    explicit parameter list following this same pattern), continuing
+    toward the "under a few hundred lines" acceptance target - still a
+    long way off, but the rate of progress per round has not slowed.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai

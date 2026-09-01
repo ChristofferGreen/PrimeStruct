@@ -2058,6 +2058,389 @@ bool SemanticsValidator::setIndexedArgsPackKeyValueMethodTarget(
                                           resolvedOut, isBuiltinOut);
 }
 
+const char *SemanticsValidator::exprKindName(Expr::Kind kind) {
+  switch (kind) {
+  case Expr::Kind::Literal:
+    return "Literal";
+  case Expr::Kind::BoolLiteral:
+    return "BoolLiteral";
+  case Expr::Kind::FloatLiteral:
+    return "FloatLiteral";
+  case Expr::Kind::StringLiteral:
+    return "StringLiteral";
+  case Expr::Kind::Call:
+    return "Call";
+  case Expr::Kind::Name:
+    return "Name";
+  }
+  return "Unknown";
+}
+
+bool SemanticsValidator::resolveExplicitRootKeyValueMethodPath(
+    const std::string &explicitKeyValueHelperPath, const Expr &receiver,
+    std::string &resolvedOut, bool &isBuiltinOut) {
+  if (!isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
+    return false;
+  }
+  if (hasDeclaredDefinitionPath(explicitKeyValueHelperPath)) {
+    resolvedOut = explicitKeyValueHelperPath;
+    isBuiltinOut = false;
+    return true;
+  }
+  return failExprDiagnostic(receiver, "unknown method: " + explicitKeyValueHelperPath);
+}
+
+bool SemanticsValidator::resolveMethodTargetGenericFallback(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::string &callNamespacePrefix, const Expr &receiver,
+    const std::string &normalizedMethodName,
+    const std::string &canonicalCollectionHelperName,
+    const std::string &explicitVectorHelperPath,
+    const std::string &explicitKeyValueHelperPath,
+    const std::string &explicitRemovedMethodPath, bool traceFileErrorResult,
+    const MethodTargetCollectionResolvers &resolvers,
+    const std::function<bool(std::string)> &failMethodTargetResolutionDiagnostic,
+    const std::function<void(std::string_view, std::string_view, std::string_view)>
+        &stampFileErrorResultFailure,
+    std::string &resolvedOut, bool &isBuiltinOut) {
+  auto normalizedTypeLeafName = [](std::string value) {
+    value = normalizeBindingTypeName(value);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
+      value = base;
+    }
+    if (!value.empty() && value.front() == '/') {
+      value.erase(value.begin());
+    }
+    const size_t slash = value.find_last_of('/');
+    return slash == std::string::npos ? value : value.substr(slash + 1);
+  };
+  auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
+    return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
+  };
+  auto setCollectionMethodTarget = [&](const std::string &path) -> bool {
+    return resolveExplicitOrCanonicalCollectionMethodTarget(
+        path, explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
+        isBuiltinOut);
+  };
+  auto canonicalVectorHelperTarget = [](std::string_view helperName) {
+    return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+  };
+
+  std::string typeName;
+  std::string typeTemplateArg;
+  inferMethodTargetReceiverType(params, locals, receiver, typeName, typeTemplateArg);
+  if (typeMatches(typeName, "File") && isFileMethodName(normalizedMethodName)) {
+    resolvedOut = preferredFileHelperTarget(normalizedMethodName,
+                                           currentValidationState_.context.definitionPath);
+    isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
+    return true;
+  }
+  const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+  const std::string normalizedCollectionTypePath =
+      normalizeCollectionTypePath(normalizedTypeName);
+  std::string normalizedBaseTypeName = normalizedTypeName;
+  if (!normalizedBaseTypeName.empty() && normalizedBaseTypeName.front() == '/') {
+    normalizedBaseTypeName.erase(normalizedBaseTypeName.begin());
+  }
+  bool handledRetiredMaybeMutableHelper = false;
+  if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
+          typeName, typeTemplateArg, normalizedMethodName, receiver,
+          handledRetiredMaybeMutableHelper);
+      handledRetiredMaybeMutableHelper) {
+    return ok;
+  }
+  if (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
+      normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+    BindingInfo receiverBinding;
+    receiverBinding.typeName = typeName;
+    receiverBinding.typeTemplateArg = typeTemplateArg;
+    std::string experimentalElemType;
+    if (extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
+      if (normalizedMethodName == "count") {
+        return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
+      }
+      if (normalizedMethodName == "capacity") {
+        return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
+      }
+      return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
+    }
+  }
+  if (normalizedMethodName == "to_soa" &&
+      normalizedCollectionTypePath == "/vector") {
+    return setCollectionMethodTarget("/to_soa");
+  }
+  if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
+      (isInternalSoaCollectionTypePath(normalizedCollectionTypePath) ||
+       normalizedCollectionTypePath == "/vector")) {
+    return setCollectionMethodTarget(
+        preferredSoaHelperTargetForCollectionType(
+            normalizedMethodName,
+            isInternalSoaCollectionTypePath(normalizedCollectionTypePath)
+                ? internalSoaCollectionTypePath(true)
+                : "/vector"));
+  }
+  if (isKeyValueSurfaceTypeName(normalizeBindingTypeName(typeName)) &&
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+       normalizedMethodName == "size" ||
+       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
+       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
+       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
+    if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
+      return resolveExplicitRootKeyValueMethodPath(explicitKeyValueHelperPath, receiver,
+                                                    resolvedOut, isBuiltinOut);
+    }
+    const std::string canonicalKeyValueHelper =
+        canonicalKeyValueHelperPathLocal(normalizedMethodName);
+    if (hasDeclaredDefinitionPath(canonicalKeyValueHelper) || hasImportedDefinitionPath(canonicalKeyValueHelper)) {
+      resolvedOut = canonicalKeyValueHelper;
+      isBuiltinOut = false;
+      return true;
+    }
+    return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName,
+                                            explicitKeyValueHelperPath, receiver,
+                                            explicitRemovedMethodPath, normalizedMethodName,
+                                            params, locals, resolvers, resolvedOut, isBuiltinOut);
+  }
+  if (typeName == "Reference" &&
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
+       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
+       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
+    std::string keyType;
+    std::string valueType;
+    if (resolveExperimentalKeyValueTarget(receiver, keyType, valueType, params, locals)) {
+      resolvedOut =
+          this->preferredCanonicalExperimentalKeyValueHelperTarget(
+              normalizedMethodName);
+      isBuiltinOut = false;
+      return true;
+    }
+  }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "eof" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = resolvedOut == "/file_error/why";
+    return !resolvedOut.empty();
+  }
+  if (typeMatches(typeName, "FileError") &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "status" || normalizedMethodName == "result")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = resolvedOut == "/file_error/why";
+    return !resolvedOut.empty();
+  }
+  if (typeName == "string" &&
+      (normalizedMethodName == "count" || normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
+    return setCollectionMethodTarget("/string/" + normalizedMethodName);
+  }
+  if (typeName.empty()) {
+    if (receiver.kind == Expr::Kind::Call && !validateExpr(params, locals, receiver)) {
+      stampFileErrorResultFailure("validate-receiver-call", typeName, {});
+      return false;
+    }
+    stampFileErrorResultFailure("unknown-target-empty-type", typeName, {});
+    return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
+  }
+  if (typeName == "Pointer" || typeName == "Reference") {
+    const std::string normalizedPointeeType =
+        normalizeBindingTypeName(typeTemplateArg);
+    const std::string normalizedPointeeCollectionTypePath =
+        normalizeCollectionTypePath(normalizedPointeeType);
+    const bool isCanonicalBorrowedSoaWrapperMethod =
+        canonicalCollectionHelperName == "count" ||
+        canonicalCollectionHelperName == "count_ref" ||
+        canonicalCollectionHelperName == "get" ||
+        canonicalCollectionHelperName == "get_ref" ||
+        canonicalCollectionHelperName == "ref" ||
+        canonicalCollectionHelperName == "ref_ref" ||
+        canonicalCollectionHelperName == "to_aos" ||
+        canonicalCollectionHelperName == "to_aos_ref";
+    if (normalizedPointeeCollectionTypePath == "/map" &&
+        (normalizedMethodName == "count" ||
+         normalizedMethodName == "contains" ||
+         normalizedMethodName == "tryAt" ||
+         normalizedMethodName == "at" ||
+         normalizedMethodName == "at_unsafe" ||
+         normalizedMethodName == "insert")) {
+      if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
+        return resolveExplicitRootKeyValueMethodPath(explicitKeyValueHelperPath, receiver,
+                                                      resolvedOut, isBuiltinOut);
+      }
+      // TODO-4691: count/contains/tryAt/at/insert now resolve via the
+      // registry-backed borrowed-variant lookup instead of a hardcoded
+      // literal chain. at_unsafe -> at_unsafe_ref stays hardcoded: TODO-4690
+      // deliberately left that pair out of the registry table because a
+      // pre-existing stdlib-map-ownership audit test forbids the
+      // "at_unsafe_ref" literal appearing in StdlibSurfaceRegistry.cpp.
+      std::string borrowedHelperName = normalizedMethodName;
+      if (borrowedHelperName == "at_unsafe") {
+        borrowedHelperName = "at_unsafe_ref";
+      } else if (const std::string_view borrowedVariant = findBorrowedVariant(
+                     StdlibSurfaceId::CollectionsManifestSurface2,
+                     borrowedHelperName);
+                 !borrowedVariant.empty()) {
+        borrowedHelperName = std::string(borrowedVariant);
+      }
+      return setPreferredKeyValueMethodTarget(receiver, borrowedHelperName,
+                                              explicitKeyValueHelperPath, receiver,
+                                              explicitRemovedMethodPath, normalizedMethodName,
+                                              params, locals, resolvers, resolvedOut,
+                                              isBuiltinOut);
+    }
+    if (isInternalSoaCollectionTypePath(normalizedPointeeCollectionTypePath) &&
+        isCanonicalBorrowedSoaWrapperMethod) {
+      return setCollectionMethodTarget(
+          preferredBorrowedSoaHelperTargetForCollectionMethod(
+              canonicalCollectionHelperName));
+    }
+    if (!normalizedPointeeType.empty() &&
+        normalizedPointeeCollectionTypePath.empty()) {
+      std::string currentNamespace;
+      if (!currentValidationState_.context.definitionPath.empty()) {
+        const size_t slash =
+            currentValidationState_.context.definitionPath.find_last_of('/');
+        if (slash != std::string::npos && slash > 0) {
+          currentNamespace =
+              currentValidationState_.context.definitionPath.substr(0, slash);
+        }
+      }
+      const std::string lookupNamespace =
+          !receiver.namespacePrefix.empty() ? receiver.namespacePrefix : currentNamespace;
+      std::string normalizedPointeeBaseType = normalizedPointeeType;
+      if (!normalizedPointeeBaseType.empty() &&
+          normalizedPointeeBaseType.front() == '/') {
+        normalizedPointeeBaseType.erase(normalizedPointeeBaseType.begin());
+      }
+      if (isPrimitiveBindingTypeName(normalizedPointeeBaseType)) {
+        resolvedOut = "/" + normalizedPointeeBaseType + "/" + normalizedMethodName;
+        return true;
+      }
+      std::string resolvedPointeeType =
+          resolveMethodTargetStructTypePath(normalizedPointeeType, lookupNamespace);
+      if (resolvedPointeeType.empty()) {
+        resolvedPointeeType =
+            resolveSumTypePath(normalizedPointeeType, lookupNamespace);
+      }
+      if (resolvedPointeeType.empty()) {
+        resolvedPointeeType =
+            resolveTypePath(normalizedPointeeType, lookupNamespace);
+      }
+      if (!resolvedPointeeType.empty()) {
+        resolvedOut = resolvedPointeeType + "/" + normalizedMethodName;
+        return true;
+      }
+    }
+    stampFileErrorResultFailure("pointer-like-type", typeName, {});
+    return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
+  }
+  // See the matching comment near the end of this function (before the
+  // generic resolvedType + "/" + normalizedMethodName fallback) - primitive
+  // receivers (e.g. string) return earlier via the branch just below, so
+  // this same guard needs to run here too.
+  if (normalizedMethodName == "capacity" &&
+      normalizedCollectionTypePath != "/vector" &&
+      isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
+      !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
+      !hasImportedDefinitionPath(explicitVectorHelperPath)) {
+    return failMethodTargetResolutionDiagnostic("capacity requires vector target");
+  }
+  if (isPrimitiveBindingTypeName(normalizedBaseTypeName)) {
+    resolvedOut = "/" + normalizedBaseTypeName + "/" + normalizedMethodName;
+    return true;
+  }
+  if (normalizedBaseTypeName == "args") {
+    return false;
+  }
+  std::string resolvedType = resolveMethodTargetStructTypePath(typeName, receiver.namespacePrefix);
+  if (resolvedType.empty()) {
+    resolvedType = resolveSumTypePath(
+        typeName.empty() || typeTemplateArg.empty() ? typeName
+                                                     : typeName + "<" + typeTemplateArg + ">",
+        receiver.namespacePrefix);
+  }
+  if (resolvedType.empty()) {
+    resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+  }
+  if (resolveDeclaredSumMethodTarget(resolvedType, normalizedMethodName, resolvedOut,
+                                     isBuiltinOut)) {
+    return true;
+  }
+  if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
+          typeName, typeTemplateArg, normalizedMethodName, receiver,
+          handledRetiredMaybeMutableHelper);
+      handledRetiredMaybeMutableHelper) {
+    return ok;
+  }
+  if (traceFileErrorResult && receiver.kind == Expr::Kind::Name &&
+      receiver.name == "FileError" && resolvedType.empty()) {
+    return failMethodTargetResolutionDiagnostic(
+        "resolveMethodTarget FileError-result-fallthrough receiver.kind=" +
+        std::string(exprKindName(receiver.kind)) +
+        " receiver.name=" + receiver.name +
+        " receiver.namespace=" + receiver.namespacePrefix +
+        " call.namespace=" + callNamespacePrefix +
+        " typeName=" + typeName);
+  }
+  if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
+       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+      isLegacyExperimentalVectorCompatibilityTypePath(resolvedType)) {
+    if (normalizedMethodName == "count") {
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
+    }
+    if (normalizedMethodName == "capacity") {
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
+    }
+    return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
+  }
+  if (normalizedCollectionTypePath == "/vector" &&
+      normalizedMethodName != "count" &&
+      normalizedMethodName != "capacity" &&
+      normalizedMethodName != "at" &&
+      normalizedMethodName != "at_unsafe") {
+    const std::string legacyVectorMethodTarget =
+        rootedVectorHelperPath(normalizedMethodName);
+    if (hasDeclaredDefinitionPath(legacyVectorMethodTarget)) {
+      resolvedOut = legacyVectorMethodTarget;
+      return true;
+    }
+  }
+  const bool isConcreteExperimentalSoaReceiver =
+      isExperimentalSoaVectorSpecializedTypePath(resolvedType);
+  const bool isCanonicalSoaWrapperMethod =
+      isSupportedCompatibilitySoaHelperName(canonicalCollectionHelperName);
+  if (isConcreteExperimentalSoaReceiver && isCanonicalSoaWrapperMethod) {
+    return setCollectionMethodTarget(
+        preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
+                                                  internalSoaCollectionTypePath(true)));
+  }
+  // A call that explicitly spells out the canonical
+  // /std/collections/vector/capacity path on a non-vector receiver must be
+  // rejected with the same "capacity requires vector target" diagnostic
+  // used elsewhere for this method, even if a same-path definition happens
+  // to exist for the receiver's own (non-vector) type - that canonical path
+  // is reserved for vector receivers. Falling through to the generic
+  // resolvedType + "/" + normalizedMethodName composition below would
+  // instead silently substitute the receiver's own type, discarding the
+  // explicit path the caller wrote and producing a misleading "unknown
+  // method: /<receiver type>/capacity" diagnostic.
+  if (normalizedMethodName == "capacity" &&
+      normalizedCollectionTypePath != "/vector" &&
+      isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
+      !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
+      !hasImportedDefinitionPath(explicitVectorHelperPath)) {
+    return failMethodTargetResolutionDiagnostic("capacity requires vector target");
+  }
+  resolvedOut = resolvedType + "/" + normalizedMethodName;
+  return true;
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -2208,11 +2591,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       specializationSuffix != std::string::npos) {
     canonicalCollectionHelperName.erase(specializationSuffix);
   }
-  auto preferredBorrowedSoaHelperTargetForCollectionMethod =
-      [&](std::string helperName) {
-        return this->preferredBorrowedSoaHelperTargetForCollectionMethod(
-            std::move(helperName));
-      };
   auto exprKindName = [](Expr::Kind kind) -> const char * {
     switch (kind) {
     case Expr::Kind::Literal:
@@ -2313,33 +2691,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto resolveStructTypePath = [&](const std::string &typeName,
                                    const std::string &namespacePrefix) -> std::string {
     return this->resolveMethodTargetStructTypePath(typeName, namespacePrefix);
-  };
-  auto normalizedTypeLeafName = [](std::string value) {
-    value = normalizeBindingTypeName(value);
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
-      value = base;
-    }
-    if (!value.empty() && value.front() == '/') {
-      value.erase(value.begin());
-    }
-    const size_t slash = value.find_last_of('/');
-    return slash == std::string::npos ? value : value.substr(slash + 1);
-  };
-  auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
-    return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
-  };
-  auto bindingTypeTextForResolution = [](const std::string &typeName,
-                                         const std::string &typeTemplateArg) {
-    if (typeName.empty() || typeTemplateArg.empty()) {
-      return typeName;
-    }
-    return typeName + "<" + typeTemplateArg + ">";
-  };
-  auto resolveSumTypePath = [&](const std::string &typeText,
-                                const std::string &namespacePrefix) -> std::string {
-    return this->resolveSumTypePath(typeText, namespacePrefix);
   };
   auto maybeFailRetiredMaybeMutableHelperForType =
       [&](const std::string &typeName,
@@ -3900,304 +4251,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
 
-  std::string typeName;
-  std::string typeTemplateArg;
-  inferMethodTargetReceiverType(params, locals, receiver, typeName, typeTemplateArg);
-  if (typeMatches(typeName, "File") && isFileMethodName(normalizedMethodName)) {
-    resolvedOut = preferredFileHelperTarget(normalizedMethodName,
-                                           currentValidationState_.context.definitionPath);
-    isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
-    return true;
-  }
-  const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
-  const std::string normalizedCollectionTypePath =
-      normalizeCollectionTypePath(normalizedTypeName);
-  std::string normalizedBaseTypeName = normalizedTypeName;
-  if (!normalizedBaseTypeName.empty() && normalizedBaseTypeName.front() == '/') {
-    normalizedBaseTypeName.erase(normalizedBaseTypeName.begin());
-  }
-  bool handledRetiredMaybeMutableHelper = false;
-  if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
-          typeName, typeTemplateArg, handledRetiredMaybeMutableHelper);
-      handledRetiredMaybeMutableHelper) {
-    return ok;
-  }
-  if (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
-      normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
-    BindingInfo receiverBinding;
-    receiverBinding.typeName = typeName;
-    receiverBinding.typeTemplateArg = typeTemplateArg;
-    std::string experimentalElemType;
-    if (extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
-      if (normalizedMethodName == "count") {
-        return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
-      }
-      if (normalizedMethodName == "capacity") {
-        return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
-      }
-      return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
-    }
-  }
-  if (normalizedMethodName == "to_soa" &&
-      normalizedCollectionTypePath == "/vector") {
-    return setCollectionMethodTarget("/to_soa");
-  }
-  if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
-      (isInternalSoaCollectionTypePath(normalizedCollectionTypePath) ||
-       normalizedCollectionTypePath == "/vector")) {
-    return setCollectionMethodTarget(
-        preferredSoaHelperTargetForCollectionType(
-            normalizedMethodName,
-            isInternalSoaCollectionTypePath(normalizedCollectionTypePath)
-                ? internalSoaCollectionTypePath(true)
-                : "/vector"));
-  }
-  if (isKeyValueSurfaceTypeName(normalizeBindingTypeName(typeName)) &&
-      (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
-       normalizedMethodName == "size" ||
-       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
-       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
-       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
-    if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
-      return resolveExplicitRootKeyValueMethodPath();
-    }
-    const std::string canonicalKeyValueHelper =
-        canonicalKeyValueHelperPathLocal(normalizedMethodName);
-    if (hasDeclaredDefinitionPath(canonicalKeyValueHelper) || hasImportedDefinitionPath(canonicalKeyValueHelper)) {
-      resolvedOut = canonicalKeyValueHelper;
-      isBuiltinOut = false;
-      return true;
-    }
-    return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
-  }
-  if (typeName == "Reference" &&
-      (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
-       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
-       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
-       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
-    std::string keyType;
-    std::string valueType;
-    if (resolveExperimentalKeyValueTarget(receiver, keyType, valueType)) {
-      resolvedOut =
-          this->preferredCanonicalExperimentalKeyValueHelperTarget(
-              normalizedMethodName);
-      isBuiltinOut = false;
-      return true;
-    }
-  }
-  if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
-      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
-       normalizedMethodName == "eof" || normalizedMethodName == "status" ||
-       normalizedMethodName == "result")) {
-    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
-    isBuiltinOut = resolvedOut == "/file_error/why";
-    return !resolvedOut.empty();
-  }
-  if (typeMatches(typeName, "FileError") &&
-      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
-       normalizedMethodName == "status" || normalizedMethodName == "result")) {
-    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
-    isBuiltinOut = resolvedOut == "/file_error/why";
-    return !resolvedOut.empty();
-  }
-  if (typeName == "string" &&
-      (normalizedMethodName == "count" || normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
-    return setCollectionMethodTarget("/string/" + normalizedMethodName);
-  }
-  if (typeName.empty()) {
-    if (receiver.kind == Expr::Kind::Call && !validateExpr(params, locals, receiver)) {
-      stampFileErrorResultFailure("validate-receiver-call", typeName);
-      return false;
-    }
-    stampFileErrorResultFailure("unknown-target-empty-type", typeName);
-    return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
-  }
-  if (typeName == "Pointer" || typeName == "Reference") {
-    const std::string normalizedPointeeType =
-        normalizeBindingTypeName(typeTemplateArg);
-    const std::string normalizedPointeeCollectionTypePath =
-        normalizeCollectionTypePath(normalizedPointeeType);
-    const bool isCanonicalBorrowedSoaWrapperMethod =
-        canonicalCollectionHelperName == "count" ||
-        canonicalCollectionHelperName == "count_ref" ||
-        canonicalCollectionHelperName == "get" ||
-        canonicalCollectionHelperName == "get_ref" ||
-        canonicalCollectionHelperName == "ref" ||
-        canonicalCollectionHelperName == "ref_ref" ||
-        canonicalCollectionHelperName == "to_aos" ||
-        canonicalCollectionHelperName == "to_aos_ref";
-    if (normalizedPointeeCollectionTypePath == "/map" &&
-        (normalizedMethodName == "count" ||
-         normalizedMethodName == "contains" ||
-         normalizedMethodName == "tryAt" ||
-         normalizedMethodName == "at" ||
-         normalizedMethodName == "at_unsafe" ||
-         normalizedMethodName == "insert")) {
-      if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
-        return resolveExplicitRootKeyValueMethodPath();
-      }
-      // TODO-4691: count/contains/tryAt/at/insert now resolve via the
-      // registry-backed borrowed-variant lookup instead of a hardcoded
-      // literal chain. at_unsafe -> at_unsafe_ref stays hardcoded: TODO-4690
-      // deliberately left that pair out of the registry table because a
-      // pre-existing stdlib-map-ownership audit test forbids the
-      // "at_unsafe_ref" literal appearing in StdlibSurfaceRegistry.cpp.
-      std::string borrowedHelperName = normalizedMethodName;
-      if (borrowedHelperName == "at_unsafe") {
-        borrowedHelperName = "at_unsafe_ref";
-      } else if (const std::string_view borrowedVariant = findBorrowedVariant(
-                     StdlibSurfaceId::CollectionsManifestSurface2,
-                     borrowedHelperName);
-                 !borrowedVariant.empty()) {
-        borrowedHelperName = std::string(borrowedVariant);
-      }
-      return setPreferredKeyValueMethodTarget(receiver, borrowedHelperName);
-    }
-    if (isInternalSoaCollectionTypePath(normalizedPointeeCollectionTypePath) &&
-        isCanonicalBorrowedSoaWrapperMethod) {
-      return setCollectionMethodTarget(
-          preferredBorrowedSoaHelperTargetForCollectionMethod(
-              canonicalCollectionHelperName));
-    }
-    if (!normalizedPointeeType.empty() &&
-        normalizedPointeeCollectionTypePath.empty()) {
-      std::string currentNamespace;
-      if (!currentValidationState_.context.definitionPath.empty()) {
-        const size_t slash =
-            currentValidationState_.context.definitionPath.find_last_of('/');
-        if (slash != std::string::npos && slash > 0) {
-          currentNamespace =
-              currentValidationState_.context.definitionPath.substr(0, slash);
-        }
-      }
-      const std::string lookupNamespace =
-          !receiver.namespacePrefix.empty() ? receiver.namespacePrefix : currentNamespace;
-      std::string normalizedPointeeBaseType = normalizedPointeeType;
-      if (!normalizedPointeeBaseType.empty() &&
-          normalizedPointeeBaseType.front() == '/') {
-        normalizedPointeeBaseType.erase(normalizedPointeeBaseType.begin());
-      }
-      if (isPrimitiveBindingTypeName(normalizedPointeeBaseType)) {
-        resolvedOut = "/" + normalizedPointeeBaseType + "/" + normalizedMethodName;
-        return true;
-      }
-      std::string resolvedPointeeType =
-          resolveStructTypePath(normalizedPointeeType, lookupNamespace);
-      if (resolvedPointeeType.empty()) {
-        resolvedPointeeType =
-            resolveSumTypePath(normalizedPointeeType, lookupNamespace);
-      }
-      if (resolvedPointeeType.empty()) {
-        resolvedPointeeType =
-            resolveTypePath(normalizedPointeeType, lookupNamespace);
-      }
-      if (!resolvedPointeeType.empty()) {
-        resolvedOut = resolvedPointeeType + "/" + normalizedMethodName;
-        return true;
-      }
-    }
-    stampFileErrorResultFailure("pointer-like-type", typeName);
-    return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
-  }
-  // See the matching comment near the end of this function (before the
-  // generic resolvedType + "/" + normalizedMethodName fallback) - primitive
-  // receivers (e.g. string) return earlier via the branch just below, so
-  // this same guard needs to run here too.
-  if (normalizedMethodName == "capacity" &&
-      normalizedCollectionTypePath != "/vector" &&
-      isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
-      !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
-      !hasImportedDefinitionPath(explicitVectorHelperPath)) {
-    return failMethodTargetResolutionDiagnostic("capacity requires vector target");
-  }
-  if (isPrimitiveBindingTypeName(normalizedBaseTypeName)) {
-    resolvedOut = "/" + normalizedBaseTypeName + "/" + normalizedMethodName;
-    return true;
-  }
-  if (normalizedBaseTypeName == "args") {
-    return false;
-  }
-  std::string resolvedType = resolveStructTypePath(typeName, receiver.namespacePrefix);
-  if (resolvedType.empty()) {
-    resolvedType = resolveSumTypePath(
-        bindingTypeTextForResolution(typeName, typeTemplateArg),
-        receiver.namespacePrefix);
-  }
-  if (resolvedType.empty()) {
-    resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
-  }
-  if (resolveDeclaredSumMethodTarget(resolvedType, normalizedMethodName, resolvedOut,
-                                     isBuiltinOut)) {
-    return true;
-  }
-  if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
-          typeName, typeTemplateArg, handledRetiredMaybeMutableHelper);
-      handledRetiredMaybeMutableHelper) {
-    return ok;
-  }
-  if (traceFileErrorResult && receiver.kind == Expr::Kind::Name &&
-      receiver.name == "FileError" && resolvedType.empty()) {
-    return failMethodTargetResolutionDiagnostic(
-        "resolveMethodTarget FileError-result-fallthrough receiver.kind=" +
-        std::string(exprKindName(receiver.kind)) +
-        " receiver.name=" + receiver.name +
-        " receiver.namespace=" + receiver.namespacePrefix +
-        " call.namespace=" + callNamespacePrefix +
-        " typeName=" + typeName);
-  }
-  if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
-       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
-      isLegacyExperimentalVectorCompatibilityTypePath(resolvedType)) {
-    if (normalizedMethodName == "count") {
-      return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
-    }
-    if (normalizedMethodName == "capacity") {
-      return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
-    }
-    return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
-  }
-  if (normalizedCollectionTypePath == "/vector" &&
-      normalizedMethodName != "count" &&
-      normalizedMethodName != "capacity" &&
-      normalizedMethodName != "at" &&
-      normalizedMethodName != "at_unsafe") {
-    const std::string legacyVectorMethodTarget =
-        rootedVectorMethodPath(normalizedMethodName);
-    if (hasDeclaredDefinitionPath(legacyVectorMethodTarget)) {
-      resolvedOut = legacyVectorMethodTarget;
-      return true;
-    }
-  }
-  const bool isConcreteExperimentalSoaReceiver =
-      isExperimentalSoaVectorSpecializedTypePath(resolvedType);
-  const bool isCanonicalSoaWrapperMethod =
-      isSupportedCompatibilitySoaHelperName(canonicalCollectionHelperName);
-  if (isConcreteExperimentalSoaReceiver && isCanonicalSoaWrapperMethod) {
-    return setCollectionMethodTarget(
-        preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
-                                                  internalSoaCollectionTypePath(true)));
-  }
-  // A call that explicitly spells out the canonical
-  // /std/collections/vector/capacity path on a non-vector receiver must be
-  // rejected with the same "capacity requires vector target" diagnostic
-  // used elsewhere for this method, even if a same-path definition happens
-  // to exist for the receiver's own (non-vector) type - that canonical path
-  // is reserved for vector receivers. Falling through to the generic
-  // resolvedType + "/" + normalizedMethodName composition below would
-  // instead silently substitute the receiver's own type, discarding the
-  // explicit path the caller wrote and producing a misleading "unknown
-  // method: /<receiver type>/capacity" diagnostic.
-  if (normalizedMethodName == "capacity" &&
-      normalizedCollectionTypePath != "/vector" &&
-      isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
-      !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
-      !hasImportedDefinitionPath(explicitVectorHelperPath)) {
-    return failMethodTargetResolutionDiagnostic("capacity requires vector target");
-  }
-  resolvedOut = resolvedType + "/" + normalizedMethodName;
-  return true;
+  return resolveMethodTargetGenericFallback(
+      params, locals, callNamespacePrefix, receiver, normalizedMethodName,
+      canonicalCollectionHelperName, explicitVectorHelperPath, explicitKeyValueHelperPath,
+      explicitRemovedMethodPath, traceFileErrorResult,
+      MethodTargetCollectionResolvers{
+          resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+          resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+          resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+      failMethodTargetResolutionDiagnostic, stampFileErrorResultFailure, resolvedOut,
+      isBuiltinOut);
 }
 
 } // namespace primec::semantics

@@ -714,6 +714,36 @@
       const std::unordered_map<std::string, BindingInfo> &locals,
       const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
       bool &isBuiltinOut);
+  // TODO-4724 seam (5): structural split of the "generic fallback" tail -
+  // the straight-line dispatch-on-typeName body that was never wrapped in
+  // a local lambda to begin with (see this task's own implementation_notes
+  // on why seams (1)-(4f) couldn't reach it: those extracted pre-existing
+  // self-contained lambdas, but this tail had no such boundary until now).
+  // Small helpers this tail needs that weren't already members:
+  static const char *exprKindName(Expr::Kind kind);
+  bool resolveExplicitRootKeyValueMethodPath(
+      const std::string &explicitKeyValueHelperPath, const Expr &receiver,
+      std::string &resolvedOut, bool &isBuiltinOut);
+  // The tail itself, starting from receiver-type inference through the
+  // function's final generic resolvedType + "/" + normalizedMethodName
+  // fallback. failMethodTargetResolutionDiagnostic and
+  // stampFileErrorResultFailure are threaded through as callbacks rather
+  // than promoted, since both close over resolveMethodTarget's own
+  // error_/rememberedMethodTargetTraceFailure diagnostic-tracing state.
+  bool resolveMethodTargetGenericFallback(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::string &callNamespacePrefix, const Expr &receiver,
+      const std::string &normalizedMethodName,
+      const std::string &canonicalCollectionHelperName,
+      const std::string &explicitVectorHelperPath,
+      const std::string &explicitKeyValueHelperPath,
+      const std::string &explicitRemovedMethodPath, bool traceFileErrorResult,
+      const MethodTargetCollectionResolvers &resolvers,
+      const std::function<bool(std::string)> &failMethodTargetResolutionDiagnostic,
+      const std::function<void(std::string_view, std::string_view, std::string_view)>
+          &stampFileErrorResultFailure,
+      std::string &resolvedOut, bool &isBuiltinOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,
