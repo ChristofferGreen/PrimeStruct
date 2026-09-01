@@ -70,24 +70,20 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding (parallel_track: resolveMethodTarget-file-split)
+- TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection (parallel_track: resolveMethodTarget-file-split)
+- TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name (parallel_track: resolveMethodTarget-file-split)
 - TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members (parallel_track: resolveMethodTarget-file-split)
 
-Note (2026-09-01): TODO-5270 through TODO-5274 (the vector/array/soa,
-string, key-value, args-pack, and struct/sum-type-path method-target
-resolver family file-splits) have resolved - see `docs/todo_finished.md`.
-`SemanticsValidatorExprMethodTargetResolution.cpp` shrank from ~4300 to
-~2349 lines across the five moves plus a new shared
-`SemanticsValidatorMethodTargetResolutionDetail.h`/`.cpp` pair (needed
-because several of the file's former per-TU anonymous-namespace helpers
-were used by both the moved code and the code staying in the main file).
-TODO-5275 is now Ready Now since its TODO-5270-5274 dependencies are
-satisfied. TODO-5276 (retire the MethodTargetCollectionResolvers
-std::function indirection) and TODO-5277 (properly promote
-`explicitRemovedCollectionMethodPathLocal`) still depend on TODO-5275
-landing first; TODO-5278 (direct unit tests for the promoted resolvers)
-depends only on TODO-5270-5274, also now satisfied - see
-`### Immediate Next 10` below for both.
+Note (2026-09-01): TODO-5270 through TODO-5275 have all resolved - see
+`docs/todo_finished.md`. `SemanticsValidatorExprMethodTargetResolution.cpp`
+shrank from ~4300 to ~2334 lines across the five file-split moves (plus
+a new shared `SemanticsValidatorMethodTargetResolutionDetail.h`/`.cpp`
+pair, needed because several of the file's former per-TU
+anonymous-namespace helpers were used by both the moved code and the
+code staying in the main file) and TODO-5275's forwarder-lambda cleanup
+(16 of 22 forwarders removed; 7 deliberately deferred to TODO-5276,
+which now depends on nothing else and is Ready Now alongside TODO-5277
+and TODO-5278).
 
 Note (2026-08-30): TODO-4743 (diffuse per-call resolution cost left over
 after TODO-4742's hasDefinitionFamilyPath fix) has resolved - see
@@ -139,23 +135,21 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding
+- TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection
+- TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name
 - TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
-- TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection (depends on TODO-5275)
-- TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name (depends on TODO-5275)
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
 
 Note (2026-09-01): TODO-4724 (decompose resolveMethodTarget) has made
 substantial progress this session (seams (5)-(9), ~2846 -> ~1371 lines)
 and is superseded at the top of this list by its own natural follow-on
-work, TODO-5270 through TODO-5278. TODO-5270 through TODO-5274 (the
-file-splits) have resolved - see `docs/todo_finished.md` - and
-TODO-5275/5276/5277/5278 remain open here to finish retiring the
-incremental scaffolding those seams left behind. TODO-4724's task block
-remains open below for any further seam work (e.g. structural splits of
-the remaining straight-line dispatch) that doesn't fit those follow-on
-leaves.
+work, TODO-5270 through TODO-5278. TODO-5270 through TODO-5275 have all
+resolved - see `docs/todo_finished.md` - and TODO-5276/5277/5278 remain
+open here to finish retiring the incremental scaffolding those seams
+left behind. TODO-4724's task block remains open below for any further
+seam work (e.g. structural splits of the remaining straight-line
+dispatch) that doesn't fit those follow-on leaves.
 
 Note (2026-08-30): TODO-4743 has resolved (superseded by TODO-5226's
 lazy-stdlib-import default flip) - see `docs/todo_finished.md`.
@@ -457,7 +451,7 @@ Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
 Note (2026-08-30): item 78 (TODO-5265) has resolved - see
 `docs/todo_finished.md`.
-Note (2026-09-01): items 79-83 (TODO-5270 through TODO-5274) have
+Note (2026-09-01): items 79-84 (TODO-5270 through TODO-5275) have
 resolved - see `docs/todo_finished.md`.
 Note (2026-08-30): item 75 (TODO-4743) has resolved - see
 `docs/todo_finished.md`.
@@ -3347,41 +3341,6 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     per-round verification overhead versus returning to seam (5)-style
     structural splitting of the remaining straight-line dispatch blocks.
 
-- [ ] TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding
-  - owner: ai
-  - created_at: 2026-09-01
-  - phase: Maintainability / tech debt
-  - parallel_track: resolveMethodTarget-file-split
-  - depends_on: TODO-5270, TODO-5271, TODO-5272, TODO-5273, TODO-5274
-  - scope: TODO-4724's seams (6)-(9) each promoted a local lambda to a
-    real private member, but left a one-line forwarder lambda behind in
-    `resolveMethodTarget`'s body (e.g.
-    `auto resolveVectorTarget = [&](...) { return this->resolveVectorTarget(...); };`)
-    purely so sibling closures could keep calling it under its original
-    captured name during incremental extraction. Once the file-split
-    leaves (TODO-5270 through TODO-5274) land, every caller of these
-    forwarders is either gone (moved to the new files, calling the real
-    member directly) or is itself inside `resolveMethodTarget` and can
-    be updated to call `this->foo(...)`/`foo(...)` directly instead of
-    going through the local shim. This leaf removes every such
-    now-redundant forwarder lambda and updates their call sites to call
-    the real member directly.
-  - implementation_notes: After the forwarders are gone, also add a
-    short comment block at the top of `resolveMethodTarget` explaining
-    its dispatch order (why File is checked before
-    collection-vector-metadata before the generic fallback, etc.) - this
-    is exactly the kind of non-obvious "why" that's worth writing down
-    once, per this repo's own comment-usage guidance, rather than making
-    every future reader re-derive it from the code.
-  - acceptance: `resolveMethodTarget`'s own body contains no forwarder
-    lambdas whose only statement is `return this->X(...)` /`return X(...)`
-    with unchanged arguments; a short dispatch-order comment exists at
-    the top of the function; full `PrimeStruct_semantics_tests`
-    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
-    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
-  - stop_rule: Pure refactor, zero behavior change - any test delta
-    means stop and revert rather than adjust the test.
-
 - [ ] TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection in favor of direct member calls
   - owner: ai
   - created_at: 2026-09-01
@@ -3404,13 +3363,31 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     constructs it anymore (verify with a repo-wide grep, not just the
     call sites visible from `resolveMethodTarget`, since
     `SemanticsValidatorCollectionHelperRewrites.cpp` and others may also
-    reference it).
+    reference it). TODO-5275 already removed 16 of the 22 forwarder
+    lambdas it found in `resolveMethodTarget`'s body and deliberately
+    left 7 in place specifically because this leaf needs them: 6 back
+    the struct's 8 fields by name (`resolveVectorTarget`,
+    `resolveSoaVectorTarget`, `resolveArrayTarget`, `resolveStringTarget`,
+    `resolveKeyValueTarget`, `resolveCollectionVectorValueTarget` -
+    `resolveArgsPackCountTarget`/`resolveArgsPackAccessTarget`, the other
+    2 fields, were never simple forwarders and are out of scope here)
+    plus `setPreferredKeyValueMethodTarget` (passed by name into
+    `resolveArgsPackElementMethodTarget`). Once this leaf removes the
+    struct (replacing each construction site with direct member calls
+    taking `params`/`locals`/receiver-shaped args explicitly, matching
+    how `SemanticsValidatorMethodTargetKeyValueResolvers.cpp` and
+    friends already call these members directly with no struct), these
+    7 forwarders should also become removable - fold that into this
+    leaf's own acceptance rather than filing yet another task for it.
   - acceptance: `MethodTargetCollectionResolvers` either no longer
     exists (if all uses were eliminated) or its remaining uses are
     genuinely load-bearing (documented in a `notes:` field on this task
-    explaining why, if any survive); full `PrimeStruct_semantics_tests`
-    (2740/2740), `PrimeStruct_backend_ir_tests` (1643/1644, same known
-    flake), and `PrimeStruct_compile_run_tests` (2678/2678) unchanged.
+    explaining why, if any survive); the 7 forwarder lambdas TODO-5275
+    left in place for this leaf are also removed once the struct no
+    longer needs named callables at their construction sites; full
+    `PrimeStruct_semantics_tests` (2740/2740), `PrimeStruct_backend_ir_tests`
+    (1643/1644, same known flake), and `PrimeStruct_compile_run_tests`
+    (2678/2678) unchanged.
   - stop_rule: Pure refactor, zero behavior change - any test delta
     means stop and revert rather than adjust the test.
 

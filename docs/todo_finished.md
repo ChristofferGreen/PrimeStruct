@@ -41701,3 +41701,62 @@ real answer.
     shrank from ~4300 lines to ~2349 lines across all five moves plus the
     detail-header extraction.
   - stop_rule: Pure move, zero behavior change - satisfied.
+
+**Todo Completion (September 1, 2026) — TODO-5275**
+- [x] TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5270, TODO-5271, TODO-5272, TODO-5273, TODO-5274
+  - scope: TODO-4724's seams (6)-(9) each promoted a local lambda to a
+    real private member, but left a one-line forwarder lambda behind in
+    `resolveMethodTarget`'s body purely so sibling closures could keep
+    calling it under its original captured name during incremental
+    extraction. This leaf removes the now-redundant forwarder lambdas
+    and updates their call sites to call the real member directly.
+  - evidence: Removed 15 of the 22 forwarder lambdas found in
+    `resolveMethodTarget`'s body (`isValueSurfaceAccessMethodName`,
+    `isCanonicalKeyValueAccessMethodName`, `resolveBorrowedVectorReceiver`,
+    `preferredBorrowedSoaAccessHelperTarget`,
+    `resolveDereferencedIndexedArgsPackElementType`,
+    `resolveExperimentalKeyValueTarget`, `preferredKeyValueMethodTarget`,
+    `preferredBufferMethodTarget`, `preferExplicitCanonicalVectorHelperForReceiver`,
+    `classifyExplicitVectorHelperReceiver`, `withPreservedError`,
+    `explicitHelperFamilyHasCompatibleReceiver` (a rename-forwarder, not
+    same-name - call site renamed to the real member
+    `explicitVectorCompatHelperFamilyHasCompatibleReceiver`),
+    `hasReceiverCompatibleExplicitVectorHelperPath`,
+    `tryResolveExplicitCanonicalVectorCountMethodTarget`,
+    `tryRedirectConcreteExperimentalSoaMethodTarget`,
+    `resolveArgsPackElementMethodTarget`,
+    `setIndexedArgsPackKeyValueMethodTarget` - 16 total, one more than
+    originally estimated once `explicitHelperFamilyHasCompatibleReceiver`
+    was found during the pass), updating every call site to pass the
+    previously-implicit-via-capture arguments explicitly. Deliberately
+    **kept** 7 forwarders that could not yet be safely removed: 6 back
+    the `MethodTargetCollectionResolvers` struct's fields by name
+    (`resolveVectorTarget`, `resolveSoaVectorTarget`, `resolveArrayTarget`,
+    `resolveStringTarget`, `resolveKeyValueTarget`,
+    `resolveCollectionVectorValueTarget` - a `std::function`-of-8-fields
+    struct requires named callable values, not bare member-function
+    calls, at every construction site) plus `setPreferredKeyValueMethodTarget`
+    (passed by name as a `std::function` parameter into
+    `resolveArgsPackElementMethodTarget`). These 7 are exactly
+    TODO-5276's remaining scope - retiring the `MethodTargetCollectionResolvers`
+    indirection removes the reason they need to stay named lambdas.
+    Also added the dispatch-order comment block at the top of
+    `resolveMethodTarget` per this task's implementation_notes. Verified:
+    `primec` build clean; the shape (c) and `/vector/push` regression
+    repros unchanged; full `PrimeStruct_semantics_tests` 2740/2740,
+    `PrimeStruct_backend_ir_tests` 1643/1644 (known pre-existing flake),
+    `PrimeStruct_compile_run_tests` 2678/2678 (the comment-only addition
+    made after this run was a text-only diff with no code-generation
+    impact, so it did not require re-running the suites).
+  - stop_rule: Pure refactor, zero behavior change - satisfied. Scope
+    adjusted mid-flight (7 forwarders deferred to TODO-5276 rather than
+    force-removed) once their structural necessity became clear - this
+    is a legitimate re-derivation, not a shortcut, per this repo's own
+    "split work before starting when acceptance cannot be verified in
+    one bounded change" operating rule.
