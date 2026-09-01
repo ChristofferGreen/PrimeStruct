@@ -3235,6 +3235,34 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     lambda or straight-line block and continue applying whichever of the
     seam (1)-(4f) lambda-promotion pattern or the seam (5) structural-split
     pattern best fits what's found.
+  - progress_2026-08-31l: seam (8) - promoted the self-contained, recursive
+    `resolveStringTarget` local lambda (~65 lines) to a real private
+    member, `bool resolveStringTarget(target, params, locals,
+    resolveArgsPackAccessTarget)`. Depended only on `params`/`locals`,
+    the `resolveArgsPackAccessTarget` `std::function` (kept as an explicit
+    parameter, same rationale as seam (7)), and already-promoted members
+    called directly with explicit args rather than via their own local
+    forwarder lambdas (`resolveFieldBindingTarget`,
+    `resolveIndexedArgsPackElementType`,
+    `resolveDereferencedIndexedArgsPackElementType`, `resolveArrayTarget`,
+    `resolveVectorTarget`, `resolveMethodTargetKeyValueValueType`,
+    `inferExprReturnKind`). Collision check: anchored
+    `SemanticsValidator::resolveStringTarget(` definition grep clean.
+    After extraction, two more now-orphaned local forwarder lambdas in
+    `resolveMethodTarget`'s remaining body (`resolveFieldBindingTarget`,
+    `resolveIndexedArgsPackElementType`) were removed once the compiler
+    flagged them unused - both single-call-site forwarders whose only
+    caller had been the old `resolveStringTarget` lambda body.
+    Verified: `primec`-only build clean; the shape (c) repros unchanged;
+    the `/vector/push` bare-call regression repro still correctly
+    rejected; full `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the same already-documented
+    pre-existing "ir lowerer supports map method calls" flake, unrelated);
+    `PrimeStruct_compile_run_tests` 2678/2678 (0 failed, run from
+    `build-release/`). `resolveMethodTarget`'s own body is now ~1428
+    lines (was ~1496 after seam (7)). A future round should re-measure
+    for the next-largest remaining full-bodied lambda or straight-line
+    block.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
