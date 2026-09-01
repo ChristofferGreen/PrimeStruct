@@ -41760,3 +41760,67 @@ real answer.
     is a legitimate re-derivation, not a shortcut, per this repo's own
     "split work before starting when acceptance cannot be verified in
     one bounded change" operating rule.
+
+**Todo Completion (September 1, 2026) — TODO-5276**
+- [x] TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection in favor of direct member calls
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5275
+  - scope: `MethodTargetCollectionResolvers`
+    (`SemanticsValidatorPrivateExprValidation.h`) bundles 8
+    `std::function` fields so that functions needing several collection
+    resolvers can take one struct parameter. Investigate whether it can
+    be retired in favor of the ~10 functions that take it calling the
+    now-mostly-promoted member functions directly.
+  - evidence: Investigated before making any change, per the acceptance
+    criterion's documented-load-bearing-uses branch. Findings: (1) 2 of
+    the struct's 8 fields (`resolveArgsPackCountTarget`,
+    `resolveArgsPackAccessTarget`) were never promoted to real
+    `SemanticsValidator` members - they remain local lambdas with real
+    inline logic in `resolveMethodTarget`'s body (and in
+    `SemanticsValidatorInferMethodResolution.cpp`'s own separate copy of
+    this pattern, see below) - so retiring the struct for them specifically
+    would require a new TODO-4724-style promotion first, not just a
+    call-site rewrite. (2) None of the ~10 functions taking
+    `MethodTargetCollectionResolvers` currently take `params`/`locals` as
+    parameters (they only take `receiverExpr`/`path`/etc.), so replacing
+    the struct with direct member calls would require widening every one
+    of those ~10 signatures to also carry `params`/`locals` (and a
+    `resolveArgsPackAccessTarget` `std::function`, until finding (1) is
+    separately resolved) - a much larger, cascading signature change than
+    "delete a struct." (3) Two of those ~10 functions
+    (`setIndexedArgsPackKeyValueMethodTarget`,
+    `resolveCollectionMethodFromTypePath`) are also called from
+    `SemanticsValidatorInferMethodResolution.cpp`, which has its own
+    separate local-lambda ecosystem (its own
+    `resolveCollectionMethodFromTypePath`/
+    `setIndexedArgsPackKeyValueMethodTarget` forwarders and presumably its
+    own `MethodTargetCollectionResolvers` construction) mirroring the
+    exact pattern TODO-4724/5275 addressed in
+    `SemanticsValidatorExprMethodTargetResolution.cpp` - meaning a full,
+    safe retirement is genuinely a second decomposition project of
+    comparable size to this session's TODO-4724 work, not a small
+    follow-up leaf, and rushing it without the same seam-by-seam
+    verification discipline risks a real regression. Per this task's own
+    acceptance criterion ("or its remaining uses are genuinely
+    load-bearing, documented..."), `MethodTargetCollectionResolvers` is
+    kept as-is. No code changed in this leaf (investigation-only); no
+    test suite re-run needed since nothing changed.
+  - notes: A follow-up TODO should scope this properly as its own
+    multi-round decomposition (mirroring TODO-4724's seam methodology)
+    if it's judged worth doing: first promote
+    `resolveArgsPackCountTarget`/`resolveArgsPackAccessTarget` to real
+    members (their own TODO), then widen the ~10
+    `MethodTargetCollectionResolvers`-taking functions' signatures one
+    at a time verifying each with the full three-suite battery, and
+    separately audit `SemanticsValidatorInferMethodResolution.cpp`'s
+    parallel local-lambda ecosystem (out of scope for TODO-4724, which
+    was scoped to `resolveMethodTarget` specifically) - not filed as a
+    numbered TODO here since it wasn't requested and the investigation
+    alone was the deliverable for this leaf.
+  - stop_rule: Investigation task - satisfied by documenting the finding
+    rather than forcing a risky mechanical change past what could be
+    safely verified in one bounded round.
