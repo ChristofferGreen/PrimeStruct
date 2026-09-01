@@ -3263,6 +3263,47 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     lines (was ~1496 after seam (7)). A future round should re-measure
     for the next-largest remaining full-bodied lambda or straight-line
     block.
+  - progress_2026-08-31m: seam (9) - promoted the `resolveArgsPackElementMethodTarget`
+    local lambda (~60 lines) to a real private member. Unlike seams
+    (6)-(8), this one wrote to `resolveMethodTarget`'s own `resolvedOut`/
+    `isBuiltinOut` output parameters directly in several branches (not
+    just via a `setCollectionMethodTarget`-style helper), so those were
+    threaded through as `std::string &`/`bool &` reference parameters.
+    Two more locally-captured helpers it called
+    (`setCollectionMethodTarget`, `setPreferredKeyValueMethodTarget`)
+    were already themselves thin one-line forwarders to real members
+    (`resolveExplicitOrCanonicalCollectionMethodTarget` and
+    `this->setPreferredKeyValueMethodTarget`, confirmed by inspection
+    before promoting) - both kept as explicit `std::function` parameters
+    rather than promoted further, following the seam (7)/(8) rationale
+    for not-yet-promoted dependencies. `normalizedMethodName` was passed
+    as an explicit `const std::string &` parameter. Two more previously
+    thin dependencies, `extractWrappedPointeeType` and `resolveStructTypePath`,
+    were called via `this->extractWrappedPointeeType(...)` and
+    `this->resolveMethodTargetStructTypePath(...)` directly in the new
+    member body instead of through their local forwarder lambdas
+    (`resolveStructTypePath`'s forwarder was still needed elsewhere in
+    the remaining body and kept; `extractWrappedPointeeType`'s forwarder
+    became unused and was removed after the compiler flagged it).
+    Collision check: anchored `SemanticsValidator::resolveArgsPackElementMethodTarget(`
+    definition grep clean. Verified: `primec`-only build clean; the
+    shape (c) repros unchanged; the `/vector/push` bare-call regression
+    repro still correctly rejected; full `PrimeStruct_semantics_tests`
+    2740/2740 (0 failed); `PrimeStruct_backend_ir_tests` 1643/1644 (the
+    same already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (0 failed, run from `build-release/`). `resolveMethodTarget`'s own
+    body is now ~1371 lines (was ~1428 after seam (8)). The remaining
+    body is now dominated by straight-line dispatch code and a handful
+    of small (<30-line) local lambdas rather than large full-bodied
+    ones (the one known exception, `explicitRemovedCollectionMethodPathLocal`
+    at ~120 lines, is intentionally left local per the seam (4d)
+    postmortem - it was the site of that session's only real regression
+    and was deliberately renamed to avoid ever being re-promoted under
+    a colliding name). A future round should weigh whether continuing
+    with small (<30-line) lambda promotions is still worth the
+    per-round verification overhead versus returning to seam (5)-style
+    structural splitting of the remaining straight-line dispatch blocks.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai

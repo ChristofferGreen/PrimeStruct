@@ -1628,6 +1628,73 @@ bool SemanticsValidator::resolveStringTarget(
   return inferExprReturnKind(target, params, locals) == ReturnKind::String;
 }
 
+bool SemanticsValidator::resolveArgsPackElementMethodTarget(
+    const std::string &elementTypeText, const Expr &receiverExpr,
+    const std::string &normalizedMethodName,
+    const std::function<bool(const std::string &)> &setCollectionMethodTarget,
+    const std::function<bool(const Expr &, const std::string &)>
+        &setPreferredKeyValueMethodTarget,
+    std::string &resolvedOut, bool &isBuiltinOut) {
+  const std::string normalizedElemType = normalizeBindingTypeName(elementTypeText);
+  std::string normalizedElemBaseType = normalizedElemType;
+  if (!normalizedElemBaseType.empty() && normalizedElemBaseType.front() == '/') {
+    normalizedElemBaseType.erase(normalizedElemBaseType.begin());
+  }
+  std::string collectionElemType = normalizedElemType;
+  std::string wrappedPointeeType;
+  if (extractWrappedPointeeType(normalizedElemType, wrappedPointeeType)) {
+    collectionElemType = normalizeBindingTypeName(wrappedPointeeType);
+  }
+  if (collectionElemType == "string" || normalizedElemBaseType == "string") {
+    return setCollectionMethodTarget("/string/" + normalizedMethodName);
+  }
+  if (collectionElemType == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "status" || normalizedMethodName == "result")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = resolvedOut == "/file_error/why";
+    return !resolvedOut.empty();
+  }
+  std::string elemBase;
+  std::string elemArgText;
+  if (splitTemplateTypeName(collectionElemType, elemBase, elemArgText)) {
+    elemBase = normalizeBindingTypeName(elemBase);
+    if (elemBase == "vector" || elemBase == "array" ||
+        isInternalSoaCollectionTypeName(elemBase)) {
+      return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
+    }
+    if (elemBase == "Buffer" &&
+        (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
+         normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
+         normalizedMethodName == "load" || normalizedMethodName == "store")) {
+      return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
+    }
+    if (isKeyValueSurfaceTypeName(elemBase)) {
+      return setPreferredKeyValueMethodTarget(receiverExpr, normalizedMethodName);
+    }
+    if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
+      resolvedOut = preferredFileHelperTarget(normalizedMethodName,
+                                             currentValidationState_.context.definitionPath);
+      isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
+      return true;
+    }
+  }
+  if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
+    resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
+    return true;
+  }
+  std::string resolvedElemType =
+      resolveMethodTargetStructTypePath(collectionElemType, receiverExpr.namespacePrefix);
+  if (resolvedElemType.empty()) {
+    resolvedElemType = resolveTypePath(collectionElemType, receiverExpr.namespacePrefix);
+  }
+  if (!resolvedElemType.empty()) {
+    resolvedOut = resolvedElemType + "/" + normalizedMethodName;
+    return true;
+  }
+  return false;
+}
+
 bool SemanticsValidator::resolveArrayTarget(
     const Expr &target, std::string &elemType, const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -3219,9 +3286,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return preferredSoaHelperTargetForCollectionType(
         normalizedMethodName, internalSoaCollectionTypePath(true));
   };
-  auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {
-    return this->extractWrappedPointeeType(typeText, pointeeTypeOut);
-  };
   auto resolveCurrentDefinitionParamBinding =
       [&](const std::string &name, BindingInfo &bindingOut) -> bool {
     if (currentValidationState_.context.definitionPath.empty()) {
@@ -3463,63 +3527,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   auto resolveArgsPackElementMethodTarget = [&](const std::string &elementTypeText,
                                                 const Expr &receiverExpr) -> bool {
-    const std::string normalizedElemType = normalizeBindingTypeName(elementTypeText);
-    std::string normalizedElemBaseType = normalizedElemType;
-    if (!normalizedElemBaseType.empty() && normalizedElemBaseType.front() == '/') {
-      normalizedElemBaseType.erase(normalizedElemBaseType.begin());
-    }
-    std::string collectionElemType = normalizedElemType;
-    std::string wrappedPointeeType;
-    if (extractWrappedPointeeType(normalizedElemType, wrappedPointeeType)) {
-      collectionElemType = normalizeBindingTypeName(wrappedPointeeType);
-    }
-    if (collectionElemType == "string" || normalizedElemBaseType == "string") {
-      return setCollectionMethodTarget("/string/" + normalizedMethodName);
-    }
-    if (collectionElemType == "FileError" &&
-        (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
-         normalizedMethodName == "status" || normalizedMethodName == "result")) {
-      resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
-      isBuiltinOut = resolvedOut == "/file_error/why";
-      return !resolvedOut.empty();
-    }
-    std::string elemBase;
-    std::string elemArgText;
-    if (splitTemplateTypeName(collectionElemType, elemBase, elemArgText)) {
-      elemBase = normalizeBindingTypeName(elemBase);
-      if (elemBase == "vector" || elemBase == "array" ||
-          isInternalSoaCollectionTypeName(elemBase)) {
-        return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
-      }
-      if (elemBase == "Buffer" &&
-          (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
-           normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
-           normalizedMethodName == "load" || normalizedMethodName == "store")) {
-        return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
-      }
-      if (isKeyValueSurfaceTypeName(elemBase)) {
-        return setPreferredKeyValueMethodTarget(receiverExpr, normalizedMethodName);
-      }
-      if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
-        resolvedOut = preferredFileHelperTarget(normalizedMethodName,
-                                               currentValidationState_.context.definitionPath);
-        isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
-        return true;
-      }
-    }
-    if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
-      resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
-      return true;
-    }
-    std::string resolvedElemType = resolveStructTypePath(collectionElemType, receiverExpr.namespacePrefix);
-    if (resolvedElemType.empty()) {
-      resolvedElemType = resolveTypePath(collectionElemType, receiverExpr.namespacePrefix);
-    }
-    if (!resolvedElemType.empty()) {
-      resolvedOut = resolvedElemType + "/" + normalizedMethodName;
-      return true;
-    }
-    return false;
+    return this->resolveArgsPackElementMethodTarget(
+        elementTypeText, receiverExpr, normalizedMethodName, setCollectionMethodTarget,
+        setPreferredKeyValueMethodTarget, resolvedOut, isBuiltinOut);
   };
   auto setIndexedArgsPackKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
     return this->setIndexedArgsPackKeyValueMethodTarget(

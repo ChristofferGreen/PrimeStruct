@@ -665,6 +665,14 @@
       const Expr &target, const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  // TODO-4724 seam (9): straight-line dispatch block promoted verbatim.
+  bool resolveArgsPackElementMethodTarget(
+      const std::string &elementTypeText, const Expr &receiverExpr,
+      const std::string &normalizedMethodName,
+      const std::function<bool(const std::string &)> &setCollectionMethodTarget,
+      const std::function<bool(const Expr &, const std::string &)>
+          &setPreferredKeyValueMethodTarget,
+      std::string &resolvedOut, bool &isBuiltinOut);
   bool resolveCollectionVectorValueTarget(
       const Expr &target, std::string &elemTypeOut,
       const std::vector<ParameterInfo> &params,
