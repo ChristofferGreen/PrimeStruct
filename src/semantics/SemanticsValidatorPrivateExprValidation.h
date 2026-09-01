@@ -669,6 +669,25 @@
       const std::string &explicitRemovedMethodPath,
       const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
       bool &isBuiltinOut);
+  // TODO-4724 seam (4e): the last big batch - resolveCollectionMethodFromTypePath
+  // (129 lines, the single biggest remaining local lambda) plus its own
+  // small dependencies not yet promoted. Names checked with the updated
+  // methodology from seam (4d)'s regression: grepped for
+  // "SemanticsValidator::<name>(" as an anchored definition pattern
+  // across the whole src/semantics/ tree, not just call sites - all
+  // clean, no collisions found.
+  bool isValueSurfaceAccessMethodName(std::string_view helperName) const;
+  bool isCanonicalKeyValueAccessMethodName(std::string_view helperName) const;
+  std::string preferredBufferMethodTarget(const std::string &helperName) const;
+  bool resolveCollectionMethodFromTypePath(
+      const std::string &collectionTypePath, const std::string &normalizedMethodName,
+      const Expr &receiver, const std::string &explicitVectorHelperPath,
+      const std::string &explicitKeyValueHelperPath,
+      const std::string &explicitRemovedMethodPath,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+      bool &isBuiltinOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

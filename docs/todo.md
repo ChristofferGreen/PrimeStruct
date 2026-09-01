@@ -2995,6 +2995,58 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     already-documented pre-existing "ir lowerer supports map method
     calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
     (0 failed, run from `build-release/`).
+  - progress_2026-08-31g: seam (4e) - `resolveCollectionMethodFromTypePath`
+    (129 lines, the single largest remaining local lambda after seam
+    (4d)), plus its own small not-yet-promoted dependencies
+    (`isValueSurfaceAccessMethodName`, `isCanonicalKeyValueAccessMethodName`,
+    `preferredBufferMethodTarget`). Unlike seam (4d)'s
+    `resolveExplicitDirectCallReturnMethodTarget`, this one has 2 call
+    sites (not 1), so - matching the established pattern for multi-call-
+    site extractions - the local lambda was removed entirely and both
+    call sites updated to call the new member directly with the full
+    parameter list (`collectionTypePath`, `normalizedMethodName`,
+    `receiver`, `explicitVectorHelperPath`, `explicitKeyValueHelperPath`,
+    `explicitRemovedMethodPath`, `params`, `locals`, the 8-field
+    `MethodTargetCollectionResolvers`, `resolvedOut`, `isBuiltinOut`),
+    rather than keeping a thin forwarder lambda around only 2 callers.
+    Internally the new member reconstructs its own
+    `setCollectionMethodTarget`/`setPreferredKeyValueMethodTarget`-
+    equivalent local lambdas (calling `resolveExplicitOrCanonicalCollectionMethodTarget`/
+    `setPreferredKeyValueMethodTarget` directly) rather than threading
+    those hub calls through as parameters - same pattern already used
+    inside `tryRedirectConcreteExperimentalSoaMethodTarget` (seam (4d)).
+    Applied seam (4d)'s hard-won methodology update throughout: every
+    one of the 4 new names (`isValueSurfaceAccessMethodName`,
+    `isCanonicalKeyValueAccessMethodName`, `preferredBufferMethodTarget`,
+    `resolveCollectionMethodFromTypePath`) was checked via an anchored
+    `SemanticsValidator::<name>(` definition grep across the whole
+    `src/semantics/` tree *before* writing any code, not just a call-
+    site grep - all 4 came back clean, no collisions. Verified:
+    `primec`-only build clean; the shape (c) repros unchanged; **also
+    re-ran the exact `/vector/push` bare-call repro that caught seam
+    (4d)'s regression**, as an explicit regression-class check given
+    this round touched the same "removed vector-compat helper"
+    diagnostic family (still correctly rejects with "unknown call
+    target: /vector/push", unchanged); full `PrimeStruct_semantics_tests`
+    2740/2740 (0 failed); `PrimeStruct_backend_ir_tests` 1643/1644 (the
+    same already-documented pre-existing "ir lowerer supports map
+    method calls" flake, unrelated); `PrimeStruct_compile_run_tests`
+    2678/2678 (0 failed, run from `build-release/`).
+    `resolveMethodTarget`'s own body is now ~2350 lines (was ~2800+ at
+    this task's creation, ~2846 at the start of this session's
+    continue-until-done phase) - real progress toward the acceptance
+    target ("under a few hundred lines") but still far from it; 57
+    local lambdas remain, the large majority now already thin
+    forwarders from prior seams. A future round should re-measure
+    (same per-lambda-line-count method used to find this round's and
+    seam (4d)'s targets) to find the next-largest still-full-bodied
+    candidates, and/or reconsider whether "under a few hundred lines"
+    is achievable without a more structural change (e.g. splitting the
+    dispatch-on-typeName body itself into named sub-dispatchers, not
+    just extracting its constituent lambdas one at a time) given how
+    much of the remaining bulk is straight-line dispatch code that was
+    never wrapped in a lambda to begin with (per seam (4)'s and (4b)'s
+    own investigation notes on the still-untouched tail).
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai

@@ -1611,6 +1611,199 @@ bool SemanticsValidator::resolveExplicitDirectCallReturnMethodTarget(
   return false;
 }
 
+bool SemanticsValidator::isValueSurfaceAccessMethodName(std::string_view helperName) const {
+  return helperName == "at" || helperName == "at_unsafe";
+}
+
+bool SemanticsValidator::isCanonicalKeyValueAccessMethodName(std::string_view helperName) const {
+  return isValueSurfaceAccessMethodName(helperName) ||
+         helperName == "size" ||
+         helperName == "at_ref" || helperName == "at_unsafe_ref";
+}
+
+std::string SemanticsValidator::preferredBufferMethodTarget(const std::string &helperName) const {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::GfxBufferHelpers);
+  if (metadata == nullptr) {
+    return std::string{};
+  }
+  const std::string canonical = stdlibSurfaceCanonicalHelperPath(
+      StdlibSurfaceId::GfxBufferHelpers,
+      helperName);
+  const std::string canonicalFallback =
+      canonical.empty() ? std::string(metadata->canonicalPath) + "/" + helperName
+                        : canonical;
+  if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+    return canonical;
+  }
+  if (!canonical.empty()) {
+    for (const std::string_view spelling : metadata->compatibilitySpellings) {
+      const std::string compatibility = std::string(spelling) + "/" + helperName;
+      if (stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::GfxBufferHelpers,
+                                           compatibility) != canonical) {
+        continue;
+      }
+      if (hasDeclaredDefinitionPath(compatibility) || hasImportedDefinitionPath(compatibility)) {
+        return compatibility;
+      }
+    }
+  }
+  return canonicalFallback;
+}
+
+bool SemanticsValidator::resolveCollectionMethodFromTypePath(
+    const std::string &collectionTypePath, const std::string &normalizedMethodName,
+    const Expr &receiver, const std::string &explicitVectorHelperPath,
+    const std::string &explicitKeyValueHelperPath, const std::string &explicitRemovedMethodPath,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+    bool &isBuiltinOut) {
+  auto setCollectionMethodTargetLocal = [&](const std::string &path) -> bool {
+    return resolveExplicitOrCanonicalCollectionMethodTarget(
+        path, explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
+        isBuiltinOut);
+  };
+  auto setPreferredKeyValueMethodTargetLocal = [&](const Expr &receiverExpr,
+                                                    const std::string &helperName) -> bool {
+    return setPreferredKeyValueMethodTarget(receiverExpr, helperName, explicitKeyValueHelperPath,
+                                            receiver, explicitRemovedMethodPath,
+                                            normalizedMethodName, params, locals, resolvers,
+                                            resolvedOut, isBuiltinOut);
+  };
+  if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
+    if (normalizedMethodName == "count" && collectionTypePath == "/array") {
+      return setCollectionMethodTargetLocal("/array/count");
+    }
+    if (collectionTypePath == "/vector" &&
+        usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
+      return setCollectionMethodTargetLocal(
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
+    }
+    if (normalizedMethodName == "count" && collectionTypePath == "/vector") {
+      return setCollectionMethodTargetLocal(
+          canonicalVectorCompatibilityHelperPathOrFallback("count"));
+    }
+    if (isInternalSoaCollectionTypePath(collectionTypePath)) {
+      return setCollectionMethodTargetLocal(
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                    internalSoaCollectionTypePath(true)));
+    }
+    if (collectionTypePath == "/soa") {
+      return setCollectionMethodTargetLocal(
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa"));
+    }
+    if (normalizedMethodName == "count" && collectionTypePath == "/string") {
+      return setCollectionMethodTargetLocal("/string/count");
+    }
+    if (collectionTypePath == "/map") {
+      if (normalizedMethodName == "count") {
+        if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
+                receiver, explicitVectorHelperPath, normalizedMethodName, resolvers, resolvedOut,
+                isBuiltinOut);
+            explicitTarget.has_value()) {
+          return *explicitTarget;
+        }
+      }
+      return setPreferredKeyValueMethodTargetLocal(receiver, normalizedMethodName);
+    }
+    if (normalizedMethodName == "count" && collectionTypePath == "/Buffer") {
+      return setCollectionMethodTargetLocal(preferredBufferMethodTarget("count"));
+    }
+  }
+  if (normalizedMethodName == "capacity" && collectionTypePath == "/array" &&
+      (hasDeclaredDefinitionPath("/array/capacity") ||
+       hasImportedDefinitionPath("/array/capacity"))) {
+    return setCollectionMethodTargetLocal("/array/capacity");
+  }
+  if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
+    return setCollectionMethodTargetLocal(
+        canonicalVectorCompatibilityHelperPathOrFallback("capacity"));
+  }
+  if ((normalizedMethodName == "empty" || normalizedMethodName == "is_valid" ||
+       normalizedMethodName == "readback" || normalizedMethodName == "load" ||
+       normalizedMethodName == "store") &&
+      collectionTypePath == "/Buffer") {
+    return setCollectionMethodTargetLocal(preferredBufferMethodTarget(normalizedMethodName));
+  }
+  if (normalizedMethodName == "contains" && collectionTypePath == "/map") {
+    return setPreferredKeyValueMethodTargetLocal(receiver, "contains");
+  }
+  if (normalizedMethodName == "tryAt" && collectionTypePath == "/map") {
+    return setPreferredKeyValueMethodTargetLocal(receiver, "tryAt");
+  }
+  if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
+    return setPreferredKeyValueMethodTargetLocal(receiver, "insert");
+  }
+  if (normalizedMethodName == "size" && collectionTypePath == "/map") {
+    return setPreferredKeyValueMethodTargetLocal(receiver, "size");
+  }
+  if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
+    if (collectionTypePath == "/array") {
+      return setCollectionMethodTargetLocal("/array/" + normalizedMethodName);
+    }
+    if (collectionTypePath == "/vector") {
+      return setCollectionMethodTargetLocal(
+          canonicalVectorCompatibilityHelperPathOrFallback(normalizedMethodName));
+    }
+    if (collectionTypePath == "/string") {
+      return setCollectionMethodTargetLocal("/string/" + normalizedMethodName);
+    }
+  }
+  if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
+      collectionTypePath == "/map") {
+    return setPreferredKeyValueMethodTargetLocal(receiver, normalizedMethodName);
+  }
+  if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
+      (isInternalSoaCollectionTypePath(collectionTypePath) ||
+       (collectionTypePath == "/vector" &&
+        usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")))) {
+    return setCollectionMethodTargetLocal(
+        preferredSoaHelperTargetForCollectionType(
+            normalizedMethodName,
+            isInternalSoaCollectionTypePath(collectionTypePath)
+                ? internalSoaCollectionTypePath(true)
+                : "/vector"));
+  }
+  if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
+      (isInternalSoaCollectionTypePath(collectionTypePath) ||
+       (collectionTypePath == "/vector" &&
+        usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")))) {
+    return setCollectionMethodTargetLocal(
+        preferredSoaHelperTargetForCollectionType(
+            normalizedMethodName,
+            isInternalSoaCollectionTypePath(collectionTypePath)
+                ? internalSoaCollectionTypePath(true)
+                : "/vector"));
+  }
+  if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
+      (isInternalSoaCollectionTypePath(collectionTypePath) ||
+       (collectionTypePath == "/vector" &&
+        usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                     "/vector")))) {
+    return setCollectionMethodTargetLocal(
+        preferredSoaHelperTargetForCollectionType(
+            normalizedMethodName,
+            isInternalSoaCollectionTypePath(collectionTypePath)
+                ? internalSoaCollectionTypePath(true)
+                : "/vector"));
+  }
+  if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
+    return setCollectionMethodTargetLocal("/to_soa");
+  }
+  if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
+      (isInternalSoaCollectionTypePath(collectionTypePath) ||
+       collectionTypePath == "/vector")) {
+    return setCollectionMethodTargetLocal(
+        preferredSoaHelperTargetForCollectionType(
+            normalizedMethodName,
+            isInternalSoaCollectionTypePath(collectionTypePath)
+                ? internalSoaCollectionTypePath(true)
+                : "/vector"));
+  }
+  return false;
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -2095,13 +2288,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
 
-  auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
-    return helperName == "at" || helperName == "at_unsafe";
+  auto isValueSurfaceAccessMethodName = [&](std::string_view helperName) {
+    return this->isValueSurfaceAccessMethodName(helperName);
   };
   auto isCanonicalKeyValueAccessMethodName = [&](std::string_view helperName) {
-    return isValueSurfaceAccessMethodName(helperName) ||
-           helperName == "size" ||
-           helperName == "at_ref" || helperName == "at_unsafe_ref";
+    return this->isCanonicalKeyValueAccessMethodName(helperName);
   };
   std::function<bool(const Expr &, std::string &)> resolveBorrowedVectorReceiver =
       [&](const Expr &candidate, std::string &elemTypeOut) {
@@ -2750,33 +2941,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         directElemTypeOut);
   };
   auto preferredBufferMethodTarget = [&](const std::string &helperName) {
-    const StdlibSurfaceMetadata *metadata =
-        findStdlibSurfaceMetadata(StdlibSurfaceId::GfxBufferHelpers);
-    if (metadata == nullptr) {
-      return std::string{};
-    }
-    const std::string canonical = stdlibSurfaceCanonicalHelperPath(
-        StdlibSurfaceId::GfxBufferHelpers,
-        helperName);
-    const std::string canonicalFallback =
-        canonical.empty() ? std::string(metadata->canonicalPath) + "/" + helperName
-                          : canonical;
-    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
-      return canonical;
-    }
-    if (!canonical.empty()) {
-      for (const std::string_view spelling : metadata->compatibilitySpellings) {
-        const std::string compatibility = std::string(spelling) + "/" + helperName;
-        if (stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::GfxBufferHelpers,
-                                             compatibility) != canonical) {
-          continue;
-        }
-        if (hasDeclaredDefinitionPath(compatibility) || hasImportedDefinitionPath(compatibility)) {
-          return compatibility;
-        }
-      }
-    }
-    return canonicalFallback;
+    return this->preferredBufferMethodTarget(helperName);
   };
   auto preferExplicitCanonicalVectorHelperForReceiver = [&](const Expr &receiverExpr) -> bool {
     return this->preferExplicitCanonicalVectorHelperForReceiver(
@@ -2852,135 +3017,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         "unknown method: /" + explicitRemovedVectorReceiverFamily + "/" +
         helperName);
   }
-  auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
-    if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
-      if (normalizedMethodName == "count" && collectionTypePath == "/array") {
-        return setCollectionMethodTarget("/array/count");
-      }
-      if (collectionTypePath == "/vector" &&
-          usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
-        return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
-      }
-      if (normalizedMethodName == "count" && collectionTypePath == "/vector") {
-        return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
-      }
-      if (isInternalSoaCollectionTypePath(collectionTypePath)) {
-        return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType(normalizedMethodName,
-                                                      internalSoaCollectionTypePath(true)));
-      }
-      if (collectionTypePath == "/soa") {
-        return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa"));
-      }
-      if (normalizedMethodName == "count" && collectionTypePath == "/string") {
-        return setCollectionMethodTarget("/string/count");
-      }
-      if (collectionTypePath == "/map") {
-        if (normalizedMethodName == "count") {
-          if (auto explicitTarget =
-                  tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
-              explicitTarget.has_value()) {
-            return *explicitTarget;
-          }
-        }
-        return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
-      }
-      if (normalizedMethodName == "count" && collectionTypePath == "/Buffer") {
-        return setCollectionMethodTarget(preferredBufferMethodTarget("count"));
-      }
-    }
-    if (normalizedMethodName == "capacity" && collectionTypePath == "/array" &&
-        (hasDeclaredDefinitionPath("/array/capacity") ||
-         hasImportedDefinitionPath("/array/capacity"))) {
-      return setCollectionMethodTarget("/array/capacity");
-    }
-    if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
-      return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
-    }
-    if ((normalizedMethodName == "empty" || normalizedMethodName == "is_valid" ||
-         normalizedMethodName == "readback" || normalizedMethodName == "load" ||
-         normalizedMethodName == "store") &&
-        collectionTypePath == "/Buffer") {
-      return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
-    }
-    if (normalizedMethodName == "contains" && collectionTypePath == "/map") {
-      return setPreferredKeyValueMethodTarget(receiver, "contains");
-    }
-    if (normalizedMethodName == "tryAt" && collectionTypePath == "/map") {
-      return setPreferredKeyValueMethodTarget(receiver, "tryAt");
-    }
-    if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
-      return setPreferredKeyValueMethodTarget(receiver, "insert");
-    }
-    if (normalizedMethodName == "size" && collectionTypePath == "/map") {
-      return setPreferredKeyValueMethodTarget(receiver, "size");
-    }
-    if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
-      if (collectionTypePath == "/array") {
-        return setCollectionMethodTarget("/array/" + normalizedMethodName);
-      }
-      if (collectionTypePath == "/vector") {
-        return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
-      }
-      if (collectionTypePath == "/string") {
-        return setCollectionMethodTarget("/string/" + normalizedMethodName);
-      }
-    }
-    if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
-        collectionTypePath == "/map") {
-      return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
-    }
-    if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
-        (isInternalSoaCollectionTypePath(collectionTypePath) ||
-         (collectionTypePath == "/vector" &&
-          usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")))) {
-      return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType(
-              normalizedMethodName,
-              isInternalSoaCollectionTypePath(collectionTypePath)
-                  ? internalSoaCollectionTypePath(true)
-                  : "/vector"));
-    }
-    if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
-        (isInternalSoaCollectionTypePath(collectionTypePath) ||
-         (collectionTypePath == "/vector" &&
-          usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")))) {
-      return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType(
-              normalizedMethodName,
-              isInternalSoaCollectionTypePath(collectionTypePath)
-                  ? internalSoaCollectionTypePath(true)
-                  : "/vector"));
-    }
-    if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
-        (isInternalSoaCollectionTypePath(collectionTypePath) ||
-         (collectionTypePath == "/vector" &&
-          usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName,
-                                                       "/vector")))) {
-      return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType(
-              normalizedMethodName,
-              isInternalSoaCollectionTypePath(collectionTypePath)
-                  ? internalSoaCollectionTypePath(true)
-                  : "/vector"));
-    }
-    if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
-      return setCollectionMethodTarget("/to_soa");
-    }
-    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
-        (isInternalSoaCollectionTypePath(collectionTypePath) ||
-         collectionTypePath == "/vector")) {
-      return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType(
-              normalizedMethodName,
-              isInternalSoaCollectionTypePath(collectionTypePath)
-                  ? internalSoaCollectionTypePath(true)
-                  : "/vector"));
-    }
-    return false;
-  };
   auto resolveArgsPackElementMethodTarget = [&](const std::string &elementTypeText,
                                                 const Expr &receiverExpr) -> bool {
     const std::string normalizedElemType = normalizeBindingTypeName(elementTypeText);
@@ -3764,7 +3800,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
       }
       if (extractExperimentalSoaVectorElementType(receiverBinding, experimentalElemType) &&
-          resolveCollectionMethodFromTypePath(internalSoaCollectionTypePath(true))) {
+          resolveCollectionMethodFromTypePath(
+              internalSoaCollectionTypePath(true), normalizedMethodName, receiver,
+              explicitVectorHelperPath, explicitKeyValueHelperPath, explicitRemovedMethodPath,
+              params, locals,
+              MethodTargetCollectionResolvers{
+                  resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+                  resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+                  resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+              resolvedOut, isBuiltinOut)) {
         return true;
       }
       resolvedOut = resolvedType + "/" + normalizedMethodName;
@@ -3800,7 +3844,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string receiverCollectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals,
                                       receiverCollectionTypePath)) {
-      if (resolveCollectionMethodFromTypePath(receiverCollectionTypePath)) {
+      if (resolveCollectionMethodFromTypePath(
+              receiverCollectionTypePath, normalizedMethodName, receiver,
+              explicitVectorHelperPath, explicitKeyValueHelperPath, explicitRemovedMethodPath,
+              params, locals,
+              MethodTargetCollectionResolvers{
+                  resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+                  resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+                  resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+              resolvedOut, isBuiltinOut)) {
         return true;
       }
     }
