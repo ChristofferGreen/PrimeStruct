@@ -3047,6 +3047,42 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     much of the remaining bulk is straight-line dispatch code that was
     never wrapped in a lambda to begin with (per seam (4)'s and (4b)'s
     own investigation notes on the still-untouched tail).
+  - progress_2026-08-31h: seam (4f) - the next-largest batch after
+    re-measuring: `getDirectKeyValueHelperCompatibilityPath` (58 lines,
+    1 call site), `resolveCollectionVectorMetadataMethodTarget` (40
+    lines, 1 call site - its own two small single-use dependencies,
+    `isCollectionVectorMetadataMethodName` and
+    `concreteExperimentalVectorReceiverPath`/`receiverBindingTypeText`,
+    were kept nested inside the new member rather than each becoming
+    its own member, since they're used nowhere else), `explicitVectorMethodPath`
+    and `explicitKeyValueMethodPath` (22/25 lines, 1 call site each -
+    these compute `explicitVectorHelperPath`/`explicitKeyValueHelperPath`
+    right at the top of `resolveMethodTarget`, used pervasively
+    throughout the rest of the function but only *computed* once), and
+    `setIndexedArgsPackKeyValueMethodTarget` (34 lines, 5 call sites -
+    kept as a forwarder). All 5 single-call-site lambdas had their local
+    definitions removed entirely and their call sites updated to call
+    the new member directly, matching the established pattern from seam
+    (4e). Continued the seam (4d)/(4e) collision-avoidance discipline:
+    every one of the 5 new names checked via an anchored
+    `SemanticsValidator::<name>(` definition grep first - all clean.
+    Verified: `primec`-only build clean on the first attempt; the shape
+    (c) repros unchanged; the `/vector/push` bare-call regression repro
+    (from seam (4d)) re-checked again and still correctly rejected;
+    full `PrimeStruct_semantics_tests` 2740/2740 (0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (the same already-documented
+    pre-existing "ir lowerer supports map method calls" flake,
+    unrelated); `PrimeStruct_compile_run_tests` 2678/2678 (0 failed, run
+    from `build-release/`). `resolveMethodTarget`'s own body is now
+    ~2140 lines (was ~2846 at the start of this session's continue-
+    until-done phase, ~2350 after seam (4e)) - steady, real progress,
+    each round finding fewer/smaller remaining candidates as the
+    low-hanging extractions are used up. A future round should
+    re-measure again for the next batch, and seriously weigh this
+    task's own implementation_notes suggestion above (structural
+    dispatch-splitting, not just further lambda-by-lambda extraction)
+    once the remaining full-bodied lambdas are mostly gone and what's
+    left is dominated by inline straight-line dispatch code.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai

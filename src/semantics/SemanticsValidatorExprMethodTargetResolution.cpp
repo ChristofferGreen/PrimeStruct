@@ -1804,6 +1804,260 @@ bool SemanticsValidator::resolveCollectionMethodFromTypePath(
   return false;
 }
 
+std::string SemanticsValidator::getDirectKeyValueHelperCompatibilityPath(
+    const Expr &candidate, const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+    return "";
+  }
+  std::string helperName;
+  helperName = rootAliasKeyValueHelperNameForMethodTargets(
+      candidate.name, candidate.namespacePrefix);
+  if (helperName.empty() || !isRemovedKeyValueCompatibilityHelper(helperName)) {
+    return "";
+  }
+  const std::string removedPath =
+      rootedKeyValueHelperAliasPathForMethodTargets(helperName);
+  if (removedPath.empty()) {
+    return "";
+  }
+  if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {
+    return "";
+  }
+  if (isCanonicalKeyValueAccessMethodName(helperName)) {
+    const std::string canonicalPath = canonicalKeyValueHelperPathLocal(helperName);
+    auto defIt = defMap_.find(canonicalPath);
+    if (defIt != defMap_.end() && defIt->second != nullptr) {
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" ||
+            transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string returnType =
+            normalizeBindingTypeName(transform.templateArgs.front());
+        if (!returnType.empty() && returnType.front() == '/') {
+          returnType.erase(returnType.begin());
+        }
+        if (!returnType.empty() && !isRootBuiltinName(returnType) &&
+            returnType != "string" && returnType != "map" &&
+            returnType != "vector" && returnType != "array") {
+          return "";
+        }
+      }
+    }
+  }
+  if (isCanonicalKeyValueAccessMethodName(helperName)) {
+    return removedPath;
+  }
+  size_t receiverIndex = 0;
+  if (hasNamedArguments(candidate.argNames)) {
+    for (size_t i = 0; i < candidate.args.size(); ++i) {
+      if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+          *candidate.argNames[i] == "values") {
+        receiverIndex = i;
+        break;
+      }
+    }
+  }
+  return receiverIndex < candidate.args.size() &&
+             resolveKeyValueTarget(candidate.args[receiverIndex], params, locals,
+                                   resolveArgsPackAccessTarget)
+             ? removedPath
+             : "";
+}
+
+bool SemanticsValidator::resolveCollectionVectorMetadataMethodTarget(
+    const std::string &normalizedMethodName, const Expr &receiver,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals, std::string &resolvedOut,
+    bool &isBuiltinOut) {
+  auto isCollectionVectorMetadataMethodName = [](std::string_view name) {
+    return name == "field_count" || name == "field_capacity" ||
+           name == "set_field_count" || name == "set_field_capacity";
+  };
+  if (!isCollectionVectorMetadataMethodName(normalizedMethodName)) {
+    return false;
+  }
+  auto receiverBindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto concreteExperimentalVectorReceiverPath =
+      [&](const BindingInfo &binding) -> std::string {
+    std::string typeText =
+        normalizeBindingTypeName(receiverBindingTypeText(binding));
+    while (true) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+        break;
+      }
+      base = normalizeBindingTypeName(base);
+      if (base != "Reference" && base != "Pointer") {
+        break;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return {};
+      }
+      typeText = normalizeBindingTypeName(args.front());
+    }
+    if (!typeText.empty() && typeText.front() != '/') {
+      typeText.insert(typeText.begin(), '/');
+    }
+    if (isLegacyExperimentalVectorCompatibilityTypePath(typeText)) {
+      return typeText;
+    }
+    std::string elemType;
+    if (extractCollectionVectorElementType(binding, elemType)) {
+      const std::string specializedVectorPath =
+          specializedExperimentalVectorHelperTarget("Vector", elemType);
+      if (isLegacyExperimentalVectorCompatibilityTypePath(
+              specializedVectorPath)) {
+        return specializedVectorPath;
+      }
+    }
+    return {};
+  };
+  BindingInfo receiverBinding;
+  if (receiver.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+      receiverBinding = *paramBinding;
+    } else if (auto localIt = locals.find(receiver.name); localIt != locals.end()) {
+      receiverBinding = localIt->second;
+    }
+  }
+  if (receiverBinding.typeName.empty()) {
+    std::string receiverTypeText;
+    if (inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
+      std::string base;
+      std::string argText;
+      const std::string normalizedReceiverType =
+          normalizeBindingTypeName(receiverTypeText);
+      if (splitTemplateTypeName(normalizedReceiverType, base, argText)) {
+        receiverBinding.typeName = normalizeBindingTypeName(base);
+        receiverBinding.typeTemplateArg = argText;
+      } else {
+        receiverBinding.typeName = normalizedReceiverType;
+      }
+    }
+  }
+  const std::string receiverPath =
+      concreteExperimentalVectorReceiverPath(receiverBinding);
+  if (receiverPath.empty()) {
+    return false;
+  }
+  const std::string methodPath = receiverPath + "/" + normalizedMethodName;
+  if (!hasDefinitionFamilyPath(methodPath)) {
+    return false;
+  }
+  resolvedOut = methodPath;
+  isBuiltinOut = false;
+  return true;
+}
+
+std::string SemanticsValidator::explicitVectorMethodPath(
+    const std::string &rawMethodName, const std::string &callNamespacePrefix) const {
+  std::string candidate = rawMethodName;
+  if (!candidate.empty() && candidate.front() == '/') {
+    candidate.erase(candidate.begin());
+  }
+  std::string normalizedPrefix = callNamespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+  if (normalizedPrefix == "vector" ||
+      isCanonicalVectorCompatibilityNamespace(normalizedPrefix) ||
+      isCompatibilitySoaSurfaceNamespace(normalizedPrefix) ||
+      isPublicSoaSurfaceNamespace(normalizedPrefix)) {
+    return "/" + normalizedPrefix + "/" + candidate;
+  }
+  if (isUnrootedVectorHelperPath(candidate) ||
+      isUnrootedCanonicalVectorCompatibilityPath(candidate) ||
+      splitSoaSurfaceHelperPath(candidate, nullptr, nullptr)) {
+    return "/" + candidate;
+  }
+  return "";
+}
+
+std::string SemanticsValidator::explicitKeyValueMethodPath(
+    const std::string &rawMethodName, const std::string &callNamespacePrefix) const {
+  std::string candidate = rawMethodName;
+  if (!candidate.empty() && candidate.front() == '/') {
+    candidate.erase(candidate.begin());
+  }
+  std::string normalizedPrefix = callNamespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+  if (isKeyValueHelperImportAliasNamespaceForMethodTargets(normalizedPrefix)) {
+    return rootedKeyValueHelperAliasPathForMethodTargets(candidate);
+  }
+  if (normalizedPrefix == canonicalKeyValueHelperNamespaceLocal()) {
+    return canonicalKeyValueHelperPathLocal(candidate);
+  }
+  if (!metadataBackedKeyValueHelperRootAliasMethodName(candidate).empty()) {
+    return "/" + candidate;
+  }
+  std::string canonicalKeyValueHelperName;
+  if (resolveCanonicalKeyValueHelperNameFromSpelling(candidate,
+                                                canonicalKeyValueHelperName)) {
+    return canonicalKeyValueHelperPathLocal(canonicalKeyValueHelperName);
+  }
+  return "";
+}
+
+bool SemanticsValidator::setIndexedArgsPackKeyValueMethodTarget(
+    const Expr &receiverExpr, const std::string &helperName,
+    const std::string &explicitKeyValueHelperPath, const Expr &receiver,
+    const std::string &explicitRemovedMethodPath, const std::string &normalizedMethodName,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+    bool &isBuiltinOut) {
+  if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
+    return false;
+  }
+  std::string indexedElemType;
+  std::string keyType;
+  std::string valueType;
+  auto isKeyValueElementType = [&](const std::string &typeText) {
+    const std::string unwrappedType =
+        normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
+    const std::string keyValueTypeText =
+        unwrappedType.empty() ? typeText : unwrappedType;
+    return extractKeyValueCollectionTypesFromTypeText(keyValueTypeText, keyType, valueType);
+  };
+  const bool resolvedIndexedKeyValueType =
+      ((resolveIndexedArgsPackElementType(receiverExpr, indexedElemType,
+                                          resolvers.resolveArgsPackAccessTarget) ||
+        resolveWrappedIndexedArgsPackElementType(receiverExpr, indexedElemType,
+                                                 resolvers.resolveArgsPackAccessTarget) ||
+        resolveDereferencedIndexedArgsPackElementType(receiverExpr, indexedElemType,
+                                                       resolvers.resolveArgsPackAccessTarget)) &&
+       isKeyValueElementType(indexedElemType));
+  const bool resolvedReceiverPackType = [&]() {
+    std::string accessName;
+    if (!getBuiltinArrayAccessName(receiverExpr, accessName)) {
+      return false;
+    }
+    const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(receiverExpr);
+    return accessReceiver != nullptr &&
+           resolvers.resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) &&
+           isKeyValueElementType(indexedElemType);
+  }();
+  if (!resolvedIndexedKeyValueType && !resolvedReceiverPackType) {
+    return false;
+  }
+  return setPreferredKeyValueMethodTarget(receiverExpr, helperName, explicitKeyValueHelperPath,
+                                          receiver, explicitRemovedMethodPath,
+                                          normalizedMethodName, params, locals, resolvers,
+                                          resolvedOut, isBuiltinOut);
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -1919,55 +2173,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
 
   const std::string explicitRemovedMethodPath =
       explicitRemovedCollectionMethodPathLocal(methodName);
-  auto explicitVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
-    std::string candidate = rawMethodName;
-    if (!candidate.empty() && candidate.front() == '/') {
-      candidate.erase(candidate.begin());
-    }
-    std::string normalizedPrefix = callNamespacePrefix;
-    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-      normalizedPrefix.erase(normalizedPrefix.begin());
-    }
-    if (normalizedPrefix == "vector" ||
-        isCanonicalVectorCompatibilityNamespace(normalizedPrefix) ||
-        isCompatibilitySoaSurfaceNamespace(normalizedPrefix) ||
-        isPublicSoaSurfaceNamespace(normalizedPrefix)) {
-      return "/" + normalizedPrefix + "/" + candidate;
-    }
-    if (startsWithRootVectorMethodPrefix(candidate) ||
-        isUnrootedCanonicalVectorCompatibilityPath(candidate) ||
-        splitSoaSurfaceHelperPath(candidate, nullptr, nullptr)) {
-      return "/" + candidate;
-    }
-    return "";
-  };
-  const std::string explicitVectorHelperPath = explicitVectorMethodPath(methodName);
-  auto explicitKeyValueMethodPath = [&](const std::string &rawMethodName) -> std::string {
-    std::string candidate = rawMethodName;
-    if (!candidate.empty() && candidate.front() == '/') {
-      candidate.erase(candidate.begin());
-    }
-    std::string normalizedPrefix = callNamespacePrefix;
-    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-      normalizedPrefix.erase(normalizedPrefix.begin());
-    }
-    if (isKeyValueHelperImportAliasNamespaceForMethodTargets(normalizedPrefix)) {
-      return rootedKeyValueHelperAliasPathForMethodTargets(candidate);
-    }
-    if (normalizedPrefix == canonicalKeyValueHelperNamespaceLocal()) {
-      return canonicalKeyValueHelperPathLocal(candidate);
-    }
-    if (!metadataBackedKeyValueHelperRootAliasMethodName(candidate).empty()) {
-      return "/" + candidate;
-    }
-    std::string canonicalKeyValueHelperName;
-    if (resolveCanonicalKeyValueHelperNameFromSpelling(candidate,
-                                                  canonicalKeyValueHelperName)) {
-      return canonicalKeyValueHelperPathLocal(canonicalKeyValueHelperName);
-    }
-    return "";
-  };
-  const std::string explicitKeyValueHelperPath = explicitKeyValueMethodPath(methodName);
+  const std::string explicitVectorHelperPath =
+      explicitVectorMethodPath(methodName, callNamespacePrefix);
+  const std::string explicitKeyValueHelperPath =
+      explicitKeyValueMethodPath(methodName, callNamespacePrefix);
   std::string normalizedMethodName = methodName;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -1989,94 +2198,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                  normalizedMethodName, canonicalKeyValueHelperName)) {
     normalizedMethodName = canonicalKeyValueHelperName;
   }
-  auto isCollectionVectorMetadataMethodName = [](std::string_view name) {
-    return name == "field_count" || name == "field_capacity" ||
-           name == "set_field_count" || name == "set_field_capacity";
-  };
-  auto receiverBindingTypeText = [](const BindingInfo &binding) {
-    if (binding.typeTemplateArg.empty()) {
-      return binding.typeName;
-    }
-    return binding.typeName + "<" + binding.typeTemplateArg + ">";
-  };
-  auto concreteExperimentalVectorReceiverPath =
-      [&](const BindingInfo &binding) -> std::string {
-    std::string typeText =
-        normalizeBindingTypeName(receiverBindingTypeText(binding));
-    while (true) {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
-        break;
-      }
-      base = normalizeBindingTypeName(base);
-      if (base != "Reference" && base != "Pointer") {
-        break;
-      }
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
-        return {};
-      }
-      typeText = normalizeBindingTypeName(args.front());
-    }
-    if (!typeText.empty() && typeText.front() != '/') {
-      typeText.insert(typeText.begin(), '/');
-    }
-    if (isLegacyExperimentalVectorCompatibilityTypePath(typeText)) {
-      return typeText;
-    }
-    std::string elemType;
-    if (extractCollectionVectorElementType(binding, elemType)) {
-      const std::string specializedVectorPath =
-          specializedExperimentalVectorHelperTarget("Vector", elemType);
-      if (isLegacyExperimentalVectorCompatibilityTypePath(
-              specializedVectorPath)) {
-        return specializedVectorPath;
-      }
-    }
-    return {};
-  };
-  auto resolveCollectionVectorMetadataMethodTarget = [&]() -> bool {
-    if (!isCollectionVectorMetadataMethodName(normalizedMethodName)) {
-      return false;
-    }
-    BindingInfo receiverBinding;
-    if (receiver.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
-        receiverBinding = *paramBinding;
-      } else if (auto localIt = locals.find(receiver.name); localIt != locals.end()) {
-        receiverBinding = localIt->second;
-      }
-    }
-    if (receiverBinding.typeName.empty()) {
-      std::string receiverTypeText;
-      if (inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
-        std::string base;
-        std::string argText;
-        const std::string normalizedReceiverType =
-            normalizeBindingTypeName(receiverTypeText);
-        if (splitTemplateTypeName(normalizedReceiverType, base, argText)) {
-          receiverBinding.typeName = normalizeBindingTypeName(base);
-          receiverBinding.typeTemplateArg = argText;
-        } else {
-          receiverBinding.typeName = normalizedReceiverType;
-        }
-      }
-    }
-    const std::string receiverPath =
-        concreteExperimentalVectorReceiverPath(receiverBinding);
-    if (receiverPath.empty()) {
-      return false;
-    }
-    const std::string methodPath = receiverPath + "/" + normalizedMethodName;
-    if (!hasDefinitionFamilyPath(methodPath)) {
-      return false;
-    }
-    resolvedOut = methodPath;
-    isBuiltinOut = false;
-    return true;
-  };
-  if (resolveCollectionVectorMetadataMethodTarget()) {
+  if (resolveCollectionVectorMetadataMethodTarget(normalizedMethodName, receiver, params, locals,
+                                                  resolvedOut, isBuiltinOut)) {
     return true;
   }
   std::string canonicalCollectionHelperName = normalizedMethodName;
@@ -2821,64 +2944,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return inferExprReturnKind(target, params, locals) == ReturnKind::String;
   };
-  auto getDirectKeyValueHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-      return "";
-    }
-    std::string helperName;
-    helperName = rootAliasKeyValueHelperNameForMethodTargets(
-        candidate.name, candidate.namespacePrefix);
-    if (helperName.empty() || !isRemovedKeyValueCompatibilityHelper(helperName)) {
-      return "";
-    }
-    const std::string removedPath =
-        rootedKeyValueHelperAliasPathForMethodTargets(helperName);
-    if (removedPath.empty()) {
-      return "";
-    }
-    if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {
-      return "";
-    }
-    if (isCanonicalKeyValueAccessMethodName(helperName)) {
-      const std::string canonicalPath = canonicalKeyValueHelperPathLocal(helperName);
-      auto defIt = defMap_.find(canonicalPath);
-      if (defIt != defMap_.end() && defIt->second != nullptr) {
-        for (const auto &transform : defIt->second->transforms) {
-          if (transform.name != "return" ||
-              transform.templateArgs.size() != 1) {
-            continue;
-          }
-          std::string returnType =
-              normalizeBindingTypeName(transform.templateArgs.front());
-          if (!returnType.empty() && returnType.front() == '/') {
-            returnType.erase(returnType.begin());
-          }
-          if (!returnType.empty() && !isRootBuiltinName(returnType) &&
-              returnType != "string" && returnType != "map" &&
-              returnType != "vector" && returnType != "array") {
-            return "";
-          }
-        }
-      }
-    }
-    if (isCanonicalKeyValueAccessMethodName(helperName)) {
-      return removedPath;
-    }
-    size_t receiverIndex = 0;
-    if (hasNamedArguments(candidate.argNames)) {
-      for (size_t i = 0; i < candidate.args.size(); ++i) {
-        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-            *candidate.argNames[i] == "values") {
-          receiverIndex = i;
-          break;
-        }
-      }
-    }
-    return receiverIndex < candidate.args.size() &&
-               resolveKeyValueTarget(candidate.args[receiverIndex])
-               ? removedPath
-               : "";
-  };
 
   std::string elemType;
   auto setCollectionMethodTarget = [&](const std::string &path) -> bool {
@@ -3078,38 +3143,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return false;
   };
   auto setIndexedArgsPackKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
-    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
-      return false;
-    }
-    std::string indexedElemType;
-    std::string keyType;
-    std::string valueType;
-    auto isKeyValueElementType = [&](const std::string &typeText) {
-      const std::string unwrappedType =
-          normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
-      const std::string keyValueTypeText =
-          unwrappedType.empty() ? typeText : unwrappedType;
-      return extractKeyValueCollectionTypesFromTypeText(keyValueTypeText, keyType, valueType);
-    };
-    const bool resolvedIndexedKeyValueType =
-        ((resolveIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
-          resolveWrappedIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
-          resolveDereferencedIndexedArgsPackElementType(receiverExpr, indexedElemType)) &&
-         isKeyValueElementType(indexedElemType));
-    const bool resolvedReceiverPackType = [&]() {
-      std::string accessName;
-      if (!getBuiltinArrayAccessName(receiverExpr, accessName)) {
-        return false;
-      }
-      const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(receiverExpr);
-      return accessReceiver != nullptr &&
-             resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) &&
-             isKeyValueElementType(indexedElemType);
-    }();
-    if (!resolvedIndexedKeyValueType && !resolvedReceiverPackType) {
-      return false;
-    }
-    return setPreferredKeyValueMethodTarget(receiverExpr, helperName);
+    return this->setIndexedArgsPackKeyValueMethodTarget(
+        receiverExpr, helperName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
+        normalizedMethodName, params, locals,
+        MethodTargetCollectionResolvers{
+            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+        resolvedOut, isBuiltinOut);
   };
   auto isDirectKeyValueConstructorReceiverCall = [&](const Expr &receiverExpr) {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
@@ -3497,7 +3538,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string accessHelperName;
     if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
       const std::string removedKeyValueCompatibilityPath =
-          getDirectKeyValueHelperCompatibilityPath(receiver);
+          getDirectKeyValueHelperCompatibilityPath(receiver, params, locals,
+                                                   resolveArgsPackAccessTarget);
       if (!removedKeyValueCompatibilityPath.empty()) {
         return failMethodTargetResolutionDiagnostic("unknown call target: " +
                                                     removedKeyValueCompatibilityPath);

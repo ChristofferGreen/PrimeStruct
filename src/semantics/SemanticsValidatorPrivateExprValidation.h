@@ -688,6 +688,32 @@
       const std::unordered_map<std::string, BindingInfo> &locals,
       const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
       bool &isBuiltinOut);
+  // TODO-4724 seam (4f): another batch of the next-largest remaining
+  // still-full-bodied local lambdas, same methodology as seam (4e) -
+  // every name checked via an anchored "SemanticsValidator::<name>("
+  // definition grep across the whole src/semantics/ tree before
+  // writing any code.
+  std::string getDirectKeyValueHelperCompatibilityPath(
+      const Expr &candidate, const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  bool resolveCollectionVectorMetadataMethodTarget(
+      const std::string &normalizedMethodName, const Expr &receiver,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals, std::string &resolvedOut,
+      bool &isBuiltinOut);
+  std::string explicitVectorMethodPath(
+      const std::string &rawMethodName, const std::string &callNamespacePrefix) const;
+  std::string explicitKeyValueMethodPath(
+      const std::string &rawMethodName, const std::string &callNamespacePrefix) const;
+  bool setIndexedArgsPackKeyValueMethodTarget(
+      const Expr &receiverExpr, const std::string &helperName,
+      const std::string &explicitKeyValueHelperPath, const Expr &receiver,
+      const std::string &explicitRemovedMethodPath, const std::string &normalizedMethodName,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+      bool &isBuiltinOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,
