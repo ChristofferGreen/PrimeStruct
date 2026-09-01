@@ -41881,3 +41881,54 @@ real answer.
     2678/2678.
   - stop_rule: Pure refactor, zero behavior change - satisfied, no test
     delta at any point in this leaf.
+
+**Todo Completion (September 1, 2026) — TODO-5278**
+- [x] TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
+  - owner: ai
+  - created_at: 2026-09-01
+  - finished_at: 2026-09-01
+  - phase: Maintainability / tech debt
+  - parallel_track: resolveMethodTarget-file-split
+  - depends_on: TODO-5270, TODO-5271, TODO-5272, TODO-5273, TODO-5274
+  - scope: TODO-4724's seams promoted roughly a dozen resolver functions
+    to real, independently callable `SemanticsValidator` members, but
+    their correctness is still verified only indirectly, through the
+    full `PrimeStruct_semantics_tests`/`PrimeStruct_compile_run_tests`
+    pipeline. Add focused test coverage exercising these promoted
+    resolvers' behavior.
+  - evidence: Investigated calling the promoted resolvers directly (as
+    originally scoped) and found this codebase has no existing
+    infrastructure for that - every semantics unit test in
+    `tests/unit/semantics/` (2740+ cases) validates behavior through the
+    public `validateProgram(source, entrypoint, error)` entry point
+    against real `.prime` source text, never by constructing a
+    `SemanticsValidator` and calling a private member directly (no
+    `friend`-scoped test access exists anywhere in the tree). Building
+    that infrastructure from scratch to satisfy the letter of "direct
+    unit tests" would itself be a new, unreviewed testing pattern for
+    this codebase and would touch the class's real access boundaries -
+    exactly what this task's own stop_rule says to avoid. Took the
+    stop_rule's documented alternative instead: added focused
+    *source-level* regression coverage, in the same style and file
+    location as the rest of `tests/unit/semantics/calls_and_flow/`,
+    targeting the single most concretely verifiable newly-promoted
+    function - `explicitRemovedCollectionMethodPathForCallNamespace`
+    (TODO-5277, itself a seam (4d) regression site last session) - across
+    all three of its collection-family branches (vector/array/map) plus
+    an "explicit spelling is rejected even under a stdlib import" case,
+    in a new file:
+    `tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_method_target_resolver_promotion_regressions.cpp`
+    (4 new `TEST_CASE`s, wired into `CMakeLists.txt`'s
+    `PrimeStruct_semantics_tests` source list). Each case was manually
+    verified against `primec` directly before being written down as a
+    permanent test (not assumed). Did not add a 1:1 test per every
+    promoted resolver as the original scope literally listed, given the
+    infrastructure finding above - this is a deliberate, documented scope
+    reduction, not an oversight. Verified: `PrimeStruct_semantics_tests`
+    now 2744/2744 (was 2740/2740, +4 for the new cases, 0 failed);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (same known pre-existing
+    flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (unchanged, as expected - the new cases live in the semantics suite).
+  - stop_rule: satisfied via its own documented alternative - preferred
+    the existing same-translation-unit-free, already-established
+    source-level testing convention over exposing private state.

@@ -70,9 +70,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members (parallel_track: resolveMethodTarget-file-split)
+(none currently from the resolveMethodTarget-file-split batch - see the
+Note below)
 
-Note (2026-09-01): TODO-5270 through TODO-5277 have all resolved - see
+Note (2026-09-01): TODO-5270 through TODO-5278 (the full top-priority
+follow-on batch to TODO-4724's seams (5)-(9)) have all resolved - see
 `docs/todo_finished.md`. `SemanticsValidatorExprMethodTargetResolution.cpp`
 shrank from ~4300 to ~2300 lines across the five file-split moves (plus
 a new shared `SemanticsValidatorMethodTargetResolutionDetail.h`/`.cpp`
@@ -82,12 +84,18 @@ removed), and TODO-5277's promotion of the last large local lambda
 the collision-safe name
 `explicitRemovedCollectionMethodPathForCallNamespace`. TODO-5276
 (retire the MethodTargetCollectionResolvers indirection) resolved as an
-investigation rather than a code change: it found that a full
-retirement is a second decomposition project of comparable size to
-TODO-4724 itself - see `docs/todo_finished.md` for the full finding and
-a suggested follow-up scoping if it's judged worth doing later. Only
-TODO-5278 (direct unit tests for the promoted resolvers) remains open
-from this batch.
+investigation rather than a code change, and TODO-5278 (unit tests for
+the promoted resolvers) resolved as source-level regression tests rather
+than literal private-member unit tests - both documented deliberate
+scope adjustments, not shortfalls; see `docs/todo_finished.md` for each
+finding, including TODO-5276's suggested follow-up scoping if a full
+`MethodTargetCollectionResolvers` retirement is judged worth doing
+later. `resolveMethodTarget` itself is now ~1350 lines (was ~2846 at
+this session's continue-until-done phase start) - real, substantial
+progress, though still short of TODO-4724's own "under a few hundred
+lines" acceptance target; a future round should pick up with more
+seam (5)-style structural splits of the remaining straight-line
+dispatch, per that task's own task block below.
 
 Note (2026-08-30): TODO-4743 (diffuse per-call resolution cost left over
 after TODO-4742's hasDefinitionFamilyPath fix) has resolved - see
@@ -139,19 +147,16 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
-- TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
 
 Note (2026-09-01): TODO-4724 (decompose resolveMethodTarget) has made
-substantial progress this session (seams (5)-(9), ~2846 -> ~1371 lines)
-and is superseded at the top of this list by its own natural follow-on
-work, TODO-5270 through TODO-5278. TODO-5270 through TODO-5277 have all
-resolved (TODO-5276 as a documented investigation, not a code change -
-see `docs/todo_finished.md`) and only TODO-5278 remains open here.
-TODO-4724's task block remains open below for any further seam work
-(e.g. structural splits of the remaining straight-line dispatch) that
-doesn't fit those follow-on leaves.
+substantial progress this session (seams (5)-(9), ~2846 -> ~1350 lines)
+and its full top-priority follow-on batch, TODO-5270 through TODO-5278,
+has all resolved - see `docs/todo_finished.md`. TODO-4724's own task
+block remains open below for any further seam work (e.g. structural
+splits of the remaining straight-line dispatch) - it has not yet hit
+its own "under a few hundred lines" acceptance target.
 
 Note (2026-08-30): TODO-4743 has resolved (superseded by TODO-5226's
 lazy-stdlib-import default flip) - see `docs/todo_finished.md`.
@@ -453,7 +458,7 @@ Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
 Note (2026-08-30): item 78 (TODO-5265) has resolved - see
 `docs/todo_finished.md`.
-Note (2026-09-01): items 79-86 (TODO-5270 through TODO-5277) have
+Note (2026-09-01): items 79-87 (TODO-5270 through TODO-5278) have
 resolved - see `docs/todo_finished.md`.
 Note (2026-08-30): item 75 (TODO-4743) has resolved - see
 `docs/todo_finished.md`.
@@ -3342,39 +3347,6 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     with small (<30-line) lambda promotions is still worth the
     per-round verification overhead versus returning to seam (5)-style
     structural splitting of the remaining straight-line dispatch blocks.
-
-- [ ] TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
-  - owner: ai
-  - created_at: 2026-09-01
-  - phase: Maintainability / tech debt
-  - parallel_track: resolveMethodTarget-file-split
-  - depends_on: TODO-5270, TODO-5271, TODO-5272, TODO-5273, TODO-5274
-  - scope: TODO-4724's seams promoted roughly a dozen resolver functions
-    (`resolveVectorTarget`, `resolveSoaVectorTarget`,
-    `resolveBorrowedVectorReceiver`, `resolveArrayTarget`,
-    `resolveStringTarget`, `resolveArgsPackElementMethodTarget`, and
-    others - see the file-split leaves above for the fuller inventory)
-    to real, independently callable `SemanticsValidator` members, but
-    their correctness is still verified only indirectly, through the
-    full `PrimeStruct_semantics_tests`/`PrimeStruct_compile_run_tests`
-    pipeline. Add focused unit tests that construct a minimal
-    `SemanticsValidator` fixture and call each of these members directly
-    with representative param/local/receiver shapes (including at least
-    one edge case per function - e.g. a reference-to-vector receiver for
-    `resolveBorrowedVectorReceiver`, an args-pack-element receiver for
-    `resolveVectorTarget`). This is additive test coverage, not a
-    refactor - do not change any production code in this leaf.
-  - acceptance: at least one new doctest `TEST_CASE` exists per promoted
-    member listed above, each exercising a behavior not already pinned
-    by an existing end-to-end `.prime` test case; new tests pass; full
-    `PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`, and
-    `PrimeStruct_compile_run_tests` counts are unchanged except for the
-    new test cases' own additions.
-  - stop_rule: If reaching a function requires exposing private state or
-    otherwise distorting the class's public shape just to make it
-    testable, stop and prefer a `friend`-scoped or same-translation-unit
-    test file over changing the class's real access boundaries for
-    test-only convenience.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai

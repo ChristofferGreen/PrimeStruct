@@ -1187,6 +1187,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_user_array_helper_precedence.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_relocation_trivial_vector_elements.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_bare_vector_pop_helper_resolution.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_method_target_resolver_promotion_regressions.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_vector_mutator_named_args.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_vector_helper_reordered_expression.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_collections_stdlib_map_constructor_resolution.cpp
