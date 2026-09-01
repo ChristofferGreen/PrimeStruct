@@ -1186,6 +1186,431 @@ bool SemanticsValidator::setPreferredKeyValueMethodTarget(
       resolvers, resolvedOut, isBuiltinOut);
 }
 
+bool SemanticsValidator::extractCollectionElementType(const std::string &typeText,
+                                                       const std::string &expectedBase,
+                                                       std::string &elemTypeOut) const {
+  elemTypeOut.clear();
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizeBindingTypeName(typeText), base, argText)) {
+    return false;
+  }
+  base = normalizeBindingTypeName(base);
+  if (base != expectedBase) {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+    return false;
+  }
+  elemTypeOut = args.front();
+  return true;
+}
+
+bool SemanticsValidator::resolveArrayTarget(
+    const Expr &target, std::string &elemType, const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) {
+  if (target.kind == Expr::Kind::Name) {
+    auto resolveReference = [&](const BindingInfo &binding) -> bool {
+      if (binding.typeName != "Reference" || binding.typeTemplateArg.empty()) {
+        return false;
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(binding.typeTemplateArg, base, arg) || base != "array") {
+        return false;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+        return false;
+      }
+      elemType = args.front();
+      return true;
+    };
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      if (resolveReference(*paramBinding)) {
+        return true;
+      }
+      if ((paramBinding->typeName == "array" || paramBinding->typeName == "vector") &&
+          !paramBinding->typeTemplateArg.empty()) {
+        elemType = paramBinding->typeTemplateArg;
+        return true;
+      }
+      return false;
+    }
+    auto it = locals.find(target.name);
+    if (it == locals.end()) {
+      return false;
+    }
+    if (resolveReference(it->second)) {
+      return true;
+    }
+    if ((it->second.typeName == "array" || it->second.typeName == "vector") &&
+        !it->second.typeTemplateArg.empty()) {
+      elemType = it->second.typeTemplateArg;
+      return true;
+    }
+    return false;
+  }
+  BindingInfo fieldBinding;
+  if (resolveFieldBindingTarget(params, locals, target, fieldBinding)) {
+    std::string base;
+    std::string arg;
+    if (fieldBinding.typeName == "Reference" && !fieldBinding.typeTemplateArg.empty() &&
+        splitTemplateTypeName(fieldBinding.typeTemplateArg, base, arg) && base == "array") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        elemType = args.front();
+        return true;
+      }
+    }
+    if ((fieldBinding.typeName == "array" || fieldBinding.typeName == "vector") &&
+        !fieldBinding.typeTemplateArg.empty()) {
+      elemType = fieldBinding.typeTemplateArg;
+      return true;
+    }
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string indexedElemType;
+    if ((resolveIndexedArgsPackElementType(target, indexedElemType, resolveArgsPackAccessTarget) ||
+         resolveWrappedIndexedArgsPackElementType(target, indexedElemType,
+                                                  resolveArgsPackAccessTarget) ||
+         resolveDereferencedIndexedArgsPackElementType(target, indexedElemType,
+                                                        resolveArgsPackAccessTarget)) &&
+        (extractCollectionElementType(indexedElemType, "array", elemType) ||
+         extractCollectionElementType(indexedElemType, "vector", elemType))) {
+      return true;
+    }
+    std::string collectionTypePath;
+    if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
+        (collectionTypePath == "/array" || collectionTypePath == "/vector")) {
+      std::vector<std::string> args;
+      const std::string expectedBase = collectionTypePath == "/vector" ? "vector" : "array";
+      if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args) &&
+          args.size() == 1) {
+        elemType = args.front();
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveCollectionVectorValueTarget(
+    const Expr &target, std::string &elemTypeOut, const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
+  elemTypeOut.clear();
+  auto extractValueBinding = [&](const BindingInfo &binding) {
+    const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+    if (normalizedType == "Reference" || normalizedType == "Pointer") {
+      return false;
+    }
+    return extractCollectionVectorElementType(binding, elemTypeOut);
+  };
+  auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = argText;
+    } else {
+      bindingOut.typeName = normalizedType;
+      bindingOut.typeTemplateArg.clear();
+    }
+  };
+  BindingInfo binding;
+  if (target.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      return extractValueBinding(*paramBinding);
+    }
+    if (auto it = locals.find(target.name); it != locals.end()) {
+      return extractValueBinding(it->second);
+    }
+  }
+  if (target.kind == Expr::Kind::Call) {
+    auto defIt = defMap_.find(resolveCalleePath(target));
+    if (defIt != defMap_.end() && defIt->second != nullptr &&
+        inferDefinitionReturnBinding(*defIt->second, binding) &&
+        extractValueBinding(binding)) {
+      return true;
+    }
+    std::string receiverTypeText;
+    if (inferQueryExprTypeText(target, params, locals, receiverTypeText)) {
+      extractBindingFromTypeText(receiverTypeText, binding);
+      return extractValueBinding(binding);
+    }
+    const std::string inferredStructPath = inferStructReturnPath(target, params, locals);
+    if (!inferredStructPath.empty()) {
+      binding.typeName = inferredStructPath;
+      binding.typeTemplateArg.clear();
+      return extractValueBinding(binding);
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveKeyValueTarget(
+    const Expr &target, const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) {
+  std::string keyType;
+  std::string valueType;
+  if (target.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      return extractAnyKeyValueTypes(*paramBinding, keyType, valueType);
+    }
+    auto it = locals.find(target.name);
+    return it != locals.end() && extractAnyKeyValueTypes(it->second, keyType, valueType);
+  }
+  BindingInfo fieldBinding;
+  if (resolveFieldBindingTarget(params, locals, target, fieldBinding)) {
+    return extractAnyKeyValueTypes(fieldBinding, keyType, valueType);
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string elemType;
+    if ((resolveIndexedArgsPackElementType(target, elemType, resolveArgsPackAccessTarget) ||
+         resolveDereferencedIndexedArgsPackElementType(target, elemType,
+                                                        resolveArgsPackAccessTarget) ||
+         resolveWrappedIndexedArgsPackElementType(target, elemType, resolveArgsPackAccessTarget)) &&
+        extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
+      return true;
+    }
+    std::string accessName;
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+      if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
+        if (resolveArgsPackAccessTarget(*accessReceiver, elemType) &&
+            extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
+          return true;
+        }
+      }
+    }
+    std::string collectionTypePath;
+    if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
+        collectionTypePath == "/map") {
+      std::vector<std::string> args;
+      if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
+          args.size() == 2) {
+        return true;
+      }
+      std::string collectionName;
+      if (getBuiltinCollectionName(target, collectionName) &&
+          collectionName == "map" &&
+          target.templateArgs.size() == 2) {
+        return true;
+      }
+      return true;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(target));
+    if (defIt == defMap_.end() || !defIt->second) {
+      return false;
+    }
+    BindingInfo inferredReturn;
+    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+        extractAnyKeyValueTypes(inferredReturn, keyType, valueType)) {
+      return true;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        return returnsKeyValueCollectionType(transform.templateArgs.front());
+      }
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveMethodTargetKeyValueValueType(
+    const Expr &target, std::string &valueTypeOut, const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) {
+  valueTypeOut.clear();
+  std::string keyType;
+  if (target.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      return extractAnyKeyValueTypes(*paramBinding, keyType, valueTypeOut);
+    }
+    auto it = locals.find(target.name);
+    return it != locals.end() && extractAnyKeyValueTypes(it->second, keyType, valueTypeOut);
+  }
+  BindingInfo fieldBinding;
+  if (resolveFieldBindingTarget(params, locals, target, fieldBinding)) {
+    return extractAnyKeyValueTypes(fieldBinding, keyType, valueTypeOut);
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string elemType;
+    if ((resolveIndexedArgsPackElementType(target, elemType, resolveArgsPackAccessTarget) ||
+         resolveWrappedIndexedArgsPackElementType(target, elemType, resolveArgsPackAccessTarget) ||
+         resolveDereferencedIndexedArgsPackElementType(target, elemType,
+                                                        resolveArgsPackAccessTarget)) &&
+        extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueTypeOut)) {
+      return true;
+    }
+    std::string collectionTypePath;
+    if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
+        collectionTypePath != "/map") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
+        args.size() == 2) {
+      valueTypeOut = args[1];
+      return true;
+    }
+    std::string collectionName;
+    if (getBuiltinCollectionName(target, collectionName) &&
+        collectionName == "map" &&
+        target.templateArgs.size() == 2) {
+      valueTypeOut = target.templateArgs[1];
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+std::string SemanticsValidator::preferredBorrowedSoaAccessHelperTarget(
+    std::string_view helperName) const {
+  // TODO-4691: registry-backed borrowed-variant lookup instead of a
+  // hardcoded count/get/ref/to_aos literal chain (mirrors the sibling
+  // preferredBorrowedSoaHelperTargetForCollectionMethod member).
+  if (const std::string_view borrowedVariant = findBorrowedVariant(
+          StdlibSurfaceId::CollectionsColumnarHelpers, helperName);
+      !borrowedVariant.empty()) {
+    helperName = borrowedVariant;
+  }
+  return preferredSoaHelperTargetForCollectionType(helperName, internalSoaCollectionTypePath(true));
+}
+
+bool SemanticsValidator::tryRedirectConcreteExperimentalSoaMethodTarget(
+    const std::string &resolvedType, const std::string &canonicalCollectionHelperName,
+    const Expr &receiver, const std::string &explicitRemovedMethodPath,
+    const std::string &normalizedMethodName, const MethodTargetCollectionResolvers &resolvers,
+    std::string &resolvedOut, bool &isBuiltinOut) {
+  const bool isConcreteExperimentalSoaReceiver =
+      isExperimentalSoaVectorSpecializedTypePath(resolvedType);
+  const bool isCanonicalSoaWrapperMethod =
+      isSupportedCompatibilitySoaHelperName(canonicalCollectionHelperName);
+  if (!isConcreteExperimentalSoaReceiver || !isCanonicalSoaWrapperMethod) {
+    return false;
+  }
+  return resolveExplicitOrCanonicalCollectionMethodTarget(
+      preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
+                                                internalSoaCollectionTypePath(true)),
+      explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
+      isBuiltinOut);
+}
+
+bool SemanticsValidator::resolveExplicitDirectCallReturnMethodTarget(
+    const Expr &receiverExpr, const std::string &canonicalCollectionHelperName,
+    const std::string &normalizedMethodName, const Expr &receiver,
+    const std::string &explicitRemovedMethodPath, const MethodTargetCollectionResolvers &resolvers,
+    std::string &resolvedOut, bool &isBuiltinOut) {
+  if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
+    return false;
+  }
+  auto defIt = defMap_.find(resolveCalleePath(receiverExpr));
+  if (defIt == defMap_.end() || defIt->second == nullptr) {
+    return false;
+  }
+  for (const auto &transform : defIt->second->transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
+    std::string normalizedReturnBaseType = normalizedReturnType;
+    std::string normalizedReturnArgText;
+    if (!normalizedReturnBaseType.empty() && normalizedReturnBaseType.front() == '/') {
+      normalizedReturnBaseType.erase(normalizedReturnBaseType.begin());
+    }
+    std::string returnBase;
+    if (splitTemplateTypeName(normalizedReturnBaseType, returnBase, normalizedReturnArgText) &&
+        !returnBase.empty()) {
+      normalizedReturnBaseType = normalizeBindingTypeName(returnBase);
+    }
+    const std::string normalizedReturnCollectionType =
+        normalizeCollectionTypePath(normalizedReturnType);
+    if (!normalizedReturnCollectionType.empty()) {
+      if (isInternalSoaCollectionTypePath(normalizedReturnCollectionType) &&
+          isSupportedCompatibilitySoaHelperName(canonicalCollectionHelperName)) {
+        return resolveExplicitOrCanonicalCollectionMethodTarget(
+            preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
+                                                      internalSoaCollectionTypePath(true)),
+            explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
+            isBuiltinOut);
+      }
+      return false;
+    }
+    if (normalizedReturnType.empty() || normalizedReturnBaseType == "auto") {
+      return false;
+    }
+    if (normalizedReturnBaseType == "Reference" ||
+        normalizedReturnBaseType == "Pointer") {
+      const std::string normalizedReturnCollectionType =
+          normalizeCollectionTypePath(normalizedReturnArgText);
+      const bool isBorrowedSoaWrapperMethod =
+          normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+          normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+          normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
+          normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref";
+      if (isInternalSoaCollectionTypePath(normalizedReturnCollectionType) &&
+          isBorrowedSoaWrapperMethod) {
+        return resolveExplicitOrCanonicalCollectionMethodTarget(
+            preferredBorrowedSoaAccessHelperTarget(normalizedMethodName), explicitRemovedMethodPath,
+            normalizedMethodName, receiver, resolvers, resolvedOut, isBuiltinOut);
+      }
+      const std::string normalizedPointeeType =
+          normalizeBindingTypeName(normalizedReturnArgText);
+      if (!normalizedPointeeType.empty() &&
+          normalizeCollectionTypePath(normalizedPointeeType).empty()) {
+        std::string normalizedPointeeBaseType = normalizedPointeeType;
+        if (!normalizedPointeeBaseType.empty() &&
+            normalizedPointeeBaseType.front() == '/') {
+          normalizedPointeeBaseType.erase(normalizedPointeeBaseType.begin());
+        }
+        if (isPrimitiveBindingTypeName(normalizedPointeeBaseType)) {
+          resolvedOut = "/" + normalizedPointeeBaseType + "/" + normalizedMethodName;
+          return true;
+        }
+        std::string resolvedPointeeType =
+            resolveMethodTargetStructTypePath(normalizedPointeeType,
+                                              defIt->second->namespacePrefix);
+        if (resolvedPointeeType.empty()) {
+          resolvedPointeeType =
+              resolveTypePath(normalizedPointeeType, defIt->second->namespacePrefix);
+        }
+        if (!resolvedPointeeType.empty()) {
+          resolvedOut = resolvedPointeeType + "/" + normalizedMethodName;
+          return true;
+        }
+      }
+      resolvedOut = "/" + normalizedReturnBaseType + "/" + normalizedMethodName;
+      return true;
+    }
+    if (isPrimitiveBindingTypeName(normalizedReturnBaseType)) {
+      resolvedOut = "/" + normalizedReturnBaseType + "/" + normalizedMethodName;
+      return true;
+    }
+    std::string resolvedReturnType =
+        resolveMethodTargetStructTypePath(normalizedReturnType, defIt->second->namespacePrefix);
+    if (resolvedReturnType.empty()) {
+      resolvedReturnType = resolveTypePath(normalizedReturnType, defIt->second->namespacePrefix);
+    }
+    if (!resolvedReturnType.empty()) {
+      if (tryRedirectConcreteExperimentalSoaMethodTarget(
+              resolvedReturnType, canonicalCollectionHelperName, receiver,
+              explicitRemovedMethodPath, normalizedMethodName, resolvers, resolvedOut,
+              isBuiltinOut)) {
+        return true;
+      }
+      resolvedOut = resolvedReturnType + "/" + normalizedMethodName;
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+
 bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &params,
                                              const std::unordered_map<std::string, BindingInfo> &locals,
                                              const std::string &callNamespacePrefix,
@@ -1218,7 +1643,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto rootedVectorMethodPath = [&](std::string_view helperName) {
     return rootedVectorHelperPath(helperName);
   };
-  auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {
+  auto explicitRemovedCollectionMethodPathLocal =
+      [&](const std::string &rawMethodName) -> std::string {
     std::string candidate = rawMethodName;
     if (!candidate.empty() && candidate.front() == '/') {
       candidate.erase(candidate.begin());
@@ -1298,7 +1724,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return "/" + candidate;
   };
 
-  const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
+  const std::string explicitRemovedMethodPath =
+      explicitRemovedCollectionMethodPathLocal(methodName);
   auto explicitVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
     std::string candidate = rawMethodName;
     if (!candidate.empty() && candidate.front() == '/') {
@@ -1606,55 +2033,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             typeName, typeTemplateArg, normalizedMethodName, receiver, handledOut);
       };
   auto resolveCollectionVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
-    elemTypeOut.clear();
-    auto extractValueBinding = [&](const BindingInfo &binding) {
-      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
-      if (normalizedType == "Reference" || normalizedType == "Pointer") {
-        return false;
-      }
-      return extractCollectionVectorElementType(binding, elemTypeOut);
-    };
-    auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
-      const std::string normalizedType = normalizeBindingTypeName(typeText);
-      std::string base;
-      std::string argText;
-      if (splitTemplateTypeName(normalizedType, base, argText)) {
-        bindingOut.typeName = normalizeBindingTypeName(base);
-        bindingOut.typeTemplateArg = argText;
-      } else {
-        bindingOut.typeName = normalizedType;
-        bindingOut.typeTemplateArg.clear();
-      }
-    };
-    BindingInfo binding;
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractValueBinding(*paramBinding);
-      }
-      if (auto it = locals.find(target.name); it != locals.end()) {
-        return extractValueBinding(it->second);
-      }
-    }
-    if (target.kind == Expr::Kind::Call) {
-      auto defIt = defMap_.find(resolveCalleePath(target));
-      if (defIt != defMap_.end() && defIt->second != nullptr &&
-          inferDefinitionReturnBinding(*defIt->second, binding) &&
-          extractValueBinding(binding)) {
-        return true;
-      }
-      std::string receiverTypeText;
-      if (inferQueryExprTypeText(target, params, locals, receiverTypeText)) {
-        extractBindingFromTypeText(receiverTypeText, binding);
-        return extractValueBinding(binding);
-      }
-      const std::string inferredStructPath = inferStructReturnPath(target, params, locals);
-      if (!inferredStructPath.empty()) {
-        binding.typeName = inferredStructPath;
-        binding.typeTemplateArg.clear();
-        return extractValueBinding(binding);
-      }
-    }
-    return false;
+    return this->resolveCollectionVectorValueTarget(target, elemTypeOut, params, locals);
   };
 
   if (normalizedMethodName == "ok" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
@@ -1795,16 +2174,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   };
   auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
-    // TODO-4691: registry-backed borrowed-variant lookup instead of a
-    // hardcoded count/get/ref/to_aos literal chain (mirrors the sibling
-    // preferredBorrowedSoaHelperTargetForCollectionMethod lambda above).
-    if (const std::string_view borrowedVariant = findBorrowedVariant(
-            StdlibSurfaceId::CollectionsColumnarHelpers, helperName);
-        !borrowedVariant.empty()) {
-      helperName = borrowedVariant;
-    }
-    return preferredSoaHelperTargetForCollectionType(
-        helperName, internalSoaCollectionTypePath(true));
+    return this->preferredBorrowedSoaAccessHelperTarget(helperName);
   };
   auto resolvesBorrowedExperimentalSoaReceiver = [&](const Expr &candidate) {
     const std::string previousError = error_;
@@ -1917,106 +2287,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto extractCollectionElementType = [&](const std::string &typeText,
                                           const std::string &expectedBase,
                                           std::string &elemTypeOut) -> bool {
-    elemTypeOut.clear();
-    std::string base;
-    std::string argText;
-    if (!splitTemplateTypeName(normalizeBindingTypeName(typeText), base, argText)) {
-      return false;
-    }
-    base = normalizeBindingTypeName(base);
-    if (base != expectedBase) {
-      return false;
-    }
-    std::vector<std::string> args;
-    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
-      return false;
-    }
-    elemTypeOut = args.front();
-    return true;
+    return this->extractCollectionElementType(typeText, expectedBase, elemTypeOut);
   };
   auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
-    if (target.kind == Expr::Kind::Name) {
-      auto resolveReference = [&](const BindingInfo &binding) -> bool {
-        if (binding.typeName != "Reference" || binding.typeTemplateArg.empty()) {
-          return false;
-        }
-        std::string base;
-        std::string arg;
-        if (!splitTemplateTypeName(binding.typeTemplateArg, base, arg) || base != "array") {
-          return false;
-        }
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-          return false;
-        }
-        elemType = args.front();
-        return true;
-      };
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        if (resolveReference(*paramBinding)) {
-          return true;
-        }
-        if ((paramBinding->typeName == "array" || paramBinding->typeName == "vector") &&
-            !paramBinding->typeTemplateArg.empty()) {
-          elemType = paramBinding->typeTemplateArg;
-          return true;
-        }
-        return false;
-      }
-      auto it = locals.find(target.name);
-      if (it == locals.end()) {
-        return false;
-      }
-      if (resolveReference(it->second)) {
-        return true;
-      }
-      if ((it->second.typeName == "array" || it->second.typeName == "vector") &&
-          !it->second.typeTemplateArg.empty()) {
-        elemType = it->second.typeTemplateArg;
-        return true;
-      }
-      return false;
-    }
-    BindingInfo fieldBinding;
-    if (resolveFieldBindingTarget(target, fieldBinding)) {
-      std::string base;
-      std::string arg;
-      if (fieldBinding.typeName == "Reference" && !fieldBinding.typeTemplateArg.empty() &&
-          splitTemplateTypeName(fieldBinding.typeTemplateArg, base, arg) && base == "array") {
-        std::vector<std::string> args;
-        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
-          elemType = args.front();
-          return true;
-        }
-      }
-      if ((fieldBinding.typeName == "array" || fieldBinding.typeName == "vector") &&
-          !fieldBinding.typeTemplateArg.empty()) {
-        elemType = fieldBinding.typeTemplateArg;
-        return true;
-      }
-    }
-    if (target.kind == Expr::Kind::Call) {
-      std::string indexedElemType;
-      if ((resolveIndexedArgsPackElementType(target, indexedElemType) ||
-           resolveWrappedIndexedArgsPackElementType(target, indexedElemType) ||
-           resolveDereferencedIndexedArgsPackElementType(target, indexedElemType)) &&
-          (extractCollectionElementType(indexedElemType, "array", elemType) ||
-           extractCollectionElementType(indexedElemType, "vector", elemType))) {
-        return true;
-      }
-      std::string collectionTypePath;
-      if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          (collectionTypePath == "/array" || collectionTypePath == "/vector")) {
-        std::vector<std::string> args;
-        const std::string expectedBase = collectionTypePath == "/vector" ? "vector" : "array";
-        if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args) &&
-            args.size() == 1) {
-          elemType = args.front();
-        }
-        return true;
-      }
-    }
-    return false;
+    return this->resolveArrayTarget(target, elemType, params, locals, resolveArgsPackAccessTarget);
   };
   std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
   std::function<bool(const Expr &, std::string &)> resolveVectorTarget =
@@ -2278,11 +2552,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  auto extractAnyKeyValueTypes = [&](const BindingInfo &binding,
-                                     std::string &keyTypeOut,
-                                     std::string &valueTypeOut) -> bool {
-    return this->extractAnyKeyValueTypes(binding, keyTypeOut, valueTypeOut);
-  };
   auto resolveExperimentalKeyValueTarget = [&](const Expr &target,
                                           std::string &keyTypeOut,
                                           std::string &valueTypeOut) -> bool {
@@ -2290,112 +2559,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                                     locals);
   };
   auto resolveKeyValueTarget = [&](const Expr &target) -> bool {
-    std::string keyType;
-    std::string valueType;
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractAnyKeyValueTypes(*paramBinding, keyType, valueType);
-      }
-      auto it = locals.find(target.name);
-      return it != locals.end() && extractAnyKeyValueTypes(it->second, keyType, valueType);
-    }
-    BindingInfo fieldBinding;
-    if (resolveFieldBindingTarget(target, fieldBinding)) {
-      return extractAnyKeyValueTypes(fieldBinding, keyType, valueType);
-    }
-    if (target.kind == Expr::Kind::Call) {
-      std::string elemType;
-      if ((resolveIndexedArgsPackElementType(target, elemType) ||
-           resolveDereferencedIndexedArgsPackElementType(target, elemType) ||
-           resolveWrappedIndexedArgsPackElementType(target, elemType)) &&
-          extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
-        return true;
-      }
-      std::string accessName;
-      if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
-        if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
-          if (resolveArgsPackAccessTarget(*accessReceiver, elemType) &&
-              extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
-            return true;
-          }
-        }
-      }
-      std::string collectionTypePath;
-      if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          collectionTypePath == "/map") {
-        std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
-            args.size() == 2) {
-          return true;
-        }
-        std::string collectionName;
-        if (getBuiltinCollectionName(target, collectionName) &&
-            collectionName == "map" &&
-            target.templateArgs.size() == 2) {
-          return true;
-        }
-        return true;
-      }
-      auto defIt = defMap_.find(resolveCalleePath(target));
-      if (defIt == defMap_.end() || !defIt->second) {
-        return false;
-      }
-      BindingInfo inferredReturn;
-      if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
-          extractAnyKeyValueTypes(inferredReturn, keyType, valueType)) {
-        return true;
-      }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name == "return" && transform.templateArgs.size() == 1) {
-          return returnsKeyValueCollectionType(transform.templateArgs.front());
-        }
-      }
-    }
-    return false;
+    return this->resolveKeyValueTarget(target, params, locals, resolveArgsPackAccessTarget);
   };
   auto resolveKeyValueValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
-    valueTypeOut.clear();
-    std::string keyType;
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractAnyKeyValueTypes(*paramBinding, keyType, valueTypeOut);
-      }
-      auto it = locals.find(target.name);
-      return it != locals.end() && extractAnyKeyValueTypes(it->second, keyType, valueTypeOut);
-    }
-    BindingInfo fieldBinding;
-    if (resolveFieldBindingTarget(target, fieldBinding)) {
-      return extractAnyKeyValueTypes(fieldBinding, keyType, valueTypeOut);
-    }
-    if (target.kind == Expr::Kind::Call) {
-      std::string elemType;
-      if ((resolveIndexedArgsPackElementType(target, elemType) ||
-           resolveWrappedIndexedArgsPackElementType(target, elemType) ||
-           resolveDereferencedIndexedArgsPackElementType(target, elemType)) &&
-          extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueTypeOut)) {
-        return true;
-      }
-      std::string collectionTypePath;
-      if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
-          collectionTypePath != "/map") {
-        return false;
-      }
-      std::vector<std::string> args;
-      if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
-          args.size() == 2) {
-        valueTypeOut = args[1];
-        return true;
-      }
-      std::string collectionName;
-      if (getBuiltinCollectionName(target, collectionName) &&
-          collectionName == "map" &&
-          target.templateArgs.size() == 2) {
-        valueTypeOut = target.templateArgs[1];
-        return true;
-      }
-      return false;
-    }
-    return false;
+    return this->resolveMethodTargetKeyValueValueType(target, valueTypeOut, params, locals,
+                                                       resolveArgsPackAccessTarget);
   };
   std::function<bool(const Expr &)> resolveStringTarget = [&](const Expr &target) -> bool {
     if (target.kind == Expr::Kind::StringLiteral) {
@@ -2654,16 +2822,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   auto tryRedirectConcreteExperimentalSoaMethodTarget =
       [&](const std::string &resolvedType) -> bool {
-    const bool isConcreteExperimentalSoaReceiver =
-        isExperimentalSoaVectorSpecializedTypePath(resolvedType);
-    const bool isCanonicalSoaWrapperMethod =
-        isSupportedCompatibilitySoaHelperName(canonicalCollectionHelperName);
-    if (!isConcreteExperimentalSoaReceiver || !isCanonicalSoaWrapperMethod) {
-      return false;
-    }
-    return setCollectionMethodTarget(
-        preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
-                                                  internalSoaCollectionTypePath(true)));
+    return this->tryRedirectConcreteExperimentalSoaMethodTarget(
+        resolvedType, canonicalCollectionHelperName, receiver, explicitRemovedMethodPath,
+        normalizedMethodName,
+        MethodTargetCollectionResolvers{
+            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+        resolvedOut, isBuiltinOut);
   };
   const std::string explicitRemovedVectorReceiverFamily =
       classifyExplicitVectorHelperReceiver(receiver);
@@ -2686,106 +2852,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         "unknown method: /" + explicitRemovedVectorReceiverFamily + "/" +
         helperName);
   }
-  auto resolveExplicitDirectCallReturnMethodTarget = [&](const Expr &receiverExpr) -> bool {
-    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
-      return false;
-    }
-    auto defIt = defMap_.find(resolveCalleePath(receiverExpr));
-    if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
-    }
-    for (const auto &transform : defIt->second->transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
-      std::string normalizedReturnBaseType = normalizedReturnType;
-      std::string normalizedReturnArgText;
-      if (!normalizedReturnBaseType.empty() && normalizedReturnBaseType.front() == '/') {
-        normalizedReturnBaseType.erase(normalizedReturnBaseType.begin());
-      }
-      std::string returnBase;
-      if (splitTemplateTypeName(normalizedReturnBaseType, returnBase, normalizedReturnArgText) &&
-          !returnBase.empty()) {
-        normalizedReturnBaseType = normalizeBindingTypeName(returnBase);
-      }
-      const std::string normalizedReturnCollectionType =
-          normalizeCollectionTypePath(normalizedReturnType);
-      if (!normalizedReturnCollectionType.empty()) {
-        if (isInternalSoaCollectionTypePath(normalizedReturnCollectionType) &&
-            isSupportedCompatibilitySoaHelperName(canonicalCollectionHelperName)) {
-          return setCollectionMethodTarget(
-              preferredSoaHelperTargetForCollectionType(
-                  canonicalCollectionHelperName,
-                  internalSoaCollectionTypePath(true)));
-        }
-        return false;
-      }
-      if (normalizedReturnType.empty() || normalizedReturnBaseType == "auto") {
-        return false;
-      }
-      if (normalizedReturnBaseType == "Reference" ||
-          normalizedReturnBaseType == "Pointer") {
-        const std::string normalizedReturnCollectionType =
-            normalizeCollectionTypePath(normalizedReturnArgText);
-        const bool isBorrowedSoaWrapperMethod =
-            normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
-            normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
-            normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
-            normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref";
-        if (isInternalSoaCollectionTypePath(normalizedReturnCollectionType) &&
-            isBorrowedSoaWrapperMethod) {
-          return setCollectionMethodTarget(
-              preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
-        }
-        const std::string normalizedPointeeType =
-            normalizeBindingTypeName(normalizedReturnArgText);
-        if (!normalizedPointeeType.empty() &&
-            normalizeCollectionTypePath(normalizedPointeeType).empty()) {
-          std::string normalizedPointeeBaseType = normalizedPointeeType;
-          if (!normalizedPointeeBaseType.empty() &&
-              normalizedPointeeBaseType.front() == '/') {
-            normalizedPointeeBaseType.erase(normalizedPointeeBaseType.begin());
-          }
-          if (isPrimitiveBindingTypeName(normalizedPointeeBaseType)) {
-            resolvedOut = "/" + normalizedPointeeBaseType + "/" + normalizedMethodName;
-            return true;
-          }
-          std::string resolvedPointeeType =
-              resolveStructTypePath(normalizedPointeeType,
-                                    defIt->second->namespacePrefix);
-          if (resolvedPointeeType.empty()) {
-            resolvedPointeeType =
-                resolveTypePath(normalizedPointeeType,
-                                defIt->second->namespacePrefix);
-          }
-          if (!resolvedPointeeType.empty()) {
-            resolvedOut = resolvedPointeeType + "/" + normalizedMethodName;
-            return true;
-          }
-        }
-        resolvedOut = "/" + normalizedReturnBaseType + "/" + normalizedMethodName;
-        return true;
-      }
-      if (isPrimitiveBindingTypeName(normalizedReturnBaseType)) {
-        resolvedOut = "/" + normalizedReturnBaseType + "/" + normalizedMethodName;
-        return true;
-      }
-      std::string resolvedReturnType = resolveStructTypePath(normalizedReturnType, defIt->second->namespacePrefix);
-      if (resolvedReturnType.empty()) {
-        resolvedReturnType = resolveTypePath(normalizedReturnType, defIt->second->namespacePrefix);
-      }
-      if (!resolvedReturnType.empty()) {
-        if (tryRedirectConcreteExperimentalSoaMethodTarget(resolvedReturnType)) {
-          return true;
-        }
-        resolvedOut = resolvedReturnType + "/" + normalizedMethodName;
-        return true;
-      }
-      return false;
-    }
-    return false;
-  };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
       if (normalizedMethodName == "count" && collectionTypePath == "/array") {
@@ -3704,7 +3770,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     }
-    if (resolveExplicitDirectCallReturnMethodTarget(receiver)) {
+    if (resolveExplicitDirectCallReturnMethodTarget(
+            receiver, canonicalCollectionHelperName, normalizedMethodName, receiver,
+            explicitRemovedMethodPath,
+            MethodTargetCollectionResolvers{
+                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
+                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
+                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+            resolvedOut, isBuiltinOut)) {
       return true;
     }
   }

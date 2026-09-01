@@ -630,6 +630,45 @@
       const std::unordered_map<std::string, BindingInfo> &locals,
       const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
       bool &isBuiltinOut);
+  // TODO-4724 seam (4d): a batch of the largest remaining still-full-bodied
+  // local lambdas in resolveMethodTarget, promoted after `setPreferredKeyValueMethodTarget`
+  // (seam (4c)) removed most of their entangled dependencies. Each was
+  // independently verified (by reading its own dependency chain, not
+  // assumed) to route only through real members, free functions, or
+  // other already-promoted seam (1)-(4c) members.
+  bool extractCollectionElementType(const std::string &typeText,
+                                    const std::string &expectedBase,
+                                    std::string &elemTypeOut) const;
+  bool resolveArrayTarget(
+      const Expr &target, std::string &elemType,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  bool resolveCollectionVectorValueTarget(
+      const Expr &target, std::string &elemTypeOut,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
+  bool resolveKeyValueTarget(
+      const Expr &target, const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  bool resolveMethodTargetKeyValueValueType(
+      const Expr &target, std::string &valueTypeOut,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  std::string preferredBorrowedSoaAccessHelperTarget(std::string_view helperName) const;
+  bool tryRedirectConcreteExperimentalSoaMethodTarget(
+      const std::string &resolvedType, const std::string &canonicalCollectionHelperName,
+      const Expr &receiver, const std::string &explicitRemovedMethodPath,
+      const std::string &normalizedMethodName, const MethodTargetCollectionResolvers &resolvers,
+      std::string &resolvedOut, bool &isBuiltinOut);
+  bool resolveExplicitDirectCallReturnMethodTarget(
+      const Expr &receiverExpr, const std::string &canonicalCollectionHelperName,
+      const std::string &normalizedMethodName, const Expr &receiver,
+      const std::string &explicitRemovedMethodPath,
+      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+      bool &isBuiltinOut);
   bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

@@ -2912,6 +2912,89 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     A future round should re-audit what remains now that this hub is
     gone - the remaining surface may be small enough for a final push to
     close this task out entirely.
+  - progress_2026-08-31f: seam (4d) - a batch of the largest remaining
+    still-full-bodied local lambdas in `resolveMethodTarget` (measured
+    by counting lines per lambda body across the whole function: 9
+    candidates from 34 to 129 lines each). Extracted in dependency
+    order: `extractCollectionElementType`, `resolveArrayTarget` (one of
+    the 8 `MethodTargetCollectionResolvers` fields),
+    `resolveCollectionVectorValueTarget` (another field),
+    `resolveKeyValueTarget` (another field), `resolveKeyValueValueType`,
+    `preferredBorrowedSoaAccessHelperTarget`,
+    `tryRedirectConcreteExperimentalSoaMethodTarget`, and
+    `resolveExplicitDirectCallReturnMethodTarget` (100 lines, single
+    call site - the very candidate this task's own 2026-08-30 notes had
+    deferred as "not clean" back when it still routed through the
+    unextracted `setCollectionMethodTarget` hub; now that hub is a real
+    member (seam (2)), so this one became tractable). All verified
+    dependency-clean by reading each one's own definition first, same as
+    every prior seam.
+    **A real regression was caught and fixed this round, not by luck but
+    because the first full-suite run actually found it** (16 test
+    failures, all "removed vector-compat helper" diagnostics like
+    "unknown call target: /vector/push" silently no longer firing).
+    Root cause: this task's own extraction pattern (reuse a local
+    lambda's exact name for the new member function) collided with a
+    **pre-existing, unrelated `SemanticsValidator::explicitRemovedCollectionMethodPath`
+    member** already defined in `SemanticsValidatorInferCollectionCompatibility.cpp`
+    (different signature: `std::string_view` params vs. the new
+    member's `const std::string&` params). Unlike every previous
+    collision this task caught (name hiding, which breaks the *build*
+    loudly), a same-named member with a *different* signature is legal
+    C++ *overloading*, not redefinition - it compiles clean with zero
+    warnings. But `const std::string&` is a better overload match than
+    `std::string_view` for an argument that's already a `std::string`
+    (no conversion needed vs. an implicit one), so every one of that
+    pre-existing function's own call sites elsewhere in the codebase
+    (`SemanticsValidatorExprCollectionAccess.cpp`,
+    `SemanticsValidatorInferCollectionCompatibility.cpp`, others) got
+    silently rebound to the new, wrong-logic function instead - a
+    genuine behavior change with a clean compile and no warning to catch
+    it. This is strictly worse than the name-hiding case: hiding breaks
+    the build immediately; overloading breaks behavior silently and
+    only a full regression suite (not a build, not a smoke test) catches
+    it. Diagnosed by adding temporary `fprintf(stderr, ...)` tracing to
+    the new member (confirmed zero output for the failing repro - the
+    call was never reaching the new function at all, meaning the actual
+    culprit was elsewhere), then grepping for `SemanticsValidator::<name>(`
+    as an anchored *definition* pattern (not just any call-site match)
+    across every other file, which surfaced the real collision
+    immediately. Fixed by reverting that one extraction back to a local
+    lambda (`explicitRemovedCollectionMethodPathLocal`, keeping
+    `resolveMethodTarget`'s own copy of the logic, not the shared
+    member) and deleting the new member + its declaration entirely -
+    per this task's stop_rule, revert-and-rederive rather than patch
+    around it. Also proactively found and defused a second instance of
+    the exact same collision shape before it could cause a second bug:
+    `resolveKeyValueValueType` collided with a pre-existing 3-arg
+    `SemanticsValidator::resolveKeyValueValueType` in
+    `SemanticsValidatorCollectionHelperRewrites.cpp` (different arity,
+    so not immediately ambiguous the way the string_view case was, but
+    still a real collision not worth the risk) - renamed the new one to
+    `resolveMethodTargetKeyValueValueType` rather than leaving two
+    same-named overloads in the class. Verified the other 7 new members'
+    names for the same failure mode by grepping specifically for
+    `SemanticsValidator::<name>(` (an anchored *definition* search, not
+    a call-site search) across the whole `src/semantics/` tree - all 7
+    came back clean. **Methodology update for future seams**: the
+    call-site grep this task has used since seam (4b) step 2 (checking
+    for other *callers* of a candidate name) is necessary but not
+    sufficient - it catches name-hiding collisions (loud, build-breaking)
+    but not overload collisions with a pre-existing same-named member of
+    *different* signature (silent, behavior-changing). Always also grep
+    for `SemanticsValidator::<candidateName>(` as an anchored definition
+    pattern across the whole `src/semantics/` tree before reusing a
+    local lambda's name for a new member - a hit there is disqualifying
+    regardless of arity or parameter types, since even a "safely
+    different arity" collision (as `resolveKeyValueValueType` turned out
+    to be) is a needless landmine for the next reader or the next
+    extraction. Verified (after the fix): `primec`-only build clean; the
+    shape (c) repros unchanged; full `PrimeStruct_semantics_tests`
+    2740/2740 (0 failed, confirmed back at exact baseline after the
+    fix); `PrimeStruct_backend_ir_tests` 1643/1644 (the same
+    already-documented pre-existing "ir lowerer supports map method
+    calls" flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678
+    (0 failed, run from `build-release/`).
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
