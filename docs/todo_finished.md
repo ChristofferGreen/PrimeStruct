@@ -41975,3 +41975,60 @@ real answer.
     failed).
   - stop_rule: Pure refactor, zero behavior change - satisfied, no test
     delta at any point.
+
+**Todo Completion (September 2, 2026) — TODO-5281**
+- [x] TODO-5281: Audit SemanticsValidatorInferMethodResolution.cpp's parallel local-lambda-scaffolding pattern
+  - owner: ai
+  - created_at: 2026-09-02
+  - finished_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: (none - independent investigation)
+  - scope: TODO-5276 found that `SemanticsValidatorInferMethodResolution.cpp`
+    has its own local `resolveCollectionMethodFromTypePath`/
+    `setIndexedArgsPackKeyValueMethodTarget` lambdas of the same name as
+    two functions taking `MethodTargetCollectionResolvers`, and assumed
+    this meant a second copy of TODO-4724's scaffolding problem, blocking
+    TODO-5282. Investigate and correct/refine that finding.
+  - evidence: Read `SemanticsValidatorInferMethodResolution.cpp` in full
+    (1278 lines, one function: `resolveInferMethodCallPath`, used for
+    call-*target inference*, a different purpose than
+    `resolveMethodTarget`'s method-*target resolution*). Inventory of
+    its 27 local lambdas:
+    - **`MethodTargetCollectionResolvers` is used 0 times in this
+      file** - TODO-5276's premise was wrong. `resolveCollectionMethodFromTypePath`
+      and `setIndexedArgsPackKeyValueMethodTarget` here are same-named
+      local lambdas with their own independent, real logic (the former
+      checks `explicitRemovedMethodPath`/count/capacity-shaped builtins
+      against a `collectionTypePath` string, the latter calls a
+      different helper, `preferredKeyValueMethodTargetForCall`, entirely
+      absent from the other file) - a safe name-hiding case, exactly
+      like the many already-documented instances of this pattern
+      elsewhere in `src/semantics/` this session, not scaffolding debt.
+      **TODO-5282 does not need to touch this file's construction
+      sites** - that part of TODO-5276's finding is superseded.
+    - Only 2 of the 27 lambdas are genuine `this->`-forwarders to a real
+      member (both to `resolveDirectSoaVectorOrExperimentalBorrowedReceiver`,
+      lines 492 and 866) - already following the correct pattern, no
+      action needed.
+    - **2 lambdas are verbatim-logic duplicates of already-promoted
+      TODO-4724 members**, not forwarders and not independent logic:
+      `resolveBorrowedVectorReceiver` (line 541, ~65 lines) is an exact
+      copy of `SemanticsValidator::resolveBorrowedVectorReceiver`
+      (promoted in TODO-4724 seam (6)); `preferredBorrowedSoaAccessHelperTarget`
+      (line 611) is an exact copy of
+      `SemanticsValidator::preferredBorrowedSoaAccessHelperTarget`
+      (promoted alongside the vector family). These should call the
+      shared members directly instead of re-implementing them - a real
+      duplication/drift-risk finding, filed as TODO-5283.
+    - The remaining ~23 lambdas contain real logic specific to
+      call-target inference (memoization key/cache management, receiver
+      candidate collection, SOA field-view redirection, etc.) with no
+      counterpart in the method-target-resolution file - correctly
+      independent, not a decomposition target.
+  - notes: TODO-5283 filed as the concrete, bounded follow-up (dedup the
+    2 confirmed duplicates). No further decomposition of this file is
+    warranted beyond that - its remaining lambdas are genuinely
+    function-local logic, not scaffolding.
+  - stop_rule: Investigation only - satisfied; no extraction performed
+    in this leaf.
