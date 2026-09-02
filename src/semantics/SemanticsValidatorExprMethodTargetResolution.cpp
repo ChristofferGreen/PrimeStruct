@@ -1248,13 +1248,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                    const std::string &namespacePrefix) -> std::string {
     return this->resolveMethodTargetStructTypePath(typeName, namespacePrefix);
   };
-  auto maybeFailRetiredMaybeMutableHelperForType =
-      [&](const std::string &typeName,
-          const std::string &typeTemplateArg,
-          bool &handledOut) {
-        return this->maybeFailRetiredMaybeMutableHelperForType(
-            typeName, typeTemplateArg, normalizedMethodName, receiver, handledOut);
-      };
   if (normalizedMethodName == "ok" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
     resolvedOut = "/result/ok";
     isBuiltinOut = true;
@@ -2052,31 +2045,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
   }
-  if (isRetiredMaybeMutableHelperName(normalizedMethodName)) {
-    std::string receiverTypeName;
-    std::string receiverTypeTemplateArg;
-    if (receiver.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
-        receiverTypeName = paramBinding->typeName;
-        receiverTypeTemplateArg = paramBinding->typeTemplateArg;
-      } else if (auto it = locals.find(receiver.name); it != locals.end()) {
-        receiverTypeName = it->second.typeName;
-        receiverTypeTemplateArg = it->second.typeTemplateArg;
-      }
-    } else if (receiver.kind == Expr::Kind::Call) {
-      BindingInfo inferredReceiverBinding;
-      if (withPreservedError([&]() {
-            return inferBindingTypeFromInitializer(
-                receiver, params, locals, inferredReceiverBinding);
-          }) &&
-          !inferredReceiverBinding.typeName.empty()) {
-        receiverTypeName = normalizeBindingTypeName(inferredReceiverBinding.typeName);
-        receiverTypeTemplateArg = inferredReceiverBinding.typeTemplateArg;
-      }
-    }
+  {
     bool handledRetiredMaybeMutableHelper = false;
-    if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
-            receiverTypeName, receiverTypeTemplateArg,
+    if (bool ok = resolveRetiredMaybeMutableHelperMethodTarget(
+            receiver, normalizedMethodName, params, locals,
             handledRetiredMaybeMutableHelper);
         handledRetiredMaybeMutableHelper) {
       return ok;

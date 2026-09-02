@@ -3367,6 +3367,41 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     with small (<30-line) lambda promotions is still worth the
     per-round verification overhead versus returning to seam (5)-style
     structural splitting of the remaining straight-line dispatch blocks.
+  - progress_2026-09-02: After the method-target-collection-resolvers-
+    retirement track (TODO-5280 through TODO-5284) landed separately,
+    picked one more small (<30-line) lambda promotion from the
+    remaining straight-line dispatch: the `isRetiredMaybeMutableHelperName`
+    branch (~30 lines, computing the receiver's own type via direct
+    param/local binding lookup or speculative call-expression initializer
+    inference, then forwarding to the already-promoted
+    `maybeFailRetiredMaybeMutableHelperForType` member) was fully
+    self-contained - no local-lambda captures beyond its own parameters.
+    Extracted to a new member `resolveRetiredMaybeMutableHelperMethodTarget`
+    (declared in `SemanticsValidatorPrivateExprValidation.h`, defined in
+    `SemanticsValidatorMethodTargetStructSumResolvers.cpp` right after
+    `maybeFailRetiredMaybeMutableHelperForType`, which it now calls
+    directly instead of through a local forwarder lambda). That local
+    forwarder lambda (also named `maybeFailRetiredMaybeMutableHelperForType`,
+    shadowing the real member, and itself a small pre-existing piece of
+    the same forwarder-scaffolding pattern TODO-5284 just finished
+    clearing out of this function) became dead once its only call site
+    was converted, and was deleted too - caught by
+    `-Werror=unused-but-set-variable`, not missed. Verified: `primec`
+    build clean; all 3 standalone regression repros unchanged; full
+    `PrimeStruct_semantics_tests` 2744/2744, `PrimeStruct_backend_ir_tests`
+    1643/1644 (known pre-existing flake), `PrimeStruct_compile_run_tests`
+    2678/2678. `resolveMethodTarget`'s own body is now ~1087 lines (was
+    ~1115 before this round). Still well short of the "under a few
+    hundred lines" acceptance target - the remaining body is dominated
+    by several ~100-250-line straight-line dispatch blocks (e.g. the
+    `receiver.kind == Expr::Kind::Call && !receiver.isBinding` chain
+    around what was originally ~1823-2045, now shifted slightly) that
+    are much more heavily captured (several local lambdas, `resolvedOut`/
+    `isBuiltinOut` out-params threaded through many nested branches) than
+    this round's clean single-purpose extraction - a future round
+    attempting one of those should expect real design work (similar to
+    TODO-5282's `MethodTargetCollectionResolvers` retirement) rather
+    than a mechanical lift, not just a bigger version of this step.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai

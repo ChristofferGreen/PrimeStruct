@@ -148,6 +148,40 @@ bool SemanticsValidator::maybeFailRetiredMaybeMutableHelperForType(
       "; " + replacement);
 }
 
+bool SemanticsValidator::resolveRetiredMaybeMutableHelperMethodTarget(
+    const Expr &receiver, const std::string &normalizedMethodName,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    bool &handledOut) {
+  handledOut = false;
+  if (!isRetiredMaybeMutableHelperName(normalizedMethodName)) {
+    return false;
+  }
+  std::string receiverTypeName;
+  std::string receiverTypeTemplateArg;
+  if (receiver.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+      receiverTypeName = paramBinding->typeName;
+      receiverTypeTemplateArg = paramBinding->typeTemplateArg;
+    } else if (auto it = locals.find(receiver.name); it != locals.end()) {
+      receiverTypeName = it->second.typeName;
+      receiverTypeTemplateArg = it->second.typeTemplateArg;
+    }
+  } else if (receiver.kind == Expr::Kind::Call) {
+    BindingInfo inferredReceiverBinding;
+    if (withPreservedError([&]() {
+          return inferBindingTypeFromInitializer(
+              receiver, params, locals, inferredReceiverBinding);
+        }) &&
+        !inferredReceiverBinding.typeName.empty()) {
+      receiverTypeName = normalizeBindingTypeName(inferredReceiverBinding.typeName);
+      receiverTypeTemplateArg = inferredReceiverBinding.typeTemplateArg;
+    }
+  }
+  return maybeFailRetiredMaybeMutableHelperForType(
+      receiverTypeName, receiverTypeTemplateArg, normalizedMethodName, receiver, handledOut);
+}
+
 std::string SemanticsValidator::resolveMethodTargetStructTypePath(
     const std::string &typeName, const std::string &namespacePrefix) const {
   if (typeName.empty()) {

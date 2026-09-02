@@ -534,6 +534,17 @@
                                                   const std::string &normalizedMethodName,
                                                   const Expr &receiver,
                                                   bool &handledOut);
+  // TODO-4724: extracted from resolveMethodTarget's body - resolves the
+  // receiver's own type (by direct param/local binding lookup, or by
+  // speculative initializer-type inference for a call-expression
+  // receiver, matching maybeFailRetiredMaybeMutableHelperForType's own
+  // call-site pattern used elsewhere in this function) and forwards it
+  // to maybeFailRetiredMaybeMutableHelperForType above.
+  bool resolveRetiredMaybeMutableHelperMethodTarget(
+      const Expr &receiver, const std::string &normalizedMethodName,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      bool &handledOut);
   // TODO-4724 seam (4b), step 2: promoted from resolveMethodTarget's own
   // local lambda (used at 11 call sites throughout the function) - walks a
   // type name up through progressively shorter namespace-prefix scopes
