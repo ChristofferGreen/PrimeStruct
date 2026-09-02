@@ -42032,3 +42032,55 @@ real answer.
     function-local logic, not scaffolding.
   - stop_rule: Investigation only - satisfied; no extraction performed
     in this leaf.
+
+**Todo Completion (September 2, 2026) — TODO-5283**
+- [x] TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget against the promoted TODO-4724 members
+  - owner: ai
+  - created_at: 2026-09-02
+  - finished_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: (none)
+  - scope: TODO-5281's audit found 2 local lambdas in
+    `resolveInferMethodCallPath` (`SemanticsValidatorInferMethodResolution.cpp`)
+    that appeared to duplicate already-promoted TODO-4724 members.
+    Diff each against its counterpart before replacing, per this task's
+    own implementation_notes, and only dedup where genuinely identical.
+  - evidence: **`resolveBorrowedVectorReceiver`** (line 541, ~65 lines) -
+    diffed line-by-line against `SemanticsValidator::resolveBorrowedVectorReceiver`
+    (`SemanticsValidatorMethodTargetVectorResolvers.cpp`) - byte-for-byte
+    identical logic (only the argument-threading style differs: capture
+    vs explicit `params`/`locals` parameters). Confirmed its only
+    external call site (line 993) and its own two recursive self-calls
+    were the sole usages - never passed as a named `std::function` value
+    elsewhere. Replaced with a 3-line forwarder:
+    `[&](const Expr &candidate, std::string &elemTypeOut) -> bool { return this->resolveBorrowedVectorReceiver(candidate, elemTypeOut, params, locals); }`.
+    **`preferredBorrowedSoaAccessHelperTarget`** (line 611) - diffed
+    against `SemanticsValidator::preferredBorrowedSoaAccessHelperTarget`
+    and found a **real divergence**, not a safe dedup candidate: the
+    local lambda still does the original hardcoded
+    count/get/ref/to_aos->_ref literal chain, but the member was since
+    upgraded (TODO-4691, already landed before this session) to a
+    registry-backed lookup via `findBorrowedVariant(StdlibSurfaceId::CollectionsColumnarHelpers, helperName)`,
+    which may cover a different (likely broader) set of borrowed-variant
+    spellings than the local lambda's 4-case chain. Left this one
+    untouched, per this task's own stop_rule ("if replacing... changes
+    even one test's outcome... treat divergence as a real bug to
+    investigate on its own terms rather than forcing the dedup
+    through") - caught by inspection before any test even ran, so no
+    regression risk was taken. Verified (for the one dedup actually
+    made): `primec` build clean; shape (c) and `/vector/push` regression
+    repros unchanged; full `PrimeStruct_semantics_tests` 2744/2744,
+    `PrimeStruct_backend_ir_tests` 1643/1644 (known pre-existing flake),
+    `PrimeStruct_compile_run_tests` 2678/2678.
+  - notes: A follow-up TODO should investigate whether
+    `resolveInferMethodCallPath`'s local `preferredBorrowedSoaAccessHelperTarget`
+    is missing borrowed-variant coverage the registry-backed member now
+    has (a real correctness question, not a refactor), before any dedup
+    is attempted there. Not filed as a numbered TODO here since it's a
+    potential behavior investigation, not the maintainability-only scope
+    this track has been working - flagging it for whoever picks this up
+    next rather than expanding scope unasked.
+  - stop_rule: Pure refactor, zero behavior change for the change
+    actually made - satisfied. The second lambda's divergence was
+    correctly left alone rather than forced through.
