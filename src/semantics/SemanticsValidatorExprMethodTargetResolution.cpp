@@ -1255,10 +1255,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return this->maybeFailRetiredMaybeMutableHelperForType(
             typeName, typeTemplateArg, normalizedMethodName, receiver, handledOut);
       };
-  auto resolveCollectionVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
-    return this->resolveCollectionVectorValueTarget(target, elemTypeOut, params, locals);
-  };
-
   if (normalizedMethodName == "ok" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
     resolvedOut = "/result/ok";
     isBuiltinOut = true;
@@ -1341,38 +1337,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return preferredSoaHelperTargetForCollectionType(
         normalizedMethodName, internalSoaCollectionTypePath(true));
   };
-  std::function<bool(const Expr &, std::string &)> resolveArgsPackCountTarget =
-      [&](const Expr &target, std::string &elemType) -> bool {
-    return this->resolveArgsPackCountTarget(target, elemType, params, locals);
-  };
   std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget =
       [&](const Expr &target, std::string &elemType) -> bool {
     return this->resolveArgsPackAccessTarget(target, elemType, params, locals);
-  };
-  auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
-    return this->resolveArrayTarget(target, elemType, params, locals, resolveArgsPackAccessTarget);
-  };
-  std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget =
-      [&](const Expr &target, std::string &elemType) -> bool {
-    return this->resolveSoaVectorTarget(target, elemType, params, locals,
-                                        resolveArgsPackAccessTarget);
-  };
-  std::function<bool(const Expr &, std::string &)> resolveVectorTarget =
-      [&](const Expr &target, std::string &elemType) -> bool {
-    return this->resolveVectorTarget(target, elemType, params, locals,
-                                     resolveArgsPackAccessTarget);
-  };
-  auto resolveKeyValueTarget = [&](const Expr &target) -> bool {
-    return this->resolveKeyValueTarget(target, params, locals, resolveArgsPackAccessTarget);
   };
   auto resolveKeyValueValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
     return this->resolveMethodTargetKeyValueValueType(target, valueTypeOut, params, locals,
                                                        resolveArgsPackAccessTarget);
   };
-  std::function<bool(const Expr &)> resolveStringTarget = [&](const Expr &target) -> bool {
-    return this->resolveStringTarget(target, params, locals, resolveArgsPackAccessTarget);
-  };
-
   std::string elemType;
   auto setCollectionMethodTarget = [&](const std::string &path) -> bool {
     return resolveExplicitOrCanonicalCollectionMethodTarget(
@@ -1407,17 +1379,22 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (normalizedMethodName == "count" &&
-      resolveArgsPackCountTarget(receiver, elemType)) {
+      this->resolveArgsPackCountTarget(receiver, elemType, params, locals)) {
     return setCollectionMethodTarget("/array/count");
   }
   if (isValueSurfaceAccessMethodName(normalizedMethodName) &&
       resolveArgsPackAccessTarget(receiver, elemType)) {
     return setCollectionMethodTarget("/array/" + normalizedMethodName);
   }
+  const std::function<bool(const Expr &, std::string &)> resolveSoaVectorTargetFn =
+      [&](const Expr &target, std::string &elemTypeOut) -> bool {
+    return this->resolveSoaVectorTarget(target, elemTypeOut, params, locals,
+                                        resolveArgsPackAccessTarget);
+  };
   auto resolveDirectReceiver = [&](const Expr &directCandidate,
                                    std::string &directElemTypeOut) -> bool {
     return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
-        directCandidate, params, locals, resolveSoaVectorTarget,
+        directCandidate, params, locals, resolveSoaVectorTargetFn,
         directElemTypeOut);
   };
   const std::string explicitRemovedVectorReceiverFamily =
@@ -1617,24 +1594,24 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
       normalizedMethodName == "size") {
     if (normalizedMethodName == "count" &&
-        resolveArgsPackCountTarget(receiver, elemType)) {
+        this->resolveArgsPackCountTarget(receiver, elemType, params, locals)) {
       return setCollectionMethodTarget("/array/count");
     }
-    if (resolveVectorTarget(receiver, elemType) &&
+    if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                     "/vector"));
     }
     if (normalizedMethodName == "count" &&
-        resolveVectorTarget(receiver, elemType)) {
+        this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }
     if (normalizedMethodName == "count" &&
-        resolveCollectionVectorValueTarget(receiver, elemType)) {
+        this->resolveCollectionVectorValueTarget(receiver, elemType, params, locals)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }
-    if (resolveSoaVectorTarget(receiver, elemType)) {
+    if (this->resolveSoaVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa"));
     }
@@ -1644,7 +1621,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(
           preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
     }
-    if (normalizedMethodName == "count" && resolveArrayTarget(receiver, elemType)) {
+    if (normalizedMethodName == "count" &&
+        this->resolveArrayTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
               receiver, explicitVectorHelperPath, normalizedMethodName, params, locals,
               resolvedOut, isBuiltinOut);
@@ -1653,7 +1631,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       return setCollectionMethodTarget("/array/count");
     }
-    if (normalizedMethodName == "count" && resolveStringTarget(receiver)) {
+    if (normalizedMethodName == "count" &&
+        this->resolveStringTarget(receiver, params, locals, resolveArgsPackAccessTarget)) {
       if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
               receiver, explicitVectorHelperPath, normalizedMethodName, params, locals,
               resolvedOut, isBuiltinOut);
@@ -1669,7 +1648,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             resolvedOut, isBuiltinOut)) {
       return true;
     }
-    if (resolveKeyValueTarget(receiver)) {
+    if (this->resolveKeyValueTarget(receiver, params, locals, resolveArgsPackAccessTarget)) {
       if (normalizedMethodName == "count") {
         if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
               receiver, explicitVectorHelperPath, normalizedMethodName, params, locals,
@@ -1689,25 +1668,26 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             resolvedOut, isBuiltinOut)) {
       return true;
     }
-    if (normalizedMethodName != "insert" && resolveKeyValueTarget(receiver)) {
+    if (normalizedMethodName != "insert" &&
+        this->resolveKeyValueTarget(receiver, params, locals, resolveArgsPackAccessTarget)) {
       return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
     }
   }
   if (normalizedMethodName == "insert") {
-    if (resolveKeyValueTarget(receiver)) {
+    if (this->resolveKeyValueTarget(receiver, params, locals, resolveArgsPackAccessTarget)) {
       return setPreferredKeyValueMethodTarget(receiver, "insert");
     }
   }
   if (normalizedMethodName == "capacity") {
-    if (resolveArrayTarget(receiver, elemType) &&
+    if (this->resolveArrayTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget) &&
         (hasDeclaredDefinitionPath("/array/capacity") ||
          hasImportedDefinitionPath("/array/capacity"))) {
       return setCollectionMethodTarget("/array/capacity");
     }
-    if (resolveVectorTarget(receiver, elemType)) {
+    if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
-    if (resolveCollectionVectorValueTarget(receiver, elemType)) {
+    if (this->resolveCollectionVectorValueTarget(receiver, elemType, params, locals)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
   }
@@ -1715,16 +1695,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveArgsPackAccessTarget(receiver, elemType)) {
       return setCollectionMethodTarget("/array/" + normalizedMethodName);
     }
-    if (resolveVectorTarget(receiver, elemType)) {
+    if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
-    if (resolveCollectionVectorValueTarget(receiver, elemType)) {
+    if (this->resolveCollectionVectorValueTarget(receiver, elemType, params, locals)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
-    if (resolveArrayTarget(receiver, elemType)) {
+    if (this->resolveArrayTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget("/array/" + normalizedMethodName);
     }
-    if (resolveStringTarget(receiver)) {
+    if (this->resolveStringTarget(receiver, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget("/string/" + normalizedMethodName);
     }
   }
@@ -1736,11 +1716,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   }
   if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
-      resolveKeyValueTarget(receiver)) {
+      this->resolveKeyValueTarget(receiver, params, locals, resolveArgsPackAccessTarget)) {
     return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
   if (normalizedMethodName == "get" || normalizedMethodName == "get_ref") {
-    if (resolveVectorTarget(receiver, elemType) &&
+    if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName,
                                                      "/vector")) {
       return setCollectionMethodTarget(
@@ -1755,7 +1735,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                     "/vector"));
     }
-    if (resolveSoaVectorTarget(receiver, elemType)) {
+    if (this->resolveSoaVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                     internalSoaCollectionTypePath(true)));
@@ -1768,12 +1748,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") {
-    if (resolveVectorTarget(receiver, elemType) &&
+    if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
     }
-    if (resolveSoaVectorTarget(receiver, elemType)) {
+    if (this->resolveSoaVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(
               normalizedMethodName, internalSoaCollectionTypePath(true)));
@@ -1785,7 +1765,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") {
-    if (resolveVectorTarget(receiver, elemType)) {
+    if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
     }
@@ -1796,7 +1776,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     // the borrowed *_ref target name, so checking it first would route an
     // owned receiver to the borrowed helper. get/ref above already use
     // this same ordering (direct soa check before the OR-combined check).
-    if (resolveSoaVectorTarget(receiver, elemType)) {
+    if (this->resolveSoaVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(
               normalizedMethodName, internalSoaCollectionTypePath(true)));
@@ -1883,7 +1863,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
              removedVectorAccessCompatibilityPath == "/array/at_unsafe") &&
             !hasSamePathRemovedVectorAccessHelper) {
           std::string vectorElemType;
-          if (resolveVectorTarget(accessReceiver, vectorElemType)) {
+          if (this->resolveVectorTarget(accessReceiver, vectorElemType, params, locals,
+                                        resolveArgsPackAccessTarget)) {
             return failMethodTargetResolutionDiagnostic("unknown method: " +
                                                         removedVectorAccessCompatibilityPath);
           }
@@ -1909,8 +1890,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         std::string accessElemType;
         std::string accessValueType;
         if (resolveArgsPackAccessTarget(accessReceiver, accessElemType) ||
-            resolveVectorTarget(accessReceiver, accessElemType) ||
-            resolveArrayTarget(accessReceiver, accessElemType)) {
+            this->resolveVectorTarget(accessReceiver, accessElemType, params, locals,
+                                      resolveArgsPackAccessTarget) ||
+            this->resolveArrayTarget(accessReceiver, accessElemType, params, locals,
+                                     resolveArgsPackAccessTarget)) {
           const std::string normalizedElemType =
               normalizeBindingTypeName(unwrapReferencePointerTypeText(accessElemType));
           std::string normalizedElemBaseType = normalizedElemType;
@@ -1970,7 +1953,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             return true;
           }
         }
-        if (resolveStringTarget(accessReceiver)) {
+        if (this->resolveStringTarget(accessReceiver, params, locals, resolveArgsPackAccessTarget)) {
           resolvedOut = "/i32/" + normalizedMethodName;
           return true;
         }

@@ -42146,3 +42146,54 @@ real answer.
     struct retirement actually performed; the deferred forwarder-lambda
     cleanup is carried forward as TODO-5284 rather than counted as a
     shortfall here.
+
+**Todo Completion (September 2, 2026) — TODO-5284**
+- [x] TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
+  - owner: ai
+  - created_at: 2026-09-02
+  - finished_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: (none - TODO-5282 resolved)
+  - scope: Remove the local `std::function`-typed forwarder lambdas
+    TODO-5282 deliberately left in `resolveMethodTarget`'s own body
+    (`SemanticsValidatorExprMethodTargetResolution.cpp`) that used to
+    exist only to be captured into `MethodTargetCollectionResolvers{...}`
+    struct literals, now that the struct is retired - converting every
+    remaining bare call site to call the corresponding
+    `SemanticsValidator::` member directly.
+  - evidence: Removed all 7 forwarder lambda definitions -
+    `resolveArgsPackCountTarget`, `resolveCollectionVectorValueTarget`,
+    `resolveStringTarget`, `resolveKeyValueTarget`, `resolveArrayTarget`,
+    `resolveSoaVectorTarget`, `resolveVectorTarget` - and converted
+    every one of their ~35 bare call sites throughout
+    `resolveMethodTarget`'s body to call `this->X(...)` directly with
+    `params, locals` (and `resolveArgsPackAccessTarget` as the trailing
+    access-resolver argument where the member's own signature needs
+    it). One site (`resolveDirectSoaVectorOrExperimentalBorrowedReceiver`'s
+    `resolveDirectReceiver` callback, which needed `resolveSoaVectorTarget`
+    as a named `std::function` value rather than a call) got a small
+    locally-scoped `resolveSoaVectorTargetFn` wrapper instead of a bare
+    call. `resolveArgsPackAccessTarget` itself was deliberately kept as
+    the sole surviving local lambda: unlike the other 7, it is itself
+    threaded by name as a `std::function` argument into ~6 sibling
+    member calls (`resolveArrayTarget`, `resolveSoaVectorTarget`,
+    `resolveVectorTarget`, `resolveKeyValueTarget`, `resolveStringTarget`,
+    `resolveMethodTargetKeyValueValueType`) - removing it would mean
+    duplicating an equivalent wrapper at each of those 6 call sites
+    instead of one shared definition, which is not a simplification.
+    This confirms TODO-5282's "8, not 7" note was itself off by one in
+    the other direction: the correct count of removable, purely
+    struct-feeding forwarders was exactly 7, matching this task's
+    original title. Verified: `primec` build clean (after also clearing
+    a corrupted zero-byte `libprimec_frontend_lib.a` left over from an
+    earlier interrupted parallel build - unrelated to this change, just
+    a stale-artifact linker failure); all 3 standalone regression repros
+    unchanged (soa shape (c), min soa shape (c), bare `/vector/push`);
+    full `PrimeStruct_semantics_tests` 2744/2744,
+    `PrimeStruct_backend_ir_tests` 1643/1644 (known pre-existing flake,
+    unrelated), `PrimeStruct_compile_run_tests` 2678/2678 - all
+    baselines unchanged.
+  - notes: This closes out the entire method-target-collection-resolvers-retirement
+    track (TODO-5280 through TODO-5284) - nothing from it remains open.
+  - stop_rule: Pure refactor, zero behavior change - satisfied.
