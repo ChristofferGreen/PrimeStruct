@@ -48,11 +48,16 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
     const std::string &explicitRemovedMethodPath,
     const std::string &normalizedMethodName,
     const Expr &receiver,
-    const MethodTargetCollectionResolvers &resolvers,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
     std::string &resolvedOut,
-    bool &isBuiltinOut) const {
+    bool &isBuiltinOut) {
   auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
+  };
+  const std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTargetFn =
+      [this, &params, &locals](const Expr &target, std::string &elemType) -> bool {
+    return this->resolveArgsPackAccessTarget(target, elemType, params, locals);
   };
   auto shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod = [&]() {
     if (explicitRemovedMethodPath.empty()) {
@@ -68,41 +73,42 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
         return false;
       }
       if (isCanonicalStdVectorPath) {
-        return resolvers.resolveVectorTarget(receiver, ignoredElemType);
+        return resolveVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn);
       }
-      return resolvers.resolveArgsPackCountTarget(receiver, ignoredElemType) ||
-             resolvers.resolveVectorTarget(receiver, ignoredElemType) ||
-             resolvers.resolveSoaVectorTarget(receiver, ignoredElemType) ||
-             resolvers.resolveArrayTarget(receiver, ignoredElemType) ||
-             resolvers.resolveStringTarget(receiver);
+      return resolveArgsPackCountTarget(receiver, ignoredElemType, params, locals) ||
+             resolveVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn) ||
+             resolveSoaVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn) ||
+             resolveArrayTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn) ||
+             resolveStringTarget(receiver, params, locals, resolveArgsPackAccessTargetFn);
     }
     if (normalizedMethodName == "count_ref") {
       if (isExplicitArrayCompatibilityPath || isCanonicalStdVectorPath) {
         return false;
       }
-      return resolvers.resolveSoaVectorTarget(receiver, ignoredElemType) ||
-             resolvers.resolveKeyValueTarget(receiver);
+      return resolveSoaVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn) ||
+             resolveKeyValueTarget(receiver, params, locals, resolveArgsPackAccessTargetFn);
     }
     if (normalizedMethodName == "capacity") {
       if (isExplicitArrayCompatibilityPath) {
         return false;
       }
       if (isCanonicalStdVectorPath) {
-        return resolvers.resolveVectorTarget(receiver, ignoredElemType) ||
-               resolvers.resolveSoaVectorTarget(receiver, ignoredElemType);
+        return resolveVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn) ||
+               resolveSoaVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn);
       }
-      return resolvers.resolveVectorTarget(receiver, ignoredElemType) ||
-             resolvers.resolveSoaVectorTarget(receiver, ignoredElemType);
+      return resolveVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn) ||
+             resolveSoaVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn);
     }
     if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
-      const bool isVectorReceiver = resolvers.resolveVectorTarget(receiver, ignoredElemType);
+      const bool isVectorReceiver =
+          resolveVectorTarget(receiver, ignoredElemType, params, locals, resolveArgsPackAccessTargetFn);
       if (isVectorReceiver) {
         return false;
       }
       if (isCanonicalStdVectorPath) {
         return false;
       }
-      return resolvers.resolveArgsPackAccessTarget(receiver, ignoredElemType);
+      return resolveArgsPackAccessTarget(receiver, ignoredElemType, params, locals);
     }
     return false;
   };
@@ -125,9 +131,9 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
     std::string ignoredElemType;
     const bool isArgsPackArrayBuiltin =
         (normalizedMethodName == "count" &&
-         resolvers.resolveArgsPackCountTarget(receiver, ignoredElemType)) ||
+         resolveArgsPackCountTarget(receiver, ignoredElemType, params, locals)) ||
         (isValueSurfaceAccessMethodName(normalizedMethodName) &&
-         resolvers.resolveArgsPackAccessTarget(receiver, ignoredElemType));
+         resolveArgsPackAccessTarget(receiver, ignoredElemType, params, locals));
     if (isArgsPackArrayBuiltin) {
       resolvedOut = path;
       isBuiltinOut = true;
@@ -305,7 +311,9 @@ void SemanticsValidator::inferMethodTargetReceiverType(
 bool SemanticsValidator::resolveExplicitDirectCallReturnMethodTarget(
     const Expr &receiverExpr, const std::string &canonicalCollectionHelperName,
     const std::string &normalizedMethodName, const Expr &receiver,
-    const std::string &explicitRemovedMethodPath, const MethodTargetCollectionResolvers &resolvers,
+    const std::string &explicitRemovedMethodPath,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
     std::string &resolvedOut, bool &isBuiltinOut) {
   if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
     return false;
@@ -337,7 +345,7 @@ bool SemanticsValidator::resolveExplicitDirectCallReturnMethodTarget(
         return resolveExplicitOrCanonicalCollectionMethodTarget(
             preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
                                                       internalSoaCollectionTypePath(true)),
-            explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
+            explicitRemovedMethodPath, normalizedMethodName, receiver, params, locals, resolvedOut,
             isBuiltinOut);
       }
       return false;
@@ -358,7 +366,7 @@ bool SemanticsValidator::resolveExplicitDirectCallReturnMethodTarget(
           isBorrowedSoaWrapperMethod) {
         return resolveExplicitOrCanonicalCollectionMethodTarget(
             preferredBorrowedSoaAccessHelperTarget(normalizedMethodName), explicitRemovedMethodPath,
-            normalizedMethodName, receiver, resolvers, resolvedOut, isBuiltinOut);
+            normalizedMethodName, receiver, params, locals, resolvedOut, isBuiltinOut);
       }
       const std::string normalizedPointeeType =
           normalizeBindingTypeName(normalizedReturnArgText);
@@ -400,7 +408,7 @@ bool SemanticsValidator::resolveExplicitDirectCallReturnMethodTarget(
     if (!resolvedReturnType.empty()) {
       if (tryRedirectConcreteExperimentalSoaMethodTarget(
               resolvedReturnType, canonicalCollectionHelperName, receiver,
-              explicitRemovedMethodPath, normalizedMethodName, resolvers, resolvedOut,
+              explicitRemovedMethodPath, normalizedMethodName, params, locals, resolvedOut,
               isBuiltinOut)) {
         return true;
       }
@@ -458,18 +466,18 @@ bool SemanticsValidator::resolveCollectionMethodFromTypePath(
     const std::string &explicitKeyValueHelperPath, const std::string &explicitRemovedMethodPath,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
-    const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+    std::string &resolvedOut,
     bool &isBuiltinOut) {
   auto setCollectionMethodTargetLocal = [&](const std::string &path) -> bool {
     return resolveExplicitOrCanonicalCollectionMethodTarget(
-        path, explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
-        isBuiltinOut);
+        path, explicitRemovedMethodPath, normalizedMethodName, receiver, params, locals,
+        resolvedOut, isBuiltinOut);
   };
   auto setPreferredKeyValueMethodTargetLocal = [&](const Expr &receiverExpr,
                                                     const std::string &helperName) -> bool {
     return setPreferredKeyValueMethodTarget(receiverExpr, helperName, explicitKeyValueHelperPath,
                                             receiver, explicitRemovedMethodPath,
-                                            normalizedMethodName, params, locals, resolvers,
+                                            normalizedMethodName, params, locals,
                                             resolvedOut, isBuiltinOut);
   };
   if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
@@ -500,8 +508,8 @@ bool SemanticsValidator::resolveCollectionMethodFromTypePath(
     if (collectionTypePath == "/map") {
       if (normalizedMethodName == "count") {
         if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
-                receiver, explicitVectorHelperPath, normalizedMethodName, resolvers, resolvedOut,
-                isBuiltinOut);
+                receiver, explicitVectorHelperPath, normalizedMethodName, params, locals,
+                resolvedOut, isBuiltinOut);
             explicitTarget.has_value()) {
           return *explicitTarget;
         }
@@ -632,7 +640,6 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
     const std::string &explicitVectorHelperPath,
     const std::string &explicitKeyValueHelperPath,
     const std::string &explicitRemovedMethodPath, bool traceFileErrorResult,
-    const MethodTargetCollectionResolvers &resolvers,
     const std::function<bool(std::string)> &failMethodTargetResolutionDiagnostic,
     const std::function<void(std::string_view, std::string_view, std::string_view)>
         &stampFileErrorResultFailure,
@@ -655,8 +662,8 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
   };
   auto setCollectionMethodTarget = [&](const std::string &path) -> bool {
     return resolveExplicitOrCanonicalCollectionMethodTarget(
-        path, explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
-        isBuiltinOut);
+        path, explicitRemovedMethodPath, normalizedMethodName, receiver, params, locals,
+        resolvedOut, isBuiltinOut);
   };
   auto canonicalVectorHelperTarget = [](std::string_view helperName) {
     return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
@@ -736,7 +743,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
     return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName,
                                             explicitKeyValueHelperPath, receiver,
                                             explicitRemovedMethodPath, normalizedMethodName,
-                                            params, locals, resolvers, resolvedOut, isBuiltinOut);
+                                            params, locals, resolvedOut, isBuiltinOut);
   }
   if (typeName == "Reference" &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
@@ -824,7 +831,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
       return setPreferredKeyValueMethodTarget(receiver, borrowedHelperName,
                                               explicitKeyValueHelperPath, receiver,
                                               explicitRemovedMethodPath, normalizedMethodName,
-                                              params, locals, resolvers, resolvedOut,
+                                              params, locals, resolvedOut,
                                               isBuiltinOut);
     }
     if (isInternalSoaCollectionTypePath(normalizedPointeeCollectionTypePath) &&
@@ -1369,11 +1376,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   std::string elemType;
   auto setCollectionMethodTarget = [&](const std::string &path) -> bool {
     return resolveExplicitOrCanonicalCollectionMethodTarget(
-        path, explicitRemovedMethodPath, normalizedMethodName, receiver,
-        MethodTargetCollectionResolvers{
-            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+        path, explicitRemovedMethodPath, normalizedMethodName, receiver, params, locals,
         resolvedOut, isBuiltinOut);
   };
   auto canonicalVectorHelperTarget = [](std::string_view helperName) {
@@ -1382,12 +1385,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto setPreferredKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
     return this->setPreferredKeyValueMethodTarget(
         receiverExpr, helperName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
-        normalizedMethodName, params, locals,
-        MethodTargetCollectionResolvers{
-            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
-        resolvedOut, isBuiltinOut);
+        normalizedMethodName, params, locals, resolvedOut, isBuiltinOut);
   };
   auto resolveExplicitRootKeyValueMethodPath = [&]() -> bool {
     if (!isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
@@ -1423,12 +1421,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         directElemTypeOut);
   };
   const std::string explicitRemovedVectorReceiverFamily =
-      classifyExplicitVectorHelperReceiver(
-          receiver,
-          MethodTargetCollectionResolvers{
-              resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-              resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-              resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget});
+      classifyExplicitVectorHelperReceiver(receiver, params, locals);
   if (startsWithRootedVectorMethodPrefix(explicitVectorHelperPath) &&
       (explicitRemovedVectorReceiverFamily == "string" ||
        explicitRemovedVectorReceiverFamily == "array" ||
@@ -1463,10 +1456,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       setIndexedArgsPackKeyValueMethodTarget(
           receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
             normalizedMethodName, params, locals,
-            MethodTargetCollectionResolvers{
-                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
             resolvedOut, isBuiltinOut)) {
     return true;
   }
@@ -1569,12 +1558,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
-  auto explicitVectorReceiverFamily = classifyExplicitVectorHelperReceiver(
-      receiver,
-      MethodTargetCollectionResolvers{
-          resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-          resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-          resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget});
+  auto explicitVectorReceiverFamily =
+      classifyExplicitVectorHelperReceiver(receiver, params, locals);
   const bool isExplicitVectorFamilyReceiver =
       explicitVectorReceiverFamily == "vector" ||
       explicitVectorReceiverFamily ==
@@ -1589,11 +1574,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isRemovedVectorCompatibilityHelper(explicitRootedVectorHelperName);
   if (isExplicitRootedVectorMethod && isExplicitVectorFamilyReceiver) {
     if (hasReceiverCompatibleExplicitVectorHelperPath(
-            explicitVectorHelperPath, receiver,
-            MethodTargetCollectionResolvers{
-                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget})) {
+            explicitVectorHelperPath, receiver, params, locals)) {
       resolvedOut = explicitVectorHelperPath;
       isBuiltinOut = false;
       return true;
@@ -1628,11 +1609,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe";
   if (!usesBuiltinVectorMethodSemantics &&
       preferExplicitCanonicalVectorHelperForReceiver(
-          receiver, explicitVectorHelperPath,
-          MethodTargetCollectionResolvers{
-              resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-              resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-              resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget})) {
+          receiver, explicitVectorHelperPath, params, locals)) {
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
     return true;
@@ -1669,11 +1646,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (normalizedMethodName == "count" && resolveArrayTarget(receiver, elemType)) {
       if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
-              receiver, explicitVectorHelperPath, normalizedMethodName,
-              MethodTargetCollectionResolvers{
-                  resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                  resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                  resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+              receiver, explicitVectorHelperPath, normalizedMethodName, params, locals,
               resolvedOut, isBuiltinOut);
           explicitTarget.has_value()) {
         return *explicitTarget;
@@ -1682,11 +1655,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (normalizedMethodName == "count" && resolveStringTarget(receiver)) {
       if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
-              receiver, explicitVectorHelperPath, normalizedMethodName,
-              MethodTargetCollectionResolvers{
-                  resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                  resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                  resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+              receiver, explicitVectorHelperPath, normalizedMethodName, params, locals,
               resolvedOut, isBuiltinOut);
           explicitTarget.has_value()) {
         return *explicitTarget;
@@ -1697,21 +1666,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         setIndexedArgsPackKeyValueMethodTarget(
             receiver, "count", explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
             normalizedMethodName, params, locals,
-            MethodTargetCollectionResolvers{
-                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
             resolvedOut, isBuiltinOut)) {
       return true;
     }
     if (resolveKeyValueTarget(receiver)) {
       if (normalizedMethodName == "count") {
         if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(
-              receiver, explicitVectorHelperPath, normalizedMethodName,
-              MethodTargetCollectionResolvers{
-                  resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                  resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                  resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+              receiver, explicitVectorHelperPath, normalizedMethodName, params, locals,
               resolvedOut, isBuiltinOut);
             explicitTarget.has_value()) {
           return *explicitTarget;
@@ -1725,10 +1686,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (setIndexedArgsPackKeyValueMethodTarget(
             receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
             normalizedMethodName, params, locals,
-            MethodTargetCollectionResolvers{
-                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
             resolvedOut, isBuiltinOut)) {
       return true;
     }
@@ -1775,10 +1732,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       setIndexedArgsPackKeyValueMethodTarget(
           receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
             normalizedMethodName, params, locals,
-            MethodTargetCollectionResolvers{
-                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
             resolvedOut, isBuiltinOut)) {
     return true;
   }
@@ -1985,10 +1938,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               if (setIndexedArgsPackKeyValueMethodTarget(
                       receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
             normalizedMethodName, params, locals,
-            MethodTargetCollectionResolvers{
-                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
             resolvedOut, isBuiltinOut)) {
                 return true;
               }
@@ -2070,11 +2019,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               if (!resolvedReturnType.empty()) {
                 if (tryRedirectConcreteExperimentalSoaMethodTarget(
                         resolvedReturnType, canonicalCollectionHelperName, receiver,
-                        explicitRemovedMethodPath, normalizedMethodName,
-                        MethodTargetCollectionResolvers{
-                            resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                            resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                            resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
+                        explicitRemovedMethodPath, normalizedMethodName, params, locals,
                         resolvedOut, isBuiltinOut)) {
                   return true;
                 }
@@ -2221,10 +2166,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               internalSoaCollectionTypePath(true), normalizedMethodName, receiver,
               explicitVectorHelperPath, explicitKeyValueHelperPath, explicitRemovedMethodPath,
               params, locals,
-              MethodTargetCollectionResolvers{
-                  resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                  resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                  resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
               resolvedOut, isBuiltinOut)) {
         return true;
       }
@@ -2233,12 +2174,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (resolveExplicitDirectCallReturnMethodTarget(
             receiver, canonicalCollectionHelperName, normalizedMethodName, receiver,
-            explicitRemovedMethodPath,
-            MethodTargetCollectionResolvers{
-                resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
-            resolvedOut, isBuiltinOut)) {
+            explicitRemovedMethodPath, params, locals, resolvedOut, isBuiltinOut)) {
       return true;
     }
   }
@@ -2265,10 +2201,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               receiverCollectionTypePath, normalizedMethodName, receiver,
               explicitVectorHelperPath, explicitKeyValueHelperPath, explicitRemovedMethodPath,
               params, locals,
-              MethodTargetCollectionResolvers{
-                  resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-                  resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-                  resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
               resolvedOut, isBuiltinOut)) {
         return true;
       }
@@ -2279,10 +2211,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       params, locals, callNamespacePrefix, receiver, normalizedMethodName,
       canonicalCollectionHelperName, explicitVectorHelperPath, explicitKeyValueHelperPath,
       explicitRemovedMethodPath, traceFileErrorResult,
-      MethodTargetCollectionResolvers{
-          resolveVectorTarget, resolveArgsPackCountTarget, resolveSoaVectorTarget,
-          resolveArrayTarget, resolveStringTarget, resolveKeyValueTarget,
-          resolveArgsPackAccessTarget, resolveCollectionVectorValueTarget},
       failMethodTargetResolutionDiagnostic, stampFileErrorResultFailure, resolvedOut,
       isBuiltinOut);
 }

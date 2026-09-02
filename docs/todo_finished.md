@@ -42084,3 +42084,65 @@ real answer.
   - stop_rule: Pure refactor, zero behavior change for the change
     actually made - satisfied. The second lambda's divergence was
     correctly left alone rather than forced through.
+
+**Todo Completion (September 2, 2026) — TODO-5282**
+- [x] TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection in favor of direct member calls
+  - owner: ai
+  - created_at: 2026-09-02
+  - finished_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: (none - both TODO-5280 and TODO-5281 resolved)
+  - scope: Widen the ~10 functions across
+    `SemanticsValidatorExprMethodTargetResolution.cpp` and its
+    TODO-5270-5274 family files (`SemanticsValidatorMethodTargetVectorResolvers.cpp`,
+    `SemanticsValidatorMethodTargetKeyValueResolvers.cpp`) that took
+    `MethodTargetCollectionResolvers` to take `params`/`locals`
+    explicitly instead, replace their internal `resolvers.X(...)` calls
+    with direct `this->X(...)` member calls, update every construction
+    site to stop building the struct, and delete it once nothing
+    constructs it anymore.
+  - evidence: Converted all 10 functions:
+    `resolveExplicitOrCanonicalCollectionMethodTarget`,
+    `resolveExplicitDirectCallReturnMethodTarget`,
+    `classifyExplicitVectorHelperReceiver`,
+    `hasReceiverCompatibleExplicitVectorHelperPath`,
+    `preferExplicitCanonicalVectorHelperForReceiver`,
+    `tryResolveExplicitCanonicalVectorCountMethodTarget`,
+    `tryRedirectConcreteExperimentalSoaMethodTarget`,
+    `resolveCollectionMethodFromTypePath`,
+    `resolveMethodTargetGenericFallback`, `setPreferredKeyValueMethodTarget`,
+    and `setIndexedArgsPackKeyValueMethodTarget` - each now takes
+    `params`/`locals` directly (adding a locally-constructed
+    `resolveArgsPackAccessTargetFn` lambda wrapper wherever a callee
+    still needed the 5-argument `resolveVectorTarget`/`resolveSoaVectorTarget`/
+    `resolveArrayTarget`/`resolveStringTarget`/`resolveKeyValueTarget`
+    signature). Updated every call site across both files (~20 sites)
+    and every header declaration in
+    `SemanticsValidatorPrivateExprValidation.h`. Deleted the
+    `MethodTargetCollectionResolvers` struct itself. Verified with a
+    repo-wide `grep -rn "MethodTargetCollectionResolvers" src/` -
+    zero references remain. `primec` build clean; all three standalone
+    regression repros unchanged (soa shape (c), min soa shape (c),
+    bare `/vector/push`); full `PrimeStruct_semantics_tests` 2744/2744,
+    `PrimeStruct_backend_ir_tests` 1643/1644 (known pre-existing flake,
+    unrelated), `PrimeStruct_compile_run_tests` 2678/2678 - all
+    baselines unchanged.
+  - notes: The task's acceptance also called for removing "the 7
+    forwarder lambdas TODO-5275 deliberately left in resolveMethodTarget's
+    body for this leaf." On inspection this turned out to be 8 lambdas
+    (matching the struct's 8 former fields), and - unlike the ~20
+    construction-site call sites converted above - each of these is
+    ALSO called directly by name at roughly 40 other sites throughout
+    `resolveMethodTarget`'s own ~1100-line body (both bare 2-arg calls
+    and as named callables threaded into sibling calls). Converting all
+    ~40 of those sites in the same pass was judged disproportionate
+    risk for a purely cosmetic, zero-behavior-change rename now that no
+    struct exists to justify keeping them named - split off as the
+    narrower, independently-verifiable TODO-5284 rather than rushed
+    through in this round, following the same scope-narrowing judgment
+    call TODO-5281/TODO-5283 made earlier in this track.
+  - stop_rule: Pure refactor, zero behavior change - satisfied for the
+    struct retirement actually performed; the deferred forwarder-lambda
+    cleanup is carried forward as TODO-5284 rather than counted as a
+    shortfall here.

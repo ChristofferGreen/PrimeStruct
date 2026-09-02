@@ -265,11 +265,14 @@ bool SemanticsValidator::setPreferredKeyValueMethodTarget(
     const std::string &explicitRemovedMethodPath, const std::string &normalizedMethodName,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
-    const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
-    bool &isBuiltinOut) {
+    std::string &resolvedOut, bool &isBuiltinOut) {
+  const std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTargetFn =
+      [this, &params, &locals](const Expr &target, std::string &elemType) -> bool {
+    return this->resolveArgsPackAccessTarget(target, elemType, params, locals);
+  };
   const std::string preferredKeyValueHelper = preferredKeyValueMethodTarget(
       receiverExpr, helperName, explicitKeyValueHelperPath, params, locals,
-      resolvers.resolveArgsPackAccessTarget);
+      resolveArgsPackAccessTargetFn);
   if (preferredKeyValueHelper.empty()) {
     const std::string directPath =
         explicitKeyValueHelperPath.empty()
@@ -291,7 +294,7 @@ bool SemanticsValidator::setPreferredKeyValueMethodTarget(
   }
   return resolveExplicitOrCanonicalCollectionMethodTarget(
       preferredKeyValueHelper, explicitRemovedMethodPath, normalizedMethodName, receiver,
-      resolvers, resolvedOut, isBuiltinOut);
+      params, locals, resolvedOut, isBuiltinOut);
 }
 
 bool SemanticsValidator::resolveKeyValueTarget(
@@ -508,11 +511,14 @@ bool SemanticsValidator::setIndexedArgsPackKeyValueMethodTarget(
     const std::string &explicitRemovedMethodPath, const std::string &normalizedMethodName,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
-    const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
-    bool &isBuiltinOut) {
+    std::string &resolvedOut, bool &isBuiltinOut) {
   if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
     return false;
   }
+  const std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTargetFn =
+      [this, &params, &locals](const Expr &target, std::string &elemType) -> bool {
+    return this->resolveArgsPackAccessTarget(target, elemType, params, locals);
+  };
   std::string indexedElemType;
   std::string keyType;
   std::string valueType;
@@ -525,11 +531,11 @@ bool SemanticsValidator::setIndexedArgsPackKeyValueMethodTarget(
   };
   const bool resolvedIndexedKeyValueType =
       ((resolveIndexedArgsPackElementType(receiverExpr, indexedElemType,
-                                          resolvers.resolveArgsPackAccessTarget) ||
+                                          resolveArgsPackAccessTargetFn) ||
         resolveWrappedIndexedArgsPackElementType(receiverExpr, indexedElemType,
-                                                 resolvers.resolveArgsPackAccessTarget) ||
+                                                 resolveArgsPackAccessTargetFn) ||
         resolveDereferencedIndexedArgsPackElementType(receiverExpr, indexedElemType,
-                                                       resolvers.resolveArgsPackAccessTarget)) &&
+                                                       resolveArgsPackAccessTargetFn)) &&
        isKeyValueElementType(indexedElemType));
   const bool resolvedReceiverPackType = [&]() {
     std::string accessName;
@@ -538,7 +544,7 @@ bool SemanticsValidator::setIndexedArgsPackKeyValueMethodTarget(
     }
     const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(receiverExpr);
     return accessReceiver != nullptr &&
-           resolvers.resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) &&
+           resolveArgsPackAccessTargetFn(*accessReceiver, indexedElemType) &&
            isKeyValueElementType(indexedElemType);
   }();
   if (!resolvedIndexedKeyValueType && !resolvedReceiverPackType) {
@@ -546,7 +552,7 @@ bool SemanticsValidator::setIndexedArgsPackKeyValueMethodTarget(
   }
   return setPreferredKeyValueMethodTarget(receiverExpr, helperName, explicitKeyValueHelperPath,
                                           receiver, explicitRemovedMethodPath,
-                                          normalizedMethodName, params, locals, resolvers,
+                                          normalizedMethodName, params, locals,
                                           resolvedOut, isBuiltinOut);
 }
 

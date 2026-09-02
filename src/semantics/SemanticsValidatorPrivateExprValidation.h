@@ -448,22 +448,6 @@
                                       const std::string &normalizedMethodName,
                                       std::string &resolvedOut,
                                       bool &isBuiltinOut) const;
-  // TODO-4724: bundles resolveMethodTarget's own local receiver-shape
-  // resolver lambdas (distinct from, and not to be confused with, the
-  // shared BuiltinCollectionDispatchResolvers used by general expression
-  // validation - see that struct's own comment) so
-  // resolveExplicitOrCanonicalCollectionMethodTarget below can be a
-  // proper member function instead of a function-local lambda.
-  struct MethodTargetCollectionResolvers {
-    const std::function<bool(const Expr &, std::string &)> &resolveVectorTarget;
-    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackCountTarget;
-    const std::function<bool(const Expr &, std::string &)> &resolveSoaVectorTarget;
-    const std::function<bool(const Expr &, std::string &)> &resolveArrayTarget;
-    const std::function<bool(const Expr &)> &resolveStringTarget;
-    const std::function<bool(const Expr &)> &resolveKeyValueTarget;
-    const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget;
-    const std::function<bool(const Expr &, std::string &)> &resolveCollectionVectorValueTarget;
-  };
   // TODO-4724: extracted from resolveMethodTarget's body (was the local
   // lambda `setCollectionMethodTarget`, seam (2)'s hub-lambda precursor -
   // see this task's own implementation_notes) - the "explicit removed/
@@ -475,9 +459,10 @@
       const std::string &explicitRemovedMethodPath,
       const std::string &normalizedMethodName,
       const Expr &receiver,
-      const MethodTargetCollectionResolvers &resolvers,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
       std::string &resolvedOut,
-      bool &isBuiltinOut) const;
+      bool &isBuiltinOut);
   // TODO-4724 seam (3): extracted from resolveMethodTarget's body - the
   // "explicit vector-namespaced helper path vs. receiver family"
   // classification cluster. These 6 mutually-calling helpers classify a
@@ -491,18 +476,22 @@
   bool explicitVectorCompatHelperFamilyHasCompatibleReceiver(
       std::string_view path, std::string_view receiverFamily) const;
   std::string classifyExplicitVectorHelperReceiver(
-      const Expr &receiverExpr, const MethodTargetCollectionResolvers &resolvers) const;
+      const Expr &receiverExpr, const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   bool hasReceiverCompatibleExplicitVectorHelperPath(
       const std::string &path, const Expr &receiverExpr,
-      const MethodTargetCollectionResolvers &resolvers) const;
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   bool preferExplicitCanonicalVectorHelperForReceiver(
       const Expr &receiverExpr, const std::string &explicitVectorHelperPath,
-      const MethodTargetCollectionResolvers &resolvers) const;
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   std::optional<bool> tryResolveExplicitCanonicalVectorCountMethodTarget(
       const Expr &receiverExpr,
       const std::string &explicitVectorHelperPath,
       const std::string &normalizedMethodName,
-      const MethodTargetCollectionResolvers &resolvers,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
       std::string &resolvedOut,
       bool &isBuiltinOut);
   // TODO-4724 seam (4a): extracted from resolveMethodTarget's body - runs
@@ -644,8 +633,7 @@
       const std::string &explicitRemovedMethodPath, const std::string &normalizedMethodName,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
-      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
-      bool &isBuiltinOut);
+      std::string &resolvedOut, bool &isBuiltinOut);
   // TODO-4724 seam (4d): a batch of the largest remaining still-full-bodied
   // local lambdas in resolveMethodTarget, promoted after `setPreferredKeyValueMethodTarget`
   // (seam (4c)) removed most of their entangled dependencies. Each was
@@ -720,13 +708,15 @@
   bool tryRedirectConcreteExperimentalSoaMethodTarget(
       const std::string &resolvedType, const std::string &canonicalCollectionHelperName,
       const Expr &receiver, const std::string &explicitRemovedMethodPath,
-      const std::string &normalizedMethodName, const MethodTargetCollectionResolvers &resolvers,
+      const std::string &normalizedMethodName, const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
       std::string &resolvedOut, bool &isBuiltinOut);
   bool resolveExplicitDirectCallReturnMethodTarget(
       const Expr &receiverExpr, const std::string &canonicalCollectionHelperName,
       const std::string &normalizedMethodName, const Expr &receiver,
       const std::string &explicitRemovedMethodPath,
-      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals, std::string &resolvedOut,
       bool &isBuiltinOut);
   // TODO-4724 seam (4e): the last big batch - resolveCollectionMethodFromTypePath
   // (129 lines, the single biggest remaining local lambda) plus its own
@@ -745,7 +735,7 @@
       const std::string &explicitRemovedMethodPath,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
-      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
+      std::string &resolvedOut,
       bool &isBuiltinOut);
   // TODO-4724 seam (4f): another batch of the next-largest remaining
   // still-full-bodied local lambdas, same methodology as seam (4e) -
@@ -771,8 +761,7 @@
       const std::string &explicitRemovedMethodPath, const std::string &normalizedMethodName,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
-      const MethodTargetCollectionResolvers &resolvers, std::string &resolvedOut,
-      bool &isBuiltinOut);
+      std::string &resolvedOut, bool &isBuiltinOut);
   // TODO-4724 seam (5): structural split of the "generic fallback" tail -
   // the straight-line dispatch-on-typeName body that was never wrapped in
   // a local lambda to begin with (see this task's own implementation_notes
@@ -798,7 +787,6 @@
       const std::string &explicitVectorHelperPath,
       const std::string &explicitKeyValueHelperPath,
       const std::string &explicitRemovedMethodPath, bool traceFileErrorResult,
-      const MethodTargetCollectionResolvers &resolvers,
       const std::function<bool(std::string)> &failMethodTargetResolutionDiagnostic,
       const std::function<void(std::string_view, std::string_view, std::string_view)>
           &stampFileErrorResultFailure,

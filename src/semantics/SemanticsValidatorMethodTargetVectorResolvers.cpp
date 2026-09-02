@@ -78,24 +78,29 @@ bool SemanticsValidator::explicitVectorCompatHelperFamilyHasCompatibleReceiver(
 }
 
 std::string SemanticsValidator::classifyExplicitVectorHelperReceiver(
-    const Expr &receiverExpr, const MethodTargetCollectionResolvers &resolvers) const {
+    const Expr &receiverExpr, const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
   std::string elemType;
-  if (resolvers.resolveCollectionVectorValueTarget(receiverExpr, elemType)) {
+  const std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTargetFn =
+      [this, &params, &locals](const Expr &target, std::string &elemTypeOut) -> bool {
+    return this->resolveArgsPackAccessTarget(target, elemTypeOut, params, locals);
+  };
+  if (resolveCollectionVectorValueTarget(receiverExpr, elemType, params, locals)) {
     return legacyExperimentalVectorCompatibilityFamilyName();
   }
-  if (resolvers.resolveVectorTarget(receiverExpr, elemType)) {
+  if (resolveVectorTarget(receiverExpr, elemType, params, locals, resolveArgsPackAccessTargetFn)) {
     return "vector";
   }
-  if (resolvers.resolveSoaVectorTarget(receiverExpr, elemType)) {
+  if (resolveSoaVectorTarget(receiverExpr, elemType, params, locals, resolveArgsPackAccessTargetFn)) {
     return internalSoaCollectionTypeName();
   }
-  if (resolvers.resolveArrayTarget(receiverExpr, elemType)) {
+  if (resolveArrayTarget(receiverExpr, elemType, params, locals, resolveArgsPackAccessTargetFn)) {
     return "array";
   }
-  if (resolvers.resolveStringTarget(receiverExpr)) {
+  if (resolveStringTarget(receiverExpr, params, locals, resolveArgsPackAccessTargetFn)) {
     return "string";
   }
-  if (resolvers.resolveKeyValueTarget(receiverExpr)) {
+  if (resolveKeyValueTarget(receiverExpr, params, locals, resolveArgsPackAccessTargetFn)) {
     return "map";
   }
   return {};
@@ -103,8 +108,9 @@ std::string SemanticsValidator::classifyExplicitVectorHelperReceiver(
 
 bool SemanticsValidator::hasReceiverCompatibleExplicitVectorHelperPath(
     const std::string &path, const Expr &receiverExpr,
-    const MethodTargetCollectionResolvers &resolvers) const {
-  const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr, resolvers);
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
+  const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr, params, locals);
   if (receiverFamily.empty()) {
     return false;
   }
@@ -113,16 +119,21 @@ bool SemanticsValidator::hasReceiverCompatibleExplicitVectorHelperPath(
 
 bool SemanticsValidator::preferExplicitCanonicalVectorHelperForReceiver(
     const Expr &receiverExpr, const std::string &explicitVectorHelperPath,
-    const MethodTargetCollectionResolvers &resolvers) const {
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
   if (explicitVectorHelperPath.empty()) {
     return false;
   }
   std::string elemType;
   if (isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)) {
-    return resolvers.resolveCollectionVectorValueTarget(receiverExpr, elemType);
+    return resolveCollectionVectorValueTarget(receiverExpr, elemType, params, locals);
   }
   if (splitSoaSurfaceHelperPath(explicitVectorHelperPath, nullptr, nullptr)) {
-    return resolvers.resolveSoaVectorTarget(receiverExpr, elemType);
+    const std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTargetFn =
+        [this, &params, &locals](const Expr &target, std::string &elemTypeOut) -> bool {
+      return this->resolveArgsPackAccessTarget(target, elemTypeOut, params, locals);
+    };
+    return resolveSoaVectorTarget(receiverExpr, elemType, params, locals, resolveArgsPackAccessTargetFn);
   }
   return false;
 }
@@ -131,7 +142,8 @@ std::optional<bool> SemanticsValidator::tryResolveExplicitCanonicalVectorCountMe
     const Expr &receiverExpr,
     const std::string &explicitVectorHelperPath,
     const std::string &normalizedMethodName,
-    const MethodTargetCollectionResolvers &resolvers,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
     std::string &resolvedOut,
     bool &isBuiltinOut) {
   if (explicitVectorHelperPath.empty() ||
@@ -139,7 +151,7 @@ std::optional<bool> SemanticsValidator::tryResolveExplicitCanonicalVectorCountMe
       normalizedMethodName != "count") {
     return std::nullopt;
   }
-  const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr, resolvers);
+  const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr, params, locals);
   if (receiverFamily != "string" && receiverFamily != "array" &&
       receiverFamily != "map") {
     return std::nullopt;
@@ -185,7 +197,7 @@ std::optional<bool> SemanticsValidator::tryResolveExplicitCanonicalVectorCountMe
     }
   }
   if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath,
-                                                    receiverExpr, resolvers)) {
+                                                    receiverExpr, params, locals)) {
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
     return true;
@@ -717,8 +729,9 @@ std::string SemanticsValidator::preferredBorrowedSoaAccessHelperTarget(
 bool SemanticsValidator::tryRedirectConcreteExperimentalSoaMethodTarget(
     const std::string &resolvedType, const std::string &canonicalCollectionHelperName,
     const Expr &receiver, const std::string &explicitRemovedMethodPath,
-    const std::string &normalizedMethodName, const MethodTargetCollectionResolvers &resolvers,
-    std::string &resolvedOut, bool &isBuiltinOut) {
+    const std::string &normalizedMethodName, const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals, std::string &resolvedOut,
+    bool &isBuiltinOut) {
   const bool isConcreteExperimentalSoaReceiver =
       isExperimentalSoaVectorSpecializedTypePath(resolvedType);
   const bool isCanonicalSoaWrapperMethod =
@@ -729,7 +742,7 @@ bool SemanticsValidator::tryRedirectConcreteExperimentalSoaMethodTarget(
   return resolveExplicitOrCanonicalCollectionMethodTarget(
       preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
                                                 internalSoaCollectionTypePath(true)),
-      explicitRemovedMethodPath, normalizedMethodName, receiver, resolvers, resolvedOut,
+      explicitRemovedMethodPath, normalizedMethodName, receiver, params, locals, resolvedOut,
       isBuiltinOut);
 }
 
