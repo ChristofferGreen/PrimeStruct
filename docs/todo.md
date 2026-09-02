@@ -70,8 +70,15 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-(none currently from the resolveMethodTarget-file-split batch - see the
-Note below)
+- TODO-5280: Promote resolveCurrentDefinitionParamBinding/resolveArgsPackCountTarget/resolveArgsPackAccessTarget to real members (parallel_track: method-target-collection-resolvers-retirement)
+- TODO-5281: Audit SemanticsValidatorInferMethodResolution.cpp's parallel local-lambda-scaffolding pattern (parallel_track: method-target-collection-resolvers-retirement)
+
+Note (2026-09-02): TODO-5280 and TODO-5281 are the first two leaves of
+a new track, `method-target-collection-resolvers-retirement`, filed
+from TODO-5276's investigation finding (see below) - both are
+independently actionable now. TODO-5282 (the actual
+`MethodTargetCollectionResolvers` retirement) depends on both and is
+queued in `### Immediate Next 10` below.
 
 Note (2026-09-01): TODO-5270 through TODO-5278 (the full top-priority
 follow-on batch to TODO-4724's seams (5)-(9)) have all resolved - see
@@ -88,9 +95,7 @@ investigation rather than a code change, and TODO-5278 (unit tests for
 the promoted resolvers) resolved as source-level regression tests rather
 than literal private-member unit tests - both documented deliberate
 scope adjustments, not shortfalls; see `docs/todo_finished.md` for each
-finding, including TODO-5276's suggested follow-up scoping if a full
-`MethodTargetCollectionResolvers` retirement is judged worth doing
-later. `resolveMethodTarget` itself is now ~1350 lines (was ~2846 at
+finding. `resolveMethodTarget` itself is now ~1350 lines (was ~2846 at
 this session's continue-until-done phase start) - real, substantial
 progress, though still short of TODO-4724's own "under a few hundred
 lines" acceptance target; a future round should pick up with more
@@ -147,8 +152,13 @@ investigation chain's actively-productive leaves - see
 
 ### Immediate Next 10
 
+- TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection (depends on TODO-5280, TODO-5281)
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
 - TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
+
+Note (2026-09-02): TODO-5280/5281/5282 file the follow-up scoping
+TODO-5276 suggested - actually retiring `MethodTargetCollectionResolvers`.
+TODO-5280 and TODO-5281 are Ready Now above; TODO-5282 depends on both.
 
 Note (2026-09-01): TODO-4724 (decompose resolveMethodTarget) has made
 substantial progress this session (seams (5)-(9), ~2846 -> ~1350 lines)
@@ -453,6 +463,9 @@ avoid clashing with this list's own history.
 85. TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection
 86. TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name
 87. TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
+88. TODO-5280: Promote resolveCurrentDefinitionParamBinding/resolveArgsPackCountTarget/resolveArgsPackAccessTarget to real members
+89. TODO-5281: Audit SemanticsValidatorInferMethodResolution.cpp's parallel local-lambda-scaffolding pattern
+90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
@@ -3347,6 +3360,126 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     with small (<30-line) lambda promotions is still worth the
     per-round verification overhead versus returning to seam (5)-style
     structural splitting of the remaining straight-line dispatch blocks.
+
+- [ ] TODO-5280: Promote resolveCurrentDefinitionParamBinding/resolveArgsPackCountTarget/resolveArgsPackAccessTarget to real SemanticsValidator members
+  - owner: ai
+  - created_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: TODO-4724
+  - scope: TODO-5276 found that 2 of `MethodTargetCollectionResolvers`'s
+    8 fields, `resolveArgsPackCountTarget` and `resolveArgsPackAccessTarget`,
+    were never promoted to real `SemanticsValidator` members during
+    TODO-4724's seams - they remain local lambdas with real inline logic
+    in `resolveMethodTarget`'s body
+    (`SemanticsValidatorExprMethodTargetResolution.cpp`), which is the
+    first blocker to retiring that struct (TODO-5282). This leaf promotes
+    them the same way seams (6)-(9) promoted their siblings. Both depend
+    on a third local lambda, `resolveCurrentDefinitionParamBinding`,
+    which is itself fully self-contained (captures no
+    `resolveMethodTarget` locals at all - only member state:
+    `currentValidationState_`, `paramsByDef_`, `defMap_`, `structNames_`,
+    `importAliases_`, `sumNames_`) and should be promoted first, as
+    `bool resolveCurrentDefinitionParamBinding(const std::string &name, BindingInfo &bindingOut) const`.
+    Then `resolveArgsPackCountTarget`/`resolveArgsPackAccessTarget` take
+    `params`/`locals` as explicit parameters, matching the established
+    pattern (e.g. `resolveVectorTarget`'s signature from seam (7)).
+  - implementation_notes: Run the anchored
+    `SemanticsValidator::<name>(` definition grep for all three new
+    member names before writing any code, per the TODO-4724 seam (4d)
+    collision-avoidance discipline. After promoting, check whether
+    `resolveArgsPackCountTarget`/`resolveArgsPackAccessTarget` also need
+    to move into `SemanticsValidatorMethodTargetArgsPackResolvers.cpp`
+    (TODO-5273's file) for consistency with their sibling
+    args-pack-family functions, though that's a nice-to-have, not
+    required for this leaf's acceptance.
+  - acceptance: `resolveCurrentDefinitionParamBinding`,
+    `resolveArgsPackCountTarget`, and `resolveArgsPackAccessTarget` are
+    real `SemanticsValidator` members, not local lambdas; `resolveMethodTarget`
+    calls them directly (or via a thin same-signature forwarder if a
+    call site still needs a named `std::function` value for
+    `MethodTargetCollectionResolvers` construction, until TODO-5282
+    lands); full `PrimeStruct_semantics_tests` (2740+, current baseline
+    after TODO-5278's 4 additions), `PrimeStruct_backend_ir_tests`
+    (1643/1644, same known flake), and `PrimeStruct_compile_run_tests`
+    (2678/2678) unchanged.
+  - stop_rule: Pure refactor, zero behavior change - any test delta
+    means stop and revert rather than adjust the test.
+
+- [ ] TODO-5281: Audit SemanticsValidatorInferMethodResolution.cpp's parallel local-lambda-scaffolding pattern
+  - owner: ai
+  - created_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: (none - independent investigation)
+  - scope: TODO-5276 found that `SemanticsValidatorInferMethodResolution.cpp`
+    has its own separate copy of the exact local-lambda-scaffolding
+    pattern TODO-4724/5275 addressed in
+    `SemanticsValidatorExprMethodTargetResolution.cpp` - it defines its
+    own local `resolveCollectionMethodFromTypePath`/
+    `setIndexedArgsPackKeyValueMethodTarget`/etc. forwarders (and
+    presumably its own `MethodTargetCollectionResolvers` construction)
+    rather than calling the real members directly. This was out of
+    TODO-4724's original scope (which was `resolveMethodTarget`
+    specifically) and has never been read through with fresh eyes for
+    this purpose. This leaf is an investigation, mirroring how TODO-4724
+    itself started: read the file, inventory its local lambdas and their
+    real-vs-forwarder status, and produce a task block (or a small
+    number of them) scoping the actual decomposition work, the same way
+    TODO-4724's own `implementation_notes` originally sketched seams (1)-(4)
+    before any extraction began.
+  - acceptance: a written inventory (in this task's own progress notes)
+    of `SemanticsValidatorInferMethodResolution.cpp`'s local lambdas,
+    which are genuine forwarders vs. real logic, and which are shared
+    with (or diverged from) their `SemanticsValidatorExprMethodTargetResolution.cpp`
+    counterparts; at least one concrete, bounded follow-up TODO filed
+    (or a documented finding that no further decomposition is warranted
+    there, with reasoning).
+  - stop_rule: Investigation only - do not extract or promote anything
+    in this leaf; that's follow-up work once the shape of the problem is
+    known, per the same discipline TODO-4724 itself used.
+
+- [ ] TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection in favor of direct member calls
+  - owner: ai
+  - created_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: TODO-5280, TODO-5281
+  - scope: `MethodTargetCollectionResolvers`
+    (`SemanticsValidatorPrivateExprValidation.h`) bundles 8
+    `std::function` fields so that functions needing several collection
+    resolvers can take one struct parameter. TODO-5276 investigated
+    retiring this and found it blocked on two things, now resolved by
+    TODO-5280 (all 8 fields are real members) and TODO-5281 (the
+    `SemanticsValidatorInferMethodResolution.cpp` half of the problem is
+    understood). This leaf does the actual retirement: widen the ~10
+    functions that currently take `MethodTargetCollectionResolvers` to
+    take `params`/`locals` explicitly instead, replace their internal
+    `resolvers.X(...)` calls with direct `this->X(...)` member calls,
+    update every construction site (in both
+    `SemanticsValidatorExprMethodTargetResolution.cpp`'s family files and
+    `SemanticsValidatorInferMethodResolution.cpp`, per TODO-5281's
+    findings) to stop building the struct, and delete it once nothing
+    constructs it anymore (verify with a repo-wide grep). Also remove
+    the 7 forwarder lambdas TODO-5275 deliberately left in
+    `resolveMethodTarget`'s body for this leaf, once the struct no
+    longer needs named callables at their construction sites.
+  - implementation_notes: This is a multi-round leaf by nature (~10
+    signature widenings across at least 2 files) - split it into its own
+    numbered sub-leaves once TODO-5281's inventory makes the true size
+    clear, the same way TODO-4724 split into seams. Verify each round
+    against the full three-suite battery before moving to the next,
+    exactly like every TODO-4724 seam did.
+  - acceptance: `MethodTargetCollectionResolvers` no longer exists
+    anywhere in `src/semantics/`; the 7 forwarder lambdas TODO-5275 left
+    in place are also gone; full `PrimeStruct_semantics_tests`,
+    `PrimeStruct_backend_ir_tests` (1643/1644, same known flake), and
+    `PrimeStruct_compile_run_tests` counts unchanged (except for any new
+    tests added incidentally, which should be called out explicitly).
+  - stop_rule: Pure refactor, zero behavior change - any test delta
+    means stop and revert rather than adjust the test. Given the size,
+    land and verify each sub-leaf independently rather than attempting
+    the whole retirement in one uninterrupted round.
 
 - [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
