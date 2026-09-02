@@ -16,6 +16,83 @@
 namespace primec::semantics {
 using namespace method_target_detail;
 
+bool SemanticsValidator::resolveCurrentDefinitionParamBinding(
+    const std::string &name, BindingInfo &bindingOut) const {
+  if (currentValidationState_.context.definitionPath.empty()) {
+    return false;
+  }
+  if (auto paramsIt = paramsByDef_.find(currentValidationState_.context.definitionPath);
+      paramsIt != paramsByDef_.end()) {
+    if (const BindingInfo *binding = findParamBinding(paramsIt->second, name)) {
+      bindingOut = *binding;
+      return true;
+    }
+  }
+  auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
+  if (defIt == defMap_.end() || defIt->second == nullptr) {
+    return false;
+  }
+  for (const Expr &param : defIt->second->parameters) {
+    if (param.name != name) {
+      continue;
+    }
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    return parseBindingInfo(param,
+                            defIt->second->namespacePrefix,
+                            structNames_,
+                            importAliases_,
+                            bindingOut,
+                            restrictType,
+                            parseError,
+                            &sumNames_);
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveArgsPackCountTarget(
+    const Expr &target, std::string &elemType,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) const {
+  elemType.clear();
+  auto resolveBinding = [&](const BindingInfo &binding) {
+    return getArgsPackElementType(binding, elemType);
+  };
+  if (target.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      if (resolveBinding(*paramBinding)) {
+        return true;
+      }
+    }
+    auto it = locals.find(target.name);
+    if (it != locals.end()) {
+      if (resolveBinding(it->second)) {
+        return true;
+      }
+    }
+    BindingInfo currentDefBinding;
+    if (resolveCurrentDefinitionParamBinding(target.name, currentDefBinding)) {
+      return resolveBinding(currentDefBinding);
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveArgsPackAccessTarget(
+    const Expr &target, std::string &elemType,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) const {
+  if (resolveArgsPackElementTypeForExpr(target, params, locals, elemType)) {
+    return true;
+  }
+  if (target.kind != Expr::Kind::Name) {
+    return false;
+  }
+  BindingInfo currentDefBinding;
+  return resolveCurrentDefinitionParamBinding(target.name, currentDefBinding) &&
+         getArgsPackElementType(currentDefBinding, elemType);
+}
+
 bool SemanticsValidator::resolveIndexedArgsPackElementType(
     const Expr &target, std::string &elemTypeOut,
     const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) const {

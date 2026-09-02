@@ -1334,73 +1334,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return preferredSoaHelperTargetForCollectionType(
         normalizedMethodName, internalSoaCollectionTypePath(true));
   };
-  auto resolveCurrentDefinitionParamBinding =
-      [&](const std::string &name, BindingInfo &bindingOut) -> bool {
-    if (currentValidationState_.context.definitionPath.empty()) {
-      return false;
-    }
-    if (auto paramsIt = paramsByDef_.find(currentValidationState_.context.definitionPath);
-        paramsIt != paramsByDef_.end()) {
-      if (const BindingInfo *binding = findParamBinding(paramsIt->second, name)) {
-        bindingOut = *binding;
-        return true;
-      }
-    }
-    auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
-    if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
-    }
-    for (const Expr &param : defIt->second->parameters) {
-      if (param.name != name) {
-        continue;
-      }
-      std::optional<std::string> restrictType;
-      std::string parseError;
-      return parseBindingInfo(param,
-                              defIt->second->namespacePrefix,
-                              structNames_,
-                              importAliases_,
-                              bindingOut,
-                              restrictType,
-                              parseError,
-                              &sumNames_);
-    }
-    return false;
+  std::function<bool(const Expr &, std::string &)> resolveArgsPackCountTarget =
+      [&](const Expr &target, std::string &elemType) -> bool {
+    return this->resolveArgsPackCountTarget(target, elemType, params, locals);
   };
-  auto resolveArgsPackCountTarget = [&](const Expr &target, std::string &elemType) -> bool {
-    elemType.clear();
-    auto resolveBinding = [&](const BindingInfo &binding) {
-      return getArgsPackElementType(binding, elemType);
-    };
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        if (resolveBinding(*paramBinding)) {
-          return true;
-        }
-      }
-      auto it = locals.find(target.name);
-      if (it != locals.end()) {
-        if (resolveBinding(it->second)) {
-          return true;
-        }
-      }
-      BindingInfo currentDefBinding;
-      if (resolveCurrentDefinitionParamBinding(target.name, currentDefBinding)) {
-        return resolveBinding(currentDefBinding);
-      }
-    }
-    return false;
-  };
-  auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {
-    if (resolveArgsPackElementTypeForExpr(target, params, locals, elemType)) {
-      return true;
-    }
-    if (target.kind != Expr::Kind::Name) {
-      return false;
-    }
-    BindingInfo currentDefBinding;
-    return resolveCurrentDefinitionParamBinding(target.name, currentDefBinding) &&
-           getArgsPackElementType(currentDefBinding, elemType);
+  std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget =
+      [&](const Expr &target, std::string &elemType) -> bool {
+    return this->resolveArgsPackAccessTarget(target, elemType, params, locals);
   };
   auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
     return this->resolveArrayTarget(target, elemType, params, locals, resolveArgsPackAccessTarget);

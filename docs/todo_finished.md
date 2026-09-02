@@ -41932,3 +41932,46 @@ real answer.
   - stop_rule: satisfied via its own documented alternative - preferred
     the existing same-translation-unit-free, already-established
     source-level testing convention over exposing private state.
+
+**Todo Completion (September 2, 2026) — TODO-5280**
+- [x] TODO-5280: Promote resolveCurrentDefinitionParamBinding/resolveArgsPackCountTarget/resolveArgsPackAccessTarget to real SemanticsValidator members
+  - owner: ai
+  - created_at: 2026-09-02
+  - finished_at: 2026-09-02
+  - phase: Maintainability / tech debt
+  - parallel_track: method-target-collection-resolvers-retirement
+  - depends_on: TODO-4724
+  - scope: TODO-5276 found that 2 of `MethodTargetCollectionResolvers`'s
+    8 fields (`resolveArgsPackCountTarget`, `resolveArgsPackAccessTarget`)
+    were never promoted to real members, blocking that struct's
+    retirement (TODO-5282). Promote them and their shared dependency
+    `resolveCurrentDefinitionParamBinding`.
+  - evidence: Ran the anchored `SemanticsValidator::<name>(` definition
+    grep for all three new names first - all clean, no collisions.
+    Promoted `resolveCurrentDefinitionParamBinding` (fully
+    self-contained, no `resolveMethodTarget` local captures, only member
+    state) as `bool resolveCurrentDefinitionParamBinding(const std::string &name, BindingInfo &bindingOut) const`,
+    and `resolveArgsPackCountTarget`/`resolveArgsPackAccessTarget` taking
+    `params`/`locals` as explicit parameters, matching the established
+    seam-(7) signature pattern. All three definitions added to
+    `SemanticsValidatorMethodTargetArgsPackResolvers.cpp` (TODO-5273's
+    file), consistent with their sibling args-pack-family functions per
+    this task's own implementation_notes suggestion. In
+    `resolveMethodTarget`'s body: `resolveCurrentDefinitionParamBinding`'s
+    local lambda was removed entirely (confirmed via grep it was called
+    nowhere else, only from the other two lambdas being promoted in the
+    same round); `resolveArgsPackCountTarget`/`resolveArgsPackAccessTarget`
+    kept as thin one-line forwarder lambdas under their original names
+    (matching the pattern for the other 6 `MethodTargetCollectionResolvers`
+    fields left in place by TODO-5275/5277 - these two are also
+    struct-field values and directly-called elsewhere, so still need a
+    named callable at their existing call sites until TODO-5282 retires
+    the struct). Verified: `primec` build clean on the first attempt; the
+    shape (c) repros unchanged; the `/vector/push` bare-call regression
+    repro still correctly rejected; full `PrimeStruct_semantics_tests`
+    2744/2744 (0 failed, includes TODO-5278's 4 additions);
+    `PrimeStruct_backend_ir_tests` 1643/1644 (same known pre-existing
+    flake, unrelated); `PrimeStruct_compile_run_tests` 2678/2678 (0
+    failed).
+  - stop_rule: Pure refactor, zero behavior change - satisfied, no test
+    delta at any point.

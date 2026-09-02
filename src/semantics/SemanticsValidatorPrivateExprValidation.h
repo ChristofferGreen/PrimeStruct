@@ -591,6 +591,22 @@
   bool isWrappedKeyValueTypeText(const std::string &typeText) const;
   bool extractAnyKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut,
                                std::string &valueTypeOut) const;
+  // TODO-5280: promoted from a local lambda in resolveMethodTarget's
+  // body - fully self-contained (captures no resolveMethodTarget locals,
+  // only member state: currentValidationState_/paramsByDef_/defMap_/
+  // structNames_/importAliases_/sumNames_).
+  bool resolveCurrentDefinitionParamBinding(const std::string &name,
+                                             BindingInfo &bindingOut) const;
+  // TODO-5280: promoted from local lambdas that depended only on
+  // params/locals plus resolveCurrentDefinitionParamBinding above.
+  bool resolveArgsPackCountTarget(
+      const Expr &target, std::string &elemType,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals) const;
+  bool resolveArgsPackAccessTarget(
+      const Expr &target, std::string &elemType,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals) const;
   bool resolveIndexedArgsPackElementType(
       const Expr &target, std::string &elemTypeOut,
       const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget) const;
