@@ -2885,6 +2885,46 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     treating TODO-4760(b) as closed-by-duplication in favor of
     continuing under TODO-4800 (which should be the tracking TODO for
     any future fix attempt on this bug).
+  - investigated_2026-09-03 (part a): reproduced with a minimal repro
+    (`score_maps([args<map<i32, i32>>] values) { [map<i32, i32>]
+    head{at(values, 0i32)} ... }`, called from `main` with one map arg).
+    Confirmed via `--dump-stage semantic-product`: `direct_call_targets`
+    shows `call_name="at" resolved_path="/std/collections/map/at"
+    stdlib_surface_id="collections.map_helpers"`, and the same record's
+    `receiver_binding_type_text="args<map<i32, i32>>"` proves the
+    receiver's type IS correctly identified as an args-pack at the point
+    of resolution - so this isn't a type-inference gap, it's a pure
+    resolution-priority bug: something matches the bare call name `"at"`
+    against the registered stdlib surface member name and returns that
+    candidate without ever checking whether the receiver is an args-pack
+    eligible for positional indexing first. Confirmed the args-pack
+    detection machinery itself is fine and receiver-type-agnostic
+    (`getArgsPackElementType`/`resolveArgsPackElementTypeForExpr`,
+    `SemanticsBindingTypeHelpers.cpp`, have no map-specific rejection) -
+    the bug is purely about which resolution path runs first for a bare
+    call whose name happens to collide with a registered stdlib helper
+    name. Did not find the exact dispatcher that performs this
+    name-based stdlib-surface match before trying args-pack indexing
+    (grepped for the `"collections.map_helpers"` `stdlib_surface_id`
+    string with no hits - it is synthesized from a registry enum value,
+    not a literal, so locating the exact call site needs either tracing
+    forward from `SemanticsValidatorExprCallResolution.cpp`'s bare-call
+    dispatch or backward from wherever `stdlib_surface_id` gets attached
+    to a `direct_call_targets` record). Given this session's TODO-4753
+    investigation (see its own notes) already found the neighboring
+    stdlib-surface-registry area (`shouldSkipWildcardAlias`/
+    `stdlibSurfaceImportAliasPriority`) to have non-obvious, load-bearing
+    design decisions where a plausible-looking narrow fix broke 67
+    unrelated tests, treat any fix here with the same caution: verify
+    against the FULL `PrimeStruct_compile_run_tests` suite (not just this
+    repro) before considering it safe, and expect the actual fix site to
+    require understanding why bare-call name-based stdlib-surface
+    dispatch currently runs unconditionally rather than being gated
+    behind "is the receiver actually a collection of the surface's own
+    type, not an args-pack of it" - which may itself be intentional for
+    some other call shape this session didn't check. Not fixed this
+    session; not attempted further given the demonstrated regression
+    risk in this immediate neighborhood.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
