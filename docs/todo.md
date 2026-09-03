@@ -156,6 +156,28 @@ diffuse-cost check) has also since resolved and closes out this
 investigation chain's actively-productive leaves - see
 `docs/todo_finished.md`.
 
+Note (2026-09-03): TODO-4753 and TODO-4760's investigations both converged
+on the same architectural cause - receiver-type/method-target resolution
+is independently re-implemented across semantics, monomorphization, and
+`ir_lowerer`, the sibling problem `docs/CompatPathResolutionConsolidation.md`
+deliberately deferred as a non-goal. Wrote
+`docs/ReceiverTargetResolutionConsolidation.md` (Problem/Evidence/Goal/Plan,
+mirroring that document's structure) and landed its Step 1a: a verified,
+independently-tested name-set library
+(`include/primec/support/ReceiverElementFamilyClassifier.h` /
+`src/support/ReceiverElementFamilyClassifier.cpp`) extracting the
+vector/array base-name set, Buffer/File method-name sets, and primitive-name
+set that `resolveArgsPackElementMethodTarget`,
+`resolveMethodCallTemplateTarget`, and the `ir_lowerer` receiver-target
+helpers each currently re-type from scratch - not yet wired into any call
+site. The attempt to go further (a byte-faithful drop-in classifier per
+this session's "implement it" instruction) surfaced two method-name- and
+template-shape-gated quirks in `resolveArgsPackElementMethodTarget` that
+mean family classification there is not a pure function of type text
+alone; safely resolving them needs the Step 0 rule table the doc scopes
+next, not a guessed extraction - see the doc's Step 1a section for detail.
+No behavior changed; this is additive-only (new module + tests, unwired).
+
 ### Immediate Next 10
 
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)

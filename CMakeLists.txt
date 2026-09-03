@@ -137,6 +137,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/EmitKind.cpp
   src/support/OptionsParser.cpp
   src/support/ProcessRunner.cpp
+  src/support/ReceiverElementFamilyClassifier.cpp
   src/support/SourceLocationMapper.cpp
   src/support/StdlibSurfaceRegistry.cpp
   src/frontend/SymbolInterner.cpp
@@ -1257,6 +1258,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/result_helpers/test_semantics_result_helpers_errors.cpp
     tests/unit/semantics/result_helpers/test_semantics_result_helpers_gfx.cpp
     tests/unit/semantics/test_semantics_collection_spelling_classifier.cpp
+    tests/unit/semantics/test_semantics_receiver_element_family_classifier.cpp
     tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp
   )
   target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
