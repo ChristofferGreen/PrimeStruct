@@ -43343,3 +43343,159 @@ real answer.
     `PrimeStruct_backend_ir_tests` 1643/1644 (known pre-existing flake,
     unrelated), `PrimeStruct_compile_run_tests` 2678/2678 - unchanged
     from every extraction round's own verification.
+
+**Todo Completion (September 3, 2026) — TODO-5285**
+- [x] TODO-5285: Root-cause shape (c)'s explicit-rooted-path-call soa borrowed-receiver routing gap (TODO-5050 residual)
+  - owner: ai
+  - created_at: 2026-09-03
+  - finished_at: 2026-09-03
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-soa-surface
+  - depends_on: TODO-5050 (shapes (a)/(b) already fixed there - see
+    `docs/todo_finished.md`)
+  - scope: TODO-5050 (closed as PARTIALLY RESOLVED) found and fixed
+    shapes (a) and (b) of a soa borrowed-receiver routing bug, but left
+    shape (c) genuinely open, confirmed-but-not-root-caused: a function
+    the user declares directly at a canonical soa helper path (e.g.
+    `/std/collections/soa/get_ref(...)`) is reachable via bare unrooted
+    direct-call and method-call form on a borrowed helper-return
+    receiver (a receiver that comes from calling a user function/method
+    returning `Reference<soa<T>>`/`Reference<SoaVector<T>>`, not a
+    local binding), but the SAME declared function called via its
+    explicit rooted path fails with "unknown method:
+    /std/collections/soa_vector/get_ref" (leaking the retired
+    `soa_vector` family spelling) on that identical receiver. TODO-5050's
+    own investigation narrowed it to helpers taking an index/extra
+    argument (`get_ref` fails; sibling no-arg `count`/`count_ref` at the
+    same rooted path on the identical receiver both succeed) but did
+    not trace it to a specific function/line. Two ready-made standalone
+    repros already exist and reproduce the exact documented symptom
+    (built and verified working throughout the 2026-09-02/03 session
+    that used them as regression pins for unrelated refactors):
+    `/tmp/repro_soa_shapec.prime` (the fuller TODO-5050-style repro,
+    also exercises shapes (a)/(b) alongside (c)) and
+    `/tmp/repro_soa_shapec_min.prime` (shape (c) isolated to one call
+    expression: `/std/collections/soa/get_ref(holder.pickBorrowed(location(values)), 1i32).y`
+    inside `main`, with `get_ref` declared directly at that rooted path
+    and `pickBorrowed` returning `Reference<soa<Particle>>`) - both
+    currently fail semantic validation with the exact "unknown method:
+    /std/collections/soa_vector/get_ref" diagnostic. Regenerate them
+    from this task block's own repro description above if the `/tmp`
+    files are gone (this is an ephemeral session directory).
+  - implementation_notes: Per TODO-5050's own carried-forward guidance,
+    start by reproducing shape (c) standalone (the min repro above
+    already does this) and tracing the routing chain in
+    `SemanticsValidatorExprMethodTargetResolution.cpp`,
+    `SemanticsValidatorExprCallResolution.cpp`,
+    `SemanticsValidatorExprVectorHelpers.cpp`, and
+    `SemanticsValidatorBuildInitializerInference.cpp`'s
+    `preferredSoaHelperTargetForCurrentImports`/
+    `preferredSoaHelperTargetForCollectionType` family - the same files
+    TODO-5050 already implicated but did not pin down. Since
+    `resolveMethodTarget` (the function this session's TODO-4724/
+    TODO-5282/TODO-5284 work just finished decomposing) is now
+    substantially more traceable than when TODO-5050 was investigated
+    (named, greppable helper functions instead of large opaque local
+    lambdas), re-tracing this specific call path should now be easier
+    than TODO-5050's own session found it - a good first real test of
+    whether that decomposition work actually pays off for a live bug,
+    not just a hypothetical future one. TODO-5050 also flagged: if
+    shape (c) turns out to share a root cause with shape (a) once
+    traced to source, merge tracking rather than treating as separate -
+    check that possibility explicitly before concluding it's a distinct
+    bug.
+  - acceptance: shape (c) either gets a genuine compiler fix (both
+    repros above compile/validate successfully, matching the working
+    bare/method-call forms' behavior on the same receiver) or, if
+    closer investigation shows it's intentional/by-design, that intent
+    is documented explicitly here and as a code comment at the relevant
+    resolution site rather than left as an unexplained diagnostic. Full
+    `PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`
+    (1643/1644, same known pre-existing flake), and
+    `PrimeStruct_compile_run_tests` counts unchanged except for any
+    newly-passing/newly-added cases from the fix itself.
+  - stop_rule: Do not guess at a fix without first confirming the exact
+    function/line via standalone reproduction (the two repros above) -
+    this is the same caution TODO-5050 left in place after its own
+    black-box-only investigation of this shape. If root-causing reveals
+    the fix would touch general collection-method routing (not soa-
+    specific), stop and re-scope rather than risking a regression in
+    the vector/map paths TODO-5282's work just finished stabilizing.
+  - resolution (2026-09-03): Root-caused via targeted stderr tracing
+    (temporary `getenv("PRIMEC_TRACE_...")`-gated prints and one
+    `backtrace()`/`backtrace_symbols_fd()` dump at the central
+    `SemanticValidationResultSink::fail()` diagnostic sink, all removed
+    before landing) rather than gdb, since this environment has no
+    interactive debugger. Traced through 6 false leads (the AST
+    pre-pass rewrite `rewriteBuiltinSoaAccessExpr`, `resolveMethodTarget`
+    itself, `resolveVectorHelperMethodTarget`,
+    `resolveExplicitOrCanonicalCollectionMethodTarget`, the
+    `SemanticsValidatorExpr.cpp` rooted-get-path branch, and the
+    `SemanticsValidatorStatementBindings.cpp` binding-initializer
+    fallback path - none of these were ever entered for the failing
+    call) before finding the real site: the diagnostic bypasses the
+    normal `SemanticsValidator` diagnostic sink entirely (explaining the
+    missing "note: stage: semantic" span info in the plain-printed
+    error) because it comes from `TemplateMonomorphExpressionRewrite.cpp`'s
+    `helperReturnSoaRefHelper` handling (~line 2089-2114), a free
+    function taking `std::string &error` as a raw out-param, part of
+    the template monomorphization pass rather than expression
+    validation proper. That code gates on
+    `resolvesSoaReceiverForRewrite(expr.args.front())`, which calls
+    `isTemplateMonomorphSoaReceiverType(inferCollectionReceiverFamilyForRewrite(&receiverExpr))`.
+    Traced `inferCollectionReceiverFamilyForRewrite`: it correctly
+    infers the receiver's type (`Reference<soa<Particle>>`) and
+    normalizes it via `normalizeCollectionReceiverTypeName` to the
+    family string `"soa"` (the plain, current builtin-collection type
+    name - confirmed as the real normalized spelling via
+    `SemanticsBindingTypeHelpers.cpp`'s `normalizeBindingTypeName`,
+    which maps `"soa"`/`"/soa"`/`"std/collections/soa"`/
+    `"/std/collections/soa"` all to base `"soa"`). But
+    `isTemplateMonomorphSoaReceiverType`
+    (`TemplateMonomorphCoreUtilities.cpp`) only ever compares against
+    `templateMonomorphSoaReceiverTypeName()` = `internalSoaCollectionTypeName()`
+    = `"soa_vector"` (the internal legacy family label) - a pure
+    string-spelling mismatch, not a missing type-inference capability:
+    the receiver's type WAS correctly inferred, it just never matched
+    the family-name check. First fix attempt widened
+    `normalizeCollectionReceiverTypeName` itself (in
+    `TemplateMonomorphCollectionCompatibilityPaths.cpp`, a function used
+    at 15+ call sites across same-path-shadow/precedence logic
+    throughout the monomorphization subsystem) to map plain `"soa"` to
+    the `"soa_vector"` family too - this fixed shape (c) but broke 5
+    existing `PrimeStruct_compile_run_tests` cases (same-path
+    `/soa/ref_ref` shadow precedence and public-soa-mutator-helper
+    tests), confirming the shared function was the wrong fix site per
+    this task's own stop_rule warning against touching general
+    collection-method routing. Reverted that and instead scoped the fix
+    to the one actual call site: `resolvesSoaReceiverForRewrite`
+    (`TemplateMonomorphExpressionRewrite.cpp`) now also accepts the
+    literal `"soa"` family alongside `isTemplateMonomorphSoaReceiverType`'s
+    check, without touching `normalizeCollectionReceiverTypeName`'s
+    return value for any other caller. Re-verified with all 3 suites:
+    zero regressions this time. Added a new permanent regression test,
+    `"vm runs builtin helper-return soa get_ref via explicit rooted
+    path"` (`test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_experimental_runs_borrowed.cpp`),
+    reproducing the exact shape (c) repro and asserting it now compiles
+    and runs correctly end-to-end (`--emit=vm`). Verified: `primec`
+    build clean; both original repros
+    (`/tmp/repro_soa_shapec_min.prime`/`_min2.prime`) now compile/run
+    successfully; the fuller `/tmp/repro_soa_shapec.prime` (which
+    exercises shapes (a)/(b)/(c) together) now fails only at the same
+    pre-existing native-lowering-backend limitation the already-working
+    bare-call form also hits (confirming semantic resolution now
+    matches, not just happens to avoid the old error); full
+    `PrimeStruct_semantics_tests` 2744/2744,
+    `PrimeStruct_backend_ir_tests` 1643/1644 (known pre-existing flake,
+    unrelated), `PrimeStruct_compile_run_tests` 2679/2679 (2678 baseline
+    + 1 new test, all green).
+  - notes: shape (c) did NOT turn out to share a root cause with shape
+    (a) (TODO-5050's own flagged possibility) - shape (a)'s bug lived
+    in a completely different AST pre-pass
+    (`SemanticsValidateBuiltinSoaRewrites.cpp`'s
+    `rewriteBuiltinSoaAccessExpr`/`compatibilitySoaHelperTargetPath` vs
+    `publicSoaHelperTargetPath` choice), while shape (c) lived in the
+    unrelated template-monomorphization stage's own, separate
+    soa-family classifier. This closes out the
+    hidden-test-failures-soa-surface track's TODO-5050 residual -
+    nothing from that investigation remains open.

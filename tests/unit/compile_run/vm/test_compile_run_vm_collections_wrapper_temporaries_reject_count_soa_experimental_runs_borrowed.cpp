@@ -564,6 +564,54 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("vm runs builtin helper-return soa get_ref via explicit rooted path") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Particle>]
+/std/collections/soa/get_ref([Reference<soa<Particle>>] values, [i32] index) {
+  return(Particle(0i32, 0i32))
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<soa<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<soa<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa<Particle> mut] values{soa<Particle>()}
+  [Holder] holder{Holder{}}
+  return(/std/collections/soa/get_ref(holder.pickBorrowed(location(values)), 1i32).y)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_builtin_soa_get_ref_helper_return_rooted_path.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_builtin_soa_get_ref_helper_return_rooted_path_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  // TODO-5285 (TODO-5050 shape (c), RESOLVED): calling a user-declared
+  // /std/collections/soa/get_ref directly via its explicit rooted path
+  // on a borrowed helper-return receiver used to fail semantic
+  // validation with "unknown method: /std/collections/soa_vector/get_ref"
+  // (the retired legacy spelling leaking through) even though the same
+  // call in bare or method-call form on the identical receiver resolved
+  // correctly. Root cause: TemplateMonomorphExpressionRewrite.cpp's
+  // resolvesSoaReceiverForRewrite classified the receiver's inferred
+  // family as "soa" (the builtin type's normalized name) but only
+  // checked it against "soa_vector" (the internal legacy family name).
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
+}
+
 TEST_CASE("vm runs borrowed local experimental soa read-only methods") {
   const std::string source = R"(
 import /std/collections/*

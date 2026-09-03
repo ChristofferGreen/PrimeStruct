@@ -159,7 +159,18 @@ investigation chain's actively-productive leaves - see
 ### Immediate Next 10
 
 - TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
-- TODO-5050: Fix three genuine soa borrowed-receiver/same-path-shadow routing gaps found while closing out TODO-4719 (shapes (a)/(b) resolved; shape (c) still open)
+
+Note (2026-09-03): TODO-5285 (the TODO-5050 shape (c) residual) has
+resolved - see `docs/todo_finished.md`. Root cause: a pure
+string-spelling mismatch in `TemplateMonomorphExpressionRewrite.cpp`'s
+`resolvesSoaReceiverForRewrite` - it checked a correctly-inferred
+receiver family against `"soa_vector"` (the internal legacy label) but
+the family value was actually `"soa"` (the current builtin type name).
+Fixed narrowly at that one call site rather than in the shared
+`normalizeCollectionReceiverTypeName` helper (a first attempt there
+broke 5 unrelated tests - reverted). Nothing from the
+hidden-test-failures-soa-surface / TODO-5050 investigation remains
+open.
 
 Note (2026-09-02): The full method-target-collection-resolvers-retirement
 track (TODO-5280 through TODO-5284) has resolved - see

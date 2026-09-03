@@ -1174,8 +1174,15 @@ bool rewriteExpr(Expr &expr,
                                                     allowMathBare));
   };
   auto resolvesSoaReceiverForRewrite = [&](const Expr &receiverExpr) {
-    return isTemplateMonomorphSoaReceiverType(
-               inferCollectionReceiverFamilyForRewrite(&receiverExpr)) ||
+    // inferCollectionReceiverFamilyForRewrite normalizes a builtin `soa<T>`
+    // receiver's family to the plain "soa" spelling (the public/current
+    // type name - see normalizeCollectionReceiverTypeName), not the
+    // "soa_vector" legacy internal name isTemplateMonomorphSoaReceiverType
+    // checks against. Accept both here rather than widening
+    // normalizeCollectionReceiverTypeName itself, which many other,
+    // unrelated same-path-shadow/precedence call sites also depend on.
+    const std::string receiverFamily = inferCollectionReceiverFamilyForRewrite(&receiverExpr);
+    return isTemplateMonomorphSoaReceiverType(receiverFamily) || receiverFamily == "soa" ||
            resolvesExperimentalSoaReceiverForRewrite(receiverExpr);
   };
   auto resolveExperimentalSoaVectorReceiverTemplateArgs =
