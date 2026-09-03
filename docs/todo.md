@@ -2524,6 +2524,63 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     method-call-sugar the same way it already recognizes their bare-call
     form), not in `IrLowererStatementCallEmission.cpp`. Not fixed this
     session.
+  - investigated_2026-09-03: traced (via targeted stderr instrumentation,
+    all reverted before landing) `resolveMethodCallTemplateTarget`
+    (`TemplateMonomorphMethodTargets.cpp`) - the function this monomorphization-side
+    template-target resolution actually goes through for method-call-sugar
+    - and confirmed it DOES reach its generic vector-family fallback
+    (`isCollectionFamilyReceiver` branch, ~line 669) for `.remove_at(...)`
+    on a plain `vector<i32>` receiver, computing a plausible target path
+    (`/vector/remove_at`) - so "use-site discovery never recognizes this
+    call shape at all" (the prior session's conclusion) is not quite
+    right; the path gets computed, it's what happens *after* that (an
+    actual specialization request/instantiation trigger for
+    `vectorRemoveAt<i32>`) that's missing or not reached - still not
+    root-caused to a specific call site this session, but narrows the
+    search: it's downstream of `resolveMethodCallTemplateTarget`, not
+    inside it.
+    Also found and attempted to fix a genuinely separate, real bug
+    surfaced while tracing this: with `import /std/collections/vector/*`
+    (or transitively via `import /std/collections/*`), the import-alias
+    table ends up mapping the bare type name `"vector"` to
+    `/std/collections/vector/vector` (the constructor overload family's
+    own canonical path, which happens to share the module's own leaf
+    name) instead of `/std/collections/vector` (the module/type path) -
+    confirmed via trace showing `qualifyImportedCollectionTypeText`
+    resolving `"vector<i32>"` to `"/std/collections/vector/vector<i32>"`.
+    Root cause: `buildImportAliases`'s existing `shouldSkipWildcardAlias`
+    guard (`TemplateMonomorphFinalOrchestration.cpp`) already handles
+    exactly this collision for the *outer* `/std/collections` wildcard
+    scan (explicitly skips aliasing `"vector"`/`"map"` there) but has no
+    equivalent guard for the *submodule's own* wildcard scan (prefix
+    `/std/collections/vector`), where the constructor family's leaf name
+    collides with the module's own name again. Fixing this alone (adding
+    `(prefix == "/std/collections/vector" && remainder == "vector") ||
+    (prefix == "/std/collections/map" && remainder == "map")` to the
+    guard) turned out to be insufficient to fix `remove_at` (the alias
+    corruption was a real bug but not this one's root cause) *and*,
+    when also applied to the separate `registerStdlibSurfaceWildcardAliases`
+    registry-driven path (a second, earlier-executing alias-registration
+    route that doesn't go through the same loop), broke 67
+    `PrimeStruct_compile_run_tests` cases (map-heavy ones specifically) -
+    caught by full-suite verification before landing, reverted in full
+    (`git status` confirms clean). Root cause of that regression:
+    `stdlibSurfaceImportAliasPriority` in the same file explicitly ranks
+    `ConstructorFamily` (30) above `HelperFamily` (10) as the *intended*
+    tiebreak winner for a shared alias name - meaning `"map"` resolving
+    to the map constructor family's path is apparently correct/relied-upon
+    behavior in some contexts, not the bug I assumed. This whole
+    import-alias-priority area is more subtle and load-bearing than a
+    quick read suggested; do not attempt to touch
+    `shouldSkipWildcardAlias`/`registerStdlibSurfaceWildcardAliases`/
+    `stdlibSurfaceImportAliasPriority` again without first understanding
+    *why* ConstructorFamily is given priority over HelperFamily and what
+    currently depends on it - this needs a dedicated investigation of its
+    own, not a drive-by fix. Not filed as a separate numbered TODO since
+    it's speculative (the map regression proves there's a real design
+    reason for the current priority order that isn't understood yet, not
+    necessarily a bug) - flagging it here for whoever next works on
+    import-alias resolution. Not fixed this session either.
 
 - [ ] TODO-4901: primec --emit=wasm hangs indefinitely (infinite loop) compiling quaternion arithmetic helpers
   - owner: ai
