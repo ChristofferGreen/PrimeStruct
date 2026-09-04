@@ -3027,6 +3027,39 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     unfound; next session should trace forward from
     `SemanticsValidatorExprCallResolution.cpp`'s bare-call dispatch (not
     yet read in full) rather than re-checking either of these two.
+  - investigated_2026-09-04 (part a): found the actual dispatcher.
+    `[map<i32, i32>] head{at(values, 0i32)}` is a binding-initializer call
+    shape, handled by
+    `SemanticsValidatorBuildInitializerInference.cpp`'s local-binding-type
+    inference cascade (the function spanning roughly lines 1000-1200,
+    around its `resolvedInitializerPath` computation at line ~1186). That
+    cascade has explicit early special-cases for several initializer
+    shapes (`take`/`borrow` on uninitialized storage, field access, sum
+    constructors, task spawn/wait, graph-local auto-binding) but **none**
+    for args-pack positional indexing - grepped the whole file for
+    `resolveArgsPackAccessTarget`/`resolveIndexedArgsPackElementType`/
+    `getBuiltinArrayAccessName` and got zero hits. So for this call shape,
+    `at(values, 0i32)` falls straight through to the generic path
+    (`preferredCollectionHelperResolvedPath` then `resolveCalleePath` then
+    `resolveExprConcreteCallPath`), which finds `/std/collections/map/at`
+    as an ordinary 2-arg "at" definition match and never has an
+    args-pack-aware candidate to compete against it. This is the same
+    "generic resolution runs unconditionally, with no args-pack-priority
+    gate" shape suspected in the 2026-09-03 note, now localized to a
+    specific file and missing code path rather than a name-based dispatch
+    quirk. A fix would add an early check in that cascade - before the
+    `resolvedInitializerPath` computation - mirroring
+    `resolveMethodTarget`'s own args-pack branches
+    (`resolveArgsPackAccessTarget`/`resolveArgsPackElementMethodTarget`,
+    `SemanticsValidatorMethodTargetArgsPackResolvers.cpp`): if
+    `initializer` is a 2-arg `at`/`at_unsafe` call whose first argument
+    resolves via `resolveArgsPackAccessTarget` to an args-pack binding,
+    set `bindingOut`'s type from the pack's element type and return before
+    reaching the generic resolver. Not attempted this session (same
+    caution as the 2026-09-03 note: verify against the full 3-suite
+    battery before landing, given this exact neighborhood's TODO-4753
+    regression precedent) - a good next-session starting point with a
+    concrete file/location instead of an open-ended search.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai

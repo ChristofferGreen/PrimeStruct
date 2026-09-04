@@ -203,6 +203,30 @@ is a nested indexed-access call (`pack[i].method()`), not when the pack
 is passed directly as the call's own first argument, which is this
 repro's shape.
 
+**Found the actual dispatcher (2026-09-04).** The repro's
+`[map<i32, i32>] head{at(values, 0i32)}` is a *binding-initializer* call
+shape (the third call-shape dimension from
+`CompatPathResolutionConsolidation.md`'s own rule table, alongside direct
+and method calls), handled by
+`SemanticsValidatorBuildInitializerInference.cpp`'s local-binding-type
+inference cascade. That cascade has explicit early special-cases for
+several initializer shapes (`take`/`borrow`, field access, sum
+constructors, task spawn/wait, graph-local auto-binding) but has *no*
+args-pack-positional-indexing case at all - confirmed by grepping the
+whole file for `resolveArgsPackAccessTarget`/
+`resolveIndexedArgsPackElementType`/`getBuiltinArrayAccessName` (zero
+hits). So `at(values, 0i32)` falls straight through to the generic
+resolver (`preferredCollectionHelperResolvedPath` → `resolveCalleePath` →
+`resolveExprConcreteCallPath`), which matches `/std/collections/map/at`
+as an ordinary 2-arg `at` definition - there is no args-pack-aware
+candidate anywhere in this cascade to compete with it. This is a fourth,
+independent gap in the same "each call shape has to remember to check
+args-pack-ness first" pattern `resolveMethodTarget`'s own args-pack
+branches already handle for method calls - direct evidence that this
+isn't one localized bug but the general shape this document exists to
+consolidate. See `docs/todo.md` TODO-4760's `investigated_2026-09-04`
+note for the precise fix sketch (not attempted this session).
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies
