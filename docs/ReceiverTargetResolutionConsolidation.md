@@ -273,6 +273,48 @@ fixing this bug safely, not an optional nicety. See TODO-4760's
 `investigated_2026-09-04` note (continued further) in `docs/todo.md` for
 full detail.
 
+**Found the true root gate (2026-09-04, final).** It has nothing to do
+with any of the four semantics-stage mechanisms above.
+`ir_lowerer`'s `getBuiltinArrayAccessName`
+(`IrLowererBuiltinNameHelpers.cpp:485-608` - the function deciding
+whether a call is builtin positional array/pack-index access at all) has
+an early-out, `resolvesKeyValueHelperSurfacePath(scopedName)`, where
+`scopedName` is built purely from the call's own literal
+`name`/`namespacePrefix` - never from any resolved-call fact, which is
+why none of the semantics-stage fixes could reach it. For a bare,
+unrooted call name (`"at"`, no `/`), the underlying
+`resolveStdlibSurfaceMemberName` skips its path-validation gate entirely
+and falls back to pure string-equality against the stdlib surface's
+member-name list. Since `"at"` is a real map helper name, this excludes
+*any* bare call literally named `at` from array-access treatment,
+**regardless of receiver type** - not receiver-blind in the sense of
+"picks the wrong resolution," but receiver-*absent*: the gate never
+looks at the receiver at all, it is a pure name collision.
+
+`getBuiltinArrayAccessName` is called from **70+ sites across ~30 files**
+in `ir_lowerer` - the highest-fan-out function found in this whole
+investigation. The exclusion is almost certainly deliberately protecting
+the common case (a real map receiver's own `.at()`/`.count()`) from
+being mistreated as array-access; making it receiver-type-aware without
+an unbounded regression audit across all 70+ sites is its own dedicated,
+carefully-scoped project - not something to attempt inside this
+investigation. TODO-4760(a) is now fully root-caused but intentionally
+left unfixed; see its own `investigated_2026-09-04` (final) note in
+`docs/todo.md`.
+
+This closes the immediate investigation loop with an important
+correction to this document's own framing: the earlier sections describe
+receiver-type resolution as duplicated-and-disagreeing across stages
+(semantics/monomorphization/`ir_lowerer` each computing their own
+answer). This final finding is a different failure mode layered on top -
+a gate that doesn't compute a receiver-dependent answer at all, it
+matches on the call's bare spelling before receiver information is even
+available. Both are real and both block this bug; a complete Step 0
+rule table needs to capture this "name-collision, receiver-blind by
+construction" class as its own row category, not fold it into the
+"stages disagree on receiver type" framing the rest of this document
+uses.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies

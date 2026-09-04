@@ -3157,6 +3157,56 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     `CompatPathResolutionConsolidation.md`'s Step 0 did for the sibling
     problem - is now clearly a prerequisite, not an optional nicety, for
     fixing this specific bug safely. Not attempted further this session.
+  - investigated_2026-09-04 (part a, final): found the true root gate,
+    independent of every semantics-stage fact fixed/reverted above.
+    `ir_lowerer`'s `getBuiltinArrayAccessName`
+    (`IrLowererBuiltinNameHelpers.cpp:485-608`) is the function that
+    decides whether a call gets treated as builtin positional
+    array/pack-index access at all (feeding
+    `emitArrayVectorIndexedAccess`-style lowering) - and it contains an
+    explicit early-out: `if (resolvesKeyValueHelperSurfacePath(scopedName))
+    { return false; }` (line ~598). `scopedName` here is built purely
+    from `expr.name`/`expr.namespacePrefix`
+    (`resolveScopedExprName`/`IrLowererHelpers.cpp:17-25` - NOT from any
+    resolved-call-target fact, so none of the semantics-stage fixes above
+    could ever have reached this gate). For our repro,
+    `scopedName == "at"` (bare, no prefix). `resolvesKeyValueHelperSurfacePath`
+    → `resolveStdlibSurfaceMemberName`
+    (`src/support/StdlibSurfaceRegistry.cpp:1634-1643`) has a documented
+    gate that only validates a *path* (containing `/`) against the
+    surface's real member paths; for a **bare, unrooted name with no
+    slash**, that validation is skipped entirely and it falls straight to
+    a pure string-equality check against the surface's member name list.
+    Since `"at"` is a real map helper member name, this returns true for
+    ANY bare call literally named `at` (or `count`, `contains`, etc. -
+    every retired/removed key-value helper name from
+    `classifierRemovedKeyValueCompatibilityHelper`), **regardless of
+    receiver type** - not args-pack-specific, not even collection-specific.
+    This is the actual, final blocker: no amount of fixing WHAT `at(...)`
+    "resolves to" upstream can matter, because this gate short-circuits
+    based on the call's bare NAME alone, before any receiver/resolution
+    fact is even consulted.
+    Not attempted as a fix: `getBuiltinArrayAccessName` is called from
+    **70+ call sites across ~30 files** in `ir_lowerer` (confirmed via
+    grep), making it almost certainly the single most load-bearing
+    function found in this entire investigation chain. The
+    `resolvesKeyValueHelperSurfacePath` gate is very likely deliberately
+    protecting *legitimate* bare map `.at()`/`.count()` calls (the common
+    case - a real map receiver) from being mistreated as array-access;
+    naively removing or loosening it risks silently breaking that common
+    case across dozens of consumers with no established regression net
+    for a change this central. A safe fix needs the gate to become
+    receiver-type-aware (skip the exclusion specifically when the
+    receiver is confirmed to be an args-pack) without an unbounded
+    blast-radius audit of all 70+ call sites - squarely a "Step 0 first"
+    problem, at ir_lowerer scale this time, not a same-session patch.
+  - summary for future sessions: TODO-4760(a)'s true root cause is now
+    fully understood and documented (this note), but it lives in the
+    single highest-fan-out function found across this whole
+    investigation. Recommend treating a fix here as its own dedicated,
+    carefully-scoped leaf (characterize `getBuiltinArrayAccessName`'s
+    call sites' actual receiver-type assumptions first) rather than
+    reopening this general investigation again.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
