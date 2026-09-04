@@ -3116,6 +3116,47 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     two-pass split exists at all (`useMergedWorkerPublicationFacts`/
     worker-parallelism, per the surrounding code) before assuming a
     parameters-only guard is safe for every caller of this machinery.
+  - investigated_2026-09-04 (part a, continued further): implemented the
+    two-function fix (guard in `inferCallSnapshotData` plus an explicit
+    erase in the local-aware pass's direct-call branch, since
+    `inferCallSnapshotData` alone can't clean up the naive first pass's
+    stale entry). Built and tested: it DID work exactly as designed -
+    `direct_call_targets` and `query_facts` for this call both correctly
+    disappeared from `--dump-stage semantic-product` (previously wrong,
+    now absent rather than wrong). The repro **still fails identically**
+    ("map key not found" at compile time), because the same dump then
+    revealed a THIRD and FOURTH independent mechanism computing the same
+    wrong answer, untouched by either fix: `bridge_path_choices[2]`
+    (`collection_family="map" helper_name="at"
+    chosen_path="/std/collections/map/at"`) and
+    `collection_specializations[1]` (`site_kind="temporary" name="at"
+    collection_family="map" ... struct_path=".../MapValue__..."`).
+    `bridge_path_choices` is populated by the SAME naive first pass
+    (`collectDirectCallExpr`) from its own local, still-unfixed
+    `resolvedPath` computation - a second independent call to
+    `collectionBridgeChoiceFromResolvedPath` I didn't touch.
+    `collection_specializations` appears to be a fifth-ish, entirely
+    separate collector not yet traced. Given every fix so far has
+    uncovered one more independent mechanism sharing this exact gap
+    (naive collectDirectCallExpr's direct_call_targets AND
+    bridge_path_choices, inferCallSnapshotData feeding query_facts and
+    the local-aware direct_call_targets refinement, and now
+    collection_specializations) rather than converging, **reverted both
+    changes in full** (`git checkout --`, confirmed clean, primec
+    rebuilds to identical baseline). This is no longer a "find the one
+    missing check" bug - it is now direct, first-hand proof of
+    `docs/ReceiverTargetResolutionConsolidation.md`'s central thesis:
+    receiver-type-aware resolution is duplicated across at least 4
+    independent mechanisms just within the semantics stage's own
+    snapshot-collection code (before even reaching monomorphization or
+    ir_lowerer), all sharing one receiver-blind fallback chain. Patching
+    them one at a time, as they're discovered, is the same
+    whack-a-mole/regression-risk pattern that already cost 67 tests once
+    this session (TODO-4753). Real Step 0 characterization - enumerating
+    every one of these mechanisms up front, the way
+    `CompatPathResolutionConsolidation.md`'s Step 0 did for the sibling
+    problem - is now clearly a prerequisite, not an optional nicety, for
+    fixing this specific bug safely. Not attempted further this session.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai

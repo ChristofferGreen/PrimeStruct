@@ -248,6 +248,31 @@ context to run the same check the second pass can - see the todo.md note
 for the full detail and next steps. Still not landed; this is now a
 precisely localized two-function fix, not an open-ended search.
 
+**That two-function fix was implemented, worked exactly as designed, and
+still didn't fix the repro (2026-09-04, continued further).** Both
+`direct_call_targets` and `query_facts` correctly stopped reporting the
+wrong resolution after the fix. The repro still failed identically,
+because `--dump-stage semantic-product` then showed a third mechanism
+(`bridge_path_choices`, populated by the same naive first pass from its
+own untouched local resolution) and a fourth
+(`collection_specializations`, not yet traced) independently computing
+the same wrong answer. Reverted both changes in full rather than keep
+chasing mechanisms one at a time - the naive first pass alone feeds at
+least two of these lists from one shared, still-broken local variable.
+
+This is no longer a hypothesis - it is direct, empirical proof of this
+document's central thesis. Within the *semantics stage alone*, before
+even reaching monomorphization or `ir_lowerer`, this exact receiver-type
+gap is duplicated across at least four independent collection mechanisms
+(`direct_call_targets` × 2 producers, `query_facts`, `bridge_path_choices`,
+`collection_specializations`). Patching them as discovered is the same
+whack-a-mole pattern that already cost 67 tests once this session
+(TODO-4753) - Step 0 (enumerate every mechanism up front, the way the
+sibling document's Step 0 did) is now a demonstrated prerequisite for
+fixing this bug safely, not an optional nicety. See TODO-4760's
+`investigated_2026-09-04` note (continued further) in `docs/todo.md` for
+full detail.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies
