@@ -166,6 +166,43 @@ first (reference behavior), then monomorphization, then `ir_lowerer`, each
 gated on zero-divergence across `PrimeStruct_semantics_tests`,
 `PrimeStruct_backend_ir_tests`, and `PrimeStruct_compile_run_tests`.
 
+## Step 0 Progress: TODO-4760 Traced Further (2026-09-04)
+
+Continued tracing TODO-4760 (`args<map<i32, i32>>` receiver's `.at(...)`
+misrouting to bare `/std/collections/map/at`) to find the exact defect,
+without landing a fix - the same discipline as Step 1a.
+
+**A real, separate bug found and ruled out as this one's cause.**
+Monomorphization's `unwrapCollectionReceiverEnvelope`
+(`TemplateMonomorphCollectionCompatibilityPaths.cpp:259-316`) unwraps
+`Reference<T>`/`Pointer<T>` envelopes down to `T`'s own family when `T` is
+a recognized collection receiver type, but has no equivalent case for
+`args<T>` - `isCollectionReceiverTypeName` only recognizes
+`array`/`vector`/`soa`/`map`/`string`, so an `args<map<i32, i32>>`
+binding's envelope unwraps to the literal, unrecognized base name
+`"args"` instead of recursing into its element type. This silently
+defeats every `typeName == "map"`-gated branch in
+`resolveMethodCallTemplateTarget` for any args-pack-of-collection
+receiver. Confirmed by direct code reading (mirrors the already-handled
+Reference/Pointer case exactly) and reproducible in isolation, but
+**a fix for it does not change TODO-4760's repro's compile output or
+`--dump-stage semantic-product` resolution** - tried and reverted in full
+(`git checkout --`). Root cause: `direct_call_targets[65]`'s wrong
+`resolved_path` is recorded by the **semantics stage**, not
+monomorphization; `unwrapCollectionReceiverEnvelope` is monomorphization-
+only code that never runs before that fact is captured. This is real,
+separate technical debt (its own future rule-table row - args-pack
+receiver family is unrecognized by this one function), not the TODO-4760
+fix, and should not be attempted again without first finding the
+semantics-stage call site that actually produces `direct_call_targets[65]`
+for a bare/direct-call-form `at(values, 0i32)` (not a method-call form) -
+`setIndexedArgsPackKeyValueMethodTarget`
+(`SemanticsValidatorMethodTargetKeyValueResolvers.cpp:508-557`) was
+checked and ruled out: it only fires when the *receiver expression itself*
+is a nested indexed-access call (`pack[i].method()`), not when the pack
+is passed directly as the call's own first argument, which is this
+repro's shape.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies

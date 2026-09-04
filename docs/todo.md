@@ -2947,6 +2947,31 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     some other call shape this session didn't check. Not fixed this
     session; not attempted further given the demonstrated regression
     risk in this immediate neighborhood.
+  - investigated_2026-09-04 (part a): ruled out two more candidates
+    without finding the actual dispatcher, as part of building
+    `docs/ReceiverTargetResolutionConsolidation.md`'s Step 0 evidence
+    (see that doc's own note on this for full detail). (1)
+    `setIndexedArgsPackKeyValueMethodTarget`
+    (`SemanticsValidatorMethodTargetKeyValueResolvers.cpp:508-557`) is not
+    the culprit - it only fires when the receiver expression is itself a
+    nested indexed-access call (`pack[i].method()` shape), and this
+    repro's `at(values, 0i32)` passes the pack directly as the call's own
+    first argument instead. (2) found and confirmed (by direct code
+    reading, matching the already-handled `Reference<T>`/`Pointer<T>`
+    case exactly) a real, separate bug in monomorphization's
+    `unwrapCollectionReceiverEnvelope`
+    (`TemplateMonomorphCollectionCompatibilityPaths.cpp:259-316`): it has
+    no case for `args<T>` envelopes, so an `args<map<...>>` receiver
+    unwraps to the literal unrecognized base `"args"` instead of
+    recursing into `T`. A fix was written, built, and tested against this
+    repro - it did NOT change the compile output or the
+    `--dump-stage semantic-product` resolution at all, because
+    `direct_call_targets[65]`'s wrong `resolved_path` is recorded by the
+    SEMANTICS stage, before monomorphization ever runs; reverted in full
+    (`git checkout --`, confirmed clean). The actual dispatcher remains
+    unfound; next session should trace forward from
+    `SemanticsValidatorExprCallResolution.cpp`'s bare-call dispatch (not
+    yet read in full) rather than re-checking either of these two.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
