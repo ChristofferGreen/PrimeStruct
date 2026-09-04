@@ -225,7 +225,28 @@ args-pack-ness first" pattern `resolveMethodTarget`'s own args-pack
 branches already handle for method calls - direct evidence that this
 isn't one localized bug but the general shape this document exists to
 consolidate. See `docs/todo.md` TODO-4760's `investigated_2026-09-04`
-note for the precise fix sketch (not attempted this session).
+note for the precise fix sketch.
+
+**That fix sketch was tried and was wrong (2026-09-04, continued).**
+`inferBindingTypeFromInitializer` never runs for `head` because it has an
+*explicit* declared type (`auto`-only inference function) - reverted in
+full. The real decision is a two-function pair in the snapshot-collection
+machinery: a naive first pass (`collectDirectCallExpr`,
+`SemanticsValidatorSnapshots.cpp:1578-1636`, no per-call local context)
+and a "local-aware" second pass (`inferCallSnapshotData`,
+`SemanticsValidatorSnapshotLocals.cpp:91-160`) that only overwrites the
+first pass's answer when its own answer is non-empty - both share the
+identical `preferredCollectionHelperResolvedPath` (confirmed
+receiver-blind: it calls `classifyCollectionHelperSpelling` with
+`CollectionReceiverFamily::None` hardcoded, by design, per this
+consolidation's own sibling document's scope) → `resolveCalleePath`
+(a plain import-alias name lookup, the same `stdlibSurfaceImportAliasPriority`
+machinery TODO-4753 found load-bearing) fallback, so both compute the
+same wrong answer and the "overwrite" is a no-op. A correct fix needs
+both functions to agree, and the naive pass lacks the per-call local
+context to run the same check the second pass can - see the todo.md note
+for the full detail and next steps. Still not landed; this is now a
+precisely localized two-function fix, not an open-ended search.
 
 ## Risks
 

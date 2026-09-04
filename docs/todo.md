@@ -3060,6 +3060,62 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     battery before landing, given this exact neighborhood's TODO-4753
     regression precedent) - a good next-session starting point with a
     concrete file/location instead of an open-ended search.
+  - investigated_2026-09-04 (part a, continued): the fix sketch above
+    was written, built, and tested against the repro - it compiled clean
+    but had **zero** effect. Root cause: `head` has an *explicit* declared
+    type (`[map<i32, i32>] head{...}`), so
+    `inferBindingTypeFromInitializer` (a type-inference function, only
+    consulted for `auto`-typed bindings) never runs for it at all - wrong
+    function entirely. Reverted (`git checkout --`, confirmed clean) and
+    traced further to find the actual two-function pair that jointly
+    decide this call's `resolved_path`, both in the semantics stage's
+    snapshot-collection machinery, not binding-type inference:
+    (1) `collectDirectCallExpr`'s naive first pass
+    (`SemanticsValidatorSnapshots.cpp:1578-1636`) walks every definition's
+    statements with no per-call local-binding context and computes
+    `resolvedPath` via `preferredCollectionHelperResolvedPath(expr)` then
+    `resolveCalleePath(expr)`. For a bare `at(...)` call,
+    `preferredCollectionHelperResolvedPath` calls
+    `classifyCollectionHelperSpelling` with `CollectionReceiverFamily::None`
+    hardcoded (`SemanticsValidatorBuildInitializerInference.cpp:105-140` -
+    receiver-blind by design, per `CompatPathResolutionConsolidation.md`'s
+    own scope: it only decides spelling disposition), so it almost
+    certainly returns empty here and `resolveCalleePath` wins - a plain,
+    receiver-oblivious, import-alias-driven name lookup that finds
+    `/std/collections/map/at` via the `import /std/collections/*`
+    wildcard (the same `stdlibSurfaceImportAliasPriority` machinery
+    TODO-4753 already found load-bearing and dangerous to touch
+    narrowly).
+    (2) A second "local-aware" pass
+    (`forEachLocalAwareSnapshotCall`/`inferCallSnapshotData`,
+    `SemanticsValidatorSnapshotLocals.cpp:91-160`, invoked from
+    `SemanticsValidatorSnapshots.cpp:1662-1721`) has per-call local
+    binding context and re-resolves every direct-call expr afterward,
+    **but only overwrites the naive pass's entry when its own
+    `resolvedPath` comes out non-empty**. `inferCallSnapshotData` has the
+    identical `preferredCollectionHelperResolvedPath` →
+    `resolveCalleePath` fallback (lines 123-142) with no args-pack check
+    ahead of it either, so it reproduces the same wrong answer and the
+    overwrite is a no-op in practice. A correct fix needs BOTH functions
+    to agree that this shape (bare 2-arg `at`/`at_unsafe`, receiver
+    confirmed via `resolveArgsPackAccessTarget` to be an args-pack)
+    should record no resolved path at all - so whichever downstream
+    mechanism handles real positional pack-indexing (per TODO-4800's own
+    finding: `getBuiltinArrayAccessName` +
+    `emitArrayVectorIndexedAccess`, not a `direct_call_targets` fact)
+    gets an unobstructed chance - and the naive pass doesn't have
+    `ParameterInfo`/locals readily available at its call site to run the
+    same check the second pass can. Given that structural two-pass
+    complexity, and this exact function pair sitting right next to the
+    already-proven-dangerous import-alias-priority code, no fix was
+    attempted this round either - the localization is the deliverable.
+    Next session should either (a) thread a parameters-only args-pack
+    check into the naive pass too (locals aren't needed for this repro's
+    shape - `values` is a parameter, and every args-pack example seen
+    this session is a parameter, not a local), or (b) understand why the
+    two-pass split exists at all (`useMergedWorkerPublicationFacts`/
+    worker-parallelism, per the surrounding code) before assuming a
+    parameters-only guard is safe for every caller of this machinery.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
