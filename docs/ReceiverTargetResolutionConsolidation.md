@@ -315,6 +315,31 @@ construction" class as its own row category, not fold it into the
 "stages disagree on receiver type" framing the rest of this document
 uses.
 
+**Attempted the narrow fix anyway; it regressed 46 tests (2026-09-04,
+one more round).** The semantics-stage sibling of this exact function
+(`SemanticsBuiltinPathHelpers.cpp:1186`'s `getBuiltinArrayAccessName`)
+turned out to already guard against bare unrooted names in its own
+key-value lookup helper - `resolveKeyValueHelperMemberNameLocal` requires
+a `/` before attempting a surface-member match at all. Adding the
+identical guard to ir_lowerer's copy looked like a precise, minimal,
+well-precedented fix (one function, matching an established sibling
+convention). It changed behavior correctly on a simplified repro, but
+`PrimeStruct_backend_ir_tests` came back with 46 failures against a
+baseline of 1 known flake. Reverted in full. This is this session's
+third instance of "narrow, well-reasoned fix in this exact neighborhood
+regresses broadly when actually run against the full suite" (after
+TODO-4753's 67-test regression and the two-function TODO-4760 attempt
+above) - strong, repeated, empirical confirmation that nothing in this
+area is safe to touch without the full characterization Step 0 calls
+for, no matter how principled the reasoning behind a specific change
+looks in isolation.
+
+Separately confirmed the fix (even before reverting) did not help the
+actual pinned regression test at all - its multi-function/`[spread]`
+scenario fails earlier and differently than the simplified repro used
+throughout this investigation. See TODO-4760's own notes in `docs/todo.md`
+for full detail.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies

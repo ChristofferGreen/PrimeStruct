@@ -3207,6 +3207,45 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     carefully-scoped leaf (characterize `getBuiltinArrayAccessName`'s
     call sites' actual receiver-type assumptions first) rather than
     reopening this general investigation again.
+  - investigated_2026-09-04 (part a, one more round): found that the
+    semantics-stage sibling of `getBuiltinArrayAccessName`
+    (`SemanticsBuiltinPathHelpers.cpp:1186`) does NOT have the same bare-
+    name exclusion: its own key-value-lookup helper
+    (`resolveKeyValueHelperMemberNameLocal`) explicitly requires the path
+    to contain `/` before attempting a surface-member match
+    (`if (rawPath.find('/') == std::string::npos) return false;`,
+    `SemanticsBuiltinPathHelpers.cpp:195-197`), so a bare `"at"` always
+    falls through to being treated as array/pack access on that side.
+    ir_lowerer's `resolvesKeyValueHelperSurfacePath`
+    (`IrLowererBuiltinNameHelpers.cpp:35-49`) has no equivalent guard.
+    Added the same slash-guard to ir_lowerer's copy, matching the
+    semantics-side convention exactly. Built and tested: it changed
+    behavior on a simplified single-function repro (error changed from
+    "map key not found" to a different, more specific "backend only
+    supports [...] calls in expressions" error - real progress, though
+    still not a working compile), but running it against the FULL
+    `PrimeStruct_backend_ir_tests` suite showed **46 test failures**
+    (baseline: 1 known flake) - confirmed this session's now-third
+    "worked on the narrow case, broke the wide one" pattern. Reverted
+    in full (`git checkout --`, confirmed clean, primec rebuilds
+    identically). The guard is evidently too broad: something real relies
+    on ir_lowerer's version matching BARE key-value helper names in cases
+    the semantics-side convention doesn't need to handle (or the two
+    functions' callers have different contracts for what "bare" inputs
+    mean despite the shared name) - characterizing which of the 70+ call
+    sites need which behavior is exactly the scale of work Step 0 would
+    need to do before this is safe, not a two-line guard.
+  - Also confirmed against the actual pinned regression test
+    (`test_compile_run_vm_core_variadics.cpp`, "vm materializes variadic
+    experimental map packs with indexed canonical count calls"): even
+    with the (reverted) fix in place, that test's exact source still
+    failed identically (`argument count mismatch for
+    /std/collections/map/map`, exit 2 - unchanged from its current pin).
+    The pinned test's multi-function/`[spread]`-based scenario hits an
+    earlier, different failure than the single-function repro used
+    throughout this session's investigation - one more independent
+    divergence point, not yet traced. TODO-4760(a) remains open,
+    thoroughly root-caused at multiple layers, intentionally unfixed.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
