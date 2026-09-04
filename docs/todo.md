@@ -510,6 +510,7 @@ Note (2026-09-03): TODO-4724 has since closed - see
 90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
+93. TODO-5286: unwrapCollectionReceiverEnvelope has no args<T> case, unlike Reference<T>/Pointer<T>
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
@@ -523,6 +524,60 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
 `docs/todo_finished.md`.
 
 ### Task Blocks
+
+- [ ] TODO-5286: unwrapCollectionReceiverEnvelope has no args<T> case, unlike Reference<T>/Pointer<T>
+  - owner: ai
+  - created_at: 2026-09-04
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: found while tracing TODO-4760 for
+    `docs/ReceiverTargetResolutionConsolidation.md`'s Step 0.
+    `unwrapCollectionReceiverEnvelope`
+    (`src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp:259-316`)
+    unwraps a `Reference<T>`/`Pointer<T>` envelope down to `T`'s own
+    family when `T` is a recognized collection receiver type
+    (`array`/`vector`/soa/`map`/`string`, per `isCollectionReceiverTypeName`),
+    but has no equivalent case for `args<T>` - an `args<map<i32, i32>>`
+    binding unwraps to the literal, unrecognized base name `"args"`
+    instead of recursing into `T`. This silently defeats every
+    `typeName == "map"` (or vector/soa/string)-gated branch in
+    `resolveMethodCallTemplateTarget`
+    (`TemplateMonomorphMethodTargets.cpp`) for any args-pack-of-collection
+    receiver reaching that code path. A minimal fix (treat `"args"`
+    identically to `"Reference"`/`"Pointer"` at both the leading check
+    (line ~261) and the loop's base check (line ~290)) was written, built,
+    and confirmed NOT to change TODO-4760's own repro's compile output or
+    `--dump-stage semantic-product` resolution - that bug is decided by
+    the semantics stage before monomorphization runs, so this is a real
+    but independent defect, not TODO-4760's cause. Reverted (not
+    committed) pending its own verification per this task's acceptance
+    criteria; not yet known whether any current call site actually
+    reaches `resolveMethodCallTemplateTarget` with an `args<collection>`
+    receiver on a live code path (if none do today, this is latent debt;
+    if one does, it is a live bug independent of TODO-4760).
+  - implementation_notes: minimal fix is adding `normalizedType == "args"`
+    to the leading two-arg-form check and `base != "args"` to the loop's
+    base-check condition in `unwrapCollectionReceiverEnvelope`, mirroring
+    the existing `Reference`/`Pointer` handling exactly (same function,
+    same file). Before landing, find at least one live call site/repro
+    where an `args<T>` (T = vector/array/soa/map/string) receiver reaches
+    `resolveMethodCallTemplateTarget` and observably changes behavior -
+    the TODO-4760 repro does not exercise this path, so a different
+    repro is needed to prove the fix does anything. Verify against the
+    full 3-suite battery (`PrimeStruct_semantics_tests`,
+    `PrimeStruct_backend_ir_tests`, `PrimeStruct_compile_run_tests`)
+    before committing - this exact file/neighborhood already produced a
+    67-test regression from a narrower change this session (see
+    TODO-4753's notes).
+  - acceptance:
+    - a repro demonstrating `args<T>` (T a recognized collection family)
+      reaching `resolveMethodCallTemplateTarget` with wrong behavior
+      today, fixed by this change
+    - full 3-suite battery unchanged except the fix's own intended delta
+  - stop_rule: land the fix with a pinning test once a live-impact repro
+    is found, or close as latent-only debt (no reachable call site) if a
+    thorough search finds none within one focused session.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai
