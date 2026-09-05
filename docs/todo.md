@@ -3246,6 +3246,54 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     throughout this session's investigation - one more independent
     divergence point, not yet traced. TODO-4760(a) remains open,
     thoroughly root-caused at multiple layers, intentionally unfixed.
+  - investigated_2026-09-05: landed the `getBuiltinArrayAccessName` fix
+    from the note above (commit `5468344`), verified safe via a proper
+    name-level diff against a freshly-confirmed baseline for all three
+    suites (an earlier apparent 46-test regression turned out to be a
+    pre-existing baseline state never previously verified for
+    `PrimeStruct_backend_ir_tests` this session - see that commit's
+    message for the full correction). This fixes the simplified
+    single-function repro's error class but, as expected, does not fix
+    TODO-4760(a)'s own pinned test.
+    Found the actual reason the pinned test still fails, and it is a
+    **second, unrelated bug**: mismatched-arity sibling arguments to an
+    `args<T>`-typed parameter break call-inlining entirely independent of
+    `at()`/positional-indexing. Minimal repro (no `at()`, no method calls,
+    nothing from the `getBuiltinArrayAccessName` investigation at all):
+    ```
+    score_maps([args<map<i32, i32>>] values) { return(0i32) }
+    main() { return(score_maps(map<i32, i32>(5i32, 6i32),
+                               map<i32, i32>(1i32, 2i32, 3i32, 4i32))) }
+    ```
+    fails to lower with `argument count mismatch for
+    /std/collections/map/map`. Isolated precisely: two args-pack elements
+    that are map-constructor calls of the SAME arg count (shape) compile
+    fine; DIFFERENT arg counts (any order) fail. Two directly-nested
+    (non-args-pack) differently-sized map constructors elsewhere in the
+    same program do NOT reproduce this - confirmed it is specific to
+    being sibling elements of one `args<T>` parameter's variadic pack,
+    not a general overload-resolution bug. Traced the failure to
+    `buildOrderedCallArgumentsWithPackedArgs`
+    (`IrLowererCallHelpers.cpp:477-558`, its existing unconditional
+    `fprintf(stderr, "[acm-N]\n")` debug markers - already committed,
+    not added this session - pinpointed which branch fires) being
+    invoked for the SECOND map-constructor call with a `callee` whose
+    `parameters` don't match that call's own arg count - meaning
+    whatever resolves each pack element's constructor overload
+    (somewhere upstream of `emitInlinePackedCallParameter`,
+    `IrLowererInlinePackedArgs.cpp`, which calls
+    `rewritePublishedKeyValueConstructorExpr` → `resolveDefinitionCall`
+    freshly per element with no obvious caching at that layer) ends up
+    using the wrong overload for a later sibling. Root call site of the
+    actual caching/staleness has not yet been found - this needs its own
+    dedicated trace through `resolveDefinitionCall`/`makeResolveDefinitionCall`
+    (`IrLowererCallResolution.cpp:224-284`) and whatever calls
+    `emitInlinePackedCallParameter` per pack element
+    (`IrLowererLowerInlineCalls.cpp`/`IrLowererInlineParamHelpers.cpp`).
+    Given the size of this session's exploration already, stopped here
+    to check in with the user before continuing further - this is a
+    genuinely separate bug from the receiver-typing story the rest of
+    this TODO's notes address, not another layer of the same one.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
