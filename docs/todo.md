@@ -3294,6 +3294,48 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     to check in with the user before continuing further - this is a
     genuinely separate bug from the receiver-typing story the rest of
     this TODO's notes address, not another layer of the same one.
+  - investigated_2026-09-05 (continued): traced this second bug to a
+    precise, specific mechanism (not yet fixed - this is diagnosis, not
+    a landed change). Ruled out "always resolves to whichever overload
+    the base path defaults to" (a standalone single 4-arg pack element,
+    with no 2-arg sibling at all, compiles fine on its own -
+    `repro_single4.prime`-style test) - it is genuinely about state
+    shared *across* sibling pack elements, not a fixed default.
+    `rewritePublishedKeyValueConstructorExpr`
+    (`IrLowererInlinePackedArgs.cpp:98-138`, invoked once per pack
+    element from `emitPackedValueToLocal`) rewrites each map-constructor
+    argument expr to the canonical constructor path and explicitly zeroes
+    `rewrittenExpr.semanticNodeId = 0` (line ~121). Downstream,
+    `resolveDefinitionCall` (`IrLowererCallResolution.cpp:224-247`) calls
+    `resolveExprPath` (`makeResolveCallPathFromScope`,
+    `IrLowererCallResolution.cpp:780-836`), which looks up the correct,
+    call-site-specific resolved path via
+    `lookupSemanticProductCallTarget` keyed by `semanticNodeId` - a
+    lookup that can never succeed for a zeroed ID, so every rewritten
+    pack-element call falls through to
+    `resolveCallPathWithoutSemanticFallbackProbes`
+    (`IrLowererCallResolution.cpp:208-220`), which for an already-rooted
+    name just returns it verbatim (`/std/collections/map/map`, no
+    `__ovN`/`__tN` overload-arity suffix at all). `resolveDefinitionByPath`
+    (`IrLowererCallHelpers.cpp:794-802`) then does a plain exact-key
+    `defMap` lookup at that bare, unsuffixed path - meaning EVERY
+    rewritten pack element (regardless of its own arg count) resolves to
+    whatever single Definition happens to be registered at that one bare
+    key, not to its own correctly-arity-matched overload. Same-shape
+    siblings all happen to want that same one entry (works by
+    coincidence); different-shape siblings don't (fails for whichever one
+    doesn't match). Have NOT yet found where `defMap`'s bare-key entry
+    for a templated/overloaded constructor gets populated (which concrete
+    overload "wins" that key, and why) - that is the concrete next step,
+    not yet started. A candidate fix direction (unverified, not attempted):
+    either stop zeroing `semanticNodeId` in the rewrite (if nothing
+    depends on it being zeroed) so the correct per-call-site semantic-
+    product fact is used instead of the bare-path fallback, or make
+    `resolveCallPathWithoutSemanticFallbackProbes` overload-suffix-aware
+    for this rewritten shape. Not attempted this session given the
+    now-repeated pattern of narrow fixes regressing broadly in this
+    general area - would need the full build+3-suite-diff verification
+    protocol from this session's other landed fix before any attempt.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
