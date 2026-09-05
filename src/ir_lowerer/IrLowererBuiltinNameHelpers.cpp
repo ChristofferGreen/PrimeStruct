@@ -33,6 +33,21 @@ std::string collectionWrapperAlias(std::string_view collectionName,
 }
 
 bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
+  // TODO-4760: a bare, unrooted name (no '/' at all - e.g. plain "at")
+  // is not a *path* into the key-value surface, it is just a call name
+  // that may collide with one by spelling alone (args-pack positional
+  // indexing uses the same "at"/"at_unsafe" names). The sibling
+  // semantics-stage implementation
+  // (resolveKeyValueHelperMemberNameLocal, SemanticsBuiltinPathHelpers.cpp)
+  // already guards this exact case (`if (rawPath.find('/') ==
+  // std::string::npos) return false;`); this copy lacked the same guard,
+  // which made getBuiltinArrayAccessName wrongly treat any bare "at"-named
+  // call as a key-value helper regardless of receiver, blocking positional
+  // pack-index lowering for it. See
+  // docs/ReceiverTargetResolutionConsolidation.md.
+  if (path.find('/') == std::string_view::npos) {
+    return false;
+  }
   const auto *metadata =
       keyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
