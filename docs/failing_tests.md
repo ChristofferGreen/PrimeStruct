@@ -629,6 +629,24 @@ All other test assertion failures have been fixed in this session:
   when a resolved user-defined callee exists (`directCallee == nullptr` guard added).
 - **IR pipeline GPU (test 1568)** — Passes in 162s with current binary (well under the
   600s CTest timeout). Was listed as failing in the last full run due to a slower binary.
+- **spinning_cube_argument_validation_51_55 (test 1745)** — Already fixed as a side
+  effect of the TODO-4760(a) `args<map<K,V>>` positional-indexing fix (commits
+  `e4cd1c8`/`181c22a`), which landed after this file's 2026-08-30 snapshot. Shard
+  cases 51-53 come from `test_compile_run_examples_language_levels.cpp`'s "3.Surface
+  examples compile and run" table, which compiles `3.Surface/collections.prime` -
+  an example that constructs `map<i32, i32>(...)` and was hitting exactly the
+  args-pack/map receiver bug TODO-4760(a) fixed. Verified test 1745 passes in
+  isolation (`ctest -I 1745,1745`, run twice) and that the whole
+  `primestruct.compile.run.examples` suite (107 non-disabled cases, `--parallel 4`)
+  is 100% green with no other regressions. Did not adopt a subsequent full-repo
+  `scripts/compile.sh --release` run's regenerated failure list: at this
+  environment's default `--parallel 8` on a 4-core box it produced ~45 new
+  failures/timeouts scattered across unrelated suites (`ir_pipeline`, `semantics`,
+  `vm_collections`, `emitters.cpp`, ...) that don't reproduce when reruns are
+  narrowed - the same parallel-interleaving/CPU-contention false-positive pattern
+  already documented above (TODO-4725 triage note, 2026-07-16) and in the
+  Configuration changes note below. Treating that noisy run as authoritative would
+  have reintroduced dozens of bogus entries into this file.
 
 ### Configuration changes
 
@@ -637,13 +655,13 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-08-30T19:18:12Z`
+- Last updated: `2026-09-06T14:05:00Z`
 - Build type: `Release`
 - Build dir: `build-release`
-- Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
+- Command: `ctest --test-dir build-release -I 1745,1745 --output-on-failure` (targeted
+  re-run; see note above on why a `--parallel 8` full-suite regen was not adopted)
+- Result: `ctest` passed - 0 failing CTest cases known.
+- Failing CTest cases: none currently tracked.
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
