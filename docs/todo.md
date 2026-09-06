@@ -3395,6 +3395,58 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     would need to go; the pinned test's own binding-initializer shape
     (`[map<i32, i32>] head{at(values, 0i32)}`) is exactly an
     expression-position use.
+  - investigated_2026-09-06: confirmed a scalar `args<i32>` pack DOES
+    already positionally index correctly in expression position (`at(pack,
+    i)` inside a binding initializer, exit code matches the selected
+    element) - the gap is specific to struct-shaped (map) elements, not
+    positional pack-indexing-as-an-expression in general.
+    Found a real, existing dispatch entry point that already anticipates
+    this exact case: `emitBuiltinArrayAccess`
+    (`IrLowererIndexedAccessEmit.cpp:371-497`) computes an
+    `isMapArgsPackElementTarget` flag from `ArrayVectorAccessTargetInfo`
+    (which - unlike the leaner `CollectionPairTypeInfo` used at the
+    dispatch cascade's gating check - has both `isArgsPackTarget` and
+    `isKeyValueTarget` fields, so it CAN distinguish "genuine map
+    receiver" from "args-pack of maps"). But the cascade's gating check
+    (`IrLowererLowerStatementsExpr.h:565`, `isKeyValueAccessTarget`) uses
+    the leaner `resolveCollectionPairTypeInfo`, whose `isKeyValueTarget`
+    is true for BOTH cases indistinguishably - so an args-pack-of-maps
+    receiver incorrectly defers to the "key-value access path below"
+    (meant for genuine map receivers only) and never reaches
+    `emitBuiltinArrayAccess` at all, eventually falling through to the
+    generic catch-all error.
+    Tried the natural fix: add a guard so `isKeyValueAccessTarget` is
+    false when the receiver is confirmed an args-pack local (checked
+    directly via `localsIn.find(...).isArgsPack`, not requiring the
+    richer struct), letting the call proceed into
+    `emitBuiltinArrayAccess` instead. Built and ran against the pinned
+    test's exact source: **it hung for ~26 seconds of pure CPU time and
+    was killed (exit 130, no output)** - genuine runaway recursion, not
+    a wrong-answer bug. Reverted immediately (`git checkout --`,
+    confirmed clean, verified the reverted binary reproduces the known
+    fast, correct-for-now error again).
+    This confirms the "missing codegen capability" theory more strongly
+    than before: `emitBuiltinArrayAccess`'s own `isMapArgsPackElementTarget`
+    branch (line ~421-428) doesn't actually do anything special for that
+    case - it just skips ONE early-return to `emitArrayVectorIndexedAccess`
+    and then falls through unrelated string-access checks to the SAME
+    `emitArrayVectorIndexedAccess` call at the bottom regardless. If
+    `emitArrayVectorIndexedAccess` itself has no real struct-element
+    support and instead loops back into `emitExpr` on a same-shaped or
+    equivalent expr when it can't handle the element type, routing our
+    call there produces exactly this runaway recursion. The
+    `isMapArgsPackElementTarget` flag look like it was added in
+    anticipation of a fix that was never finished, not a working path
+    to route into. Building real support now needs to go inside
+    `emitArrayVectorIndexedAccess`/`emitArrayVectorIndexedAccess`'s own
+    struct-element handling (or a sibling function reached from the
+    `isMapArgsPackElementTarget` branch that doesn't yet exist), not
+    just a dispatch-cascade reordering - confirmed NOT a quick fix.
+    Recommend anyone picking this up start by instrumenting
+    `emitArrayVectorIndexedAccess` itself (not the cascade around it) to
+    find exactly where/why it recurses for a map-args-pack-element input,
+    with a hard recursion-depth guard in place before ever running it
+    against a real program, given the demonstrated hang.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
