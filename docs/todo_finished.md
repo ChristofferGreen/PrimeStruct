@@ -44256,3 +44256,125 @@ real answer.
     resolved; TODO-4760(b) was already closed-by-duplication into
     TODO-4800 (see the `cross_reference_2026-08-08` note above) - this
     TODO as a whole is complete.
+
+**Todo Completion (September 6, 2026) — TODO-5286**
+- [x] TODO-5286: unwrapCollectionReceiverEnvelope has no args<T> case, unlike Reference<T>/Pointer<T>
+  - owner: ai
+  - created_at: 2026-09-04
+  - finished_at: 2026-09-06
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: found while tracing TODO-4760 for
+    `docs/ReceiverTargetResolutionConsolidation.md`'s Step 0.
+    `unwrapCollectionReceiverEnvelope`
+    (`src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp:259-316`)
+    unwraps a `Reference<T>`/`Pointer<T>` envelope down to `T`'s own
+    family when `T` is a recognized collection receiver type
+    (`array`/`vector`/soa/`map`/`string`, per `isCollectionReceiverTypeName`),
+    but has no equivalent case for `args<T>` - an `args<map<i32, i32>>`
+    binding unwraps to the literal, unrecognized base name `"args"`
+    instead of recursing into `T`. This silently defeats every
+    `typeName == "map"` (or vector/soa/string)-gated branch in
+    `resolveMethodCallTemplateTarget`
+    (`TemplateMonomorphMethodTargets.cpp`) for any args-pack-of-collection
+    receiver reaching that code path.
+  - evidence (closed as latent-only debt, no code change landed): applied
+    the minimal fix from this task's own `implementation_notes` (add
+    `normalizedType == "args"` to the leading two-arg-form check at line
+    ~261 and `base != "args"` to the loop's base-check at line ~290,
+    mirroring the existing `Reference`/`Pointer` handling exactly) and
+    rebuilt, then hunted for a live-impact repro:
+    - Confirmed the defect is real at the unit level: a temporary debug
+      trace in `resolveMethodCallTemplateTarget` showed that for
+      `packCount([args<map<i32, i32>>] values) { return(values.count()) }`,
+      the function *is* invoked (3 times per compile, from different
+      monomorphization rewrite call sites) with `receiver.kind == Name`
+      bound to `typeName="args"`, `typeTemplateArg="map<i32, i32>"`, and
+      before the fix `unwrapImportedCollectionReceiverType` returns the
+      literal `"args"`; after the fix it correctly returns `"map"`. So
+      the call site is genuinely live/reachable, not dead code.
+    - However, this internal difference never surfaces as an observable
+      compiled-program behavior change: (1) direct pack-level
+      `.count()`/`.at()`/`.at_unsafe()` calls are already fully resolved
+      to `/array/count` (etc.) at the *semantics* stage, before
+      monomorphization runs (confirmed via
+      `--dump-stage semantic-product`: `method_call_targets[0]` shows
+      `resolved_path="/array/count"` already stamped), and the
+      monomorphization-stage `resolveMethodCallTemplateTarget` result for
+      this expression is only applied back onto `expr.name` by its caller
+      (`TemplateMonomorphExpressionRewrite.cpp`) when a canonicalization
+      pass (`preferCanonicalStdlibCollectionHelperPath`) would *change*
+      the path - for both `"/array/count"` (buggy) and `"/map/count"`
+      (fixed) that canonicalization is a no-op, so `expr.name` is left
+      untouched either way and the previously-resolved `/array/count`
+      target is what actually gets emitted; (2) any *other* method name
+      called directly on an `args<T>` pack receiver (e.g. `.tryAt(...)`)
+      is already rejected earlier, at the semantics-validation stage
+      (`SemanticsValidatorExprMethodTargetResolution.cpp:898`,
+      `normalizedBaseTypeName == "args"` unconditionally returns `false`
+      there for anything other than the dedicated
+      count/capacity pack-level path in
+      `SemanticsValidatorExprCollectionCountCapacity.cpp`), so
+      `resolveMethodCallTemplateTarget` is never reached for those at all
+      - confirmed with a direct repro
+      (`packTryAt([args<map<i32,i32>>] values) { return(values.tryAt(0i32)) }`)
+      that fails with `PSC1005` at the semantic stage identically with
+      and without the fix.
+    - Tried an indexed-access variant
+      (`values[0i32].count()` on `args<vector<i32>>`) as another
+      candidate live path; it hits a pre-existing, unrelated
+      "count() argument resolves to a non-string value" native-lowering
+      error, byte-for-byte identical with and without the fix - not a
+      regression, and not evidence of this defect either.
+    - Ran the full 3-suite battery with the fix applied and compared
+      against a freshly rebuilt baseline (this file/neighborhood
+      previously caused a 67-test regression from a narrower change, per
+      TODO-4753's notes, so this was verified carefully rather than
+      assumed): `PrimeStruct_semantics_tests` 2753/2754 passed (the 1
+      known pre-existing failure, TODO-5050 shape (c)/TODO-5285 residual,
+      identical error text with and without the fix);
+      `PrimeStruct_backend_ir_tests` 1598/1644 passed, with the exact
+      same 46 failing `TEST CASE:` names (diffed byte-for-byte) on both
+      baseline and patched builds; `PrimeStruct_compile_run_tests`
+      2674/2679 passed, with the same 5 pre-existing map-conformance/
+      map-reference-string-access failures on both builds. Zero net
+      change to any test outcome from the fix, in either direction.
+  - implementation_notes: the described minimal fix (mirroring
+    `Reference`/`Pointer` handling for `"args"` in both spots in
+    `unwrapCollectionReceiverEnvelope`) is correct and safe (verified
+    above), but was **not committed** - per this task's own acceptance
+    criteria and stop_rule, landing it requires a repro demonstrating
+    `args<T>` reaching `resolveMethodCallTemplateTarget` with *wrong*
+    behavior *today* that the fix corrects. Despite constructing and
+    testing several candidate repros across the shapes most likely to
+    exercise the gap (direct pack-level collection methods for
+    map/vector element types, both the count/at/at_unsafe whitelisted
+    path and an arbitrary other method name, plus an indexed-access
+    variant), none showed any observable difference - the defect is real
+    at the unit-function level but is unreachable-in-effect end-to-end,
+    fully absorbed by (a) the semantics stage's own earlier, independent
+    resolution/rejection of every call shape that can reach a direct
+    `args<T>` receiver, and (b) the monomorphization rewrite's
+    change-only-if-canonicalization-differs guard. No unit test
+    infrastructure exists that calls `unwrapCollectionReceiverEnvelope`
+    directly (it is a free function in
+    `TemplateMonomorphCollectionCompatibilityPaths.cpp`, not currently
+    exercised by any dedicated unit test file), so there is also no
+    existing pinning-test convention to extend for a unit-level-only
+    fix without an end-to-end repro backing it.
+  - acceptance: not met - no repro found demonstrating wrong behavior
+    today that the fix corrects (see evidence above for the thorough
+    search performed).
+  - notes: if a future task (e.g. new args-pack-of-collection call shapes
+    added elsewhere) creates a path where this defect's `typeName`
+    difference is no longer absorbed by the two downstream guards
+    identified above, revisit this fix - the patch itself remains
+    trivial to reapply (see implementation_notes) and was verified safe
+    against the full 3-suite battery.
+  - stop_rule: satisfied via the task's own latent-only-debt branch - a
+    thorough, multi-angle search within one focused session found a
+    reachable call site but no live-impact (observably wrong) behavior,
+    so the fix is not landed; documented here instead of forcing a
+    speculative, unverified change into the same file/neighborhood that
+    previously caused a 67-test regression (TODO-4753).
