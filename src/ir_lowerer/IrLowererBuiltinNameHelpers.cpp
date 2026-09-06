@@ -14,24 +14,11 @@ namespace primec::ir_lowerer {
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata();
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadata();
 
-namespace {
-std::string stdCollectionsRoot() {
-  return "std/collections";
-}
-
-std::string collectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
-}
-
-std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/" + collection_paths::experimentalFolder(collectionName) + "/";
-}
-
-std::string collectionWrapperAlias(std::string_view collectionName,
-                                   std::string_view suffix) {
-  return std::string(collectionName) + std::string(suffix);
-}
-
+// TODO-5288: shared by every ir_lowerer-stage call site (declared in
+// IrLowererHelpers.h) so the guard below lives in exactly one place for
+// this stage; the semantics-stage twin (resolveKeyValueHelperMemberNameLocal,
+// SemanticsBuiltinPathHelpers.cpp) has a different signature/metadata lookup
+// and is tracked separately - see TODO-5293.
 bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
   // TODO-4760: a bare, unrooted name (no '/' at all - e.g. plain "at")
   // is not a *path* into the key-value surface, it is just a call name
@@ -61,6 +48,24 @@ bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
     return !resolveStdlibSurfaceMemberName(*metadata, rootedPath).empty();
   }
   return false;
+}
+
+namespace {
+std::string stdCollectionsRoot() {
+  return "std/collections";
+}
+
+std::string collectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/" + collection_paths::experimentalFolder(collectionName) + "/";
+}
+
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
 }
 
 std::string keyValueConstructorAliasToken() {

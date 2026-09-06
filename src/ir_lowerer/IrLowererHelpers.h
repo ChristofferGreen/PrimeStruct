@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "primec/ast/Ast.h"
@@ -24,6 +25,9 @@ std::string specializedExperimentalSoaVectorStructPathForElementType(
     const std::string &elementTypeText);
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
+// TODO-5288: single shared implementation for this stage - see
+// IrLowererBuiltinNameHelpers.cpp for the definition and its guard notes.
+bool resolvesKeyValueHelperSurfacePath(std::string_view path);
 bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, const Expr &callExpr);
 bool isFileHandleCall(const Expr &expr);
 bool isReturnCall(const Expr &expr);

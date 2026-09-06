@@ -44488,3 +44488,124 @@ real answer.
     logic shared by dozens of the ~70 call sites in this area's call
     graph, which this task's own stop_rule flags as out of scope for a
     single pass; filed as TODO-5292 instead of attempting it here.
+
+- [x] TODO-5288: Consolidate the semantics-stage and ir_lowerer-stage builtin-array-access/key-value-helper-name classifiers
+  - owner: ai
+  - created_at: 2026-09-06
+  - finished_at: 2026-09-06
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: TODO-4760(a)'s first landed fix (commit `5468344`) was adding
+    a slash-guard to ir_lowerer's `resolvesKeyValueHelperSurfacePath`
+    (`IrLowererBuiltinNameHelpers.cpp:35-49`) to match the guard its
+    semantics-stage twin, `resolveKeyValueHelperMemberNameLocal`
+    (`SemanticsBuiltinPathHelpers.cpp:187-215`), already had. These two
+    functions - and their siblings `getBuiltinArrayAccessName`
+    (`SemanticsBuiltinPathHelpers.cpp:1186` vs
+    `IrLowererBuiltinNameHelpers.cpp:485-608`) - are independently
+    written, semantically-equivalent-in-intent implementations that
+    silently drifted apart. There was also a THIRD, textually-identical-
+    but-independent copy of `resolvesKeyValueHelperSurfacePath` in
+    `IrLowererHelpers.cpp:76-90` (separate anonymous-namespace symbol,
+    not the same function as the one in `IrLowererBuiltinNameHelpers.cpp`
+    despite matching source) - meaning the guard needed checking/applying
+    in three places, not two, and the fix that landed this session before
+    this task only touched one of them.
+  - evidence: (1) confirmed `IrLowererHelpers.cpp:76-90`'s copy of
+    `resolvesKeyValueHelperSurfacePath` has exactly one call site
+    (`IrLowererHelpers.cpp:279`, inside `isSimpleCallName`'s
+    `isRemovedScopedCollectionAlias` lambda), and that call site is only
+    reached from a branch already gated on
+    `name.find('/') != std::string::npos` (line 299 in the pre-change
+    file) - so, unlike the copy in `IrLowererBuiltinNameHelpers.cpp`
+    (called from `getBuiltinArrayAccessName` on a `scopedName` that CAN be
+    a bare unrooted name, e.g. plain "at", with no upstream slash-guard),
+    this third copy's single call site can never actually pass it a bare
+    name in practice. So the slash-guard's *absence* here was not an
+    active bug (a passing test suite is consistent with this, but so is a
+    latent bug - the direct code-path trace is what actually establishes
+    it, per the task's own caution that a passing suite alone doesn't
+    prove safety). (2) Given (1), the two ir_lowerer-stage copies are
+    textually near-identical and both safe to merge into one - did so
+    (see fixed, below) rather than separately patching the guard into the
+    third copy and leaving 2 independent ir_lowerer-stage bodies to drift
+    apart again later. (3) audited `getBuiltinArrayAccessName`'s two
+    stage implementations line-by-line (see fixed/deferred split below).
+  - fixed: merged the two ir_lowerer-stage copies of
+    `resolvesKeyValueHelperSurfacePath` (`IrLowererBuiltinNameHelpers.cpp`'s
+    guarded version and `IrLowererHelpers.cpp`'s unguarded one) into a
+    single non-anonymous-namespace function, defined once in
+    `IrLowererBuiltinNameHelpers.cpp` (keeping the TODO-4760 guard and its
+    comment) and declared in `IrLowererHelpers.h` so both translation
+    units call the same symbol; `IrLowererHelpers.cpp`'s local copy (and
+    its now-unused `keyValueHelperSurfaceMetadata` forward declaration)
+    were deleted. Net effect: this stage now has exactly one
+    implementation of this function (previously two, one of which was
+    missing the guard, though its only call site could not have hit that
+    gap). The semantics-stage twin, `resolveKeyValueHelperMemberNameLocal`,
+    was left as-is and separate: it has a materially different signature
+    (returns the resolved member-name string via an out-param, not just a
+    bool) and an additional resolved-path/metadata-id cross-check
+    (`findStdlibSurfaceMetadataByResolvedPath`) that the ir_lowerer-stage
+    function has no equivalent for, so collapsing it into the ir_lowerer
+    one is a real behavior-preserving-merge project, not a mechanical
+    rename - deferred, see below. Both remaining implementations
+    (ir_lowerer-stage's single copy, semantics-stage's
+    `resolveKeyValueHelperMemberNameLocal`) now have the same bare-name
+    slash-guard, so guard parity across the codebase holds.
+  - deferred: `getBuiltinArrayAccessName`'s two stage implementations were
+    audited (see evidence (3)) and found to have genuinely diverged, not
+    just cosmetically: the semantics-stage version handles capitalized
+    `At`/`AtUnsafe` aliases and a template-specialization-suffix strip
+    that the ir_lowerer-stage version has no equivalent for, while the
+    ir_lowerer-stage version handles internal-SOA-storage-column receivers
+    and vector-receiver-base disambiguation that the semantics-stage
+    version has no equivalent for. Merging them behind one shared
+    classifier (following the `ReceiverElementFamilyClassifier` pattern -
+    a name-set/logic module intentionally extracted but NOT wired into
+    call sites until proven safe) is a real project requiring a
+    branch-by-branch audit of which divergent behaviors are
+    stage-necessary vs. latent gaps in the other stage - exactly the kind
+    of "risks touching many fragile call sites" case this task's own
+    stop_rule (and TODO-4753's precedent) says to defer rather than
+    attempt in the same pass as the resolvesKeyValueHelperSurfacePath
+    merge. Filed as TODO-5293.
+  - full 3-suite battery: fresh, name-level-diffed baseline taken
+    immediately before the merge and again immediately after (never
+    trusted the prior session's numbers, per this task's stop_rule).
+    Before: `PrimeStruct_semantics_tests` 2753/2754 passed (1 pre-existing
+    failure), `PrimeStruct_backend_ir_tests` 1598/1644 passed (46
+    pre-existing failures), `PrimeStruct_compile_run_tests` 2674/2679
+    passed (5 pre-existing failures) - matching the prior session's
+    recorded numbers exactly. After the merge: identical counts
+    (2753/2754, 1598/1644, 2674/2679). Diffed the actual named failing
+    `TEST CASE:` sets (not just counts) for all three suites between
+    before and after: zero-line diff in all three - the exact same named
+    tests failed before and after, with no additions or removals. Total
+    assertion counts and named failures used to pin the baseline:
+    semantics 13314/13316 (2 failed assertions, same
+    `type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`
+    experimental-soa borrowed-helper-return case both times); backend_ir
+    16281/16418 (137 failed assertions, same 46 named tests both times);
+    compile_run 15270-15286/15278-15294 (8 failed assertions both times,
+    same 5 named map-conformance tests both times - the small assertion-
+    count wobble between runs is pre-existing test-level nondeterminism
+    unrelated to this change, consistent with TODO-5287's prior
+    observation of the same thing).
+  - acceptance: met for `resolvesKeyValueHelperSurfacePath` - exactly one
+    ir_lowerer-stage implementation remains, and the surviving cross-stage
+    duplication (vs. `resolveKeyValueHelperMemberNameLocal`) is documented
+    above as proven-necessary given the differing signature/behavior. Not
+    yet met for `getBuiltinArrayAccessName` - two implementations remain,
+    with the specific unsafe-to-merge branches named and the merge itself
+    filed as TODO-5293 per this task's own stop_rule/implementation_notes
+    ("if it risks touching many fragile call sites... extract a shared
+    classifier only where clearly safe, and document/file a follow-up
+    TODO for anything riskier"). Full 3-suite battery unchanged.
+  - stop_rule: satisfied - the ir_lowerer-stage merge was contained to two
+    files sharing one header and verified byte-for-byte-behavior-preserving
+    via the fresh before/after diff; the riskier cross-stage
+    `getBuiltinArrayAccessName` merge was stopped and deferred (TODO-5293)
+    rather than attempted in the same pass, per this exact neighborhood's
+    demonstrated fragility this session.

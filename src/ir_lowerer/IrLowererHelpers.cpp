@@ -10,8 +10,6 @@
 
 namespace primec::ir_lowerer {
 
-const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata();
-
 namespace {
 
 std::string resolveScopedExprName(const Expr &expr) {
@@ -73,21 +71,11 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "fract" || alias == "sqrt" || alias == "cbrt";
 }
 
-bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
-  const auto *metadata =
-      keyValueHelperSurfaceMetadata();
-  if (metadata == nullptr) {
-    return false;
-  }
-  if (!resolveStdlibSurfaceMemberName(*metadata, path).empty()) {
-    return true;
-  }
-  if (!path.empty() && path.front() != '/') {
-    const std::string rootedPath = "/" + std::string(path);
-    return !resolveStdlibSurfaceMemberName(*metadata, rootedPath).empty();
-  }
-  return false;
-}
+// TODO-5288: this used to be an independent (textually-identical but
+// separately drifting) copy of resolvesKeyValueHelperSurfacePath. It is
+// now the single shared implementation declared in IrLowererHelpers.h and
+// defined in IrLowererBuiltinNameHelpers.cpp, used unqualified via ADL from
+// the enclosing primec::ir_lowerer namespace.
 
 bool shouldStripBuiltinPrefix(const std::string &prefix,
                               const std::string &alias) {

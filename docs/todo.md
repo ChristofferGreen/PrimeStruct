@@ -510,11 +510,11 @@ Note (2026-09-03): TODO-4724 has since closed - see
 90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
-95. TODO-5288: Consolidate the semantics-stage and ir_lowerer-stage builtin-array-access/key-value-helper-name classifiers
 96. TODO-5289: Name and document the args-pack-element storage-layout invariants LocalInfo carries implicitly
 97. TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
 98. TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
 99. TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
+100. TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
@@ -531,58 +531,12 @@ latent-only debt) - see `docs/todo_finished.md`.
 Note (2026-09-06): item 94 (TODO-5287) has resolved (audited and
 documented; follow-up filed as item 99/TODO-5292) - see
 `docs/todo_finished.md`.
+Note (2026-09-06): item 95 (TODO-5288) has resolved (ir_lowerer-stage
+duplication merged to one implementation; cross-stage
+getBuiltinArrayAccessName merge deferred as item 100/TODO-5293) - see
+`docs/todo_finished.md`.
 
 ### Task Blocks
-
-- [ ] TODO-5288: Consolidate the semantics-stage and ir_lowerer-stage builtin-array-access/key-value-helper-name classifiers
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: TODO-4760(a)'s first landed fix (commit `5468344`) was adding
-    a slash-guard to ir_lowerer's `resolvesKeyValueHelperSurfacePath`
-    (`IrLowererBuiltinNameHelpers.cpp:35-49`) to match the guard its
-    semantics-stage twin, `resolveKeyValueHelperMemberNameLocal`
-    (`SemanticsBuiltinPathHelpers.cpp:187-215`), already had. These two
-    functions - and their siblings `getBuiltinArrayAccessName`
-    (`SemanticsBuiltinPathHelpers.cpp:1186` vs
-    `IrLowererBuiltinNameHelpers.cpp:485-608`) - are independently
-    written, semantically-equivalent-in-intent implementations that
-    silently drifted apart (one had the slash-guard, the other didn't;
-    finding this took a full investigation round). There is also a
-    THIRD, textually-identical-but-independent copy of
-    `resolvesKeyValueHelperSurfacePath` in `IrLowererHelpers.cpp:76-90`
-    (separate anonymous-namespace symbol, not the same function as the
-    one in `IrLowererBuiltinNameHelpers.cpp` despite matching source) -
-    meaning the same guard now needs to be checked/applied in three
-    places, not two, and the fix that landed this session only touched
-    one of them.
-  - implementation_notes: this is precisely the class of duplication
-    `docs/CompatPathResolutionConsolidation.md` was written to solve for
-    "spelling disposition" - the analogous move here is extracting a
-    single shared classifier (name-set + guard logic) that both stages
-    call, rather than maintaining parallel copies. Start by confirming
-    whether `IrLowererHelpers.cpp:76-90`'s copy needs the same
-    slash-guard TODO-4760 added to `IrLowererBuiltinNameHelpers.cpp`'s
-    copy (check its call sites for the same bare-name-over-match
-    exposure); a passing test suite today doesn't prove it's safe, only
-    that no currently-tested call site hits it. Then evaluate whether
-    `getBuiltinArrayAccessName`'s two independent implementations can be
-    merged behind one shared function taking a stage-appropriate
-    lookup callback, following this document's classifier-extraction
-    pattern (see `ReceiverElementFamilyClassifier` for a prior,
-    similarly-scoped but not-yet-wired-in extraction).
-  - acceptance: at most one implementation of each of
-    `resolvesKeyValueHelperSurfacePath`-equivalent and
-    `getBuiltinArrayAccessName` logic remains (shared between stages, or
-    the duplication is proven necessary and documented why); full
-    3-suite battery unchanged.
-  - stop_rule: given this exact neighborhood's demonstrated fragility
-    (46-test and 67-test near-regressions already logged against
-    changes here this session and TODO-4753's), require a fresh,
-    name-level-diffed 3-suite baseline immediately before AND after any
-    change, never trust an assumed baseline from an earlier session.
 
 - [ ] TODO-5289: Name and document the args-pack-element storage-layout invariants LocalInfo carries implicitly
   - owner: ai
@@ -792,6 +746,71 @@ documented; follow-up filed as item 99/TODO-5292) - see
     just to build a reachable repro, stop after documenting that
     difficulty and close this task as latent-only debt (per TODO-5286)
     rather than attempting the fix blind.
+
+- [ ] TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
+  - owner: ai
+  - created_at: 2026-09-06
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: found while resolving TODO-5288. `getBuiltinArrayAccessName`
+    is implemented twice, once per stage -
+    `SemanticsBuiltinPathHelpers.cpp:1186` (semantics-stage) and
+    `IrLowererBuiltinNameHelpers.cpp:500-...` (ir_lowerer-stage) - and the
+    two bodies have genuinely diverged in structure, not just spelling:
+    the semantics-stage version accepts capitalized `At`/`AtUnsafe`
+    member-name spellings and a `stripTemplateSpecializationSuffix` pass
+    (via `accessAliasFromMemberName`) and delegates key-value detection to
+    `resolveKeyValueHelperMemberNameLocal` (which returns the resolved
+    member-name string, not just a bool); the ir_lowerer-stage version has
+    no capitalized-spelling handling, instead handles internal-SOA-storage
+    column receivers (`SoaColumn`, the
+    `kInternalSoaStorageFolder`/`normalizeInternalSoaStorageBuiltinAlias`
+    branch) and vector-receiver-base disambiguation
+    (`matchAccessAlias`'s `receiverBase`/`receiverBase + "__"` check) that
+    the semantics stage has no equivalent for, and calls the bool-only
+    `resolvesKeyValueHelperSurfacePath` (now the single shared
+    implementation TODO-5288 left behind for this stage) instead. TODO-5288
+    audited both bodies line-by-line and concluded a behavior-preserving
+    merge in one pass would require either (a) building a stage-supplied
+    lookup callback rich enough to cover both the "returns a resolved
+    member-name string with a resolved-path metadata id cross-check"
+    semantics-stage shape and the "bool-only, no cross-check" ir_lowerer
+    shape, or (b) proving the ir_lowerer-stage SOA/receiver-base branches
+    and the semantics-stage capitalized-spelling/suffix-stripping branches
+    are each dead weight in the other stage - neither of which TODO-5288's
+    stop_rule (extreme caution in this exact neighborhood, given this
+    session's 46-test and 67-test near-regressions from narrower changes)
+    permitted attempting blind.
+  - implementation_notes: follow the `ReceiverElementFamilyClassifier`
+    extraction pattern (`include/primec/support/ReceiverElementFamilyClassifier.h`
+    / `src/support/ReceiverElementFamilyClassifier.cpp`) - a shared
+    name-set/logic module the call sites are NOT wired into until its
+    behavior is verified against each stage's real quirks. Concretely:
+    (1) enumerate every branch each stage's `getBuiltinArrayAccessName`
+    has that the other lacks (the capitalized-alias/suffix-stripping pair
+    above vs. the SOA-column/receiver-base pair above) and confirm for
+    each whether it is stage-specific-and-necessary or a latent gap in the
+    other stage (TODO-5286's "absorbed by earlier-stage rejection"
+    precedent may apply to some of these - verify, don't assume); (2) only
+    once that audit is complete, design a single function taking a
+    stage-supplied lookup callback (mirroring
+    `ReceiverElementFamilyPredicates`) that reproduces both today's
+    behaviors bit-for-bit; (3) wire it into both stages only after a
+    fresh, name-level-diffed 3-suite baseline shows zero change.
+  - acceptance: a single shared `getBuiltinArrayAccessName`-equivalent
+    classifier is used by both stages (each supplying its own lookup
+    callback), OR the specific branches that make a full merge unsafe are
+    named and left as documented, provably-necessary duplication; full
+    3-suite battery unchanged either way.
+  - stop_rule: same as TODO-5288's - this is the exact neighborhood that
+    produced 46-test and 67-test near-regressions from narrower changes
+    already this session (TODO-4753's notes). Require a fresh,
+    name-level-diffed 3-suite baseline immediately before AND after any
+    change; if the branch-by-branch audit in implementation_notes step
+    (1) surfaces more than one or two genuinely ambiguous
+    (stage-specific-or-latent-gap?) branches, stop and document the
+    ambiguity rather than guessing at a merge.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai
