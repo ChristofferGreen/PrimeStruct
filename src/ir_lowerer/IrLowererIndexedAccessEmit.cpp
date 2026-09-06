@@ -426,6 +426,27 @@ bool emitBuiltinArrayAccess(
       semanticProgram,
       semanticIndex);
   std::string nestedAccessName;
+  // TODO-5287 (see docs/todo_finished.md): this is the emission-side twin of
+  // the gating check `isKeyValueAccessTarget`/
+  // `isKeyValueAccessReceiverArgsPackOfMap` in IrLowererLowerStatementsExpr.h
+  // (around its TODO-4760 comment). That gating check only special-cases a
+  // bare `Name`-kind receiver (a direct args-pack-of-map local) and
+  // disambiguates a genuine `args<map<K,V>>` pack element from the map
+  // constructor's own internal `args<Entry<K,V>>` pack element via
+  // structTypeName emptiness. Here, for a `Call`-kind receiver (a nested
+  // pack-element access, e.g. `pack[i].at(key)`), no equivalent
+  // structTypeName-emptiness check is applied - this relies solely on
+  // arrayVectorTargetInfo.isKeyValueTarget/isWrappedKeyValueTarget, which
+  // `resolveArrayVectorAccessTargetInfo`'s populateFromArgsPackLocal helper
+  // sets purely from hasInferredTypedKeyValue(localInfo) (keyValueKeyKind/
+  // keyValueValueKind populated), the same signal
+  // `resolveCollectionPairTypeInfo`'s populateFromArgsPackElement helper
+  // uses - neither helper consults structTypeName the way the Name-receiver
+  // gating check above does. So an Entry-pack element reached via a nested
+  // Call-kind receiver is not distinguished from a map-pack element here;
+  // this is believed latent (no known repro) but undocumented before this
+  // comment. See TODO-5292 for the concrete unification/fix this gap
+  // motivates.
   const bool isMapArgsPackElementTarget =
       arrayVectorTargetInfo.isArgsPackTarget &&
       targetExpr.kind == Expr::Kind::Call &&

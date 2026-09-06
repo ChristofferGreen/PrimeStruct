@@ -574,6 +574,19 @@
           // whose structTypeName is always populated with a concrete
           // Entry__t... path - use that as the distinguishing signal. See
           // docs/ReceiverTargetResolutionConsolidation.md.
+          // TODO-5287 (see docs/todo_finished.md): this structTypeName-
+          // emptiness check only covers a bare `Name`-kind receiver (a
+          // direct args-pack-of-map local). The emission-side twin of this
+          // gap - `isMapArgsPackElementTarget` in
+          // IrLowererIndexedAccessEmit.cpp's emitBuiltinArrayAccess - covers
+          // a `Call`-kind receiver (a nested pack-element access) instead,
+          // and does NOT apply an equivalent structTypeName check there; see
+          // that call site's comment. Neither `resolveCollectionPairTypeInfo`
+          // nor `resolveArrayVectorAccessTargetInfo` bakes this
+          // Name-vs-Call/structTypeName distinction into their own
+          // args-pack-element resolution helpers - it is only applied here,
+          // ad hoc, for the Name-receiver case. See TODO-5292 for the
+          // concrete unification/fix this gap motivates.
           const bool isKeyValueAccessReceiverArgsPackOfMap =
               expr.args.front().kind == Expr::Kind::Name &&
               [&]() {

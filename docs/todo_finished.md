@@ -44378,3 +44378,113 @@ real answer.
     so the fix is not landed; documented here instead of forcing a
     speculative, unverified change into the same file/neighborhood that
     previously caused a 67-test regression (TODO-4753).
+
+**Todo Completion (September 6, 2026) — TODO-5287**
+- [x] TODO-5287: Unify gating and emission receiver-type-info structs in the array/vector/pack indexed-access cascade
+  - owner: ai
+  - created_at: 2026-09-06
+  - finished_at: 2026-09-06
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: found while fixing TODO-4760(a). The expression-emission
+    cascade's gating check in `IrLowererLowerStatementsExpr.h`
+    (`isKeyValueAccessTarget`) calls `resolveCollectionPairTypeInfo`,
+    which returns the leaner `CollectionPairTypeInfo`
+    (`IrLowererCallHelperTypes.h:67-73` -
+    `isKeyValueTarget`/`keyValueKeyKind`/`keyValueValueKind`/
+    `isWrappedKeyValueTarget`/`structTypeName`) - not enough fields to
+    distinguish a genuine map receiver from an args-pack-of-maps
+    element. A few calls later, the emission code in
+    `IrLowererIndexedAccessEmit.cpp` calls
+    `resolveArrayVectorAccessTargetInfo`, which returns the richer
+    `ArrayVectorAccessTargetInfo` (`IrLowererCallHelperTypes.h:75+` -
+    adds `isArgsPackTarget`/`elemKind`/`isVectorTarget`/`isSoaVector`)
+    which CAN make that distinction. The two calls read overlapping but
+    different-fidelity views of the same receiver expression at two
+    points in one dispatch path - when they disagree about what the
+    receiver is, gating can send a request down the wrong branch before
+    emission ever gets a chance to notice. TODO-4760(a)'s actual bug was
+    exactly this: gating's leaner struct couldn't tell map-pack-element
+    from entry-pack-element, so it deferred both to the wrong path.
+  - evidence: audited every gating call to `resolveCollectionPairTypeInfo`
+    against every downstream emission call to
+    `resolveArrayVectorAccessTargetInfo` on the same receiver expression
+    across the full call graph (`IrLowererLowerStatementsExpr.h`,
+    `IrLowererIndexedAccessEmit.cpp`, `IrLowererAccessTargetResolution.cpp`,
+    plus their ~15 other calling files - roughly 70 call sites total,
+    matching this area's documented history from TODO-4753's notes).
+    Found that `CollectionPairTypeInfo` is NOT structurally a strict
+    subset of `ArrayVectorAccessTargetInfo` (the latter is missing
+    `keyValueKeyKind`/`keyValueValueKind`, the former's only fields the
+    latter lacks), so a mechanical merge is plausible in principle but
+    was not attempted (see stop_rule). More importantly, traced the
+    *specific* mismatch TODO-4760(a) hit (map-pack-element vs.
+    Entry-pack-element receiver disambiguation) all the way down and
+    found it is deeper than the gating-vs-emission split the task
+    description named: TODO-4760(a)'s landed fix
+    (`isKeyValueAccessReceiverArgsPackOfMap` in
+    `IrLowererLowerStatementsExpr.h`) is an ad hoc, local check that (a)
+    only covers a bare `Name`-kind receiver (a direct args-pack-of-map
+    local) and (b) was never pushed down into the resolvers themselves.
+    Both `resolveCollectionPairTypeInfo`'s `populateFromArgsPackElement`
+    lambda and `resolveArrayVectorAccessTargetInfo`'s
+    `populateFromArgsPackLocal` lambda (both in
+    `IrLowererAccessTargetResolution.cpp`) flag a map-pack element as
+    `isKeyValueTarget = true` purely from
+    `hasInferredTypedKeyValue`/`hasKeyValueKinds` (keyValueKeyKind/
+    keyValueValueKind populated), without ever consulting
+    `structTypeName` - so for a `Call`-kind receiver (a nested
+    pack-element access, e.g. `pack[i].at(key)`), NEITHER resolver (lean
+    or rich) can currently tell a genuine `args<map<K,V>>` pack element
+    apart from the map constructor's own internal `args<Entry<K,V>>`
+    pack element; `IrLowererIndexedAccessEmit.cpp`'s
+    `isMapArgsPackElementTarget` (which does handle the Call-kind-receiver
+    shape) inherits this gap from `resolveArrayVectorAccessTargetInfo`
+    and has no independent check of its own. This is believed
+    latent/unreached in practice (no confirmed repro constructing a
+    Call-kind nested-pack-of-Entry receiver), consistent with
+    TODO-5286's finding that this general family of receiver-resolution
+    gaps tends to be absorbed by earlier semantics-stage rejection - but
+    it was not exhaustively repro-searched in this pass (that
+    verification, and the fix itself, is scoped out to TODO-5292 below).
+  - fixed (small, local, safe): added explicit cross-referencing
+    comments at all four sites in this specific mismatch chain, each
+    naming the others and the exact field gap:
+    `IrLowererLowerStatementsExpr.h` (the `isKeyValueAccessReceiverArgsPackOfMap`
+    gating check, extending its existing TODO-4760 comment),
+    `IrLowererIndexedAccessEmit.cpp` (the `isMapArgsPackElementTarget`
+    emission check), and both of
+    `IrLowererAccessTargetResolution.cpp`'s `populateFromArgsPackElement`
+    and `populateFromArgsPackLocal` lambdas. No behavior change - comment
+    additions only.
+  - filed as follow-up: TODO-5292 (concrete unification opportunity -
+    push the structTypeName-emptiness discriminator down into both
+    resolvers themselves, and re-evaluate whether `CollectionPairTypeInfo`
+    can become a view/subset of `ArrayVectorAccessTargetInfo` once that
+    smaller fix's blast radius is known).
+  - full 3-suite battery: ran a fresh baseline before any change, then
+    reran after the comment-only edits (byte-for-byte source diff is
+    comments only, so no codegen difference is possible in principle;
+    verified anyway per this area's TODO-4753/TODO-4760 history of
+    surprising regressions from seemingly-narrow changes).
+    `PrimeStruct_semantics_tests`: 2753/2754 passed both before and after
+    (same 1 pre-existing failure, `type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`
+    experimental-soa borrowed-helper-return case, unrelated to this task).
+    `PrimeStruct_backend_ir_tests`: 1598/1644 passed both before and
+    after (same 46 pre-existing failures). `PrimeStruct_compile_run_tests`:
+    2674/2679 passed both before and after (same 5 pre-existing
+    map-conformance failures; total assertion count varied by 16 between
+    the two runs with the same 8 failed assertions both times - consistent
+    with pre-existing test-level nondeterminism, not a regression from a
+    comment-only change). Zero net change to any test outcome.
+  - acceptance: met via the audit-and-document branch - the specific
+    struct-fidelity mismatch is resolved-as-documented at all four call
+    sites with the exact field gap named, and the deeper unification
+    opportunity it exposes is filed as its own leaf (TODO-5292) rather
+    than attempted at scale in this pass; full 3-suite battery unchanged.
+  - stop_rule: satisfied - the concrete fix that would fully close this
+    gap (pushing the structTypeName check into the resolvers) touches
+    logic shared by dozens of the ~70 call sites in this area's call
+    graph, which this task's own stop_rule flags as out of scope for a
+    single pass; filed as TODO-5292 instead of attempting it here.
