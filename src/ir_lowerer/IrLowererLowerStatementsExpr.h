@@ -562,9 +562,31 @@
           // array/vector emitter. This matters in particular for canonical
           // `/std/collections/ma p/at_unsafe` calls that get rewritten into a bare
           // builtin access form and re-emitted here.
+          // TODO-4760: hasKeyValueKinds/isKeyValueTarget alone can't tell
+          // apart the stdlib map constructor's own internal
+          // `args<Entry<K, V>>` pack parameter (which must keep deferring
+          // here - that path already works) from a user-level
+          // `args<map<K, V>>` pack element (which does not - it needs
+          // emitBuiltinArrayAccess below instead). A bare `args<map<K,V>>`
+          // pack element's LocalInfo carries keyValueKeyKind/
+          // keyValueValueKind but an EMPTY structTypeName, unlike
+          // `args<Entry<K, V>>` (the map constructor's own internal pack),
+          // whose structTypeName is always populated with a concrete
+          // Entry__t... path - use that as the distinguishing signal. See
+          // docs/ReceiverTargetResolutionConsolidation.md.
+          const bool isKeyValueAccessReceiverArgsPackOfMap =
+              expr.args.front().kind == Expr::Kind::Name &&
+              [&]() {
+                auto receiverLocalIt = localsIn.find(expr.args.front().name);
+                return receiverLocalIt != localsIn.end() &&
+                       receiverLocalIt->second.isArgsPack &&
+                       hasKeyValueKinds(receiverLocalIt->second) &&
+                       receiverLocalIt->second.structTypeName.empty();
+              }();
           const bool isKeyValueAccessTarget =
               (accessName == "at" || accessName == "at_unsafe") &&
               !expr.args.empty() &&
+              !isKeyValueAccessReceiverArgsPackOfMap &&
               ir_lowerer::resolveCollectionPairTypeInfo(
                   expr.args.front(),
                   localsIn,

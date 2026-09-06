@@ -387,6 +387,62 @@ address, since there is no existing per-stage answer to reconcile, just
 an absent one. See TODO-4760's own notes in `docs/todo.md` for the full
 trace and a concrete narrowing suggestion for whoever picks this back up.
 
+## Update (2026-09-06): the third issue is fixed - TODO-4760 fully resolved
+
+The "missing codegen capability" theory was correct in spirit but not in
+scale: the capability already existed (a working, pre-existing path
+through `emitArrayVectorIndexedAccess` for struct-shaped args-pack
+elements, proven by the map constructor's own internal
+`args<Entry<K,V>>` access using it correctly), it just wasn't reachable
+for a genuine `args<map<K,V>>` element and, once reached, mishandled one
+storage-layout case.
+
+Two coordinated fixes:
+
+1. **Dispatch routing** (`IrLowererLowerStatementsExpr.h`): the cascade's
+   `isKeyValueAccessTarget` gate used `resolveCollectionPairTypeInfo`,
+   whose `isKeyValueTarget` can't distinguish a genuine
+   `args<map<K,V>>` pack element from the map constructor's own internal
+   `args<Entry<K,V>>` pack - both are key-value-shaped args-pack
+   elements. An earlier attempt to fix this with a crude "any args-pack
+   receiver" guard corrupted the `Entry<K,V>` path (confirmed via a
+   bounded-recursion-guard trace: genuine runaway recursion, not a false
+   alarm). The correct, precise discriminator turned out to be
+   `structTypeName` emptiness: a `map<K,V>`-element's `LocalInfo` has an
+   EMPTY `structTypeName`, while `Entry<K,V>`'s has a populated
+   `Entry__t...` path. Added `isKeyValueAccessReceiverArgsPackOfMap`,
+   true only for the empty-`structTypeName` case, and excluded exactly
+   that case from the deferral.
+2. **Load-vs-copy contract** (`IrLowererIndexedAccessEmit.cpp`): once
+   routing was fixed, `count()` on the retrieved map returned a garbage
+   value. `isInlineMapArgsPackTarget` used `elemSlotCount > 0` to decide
+   "struct-copy from address, don't load" - but a key-value pack element
+   with `elemSlotCount == 1` is stored as a single heap pointer (the same
+   convention used elsewhere for `map<K,V>` bindings), which needs a
+   plain load, not an address left for a copy. Changed the threshold to
+   `elemSlotCount > 1`.
+
+Verified via three hand-built repros (single-map `count()`: exit 2;
+two-map summed `count()`: exit 3; the full pinned-test source with
+`[spread]`/`forward`/`forward_mixed` across 4 functions: exit 11,
+independently confirmed correct via manual arithmetic on the call
+graph) and the full 3-suite battery with a fresh name-level diff:
+`backend_ir` and `semantics` unchanged from their established
+baselines; `compile_run` dropped from 164 to 5 failures with **zero new
+failures and 159 net fixes** - this bug was blocking far more of the
+map-conformance harness than just the one pinned test. TODO-4760 is now
+fully resolved and moved to `docs/todo_finished.md`.
+
+This consolidation document's own scope (a shared receiver-classifier
+library, `ReceiverElementFamilyClassifier`) remains unimplemented at the
+call-site level - the classifier exists and is unit-tested but
+deliberately unwired, per its own header caveats. TODO-4760's resolution
+did not go through that classifier; it used a narrower, one-off
+discriminator scoped to this exact pair of cases. Whether that
+discriminator generalizes into the shared classifier, or stays a local
+special case, is unresolved and left for whoever next works this
+consolidation's Step 0.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies

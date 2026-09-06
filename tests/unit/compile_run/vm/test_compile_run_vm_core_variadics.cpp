@@ -227,14 +227,15 @@ main() {
   // instead of pack-element indexing - fixed (see
   // IrLowererInlinePackedArgs.cpp's rewritePublishedKeyValueConstructorExpr
   // and IrLowererBuiltinNameHelpers.cpp's resolvesKeyValueHelperSurfacePath).
-  // A separate, still-open limitation remains: the vm/native backends'
-  // expression emitters don't yet support embedding this positional
-  // pack-index access at an arbitrary expression position (only as a
-  // top-level statement) - not yet root-caused, tracked under TODO-4760.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  // The related positional pack-index access limitation (the vm/native
+  // backends' expression emitters not distinguishing an args<map<K,V>> pack
+  // element from the map constructor's own internal args<Entry<K,V>> pack)
+  // is also fixed (see IrLowererLowerStatementsExpr.h's
+  // isKeyValueAccessReceiverArgsPackOfMap and
+  // IrLowererIndexedAccessEmit.cpp's isInlineMapArgsPackTarget elemSlotCount
+  // threshold). The whole program now compiles and runs to completion.
+  CHECK(runCommand(runCmd) == 11);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm forwards variadic Reference<Buffer> packs through helper methods") {

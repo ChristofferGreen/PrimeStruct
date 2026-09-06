@@ -303,11 +303,19 @@ bool emitArrayVectorIndexedAccess(
       arrayVectorTargetInfo.elemSlotCount > 0 &&
       !isWrappedStructArgsPackTarget &&
       !isVectorArgsPackTarget;
+  // TODO-4760: elemSlotCount == 1 for a key-value args-pack element means
+  // the element is stored as a single pointer slot (the same "builtin
+  // key/value map materialized as a heap pointer" convention used
+  // elsewhere for map<K,V>(...) bindings - see
+  // IrLowererLowerStatementsBindings.h's hasKeyValueKinds branch), not an
+  // inline multi-slot struct needing a copy. Only treat elemSlotCount > 1
+  // as the inline-struct-copy case; a single slot should just be loaded
+  // like any other pointer-sized value.
   const bool isInlineMapArgsPackTarget =
       arrayVectorTargetInfo.isArgsPackTarget &&
       arrayVectorTargetInfo.isKeyValueTarget &&
       !arrayVectorTargetInfo.isWrappedKeyValueTarget &&
-      arrayVectorTargetInfo.elemSlotCount > 0;
+      arrayVectorTargetInfo.elemSlotCount > 1;
   const bool targetUsesVectorStorageLayout =
       arrayVectorTargetInfo.isVectorTarget && !arrayVectorTargetInfo.isArgsPackTarget;
   const bool loadElementValue =
