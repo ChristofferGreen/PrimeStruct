@@ -3336,6 +3336,65 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     now-repeated pattern of narrow fixes regressing broadly in this
     general area - would need the full build+3-suite-diff verification
     protocol from this session's other landed fix before any attempt.
+  - investigated_2026-09-05/06 (fixed): landed the first candidate
+    direction (commit `a3fa55d`) - `rewritePublishedKeyValueConstructorExpr`
+    now uses the already-correctly-resolved `callee->fullPath` (resolved
+    via the ORIGINAL call's still-intact `semanticNodeId`, before it gets
+    zeroed) instead of the bare canonical family name, so downstream
+    resolution finds the one specific concrete overload directly rather
+    than falling back to an arity-blind exact-key lookup. Verified via
+    the full 3-suite battery with name-level diffs: zero new failures,
+    one net improvement, and the pinned test's own "argument count
+    mismatch" failure is gone entirely - updated its pinned assertion to
+    match (it now compiles past that point).
+    **A third, separate, still-open limitation remains** blocking the
+    pinned test's full success: after both this fix and the
+    `getBuiltinArrayAccessName` fix, `at(values, 0i32)` used as a binding-
+    initializer expression now fails with `vm backend only supports
+    arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/
+    assign/increment/decrement calls in expressions (call=/at, name=at,
+    args=2, method=true)`.
+    Found the exact emission site this time (previous attempt's trace
+    placement was wrong - two earlier-placed traces at the two
+    source-level occurrences of this error text both fired zero times;
+    a third trace placed directly at the confirmed live site did fire):
+    `IrLowererLowerStatementsExpr.h`'s generic emitExpr dispatch cascade
+    has (at least) three earlier checks that call the working
+    `emitArrayVectorIndexedAccess` helper for `at`/`at_unsafe` 2-arg
+    calls (~lines 1281-1320, 1373, 1459), but every one of them gates on
+    the receiver being a **vector** specifically
+    (`resolveArrayVectorAccessTargetInfo(...).isVectorTarget` or a local
+    marked `LocalInfo::Kind::Vector`/`referenceToVector`/etc.) - none of
+    them recognize "receiver is an args-pack whose element is a
+    struct/map value" as a case that also needs positional-index
+    emission. Falling through all of them, execution reaches this
+    file's own final generic catch-all (confirmed by trace, despite
+    initially looking like it sat inside an unrelated, already-closed
+    `if (!expr.isMethodCall && expr.args.size() == 1)` block from
+    brace-depth counting - the visual indentation in this file mixes
+    tabs and spaces inconsistently and does not reliably reflect actual
+    C++ nesting; trust `awk`-counted brace depth over indentation when
+    reading it).
+    This is very plausibly not a resolvable-priority bug at all but a
+    **missing codegen capability**: `emitArrayVectorIndexedAccess` is
+    vector-specific (presumably relies on vector's known contiguous
+    memory layout to compute an element address), and positionally
+    indexing into an args-pack whose elements are struct-shaped (a map,
+    here) as an *expression value* (not a statement) may need genuinely
+    new codegen - copying/materializing the selected struct-shaped pack
+    slot's value - that doesn't exist yet anywhere in the codebase, not
+    a call to an existing-but-unreached helper. Not attempted: implementing
+    new codegen is a materially larger, different-shaped task than
+    everything else landed this session, and the two real fixes already
+    landed (commits `5468344`, `a3fa55d`) are the actual, verified,
+    durable progress from this investigation. If picked back up, start
+    by checking whether `args<map<K,V>>` positional access already works
+    as a top-level **statement** (not embedded in an expression) - if so,
+    the gap is narrowly "statement-only, no expression-position support
+    for struct-shaped pack elements," which narrows where new codegen
+    would need to go; the pinned test's own binding-initializer shape
+    (`[map<i32, i32>] head{at(values, 0i32)}`) is exactly an
+    expression-position use.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai

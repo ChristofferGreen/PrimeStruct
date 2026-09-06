@@ -340,6 +340,53 @@ scenario fails earlier and differently than the simplified repro used
 throughout this investigation. See TODO-4760's own notes in `docs/todo.md`
 for full detail.
 
+## Update (2026-09-05/06): the "46-test regression" was a false alarm, and two real fixes landed
+
+The `resolvesKeyValueHelperSurfacePath` fix described above was re-verified
+properly and found to be entirely safe: the "46 failures" were a
+**pre-existing baseline state** that had never actually been confirmed for
+`PrimeStruct_backend_ir_tests` earlier in this session (every prior
+verification round on this suite had implicitly compared against an
+assumed-clean baseline from a much earlier session, never re-checked). A
+fresh `git stash` + rebuild + rerun of the unmodified baseline reproduced
+the exact same 46 failures, byte-for-byte identical by name. The fix was
+restored and landed (commit `5468344`), verified via proper name-level
+diffs against freshly-confirmed baselines across all three suites:
+`PrimeStruct_backend_ir_tests` identical, `PrimeStruct_semantics_tests`
+identical (1 known flake), `PrimeStruct_compile_run_tests` improved by
+one with zero new failures.
+
+A **second** real bug was then found and fixed (commit `a3fa55d`):
+`rewritePublishedKeyValueConstructorExpr`
+(`IrLowererInlinePackedArgs.cpp`) rewrote every map-constructor call
+inside an args-pack element to a bare, arity-blind canonical family
+name, with the original call's `semanticNodeId` zeroed - downstream
+resolution then fell back to a plain exact-key `defMap` lookup with no
+overload disambiguation, so every pack element resolved to whichever
+one concrete overload happened to be registered at that shared bare
+key. Sibling pack elements needing the same arity (e.g. two 2-pair maps)
+worked by coincidence; different arities (one 2-pair, one 4-pair) broke
+with "argument count mismatch for /std/collections/map/map". Fixed by
+using the already-correctly-resolved `callee->fullPath` (resolved via
+the original call's still-intact `semanticNodeId`, before it gets
+zeroed) instead of the bare canonical name.
+
+With both fixes landed, the pinned regression test's own "argument
+count mismatch" failure is gone entirely - its assertion was updated to
+match. **A third, distinct issue remains**, found and precisely located
+but not fixed: `IrLowererLowerStatementsExpr.h`'s expression-emission
+cascade has several checks that route `at`/`at_unsafe` 2-arg calls to
+the working `emitArrayVectorIndexedAccess` helper, but every one of
+them gates on the receiver being a **vector** specifically - none
+recognize an args-pack-of-struct-shaped-elements (a map, here) as a
+case needing the same treatment. This looks like a missing codegen
+capability (positionally indexing a struct-shaped pack element as an
+*expression value*, not a statement) rather than a resolution-priority
+bug - the kind of thing this document's classifier proposal doesn't
+address, since there is no existing per-stage answer to reconcile, just
+an absent one. See TODO-4760's own notes in `docs/todo.md` for the full
+trace and a concrete narrowing suggestion for whoever picks this back up.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies
