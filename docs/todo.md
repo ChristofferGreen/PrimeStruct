@@ -3447,6 +3447,60 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
     find exactly where/why it recurses for a map-args-pack-element input,
     with a hard recursion-depth guard in place before ever running it
     against a real program, given the demonstrated hang.
+  - investigated_2026-09-06 (continued): did exactly that - added a
+    bounded (10-iteration) recursion guard with tracing directly inside
+    `emitArrayVectorIndexedAccess`/`emitBuiltinArrayAccess`
+    (`IrLowererIndexedAccessEmit.cpp`), re-applied the dispatch fix, and
+    reran under `timeout 10`. First correction: the earlier "26s hang"
+    was NOT actually infinite - a longer-timeout rerun of the plain
+    (reverted, unmodified) baseline against this same complex,
+    multi-function, `[spread]`-using pinned-test source showed it
+    legitimately takes ~10.2s to compile even with no changes at all
+    (confirmed via `time`, exit code 2, the expected error) - a
+    too-short `timeout 10` in earlier rounds produced a false "hang"
+    signal on the *baseline* by pure chance of the two durations being
+    close. That said, the fix's own behavior IS still a real, confirmed
+    bug, caught cleanly by the bounded guard this time: the trace showed
+    `emitBuiltinArrayAccess`/`emitArrayVectorIndexedAccess` first being
+    entered *correctly* for the stdlib map constructor's own internal
+    `[args<Entry<K, V>>] entries` positional access (entry #1:
+    `isArgsPackTarget=1, isKeyValueTarget=0, elemSlotCount=3,
+    structTypeName=.../Entry__t...` - a real, working, PRE-EXISTING call
+    into this same emitter for struct-shaped-but-non-map pack elements),
+    then immediately degenerating into 10+ repeated calls with a
+    corrupted, empty-named `Name` expr and all-false target info -
+    genuine broken recursion, not just slowness, caught and aborted
+    safely by the guard before it could run away.
+    This means `emitArrayVectorIndexedAccess` already has a *live,
+    working* call path for indexing into a struct-shaped args-pack
+    element (the map constructor's own `entries` access proves it) -
+    but the dispatch fix, by rerouting our `args<map<K,V>>` case into
+    this same machinery, corrupts a *different*, previously-fine
+    request into that same emitter, most likely because constructing or
+    copying a `map<K,V>` value out of a pack slot itself needs to
+    recursively query the map's own `entries` accessor internally, and
+    something about the state/expr passed down that recursive path from
+    the new caller (our fix) is malformed. Reverted again in full
+    (confirmed via forced-touch rebuild + rerun matching the established
+    baseline exactly, `git status` clean).
+    This is a stronger, more specific confirmation of "missing/incomplete
+    codegen" than the original theory: it's not that struct-element pack
+    access is entirely unimplemented, it's that the *map-specific*
+    branch of an already-partially-working struct-pack-access emitter
+    has a real, reproducible defect when composed with the map
+    constructor's own internal use of the same machinery. Given this
+    session already caused one real (if narrowly-averted) risk to the
+    stdlib's own map constructor while investigating, further attempts
+    should study `emitArrayVectorAccessLoad`'s (`IrLowererAccessLoadHelpers.cpp:1008-1085`)
+    `loadElementValue=false` contract first - it leaves a computed
+    element ADDRESS on the operand stack without dereferencing, implying
+    the CALLER is responsible for a subsequent struct-copy the codebase
+    already has helpers for (`emitStructCopyFromPtrs`/`emitStructCopySlots`,
+    seen wired into `IrLowererLowerReturnEmitStage.cpp`'s lambda set) -
+    but no code path in this investigation was found that actually
+    performs that copy for a map-args-pack-element result. That is the
+    most likely concrete missing piece, still unconfirmed and
+    unimplemented.
 
 - [ ] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
   - owner: ai
