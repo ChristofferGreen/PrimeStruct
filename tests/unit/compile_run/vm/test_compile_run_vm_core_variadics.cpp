@@ -222,11 +222,19 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_variadic_args_experimental_map_count_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4760: bare at(values, i) indexing into an args<map<K,V>> pack now
-  // fails to lower, misrouting into the map<K,V> constructor's argument
-  // count check instead of pack-element indexing.
+  // TODO-4760: bare at(values, i) indexing into an args<map<K,V>> pack used
+  // to misroute into the map<K,V> constructor's argument count check
+  // instead of pack-element indexing - fixed (see
+  // IrLowererInlinePackedArgs.cpp's rewritePublishedKeyValueConstructorExpr
+  // and IrLowererBuiltinNameHelpers.cpp's resolvesKeyValueHelperSurfacePath).
+  // A separate, still-open limitation remains: the vm/native backends'
+  // expression emitters don't yet support embedding this positional
+  // pack-index access at an arbitrary expression position (only as a
+  // top-level statement) - not yet root-caused, tracked under TODO-4760.
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument count mismatch for /std/collections/map/map") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm forwards variadic Reference<Buffer> packs through helper methods") {

@@ -115,7 +115,22 @@ bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
     return false;
   }
   rewrittenExpr = callExpr;
-  rewrittenExpr.name = canonicalKeyValueConstructorPath();
+  // TODO-4760: use the already-resolved concrete overload's own path
+  // (correctly arity-matched via callExpr's still-intact semanticNodeId,
+  // resolved above) rather than the bare, arity-blind canonical family
+  // name. semanticNodeId is zeroed below so this rewritten expr can't be
+  // mistaken for the original call site's own semantic-product fact, but
+  // that means downstream resolution falls back to a plain exact-path
+  // defMap lookup with no overload disambiguation - fine when
+  // rewrittenExpr.name already names one specific concrete definition,
+  // wrong when it names the shared family name every arity/overload
+  // maps to. When multiple args<map<K,V>>(...) pack elements need
+  // different arities (e.g. one 2-arg, one 4-arg pair-count), rewriting
+  // all of them to the same bare name meant whichever concrete
+  // overload's Definition happened to be registered at that shared bare
+  // key won for every element, breaking any sibling needing a different
+  // arity. See docs/ReceiverTargetResolutionConsolidation.md.
+  rewrittenExpr.name = callee != nullptr ? callee->fullPath : canonicalKeyValueConstructorPath();
   rewrittenExpr.namespacePrefix.clear();
   rewrittenExpr.isMethodCall = false;
   rewrittenExpr.semanticNodeId = 0;
