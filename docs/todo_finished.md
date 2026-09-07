@@ -44893,3 +44893,117 @@ real answer.
     backend_ir: 1600/1646 passed, 46 known failures; compile_run:
     2674/2679 passed, 5 known failures - all pre-existing, unrelated to
     this change).
+
+**Todo Completion (September 7, 2026) — TODO-5291**
+- [x] TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
+  - owner: ai
+  - created_at: 2026-09-06
+  - finished_at: 2026-09-07
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: TODO-5289 (names the predicates this task should test
+    directly; can proceed against the inline checks if TODO-5289 hasn't
+    landed yet, then be updated to call the named predicates once it
+    has)
+  - scope: TODO-4760(a) had no unit-level regression net at the exact
+    seam it broke - `resolveArrayVectorAccessTargetInfo`'s
+    map-vs-entry-args-pack-element discrimination, and
+    `emitArrayVectorIndexedAccess`'s `elemSlotCount`-based
+    load-vs-copy decision. Every verification pass this session had to
+    run the full, slow 3-suite battery (`PrimeStruct_compile_run_tests`
+    alone takes minutes) to learn whether a change broke this area,
+    which is exactly why two earlier fix attempts this session looked
+    like false alarms (a 46-test "regression" and a 26-second "hang")
+    before being properly re-diagnosed - a fast, targeted unit test at
+    this seam would have given a much quicker, clearer signal each
+    round.
+  - implementation_notes: add unit tests (likely alongside
+    `tests/unit/semantics/test_semantics_receiver_element_family_classifier.cpp`'s
+    sibling location for `ir_lowerer`, or a new
+    `tests/unit/ir_pipeline/...` file) that directly construct a
+    `LocalInfo` for (a) an `args<map<K,V>>` pack element (empty
+    `structTypeName`, `hasKeyValueKinds` true, `isArgsPack` true) and
+    (b) an `args<Entry<K,V>>` pack element (populated `structTypeName`,
+    same other flags), then assert
+    `resolveArrayVectorAccessTargetInfo`/the relevant discriminator
+    correctly distinguishes them, and that `emitArrayVectorIndexedAccess`
+    picks load-vs-copy correctly for `elemSlotCount` values of 1, 2, and
+    higher. These should run in milliseconds, unlike the full
+    compile/run suite.
+  - acceptance: new unit tests exist, pass, and independently verified
+    to fail against the pre-fix code (checked out at the commit before
+    TODO-4760(a)'s fix) to confirm they actually pin the behavior fixed
+    this session, not just restate it.
+  - stop_rule: unit-test-only addition; if writing these tests reveals
+    the discriminator logic can't be exercised without the full
+    `ir_lowerer` pipeline machinery (no seam narrow enough for a fast
+    unit test), stop and note that as a finding rather than building an
+    increasingly elaborate test harness to force it.
+  - resolution: found that TODO-5289's own new test file
+    (`tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_shared_types_key_value_args_pack_predicates.cpp`,
+    commit `74ccd3c`) already contains exactly the two test cases this
+    task asked for, at the leaf-predicate level TODO-5289's own
+    depends_on note recommended: `isMapArgsPackElement` tested against a
+    bare `args<map<K,V>>` element (empty `structTypeName`) vs. the map
+    constructor's own internal `args<Entry<K,V>>` element (populated
+    `structTypeName`), plus non-key-value and partial-key-value negative
+    cases; and `isSingleSlotPointerStyleKeyValueStorage` tested for
+    `elemSlotCount` 1 (true), 2 and 3 (false), plus 0/-1 edge cases. Both
+    run in milliseconds as part of `PrimeStruct_backend_ir_tests`.
+    Checked whether to go one level up per the task's own suggestion
+    (testing `resolveArrayVectorAccessTargetInfo` itself, not just the
+    leaf predicates): read `IrLowererAccessTargetResolution.cpp`'s
+    `populateFromArgsPackLocal` lambda and found its own TODO-5287
+    comment already documents that this resolver's `isKeyValueTarget`
+    field does NOT yet consult `structTypeName` and fires identically
+    for map and Entry args-pack elements alike - that gap is real, known,
+    and already tracked separately as TODO-5292 (not this task). Testing
+    at that level would therefore either assert the *wrong*, not-yet-fixed
+    behavior or require building out TODO-5292's fix first - exactly the
+    "no seam narrow enough without pulling in unrelated, larger-scoped
+    work" case the stop_rule anticipates. The leaf-predicate level (where
+    TODO-4760(a)'s actual, landed discrimination logic lives - in
+    `IrLowererLowerStatementsExpr.h`'s `isKeyValueAccessReceiverArgsPackOfMap`
+    and `IrLowererIndexedAccessEmit.cpp`'s `isInlineMapArgsPackTarget`,
+    both of which call the two named predicates directly) is the correct,
+    already-covered scope; stopped there rather than reaching upward.
+    Added a documentation-only comment block to the existing test file
+    explaining its TODO-5291 role, the historical bug it pins (`count()`
+    returning a garbage value of 100 for a single-map-element pack,
+    because `elemSlotCount == 1` was misclassified as needing a
+    multi-slot struct copy), and the verification performed (no
+    assertion changes - the existing coverage was already complete and
+    correct).
+    Pre-fix/post-fix verification (per acceptance criterion): identified
+    the exact pre-fix commit as `e4cd1c8` (immediately before `181c22a`,
+    "Fix TODO-4760(a): positional indexing into args<map<K,V>> pack
+    elements" - confirmed via `git log --oneline --all | grep 4760` and
+    `git log -1 181c22a^`). Added a `git worktree` at `e4cd1c8` and
+    confirmed: (a) `grep -n "isMapArgsPackElement\|isSingleSlotPointerStyleKeyValueStorage"
+    src/ir_lowerer/IrLowererSharedTypes.h` returns zero matches - neither
+    named predicate existed at all pre-fix, so this test file could not
+    even compile against that commit's sources; (b)
+    `IrLowererIndexedAccessEmit.cpp:306-310` at that commit reads
+    `arrayVectorTargetInfo.elemSlotCount > 0` (not `> 1`) for
+    `isInlineMapArgsPackTarget`; and (c)
+    `IrLowererLowerStatementsExpr.h:565-571` at that commit shows
+    `isKeyValueAccessTarget` computed purely from
+    `resolveCollectionPairTypeInfo(...).isKeyValueTarget` with no
+    map-vs-Entry discriminator of any kind - confirming
+    `isKeyValueAccessReceiverArgsPackOfMap` (and the underlying question
+    it answers) is entirely new with the fix, not a modified existing
+    check. Compiled and ran a standalone g++ reproduction
+    (`prefix_check.cpp`, kept only in scratch, not committed) of the
+    literal pre-fix `elemSlotCount > 0` formula against the current
+    `> 1`-based decision: confirmed the pre-fix formula wrongly reports
+    `true` (needs struct copy) for `elemSlotCount == 1`, while the
+    current formula correctly reports `false`; both formulas agree for
+    `elemSlotCount` 2 and 3. Removed the worktree
+    (`git worktree remove --force`) after verification. This confirms
+    the existing tests genuinely pin behavior introduced by the fix, not
+    behavior that already existed beforehand.
+    Full 3-suite battery after the doc-comment-only test-file edit:
+    `backend_ir`: 1600/1646 passed, 46 known failures (unchanged
+    baseline); `compile_run` and `semantics`: matched established
+    baselines, zero new failures anywhere - a comment-only change to an
+    already-passing test file, as expected.

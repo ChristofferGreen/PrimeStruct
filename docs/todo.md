@@ -510,7 +510,6 @@ Note (2026-09-03): TODO-4724 has since closed - see
 90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
-98. TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
 99. TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
 100. TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
 
@@ -541,52 +540,16 @@ IrLowererLowerStatementsExpr.h to match true brace nesting via a
 custom bracket-depth-tracking script, plus 9 `// end if (...)` banner
 comments; whitespace/comment-only, full 3-suite battery byte-identical)
 - see `docs/todo_finished.md`.
+Note (2026-09-07): item 98 (TODO-5291) has resolved - TODO-5289's own
+new test file already contained the exact direct unit tests this task
+asked for (isMapArgsPackElement map-vs-Entry discrimination,
+isSingleSlotPointerStyleKeyValueStorage for elemSlotCount 1/2/3);
+added doc comments pinning the historical bug and verified via a
+scratch worktree at pre-fix commit e4cd1c8 that both predicates did
+not exist there and that commit's literal `elemSlotCount > 0` formula
+misclassifies elemSlotCount==1 - see `docs/todo_finished.md`.
 
 ### Task Blocks
-
-- [ ] TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: TODO-5289 (names the predicates this task should test
-    directly; can proceed against the inline checks if TODO-5289 hasn't
-    landed yet, then be updated to call the named predicates once it
-    has)
-  - scope: TODO-4760(a) had no unit-level regression net at the exact
-    seam it broke - `resolveArrayVectorAccessTargetInfo`'s
-    map-vs-entry-args-pack-element discrimination, and
-    `emitArrayVectorIndexedAccess`'s `elemSlotCount`-based
-    load-vs-copy decision. Every verification pass this session had to
-    run the full, slow 3-suite battery (`PrimeStruct_compile_run_tests`
-    alone takes minutes) to learn whether a change broke this area,
-    which is exactly why two earlier fix attempts this session looked
-    like false alarms (a 46-test "regression" and a 26-second "hang")
-    before being properly re-diagnosed - a fast, targeted unit test at
-    this seam would have given a much quicker, clearer signal each
-    round.
-  - implementation_notes: add unit tests (likely alongside
-    `tests/unit/semantics/test_semantics_receiver_element_family_classifier.cpp`'s
-    sibling location for `ir_lowerer`, or a new
-    `tests/unit/ir_pipeline/...` file) that directly construct a
-    `LocalInfo` for (a) an `args<map<K,V>>` pack element (empty
-    `structTypeName`, `hasKeyValueKinds` true, `isArgsPack` true) and
-    (b) an `args<Entry<K,V>>` pack element (populated `structTypeName`,
-    same other flags), then assert
-    `resolveArrayVectorAccessTargetInfo`/the relevant discriminator
-    correctly distinguishes them, and that `emitArrayVectorIndexedAccess`
-    picks load-vs-copy correctly for `elemSlotCount` values of 1, 2, and
-    higher. These should run in milliseconds, unlike the full
-    compile/run suite.
-  - acceptance: new unit tests exist, pass, and independently verified
-    to fail against the pre-fix code (checked out at the commit before
-    TODO-4760(a)'s fix) to confirm they actually pin the behavior fixed
-    this session, not just restate it.
-  - stop_rule: unit-test-only addition; if writing these tests reveals
-    the discriminator logic can't be exercised without the full
-    `ir_lowerer` pipeline machinery (no seam narrow enough for a fast
-    unit test), stop and note that as a finding rather than building an
-    increasingly elaborate test harness to force it.
 
 - [ ] TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
   - owner: ai
