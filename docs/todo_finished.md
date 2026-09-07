@@ -44609,3 +44609,167 @@ real answer.
     `getBuiltinArrayAccessName` merge was stopped and deferred (TODO-5293)
     rather than attempted in the same pass, per this exact neighborhood's
     demonstrated fragility this session.
+
+**Todo Completion (September 7, 2026) — TODO-5289**
+- [x] TODO-5289: Name and document the args-pack-element storage-layout invariants LocalInfo carries implicitly
+  - owner: ai
+  - created_at: 2026-09-06
+  - finished_at: 2026-09-07
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: TODO-4760(a)'s fix depended on two facts that exist nowhere
+    in the codebase except as tribal knowledge now recorded in a code
+    comment and this session's `docs/todo_finished.md` entry: (1) a
+    `LocalInfo` for an `args<map<K,V>>` pack element has an EMPTY
+    `structTypeName`, while one for `args<Entry<K,V>>` (the map
+    constructor's own internal pack) has a POPULATED
+    `Entry__t...`-rooted `structTypeName` - despite both being
+    key-value-shaped args-pack elements per `hasKeyValueKinds`; (2) a
+    key-value args-pack element with `elemSlotCount == 1` is stored as a
+    single heap pointer (same convention as `map<K,V>` bindings
+    elsewhere), while `elemSlotCount > 1` means an inline multi-slot
+    struct needing an address-only copy. Neither invariant is asserted,
+    named, or discoverable without tracing - the only way this session
+    found them was via `getenv`-gated fprintf tracing against a live
+    compile.
+  - implementation_notes: add two small, named, unit-testable predicates
+    to `IrLowererSharedTypes.h` (alongside the existing
+    `hasKeyValueKinds`) - e.g.
+    `bool isMapArgsPackElement(const LocalInfo&)` (wraps the
+    `hasKeyValueKinds(...) && structTypeName.empty()` check) and
+    `bool isSingleSlotPointerStyleKeyValueStorage(const LocalInfo&)` or
+    similar for the `elemSlotCount` convention - each with a doc comment
+    stating the invariant plainly (what produces an empty vs populated
+    `structTypeName`; where the `elemSlotCount == 1` pointer convention
+    is also relied on elsewhere, e.g.
+    `IrLowererLowerStatementsBindings.h`'s `hasKeyValueKinds` branch).
+    Replace the ad-hoc inline checks this session's fix added in
+    `IrLowererLowerStatementsExpr.h` and `IrLowererIndexedAccessEmit.cpp`
+    with calls to these named predicates. Search for other places in
+    `ir_lowerer` that inspect `structTypeName` emptiness or
+    `elemSlotCount` thresholds ad hoc and may be relying on the same
+    invariants without naming them.
+  - acceptance: the two invariants have named, documented,
+    unit-testable predicates; this session's fix sites use them instead
+    of inline checks; full 3-suite battery unchanged.
+  - stop_rule: pure naming/documentation extraction, zero behavior
+    change - if any call site's behavior would change by switching to
+    the named predicate, treat that as a real divergence to investigate
+    separately rather than forcing the extraction through.
+  - finished_2026-09-07: added both predicates to
+    `src/ir_lowerer/IrLowererSharedTypes.h`, right after `hasKeyValueKinds`/
+    `hasWrappedKeyValueKinds`, each with a doc comment stating the
+    invariant plainly: `isMapArgsPackElement(const LocalInfo&)` (wraps
+    `hasKeyValueKinds(info) && info.structTypeName.empty()`, contrasting
+    the bare `args<map<K,V>>` shape against the map constructor's own
+    `args<Entry<K,V>>` internal pack) and
+    `isSingleSlotPointerStyleKeyValueStorage(int32_t elemSlotCount)`
+    (`elemSlotCount == 1`, documenting the single-heap-pointer vs.
+    inline-multi-slot-struct convention and cross-referencing
+    `IrLowererLowerStatementsBindings.h`'s `hasKeyValueKinds` branch as
+    the sibling convention). The slot-count predicate takes the raw
+    `int32_t` rather than a `LocalInfo` because `elemSlotCount` lives on
+    `ArrayVectorAccessTargetInfo` (`IrLowererCallHelperTypes.h`), a
+    target-resolution fact computed downstream of `LocalInfo`, not a
+    `LocalInfo` field itself - `LocalInfo` has no `elemSlotCount` member.
+    Since `src/ir_lowerer/IrLowererSharedTypes.h` has a hand-maintained
+    test-only mirror at
+    `include/primec/testing/ir_lowerer_helpers/IrLowererSharedTypes.h`
+    (confirmed via `git log`: both files were added together in a prior
+    commit and are meant to stay in sync), mirrored both predicates
+    there too so unit tests can exercise them directly.
+    Switched over two call sites: `IrLowererLowerStatementsExpr.h`'s
+    `isKeyValueAccessReceiverArgsPackOfMap` lambda now calls
+    `isMapArgsPackElement(receiverLocalIt->second)` in place of the
+    inline `hasKeyValueKinds(...) && ...structTypeName.empty()` pair
+    (identical boolean, since both conjuncts were on the same
+    `LocalInfo`), and `IrLowererIndexedAccessEmit.cpp`'s
+    `isInlineMapArgsPackTarget` now reads
+    `!isSingleSlotPointerStyleKeyValueStorage(arrayVectorTargetInfo.elemSlotCount)
+    && arrayVectorTargetInfo.elemSlotCount > 0` in place of the original
+    `arrayVectorTargetInfo.elemSlotCount > 1` - proved behavior-identical
+    for every `int32_t` value (not just the values actually reachable
+    here) via the integer identity `x > 1 ⟺ x != 1 && x > 0`, so no
+    reachability argument about whether `elemSlotCount` can be 0 in this
+    branch was needed. Both TODO-4760 comments at these sites were
+    updated to name the new predicates instead of re-deriving the
+    invariant inline.
+  - other call sites searched and left alone: grepped every
+    `structTypeName.empty()` and `elemSlotCount` use in `src/ir_lowerer/`
+    for the same two invariants. Found one close-but-not-identical
+    candidate,
+    `IrLowererInlineParamHelpers.cpp`'s
+    `shouldRewriteMapReferenceReceiverForParam` - inside its
+    `paramInfo.structTypeName.empty()` branch it returns a local
+    (shadowed) `hasKeyValueKinds` boolean ANDed with a `paramInfo.kind`
+    membership check, not the bare `isMapArgsPackElement` condition
+    alone, and the function's purpose (deciding whether to rewrite a
+    plain reference/pointer/value parameter's receiver expression) is
+    not specifically about args-pack elements the way the two target
+    sites are - so applying the `isMapArgsPackElement` name there would
+    describe a different invariant than the one this task named, even
+    though the sub-expression is boolean-equivalent within that branch.
+    Left it as an inline check rather than forcing a same-named-but-
+    different-meaning extraction through; noting the discrepancy here
+    per this task's own stop_rule instead. All other `elemSlotCount`
+    comparisons found (`IrLowererLowerStatementsCallsStep.cpp`,
+    `IrLowererLowerEmitExprCollectionHelpers.cpp`,
+    `IrLowererInlineParamHelpers.cpp:941`,
+    `IrLowererLowerEmitExprTailDispatch.h`, `IrLowererLowerEmitExpr.h`,
+    `IrLowererLowerStatementsBindings.h:1029`,
+    `IrLowererIndexedAccessEmit.cpp`'s `isInlineStructArgsPackTarget`
+    at line ~303) either use a `> 0` threshold unrelated to the
+    single-vs-multi-slot pointer/struct distinction, or (for
+    `IrLowererLowerStatementsCallsStep.cpp:193`) explicitly exclude the
+    key-value case first (`targetInfo.isKeyValueTarget` already rejected
+    above) - none of them are this invariant, so left untouched.
+  - unit tests: added
+    `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_shared_types_key_value_args_pack_predicates.cpp`
+    (registered in `CMakeLists.txt`'s `PrimeStructBackendAllTestSources` /
+    `PrimeStruct_backend_ir_tests`), following the existing
+    `test_ir_pipeline_validation_*` doctest convention (same
+    `primestruct.ir.pipeline.validation` suite, same
+    `test_ir_pipeline_validation_helpers.h` include, which already
+    transitively pulls in the testing mirror of
+    `IrLowererSharedTypes.h`). Two `TEST_CASE`s: one exercising
+    `isMapArgsPackElement` across a bare `args<map<K,V>>`-shaped
+    `LocalInfo` (true), an `args<Entry<K,V>>`-shaped one with a populated
+    `structTypeName` (false), a non-key-value `LocalInfo` (false), and a
+    partially-resolved key/value-kind `LocalInfo` (false); one exercising
+    `isSingleSlotPointerStyleKeyValueStorage` across 1 (true), 2 and 3
+    (false), and 0/-1 (false, defensive).
+  - full 3-suite battery: fresh, name-level-diffed baseline taken
+    immediately before any source edit and again immediately after (per
+    this task's own instruction not to trust an old baseline in this
+    neighborhood). Before: `PrimeStruct_semantics_tests` 2753/2754 passed
+    (1 pre-existing failure,
+    `type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`
+    experimental-soa borrowed-helper-return case),
+    `PrimeStruct_backend_ir_tests` 1598/1644 passed (46 pre-existing
+    failures), `PrimeStruct_compile_run_tests` 2674/2679 passed (5
+    pre-existing map-conformance failures) - matching the numbers
+    recorded by the immediately-prior TODO-5288 session exactly. After:
+    `PrimeStruct_semantics_tests` 2753/2754 passed (same failure, byte-
+    for-byte identical `TEST CASE:` name-set diff against before);
+    `PrimeStruct_backend_ir_tests` 1600/1646 passed - test-case count
+    rose by exactly 2 (the new unit test file's two `TEST_CASE`s, both
+    passing) with the same 46 named pre-existing failures (empty diff of
+    failing-test-name sets against before); `PrimeStruct_compile_run_tests`
+    2674/2679 passed (same 5 named pre-existing failures, empty diff).
+    Zero net change to any pre-existing test outcome; the only delta is
+    the 2 new passing unit tests.
+  - acceptance: met - both invariants have named, documented,
+    unit-tested predicates (`isMapArgsPackElement`,
+    `isSingleSlotPointerStyleKeyValueStorage`); the two TODO-4760 fix
+    sites (`IrLowererLowerStatementsExpr.h`,
+    `IrLowererIndexedAccessEmit.cpp`) use them instead of inline checks;
+    full 3-suite battery unchanged beyond the new unit tests.
+  - stop_rule: satisfied - pure naming/documentation extraction with
+    zero behavior change, proved either by identical-conjuncts
+    equivalence (`isMapArgsPackElement` site) or an integer identity
+    covering every possible input (`isSingleSlotPointerStyleKeyValueStorage`
+    site); the one near-miss call site
+    (`shouldRewriteMapReferenceReceiverForParam`) was left alone and
+    the discrepancy documented rather than forced through, exactly as
+    the stop_rule directs.

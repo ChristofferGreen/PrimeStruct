@@ -303,19 +303,22 @@ bool emitArrayVectorIndexedAccess(
       arrayVectorTargetInfo.elemSlotCount > 0 &&
       !isWrappedStructArgsPackTarget &&
       !isVectorArgsPackTarget;
-  // TODO-4760: elemSlotCount == 1 for a key-value args-pack element means
-  // the element is stored as a single pointer slot (the same "builtin
-  // key/value map materialized as a heap pointer" convention used
-  // elsewhere for map<K,V>(...) bindings - see
+  // TODO-4760: `isSingleSlotPointerStyleKeyValueStorage` (see
+  // IrLowererSharedTypes.h) names the elemSlotCount convention this depends
+  // on - a key-value args-pack element with a single slot is stored as a
+  // heap pointer (the same "builtin key/value map materialized as a heap
+  // pointer" convention used elsewhere for map<K,V>(...) bindings - see
   // IrLowererLowerStatementsBindings.h's hasKeyValueKinds branch), not an
-  // inline multi-slot struct needing a copy. Only treat elemSlotCount > 1
-  // as the inline-struct-copy case; a single slot should just be loaded
-  // like any other pointer-sized value.
+  // inline multi-slot struct needing a copy. Only treat the non-single-slot
+  // case (and only when there is at least one slot at all) as the
+  // inline-struct-copy case; a single slot should just be loaded like any
+  // other pointer-sized value.
   const bool isInlineMapArgsPackTarget =
       arrayVectorTargetInfo.isArgsPackTarget &&
       arrayVectorTargetInfo.isKeyValueTarget &&
       !arrayVectorTargetInfo.isWrappedKeyValueTarget &&
-      arrayVectorTargetInfo.elemSlotCount > 1;
+      !isSingleSlotPointerStyleKeyValueStorage(arrayVectorTargetInfo.elemSlotCount) &&
+      arrayVectorTargetInfo.elemSlotCount > 0;
   const bool targetUsesVectorStorageLayout =
       arrayVectorTargetInfo.isVectorTarget && !arrayVectorTargetInfo.isArgsPackTarget;
   const bool loadElementValue =

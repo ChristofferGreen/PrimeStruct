@@ -802,6 +802,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_collection_key_value_surface_wrappers.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_semantics_validator_public_contracts.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_shared_types_key_value_args_pack_predicates.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_build_bundled_entry_call_setup.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_struct_field_binding_helpers_resolve_layout_bindings.cpp

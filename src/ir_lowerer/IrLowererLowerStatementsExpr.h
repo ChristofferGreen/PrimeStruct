@@ -567,13 +567,13 @@
           // `args<Entry<K, V>>` pack parameter (which must keep deferring
           // here - that path already works) from a user-level
           // `args<map<K, V>>` pack element (which does not - it needs
-          // emitBuiltinArrayAccess below instead). A bare `args<map<K,V>>`
-          // pack element's LocalInfo carries keyValueKeyKind/
-          // keyValueValueKind but an EMPTY structTypeName, unlike
-          // `args<Entry<K, V>>` (the map constructor's own internal pack),
-          // whose structTypeName is always populated with a concrete
-          // Entry__t... path - use that as the distinguishing signal. See
-          // docs/ReceiverTargetResolutionConsolidation.md.
+          // emitBuiltinArrayAccess below instead). `isMapArgsPackElement`
+          // (see IrLowererSharedTypes.h) names the distinguishing signal: a
+          // bare `args<map<K,V>>` pack element's LocalInfo carries
+          // keyValueKeyKind/keyValueValueKind but an EMPTY structTypeName,
+          // unlike `args<Entry<K, V>>` (the map constructor's own internal
+          // pack), whose structTypeName is always populated with a concrete
+          // Entry__t... path. See docs/ReceiverTargetResolutionConsolidation.md.
           // TODO-5287 (see docs/todo_finished.md): this structTypeName-
           // emptiness check only covers a bare `Name`-kind receiver (a
           // direct args-pack-of-map local). The emission-side twin of this
@@ -593,8 +593,7 @@
                 auto receiverLocalIt = localsIn.find(expr.args.front().name);
                 return receiverLocalIt != localsIn.end() &&
                        receiverLocalIt->second.isArgsPack &&
-                       hasKeyValueKinds(receiverLocalIt->second) &&
-                       receiverLocalIt->second.structTypeName.empty();
+                       isMapArgsPackElement(receiverLocalIt->second);
               }();
           const bool isKeyValueAccessTarget =
               (accessName == "at" || accessName == "at_unsafe") &&

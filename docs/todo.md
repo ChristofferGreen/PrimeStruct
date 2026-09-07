@@ -510,7 +510,6 @@ Note (2026-09-03): TODO-4724 has since closed - see
 90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
-96. TODO-5289: Name and document the args-pack-element storage-layout invariants LocalInfo carries implicitly
 97. TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
 98. TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
 99. TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
@@ -535,54 +534,11 @@ Note (2026-09-06): item 95 (TODO-5288) has resolved (ir_lowerer-stage
 duplication merged to one implementation; cross-stage
 getBuiltinArrayAccessName merge deferred as item 100/TODO-5293) - see
 `docs/todo_finished.md`.
+Note (2026-09-07): item 96 (TODO-5289) has resolved (named/documented
+the two args-pack-element storage-layout predicates and switched their
+fix sites over) - see `docs/todo_finished.md`.
 
 ### Task Blocks
-
-- [ ] TODO-5289: Name and document the args-pack-element storage-layout invariants LocalInfo carries implicitly
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: TODO-4760(a)'s fix depended on two facts that exist nowhere
-    in the codebase except as tribal knowledge now recorded in a code
-    comment and this session's `docs/todo_finished.md` entry: (1) a
-    `LocalInfo` for an `args<map<K,V>>` pack element has an EMPTY
-    `structTypeName`, while one for `args<Entry<K,V>>` (the map
-    constructor's own internal pack) has a POPULATED
-    `Entry__t...`-rooted `structTypeName` - despite both being
-    key-value-shaped args-pack elements per `hasKeyValueKinds`; (2) a
-    key-value args-pack element with `elemSlotCount == 1` is stored as a
-    single heap pointer (same convention as `map<K,V>` bindings
-    elsewhere), while `elemSlotCount > 1` means an inline multi-slot
-    struct needing an address-only copy. Neither invariant is asserted,
-    named, or discoverable without tracing - the only way this session
-    found them was via `getenv`-gated fprintf tracing against a live
-    compile.
-  - implementation_notes: add two small, named, unit-testable predicates
-    to `IrLowererSharedTypes.h` (alongside the existing
-    `hasKeyValueKinds`) - e.g.
-    `bool isMapArgsPackElement(const LocalInfo&)` (wraps the
-    `hasKeyValueKinds(...) && structTypeName.empty()` check) and
-    `bool isSingleSlotPointerStyleKeyValueStorage(const LocalInfo&)` or
-    similar for the `elemSlotCount` convention - each with a doc comment
-    stating the invariant plainly (what produces an empty vs populated
-    `structTypeName`; where the `elemSlotCount == 1` pointer convention
-    is also relied on elsewhere, e.g.
-    `IrLowererLowerStatementsBindings.h`'s `hasKeyValueKinds` branch).
-    Replace the ad-hoc inline checks this session's fix added in
-    `IrLowererLowerStatementsExpr.h` and `IrLowererIndexedAccessEmit.cpp`
-    with calls to these named predicates. Search for other places in
-    `ir_lowerer` that inspect `structTypeName` emptiness or
-    `elemSlotCount` thresholds ad hoc and may be relying on the same
-    invariants without naming them.
-  - acceptance: the two invariants have named, documented,
-    unit-testable predicates; this session's fix sites use them instead
-    of inline checks; full 3-suite battery unchanged.
-  - stop_rule: pure naming/documentation extraction, zero behavior
-    change - if any call site's behavior would change by switching to
-    the named predicate, treat that as a real divergence to investigate
-    separately rather than forcing the extraction through.
 
 - [ ] TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
   - owner: ai
