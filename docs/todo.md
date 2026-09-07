@@ -510,7 +510,6 @@ Note (2026-09-03): TODO-4724 has since closed - see
 90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
-97. TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
 98. TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
 99. TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
 100. TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
@@ -537,43 +536,13 @@ getBuiltinArrayAccessName merge deferred as item 100/TODO-5293) - see
 Note (2026-09-07): item 96 (TODO-5289) has resolved (named/documented
 the two args-pack-element storage-layout predicates and switched their
 fix sites over) - see `docs/todo_finished.md`.
+Note (2026-09-07): item 97 (TODO-5290) has resolved (reindented
+IrLowererLowerStatementsExpr.h to match true brace nesting via a
+custom bracket-depth-tracking script, plus 9 `// end if (...)` banner
+comments; whitespace/comment-only, full 3-suite battery byte-identical)
+- see `docs/todo_finished.md`.
 
 ### Task Blocks
-
-- [ ] TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Maintainability / tech debt
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: `IrLowererLowerStatementsExpr.h` is an implementation-in-header
-    file `#include`d inside function bodies at multiple points across
-    the codebase (not a normal header). Its indentation mixes tabs and
-    spaces inconsistently and does NOT reliably reflect true C++ brace
-    nesting - confirmed twice this session via `awk`-based brace-depth
-    counting after visual indentation gave a wrong read of which `if`
-    block a given line actually lived inside, costing at least one full
-    investigation round during TODO-4760(a)'s fix.
-  - implementation_notes: run this file (and its sibling
-    implementation-in-header files, if any share the same authoring
-    history) through the project's existing `clang-format` config to
-    normalize indentation to match real brace nesting; if the file's
-    unusual `#include`-inside-a-function-body structure makes a
-    project-wide `clang-format` config unsuitable as-is, a
-    file-scoped `.clang-format` override or a one-off manual
-    reformatting pass is acceptable. Where reformatting alone isn't
-    enough to make nesting legible (e.g. very long cascades), add
-    brief `// end if (<condition>)`-style banner comments at the closing
-    braces of the longest/most easily-confused blocks, verified against
-    `awk`-counted brace depth, not by eye.
-  - acceptance: reading the file's indentation alone (no `awk` needed)
-    correctly identifies which conditional block any given line is
-    nested inside; no behavior change (whitespace/comment-only diff);
-    full 3-suite battery unchanged (compiles identically).
-  - stop_rule: whitespace/comment-only change - if `clang-format`
-    wants to make any non-whitespace change here, stop and use a
-    narrower/manual pass instead rather than risk a behavior change
-    hiding inside a "just formatting" commit.
 
 - [ ] TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
   - owner: ai

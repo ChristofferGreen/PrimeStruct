@@ -44773,3 +44773,123 @@ real answer.
     (`shouldRewriteMapReferenceReceiverForParam`) was left alone and
     the discrepancy documented rather than forced through, exactly as
     the stop_rule directs.
+
+**Todo Completion (September 7, 2026) — TODO-5290**
+- [x] TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
+  - owner: ai
+  - created_at: 2026-09-06
+  - finished_at: 2026-09-07
+  - phase: Maintainability / tech debt
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: `IrLowererLowerStatementsExpr.h` is an implementation-in-header
+    file `#include`d inside function bodies at multiple points across
+    the codebase (not a normal header). Its indentation mixes tabs and
+    spaces inconsistently and does NOT reliably reflect true C++ brace
+    nesting - confirmed twice this session via `awk`-based brace-depth
+    counting after visual indentation gave a wrong read of which `if`
+    block a given line actually lived inside, costing at least one full
+    investigation round during TODO-4760(a)'s fix.
+  - implementation_notes: run this file (and its sibling
+    implementation-in-header files, if any share the same authoring
+    history) through the project's existing `clang-format` config to
+    normalize indentation to match real brace nesting; if the file's
+    unusual `#include`-inside-a-function-body structure makes a
+    project-wide `clang-format` config unsuitable as-is, a
+    file-scoped `.clang-format` override or a one-off manual
+    reformatting pass is acceptable. Where reformatting alone isn't
+    enough to make nesting legible (e.g. very long cascades), add
+    brief `// end if (<condition>)`-style banner comments at the closing
+    braces of the longest/most easily-confused blocks, verified against
+    `awk`-counted brace depth, not by eye.
+  - acceptance: reading the file's indentation alone (no `awk` needed)
+    correctly identifies which conditional block any given line is
+    nested inside; no behavior change (whitespace/comment-only diff);
+    full 3-suite battery unchanged (compiles identically).
+  - stop_rule: whitespace/comment-only change - if `clang-format`
+    wants to make any non-whitespace change here, stop and use a
+    narrower/manual pass instead rather than risk a behavior change
+    hiding inside a "just formatting" commit.
+  - finished_2026-09-07: the repo has NO `.clang-format` at all (checked
+    repo root and elsewhere - none exists), so first tried
+    `clang-format` (LLVM 18.1.3, `BasedOnStyle: Google, IndentWidth: 2`)
+    directly against the file anyway. Confirmed it is unsuitable exactly
+    per the stop_rule: because this file is a fragment spliced mid-scope
+    into a surrounding function (not a standalone translation unit),
+    clang-format re-bases all indentation to column 0 as if the file's
+    outermost `if` were top-level, discarding the file's real embedded
+    depth, and reflows several long argument/parameter lists onto
+    different line breaks than the original - real, non-whitespace
+    line-content changes, not just re-indentation. Reverted the
+    clang-format attempt in full and instead wrote a small standalone
+    Python reindenter
+    (not checked into the repo - a throwaway scratchpad script) that:
+    (1) tracks true bracket depth by scanning each line character-by-
+    character, correctly skipping `//` line comments and `"..."`/`'...'`
+    literals (confirmed beforehand the file has no block comments and no
+    raw string literals, so a single-line-at-a-time scanner is safe);
+    (2) treats `(`, `{`, `[` as one combined nesting level so multi-line
+    argument lists get a real continuation indent, not just `{`/`}`;
+    (3) rewrites ONLY each line's leading whitespace (tabs converted to
+    spaces, 2 spaces per level, preserving the file's existing 8-space/
+    depth-4 base offset so it stays visually consistent with the
+    surrounding call sites it is spliced into) and leaves every other
+    character on every line byte-for-byte untouched; (4) special-cases
+    the file's one `switch` statement so `case`/`default` labels sit at
+    the switch body's own depth (matching `clang-format`'s
+    `IndentCaseLabels: false` convention) while non-label statements in
+    each arm get one extra display level, without perturbing the
+    underlying brace-depth accounting used for (1)-(3). Verified
+    whitespace-only in two independent ways: `git diff -w` against the
+    original shows zero remaining diff, and stripping all tabs/spaces
+    from both the original and reformatted file line-by-line
+    (`sed 's/[ \t]*//'` on each) produces byte-identical output across
+    all 1,720 lines. Then added 9 `// end if (<condition>)`-style banner
+    comments (a pure comment-only addition layered on top, independently
+    re-verified whitespace/comment-only by stripping both the leading
+    whitespace AND diffing that every non-whitespace line delta is
+    exactly one of these 9 appended comments) at the closing braces of
+    the file's longest/most confusable blocks, each brace matched by the
+    reindenter's own depth tracking (not by eye): the two spots
+    `docs/todo_finished.md`'s TODO-4760(a) notes explicitly named as
+    having caused a wrong read during that investigation (the
+    `isKeyValueAccessTarget`-gated `if/else-if/else` cascade starting at
+    `if (statementsExprHelpers.resolveBuiltinAccessName(...))`, ~122
+    lines, and its nested `if (directBuiltinAccessOverrideCallee !=
+    nullptr) / else if (isKeyValueAccessTarget) / else if
+    (isMethodCallTempReceiver...) / else` chain, ~48 lines - the exact
+    chain TODO-4760(a)'s investigation initially misread via visual
+    indentation as being inside an unrelated, already-closed
+    `if (!expr.isMethodCall && expr.args.size() == 1)` block), plus 7
+    more of the file's longest `if` bodies (`if (expr.isMethodCall)`
+    ~162 lines; the two textually-identical
+    `if (!expr.isMethodCall && expr.args.size() == 1)` blocks at ~99 and
+    ~94 lines, disambiguated in their banners by purpose - "key-value
+    count fast path" vs. "vector count/capacity fast path"; `if
+    (targetInfo.isKeyValueTarget)` ~97 lines; `if (!expr.isMethodCall &&
+    expr.args.size() == 2)` ~62 lines; `if (expr.isMethodCall &&
+    expr.args.size() == 2)` ~57 lines; `if (methodCallee != nullptr)`
+    ~55 lines). Spot-checked the acceptance criterion directly:
+    reading the reformatted file's indentation alone (no `awk` needed)
+    now correctly shows the `if/else-if/else` cascade nesting at the
+    file's ~547-669 span, matching the true brace depth this session's
+    earlier `awk`-based counting had to reconstruct by hand.
+    Checked for sibling implementation-in-header files sharing the same
+    problem: `src/ir_lowerer/*.h` has ~20 more files that are code
+    fragments (no `#pragma once`, start mid-statement/mid-block) rather
+    than normal headers, but only one
+    (`IrLowererLowerOperatorsConversionsAndCalls.h`, 101 lines) has any
+    tab/space mixing at all (11 of 101 lines), and inspection showed its
+    mixing is cosmetic column drift inside a single flat call-argument
+    list, not the nested-if depth-misattribution problem this task is
+    about - left it untouched, matching the task's own "primary scope is
+    this one file; don't go on a broad tangent" instruction.
+    Verified zero behavior change: built `build-release` and ran the
+    full `PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`,
+    and `PrimeStruct_compile_run_tests` battery before (via `git stash`
+    of just this file) and after - all three suites produced identical
+    test-case/assertion counts and the exact same named failing tests
+    both times (semantics: 2753/2754 passed, 1 known failure;
+    backend_ir: 1600/1646 passed, 46 known failures; compile_run:
+    2674/2679 passed, 5 known failures - all pre-existing, unrelated to
+    this change).
