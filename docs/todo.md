@@ -510,7 +510,6 @@ Note (2026-09-03): TODO-4724 has since closed - see
 90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
-99. TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
 100. TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
@@ -526,8 +525,8 @@ Note (2026-08-30): item 75 (TODO-4743) has resolved - see
 Note (2026-09-06): item 93 (TODO-5286) has resolved (closed as
 latent-only debt) - see `docs/todo_finished.md`.
 Note (2026-09-06): item 94 (TODO-5287) has resolved (audited and
-documented; follow-up filed as item 99/TODO-5292) - see
-`docs/todo_finished.md`.
+documented; follow-up filed as TODO-5292, which has itself since
+resolved 2026-09-07 as latent-only debt - see `docs/todo_finished.md`).
 Note (2026-09-06): item 95 (TODO-5288) has resolved (ir_lowerer-stage
 duplication merged to one implementation; cross-stage
 getBuiltinArrayAccessName merge deferred as item 100/TODO-5293) - see
@@ -548,92 +547,12 @@ added doc comments pinning the historical bug and verified via a
 scratch worktree at pre-fix commit e4cd1c8 that both predicates did
 not exist there and that commit's literal `elemSlotCount > 0` formula
 misclassifies elemSlotCount==1 - see `docs/todo_finished.md`.
+Note (2026-09-07): item 99 (TODO-5292) has resolved (closed as
+latent-only debt - no reachable surface syntax found that presents a
+Call-kind nested args-pack-of-map receiver to the affected resolvers)
+- see `docs/todo_finished.md`.
 
 ### Task Blocks
-
-- [ ] TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: found while auditing TODO-5287. TODO-4760(a)'s fix for
-    distinguishing a genuine `args<map<K,V>>` pack element from the map
-    constructor's own internal `args<Entry<K,V>>` pack element (empty
-    vs. populated `structTypeName`) was applied ONLY as an ad hoc,
-    local check - `isKeyValueAccessReceiverArgsPackOfMap` in
-    `IrLowererLowerStatementsExpr.h` (just above the TODO-4760 comment)
-    - and only for a bare `Name`-kind receiver (a direct args-pack-of-map
-    local). The underlying resolvers both have the same gap for a
-    `Call`-kind receiver (a nested pack-element access, e.g.
-    `pack[i].at(key)`):
-    `resolveCollectionPairTypeInfo`'s `populateFromArgsPackElement` lambda
-    (`IrLowererAccessTargetResolution.cpp`, `isDirectKeyValue` branch) and
-    `resolveArrayVectorAccessTargetInfo`'s `populateFromArgsPackLocal`
-    lambda (same file, the `hasInferredTypedKeyValue(localInfo)` branch)
-    both flag `isKeyValueTarget = true` purely from
-    `hasInferredTypedKeyValue`/`hasKeyValueKinds` (keyValueKeyKind/
-    keyValueValueKind populated) without ever consulting
-    `localInfo.structTypeName` - so for a Call-kind receiver, an
-    Entry-pack element is not distinguished from a map-pack element by
-    either resolver. `IrLowererIndexedAccessEmit.cpp`'s
-    `isMapArgsPackElementTarget` (the emission-side check that handles
-    the Call-kind-receiver case) inherits this gap from
-    `resolveArrayVectorAccessTargetInfo` and has no independent
-    structTypeName check of its own either. This is believed latent (no
-    known repro constructing a Call-kind nested-pack-element receiver
-    that actually reaches this code with an Entry-pack element) but is
-    unverified - see the cross-referencing comments left at all four
-    sites (TODO-5287's own change) for exact line-level pointers.
-  - implementation_notes: (a) move the structTypeName-emptiness check
-    from `isKeyValueAccessReceiverArgsPackOfMap` down into
-    `populateFromArgsPackElement`/`populateFromArgsPackLocal` themselves,
-    so both resolvers correctly report `isKeyValueTarget` for genuine
-    map-pack elements only (Entry-pack elements would then report
-    `isKeyValueTarget = false`, which should be the semantically correct
-    answer everywhere, not just at the one gating site that currently
-    special-cases it) - this would let
-    `isKeyValueAccessReceiverArgsPackOfMap` be deleted in favor of a
-    plain `.isKeyValueTarget` check, removing the duplication; (b) as
-    part of the same pass, evaluate whether `CollectionPairTypeInfo`
-    (`IrLowererCallHelperTypes.h:67-73`) can become a view/subset of
-    `ArrayVectorAccessTargetInfo` (`:75-86`) - the latter already carries
-    every field the former has except `keyValueKeyKind`/
-    `keyValueValueKind`, so adding those two fields to
-    `ArrayVectorAccessTargetInfo` and having
-    `resolveCollectionPairTypeInfo` become a thin projection over
-    `resolveArrayVectorAccessTargetInfo` looks plausible in principle;
-    however TODO-5287's audit found 70+ call sites across at least 15
-    files touching one or both resolvers (`IrLowererInlineNativeCallDispatch.cpp`,
-    `IrLowererLowerEmitExprCollectionHelpers.cpp`,
-    `IrLowererLowerEmitExprTailDispatchHelpers.cpp`,
-    `IrLowererNativeTailDispatch.cpp`,
-    `IrLowererSetupTypeReturnKindHelpers.cpp`,
-    `IrLowererSetupTypeMethodCallResolution.cpp`, and others), several of
-    which pass distinct callback adapter types
-    (`ResolveCallCollectionPairTypeInfoFn` vs.
-    `ResolveCallArrayVectorAccessTargetInfoFn`) that a struct merge would
-    also need to reconcile - do not attempt this in one pass; land (a)
-    first (small, mechanical, behavior-preserving-or-latent-bug-fixing)
-    and re-scope (b) as its own leaf once (a)'s blast radius against the
-    full 3-suite battery is known.
-  - acceptance: (a) lands with the full 3-suite battery unchanged (or,
-    if it changes behavior, the change is confirmed to fix a
-    demonstrated Entry-vs-map-pack-element misclassification rather than
-    regress one); a repro program constructing a Call-kind nested
-    args-pack-of-map receiver either confirms the latent gap fires today
-    (pre-fix) and is corrected (post-fix), or confirms the gap is
-    provably unreachable (e.g. no surface syntax produces a Call-kind
-    receiver whose resolved LocalInfo has `isArgsPack` with a populated
-    Entry `structTypeName`), in which case this task closes as
-    latent-only debt per TODO-5286's precedent. (b) is filed as its own
-    follow-up TODO only if (a)'s landing shows the merge is still worth
-    doing.
-  - stop_rule: if reaching a Call-kind nested args-pack-of-map receiver
-    turns out to require plumbing through several of the 70+ call sites
-    just to build a reachable repro, stop after documenting that
-    difficulty and close this task as latent-only debt (per TODO-5286)
-    rather than attempting the fix blind.
 
 - [ ] TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
   - owner: ai

@@ -45007,3 +45007,147 @@ real answer.
     baseline); `compile_run` and `semantics`: matched established
     baselines, zero new failures anywhere - a comment-only change to an
     already-passing test file, as expected.
+
+**Todo Completion (September 7, 2026) — TODO-5292**
+- [x] TODO-5292: Extend the map-vs-Entry args-pack-element structTypeName discriminator into resolveCollectionPairTypeInfo/resolveArrayVectorAccessTargetInfo themselves
+  - owner: ai
+  - created_at: 2026-09-06
+  - finished_at: 2026-09-07
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: found while auditing TODO-5287. TODO-4760(a)'s fix for
+    distinguishing a genuine `args<map<K,V>>` pack element from the map
+    constructor's own internal `args<Entry<K,V>>` pack element (empty
+    vs. populated `structTypeName`) was applied ONLY as an ad hoc,
+    local check - `isKeyValueAccessReceiverArgsPackOfMap` in
+    `IrLowererLowerStatementsExpr.h` (just above the TODO-4760 comment)
+    - and only for a bare `Name`-kind receiver (a direct args-pack-of-map
+    local). The underlying resolvers both have the same gap for a
+    `Call`-kind receiver (a nested pack-element access, e.g.
+    `pack[i].at(key)`):
+    `resolveCollectionPairTypeInfo`'s `populateFromArgsPackElement` lambda
+    (`IrLowererAccessTargetResolution.cpp`, `isDirectKeyValue` branch) and
+    `resolveArrayVectorAccessTargetInfo`'s `populateFromArgsPackLocal`
+    lambda (same file, the `hasInferredTypedKeyValue(localInfo)` branch)
+    both flag `isKeyValueTarget = true` purely from
+    `hasInferredTypedKeyValue`/`hasKeyValueKinds` (keyValueKeyKind/
+    keyValueValueKind populated) without ever consulting
+    `localInfo.structTypeName` - so for a Call-kind receiver, an
+    Entry-pack element is not distinguished from a map-pack element by
+    either resolver. `IrLowererIndexedAccessEmit.cpp`'s
+    `isMapArgsPackElementTarget` (the emission-side check that handles
+    the Call-kind-receiver case) inherits this gap from
+    `resolveArrayVectorAccessTargetInfo` and has no independent
+    structTypeName check of its own either. This was believed latent (no
+    known repro constructing a Call-kind nested-pack-element receiver
+    that actually reaches this code with an Entry-pack element) but was
+    unverified - see the cross-referencing comments left at all four
+    sites (TODO-5287's own change) for exact line-level pointers.
+  - implementation_notes (as originally filed): (a) move the
+    structTypeName-emptiness check from
+    `isKeyValueAccessReceiverArgsPackOfMap` down into
+    `populateFromArgsPackElement`/`populateFromArgsPackLocal` themselves,
+    so both resolvers correctly report `isKeyValueTarget` for genuine
+    map-pack elements only - this would let
+    `isKeyValueAccessReceiverArgsPackOfMap` be deleted in favor of a
+    plain `.isKeyValueTarget` check; (b) evaluate merging
+    `CollectionPairTypeInfo` into a view/subset of
+    `ArrayVectorAccessTargetInfo` - explicitly deferred per this task's
+    own stop_rule and not attempted this session (TODO-5287's audit
+    found 70+ call sites across 15+ files touching one or both resolvers
+    with distinct callback adapter types; nothing new learned this
+    session changes that scoping, so (b) remains unfiled pending a
+    future need).
+  - evidence (closed as latent-only debt, no code change landed): per
+    this task's own acceptance criterion, first tried to construct a
+    repro program presenting a genuine Call-kind nested
+    args-pack-of-map receiver to the affected resolvers - i.e. a
+    `.at()`/`at()`/bare-call access whose *receiver* expression
+    (`expr.args.front()` at the `isKeyValueAccessReceiverArgsPackOfMap`
+    gating site, or `target` inside
+    `resolveCollectionPairTypeInfo`/`resolveArrayVectorAccessTargetInfo`)
+    is itself an `Expr::Kind::Call` rather than a bare `Name`, per the
+    scope's own `pack[i].at(key)` example (adapting TODO-4760(a)'s own
+    Name-kind repro, `score_maps([args<map<i32, i32>>] values) {
+    at(values, 0i32) ... }`, one level deeper). Tried six distinct
+    surface-syntax shapes against a genuine `args<map<i32, i32>>`
+    parameter, rebuilt `primec` fresh first: (1) `values[0i32].at(5i32)`
+    (bracket-index then method-call `.at`); (2) `at(values[0i32],
+    5i32)` (bare-call form of the same); (3)
+    `/std/collections/map/at<i32,i32>(values[0i32], 5i32)` (fully
+    qualified path form); (4) nested bare calls, `at(at(values, 0i32),
+    5i32)`; (5) `values[0i32].count()` and `count(values[0i32])`
+    (method-less-argument variants, mirroring TODO-5286's own
+    vector-indexed-access candidate). All six fail identically at the
+    **semantic** stage, before ir_lowerer's resolvers are ever reached:
+    `Semantic error: unknown call target: /map/at` (or `/map/count`,
+    or bare `count`) `[PSC1005]` - i.e. the semantics stage has no type
+    inference at all for a bracket-indexed args-pack-of-map element
+    expression (`values[0i32]`) used directly as a call/method
+    receiver; it only knows the element's type once the expression is
+    first bound to a named local (`[map<i32, i32>] head{values[0i32]}`
+    or the pinned test's own `at(values, 0i32)` binding form) - which
+    produces exactly the `Name`-kind receiver TODO-4760(a) already fixed,
+    not the `Call`-kind receiver this task investigates. Tried (6) the
+    only shape where the bracket-indexed receiver survives to
+    ir_lowerer at all - binding `head{values[0i32]}` then calling
+    `head.at(5i32)` - which compiles semantically but hits a distinct,
+    unrelated pre-existing bug first (`VM lowering error: struct
+    parameter type mismatch: expected .../MapValue__ta77c4e1cde0d2ba9,
+    got <unknown>`) that also has nothing to do with the
+    structTypeName-discriminator gap this task targets (the bracket
+    `[i]` indexing path and the `at(values, i)` bare-call path are
+    lowered through genuinely different code, and only the latter
+    - the one TODO-4760(a) already fixed - currently works end to end).
+    This matches TODO-5286's own precedent almost exactly: a
+    thorough, multi-angle search found the defective code is real and
+    live (confirmed by direct code reading - see scope above) but no
+    surface syntax reaches it with the specific Entry-vs-map
+    misclassification in play, because the upstream semantics stage has
+    no type-inference support at all for indexed args-pack-of-map
+    elements used as a call/method receiver without an intervening
+    named-local bind - a gap one full stage earlier than, and outside
+    the scope of, the ir_lowerer-only resolvers this task's fix would
+    have touched. Forcing the fix in blind (per the stop_rule) was
+    avoided.
+    Ran a fresh, name-level-diffed 3-suite baseline (no code changed,
+    so this single run stands for both "before" and "after"):
+    `PrimeStruct_semantics_tests` 2753/2754 passed (the 1 known
+    pre-existing flake, unchanged); `PrimeStruct_backend_ir_tests`
+    1600/1646 passed (the same 46 known failing `TEST CASE:` names as
+    every prior session baseline); `PrimeStruct_compile_run_tests`
+    2674/2679 passed (the same 5 pre-existing map-conformance/
+    map-reference-string-access failures as every prior baseline). All
+    three exactly match the last known-clean numbers this session has
+    been tracking (2753/2754, 1600/1646, 2674/2679) - confirmed fresh,
+    not assumed.
+  - acceptance: not met for part (a) (no code change landed - see
+    evidence above for why forcing it blind was avoided); part (a)'s
+    "provably unreachable" branch is satisfied instead (no surface
+    syntax found that presents a Call-kind receiver with a populated
+    Entry `structTypeName` to either resolver, and the reason is now
+    understood precisely: semantics itself cannot type a bracket-indexed
+    args-pack element as a call/method receiver at all without an
+    intervening bind, which collapses every reachable case back to the
+    already-fixed Name-kind shape). Part (b) intentionally not
+    attempted, per its own stop_rule and TODO-5287's original scoping,
+    which nothing this session found reason to revise.
+  - notes: if a future task adds semantics-stage type inference for
+    indexed args-pack-element expressions used directly as a call/method
+    receiver (closing the upstream gap identified above), the
+    `populateFromArgsPackElement`/`populateFromArgsPackLocal`
+    structTypeName check described in implementation_notes (a) should be
+    revisited then - it remains a real, understood gap in the ir_lowerer
+    resolvers themselves, just not one any known surface syntax can
+    reach today. The cross-referencing comments TODO-5287 left at the
+    four sites (`IrLowererLowerStatementsExpr.h`,
+    `IrLowererAccessTargetResolution.cpp` x2,
+    `IrLowererIndexedAccessEmit.cpp`) were left as-is (they already
+    point future readers at this entry's resolution).
+  - stop_rule: satisfied via the task's own latent-only-debt branch,
+    directly per TODO-5286's precedent - a focused, multi-shape repro
+    search within one session found the defective code is real but
+    unreachable in effect by any known surface syntax, one stage earlier
+    than expected (semantics, not ir_lowerer), so no fix was forced in
+    blind.
