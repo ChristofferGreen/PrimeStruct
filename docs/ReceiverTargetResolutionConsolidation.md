@@ -1,7 +1,10 @@
 # Receiver-Target Resolution Consolidation Plan
 
 Status: Step 1a landed (name-set library only, unwired). Step 0
-(characterize the full rule table) not started. This is the sibling
+(characterize the full rule table) in progress - see "Step 0 Rule Table"
+below; semantics-stage method-target resolvers substantially covered,
+the four snapshot-collection mechanisms and the ir_lowerer/
+monomorphization stages remain. This is the sibling
 problem `docs/CompatPathResolutionConsolidation.md` explicitly deferred as
 a non-goal: "Method-call *receiver* inference (which type a method call
 dispatches on) stays where it is; the classifier only decides spelling
@@ -442,6 +445,211 @@ discriminator scoped to this exact pair of cases. Whether that
 discriminator generalizes into the shared classifier, or stays a local
 special case, is unresolved and left for whoever next works this
 consolidation's Step 0.
+
+## Step 0 Rule Table (progress, 2026-09-08)
+
+Following `CompatPathResolutionConsolidation.md`'s Step 0 method: for each
+implementation, enumerate every branch, its guard conditions, and which
+test (if any) pins it. Per this document's own stated order, semantics is
+covered first as reference behavior. This round covers the method-target
+resolver family in full and the four snapshot-collection mechanisms and
+the ir_lowerer name-collision gate at a pointer/cross-reference level (not
+yet full branch enumeration for those). Row IDs are local to this table
+(prefixed `R`, distinct from the compat-spelling table's numbering).
+
+### Row category A: `resolveArgsPackElementMethodTarget` and siblings (method-call-on-args-pack-element dispatch)
+
+`resolveArgsPackElementMethodTarget`
+(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp:152-217`) is the
+entry point once an args-pack element's type text is known. Branch order
+matters - it is a strict if/else-return cascade, first match wins:
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| R1 | `collectionElemType == "string"` (after `Reference`/`Pointer` unwrap) OR bare base type text is literally `"string"` | dispatch to `/string/<method>` unconditionally, no method-name check | args-pack corpus (string element method calls) |
+| R2 | `collectionElemType == "FileError"` AND `normalizedMethodName ∈ {why, is_eof, status, result}` | dispatch to `preferredFileErrorHelperTarget` | args-pack corpus (FileError element `.why()` etc.) |
+| R2b | `collectionElemType == "FileError"` AND method name NOT in that set | **falls through** past this branch entirely to the struct-type-path fallback (R7) - not rejected here, not treated as FileError | UNPINNED - documented as an open quirk in Step 1a ("method-name gating inside a type-family branch"); no test found asserting this fallthrough is intended vs. accidental |
+| R3 | element type text is template-shaped (`splitTemplateTypeName` succeeds) AND base ∈ `{vector, array}` or `isInternalSoaCollectionTypeName(base)` | dispatch to `/<base>/<method>` unconditionally, no method-name check | args-pack corpus (vector/array/soa element method calls) |
+| R4 | template-shaped AND base == `"Buffer"` AND method ∈ `{count, empty, is_valid, readback, load, store}` | dispatch to `preferredBufferMethodTarget` | args-pack corpus (Buffer element helper calls) |
+| R4b | template-shaped AND base == `"Buffer"` AND method NOT in that set | falls through to R7 (struct-path fallback) | UNPINNED |
+| R5 | template-shaped AND `isKeyValueSurfaceTypeName(base)` | delegates to `setPreferredKeyValueMethodTarget` (Row category C below) - method name NOT re-checked here | args-pack corpus (map element method calls) |
+| R6 | template-shaped AND base == `"File"` AND `isFileMethodName(method)` | dispatch to `preferredFileHelperTarget` | args-pack corpus (File element method calls) |
+| R6b | element type text is **not** template-shaped (bare, no `<...>`), even if the bare text is literally `"Buffer"` or `"File"` | R3-R6 never evaluated at all - falls straight to R7/R8 | UNPINNED - documented in Step 1a as "template-shape gating"; a bare (non-generic) `Buffer`/`File`-typed args-pack element never reaches Buffer/File dispatch in this function. Undetermined whether any such element type is reachable in practice (bare `Buffer`/`File` without a template arg may not be a real user-facing type shape) - flagged, not resolved |
+| R7 | none of the above; `isPrimitiveBindingTypeName(normalizedElemBaseType)` | dispatch to `/<baseType>/<method>` unconditionally | args-pack corpus (primitive element method calls, e.g. `args<i32>` `.method()`) |
+| R8 | none of the above; struct-type-path resolution (`resolveMethodTargetStructTypePath` then `resolveTypePath`) succeeds | dispatch to `<resolvedType>/<method>` | args-pack corpus (struct/sum element method calls) - this is also FileError's/Buffer's/File's de facto fallback per R2b/R4b/R6b |
+| R9 | none of the above | return `false` (unresolved - caller emits "unknown method") | — |
+
+Note: `isBuiltinOut` is set `true` only for R2 when the resolved path is
+exactly `/file_error/why`, and for R6 always when the resolved path starts
+with `/file/`; every other branch (R1, R3, R4, R7, R8) leaves it at its
+caller-supplied default. This asymmetry (some branches mark
+builtin-ness, most don't) is itself unpinned - no test found asserting the
+semantics of `isBuiltinOut` per branch.
+
+### Row category B: vector-family resolvers (`SemanticsValidatorMethodTargetVectorResolvers.cpp`)
+
+- **`classifyExplicitVectorHelperReceiver`** (line 80): tries, **in fixed
+  order**, `resolveCollectionVectorValueTarget` (legacy experimental
+  family) → `resolveVectorTarget` → `resolveSoaVectorTarget` →
+  `resolveArrayTarget` → `resolveStringTarget` → `resolveKeyValueTarget`,
+  returning the family name of the **first** that matches. This ordering
+  is itself a receiver-family-priority table with no shared counterpart in
+  monomorphization or `ir_lowerer` - a receiver expression that could
+  satisfy more than one of these (unclear if any real type shape does) is
+  resolved by this order alone. UNPINNED as an explicit priority
+  contract; no test found asserting the order itself, only its
+  consequences per concrete receiver type.
+- **`resolveBorrowedVectorReceiver`** (line 224): recognizes a vector
+  receiver through up to 3 layers of indirection, each its own guard:
+  (a) direct `vector<T>`-typed binding; (b) `Reference<vector<T>>` /
+  `Pointer<vector<T>>`-typed binding (checked via
+  `binding.typeTemplateArg`, a **different** code path than (c)); (c) a
+  `location(...)`/`dereference(...)`-wrapped call, recursing on the
+  wrapped argument; (d) a call expression with no direct binding, falling
+  back to `inferQueryExprTypeText` then re-parsing the inferred type text
+  for the same `Reference`/`Pointer`-of-`vector` shape as (b) - this is a
+  **fourth, separately-coded** implementation of the same
+  Reference/Pointer-unwrap-then-check-vector logic already done twice
+  above (BindingInfo-based in (b), type-text-based here). Three
+  independent copies of "is this a borrowed vector" inside one function.
+- **`preferExplicitCanonicalVectorHelperForReceiver`** (line 120) /
+  **`tryResolveExplicitCanonicalVectorCountMethodTarget`** (line 141):
+  the `count` method on an explicit canonical-vector-namespaced helper
+  path has a receiver-family-conditional diagnostic split found nowhere
+  else in this file - a map receiver whose type comes from an **explicit**
+  `[return<map<...>>]` annotation on the callee gets a different
+  "unknown call target" message than a map receiver whose type is
+  **body-inferred** (no explicit annotation), which keeps the older
+  "unknown method: <path>" diagnostic. This is a real, deliberately-coded
+  behavioral fork on *how* the receiver's type was determined, not just
+  *what* it is - pinned by name in the source comment referencing
+  "...keeps wrapper array/string same-path helper" and "wrapper temporary
+  canonical vector count slash-method rejects map receiver" test names
+  (not independently re-verified this round which literal test files
+  those map to - flagged for a future pass).
+
+### Row category C: key-value-family resolvers (`SemanticsValidatorMethodTargetKeyValueResolvers.cpp`)
+
+- **Two independently-gated key-value receiver predicates that are not
+  each other's superset/subset in an obvious way**:
+  `isCanonicalKeyValueReceiver` (line 119, checks
+  `extractAnyKeyValueTypes` i.e. canonical-or-experimental map-shaped
+  binding/field/call-return, OR `resolveCallCollectionTypePath(...) ==
+  "/map"`) vs. `isWrappedKeyValueReceiver` (line 86, checks
+  `Reference<map<K,V>>`/`Pointer<map<K,V>>`-wrapped binding/field, OR an
+  indexed-args-pack-element access resolving to a wrapped map type). A
+  receiver can satisfy one, the other, both, or neither depending on
+  exactly which of binding/field/call/indexed-access shape it has - each
+  shape is its own guarded branch, none share a common "is this
+  map-family" primitive.
+  `extractAnyKeyValueTypes` itself is `extractKeyValueCollectionTypes(...)
+  || extractExperimentalKeyValueFieldTypes(...)` (line 79) - **two**
+  further independent extractors OR'd together, "canonical" and
+  "experimental" field-shaped maps, each presumably with its own struct-
+  metadata assumptions not audited this round.
+- **`preferredKeyValueMethodTarget`** (line 219): the real decision
+  function `setPreferredKeyValueMethodTarget` delegates to. Guard
+  cascade: (1) if `explicitKeyValueHelperPath` is empty, first resolve
+  the borrowed-vs-owned helper name via
+  `borrowedKeyValueHelperNameForReceiver` (itself gated on
+  `isWrappedKeyValueReceiver` - wrapped receivers get borrowed-variant
+  method names, e.g. `at` → registry-driven borrowed name, `at_unsafe` →
+  hardcoded `at_unsafe_ref`, the one case TODO-4690/4691 left
+  un-registry-migrated per its own comment); (2) if the receiver is
+  "compatible experimental" (`resolveExperimentalKeyValueTarget` true),
+  prefer the canonical path if declared/imported, else fall back to
+  `preferredCanonicalExperimentalKeyValueHelperTarget`; (3) else if an
+  explicit spelling was given and resolves to a canonical helper name,
+  require the receiver to be experimental-compatible OR canonical OR a
+  published key-value constructor call, else return empty (reject); (4)
+  else if the canonical path is declared/imported, require
+  experimental-compatible OR canonical, else return empty. Four
+  receiver-shape-conditional branches, each independently deciding
+  accept/reject/rewrite - this is the same "priority disagreement between
+  independently-derived family classifications" shape the doc's Evidence
+  section names for TODO-4753/TODO-4760, just one level deeper (inside a
+  single stage's own key-value resolver, not yet crossing to another
+  stage).
+- **`resolveKeyValueTarget`** (line 300, the boolean predicate used
+  elsewhere as a receiver-family test) has its own, **separately coded**
+  cascade for call-expression receivers: indexed-args-pack-element
+  (3 sub-variants: direct, dereferenced, wrapped - each its own already-
+  audited function from Row category A's sibling helpers) →
+  `getBuiltinArrayAccessName` gate (cross-reference: this is the
+  ir_lowerer-side function's semantics-stage sibling, see Row category D
+  below) → `resolveCallCollectionTypePath(...) == "/map"` (with an odd
+  sub-branch: if collection-template-args resolve to exactly 2, or a
+  builtin-collection-name check independently also passes, or **neither**
+  - all three sub-paths `return true` unconditionally, i.e. once
+  `collectionTypePath == "/map"` is established this function cannot
+  return false for that receiver regardless of arg-count validity) →
+  definition-return-type inference → transform-annotation fallback. This
+  is a fifth independent "is this a map receiver" implementation
+  alongside the two predicates above and the two extractors inside them.
+
+### Row category D: the ir_lowerer name-collision gate (cross-referenced, not re-derived)
+
+`getBuiltinArrayAccessName`'s `ir_lowerer`-side early-out via
+`resolvesKeyValueHelperSurfacePath` (`IrLowererBuiltinNameHelpers.cpp:485-
+608`) is a distinct row *category*, not a stage-disagreement row: it is
+"name-collision, receiver-blind by construction" per this document's own
+2026-09-04 finding above - a bare, unrooted call literally spelled `at`
+is excluded from array-access treatment by pure string match against the
+stdlib member-name list, before any receiver type is even consulted.
+Already fully characterized by TODO-5288's work (see the Update sections
+above and TODO-5293's task block in `docs/todo.md` for the semantics-stage
+sibling's own divergent branches: capitalized `At`/`AtUnsafe` spellings,
+`stripTemplateSpecializationSuffix`, and a member-name-string-returning
+contract vs. the ir_lowerer side's bool-only contract, SOA-column
+handling, and receiver-base disambiguation) - not re-traced line-by-line
+here to avoid duplicating that existing audit. Row for this table: guard
+= `scopedName` (from literal call spelling only) matches a stdlib
+surface member name; disposition = excluded from builtin-array-access
+regardless of receiver type; pinned by `PrimeStruct_backend_ir_tests`
+(46 tests, per the 2026-09-04/05 near-regression finding above).
+
+### Row category E: the four snapshot-collection mechanisms (pointers only - not yet individually branch-enumerated)
+
+Documented in narrative form in the "Step 0 Progress" Update sections
+above from the TODO-4760 investigation; recorded here as table rows for
+completeness, with file:line pointers for whoever expands each into full
+branch enumeration next:
+
+| # | mechanism | entry point | shares logic with |
+|---|---|---|---|
+| R10 | `direct_call_targets` (naive pass) | `collectDirectCallExpr`, `SemanticsValidatorSnapshots.cpp:1578-1636` | feeds `bridge_path_choices` from the same untouched local resolution (confirmed R10/R12 share one broken local variable) |
+| R11 | `direct_call_targets` (local-aware overwrite pass) | `inferCallSnapshotData`, `SemanticsValidatorSnapshotLocals.cpp:91-160` | only overwrites R10's answer when its own is non-empty; both ultimately call the same `preferredCollectionHelperResolvedPath` → `resolveCalleePath` fallback chain (`SemanticsValidatorBuildInitializerInference.cpp:105`) |
+| R12 | `bridge_path_choices` | populated from R10's naive pass, gated by `isSemanticCollectorEnabled(buildConfig, "bridge_path_choices")`, `SemanticsValidatorSnapshots.cpp:1857,1867` | R10 |
+| R13 | `collection_specializations` | populated in `src/frontend/SemanticProduct.cpp` (not yet traced into semantics-stage resolution logic this round) | unknown - not yet traced |
+
+All four confirmed (2026-09-04, see Update sections above) to
+independently compute the same wrong answer for the TODO-4760 repro
+before that bug's actual root cause (Row category D, not any of these
+four) was found - i.e. these four are a real, demonstrated instance of
+duplicated receiver-family logic *within* the semantics stage alone, but
+turned out not to be the specific TODO-4760 defect's root cause. They
+remain open Step 0 rows regardless: `preferredCollectionHelperResolvedPath`
+is explicitly, by-design receiver-blind (`CollectionReceiverFamily::None`
+hardcoded per the compat-spelling document's own scope decision), so
+any future receiver-family classifier work here needs to treat R10-R13
+as call sites needing a receiver-aware answer plumbed in, not as
+receiver-logic to consolidate directly.
+
+### What remains for Step 0
+
+Not yet characterized to the same branch level as categories A-C above:
+monomorphization's `resolveMethodCallTemplateTarget`
+(`TemplateMonomorphMethodTargets.cpp`) and
+`TemplateMonomorphCollectionCompatibilityPaths.cpp` (including the
+`unwrapCollectionReceiverEnvelope` gap from TODO-5286/TODO-5292, see
+`docs/todo.md`'s note on those); `ir_lowerer`'s
+`IrLowererSetupTypeMethodCallResolution.cpp`,
+`IrLowererSetupTypeReceiverTargetHelpers.cpp`, and
+`IrLowererSetupTypeCollectionHelpers.cpp` beyond the one gate already
+covered in Row category D; and Row category E's four mechanisms need
+individual branch enumeration, not just the pointer-level summary above.
+Per this document's own Step 0 description, this is real, multi-session
+work - not expected to complete in one round.
 
 ## Risks
 

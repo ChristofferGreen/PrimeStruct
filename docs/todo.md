@@ -70,6 +70,42 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
+**Top priority (2026-09-08): TODO-5294, receiver-target resolution
+consolidation, Step 0.** The last several sessions (TODO-5286 through
+TODO-5292) chased individual receiver-type-resolution leaf bugs one at a
+time, with two closing as "latent-only debt" (a real defect confirmed by
+code reading, but no reachable repro today, so left unfixed) and a third
+explicitly deferred rather than attempted. Repeatedly closing real
+defects this way is a symptom that this area of the codebase
+(receiver-type-family classification, independently reimplemented across
+semantics/monomorphization/`ir_lowerer` - see
+`docs/ReceiverTargetResolutionConsolidation.md`) is unsafe to work in at
+all, not a reason to leave the bugs in place. TODO-5294 (below, and item
+101 in the Execution Queue) is the explicit top priority ahead of any
+further piecemeal leaf-picking in this neighborhood: build the Step 0
+rule table the consolidation doc calls for, so Step 1b/Step 2 can
+actually land a shared classifier instead of another guessed extraction.
+**Revisit once Step 0/1b/2 land** - these were deferred specifically
+because this area is fragile, not because they are genuinely resolved:
+
+- TODO-5286 (closed latent-only: `unwrapCollectionReceiverEnvelope`'s
+  missing `args<T>` case) - revisit: this fix should be trivial once a
+  single authoritative receiver-family classifier exists, since it
+  collapses the current need for a per-site latent-bug judgment call.
+- TODO-5292 (closed latent-only: the same discriminator gap for
+  Call-kind receivers) - revisit: same reasoning as TODO-5286: a shared
+  classifier removes the "is this reachable today" judgment call this
+  closure had to make.
+- TODO-5293 (open follow-up: merge `getBuiltinArrayAccessName`'s two
+  stage implementations, found genuinely divergent) - revisit: Step 0's
+  rule table (see the doc's new "Row category D") should make the
+  divergent-vs-latent-gap branches provable instead of judgment calls,
+  which is exactly what TODO-5293's own stop_rule is waiting on.
+- TODO-5292's own deferred part (b) (the `CollectionPairTypeInfo`/
+  `ArrayVectorAccessTargetInfo` struct merge, 70+ call sites) - revisit:
+  explicitly deferred pending this consolidation; do not attempt before
+  Step 2 reaches `ir_lowerer`.
+
 Note (2026-09-02): The full method-target-collection-resolvers-retirement
 track (TODO-5280 through TODO-5284) has resolved - see
 `docs/todo_finished.md`. `MethodTargetCollectionResolvers` no longer
@@ -511,6 +547,7 @@ Note (2026-09-03): TODO-4724 has since closed - see
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
 100. TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
+101. TODO-5294: Receiver-target resolution consolidation: Step 0 - characterize the full rule table
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
@@ -553,6 +590,72 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
 - see `docs/todo_finished.md`.
 
 ### Task Blocks
+
+- [ ] TODO-5294: Receiver-target resolution consolidation: Step 0 - characterize the full rule table
+  - owner: ai
+  - created_at: 2026-09-08
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: `docs/ReceiverTargetResolutionConsolidation.md` documents
+    receiver-type-family classification (which definition a method/call
+    dispatches to, given a receiver's inferred type) independently
+    reimplemented in semantics, monomorphization, and `ir_lowerer`, with
+    even the low-level primitives (`normalizeBindingTypeName`,
+    `splitTemplateTypeName`, `isKeyValueSurfaceTypeName`,
+    `isInternalSoaCollectionTypeName`) not shared. Evidence this is
+    load-bearing: TODO-4753 (67-test regression from a narrow fix),
+    TODO-4760 (~10-round investigation finding the same receiver-type gap
+    duplicated across 4 mechanisms within the semantics stage alone
+    before finding its real root cause), and a 46-test false-alarm
+    near-regression, all in this project. Per the doc's own Step 0
+    description (mirroring `CompatPathResolutionConsolidation.md`'s
+    Step 0): build the rule table before writing any shared function -
+    for each of the three stage implementations, enumerate every
+    branch/guard condition (type shape, method name, import visibility,
+    shadow definitions) and which test pins it. Starting points already
+    identified: the four semantics-stage mechanisms found duplicating the
+    same gap during TODO-4760's investigation (`direct_call_targets` via
+    `collectDirectCallExpr`/`inferCallSnapshotData`, `query_facts`,
+    `bridge_path_choices`, `collection_specializations`) and the
+    `ir_lowerer` `getBuiltinArrayAccessName` name-collision gate TODO-5288
+    already characterized (see TODO-5293's own scope for its full
+    detail - cross-reference, don't re-derive).
+  - implementation_notes: this round (2026-09-08) built out the rule
+    table for the semantics-stage method-target resolver family in full
+    - `resolveArgsPackElementMethodTarget` and its 9-branch cascade
+    (`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`), the
+    vector-family resolvers' receiver-priority ordering and
+    triple-duplicated Reference/Pointer-unwrap logic
+    (`SemanticsValidatorMethodTargetVectorResolvers.cpp`), and the
+    key-value-family resolvers' five independent "is this a map receiver"
+    implementations (`SemanticsValidatorMethodTargetKeyValueResolvers.cpp`)
+    - plus pointer-level rows for the four snapshot-collection mechanisms
+    and a cross-reference row for the `ir_lowerer` name-collision gate.
+    See `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 0
+    Rule Table" section for the full table and row-by-row detail. NOT yet
+    covered: monomorphization's `resolveMethodCallTemplateTarget`/
+    `TemplateMonomorphCollectionCompatibilityPaths.cpp`, `ir_lowerer`'s
+    receiver-target helpers beyond the one already-characterized gate,
+    and full branch enumeration (not just pointers) for the four
+    snapshot-collection mechanisms - left for a future round, per the
+    doc's own "real, multi-session characterization work" framing.
+  - acceptance: a rule table exists in
+    `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
+    of the three stages' receiver-type-resolution implementations, every
+    branch, its guard conditions, and which test (if any) pins it. Rows
+    the corpus does not pin get explicit "unpinned" annotations rather
+    than being silently omitted. Completeness is not required in one
+    round; genuine, well-documented progress toward full coverage is.
+    This task stays open (not `[x]`) until all three stages are covered
+    to the branch level.
+  - stop_rule: characterization only - no behavior changes, per the
+    consolidation doc's own "No behavior changes anywhere yet" non-goal.
+    If a rule-table pass surfaces a change that looks safe or tempting to
+    make, note it as a finding in the doc instead and keep going - do not
+    land it inside this task. Do not attempt Step 1b (wiring the
+    differential-audit harness) or Step 2 (migration) from inside this
+    task; those are separate, later steps gated on this one completing.
 
 - [ ] TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
   - owner: ai
