@@ -138,6 +138,40 @@ ReceiverElementFamilyResult classifyReceiverElementFamilyJoint(
     const ReceiverElementFamilyJointInput &input,
     const ReceiverElementFamilyPredicates &predicates);
 
+// Step 1b, slice 2: wired at resolveMethodTarget's own inline indexed-
+// args-pack-element cascade (SemanticsValidatorExprMethodTargetResolution.cpp,
+// the `pack[i].method()` access shape - as opposed to
+// resolveArgsPackElementMethodTarget's plain `pack_elem.method()` shape).
+// That call site independently re-implements the *same* R1/R3-R7 family
+// cascade classifyReceiverElementFamilyJoint already models, confirmed
+// during Step 1b slice 2's audit to need no new branch or family - only a
+// different relationship between its two text inputs:
+//
+//   - Its element type text is already Reference<T>/Pointer<T>-unwrapped
+//     (via unwrapReferencePointerTypeText) *before* either the family
+//     checks or the Primitive check run, so - unlike
+//     resolveArgsPackElementMethodTarget's R7, which deliberately compares
+//     the *non*-unwrapped raw text - this call site has no wrapped-vs-
+//     unwrapped asymmetry at all: callers wiring this call site should pass
+//     the same already-unwrapped text as both `unwrappedElementType` and
+//     `rawElementBaseType`.
+//   - Its FileError check is textually positioned *after* the template-
+//     shape block instead of before it (opposite of R2's position in
+//     resolveArgsPackElementMethodTarget). This is provably behavior-
+//     preserving under this classifier's existing branch order: a
+//     template-shaped type's parsed base name can never be the bare
+//     literal "FileError" (that would require unparsed text like
+//     "FileError<...>", which practice does not produce and neither call
+//     site's cascade special-cases), so the two textual orderings are
+//     mutually exclusive on any real input and this classifier's own
+//     fixed R1/R2/R3-R6b/R7 ordering (FileError checked before the
+//     template block) reproduces both call sites' verdicts identically.
+//     Not re-derived as a new rule row; noted here so a future reader
+//     does not mistake the reordering for an unmodeled divergence.
+//
+// See docs/ReceiverTargetResolutionConsolidation.md's Step 1b section for
+// the wiring detail and zero-divergence proof.
+
 // Env-gate for Step 1b's differential-audit harness
 // (docs/ReceiverTargetResolutionConsolidation.md): when
 // PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set (any value) in the

@@ -1,22 +1,29 @@
 # Receiver-Target Resolution Consolidation Plan
 
-Status: Step 1b started (2026-09-08) - the joint `(type, methodName,
-templateShape)` classifier (`classifyReceiverElementFamilyJoint`) is
-landed, unit-tested (including both Step 1a quirks), and wired behind
-`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` into exactly one call site,
-`resolveArgsPackElementMethodTarget`
-(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`) - see "Step 1b:
-diff-audit harness wired at resolveArgsPackElementMethodTarget,
-zero-divergence achieved (2026-09-08)" below for the full proof. The
-harness is observe-only and env-gated off by default; no call site
-delegates to the classifier's verdict yet (that is Step 2, not attempted
-this round). Step 0 (characterize the full rule table) is otherwise still
-in progress - see "Step 0 Rule Table" below; semantics-stage method-target
-resolvers, all five snapshot-collection mechanisms, and monomorphization
-are now fully branch-enumerated; the `ir_lowerer` stage's own
-`resolveMethodCallDefinitionFromExpr` (Row G) is now enumerated too, but
-its two sibling receiver-target-helper/collection-helper files remain
-open. This is the sibling
+Status: Step 1b, slice 2 landed (2026-09-08) - the joint `(type,
+methodName, templateShape)` classifier (`classifyReceiverElementFamilyJoint`)
+is now wired behind `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` into two
+call sites: `resolveArgsPackElementMethodTarget`
+(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`, slice 1) and
+`resolveMethodTarget`'s own inline indexed-args-pack-element cascade
+(`SemanticsValidatorExprMethodTargetResolution.cpp`, slice 2 - the
+`pack[i].method()` access shape, a near-duplicate of slice 1's cascade for
+the plain `pack_elem.method()` shape). Slice 2 needed no new classifier
+logic - the existing joint classifier already models its exact cascade;
+only its two text inputs relate differently (see "Step 1b slice 2" below
+for the full detail). See "Step 1b: diff-audit harness wired at
+resolveArgsPackElementMethodTarget, zero-divergence achieved (2026-09-08)"
+and "Step 1b slice 2: diff-audit harness wired at resolveMethodTarget's
+indexed-args-pack cascade, zero-divergence achieved (2026-09-08)" below for
+the full proofs. The harness stays observe-only and env-gated off by
+default; no call site delegates to the classifier's verdict yet (that is
+Step 2, not attempted this round). Step 0 (characterize the full rule
+table) is otherwise still in progress - see "Step 0 Rule Table" below;
+semantics-stage method-target resolvers, all five snapshot-collection
+mechanisms, and monomorphization are now fully branch-enumerated; the
+`ir_lowerer` stage's own `resolveMethodCallDefinitionFromExpr` (Row G) is
+now enumerated too, but its two sibling receiver-target-helper/collection-
+helper files remain open. This is the sibling
 problem `docs/CompatPathResolutionConsolidation.md` explicitly deferred as
 a non-goal: "Method-call *receiver* inference (which type a method call
 dispatches on) stays where it is; the classifier only decides spelling
@@ -171,12 +178,23 @@ A's rule table documents, and wired an env-gated
 (`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`) differential-audit harness
 into `resolveArgsPackElementMethodTarget` - see the dedicated Update
 section below for the full detail (classifier design, wiring mechanics,
-zero-divergence proof, unchanged-default-behavior proof). Remaining scope:
-every other Row A/B/C/D/E call site (`resolveMethodCallTemplateTarget` and
-siblings in monomorphization, `ir_lowerer`'s own helpers, and the
-snapshot-collection mechanisms) still independently re-derives receiver
-family membership - this round wired exactly one function, deliberately,
-per this document's own staged-rollout discipline.
+zero-divergence proof, unchanged-default-behavior proof).
+
+A second round (slice 2, same day) wired the identical harness pattern
+into a second call site, `resolveMethodTarget`'s own inline indexed-
+args-pack-element cascade (the `pack[i].method()` access shape) - a
+near-duplicate of slice 1's cascade discovered while looking for the
+next well-scoped call site. No classifier code changed; only the two
+inputs' relationship differs per call site (see the dedicated "Step 1b
+slice 2" section below). Remaining scope: every other Row A/B/C/D/E call
+site (`resolveMethodCallTemplateTarget` and siblings in monomorphization,
+`ir_lowerer`'s own helpers, the snapshot-collection mechanisms, and the
+still-sprawling Row B/C functions - `classifyExplicitVectorHelperReceiver`,
+`resolveBorrowedVectorReceiver`, `preferredKeyValueMethodTarget`, the five
+independent "is this a map receiver" implementations) still independently
+re-derives receiver family membership - this round wired exactly one more
+function, deliberately, per this document's own staged-rollout
+discipline.
 
 ### Step 2 — Migrate stage by stage (not started)
 
@@ -2181,6 +2199,168 @@ account for production's behavior at this call site. The harness stays
 wired and env-gated off by default. No call site was switched to use the
 classifier's verdict for real (Step 2, not attempted this round, per the
 task's explicit scope).
+
+## Step 1b slice 2: diff-audit harness wired at resolveMethodTarget's indexed-args-pack cascade, zero-divergence achieved (2026-09-08)
+
+Continuing Step 1b's own staged plan (one more call site, same pattern,
+never batching): wired the differential-audit harness into a second call
+site this round, found by looking for the next well-scoped, single-
+function target among Row category A/B/C's remaining call sites.
+
+**Why this call site, not `classifyExplicitVectorHelperReceiver` or the
+Row C "is this a map receiver" candidates.** Both were read in full this
+round before choosing. `classifyExplicitVectorHelperReceiver` (Row B)
+delegates to six large sub-resolvers (`resolveVectorTarget`,
+`resolveSoaVectorTarget`, `resolveArrayTarget`, `resolveBorrowedVectorReceiver`,
+...), each 40-150 lines with its own multi-branch cascades over binding
+shape, call-expression inference, and SOA-conversion special-casing - a
+sprawling, not-single-bounded-function shape unlike this task's own
+"smaller, cleaner target" guidance. Row C's five independent "is this a
+map receiver" implementations
+(`isCanonicalKeyValueReceiver`/`isWrappedKeyValueReceiver`/their two nested
+extractors/`resolveKeyValueTarget`) are boolean receiver-shape predicates
+gated on binding/field/call-expression *shape*, not the
+`(type, methodName, templateShape) -> family` decision shape this
+classifier models - forcing them onto `classifyReceiverElementFamilyJoint`
+would mean guessing at a mapping rather than reusing a genuinely identical
+decision, the exact anti-pattern this document's Step 1a/1b sections
+already warn against.
+
+Instead, re-reading `SemanticsValidatorExprMethodTargetResolution.cpp`
+(the file housing `resolveMethodTarget`, the ~1100-line top-level
+dispatcher slice 1's own call site is invoked from) turned up an inline
+block, lines ~1890-1947, handling the *indexed* args-pack-element method-
+call shape (`pack[i].method()`, as opposed to slice 1's plain
+`pack_elem.method()` shape) that is a near-verbatim second, independently-
+coded copy of slice 1's own R1/R3-R7 cascade: string check, then a
+template-shape-gated vector/array/soa -> Buffer -> key-value -> File
+block, then a FileError check, then the primitive check, then the struct-
+type-path fallback. This is exactly Row category A's own shape (the doc's
+"resolveArgsPackElementMethodTarget and its siblings" framing already
+anticipated a family of call sites like this), well-bounded (one ~60-line
+`if` block inside a much larger function, touched without altering
+anything else in that function), and reuses the *same* classifier
+verdict-space this round already built - the ideal next slice.
+
+**Classifier extension: none needed.** Auditing this block's exact inputs
+found it needs no new branch, family, or predicate - `classifyReceiverElementFamilyJoint`
+already covers it. Two structural differences from slice 1 were found and
+resolved by understanding, not by adding code:
+
+- **No wrapped-vs-unwrapped Primitive-check asymmetry.** Slice 1's R7
+  quirk (documented above and in the header) exists because
+  `resolveArgsPackElementMethodTarget` computes its Primitive-check text
+  (`normalizedElemBaseType`) *before* unwrapping `Reference<T>`/`Pointer<T>`,
+  while every other branch there runs on the *unwrapped* text. This call
+  site's `accessElemType` is already passed through
+  `unwrapReferencePointerTypeText` before either `normalizedElemType` or
+  `normalizedElemBaseType` is computed (line ~1891), so both are the exact
+  same already-unwrapped string here - there is no wrapped/unwrapped split
+  to model. The wiring passes that single string as both
+  `unwrappedElementType` and `rawElementBaseType`, which is exactly
+  `jointInputFor`'s existing test-helper default (`rawBase` defaults to
+  `unwrapped` when omitted) - confirmed by a new unit test contrasting the
+  two call sites' conventions on the identical original element type (see
+  below).
+- **FileError check position.** This block checks FileError *after* the
+  template-shape block (opposite of slice 1's R2-before-R3 ordering).
+  Proven behavior-preserving, not merely assumed: a template-shaped type's
+  parsed base name (`splitTemplateTypeName`'s output) can never equal the
+  bare literal `"FileError"` - that would require unparsed text like
+  `"FileError<...>"`, which neither call site's cascade, nor any test
+  corpus grep this round, produces - so the two check orderings are
+  mutually exclusive on every real input and the classifier's own fixed
+  ordering (FileError checked before the template block) reproduces both
+  call sites' verdicts identically. Documented in the header rather than
+  re-derived as a new rule row, since it changes no observable behavior.
+
+Both findings are recorded on `classifyReceiverElementFamilyJoint`'s own
+header comment (not just here) so a future reader wiring a third call site
+does not mistake either for an unmodeled divergence.
+
+**Unit tests.** One new `TEST_CASE` added (23 total in the classifier's
+test file, all passing) explicitly pinning slice 2's "both classifier
+inputs receive the same already-unwrapped text" contract, contrasted
+against slice 1's wrapped-raw-text convention on the identical original
+element type (`Reference<i32>` unwrapped to `i32`) - slice 2's convention
+classifies `Primitive`, slice 1's classifies `StructOrUnknown`, same
+classifier, different verdict, purely from which text each call site's
+caller supplies.
+
+**Wiring mechanics.** Identical pattern to slice 1, applied to this block
+only: `resolveMethodTarget`'s control flow, argument types, and return
+values inside and outside this specific `if` block are completely
+unmodified. Additions: a cached `isReceiverTargetDiffAuditEnabled()`
+check plus classifier-verdict computation gated on it (skipped entirely
+when unset), and one `auditFamily2(...)` call inserted immediately before
+each of the block's existing `return` statements (String, VectorLike/Soa,
+Buffer, KeyValue - covering both of its two return paths, File, FileError,
+Primitive, and the struct-path-found case). The one point in this block
+that does *not* return - the struct-path-fallback-empty case, which falls
+through to further, unrelated fallback resolution elsewhere in the
+enclosing function (`resolveStringTarget`, `resolveKeyValueValueType`,
+...) rather than committing to an answer of its own - is deliberately left
+unaudited: unlike slice 1's R9 (which does `return false` as
+`resolveArgsPackElementMethodTarget`'s own terminal verdict), this
+cascade never treats "no match" as its own final answer, so there is no
+production decision at that point to compare against. Auditing there would
+compare the classifier's opinion against a decision production simply
+does not make at that spot.
+
+**Zero-divergence proof.** Ran the full 3-suite battery with
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` set (both slices wired and
+active simultaneously - the harness's own design means each call site's
+audit is independent, so this exercises both slice 1's and slice 2's
+verdicts in the same runs):
+
+| suite | test cases | failed | assertions | failed | `[receiver-target-diff-audit] MISMATCH` lines |
+|---|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 | **0** |
+| backend_ir | 1646 | 46 | 16428 | 137 | **0** |
+| compile_run | 2679 | 5 | 15294 | 8 | **0** |
+
+(Test-case count is up by 1 from slice 1's own recorded 2766 - this
+round's one new classifier unit test; failure counts (1/46/5) match the
+pre-existing baseline this round independently re-confirmed fresh before
+any change, below.)
+
+**Unchanged-default-behavior proof.** Ran the same battery with the env
+var unset and diffed the *set* of failing test-case names (not just
+counts) against a freshly re-confirmed pre-change baseline - `git status`
+confirmed a clean tree at `4c2cfdb` before starting, then the existing
+`build-release` binaries (already built from that exact commit) were run
+directly with `-r=console -d`, parsed for the `TEST CASE:` line
+immediately preceding each `ERROR:`/`is NOT correct!` line per suite, to
+get the baseline failing-name set - then the same procedure was repeated
+after the change, with the env var unset:
+
+- `PrimeStruct_semantics_tests`: baseline and post-change failing-name
+  sets both exactly `{"semantic product validates direct return
+  method-like borrowed helper-return experimental soa reads"}` (the same
+  pre-existing flake this document's earlier Update sections reference) -
+  diff empty. Test-case count up by 1 (2767 vs 2766), matching the one new
+  unit test.
+- `PrimeStruct_backend_ir_tests`: baseline and post-change failing-name
+  sets both the same 46 names - diff empty, test-case count unchanged
+  (1646).
+- `PrimeStruct_compile_run_tests`: baseline and post-change failing-name
+  sets both the same 5 names - diff empty, test-case count unchanged
+  (2679). One incidental observation: the suite's own *total passed-
+  assertion* count varied between two back-to-back post-change runs with
+  identical code and environment (15294 in one run, 15278 in another) even
+  though the failing-name set and per-test SUCCESS/ERROR line counts were
+  byte-identical between them - a pre-existing run-to-run nondeterminism
+  in this suite (not traced further this round; out of this task's scope),
+  not a regression from this change. The *failed*-assertion count (8) and
+  failing-test-name set stayed fixed across all runs regardless.
+
+**Conclusion.** Zero divergence achieved for this second call site on the
+first attempt, same as slice 1 - the classifier needed no new logic, only
+a documented understanding of how its two existing inputs map onto this
+call site's already-unwrapped text and reordered FileError check. The
+harness stays wired and env-gated off by default at both slices. No call
+site was switched to use the classifier's verdict for real (Step 2, not
+attempted this round).
 
 ## Risks
 

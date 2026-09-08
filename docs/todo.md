@@ -892,6 +892,62 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     mechanisms) still independently re-derives receiver family membership
     and is unwired. Still not marked `[x]` - this is one call site out of
     a large remaining set.
+  - implementation_notes (2026-09-08, eighth round - Step 1b slice 2):
+    wired the same env-gated (`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`)
+    differential-audit harness into a second call site,
+    `resolveMethodTarget`'s own inline indexed-args-pack-element cascade
+    (`SemanticsValidatorExprMethodTargetResolution.cpp`, the
+    `pack[i].method()` access shape - a near-verbatim second, independent
+    copy of slice 1's R1/R3-R7 cascade for the plain `pack_elem.method()`
+    shape). Read `classifyExplicitVectorHelperReceiver` (Row B) and Row
+    C's five "is this a map receiver" implementations in full first and
+    ruled both out as this round's target: the former delegates to six
+    large multi-branch sub-resolvers (not a single bounded function), the
+    latter are boolean receiver-shape predicates gated on binding/field/
+    call-expression shape, not the `(type, methodName, templateShape) ->
+    family` decision shape this classifier models - wiring either would
+    mean guessing at a mapping, not reusing a genuinely identical decision.
+    The chosen call site needed **no new classifier logic** -
+    `classifyReceiverElementFamilyJoint` already covers it; only two
+    structural differences from slice 1 needed to be understood, not
+    coded: (1) this call site's element text is already
+    Reference/Pointer-unwrapped before either the family checks or the
+    Primitive check run, so unlike slice 1's R7 quirk (wrapped-vs-unwrapped
+    asymmetry) it passes the same already-unwrapped text as both classifier
+    inputs; (2) its FileError check is positioned after the template-shape
+    block instead of before it, proven behavior-preserving (not merely
+    assumed) because a template-shaped type's parsed base name can never
+    equal the bare literal "FileError", so the two orderings are mutually
+    exclusive on every real input. Both findings are documented on the
+    classifier's own header, not just in the design doc. One new unit test
+    added (23 total in the classifier's test file, all passing) pinning
+    the two call sites' different input-construction conventions on the
+    same original element type. Wiring mechanics identical to slice 1:
+    production's control flow/return values inside and outside the audited
+    block are unmodified; the one non-returning fallthrough point in the
+    block is deliberately left unaudited (production never treats "no
+    match" as its own final answer there, unlike slice 1's R9). Took a
+    fresh, name-level-diffed 3-suite baseline before the change (confirmed
+    clean tree at `4c2cfdb`) rather than trusting prior rounds' numbers:
+    1/46/5 failures, matching what earlier rounds recorded. Ran the full
+    3-suite battery with the env var SET (both slices simultaneously wired
+    and active): zero `[receiver-target-diff-audit] MISMATCH` lines across
+    all three suites (semantics 2767 cases/1 known failure, backend_ir
+    1646/46, compile_run 2679/5 - all matching the fresh baseline). Ran the
+    same battery with the env var UNSET and diffed failing test-case
+    *names* (not just counts) against that fresh baseline: all three
+    suites' failing-name sets byte-identical (semantics's 1 known flake,
+    backend_ir's 46, compile_run's 5). One incidental finding, noted but
+    not chased further (out of this round's scope): `compile_run`'s total
+    *passed*-assertion count varied between two back-to-back post-change
+    runs with identical code/environment (15294 vs 15278) while the
+    failing-name set and per-test assertion tallies stayed byte-identical
+    - pre-existing suite nondeterminism, not a regression. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b slice 2"
+    section. Scope explicitly not attempted, per the task's own staging:
+    no call site switched to use the classifier's verdict (Step 2); every
+    other Row A/B/C/D/E call site remains independently re-deriving
+    receiver family membership and unwired. Still not marked `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

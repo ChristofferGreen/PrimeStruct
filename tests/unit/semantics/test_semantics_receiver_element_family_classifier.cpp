@@ -273,6 +273,38 @@ TEST_CASE("joint classifier: R7 primitive check uses the raw (non-unwrapped) bas
         ReceiverElementFamily::Primitive);
 }
 
+// Step 1b, slice 2: the same classifier wired at resolveMethodTarget's own
+// inline indexed-args-pack-element cascade
+// (SemanticsValidatorExprMethodTargetResolution.cpp - the `pack[i].method()`
+// access shape). That call site's element type text is already
+// Reference<T>/Pointer<T>-unwrapped (via unwrapReferencePointerTypeText)
+// *before* the Primitive check runs, unlike resolveArgsPackElementMethodTarget
+// (slice 1), which deliberately compares the non-unwrapped raw text there
+// (see the R7 test above). So slice 2's caller passes the SAME already-
+// unwrapped text for both unwrappedElementType and rawElementBaseType -
+// jointInputFor's default (rawBase defaults to unwrapped) is exactly that
+// contract. Pinning it explicitly here, rather than relying on the R7 test's
+// "directInput" case reading the same, in case that test's shape changes
+// independently in the future.
+TEST_CASE("joint classifier: slice-2 call site (already-unwrapped text for "
+          "both inputs) classifies a would-be-wrapped primitive correctly, "
+          "unlike slice 1's raw-text convention") {
+  auto predicates = alwaysFalsePredicates();
+  // Slice 2's caller has already unwrapped "Reference<i32>" down to "i32"
+  // before calling in - both fields see "i32".
+  auto slice2Input = jointInputFor("i32", "method_name");
+  CHECK(classifyReceiverElementFamilyJoint(slice2Input, predicates).family ==
+        ReceiverElementFamily::Primitive);
+
+  // Contrast: slice 1's convention (rawElementBaseType still wrapped) for
+  // the identical original element type falls to StructOrUnknown instead -
+  // same classifier, different verdict, purely from which text each call
+  // site's caller supplies as rawElementBaseType.
+  auto slice1Input = jointInputFor("i32", "method_name", "Reference<i32>");
+  CHECK(classifyReceiverElementFamilyJoint(slice1Input, predicates).family ==
+        ReceiverElementFamily::StructOrUnknown);
+}
+
 TEST_CASE("joint classifier: struct-typed element falls back to StructOrUnknown") {
   auto predicates = alwaysFalsePredicates();
   auto input = jointInputFor("MyStruct", "any_method");

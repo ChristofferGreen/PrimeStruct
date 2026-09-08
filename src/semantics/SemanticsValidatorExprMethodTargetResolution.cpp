@@ -4,11 +4,14 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsValidatorMethodTargetResolutionDetail.h"
 #include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cstdint>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -1893,7 +1896,69 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           if (!normalizedElemBaseType.empty() && normalizedElemBaseType.front() == '/') {
             normalizedElemBaseType.erase(normalizedElemBaseType.begin());
           }
+
+          // Step 1b differential-audit harness, slice 2
+          // (docs/ReceiverTargetResolutionConsolidation.md,
+          // PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT): same classifier, same
+          // pattern as resolveArgsPackElementMethodTarget's slice-1 wiring -
+          // computes the shared classifier's verdict alongside this block's
+          // own inline cascade below and compares, purely for observation.
+          // Unlike slice 1, this call site's element text is already
+          // Reference/Pointer-unwrapped before either check runs, so both
+          // classifier inputs use the same normalizedElemType/
+          // normalizedElemBaseType text - see the header comment on
+          // classifyReceiverElementFamilyJoint for why that is provably
+          // equivalent to slice 1's wrapped/unwrapped split at this call
+          // site. Zero-cost when the env var is unset.
+          const bool diffAuditEnabled2 = primec::isReceiverTargetDiffAuditEnabled();
+          primec::ReceiverElementFamily classifierFamilyForAudit2 =
+              primec::ReceiverElementFamily::StructOrUnknown;
+          if (diffAuditEnabled2) {
+            std::string auditElemBase2;
+            std::string auditElemArgText2;
+            const bool auditIsTemplateShaped2 =
+                splitTemplateTypeName(normalizedElemType, auditElemBase2, auditElemArgText2);
+            if (auditIsTemplateShaped2) {
+              auditElemBase2 = normalizeBindingTypeName(auditElemBase2);
+            }
+            primec::ReceiverElementFamilyJointInput jointInput2;
+            jointInput2.unwrappedElementType = normalizedElemType;
+            jointInput2.rawElementBaseType = normalizedElemBaseType;
+            jointInput2.isTemplateShaped = auditIsTemplateShaped2;
+            jointInput2.templateShapedBaseName = auditElemBase2;
+            jointInput2.normalizedMethodName = normalizedMethodName;
+            primec::ReceiverElementFamilyPredicates auditPredicates2{
+                [](std::string_view name) {
+                  return isInternalSoaCollectionTypeName(name);
+                },
+                [](std::string_view name) {
+                  return isKeyValueSurfaceTypeName(std::string(name));
+                },
+            };
+            classifierFamilyForAudit2 =
+                primec::classifyReceiverElementFamilyJoint(jointInput2, auditPredicates2).family;
+          }
+          auto auditFamily2 = [&](primec::ReceiverElementFamily productionFamily) {
+            if (!diffAuditEnabled2) {
+              return;
+            }
+            if (productionFamily != classifierFamilyForAudit2) {
+              std::cerr << "[receiver-target-diff-audit] MISMATCH in "
+                           "resolveMethodTarget (indexed args-pack cascade): "
+                           "accessElemType=\""
+                        << accessElemType << "\" methodName=\"" << normalizedMethodName
+                        << "\" production=" << primec::describeReceiverElementFamily(productionFamily)
+                        << " classifier=" << primec::describeReceiverElementFamily(classifierFamilyForAudit2)
+                        << "\n";
+            }
+            assert(productionFamily == classifierFamilyForAudit2 &&
+                   "receiver-target diff audit (slice 2): classifier/production family "
+                   "disagreement (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
+                   "docs/ReceiverTargetResolutionConsolidation.md Step 1b");
+          };
+
           if (normalizedElemType == "string" || normalizedElemBaseType == "string") {
+            auditFamily2(primec::ReceiverElementFamily::String);
             return setCollectionMethodTarget("/string/" + normalizedMethodName);
           }
           std::string elemBase;
@@ -1902,15 +1967,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             elemBase = normalizeBindingTypeName(elemBase);
             if (elemBase == "vector" || elemBase == "array" ||
                 isInternalSoaCollectionTypeName(elemBase)) {
+              auditFamily2(elemBase == "vector" || elemBase == "array"
+                               ? primec::ReceiverElementFamily::VectorLike
+                               : primec::ReceiverElementFamily::Soa);
               return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
             }
             if (elemBase == "Buffer" &&
                 (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
                  normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
                  normalizedMethodName == "load" || normalizedMethodName == "store")) {
+              auditFamily2(primec::ReceiverElementFamily::Buffer);
               return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
             }
             if (isKeyValueSurfaceTypeName(elemBase)) {
+              auditFamily2(primec::ReceiverElementFamily::KeyValue);
               if (setIndexedArgsPackKeyValueMethodTarget(
                       receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
             normalizedMethodName, params, locals,
@@ -1923,6 +1993,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               resolvedOut = preferredFileHelperTarget(normalizedMethodName,
                                                      currentValidationState_.context.definitionPath);
               isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
+              auditFamily2(primec::ReceiverElementFamily::File);
               return true;
             }
           }
@@ -1931,10 +2002,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                normalizedMethodName == "status" || normalizedMethodName == "result")) {
             resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
             isBuiltinOut = resolvedOut == "/file_error/why";
+            auditFamily2(primec::ReceiverElementFamily::FileError);
             return !resolvedOut.empty();
           }
           if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
             resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
+            auditFamily2(primec::ReceiverElementFamily::Primitive);
             return true;
           }
           std::string resolvedElemType = resolveStructTypePath(normalizedElemType, receiver.namespacePrefix);
@@ -1943,8 +2016,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           }
           if (!resolvedElemType.empty()) {
             resolvedOut = resolvedElemType + "/" + normalizedMethodName;
+            auditFamily2(primec::ReceiverElementFamily::StructOrUnknown);
             return true;
           }
+          // No return here: production falls through to further,
+          // unrelated fallback resolution below (resolveStringTarget,
+          // resolveKeyValueValueType, ...) when the struct-type-path
+          // fallback itself fails - this cascade does not "commit" to
+          // StructOrUnknown as ITS OWN final answer in that case (unlike
+          // resolveArgsPackElementMethodTarget's R9, which does return
+          // false as this function's own terminal verdict). Auditing here
+          // would compare against a decision production never actually
+          // makes at this call site, so it is deliberately skipped -
+          // matching this round's "audit only at existing return points"
+          // discipline.
         }
         if (this->resolveStringTarget(accessReceiver, params, locals, resolveArgsPackAccessTarget)) {
           resolvedOut = "/i32/" + normalizedMethodName;
