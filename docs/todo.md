@@ -728,6 +728,48 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     family, `isExplicit*AliasPath` predicates, path-canonicalization
     helpers). See the doc's Row categories E, F (F3 detail), and new Row G,
     plus the updated "What remains" note, for full detail.
+  - implementation_notes (2026-09-08, fourth round): closed the two
+    files the previous round left open, completing branch-level coverage
+    of all three `ir_lowerer` files this document's own "Problem,
+    Verified" section named. `IrLowererSetupTypeReceiverTargetHelpers.cpp`
+    (778 lines - `resolveMethodCallReceiverExpr`/G5,
+    `resolveMethodReceiverTypeFromLocalInfo`, `resolveMethodReceiverTypeNameFromCallExpr`,
+    `inferBuiltinAccessReceiverResultKind`, `isSoaVectorReceiverExpr`,
+    `resolveMethodReceiverTypeFromNameExpr`, and
+    `resolveMethodReceiverTarget`/G7) and
+    `IrLowererSetupTypeCollectionHelpers.cpp` (1143 lines, all of it -
+    correcting the prior round's framing that only the `SoaVector__`
+    search had been done there) are both now fully branch-enumerated as
+    "Row category G continued (I)" and "(II)" in the doc. Headline
+    finding: `resolveKeyValueHelperAliasName`/
+    `resolveBorrowedKeyValueHelperAliasName` in the collection-helpers
+    file are permanent no-op stubs (`return false` unconditionally,
+    parameter void-cast) while their vector-family counterpart is fully
+    implemented - this silently makes two live "block this inference"
+    guards (`isExplicitKeyValueHelperFallbackPath`,
+    `isExplicitKeyValueReceiverProbeHelperExpr`) permanently return
+    `false`, a real (live, not latent) vector-vs-key-value asymmetry, not
+    just isolated dead code. Also found: two genuinely-dead (unreachable,
+    no live impact) branches in `resolveMethodReceiverTypeFromLocalInfo`
+    caused by an earlier unconditional return in the same function; a
+    sixth-and-seventh-plus tally of independently-coded "what type family
+    is this receiver" predicates within just these two files (on top of
+    the ones already tallied in Rows A-G), including the
+    "String-receiver-access-means-character-access" rule recurring four
+    separate times across the two files; and a second, differently-scoped
+    reimplementation of "is this receiver a bare error-family name"
+    between `ir_lowerer`'s G6 (method-name-gated) and this round's
+    `resolveMethodReceiverTypeFromNameExpr` (ungated). Added a Step 0
+    synthesis note at the end of the Rule Table section assessing that
+    the inventory is now broad and deep enough that Step 0 is
+    substantially complete for scoping Step 1b, with one specific
+    remaining gap flagged before committing to that scope: none of the
+    accumulated `UNPINNED` guards across Rows F/G have been
+    cross-referenced against the actual test suites by name, in any
+    round so far - see the doc's new synthesis note for the full
+    reasoning. Per this task's own scope, Step 1b itself is NOT started
+    and this task is NOT marked `[x]` - the completeness call is left for
+    a human/next round to make explicitly.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

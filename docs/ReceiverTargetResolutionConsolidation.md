@@ -1041,6 +1041,322 @@ predicates at lines 573-810, the canonical-path builders) are **not**
 branch-enumerated this round - left open per this round's own budget,
 flagged again below.
 
+### Row category G continued (I): `IrLowererSetupTypeReceiverTargetHelpers.cpp` (2026-09-08, fourth round)
+
+778 lines, fully read this round. This is the sibling file Row G's G5
+(`resolveMethodCallReceiverExpr`) and G7 (`resolveMethodReceiverTarget`)
+call into; both are branch-enumerated below, along with every other
+function in the file (all are called transitively from the G-cascade,
+directly or as sub-helpers of G5/G7).
+
+**`resolveMethodCallReceiverExpr` (G5's own function, lines 142-200).**
+Extracts the receiver `Expr*` from a method-call `Expr`, or fails.
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| RT1a | `callExpr.kind != Call \|\| callExpr.isBinding \|\| !callExpr.isMethodCall` | `return false` silently (no error text) | — |
+| RT1b | `callExpr.args.empty()` | error "method call missing receiver", `return false` | — |
+| RT1c | computes a **local, function-scoped** `allowBuiltinFallback` boolean from five independent classifier calls (builtin array-access, unqualified `count`/`capacity`, bare vector-capacity-method, unqualified vector-mutator names `push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap`, unqualified key-value `contains`/`tryAt`/`insert`, plus the three injected classifier callbacks `isArrayCountCall`/`isVectorCapacityCall`/`isEntryArgsName`) AND-gated on **not** being one of three "explicit alias path" shapes (`isExplicitRemovedVectorMethodAliasPath`, `isExplicitKeyValueMethodAliasPath`, `isExplicitKeyValueContainsOrTryAtMethodPath`) or the bare-vector-capacity-method shape | — (feeds RT1d) | — |
+| RT1d | `isEntryArgsName(receiver, localsIn)` (an args-pack-`Entry`-shaped receiver, via injected callback) | if `allowBuiltinFallback`: silent `return false`; else: error "unknown method target for `<scopedPath>`", `return false` | UNPINNED |
+| RT1e | none of the above | `receiverOut = &receiver`, `return true` | — |
+
+**Cross-stage note:** this function computes its own `allowBuiltinFallback`
+with a formula distinct from (though overlapping with) the main file's
+G4 `allowBuiltinFallback` — same *name*, different scope, different
+formula, different purpose (G4 gates error-message selection at the end
+of the whole cascade; RT1c/RT1d gates only whether a bare-`Entry`
+receiver silently defers vs. hard-errors, early in the cascade). Two
+independently-computed booleans sharing a name across sibling files in
+the same cascade is exactly the kind of naming collision this
+consolidation effort is trying to surface — flagged as a
+characterization finding, not a bug (the two never interact directly).
+
+**`resolveMethodReceiverTypeFromLocalInfo` (lines 202-289).** Given a
+bound local's `LocalInfo`, decides `typeNameOut`/`resolvedTypePathOut`.
+Strict if/return cascade:
+
+| # | guard condition | disposition |
+|---|---|---|
+| RT2a | `localInfo.isFileHandle` | `typeNameOut = "File"` |
+| RT2b | `!localInfo.structTypeName.empty()` | `resolvedTypePathOut = structTypeName` |
+| RT2c | `!localInfo.errorHelperNamespacePath.empty()` | `resolvedTypePathOut = errorHelperNamespacePath` |
+| RT2d | `!localInfo.errorTypeName.empty()` | `typeNameOut = errorTypeName` |
+| RT2e | `kind == Array` | `typeNameOut = "array"` |
+| RT2f | `isSoaVector` | `typeNameOut = "soa"` |
+| RT2g | `kind == Vector` | `typeNameOut = "vector"` |
+| RT2h | `kind == Value` AND `hasKeyValueKinds` | `typeNameOut = "map"` |
+| RT2i | `kind == Buffer` | `typeNameOut = "Buffer"` |
+| RT2j | `kind == Reference` AND (`referenceToArray \|\| referenceToVector \|\| hasKeyValueKinds \|\| referenceToBuffer`) | if `structTypeName` non-empty, `resolvedTypePathOut = structTypeName`; else `typeNameOut` = `"map"`/`"soa"` or `"vector"`/`"Buffer"`/`"array"` by sub-priority (key-value first, then vector, then buffer, then array) |
+| RT2k | `kind == Pointer && pointerToArray` | `typeNameOut = "array"` |
+| RT2l | `kind == Pointer && pointerToVector` | `typeNameOut = "soa"`/`"vector"` |
+| RT2m | `kind == Pointer` AND `hasKeyValueKinds` | `typeNameOut = "map"` |
+| RT2n | `kind == Pointer && pointerToBuffer` | `typeNameOut = "Buffer"` |
+| RT2o | `kind == Reference && !structTypeName.empty()` | `resolvedTypePathOut = structTypeName` |
+| RT2p | `kind == Pointer \|\| kind == Reference` (none of the above matched) | `return false` |
+| RT2q | `kind == Value && !structTypeName.empty()` | `resolvedTypePathOut = structTypeName` |
+| RT2r | fallback | `typeNameOut = typeNameForValueKind(valueKind)`, `return true` unconditionally |
+
+**Finding (new, this round): RT2o and RT2q are dead code.** RT2b, at the
+very top of the function, already unconditionally returns as soon as
+`structTypeName` is non-empty — for *any* `LocalInfo::Kind*`, not just
+`Reference`/`Value`. So by the time execution could reach RT2o or RT2q,
+`structTypeName` is guaranteed empty (RT2b would already have returned
+otherwise), making both branches' guard conditions (`!structTypeName.empty()`)
+unreachable in practice. This reads as historical residue from a
+refactor that hoisted the `structTypeName` check to the top without
+removing its now-redundant copies further down — harmless (dead code,
+not a behavior bug) but worth noting as exactly the kind of drift that
+accumulates when the same field is checked independently in multiple
+places within one cascade, which is the broader pattern this whole
+consolidation effort is about. UNPINNED either way, since the branches
+never execute.
+
+**`resolveMethodReceiverTypeNameFromCallExpr` (lines 291-324).** Given a
+receiver that is itself a `Call`, and an already-inferred
+`LocalInfo::ValueKind`, classifies collection-constructor-shaped calls:
+Buffer-constructor-by-path check first (`Buffer`/4 rooted spellings, 1
+template arg), then `getBuiltinCollectionName` dispatch for
+`array`/`vector` (1 template arg), `map` (2 template args), `Buffer` (1
+template arg, a **second**, independent Buffer-detection path alongside
+the first), `soa` (1 template arg); falls back to
+`typeNameForValueKind(inferredKind)` if none match. Two independently
+coded Buffer-detection paths in the same 34-line function (path-string
+match vs. `getBuiltinCollectionName` classification) is a minor internal
+duplication, not cross-stage — noted for completeness, not flagged as a
+priority finding.
+
+**`inferBuiltinAccessReceiverResultKind` (lines 326-445).** Infers the
+*element* `ValueKind` of a builtin collection-access call
+(`array[i]`/`at(...)`-shaped), used to seed `inferExprKind` results
+upstream. Guarded first by four independent "block this inference"
+predicates (explicit key-value method-alias path, explicit key-value
+contains/tryAt path, `isExplicitKeyValueHelperFallbackPath` — **always
+false**, see the CollectionHelpers finding below —, and
+`blocksExplicitVectorReceiverProbeKindFallbackExpr`); then requires the
+call itself to be a 2-arg builtin-access or literal `at` call. From
+there: `Name`-kind access-receiver branches on `inferExprKind` (String
+→ `Int32`, i.e. character access), then `LocalInfo` lookup (vector/array
+family → element `valueKind`; key-value family → `keyValueValueKind`;
+plain `String`-kind `Value` local with **no** inferred kind → `Int32`);
+`Call`-kind access-receiver branches on `getBuiltinCollectionName`
+(`string`→`Int32`; `vector`/`array`/1-arg → element kind; `map`/2-arg →
+value-position kind), then a second, independent `inferExprKind`
+String-check, then `defMap`-lookup-driven declared-return-collection
+inference, then `getReturnInfo`-driven inference as a final fallback
+(String → `Int32` again, a **third** occurrence of the same
+String-receiver-means-character-access rule inside this one function).
+
+**`isSoaVectorReceiverExpr` (lines 447-483).** A **fourth** independent
+SOA-family-membership predicate in this investigation (alongside Row
+B's semantics-stage SOA checks, F12/F14's `isTemplateMonomorphSoaReceiverType`
+in monomorphization, and `normalizeCollectionReceiverTypeName`'s SOA
+branch also in monomorphization) — but unlike those, this one operates
+on receiver **Expr shape**, not a resolved type-name string: bound
+`Name` local with `isSoaVector` set; `getBuiltinCollectionName(...) ==
+"soa"` constructor call; or a `dereference(...)`-wrapped local/args-pack-element
+that is itself SOA. No shared implementation with any of the
+type-name-string-based SOA checks elsewhere — this is Expr-shape
+classification feeding *into* the type-name-string classification the
+other three do, so not a direct behavioral duplication, but one more
+independently-coded predicate that answers the same underlying "is this
+a SOA vector" question.
+
+**`resolveMethodReceiverTypeFromNameExpr` (lines 485-525).** For a bare
+`Name`-kind receiver not found in `localsIn`: unconditionally matches
+literal receiver spelling `FileError`/`ImageError`/`ContainerError`/`GfxError`
+and sets a hardcoded type/path (`FileError`→`("FileError",
+"/std/file/FileError")`, `ImageError`→`("ImageError",
+"/std/image/ImageError")`, `ContainerError`→`("ContainerError",
+"/std/collections/ContainerError")`, `GfxError`→`("GfxError", "")` — the
+one family with **no** `resolvedTypePathOut`, left for later
+disambiguation between canonical and experimental namespaces, matching
+Row F's F11 in-source-documented `GfxError` dual-namespace history).
+
+**Cross-reference/finding (new, this round): unconditional vs.
+method-name-gated bare-error-Name handling.** The main cascade's G6
+(in `IrLowererSetupTypeMethodCallResolution.cpp`) *also* handles a bare
+`Name`-kind receiver not found in `localsIn` spelled one of these four
+names — but G6 gates dispatch on the method name matching one of
+`why`/`is_eof`/`eof`/`status`/`result` (`FileError`) or
+`why`/`status`/`result` (the other three) via the `preferred*ErrorHelperTarget`
+family, and only *falls through* to G7 (which reaches this function) if
+that gate fails to find a matching `defMap` entry. This function, reached
+from G7, has **no method-name gate at all** — it unconditionally treats
+*any* method called on a bare `FileError`/`ImageError`/`ContainerError`/`GfxError`-spelled
+receiver as that error type, regardless of the method name, then lets
+`resolveMethodDefinitionFromReceiverTarget` (G8) fail on an unknown
+method separately. Net effect is probably the same final outcome (an
+"unknown method" error either way), but the *error text and code path*
+differ depending on whether G6's method-name gate matched: this is a
+second, differently-scoped reimplementation of "is this receiver one of
+the four bare error-family names" within the same G5→G10 cascade, not
+previously documented. UNPINNED; not confirmed whether the two paths'
+differing error messages are independently tested.
+
+**`resolveMethodReceiverTarget` (G7's own function, lines 527-776).**
+The largest function in the file — the receiver-type-inference dispatcher
+matching monomorphization's F3 in role (feeds `typeName`/`resolvedTypePathOut`
+for the rest of the G-cascade). Top-level dispatch on `receiverExpr.kind`:
+
+| # | guard condition | disposition |
+|---|---|---|
+| RT3a | `kind == Name` | try `resolveMethodReceiverTypeFromNameExpr` (bound-local path via `resolveMethodReceiverTypeFromLocalInfo`, or the bare-error-Name fallback above); on failure, try `resolveStructTypePathFromName` (an unrelated struct-type-name-by-namespace-walk lookup, lines 28-74 of this file, with its own import-alias fallback distinct from `resolveMethodReceiverTypeFromNameExpr`'s hardcoded 4-family table); `return false` only if both fail |
+| RT3b | `kind == Call` | large sub-cascade, RT3b-i..vii below |
+| RT3c | neither `Name` nor `Call` | `typeNameOut = typeNameForValueKind(inferExprKind(receiverExpr, localsIn))`, `return true` unconditionally (never fails) |
+
+RT3b (`kind == Call`) sub-cascade, first match wins within each block
+but several blocks can each independently set output and `return true`
+without falling through to later ones:
+
+| # | guard condition | disposition |
+|---|---|---|
+| RT3b-i | builtin-access/`at`-shaped 2-arg call whose first arg is a `Name` bound to an args-pack local | large table of `argsPackElementKind`-driven type assignments (mirrors RT2's `LocalInfo`-kind cascade but operating on `argsPackElementKind` instead of `kind`, and re-deriving FileError/File/struct/vector/array/soa/map/Buffer membership from scratch rather than delegating to RT2 — a **fifth** independent re-derivation of "what type family does this LocalInfo represent", this time args-pack-scoped) — if none of its ~13 sub-checks match, falls through to RT3b-ii |
+| RT3b-ii | `dereference(...)`-wrapped call, 1 arg | delegates to a local lambda (`resolveDereferencedCollectionOrFileErrorReceiver`) that re-derives the **same** family classification a **sixth** time, this time keyed off `receiverKind` (which is `argsPackElementKind` or plain `kind` depending on whether the dereferenced target is itself an args-pack local) — covers `isFileError`/`isFileHandle`/array/vector(soa-aware)/map(both `Value`-kind-with-KV and Reference/Pointer-with-KV shapes)/Buffer |
+| RT3b-iii | bare key-value-access-shaped probe (`isBareKeyValueAccessReceiverProbeExpr`, a local lambda checking `resolveCollectionPairTypeInfo(...).isKeyValueTarget` on the access call's first arg) | `typeNameOut = "map"`, `return true` |
+| RT3b-iv | none of the above matched; a `blocks*` predicate quartet (explicit-key-value-receiver-probe, bare-key-value-access-probe [same lambda as RT3b-iii, re-evaluated], bare-key-value-tryAt-probe, explicit-vector-receiver-probe) gates whether `inferExprKind` is even consulted | if not blocked, `inferredKind = inferExprKind(receiverExpr, localsIn)`; `typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind, resolveExprPath)` |
+| RT3b-v | `typeNameOut` still empty after RT3b-iv, none of the four blockers fired, AND `receiverExpr.isMethodCall && args.size()==2` | a **String-receiver-means-character-access** check (String inferredKind on the access call's own first arg) → `typeNameOut = "i32"` — a **fourth** occurrence of this same rule within this pair of functions (the other three are inside `inferBuiltinAccessReceiverResultKind` above) |
+| RT3b-vi | `typeNameOut` still empty | `resolvedTypePathOut = resolveMethodReceiverStructTypePathFromCallExpr(...)` (own function, cross-referenced not re-derived — declared in the header this file includes but not defined in either file read this round; likely lives in `IrLowererSetupTypeHelpers.cpp` or a sibling not in this round's scope) |
+| RT3b-vii | (always) | `return true` — this whole `Call`-kind branch, like RT3c, **never returns false**; the only failure exit for the entire `resolveMethodReceiverTarget` function is RT3a's `Name`-kind path |
+
+**Divergence tally for this file:** the "what type family does this
+receiver represent" question is independently re-derived **at least six
+times** across this file alone (RT2's `LocalInfo`-kind cascade, RT3b-i's
+`argsPackElementKind`-keyed cascade, RT3b-ii's `dereference`-wrapped
+lambda, plus the three String-means-character-access occurrences spread
+across `inferBuiltinAccessReceiverResultKind` and RT3b-v) — on top of
+the file's own `isSoaVectorReceiverExpr` and the main cascade's RT2
+already noted above, and *on top of* the file's `resolveMethodReceiverTypeFromLocalInfo`
+being conceptually the same question Row F's F3-N1 answers for
+monomorphization and Row B/C answer for semantics. This file alone is a
+microcosm of the whole consolidation problem, not just a contributor to
+it.
+
+### Row category G continued (II): `IrLowererSetupTypeCollectionHelpers.cpp` (2026-09-08, fourth round)
+
+1143 lines, fully read this round (all of it, correcting Row G's earlier
+note that only the `SoaVector__` search had been done). This file holds
+path-normalization primitives, the `preferred*ErrorHelperTarget` family
+already cross-referenced from G6, and the `isExplicit*AliasPath`
+predicate family cross-referenced from G1/G2/RT1c/RT3b-iv. It has **no**
+`SoaVector__` handling anywhere (confirmed by this round's full read,
+consistent with Row G's earlier finding that the specialization case
+lives entirely in `IrLowererSetupTypeMethodCallResolution.cpp` instead).
+
+**Headline finding (new, this round): the key-value-alias-name resolver
+is a permanent no-op stub, asymmetric with its vector counterpart.**
+`resolveKeyValueHelperAliasName` (lines 483-487) and
+`resolveBorrowedKeyValueHelperAliasName` (lines 489-493) are both:
+
+```cpp
+bool resolveKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  (void)expr;
+  helperNameOut.clear();
+  return false;
+}
+```
+
+— unconditionally `return false` for *every* input, with the parameter
+explicitly void-cast (reads as a deliberate stub, not an accidental
+omission — there is no dead branch above it, it is the entire function
+body). Its vector-family counterpart, `resolveVectorHelperAliasName`
+(lines 404-481), is fully implemented: it resolves array/vector/SOA
+(canonical, internal, experimental namespaces)/experimental-vector alias
+paths through the stdlib surface registry, with per-namespace helper-name
+remapping (e.g. `soaVectorCount`→`count`). This is a live, not latent,
+asymmetry: `resolveKeyValueHelperAliasName`'s permanent-`false` return
+propagates directly into:
+- `isExplicitKeyValueHelperFallbackPath` (line 756) — **always returns
+  false**, since its only path to `true` requires
+  `resolveKeyValueHelperAliasName` to succeed. This function is one of
+  the four "block this inference" guards gating
+  `inferBuiltinAccessReceiverResultKind` (Row G continued (I) above) —
+  it can never actually block anything, making that guard dead weight
+  in practice (always evaluates to "not blocked by this predicate").
+- `isExplicitKeyValueReceiverProbeHelperExpr` (line 770) — same stub
+  dependency, **always returns false**; this is one of RT3b-iv's four
+  `blocks*` predicates in `resolveMethodReceiverTarget` above, so it too
+  can never actually block that inference path.
+- `getNamespacedCollectionHelperName` (line 1124) — tries
+  `resolveVectorHelperAliasName` first (works), then
+  `resolveKeyValueHelperAliasName` as the map-family fallback (always
+  fails) — so this function can classify vector-family helper paths but
+  can **never** classify a key-value/map-family helper path by this
+  route, silently. Not confirmed this round whether any live caller
+  actually depends on this function's map-family branch (it is declared
+  in the header but no call site was found in either of this round's two
+  files); flagged as UNPINNED and worth a grep in a future round before
+  assuming it's inert everywhere.
+
+Whether this asymmetry is intentional (key-value aliasing routed through
+a wholly different mechanism elsewhere, making these two functions
+deliberately vestigial) or a genuine gap was not determined this round —
+no comment in-source explains it, unlike the `resolveVectorHelperAliasName`/`isRemovedVectorCompatibilityHelper`
+pairing nearby, which *does* carry an explanatory comment pointing at
+`CollectionSpellingClassifier.h`. Framed here purely as a Step 0
+characterization finding, per this document's non-goal of not fixing
+anything found.
+
+**The rest of the file, branch-enumerated:**
+
+| function | lines | role | branch summary |
+|---|---|---|---|
+| `stripGeneratedHelperSuffix` | 19-25 | strip a `__`-suffixed generated-name tail | single `find`/`erase`, no branching beyond the `npos` check |
+| `matchesRegistrySpellingSet` | 27-33 | membership test against a stdlib-registry spelling list | `std::any_of` wrapper, no independent logic |
+| `normalizePublishedCollectionPath`/`stripCollectionConstructorPathSuffix` | 35-53 | path canonicalization for constructor-family lookups | leading-slash insertion gated on 3 root-prefix checks (`std/collections/`, key-value alias root, `vector/`); suffix-stripping keyed off the leaf segment (last `/`) rather than the whole string, unlike `normalizeCollectionHelperPath`'s file-scope twin (line 643) which does the same suffix-strip differently-scoped — a **second**, structurally distinct implementation of "strip the generated-suffix tail from a path", noted but not flagged as high-priority (both agree on outcome for the shapes this round's read could verify by inspection) |
+| `findPublishedStdlibSurfaceMetadata`/`findCollectionSurfaceMetadataByCanonicalPath`/`findCollectionConstructorSurfaceMetadataForHelper` | 55-98 | stdlib-surface-registry metadata lookup by spelling/canonical-path/domain+shape | straight-line registry queries, no cross-stage relevance found |
+| `matchesResolvedRootedPublishedCollectionMemberPath` | 100-114 | "is this path `<root>/<one-segment-member>`" check | 4-condition guard (non-empty root, longer than root, root-prefix match, `/`-boundary at the root) then single-segment-membership test |
+| `rebuildScopedCollectionHelperPath` | 116-128 | rebuild a fully-scoped path from `expr.namespacePrefix`+`expr.name`, only when `expr.name` has no `/` already | feeds `normalizeCollectionHelperPath` |
+| `keyValueHelperSurfaceId`/`keyValueConstructorSurfaceId`/`isKeyValueHelperSurfaceId`/`resolveKeyValueSurfaceMemberToken` | 130-159 | registry-backed key-value surface-id/member-token resolution (the **working** key-value path, distinct from the stubbed `resolveKeyValueHelperAliasName` above) | thin wrappers; `resolveKeyValueSurfaceMemberToken` is what `isExplicitKeyValueMethodAliasPath`/`isExplicitKeyValueContainsOrTryAtMethodPath` actually use — i.e. explicit-path key-value classification (G1/G2/RT1c) is registry-driven and works; it is specifically the **alias-name-from-Expr** path (the stubbed functions) that is dead, not key-value classification generally |
+| `isBorrowedKeyValueHelperSurface` | 161-173 | `_ref`-suffixed borrowed-helper detection via the registry | works (registry-backed), feeds `isExplicitKeyValueHelperFallbackPath`'s early-out — note this means the *stub* dependency is the reason that function is dead, not this borrowed-check, which is itself fine |
+| `vectorHelperSurfaceId`/`resolveVectorSurfaceMemberToken`/`resolveVectorSurfaceExprMemberName` | 175-198 | registry-backed vector-family equivalents of the key-value ones above | fully working, used throughout Row G continued (I) |
+| `vectorHelperSurfaceMetadata`/`keyValueHelperSurfaceMetadata`/`keyValueConstructorSurfaceMetadata` | 202-219 | public accessors for the above, keyed by canonical collection type path (`/std/collections/vector`, `/std/collections/map`) and shape (`HelperFamily`/`ConstructorFamily`) | straight delegation |
+| `allowsArrayVectorCompatibilitySuffix` | 221-225 | 9-name blocklist (`count`/`capacity`/`at`/`at_unsafe`/`push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap`) | gates `collectionHelperPathCandidates`'s array→vector compat-candidate generation below |
+| `preferredFileErrorHelperTarget`/`preferredImageErrorHelperTarget`/`preferredContainerErrorHelperTarget`/`preferredGfxErrorHelperTarget` | 227-392 | already cross-referenced from Row G's G6; fully read this round | confirms Row G's characterization: `FileError` has 5 helper names (`why`/`is_eof`/`eof`/`status`/`result`), each independently probing 2-3 candidate `defMap` paths in a fixed preference order (namespaced-canonical, then bare, then — for `is_eof`/`eof`/`status`/`result` only, not `why` — a legacy free-function fallback path e.g. `/std/file/fileReadEof`); `ImageError`/`ContainerError` both have exactly 3 names (`why`/`status`/`result`, no `eof`/`is_eof`), each with the same namespaced/bare/legacy-free-function 3-tier preference (mirroring `FileError`'s pattern but with a smaller name set, matching Row G's G6 finding of the 5-vs-3 asymmetry at the call site); `GfxError` is structurally different — no name-specific branching at all, instead a single generic `helperForBasePath` used across an early exact-`resolvedTypePath`-match fast path and a `hasCanonical`/`hasExperimental` existence-based tiebreak, with **no legacy free-function fallback tier** unlike the other three families |
+| `isRemovedVectorCompatibilityHelper` | 394-402 | delegates to the shared `CollectionSpellingClassifier` (per its own comment, decision D2's authoritative removed-name set) | comment explicitly frames this as the "other registry-membership variant" already reconciled by a D2 agreement unit test — cross-referenced, not re-derived |
+| `resolveVectorHelperAliasName` | 404-481 | full branch table below | see RT-adjacent finding above; this is the real, working half of the vector/key-value asymmetry |
+| `stdCollectionsRoot`/`collectionTypePath`/`collectionMemberRoot`/`collectionMemberPath`/`canonicalKeyValueHelperPath`/`canonicalKeyValueConstructorPath`/`experimentalCollectionMemberRoot`/`experimentalCollectionTypePath`/`collectionWrapperAlias`/`keyValueCollectionAliasRoot` | 495-571 | canonical-path builders, all straight-line string concatenation with a `leadingSlash` toggle; `canonicalKeyValueHelperPath`/`canonicalKeyValueConstructorPath` fall back to a hardcoded `/std/collections/map`-rooted path if the registry metadata lookup fails (`metadata == nullptr`) | no branching of note; hardcoded-fallback-when-registry-lookup-fails is the one pattern worth flagging as a general theme across this file — the registry is treated as authoritative but every consumer has its own hardcoded escape hatch for when it isn't found |
+| `isBuiltinCollectionTypeName`/`isExperimentalCollectionTypeName` | 573-602 | type-name-string family-membership tests (bare name, rooted name, canonical path, rooted-canonical path, and `<name` template-prefix variants for each) | a **seventh** independent "is this type name X family" predicate pair in this investigation, this time string-shape-based rather than `LocalInfo`/`Expr`-based like the ones in Row G continued (I) |
+| `keyValueStorageStructRootPath`/`isKeyValueStorageStructPath` | 604-622 | key-value backing-struct-path identity check (canonical + experimental root, `__`-suffixed generated variants) | registry-backed for the canonical root, hardcoded for the experimental one (`experimentalCollectionTypePath("map", "Map")`) — same registry/hardcoded-escape-hatch pattern as above |
+| `normalizeBuiltinCollectionStructPath`/`normalizeExperimentalCollectionTypePath` | 624-641 | path normalization, single-purpose | straight-line |
+| `normalizeCollectionHelperPath` | 643-664 | the file-scope suffix-stripping/leading-slash-insertion primitive used throughout both files (declared as a free function outside the anonymous namespace, at line 15, so it is genuinely shared internal-file surface) | leading-slash insertion gated on 6 root-prefix checks (broader than `normalizePublishedCollectionPath`'s 3, see the duplication note above); suffix strip is leaf-scoped like the other copy |
+| `isExplicitRemovedVectorMethodAliasPath` | 666-690 | explicit-path-shape removed-vector-helper check (feeds RT1c/RT3b's `allowBuiltinFallback`/`blocksExplicitVectorReceiverProbeKindFallbackExpr`) | 3-prefix dispatch (`array/`, canonical vector root, experimental vector root), each delegating to `isRemovedVectorCompatibilityHelper` or the registry token resolver |
+| `isExplicitKeyValueMethodAliasPath`/`isExplicitKeyValueContainsOrTryAtMethodPath` | 692-744 | already cross-referenced from Row G's G1/G2; fully read this round | both 2-prefix dispatch (key-value alias root, canonical map root), both registry-token-resolver-backed (the *working* key-value path, per the note above) — `isExplicitKeyValueMethodAliasPath` gates on `count`/`at`/`at_unsafe`/`insert`, `isExplicitKeyValueContainsOrTryAtMethodPath` on `contains`/`tryAt`; together they partition the same 6-name set G1's cascade uses (`count`/`contains`/`tryAt`/`at`/`at_unsafe`/`insert`), but `count_ref`/`at_ref`/`at_unsafe_ref`/`insert_ref`/`contains_ref`/`tryAt_ref` (the `_ref` borrowed variants G1's own guard condition lists) are **not** matched by either of these two path-shape checks — an explicit-path receiver spelled with a `_ref` suffix takes neither of these routes, a narrower gap than G1's own guard but not previously called out at this granularity |
+| `isUnqualifiedCollectionBuiltinName` | 746-754 | exact-name, no-namespace-prefix, no-`/`-in-name unqualified-builtin-call check | used by RT1c above |
+| `isExplicitKeyValueHelperFallbackPath`/`isExplicitKeyValueReceiverProbeHelperExpr` | 756-779 | **dead per the headline finding above** | both always `false` |
+| `isExplicitVectorAccessHelperPath`/`isExplicitVectorAccessHelperExpr`/`isExplicitVectorReceiverProbeHelperExpr`/`blocksExplicitVectorReceiverProbeKindFallbackExpr` | 781-829 | vector-family counterparts of the above, fully working (registry-backed) | `isExplicitVectorAccessHelperPath` checks only `at`/`at_unsafe`; `isExplicitVectorReceiverProbeHelperExpr` checks the broader `at`/`at_unsafe`/`count`/`capacity` (4 names); `blocksExplicitVectorReceiverProbeKindFallbackExpr` further gates on `expr.isMethodCall` (blocks unconditionally) vs. explicit-path spelling (delegates to `isExplicitRemovedVectorMethodAliasPath` on the reconstructed scoped path) — used directly by RT3b-iv/RT1c above |
+| `isAllowedResolvedMapDirectCallPath`/`isAllowedResolvedVectorDirectCallPath` | 831-853 | "does this resolved definition path match one of the call path's allowed candidates" checks, used to validate a direct-call dispatch didn't drift onto an unrelated family's helper | both delegate to `collectionHelperPathCandidates`; the map variant only applies its restriction when `isExplicitKeyValueMethodAliasPath` already matched (else permissive `true`), the vector variant only applies when the call path is already vector-rooted (else permissive `true`) — same shape, independently coded per family, not shared |
+| `resolvePublishedStdlibSurfaceMemberToken`/`resolvePublishedStdlibSurfaceExprMemberName`/`resolvePublishedStdlibSurfaceConstructorMemberName`/`resolvePublishedStdlibSurfaceConstructorExprMemberName`/`isResolvedCanonicalPublishedStdlibSurfaceConstructorPath`/`isPublishedStdlibSurfaceConstructorExpr` | 855-991 | generic (family-agnostic, parameterized by `StdlibSurfaceId`) registry-backed member/constructor-name resolution — the shared mechanism `canonicalKeyValueHelperPath` et al. and the vector-family resolvers both build on | this is the one place in the file where vector and key-value families **do** share one real implementation, parameterized by surface id, rather than being independently reimplemented — worth noting as a partial counterexample to the "everything duplicated" pattern, i.e. this file demonstrates both ends: some primitives genuinely shared (this block), others independently duplicated per family (most of the rest), and one stubbed out entirely (key-value alias-name resolution) |
+| `inferPublishedKeyValueStorageStructPathFromConstructorPath` | 993-1022 | constructor-path → backing-storage-struct-path inference, key-value-specific | single-purpose, registry-backed |
+| `resolvePublishedSemanticStdlibSurfaceMemberName` | 1024-1054 | semantic-product-driven member-name resolution — tries bridge-path-choice, then method-call-target, then direct-call-target, in that order, each gated on the semantic-product's own recorded `StdlibSurfaceId` matching the requested one | **cross-stage note:** this is the same three-tier semantic-product lookup order (bridge-path-choice → method-call-target → direct-call-target) Row G's G2 and G3c both use independently for their own fallback chains — a fourth site in this investigation reimplementing that same three-way (or four-way, counting G3c's extra `findKeyValueConstructorBridgePathChoiceBySource` tier) semantic-product consultation order, though this one is gated per-surface-id rather than being method-name-driven like G2/G3c |
+| `resolvePublishedStdlibSurfaceMemberName`/`isPublishedStdlibSurfaceLoweringPath`/`isCanonicalPublishedStdlibSurfaceHelperPath` | 1056-1089 | further registry-backed path/spelling classification | straight delegation |
+| `normalizeMapImportAliasPath` | 1091-1093 | **identity function** — `return path;` unconditionally, no transformation at all | dead-looking in a different way from the key-value alias-name stubs above (this one is a genuine identity no-op, not a permanent-`false`); not confirmed this round whether any caller relies on this being a hook point for future logic vs. being vestigial itself — worth a name-search in a future round |
+| `collectionHelperPathCandidates` | 1095-1122 | builds the candidate-path list `isAllowedResolvedMapDirectCallPath`/`isAllowedResolvedVectorDirectCallPath` (and `isAllowedResolvedMapDirectCallPath`'s R-row analogues elsewhere) validate against | starts with `{path, normalizedPath}`, then — only for paths rooted at `/array/` and only when `allowsArrayVectorCompatibilitySuffix` allows the suffix — appends the registry's canonical vector-helper path for that suffix as a third candidate; no equivalent map-rooted candidate-expansion branch exists in this function at all (asymmetric with the array→vector expansion, though not clearly a gap since map has no compatibility-alias-root the way array/vector do) |
+| `getNamespacedCollectionHelperName` | 1124-1141 | already covered under the headline finding — vector branch works, map branch dead |
+
+**`resolveVectorHelperAliasName` (lines 404-481), branch table** (the
+function whose map-family sibling is the stubbed-out
+`resolveKeyValueHelperAliasName`):
+
+| # | guard condition | disposition |
+|---|---|---|
+| CH-V1 | `expr.name.empty()` | `return false` |
+| CH-V2 | rebuilt scoped path, stripped of leading `/`, starts with `vector/` | `return false` (this is the *canonical, unprefixed* vector root — deliberately excluded from the "alias" concept; presumably handled elsewhere as the non-alias case) |
+| CH-V3 | `resolveVectorSurfaceExprMemberName` succeeds (registry-backed) | `return true` immediately, before any of the hardcoded prefix checks below run |
+| CH-V4 | normalized path starts with `array/` | strip suffix, reject if `isRemovedVectorCompatibilityHelper`, else accept |
+| CH-V5 | starts with the canonical `std/collections/vector/` member root | strip suffix, accept unconditionally (no removed-name check here, asymmetric with CH-V4's array-prefix branch) |
+| CH-V6 | starts with `std/collections/soa/` | strip suffix, remap `soaVectorCount`/`soaVectorCountRef`→`count`/`count_ref`, accept only if the resulting name is one of `count`/`count_ref`/`get`/`get_ref`/`ref`/`ref_ref` |
+| CH-V7 | starts with the experimental-SOA-vector module prefix | strip suffix, remap the same two `soaVectorCount*` names, accept **only** those two (narrower than CH-V6 — `get`/`ref` variants are not accepted from the experimental-SOA prefix at all) |
+| CH-V8 | starts with the internal-SOA-vector module prefix | same as CH-V7 (narrower two-name acceptance, structurally identical block, independently coded) |
+| CH-V9 | starts with the experimental-vector member root | delegates back to `resolveVectorSurfaceExprMemberName` (registry) |
+| CH-V10 | none matched | `return false` |
+
+CH-V4 vs. CH-V5's asymmetry (array-prefix rejects removed-compat names,
+canonical-vector-prefix does not) and CH-V6 vs. CH-V7/CH-V8's asymmetry
+(canonical-SOA-prefix accepts 6 names, both non-canonical SOA prefixes
+accept only 2) are both new findings this round — neither documented
+in-source, neither confirmed live-vs-latent without a reachability check
+this round's budget didn't extend to.
+
 ### What remains for Step 0
 
 Done as of this round (2026-09-08, third round): F3 within Row category F
@@ -1070,23 +1386,156 @@ this document's own "Problem, Verified" section named but hadn't located
 `IrLowererSetupTypeCollectionHelpers.cpp` as that section's phrasing
 implied.
 
-Still not yet characterized to the same branch level:
-`IrLowererSetupTypeReceiverTargetHelpers.cpp`'s
-`resolveMethodCallReceiverExpr`/`resolveMethodReceiverTarget` (Row G's
-G5/G7, cited by name only) and the bulk of
-`IrLowererSetupTypeCollectionHelpers.cpp` beyond the `SoaVector__` search
-(the `preferred*ErrorHelperTarget` family, the `isExplicit*AliasPath`
-predicates, `canonicalKeyValueHelperPath`, `normalizeCollectionHelperPath`)
-- both flagged in Row G above, left for a future round per this document's
-own "real, multi-session characterization work" framing. Also still open:
-`inferQueryExprTypeText`/`resolveResultTypeForExpr`/
-`resolveResultTypeFromTypeName` (Q2/Q3/Q3b's own sub-helpers, cited by
-name only in R14); Row category G's many `UNPINNED` sub-guards would
-benefit from a pass cross-referencing them against
-`PrimeStruct_backend_ir_tests` by name, not attempted this round; and
-whether R14's local-aware traversal is genuinely exempt from
+Done as of this round (2026-09-08, fourth round): both files Row G's
+third round left open are now fully read and branch-enumerated -
+`IrLowererSetupTypeReceiverTargetHelpers.cpp` (778 lines - Row G
+continued (I): `resolveMethodCallReceiverExpr`/G5,
+`resolveMethodReceiverTypeFromLocalInfo`,
+`resolveMethodReceiverTypeNameFromCallExpr`,
+`inferBuiltinAccessReceiverResultKind`, `isSoaVectorReceiverExpr`,
+`resolveMethodReceiverTypeFromNameExpr`, and
+`resolveMethodReceiverTarget`/G7) and
+`IrLowererSetupTypeCollectionHelpers.cpp` (1143 lines - Row G continued
+(II): the full `preferred*ErrorHelperTarget`/`isExplicit*AliasPath`/
+`canonicalKeyValueHelperPath`/`normalizeCollectionHelperPath` family,
+plus everything else in the file). This completes explicit branch-level
+coverage of all three `ir_lowerer` files this document's "Problem,
+Verified" section originally named. New findings this round, in
+descending order of concreteness:
+- **Dead stub, live impact**: `resolveKeyValueHelperAliasName`/
+  `resolveBorrowedKeyValueHelperAliasName` in
+  `IrLowererSetupTypeCollectionHelpers.cpp` unconditionally `return
+  false` for every input (a stub, not an accidental gap - the parameter
+  is explicitly void-cast), while their vector-family counterpart
+  (`resolveVectorHelperAliasName`) is fully implemented. This silently
+  makes `isExplicitKeyValueHelperFallbackPath` and
+  `isExplicitKeyValueReceiverProbeHelperExpr` permanently return `false`
+  - both are live "block this inference" guards consulted from
+  `inferBuiltinAccessReceiverResultKind` and `resolveMethodReceiverTarget`
+  in the sibling file, so this is a real (not latent) asymmetry between
+  how vector and key-value receivers are probed, not merely dead code in
+  isolation.
+- **Dead code, no impact**: two branches in
+  `resolveMethodReceiverTypeFromLocalInfo` (`Reference && !structTypeName.empty()`
+  and `Value && !structTypeName.empty()`) are unreachable, because the
+  same function already unconditionally returns on `!structTypeName.empty()`
+  at its very top regardless of `LocalInfo::Kind` - reads as refactor
+  residue, harmless.
+- **A sixth-and-seventh-plus tally of independently-coded "what type
+  family is this receiver" predicates**, now counted precisely within
+  just these two files: `resolveMethodReceiverTypeFromLocalInfo`'s
+  `LocalInfo`-kind cascade, `resolveMethodReceiverTarget`'s
+  `argsPackElementKind`-keyed cascade and its `dereference`-wrapped-local
+  lambda (both re-deriving the same family classification a third and
+  fourth way within one function), `isSoaVectorReceiverExpr` as a
+  fifth (Expr-shape-based) SOA-membership test, and
+  `isBuiltinCollectionTypeName`/`isExperimentalCollectionTypeName` as a
+  sixth (string-shape-based) family-membership pair - on top of the
+  four already tallied across Rows B/C/F. The "String receiver access
+  means character access, so treat result as `Int32`" rule specifically
+  recurs *four* separate times across these two files alone.
+- Two bare-error-family-Name-receiver handlers
+  (`IrLowererSetupTypeMethodCallResolution.cpp`'s G6 and this round's
+  `resolveMethodReceiverTypeFromNameExpr`) both match a literal
+  `FileError`/`ImageError`/`ContainerError`/`GfxError`-spelled receiver,
+  but G6 gates on a method-name allowlist via
+  `preferred*ErrorHelperTarget` while `resolveMethodReceiverTypeFromNameExpr`
+  (reached only when G6's allowlist match fails to find a `defMap` entry)
+  has no method-name gate at all - a second, differently-scoped
+  reimplementation of the same "is this receiver a bare error-family
+  name" question within one cascade.
+- Several smaller, lower-confidence asymmetries flagged inline above
+  (CH-V4 vs. CH-V5's removed-name-check asymmetry, CH-V6 vs. CH-V7/CH-V8's
+  narrower non-canonical-SOA-prefix acceptance set, the array→vector
+  compat-candidate expansion in `collectionHelperPathCandidates` having
+  no map-rooted counterpart, and `normalizeMapImportAliasPath` being a
+  pure identity function of undetermined purpose).
+
+Still open, not attempted this round: `inferQueryExprTypeText`/
+`resolveResultTypeForExpr`/`resolveResultTypeFromTypeName` (Q2/Q3/Q3b's
+own sub-helpers, cited by name only in R14);
+`resolveMethodReceiverStructTypePathFromCallExpr` (cited by name in
+RT3b-vi above, declared in a header included by
+`IrLowererSetupTypeReceiverTargetHelpers.cpp` but not defined in either
+file read this round or last round - its defining file wasn't
+identified); Row category G's (and this round's RT/CH rows') many
+`UNPINNED` sub-guards would benefit from a pass cross-referencing them
+against `PrimeStruct_backend_ir_tests` and the semantics/monomorphization
+test suites by name, not attempted in any round so far; whether R14's
+local-aware traversal is genuinely exempt from
 `skipLocalAwareCallRefinement_` in practice (flagged, not resolved, in
-R14's own section above).
+R14's own section); and whether `getNamespacedCollectionHelperName`'s
+now-confirmed-dead map-family branch and `normalizeMapImportAliasPath`'s
+identity-function body have any live caller anywhere in the tree outside
+these two files (neither round's grep scope extended past
+`src/ir_lowerer/`).
+
+### Step 0 synthesis (2026-09-08, fourth round): is Step 0 substantially
+complete enough to scope Step 1b?
+
+All three stages this document's "Problem, Verified" section names as
+independently reimplementing receiver-target resolution now have
+explicit, branch-level characterization: semantics (Rows A-E, covering
+the args-pack/vector/key-value method-target resolver families and all
+five snapshot-collection mechanisms including `query_facts`),
+monomorphization (Row F, including its F3 receiver-type-inference
+sub-cascade), and `ir_lowerer` (Row G plus this round's two
+continuations, covering all three of `IrLowererSetupTypeMethodCallResolution.cpp`,
+`IrLowererSetupTypeReceiverTargetHelpers.cpp`, and
+`IrLowererSetupTypeCollectionHelpers.cpp`). That is the literal scope
+the "Problem, Verified" section named, and it is now done.
+
+**In favor of treating Step 0 as substantially complete:** the evidence
+pattern has been consistent and has stopped changing in kind across four
+rounds. Every stage answers the same handful of underlying questions
+(is this receiver a vector/SOA/array/map/Buffer/error-type; is it
+borrowed or owned; does an args-pack-wrapped or `Reference`/`Pointer`-wrapped
+receiver unwrap correctly) with its own independently-coded predicate,
+and every round of this investigation - regardless of which file it
+targeted - has found more instances of the same pattern rather than a
+qualitatively new one. This round's two files alone contained at least
+six more independent re-derivations of "what type family is this
+receiver" on top of the ones already tallied in Rows A-G. The dead-stub
+finding (key-value alias-name resolution) is new *in kind* (a
+permanently-false predicate, not just a divergent one) but it still
+fits the meta-pattern: it exists specifically because vector and
+key-value families are handled by parallel-but-not-shared code paths, so
+one path can silently rot while its sibling stays live. A shared-name-set
+library and a differential-audit harness (Step 1a/1b) are aimed exactly
+at this class of problem, and there is now a large, concrete rule table
+across three stages and roughly a dozen files to drive that harness's
+test-case generation from.
+
+**Specific gap that could still matter before Step 1b scoping starts:**
+none of the `UNPINNED` guards in Rows F or G (or this round's RT/CH
+rows) have been cross-referenced against the actual test suites by name
+- every round including this one has deferred that pass. A
+differential-audit harness's value depends on knowing which of these
+branches already have *some* test coverage (so a differential check adds
+confidence) versus which have none (so a differential check is the
+*first* signal ever generated for that branch). Scoping Step 1b without
+that pass risks either duplicating existing coverage or, worse,
+producing a harness that reports "all branches agree" for branches no
+existing test exercises in a way that would catch a real disagreement.
+This is a scoping-quality gap, not a completeness-of-inventory gap - the
+rule table itself is unlikely to gain much more from further Step 0
+rounds at this point, since four consecutive rounds have found
+diminishing marginal *new kinds* of divergence (mostly refinements and
+tallies of already-established patterns by this round) even as the
+absolute count of individually-named divergences keeps growing.
+
+**Overall assessment**: the inventory is broad and deep enough that
+another full Step 0 round targeting a *new file* is unlikely to change
+the qualitative picture - the case for consolidation is already
+overwhelming on the evidence gathered. The one thing worth doing before
+committing to Step 1b's specific scope is the test-cross-reference pass
+named above (even a partial one, focused on the highest-confidence
+"live, not latent" findings from this round and Row F), so that Step
+1b's harness is designed to fill the coverage gaps this investigation
+has found rather than only re-confirming what's already pinned. This is
+an assessment for whoever picks up the next phase to weigh, not a
+decision made here - per this task's own instructions, Step 1b work is
+explicitly not started in this round regardless of this assessment.
 
 ## Risks
 
