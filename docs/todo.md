@@ -640,6 +640,46 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     and full branch enumeration (not just pointers) for the four
     snapshot-collection mechanisms - left for a future round, per the
     doc's own "real, multi-session characterization work" framing.
+  - implementation_notes (2026-09-08, second round): expanded Row
+    category E (the four snapshot-collection mechanisms) from
+    pointer-level to full branch enumeration - `collectDirectCallExpr`
+    (R10, naive `direct_call_targets` pass), `inferCallSnapshotData` (R11,
+    local-aware overwrite pass), `collectionBridgeChoiceFromResolvedPath`
+    (R12, `bridge_path_choices`), and `classifyCollectionSpecialization`/
+    `publishCollectionSpecializationForBinding` (R13,
+    `collection_specializations`, traced into
+    `src/semantics/SemanticPublicationBuilders.cpp` for the first time).
+    Found three new, previously-undocumented divergences in the process:
+    R10's naive pass has no `isTaskSpawnExpr` special-case at all (R11's
+    local-aware pass does), R11 has a bare-`count`/`capacity`
+    vector-helper-method attempt with no R10 counterpart, and R10 lacks
+    the D5 shadow-precedence guard R11 has around the legacy-SOA
+    canonicalizer cascade - all three are live (not just latent) whenever
+    `skipLocalAwareCallRefinement_` forces R11 off during worker-parallel
+    "pilot routing". Also found R13's production is gated only through
+    the unrelated `"binding_facts"` collector flag, with no
+    `"collection_specializations"`-named gate anywhere in the source tree
+    despite the family having its own name in the dump formatter. Also
+    built Row category F (new) covering monomorphization in full:
+    `resolveMethodCallTemplateTarget`'s 17-branch top-level cascade
+    (`TemplateMonomorphMethodTargets.cpp`) and
+    `TemplateMonomorphCollectionCompatibilityPaths.cpp`'s
+    `unwrapCollectionReceiverEnvelope`/`normalizeCollectionReceiverTypeName`
+    - cross-referencing TODO-5286's already-closed `args<T>` finding
+    rather than re-deriving it, and surfacing two further new gaps: a
+    `FileError.eof()` method reachable only via one of two independent
+    FileError-handling code paths in the same function (the other's
+    4-method allowlist omits `eof`), and a borrowed-vs-owned SOA-receiver
+    asymmetry between the generic-SOA-receiver branch (applies
+    `isBorrowedSoaReceiver` renaming) and the concrete-experimental-SOA
+    branch (does not). See the doc's Row categories E and F and updated
+    "What remains" note for full detail. Still open: F3 (the
+    receiver-type-inference sub-cascade feeding `resolveMethodCallTemplateTarget`'s
+    `typeName`, not itself branch-enumerated), the `query_facts` snapshot
+    mechanism (named in the doc's own narrative as a fifth sibling to
+    R10-R13 but never given its own table row - still missing), and all
+    of `ir_lowerer`'s three named files beyond the one gate already in Row
+    category D.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

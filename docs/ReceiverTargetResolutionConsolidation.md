@@ -608,48 +608,260 @@ surface member name; disposition = excluded from builtin-array-access
 regardless of receiver type; pinned by `PrimeStruct_backend_ir_tests`
 (46 tests, per the 2026-09-04/05 near-regression finding above).
 
-### Row category E: the four snapshot-collection mechanisms (pointers only - not yet individually branch-enumerated)
+### Row category E: the four snapshot-collection mechanisms (full branch enumeration, 2026-09-08)
 
 Documented in narrative form in the "Step 0 Progress" Update sections
-above from the TODO-4760 investigation; recorded here as table rows for
-completeness, with file:line pointers for whoever expands each into full
-branch enumeration next:
+above from the TODO-4760 investigation; expanded here to full branch
+level per row (previous round left this at file:line pointers only).
+Note: the narrative above (see "Found the true root gate") also names a
+fifth sibling, `query_facts`, as independently duplicating the same gap -
+that mechanism is **not** covered by R10-R13 below and remains untraced;
+flagged again in "What remains" at the end of this section so it is not
+lost.
 
-| # | mechanism | entry point | shares logic with |
+**R10 - `direct_call_targets` naive pass**
+(`collectDirectCallExpr`, `SemanticsValidatorSnapshots.cpp:1578-1640`,
+called for every `Definition`'s parameters/statements/returnExpr and every
+`Execution`'s arguments/bodyArguments when `!useMergedWorkerPublicationFacts`,
+lines 1642-1660). Recurses unconditionally into `expr.args` and
+`expr.bodyArguments` regardless of whether the outer `expr` itself
+qualified (lines 1638-1639), which is why nested direct calls each get
+their own entry. For each visited `expr`:
+
+| # | guard condition | disposition | pinned by |
 |---|---|---|---|
-| R10 | `direct_call_targets` (naive pass) | `collectDirectCallExpr`, `SemanticsValidatorSnapshots.cpp:1578-1636` | feeds `bridge_path_choices` from the same untouched local resolution (confirmed R10/R12 share one broken local variable) |
-| R11 | `direct_call_targets` (local-aware overwrite pass) | `inferCallSnapshotData`, `SemanticsValidatorSnapshotLocals.cpp:91-160` | only overwrites R10's answer when its own is non-empty; both ultimately call the same `preferredCollectionHelperResolvedPath` → `resolveCalleePath` fallback chain (`SemanticsValidatorBuildInitializerInference.cpp:105`) |
-| R12 | `bridge_path_choices` | populated from R10's naive pass, gated by `isSemanticCollectorEnabled(buildConfig, "bridge_path_choices")`, `SemanticsValidatorSnapshots.cpp:1857,1867` | R10 |
-| R13 | `collection_specializations` | populated in `src/frontend/SemanticProduct.cpp` (not yet traced into semantics-stage resolution logic this round) | unknown - not yet traced |
+| E1 | `expr.kind != Expr::Kind::Call \|\| expr.isMethodCall` | not a direct-call candidate; skip straight to the unconditional recursion into args/bodyArguments | — |
+| E2 | `isTaskWaitExpr(expr)` | `resolvedPath = "/task/wait"` unconditionally (no method-name or arg check beyond what `isTaskWaitExpr` itself does) | task-wait tests generally; not specifically pinned to this snapshot collector |
+| E2b | **no `isTaskSpawnExpr(expr)` check exists in this function at all** - confirmed by grep, zero hits for `isTaskSpawnExpr` in `SemanticsValidatorSnapshots.cpp` | a task-spawn call falls through to E3 (`preferredCollectionHelperResolvedPath`/`resolveCalleePath`) exactly like an ordinary call, instead of getting a forced `/task/spawn` path the way R11 (below) gives it | UNPINNED - newly found this round, not previously called out. See "R10/R11 divergence" note below for when this is actually reachable (not merely latent) |
+| E3 | none of the above; `resolvedPath = preferredCollectionHelperResolvedPath(expr)` | receiver-blind lookup (`CollectionReceiverFamily::None` hardcoded, confirmed by the 2026-09-04 narrative above) | compile_run_benchmark_harness.cpp real-compile dump tests (see below) |
+| E4 | `resolvedPath` still empty after E3 | `resolvedPath = resolveCalleePath(expr)` (plain import-alias-priority lookup, the same machinery TODO-4753 found load-bearing) | same |
+| E5 | `resolvedPath` non-empty AND `splitSoaSurfaceHelperPath(resolvedPath, ...)` succeeds AND `usesPublicSurface` | redirect to `preferredSoaHelperTargetForCurrentImports(soaHelperName)` if that's non-empty and differs from the current path | UNPINNED as an isolated branch in this snapshot mechanism specifically; SOA public-surface redirection generally exercised elsewhere |
+| E6 | `resolvedPath` non-empty; contains `"__t"` with no `/` after it | strip the `__t<hash>` specialization suffix | UNPINNED here specifically |
+| E7 | `resolvedPath` non-empty | run all three legacy-SOA canonicalizers (`canonicalizeLegacySoaGetHelperPath`/`RefHelperPath`/`ToAosHelperPath`) **unconditionally** - no "does the current path already have a real backing definition" guard | **Divergence from R11**: R11 (below) added a `canonicalResolvedPathHasRealDefinition` guard around the identical three-canonicalizer call per `docs/CompatPathResolutionConsolidation.md`'s D5 shadow-precedence rule; R10 never got that guard. UNPINNED - not confirmed whether any real call shape reaches R7 with a real-definition-backed path that R10 would then wrongly redirect, but the asymmetry is real and unaudited |
+| E8 | `resolvedPath` non-empty; `collectionBridgeChoiceFromResolvedPath(resolvedPath)` returns a value | push a `CollectedBridgePathChoiceEntry` (feeds R12) | compile_run_benchmark_harness.cpp (vector bridge-choice dump, see below) |
+| E9 | `resolvedPath` non-empty (regardless of E8) | push a `CollectedDirectCallTargetEntry` | compile_run_benchmark_harness.cpp lines ~1874-1889 (real compile + `--dump-stage semantic-product`, two direct calls `id`/`plus`) |
+| E10 | `resolvedPath` still empty after E2-E4 | **no entry created** - the call is silently absent from `direct_call_targets`, not recorded as an error or an "unresolved" placeholder | UNPINNED - no test asserts a specific call is *absent* from this collector; only positive-presence assertions found |
 
-All four confirmed (2026-09-04, see Update sections above) to
-independently compute the same wrong answer for the TODO-4760 repro
-before that bug's actual root cause (Row category D, not any of these
-four) was found - i.e. these four are a real, demonstrated instance of
-duplicated receiver-family logic *within* the semantics stage alone, but
-turned out not to be the specific TODO-4760 defect's root cause. They
+**R11 - `direct_call_targets` local-aware overwrite pass**
+(`inferCallSnapshotData`, `SemanticsValidatorSnapshotLocals.cpp:91-206`
+[not 91-160 as an earlier round's pointer estimated - the function runs
+to line 206], invoked via `forEachLocalAwareSnapshotCall` only when
+`!useMergedWorkerPublicationFacts && !skipLocalAwareCallRefinement_`,
+`SemanticsValidatorSnapshots.cpp:1662`). For each call `expr` visited:
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| F1 | `isTaskWaitExpr(expr)` AND `inferTaskWaitBinding(...)` succeeds | `resolvedPath = "/task/wait"`, `binding = waitBinding`, **return true immediately** - skips every later branch (F3 onward) entirely, including the canonicalizer cascade R10 always runs for this same call shape | task-wait tests generally; not specifically pinned to this collector's overwrite behavior |
+| F2 | `isTaskSpawnExpr(expr)` AND `inferTaskSpawnBinding(...)` succeeds | `resolvedPath = "/task/spawn"`, same early-return shape as F1 | same caveat as F1 |
+| F3 | none of F1/F2; `preferredCollectionHelperResolvedPath(expr)` non-empty | that becomes the base `resolvedPath` | compile-and-dump tests generally |
+| F4 | `resolvedPath` still empty; `expr.kind==Call && !expr.isMethodCall && expr.args.size()==1` AND (`isUnqualifiedCollectionBuiltinName(expr,"count")` OR `...("capacity")`) | try `resolveVectorHelperMethodTarget` on the single arg; use its result if non-empty | UNPINNED to this collector specifically - this whole branch has **no counterpart in R10 at all** (R10 never tries a vector-helper-method resolution for bare `count`/`capacity` calls); another R10/R11 divergence, in addition to the task-spawn one above |
+| F5 | `resolvedPath` still empty AND NOT (`expr.kind==Call && expr.isMethodCall`) | `resolvedPath = resolveCalleePath(expr)` | same fallback R10 uses at E4 |
+| F6 | `expr.kind==Call && expr.isMethodCall && !expr.args.empty()` | try `resolveMethodTarget(...)` on the receiver (`expr.args.front()`); overwrite `resolvedPath` if it succeeds - this is the one path where a *method*-shaped call can still reach this "direct call targets" collector's overwrite pass, since R10 only ever visits `!expr.isMethodCall` calls (E1) | UNPINNED specifically for this collector; `resolveMethodTarget` itself is covered extensively by Row categories A-C above |
+| F7 | `resolvedPath` non-empty (from F3/F4/F5/F6) | run `resolveExprConcreteCallPath` to attempt a more concrete resolution; if non-empty, adopt it | UNPINNED to this collector specifically |
+| F8 | `resolvedPath` non-empty | strip `__t<hash>` suffix (same as R10's E6) | same |
+| F9 | `resolvedPath` non-empty; `canonicalResolvedPathHasRealDefinition` is **false** (`defMap_.count(...)==0 && !hasDefinitionFamilyPath(...)`) | run the same three legacy-SOA canonicalizers as R10's E7, but **only** under this guard | this is the D5 shadow-precedence guard R10 lacks (see R10's E7 divergence note) |
+| F9b | `canonicalResolvedPathHasRealDefinition` is true | **skip** all three canonicalizers - the already-real-definition path is trusted as-is | UNPINNED as an isolated branch; the guard's existence is documented at D5 in the compat-spelling doc, not re-verified against a live test this round |
+| F10 | `resolvedPath` non-empty | `inferResolvedDirectCallBindingType(resolvedPath, ...)`; if it yields a non-empty type name, set `out.binding` from it | UNPINNED to this collector specifically |
+| F11 | `out.binding.typeName` still empty | fall back to `inferBindingTypeFromInitializer(expr, ...)` | same |
+| F12 | return value | `!out.resolvedPath.empty() \|\| !out.binding.typeName.empty()` - the caller (`SemanticsValidatorSnapshots.cpp:1662-1721`) only overwrites R10's already-collected entry (erasing the old one by `semanticNodeId` or by scope/name/line/column match, then re-inserting) when this returns true **and** `callData.resolvedPath` is itself non-empty (line 1671) - a call where `inferCallSnapshotData` returns true solely because it found a binding type but no resolved path leaves R10's original (possibly wrong) `direct_call_targets`/`bridge_path_choices` entries untouched | UNPINNED - no test found specifically exercising "local-aware pass found a binding but no path" as distinct from "found nothing at all" |
+
+**R10/R11 divergence, when it's reachable, not just latent:** both
+E2b (task-spawn) and F4 (bare `count`/`capacity`) are real behavioral
+differences between the naive and local-aware passes, but R11 only runs
+at all when `!useMergedWorkerPublicationFacts && !skipLocalAwareCallRefinement_`
+(`SemanticsValidatorSnapshots.cpp:1662`). `skipLocalAwareCallRefinement_`
+is forced `true` for the duration of `collectPilotRoutingSemanticProductFacts()`
+(lines 1061-1063) when validation partitions a definition range for
+worker-parallel "pilot routing" - i.e. **for that code path only R10 runs
+at all**, and its task-spawn/count/capacity gaps versus R11 are live, not
+merely latent, for whatever definitions get routed through the pilot
+path. Not confirmed this round whether/how often the pilot-routing path
+is exercised in the test corpus for a definition actually containing a
+bare task-spawn, `count`, or `capacity` call - flagged, not resolved.
+
+**R12 - `bridge_path_choices`**
+(populated only from R10's naive pass at E8 above - R11's overwrite path
+also pushes into `collectedBridgePathChoices_`, at
+`SemanticsValidatorSnapshots.cpp:1699-1711`, using the *same*
+`collectionBridgeChoiceFromResolvedPath` helper on `callData.resolvedPath`,
+so R12 is really "R10's E8 or R11's equivalent overwrite", not a
+free-standing third mechanism). The helper itself
+(`collectionBridgeChoiceFromResolvedPath`, lines 326-446) is its own
+small cascade:
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| G1 | `isInternalSoaCollectionTypePath(normalizedResolvedPath)` (after stripping a `__t<hash>` suffix that has a `/` before it and no `/` after - a **third**, textually-similar-but-not-identical suffix-stripping implementation alongside R10's E6 and R11's F8) | family = `internalSoaCollectionTypeName()` for both elements of the returned pair | not independently verified this round which literal test pins this |
+| G2 | `findStdlibSurfaceMetadataByResolvedPath(resolvedPath)` returns non-null AND matches `vectorHelperSurfaceMetadata()`/`vectorConstructorSurfaceMetadata()` | family = `"vector"` | compile_run_benchmark_harness.cpp (`bridge_path_choices[0]: ... collection_family="vector"`) |
+| G3 | metadata non-null AND `isMapCollectionSurfaceMetadata(*metadata)` (matches key-value helper or constructor surface metadata) | family = `"map"` | UNPINNED to this specific collector (map bridge-choice dump not found in the grepped test set this round) |
+| G4 | metadata non-null AND `metadata->id` is `CollectionsColumnarHelpers`/`CollectionsColumnarConstructors` | family = `internalSoaCollectionTypeName()` | UNPINNED to this specific collector |
+| G5 | metadata non-null, none of G2-G4 | `return std::nullopt` - no bridge-choice entry at all for this call | UNPINNED |
+| G6 | metadata null; resolved path matches one of several hardcoded SOA-compat prefixes (`samePathSoaHelperTargetPath`, `compatibilitySoaHelperTargetPath`, the experimental-SOA-vector prefix with an 8-way hardcoded method-name table, or the experimental-SOA-conversions prefix with a 2-way table) | family = `internalSoaCollectionTypeName()`, helper name = the matched/mapped name | UNPINNED to this specific collector; the underlying compat-path tables are covered by `CompatPathResolutionConsolidation.md`'s own corpus, not re-verified here |
+| G7 | metadata null, none of G6's prefixes match | `return std::nullopt` | UNPINNED |
+| G8 | metadata non-null, family resolved (G2-G4); `resolveStdlibSurfaceMemberName(*metadata, resolvedPath)` returns empty | `return std::nullopt` even though a family was found - i.e. family resolution alone is not sufficient, the member-name extraction can still veto the whole entry | UNPINNED - no test found isolating this specific veto path |
+
+Production gate: `isSemanticCollectorEnabled(buildConfig, "bridge_path_choices")`
+(`SemanticsValidatorSnapshots.cpp:1857,1867`) controls whether the
+already-collected `collectedBridgePathChoices_` vector is moved into the
+publication surface at all - the collection itself (E8/F-equivalent
+above) always runs regardless of this flag; only the final hand-off is
+gated. Same "collect always, gate only at publish time" pattern as R13
+below.
+
+**R13 - `collection_specializations`**
+(producer traced this round: `publishCollectionSpecializationForBinding`,
+`src/semantics/SemanticPublicationBuilders.cpp:735-804`, called once per
+binding fact from `publishBindingFacts`, line 1635 - i.e. this mechanism
+runs off *binding facts*, not off call expressions at all, unlike R10-R12).
+`classifyCollectionSpecialization` (lines 600-653) is the real branch
+cascade, driven by `bindingEntry.bindingTypeText`:
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| H1 | `splitTemplateTypeName` fails on the current type text (not template-shaped) | `return false` - no specialization entry at all for this binding | implicit in every non-collection-typed binding in the corpus |
+| H2 | base (after `normalizeCollectionSpecializationTypeName`) is `"Reference"` or `"Pointer"`, with exactly one template arg | set `isReference`/`isPointer` (OR'd - a `Reference<Pointer<vector<T>>>` chain would set **both** flags true, since the loop unwraps repeatedly and both flags are cumulative OR, never reset), unwrap one layer, loop again | test at `test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp` (`pairsRef`/`particleRefs` entries both assert `isReference==true, isPointer==false` for single-`Reference<...>` wraps; **no test found for a `Pointer<...>` wrap, nor for a doubly-wrapped `Reference<Pointer<...>>` or `Pointer<Reference<...>>` chain** - UNPINNED for those shapes) |
+| H2b | `splitTopLevelTemplateArgs` fails or yields != 1 arg for a `Reference`/`Pointer` base | `return false` | UNPINNED |
+| H3 | base == `"vector"` (after normalization, which maps `/vector`, `/std/collections/vector`, `"Vector"`, and the experimental `Vector` spelling all to the bare string `"vector"`), with exactly one template arg | family=`"vector"`, `elementTypeText`=`valueTypeText`=the single arg | `test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp` vector-entry assertions |
+| H3b | template-arg count != 1 for `"vector"` base | `return false` | UNPINNED |
+| H4 | base == `"soa"` (after normalization, which maps `/soa`, the legacy SOA folder root, `kSoaVectorTypeName` bare/rooted, and the `soa/SoaVector` member-path spellings all to `kLegacySoaVectorFolder`) with exactly one template arg | family=`"soa"`, `elementTypeText`=`valueTypeText`=the arg | same test file's `particleRefs`/`soaEntry` assertions |
+| H4b | template-arg count != 1 for `"soa"` base | `return false` | UNPINNED |
+| H5 | base == `"map"` (normalization maps anything matching the key-value helper surface's canonical path or import-alias spellings, or an unspecialized experimental `Map` backing type, to `"map"`) with exactly two template args | family=`"map"`, `keyTypeText`/`valueTypeText` = the two args in order | same test file's `mapEntry` assertions (including `structPath` construction via `collectionSpecializationStructPath`, which itself only produces a non-empty path for the `"map"` family) |
+| H5b | template-arg count != 2 for `"map"` base | `return false` | UNPINNED |
+| H6 | base matches none of `Reference`/`Pointer`/`vector`/`soa`/`map` after normalization | `return false` - e.g. a `vector<vector<T>>` binding's *outer* classification succeeds as `"vector"` with `elementTypeText` left as the literal nested-template text (`"vector<T>"`), not itself recursively re-classified into a nested specialization entry | UNPINNED - no test found asserting nested-collection element-type text is or isn't itself expanded |
+
+Production gate: unlike R12, there is **no** `isSemanticCollectorEnabled(buildConfig,
+"collection_specializations")` check anywhere in the source tree - grepped
+the whole `src/` tree for the literal string `"collection_specializations"`
+and the only hit is the dump-formatter's label string
+(`src/frontend/SemanticProduct.cpp:1581`), not a collector-enable gate.
+Production is entirely piggybacked on the **`"binding_facts"`** collector
+flag instead (`isSemanticCollectorEnabled(buildConfig, "binding_facts")`,
+`SemanticsValidatorSnapshots.cpp:1897`, which populates
+`publicationSurface.bindingFacts`, which `publishBindingFacts` then always
+walks unconditionally at line 1635 whenever it's non-empty). This means a
+build config that disables `binding_facts` specifically but leaves
+`collection_specializations` in its collector allowlist gets **no**
+`collection_specializations` entries at all, silently - there is no way to
+request one without the other. UNPINNED as an intentional-vs-accidental
+design choice; not found documented anywhere as deliberate.
+
+All four mechanisms were confirmed (2026-09-04, see Update sections
+above) to independently compute the same wrong answer for the TODO-4760
+repro before that bug's actual root cause (Row category D, not any of
+these four) was found - i.e. these four are a real, demonstrated instance
+of duplicated receiver-family logic *within* the semantics stage alone,
+but turned out not to be the specific TODO-4760 defect's root cause. They
 remain open Step 0 rows regardless: `preferredCollectionHelperResolvedPath`
 is explicitly, by-design receiver-blind (`CollectionReceiverFamily::None`
-hardcoded per the compat-spelling document's own scope decision), so
-any future receiver-family classifier work here needs to treat R10-R13
-as call sites needing a receiver-aware answer plumbed in, not as
-receiver-logic to consolidate directly.
+hardcoded per the compat-spelling document's own scope decision), so any
+future receiver-family classifier work here needs to treat R10-R13 as
+call/binding sites needing a receiver-aware answer plumbed in, not as
+receiver-logic to consolidate directly. The R10/R11 divergences found
+this round (task-spawn, bare count/capacity, the D5-guard asymmetry) are
+new findings beyond what TODO-4760's investigation already established -
+none of them were the TODO-4760 repro's root cause either (that was Row
+category D), but they are real, currently-uncharacterized-elsewhere
+behavioral differences between the two `direct_call_targets` producers.
+
+### Row category F: monomorphization stage (`resolveMethodCallTemplateTarget` and its collection-compatibility-path helpers, 2026-09-08)
+
+Covers `TemplateMonomorphMethodTargets.cpp` (single entry point,
+`resolveMethodCallTemplateTarget`, lines 105-719) and
+`TemplateMonomorphCollectionCompatibilityPaths.cpp` (helper functions it
+calls, fully read this round - `unwrapCollectionReceiverEnvelope`,
+`normalizeCollectionReceiverTypeName`, `isCollectionReceiverTypeName`, and
+the removed/compat-alias predicates). Per this document's own prior
+finding, TODO-5286 already characterized `unwrapCollectionReceiverEnvelope`'s
+`args<T>` gap in full (see `docs/todo_finished.md`, September 6 entry) -
+cross-referenced below at F-args, not re-derived. No dedicated unit test
+file calls `resolveMethodCallTemplateTarget` or any of the
+`TemplateMonomorphCollectionCompatibilityPaths.cpp` functions directly by
+name (grepped the whole `tests/` tree); this whole stage is exercised
+only indirectly, through the `compile_run` corpus's observable compiled
+output - same "no direct pinning, only end-to-end absorption" pattern
+TODO-5286's investigation already established for this file specifically.
+
+`resolveMethodCallTemplateTarget` is a strict cascade; branch order
+matters, first match returns:
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| F0 | `!expr.isMethodCall \|\| expr.args.empty() \|\| expr.name.empty()` | `return false` immediately | — |
+| F1 | receiver is a bare `Expr::Kind::Name` whose **literal spelling** (after `normalizeBindingTypeName`) is exactly `"FileError"` (not a binding lookup - the receiver identifier text itself must read `FileError`) AND method name ∈ `{result, status, why, is_eof, eof}` (5 names) | dispatch to a hardcoded `/std/file/FileError/<method>` path via `selectStaticHelperOverloadPath` | UNPINNED to this specific literal-receiver-spelling shape; not independently verified this round which test (if any) calls methods on a receiver expression that is literally the identifier `FileError` rather than a `FileError`-typed binding |
+| F1-not | receiver is `Name` spelled `FileError` but method NOT in that 5-name set | falls through to the rest of the cascade (F2 onward) exactly as if F1 didn't exist - `typeName` inference below will not treat this as a `FileError` at all (nothing in the receiver-type-inference block special-cases a bare `FileError`-spelled Name), so this receiver shape typically reaches `typeName.empty()` at F5 and returns false | UNPINNED |
+| F2 | `resolveIndexedArgsPackMapMethodTarget()` succeeds - a narrow shape: receiver is a non-binding, non-method `Call` named exactly `at`/`at_unsafe` with 2 args, whose own first arg is a `Name` bound (in `locals`) to an args-pack element type that itself extracts as a key-value (map) element type | dispatch to `metadataBackedCanonicalKeyValueHelperPath(helperName)`, with `count`/`contains`/`tryAt`/`at`/`at_unsafe`/`insert` renamed to their `_ref` borrowed variant when the args-pack element type is itself `Reference<...>`/`Pointer<...>`-wrapped | UNPINNED to this exact call shape this round; note this check runs **after** the full receiver-type-inference block (F3 below) has already run and possibly set `typeName`/`wrappedReceiverTypeName`, but **before** the `typeName.empty()` early-return (F5) - i.e. it can override an already-successfully-inferred `typeName`'s dispatch entirely if the args-pack-map shape also matches, a priority-ordering fact not documented anywhere in-source |
+| F3 | receiver-type inference (not itself branch-enumerated further here - see summary below) | sets `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver` for `Name`/`Literal`/`BoolLiteral`/`FloatLiteral`/`StringLiteral`/`Call`-kind receivers, each its own guarded sub-case (bound local, numeric/bool/string literal kinds each with a hardcoded type text, or a `Call` receiver that tries, in order: `inferBindingTypeForMonomorph`, then `inferExprTypeTextForTemplatedVectorFallback`, then - if `!receiver.isBinding` - recursing into `resolveMethodCallTemplateTarget` itself for a method-call receiver or `resolveCalleePath` for a direct-call receiver, looking up the resolved definition, and if it's a struct definition dispatching immediately to `<resolvedPath>/<method>` without any further type-family classification, else scanning its `return<T>` transform annotations or falling back to `inferDefinitionReturnBindingForTemplatedFallback`) | not independently branch-enumerated this round - flagged as a further-detail opportunity for a future pass, budget permitting |
+| F5 | `typeName.empty()` after F3 (and F2 didn't already return) | `return false` | — |
+| F6 | `!expr.templateArgs.empty()` (explicit method-call template args given) AND `wrappedReceiverTypeName`'s base (post-normalization) is `Reference`/`Pointer` with a non-empty arg | try a "wrapper method path" `/<Reference\|Pointer>/<method>`; dispatch to it **only if** both `hasTemplatedDefinitionFamilyPath` and `hasDefinitionFamilyPath` confirm a real definition family exists there - preferred over unwrapping to the inner type `T`'s own family when it applies | UNPINNED; source comment references a "wrapper temporary canonical vector count slash-method" test name (mirrors Row category B's `preferExplicitCanonicalVectorHelperForReceiver` note) - not independently re-verified which literal test file |
+| F7 | `typeName == "File"` or its leaf is `"File"`, AND `isFileMethodName(normalizedMethodName)` (`write`/`writeLine`/`write_line`/`writeByte`/`write_byte`/`readByte`/`read_byte`/`writeBytes`/`write_bytes`/`flush`/`close`) | dispatch via `preferredFileMethodTarget`, itself gated: builtin `/file/<name>` for most names; for `write`/`write_line` specifically, builtin also if `expr.args.size() > 10` or receiver is literally the `self` binding; otherwise prefer `/File/<name>` if a real definition exists there, else fall back to builtin | UNPINNED to this exact branch |
+| F8 | `isExplicitRemovedCollectionMethodAlias(typeName, rawMethodName)` (per-family removed-helper-name check via `CollectionSpellingClassifier`, one sub-cascade per family: SOA, vector/array, map) | `return false` - explicitly rejected as a removed compatibility spelling | covered by `CompatPathResolutionConsolidation.md`'s own corpus, not re-verified here |
+| F9 | `isPrimitiveBindingTypeName(typeName)` | dispatch to `/<typeName>/<normalizedMethodName>` unconditionally | UNPINNED to this branch specifically |
+| F10 | `typeName`'s leaf (post-`normalizeCollectionReceiverTypeName`) is exactly `"args"` | only `count`/`at`/`at_unsafe` (array-normalized) dispatch to `/array/<name>`; any other method `return false` - this is the **direct downstream consumer of the TODO-5286 gap**: `unwrapCollectionReceiverEnvelope` has no `args<T>` case (confirmed, see cross-reference below), so an `args<map<K,V>>` receiver's `typeName` never becomes `"map"` and always lands here instead, meaning the map-family dispatch below (F13/generic) is unreachable for any args-pack-of-map receiver reaching this function - this is the same closed-loop TODO-5286 already traced end-to-end (found unreachable-in-effect, not landed) | args-pack corpus for the reachable `count`/`at`/`at_unsafe` cases; TODO-5286's closed investigation for the unreached map-family gap |
+| F11 | leaf is `FileError`/`ImageError`/`ContainerError`/`GfxError` AND method name (after `normalizeFileErrorMethodName`, which only maps `isEof`→`is_eof`) ∈ `{why, is_eof, status, result}` (**4** names - `eof` is absent here) | dispatch to the matching `/std/<domain>/<Error>/​<method>` static path (`GfxError` additionally prefers an experimental-namespace path over the canonical one when a definition exists there, per an in-source comment explaining this was a real, previously-fixed bug) | UNPINNED to this branch; the `eof` gap below is a new finding |
+| F11-eof | leaf is `FileError` AND method is `eof` | **not matched here at all** - `eof` only dispatches via F1's literal-`Name`-spelled-`FileError`-receiver path above; a bound `FileError`-typed variable's `.eof()` call (as opposed to a call where the receiver expression is literally spelled `FileError`) has no matching branch in this function and falls through to the final generic-resolution fallback (F16) instead of the intended static path | UNPINNED - newly found this round; not confirmed whether this is reachable in practice (whether `.eof()` is even a real supported method name outside the literal-`FileError`-receiver shape) or whether the semantics stage already rejects/rewrites it before monomorphization runs, mirroring the TODO-5286 "real gap, unconfirmed live impact" shape |
+| F12 | `isTemplateMonomorphSoaReceiverType(normalizedTypeName)` (generic, not-yet-resolved-to-a-concrete-definition SOA receiver) AND method ∈ one of 4 borrowed/owned pairs (`count`/`count_ref`, `toAos`/`toAosRef` name variants, `get`/`get_ref`, `ref`/`ref_ref`) OR `push`/`reserve` (no pair) | dispatch via the matching `preferredSamePath*MethodTarget` helper; for the 4 paired methods, `isBorrowedSoaReceiver` is consulted to substitute the `_ref` wrapper name via `borrowedSoaWrapperMethodName` first | UNPINNED to this branch |
+| F13 | none of F7-F12; `ctx.sourceDefs` lacks a definition at `resolveTypePath(typeName, ...)`, resolved via optional import-alias substitution first, AND `typeName` ∈ `{array, vector, map, soa-family}` | dispatch to `/<typeName>/<normalizedMethodName>`, run through `preferVectorStdlibHelperPath` | UNPINNED to this branch specifically |
+| F13b | same "no definition" condition, `typeName == "string"` | dispatch to `/string/<normalizedMethodName>` | UNPINNED |
+| F13c | same "no definition" condition, neither a collection family nor string | `return false` | UNPINNED |
+| F14 | `ctx.sourceDefs` **does** have a definition at `resolvedType`, AND it is specifically an experimental-SOA-*specialized* type path (`isConcreteExperimentalSoaReceiver`), AND method matches one of the same 4 pairs/`push`/`reserve` as F12 | dispatch via the same `preferredSamePath*MethodTarget` helpers as F12, but **without ever consulting `isBorrowedSoaReceiver`/`borrowedSoaWrapperMethodName`** - the borrowed-vs-owned renaming F12 applies for the generic (not-yet-concrete) SOA case is silently skipped once the receiver resolves to a concrete experimental-SOA type | UNPINNED - newly found this round; a genuine asymmetry between F12 and F14 for what should be the same logical distinction (borrowed vs. owned SOA receiver), not confirmed whether any real borrowed-and-concrete-experimental-SOA receiver shape is reachable to expose it |
+| F15 | none of the above; a `receiverHelperFamilyLeaf`-derived "rooted" path (`/<leaf>/<method>`) has a real definition family but the "same-path" `<resolvedType>/<method>` does not, and the two differ | dispatch to the rooted path instead of the same-path one | UNPINNED |
+| F16 | fallback (always reached if nothing above returned) | dispatch to `<resolvedType>/<normalizedMethodName>`, run through `preferVectorStdlibHelperPath` then `selectHelperOverloadPath` - **always returns true**, this function has no final "unresolved" `return false` once a definition exists at `resolvedType` | UNPINNED to this exact branch; this is also F11-eof's actual landing branch per the finding above |
+
+Cross-reference: `unwrapCollectionReceiverEnvelope` and
+`normalizeCollectionReceiverTypeName` (`TemplateMonomorphCollectionCompatibilityPaths.cpp:215-316`)
+are the receiver-family-normalization primitives F3/F10 depend on. Fully
+read this round (not previously done): `normalizeCollectionReceiverTypeName`
+recognizes `vector` (canonical path, `Vector`/`Vector__*` bare spellings,
+legacy-experimental vector path), the SOA family (via
+`isExperimentalSoaVectorTypePath`), and `map` (via
+`isTemplateMonomorphMapCollectionRoot`'s canonical-path-or-import-alias
+match, or a bare/generated `Map`/`Map__*` experimental backing-type name)
+- everything else passes through unchanged, including a bare `"args"`
+(confirmed: no `args`-handling branch anywhere in this function, matching
+TODO-5286's finding one level up in its caller,
+`unwrapCollectionReceiverEnvelope`, which is the one TODO-5286 already
+fully characterized: no `args<T>` case in either of its two structurally
+near-identical unwrap loops, lines 259-276 and 278-316 - two more
+independently-coded near-duplicate unwrap loops in the same function,
+not previously called out as a within-function duplication in TODO-5286's
+own writeup, though the net *effect* TODO-5286 measured (args stays
+"args", never unwraps) is unchanged by which loop copy hits it).
 
 ### What remains for Step 0
 
-Not yet characterized to the same branch level as categories A-C above:
-monomorphization's `resolveMethodCallTemplateTarget`
-(`TemplateMonomorphMethodTargets.cpp`) and
-`TemplateMonomorphCollectionCompatibilityPaths.cpp` (including the
-`unwrapCollectionReceiverEnvelope` gap from TODO-5286/TODO-5292, see
-`docs/todo.md`'s note on those); `ir_lowerer`'s
-`IrLowererSetupTypeMethodCallResolution.cpp`,
+Done as of this round (2026-09-08): Row category E's four
+snapshot-collection mechanisms (R10-R13) now have full branch-level
+enumeration, including three newly-found divergences not previously
+documented (R10/R11's task-spawn and bare-count/capacity gaps, R10's
+missing D5 shadow-precedence guard vs. R11; see Row category E). Row
+category F now covers monomorphization's `resolveMethodCallTemplateTarget`
+(`TemplateMonomorphMethodTargets.cpp`, all 17 top-level cascade branches
+F0-F16) and `TemplateMonomorphCollectionCompatibilityPaths.cpp` in full,
+cross-referencing rather than re-deriving TODO-5286's already-closed
+`unwrapCollectionReceiverEnvelope`/`args<T>` finding, and surfacing two
+further new gaps in the same neighborhood (the FileError `eof`-method
+dual-path asymmetry at F11-eof, and the borrowed-vs-owned SOA
+asymmetry between the generic and concrete-experimental SOA branches at
+F12/F14).
+
+Still not yet characterized to the same branch level: F3 within Row
+category F (the receiver-type-inference sub-cascade for `Name`/`Literal`/
+`Call`-kind receivers that feeds `typeName` before the main F0-F16
+cascade runs - noted as a further-detail opportunity, not attempted this
+round); the `query_facts` mechanism named in this document's own
+2026-09-04 narrative as a fifth sibling to R10-R13 but never added as its
+own table row (flagged again, not fixed, in Row category E above -
+whoever picks this up next should add it as R14 or fold it in); and
+`ir_lowerer`'s `IrLowererSetupTypeMethodCallResolution.cpp`,
 `IrLowererSetupTypeReceiverTargetHelpers.cpp`, and
 `IrLowererSetupTypeCollectionHelpers.cpp` beyond the one gate already
-covered in Row category D; and Row category E's four mechanisms need
-individual branch enumeration, not just the pointer-level summary above.
-Per this document's own Step 0 description, this is real, multi-session
-work - not expected to complete in one round.
+covered in Row category D - entirely untouched so far, per this
+document's own "Problem, Verified" section naming these three files as
+the IR-lowering stage's independent re-implementation, including the
+`SoaVector__`/specialization-suffix case flagged there as having no
+counterpart in the other two stages. Per this document's own Step 0
+description, this is real, multi-session work - not expected to complete
+in one round.
 
 ## Risks
 
