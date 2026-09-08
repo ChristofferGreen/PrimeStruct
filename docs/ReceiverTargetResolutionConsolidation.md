@@ -1753,6 +1753,280 @@ Step 1b scopes which branches actually need differential-audit
 scaffolding versus which are dead weight for any semantically-valid
 input.
 
+## Step 0 UNPINNED test-coverage cross-reference (2026-09-08, sixth round)
+
+Continued the fifth round's cross-reference pass, working from its own
+"Still open — not attempted this round" list, prioritizing (per this
+task's own instructions) any remaining "live, not latent" candidates and
+the most heavily-duplicated "what type family is this receiver"
+predicates first. Same methodology: `grep tests/unit/` for the exact
+function/behavior names first, then hand-built `.prime` repros compiled
+with `--dump-stage semantic-product` (the fifth round's methodology
+section already establishes this; not repeated in full here) via the
+pre-built `build-release/primec` binary where grep alone couldn't settle
+reachability. No source file was modified; all repro `.prime` files were
+written under the session scratchpad and never copied into the repo
+(confirmed via `git status`/`git diff --stat` before committing). **8
+additional UNPINNED rows/sub-guards were audited this round** (fewer than
+the fifth round's 14, by design — several of this round's rows required
+multi-step source tracing rather than a single grep/repro, and depth was
+prioritized over breadth per this task's own budget guidance). The
+remaining ~46 UNPINNED rows are listed at the end of this section for a
+future round.
+
+### Headline finding: Row F's F12/F14 SOA "asymmetry" is not an
+asymmetry — F14 is dead code, confirmed by direct source reading
+
+The fourth/fifth rounds' rule table described F12
+(`isTemplateMonomorphSoaReceiverType`-gated dispatch for the generic,
+not-yet-concrete SOA receiver case, `TemplateMonomorphMethodTargets.cpp`
+lines 604-646) and F14 (`isConcreteExperimentalSoaReceiver`-gated
+dispatch for the concrete/specialized-experimental-SOA case, lines
+671-704) as "a genuine asymmetry between F12 and F14 for what should be
+the same logical distinction (borrowed vs. owned SOA receiver) ...  not
+confirmed whether any real borrowed-and-concrete-experimental-SOA
+receiver shape is reachable to expose it." Tracing this fully this round
+found something stronger than an asymmetry: **F14 can never execute at
+all.**
+
+- `normalizedTypeName` (`TemplateMonomorphMethodTargets.cpp:532-539`) is
+  computed once and never reassigned between F12 and F14.
+- F12's guard (line 604 et seq.) is exactly
+  `isTemplateMonomorphSoaReceiverType(normalizedTypeName)` combined with
+  a method-name check, for the **identical** six method-name pairs F14
+  also checks: `count`/`count_ref`, the two `to_aos` spellings,
+  `get`/`get_ref`, `push`/`reserve`, `ref`/`ref_ref`.
+- F14's guard (line 671-673) is
+  `isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  isExperimentalSoaVectorSpecializedTypePath(resolvedType)` — a strict
+  superset condition (everything F12 requires, plus one more predicate)
+  — over the **same** six method-name pairs.
+- Every one of F12's six branches (lines 604, 613, 623, 632, 638)
+  unconditionally `return true` once its guard matches. Since F14's guard
+  implies F12's guard for every method name F14 handles, execution can
+  never reach line 671 with a matching method name that F12 hasn't
+  already dispatched and returned from three-dozen-plus lines earlier in
+  the same function.
+- Confirmed `isExperimentalSoaVectorSpecializedTypePath` has no other
+  call site in this file (`grep -n` for it: one hit, line 673) that could
+  somehow gate entry to this block differently — there is no earlier
+  branch between F12 and F14 that could exit before F14 for a
+  concrete-experimental receiver specifically (read lines 555-671 in
+  full: FileError/ImageError/ContainerError/GfxError static-dispatch
+  branches only, none SOA-related, none returning early for this
+  shape).
+- `isTemplateMonomorphSoaReceiverType` itself
+  (`TemplateMonomorphCoreUtilities.cpp:42-44`) is a single string-equality
+  check against a fixed `"soa"`-normalized constant — it does not
+  distinguish generic-vs-concrete-specialized receivers at all, which is
+  exactly why F12's guard is a superset: both a generic `soa<T>` and a
+  concrete experimental-SOA-specialized receiver normalize to the same
+  `normalizedTypeName`.
+
+This resolves the "not confirmed whether reachable" question definitively
+via code reading alone, no repro needed: F14 (lines 671-704, the
+`isConcreteExperimentalSoaReceiver`-gated block, `count`/`count_ref` at
+674-679, `get`/`get_ref` at 680-685, `push`/`reserve` at 686-691,
+`ref`/`ref_ref` at 692-697, `to_aos` variants at 698-704) is unreachable
+dead code, not merely under-tested — the extensive borrowed/owned SOA
+test corpus in
+`test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_experimental_runs_borrowed.cpp`
+(60+ TEST_CASEs covering exactly this borrowed-vs-owned `count`/`get`/
+`ref`/`to_aos`/`push`/`reserve` surface across generic `SoaVector<T>`,
+`Reference<SoaVector<T>>`, helper-return, and struct-method-borrowed
+receiver shapes, all passing) is consistent with this: every one of those
+cases is actually being served by F12 alone, and F14's
+`isBorrowedSoaReceiver`-blind dispatch is never exercised because it
+never runs. Whether this is deliberate (F14 kept as defensive/
+future-proofing code, or historical residue from before F12's guard was
+broadened to subsume it) is undetermined — no in-source comment explains
+it — but it is definitively not a live behavioral divergence for any
+input, borrowed or owned, generic or concrete-specialized. This closes
+the fourth/fifth rounds' open question on this row with more certainty
+than a coverage grep could have provided (a differential-audit harness
+built for Step 1b would need to know this branch cannot fire at all,
+rather than trying to construct a test case that reaches it).
+
+### Confirmed genuinely zero test coverage (new this round)
+
+- **R13/H6** (`collection_specializations`: a nested-collection binding's
+  outer classification succeeds but `elementTypeText` is left as the raw,
+  unexpanded nested-template text rather than being recursively
+  reclassified). Confirmed reachable — contrary to what the fifth round's
+  adjacent finding about literal `vector<vector<i32>>()` *construction*
+  being rejected upstream ("collection literal requires
+  relocation-trivial collection element type") might suggest — via a
+  **parameter declaration alone** (no construction): `useit([vector<vector<i32>>]
+  values) { ... }` compiles past semantics validation and its dump shows
+  `collection_specializations[0]: ... collection_family="vector"
+  binding_type_text="vector<vector<i32>>" element_type_text="vector<i32>"
+  value_type_text="vector<i32>"` — exactly the un-expanded-nested-text
+  behavior the rule table's H6 row describes, and genuinely reachable for
+  a real (if unusual) parameter type. Grepped the whole `tests/` tree for
+  `vector<vector<` — zero hits anywhere — so this reachable branch has no
+  test coverage at all, not just an absence of edge-case assertions.
+- **R13/H2's positive `Pointer<...>`-wrapped shape** (as opposed to the
+  fifth round's already-established zero-coverage finding for this same
+  row, which was grep-only). This round extends that finding with a
+  reachability proof: `useit([Pointer<vector<i32>>] values) { ... }`
+  compiles cleanly and its `collection_specializations` dump entry shows
+  `is_pointer=true is_reference=false collection_family="vector"
+  element_type_text="i32"` — i.e. the `Pointer<...>` unwrap path works
+  correctly, symmetric with the already-tested `Reference<...>` case, it
+  is simply never exercised by any test (every existing `isPointer`
+  assertion in the corpus's one relevant test file is `CHECK_FALSE`, per
+  the fifth round's own grep). Confirms this is a live, reachable,
+  correctly-implemented gap in coverage, not a latent one.
+- **E10** (`direct_call_targets`: a call whose `resolvedPath` stays empty
+  after E2-E4 gets silently no entry, rather than being recorded as
+  absent-or-unresolved). Grepped
+  `tests/unit/compile_run/test_compile_run_benchmark_harness.cpp` (the
+  file exercising `direct_call_targets` most directly) for every
+  `direct_call_targets` reference — all of them assert positive presence
+  or a positive count (`direct_call_targets[0]`/`[1]`, `counts.get('direct_call_targets')
+  == 2`, `== 4`, etc.); none assert that a specific call is *absent* from
+  the collector, or that the collector's count stays lower than the
+  source's total call count when some calls should fail to resolve. This
+  confirms the rule table's own note ("no test asserts a specific call is
+  absent from this collector; only positive-presence assertions found")
+  — the concept of "a call silently vanishes from this fact family
+  instead of erroring" is untested by name anywhere in the corpus.
+
+### Resolved as latent-only (confirmed unreachable via upstream semantics
+validation, not merely under-tested)
+
+Five more rows resolve the same way the fifth round's F11-eof/F1-not
+pair did: a real gap exists in the row's own code, but the shape needed
+to reach it is rejected by semantics-stage validation before the
+row's own function ever runs, for any program that compiles far enough
+to reach it.
+
+- **R13/H3b** (`vector`-base collection-specialization with template-arg
+  count != 1). Repro: `[vector<i32, i32>] values{vector<i32>(1i32)}` —
+  rejected at semantics with `vector requires exactly one template
+  argument [PSC1005]`, before `classifyCollectionSpecialization` (which
+  only runs off already-accepted binding facts) ever sees this binding.
+- **R13/H4b** (`soa`-base, template-arg count != 1). Repro:
+  `[soa<Particle, i32>] values{soa<Particle>()}` — rejected identically:
+  `soa requires exactly one template argument [PSC1005]`.
+- **R13/H5b** (`map`-base, template-arg count != 2). Repro: `[map<i32>]
+  values{map<i32, i32>()}` — rejected identically: `map requires exactly
+  two template arguments [PSC1005]`.
+- **R13/H2's doubly-wrapped `Reference<Pointer<...>>` shape.** Repro:
+  `useit([Reference<Pointer<vector<i32>>>] values) { ... }` — rejected at
+  semantics with `unsupported reference target type:
+  Pointer<vector<i32>> [PSC1005]`, i.e. `Reference<...>` only accepts a
+  non-wrapper inner type; the doubly-wrapped shape never reaches binding
+  publication at all.
+- **R13/H2's doubly-wrapped `Pointer<Reference<...>>` shape.** Repro:
+  `useit([Pointer<Reference<vector<i32>>>] values) { ... }` — rejected
+  symmetrically: `unsupported pointer target type:
+  Reference<vector<i32>> [PSC1005]`.
+- **F3-N2** (monomorphization: an unbound `Name`-kind method-call
+  receiver — one with no matching entry in `locals` — has no matching
+  branch in the F3 receiver-type-inference cascade, so `typeName` stays
+  empty and the call would fall to F5's `return false`). Repro:
+  `return(bogus_receiver_name.count())` with no such binding declared —
+  rejected at the **semantics** stage itself:
+  `validateExprMethodCallTarget failed name=count ns= resolved=/count
+  templateArgs=0 args=1 receiver=Name:bogus_receiver_name ns=
+  [PSC1005]`, before monomorphization ever runs. Consistent with the
+  broader pattern this document's fifth round already established:
+  semantics validation gates receiver-shape sanity upstream of the later
+  two stages for most malformed-receiver shapes.
+
+Together these six confirm (three of the six being the H2 sub-shapes,
+resolving the fifth round's own "no test found for a `Pointer<...>` wrap,
+nor for a doubly-wrapped ... chain" note completely: the single-wrap case
+is live-and-uncovered, both double-wrap cases are unreachable) — this
+round's H2/H3b/H4b/H5b/H6 sweep fully closes out R13's entire
+"return false"/"positive-shape" open-question set the fifth round's
+"Still open" list named, except H2b (below).
+
+### Inconclusive after reasonable effort (left `UNPINNED`, with what was
+tried)
+
+- **R13/H2b** (`Reference`/`Pointer`-base collection-specialization:
+  `splitTopLevelTemplateArgs` fails or yields != 1 arg → `return false`).
+  Attempting the obvious repro (`Reference<i32, i32>`, expecting a
+  same-shape rejection to H3b/H4b/H5b's pattern) instead surfaced a
+  wrinkle not previously documented anywhere in this table: PrimeStruct's
+  `Reference<T, Capability>` is apparently a **legitimate**, real 2-arg
+  binding shape (a capability spelling as the second argument — the repro
+  failed with `unknown Reference capability: i32 (expected Read, Write,
+  or ReadWrite) [PSC1005]`, not an arity-rejection message), distinct
+  from H2b's "malformed wrapped-collection with the wrong arg count"
+  framing. This means H2b's own guard condition ("!= 1 arg") may not be
+  the operative gate for the common malformed case at all — a
+  capability-bearing `Reference<vector<T>, Read>` might be the shape that
+  actually reaches this branch, not a bare wrong-arity wrapper. Did not
+  determine within this round's budget whether `Reference<vector<T>,
+  Capability>` (a *valid* 2-arg reference-with-capability shape wrapping
+  a collection) reaches H2's normal path, H2b's rejection, or a third,
+  undocumented branch — left open with this concrete new lead for a
+  future round instead of guessed at.
+- **Row G's G3b** (`ir_lowerer`: `resolvedPath ==
+  "/std/collections/soa/to_aos"` treated as a deliberate "no definition,
+  not an error" sentinel inside the semantic-product-driven G3 cascade).
+  Found a related but distinct existing unit test
+  (`test_ir_pipeline_validation_ir_lowerer_setup_type_helper_resolves_method_definitions_from_receiver_targets.cpp`)
+  that exercises `resolveMethodDefinitionFromReceiverTarget` (G8's own
+  helper, a different, lower-level function in the same cascade) directly
+  against both a bare `/to_aos` and the canonical
+  `/std/collections/soa/to_aos` `defMap` entry — but this does not
+  exercise G3b's specific condition, which requires
+  `findSemanticProductMethodCallTarget` to have already resolved and
+  returned exactly that literal path string as a semantic-product-stage
+  fact (a different, earlier point in the cascade than G8's unit-level
+  test reaches). Did not trace `findSemanticProductMethodCallTarget`'s
+  own producer far enough this round to construct a `.prime` repro that
+  reliably lands exactly on this sentinel value rather than some other
+  resolved/empty path — left open, flagged for a future round with the
+  above unit test noted as adjacent-but-not-equivalent coverage.
+
+### Still open — not attempted this round
+
+The remaining ~46 UNPINNED-tagged rows were not individually
+cross-referenced this round. Grouped by document row category for
+whoever picks this up next (largely the fifth round's own list, minus
+the items this round resolved):
+
+- **Row A**: the `isBuiltinOut` per-branch-asymmetry note (no dedicated
+  row ID).
+- **Row B**: `classifyExplicitVectorHelperReceiver`'s fixed-order-priority
+  contract (the order itself, not its per-family consequences).
+- **Row E**: E5, E6, E7's R10-lacks-D5-guard asymmetry, F6, F7, F9b, F10,
+  R12's G3/G4/G5/G7/G8 sub-rows, R13's production-gate-piggyback-on-
+  `binding_facts` design question, R14's Q2/Q3/Q3b/Q4/Q5/Q5b and its own
+  Pass-2-redundancy question.
+- **Row F**: F6 (wrapper-method-path), F7 (File-method dispatch details),
+  F9/F13/F13b/F13c (primitive/collection-family no-definition fallbacks),
+  F15, F16, F3-C3a/b/c/d (the struct-return-path and `return<T>`-
+  annotation override-priority gaps).
+- **Row G**: G1, G2, G3c-i through G3c-v, G3d's per-sub-guard detail,
+  G9b through G9f, the CH-V4/CH-V5 and CH-V6/CH-V7/CH-V8 asymmetries in
+  `resolveVectorHelperAliasName`, and `normalizeMapImportAliasPath`'s
+  identity-function purpose.
+- **New leads from this round's inconclusive rows**: H2b's
+  `Reference<T, Capability>`-vs-wrapped-collection ambiguity (above), and
+  G3b's `findSemanticProductMethodCallTarget` producer chain (above).
+
+**Cumulative running total across all rounds so far.** Approximately 22
+of the ~68 originally-tagged UNPINNED rows/sub-guards have now been
+individually cross-referenced (round five's ~14 plus this round's 8),
+resolving to some combination of confirmed-zero-coverage,
+confirmed-latent-only, confirmed-dead-code (this round's new resolution
+class — a stronger determination than either of the other two, since it
+proves the branch cannot execute for *any* input, not just that no test
+happens to reach it), or inconclusive-with-documented-attempts, leaving
+roughly 46 still open for future rounds. Consistent with the fifth
+round's own observation: rows this document already flagged as
+suspicious (an explicit "asymmetry" or "not confirmed reachable" note)
+continue to resolve to real findings rather than false alarms at a high
+rate, and semantics-stage upstream validation continues to be the
+dominant reason a documented lower-stage gap turns out to be
+latent-only rather than live.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies

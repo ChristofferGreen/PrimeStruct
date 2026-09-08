@@ -804,6 +804,48 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     per-row detail, evidence, and the explicit list of what remains open
     for a future round (~54 rows not yet touched). Per this task's scope,
     still not marked `[x]` and Step 1b still not started.
+  - implementation_notes (2026-09-08, sixth round): continued the fifth
+    round's cross-reference pass from its own "still open" list, 8 more
+    rows audited (fewer than round five's 14 by design - several required
+    multi-step source tracing rather than a single grep/repro). Headline
+    finding: Row F's F12/F14 "SOA borrowed-vs-owned asymmetry" is not an
+    asymmetry at all - traced `TemplateMonomorphMethodTargets.cpp` in full
+    and confirmed by direct code reading (no repro needed) that F14 (the
+    `isConcreteExperimentalSoaReceiver`-gated block, lines 671-704) is
+    unreachable dead code: F12 (lines 604-646) shares the identical
+    `normalizedTypeName`-based guard over the same six method-name pairs
+    and unconditionally returns first, since F14's guard is a strict
+    superset (F12's condition plus one more predicate) of F12's. This is a
+    stronger resolution class than "confirmed zero coverage" - it proves
+    the branch cannot execute for *any* input. Also resolved R13's entire
+    remaining H2/H3b/H4b/H5b/H6 sub-guard set: H6 (nested
+    `vector<vector<T>>` binding leaves `elementTypeText` unexpanded) and
+    H2's positive `Pointer<...>`-wrap shape both confirmed reachable and
+    genuinely zero-coverage via direct `.prime` repros dumping
+    `collection_specializations`; H3b/H4b/H5b (wrong template-arg-count
+    for vector/soa/map) and H2's doubly-wrapped
+    `Reference<Pointer<...>>`/`Pointer<Reference<...>>` shapes all
+    confirmed latent-only - each rejected at the **semantics** stage
+    itself (`vector`/`soa`/`map requires exactly N template arguments`,
+    `unsupported reference/pointer target type`) before
+    `classifyCollectionSpecialization` ever runs. F3-N2 (an unbound-`Name`
+    method-call receiver in monomorphization) is likewise confirmed
+    latent-only, rejected upstream by `validateExprMethodCallTarget`. E10
+    (`direct_call_targets`' silent-absence-on-unresolved-call behavior)
+    confirmed genuinely zero coverage via grep of the harness test file -
+    every existing assertion checks positive presence/count, none assert
+    absence. Two rows left inconclusive with new leads documented: H2b
+    (found `Reference<T, Capability>` is apparently a legitimate 2-arg
+    binding shape, not itself the malformed wrong-arity case H2b's guard
+    seems to describe - unresolved which shape actually reaches this
+    branch) and Row G's G3b (found an adjacent-but-not-equivalent unit
+    test exercising a sibling lower-level function, not this exact
+    semantic-product-sentinel branch). Cumulative: ~22 of the ~68
+    originally-tagged UNPINNED rows now resolved across rounds five and
+    six, ~46 remain for future rounds. See the doc's "Step 0 UNPINNED
+    test-coverage cross-reference (... sixth round)" section for full
+    per-row detail and the updated "still open" list. Per this task's
+    scope, still not marked `[x]` and Step 1b still not started.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
