@@ -170,104 +170,72 @@ bool SemanticsValidator::resolveArgsPackElementMethodTarget(
     collectionElemType = normalizeBindingTypeName(wrappedPointeeType);
   }
 
-  // Step 1b differential-audit harness
-  // (docs/ReceiverTargetResolutionConsolidation.md, PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT):
-  // computes the shared classifier's verdict alongside this function's own
-  // inline cascade below and compares the two, purely for observation - it
-  // never influences this function's actual return value. Zero-cost when
-  // the env var is unset (a single cached getenv check).
-  const bool diffAuditEnabled = primec::isReceiverTargetDiffAuditEnabled();
-  primec::ReceiverElementFamily classifierFamilyForAudit =
-      primec::ReceiverElementFamily::StructOrUnknown;
-  if (diffAuditEnabled) {
-    std::string auditElemBase;
-    std::string auditElemArgText;
-    const bool auditIsTemplateShaped =
-        splitTemplateTypeName(collectionElemType, auditElemBase, auditElemArgText);
-    if (auditIsTemplateShaped) {
-      auditElemBase = normalizeBindingTypeName(auditElemBase);
-    }
-    primec::ReceiverElementFamilyJointInput jointInput;
-    jointInput.unwrappedElementType = collectionElemType;
-    jointInput.rawElementBaseType = normalizedElemBaseType;
-    jointInput.isTemplateShaped = auditIsTemplateShaped;
-    jointInput.templateShapedBaseName = auditElemBase;
-    jointInput.normalizedMethodName = normalizedMethodName;
-    primec::ReceiverElementFamilyPredicates auditPredicates{
-        [](std::string_view name) {
-          return isInternalSoaCollectionTypeName(name);
-        },
-        [](std::string_view name) {
-          return isKeyValueSurfaceTypeName(std::string(name));
-        },
-    };
-    classifierFamilyForAudit =
-        primec::classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
-  }
-  auto auditFamily = [&](primec::ReceiverElementFamily productionFamily) {
-    if (!diffAuditEnabled) {
-      return;
-    }
-    if (productionFamily != classifierFamilyForAudit) {
-      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
-                   "resolveArgsPackElementMethodTarget: elementTypeText=\""
-                << elementTypeText << "\" methodName=\"" << normalizedMethodName
-                << "\" production=" << primec::describeReceiverElementFamily(productionFamily)
-                << " classifier=" << primec::describeReceiverElementFamily(classifierFamilyForAudit)
-                << "\n";
-    }
-    assert(productionFamily == classifierFamilyForAudit &&
-           "receiver-target diff audit: classifier/production family disagreement "
-           "(PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
-           "docs/ReceiverTargetResolutionConsolidation.md Step 1b");
-  };
-
-  if (collectionElemType == "string" || normalizedElemBaseType == "string") {
-    auditFamily(primec::ReceiverElementFamily::String);
-    return setCollectionMethodTarget("/string/" + normalizedMethodName);
-  }
-  if (collectionElemType == "FileError" &&
-      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
-       normalizedMethodName == "status" || normalizedMethodName == "result")) {
-    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
-    isBuiltinOut = resolvedOut == "/file_error/why";
-    auditFamily(primec::ReceiverElementFamily::FileError);
-    return !resolvedOut.empty();
-  }
+  // Step 2 of docs/ReceiverTargetResolutionConsolidation.md: this function's
+  // own classification cascade (R1-R9 of the Step 0 Rule Table's Row
+  // category A) has been replaced by a single call into the shared
+  // classifier proven byte-faithful by Step 1b's diff-audit harness (see
+  // that section for the derivation of each of these two text inputs and
+  // the fall-through quirks R2b/R4b/R6b the classifier reproduces
+  // verbatim). Only the *downstream* action per family below is unchanged
+  // from the pre-migration inline cascade.
   std::string elemBase;
   std::string elemArgText;
-  if (splitTemplateTypeName(collectionElemType, elemBase, elemArgText)) {
+  const bool isTemplateShaped =
+      splitTemplateTypeName(collectionElemType, elemBase, elemArgText);
+  if (isTemplateShaped) {
     elemBase = normalizeBindingTypeName(elemBase);
-    if (elemBase == "vector" || elemBase == "array" ||
-        isInternalSoaCollectionTypeName(elemBase)) {
-      auditFamily(elemBase == "vector" || elemBase == "array"
-                       ? primec::ReceiverElementFamily::VectorLike
-                       : primec::ReceiverElementFamily::Soa);
-      return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
-    }
-    if (elemBase == "Buffer" &&
-        (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
-         normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
-         normalizedMethodName == "load" || normalizedMethodName == "store")) {
-      auditFamily(primec::ReceiverElementFamily::Buffer);
+  }
+  primec::ReceiverElementFamilyJointInput jointInput;
+  jointInput.unwrappedElementType = collectionElemType;
+  jointInput.rawElementBaseType = normalizedElemBaseType;
+  jointInput.isTemplateShaped = isTemplateShaped;
+  jointInput.templateShapedBaseName = elemBase;
+  jointInput.normalizedMethodName = normalizedMethodName;
+  primec::ReceiverElementFamilyPredicates predicates{
+      [](std::string_view name) {
+        return isInternalSoaCollectionTypeName(name);
+      },
+      [](std::string_view name) {
+        return isKeyValueSurfaceTypeName(std::string(name));
+      },
+  };
+  const primec::ReceiverElementFamilyResult classified =
+      primec::classifyReceiverElementFamilyJoint(jointInput, predicates);
+
+  switch (classified.family) {
+    case primec::ReceiverElementFamily::String:
+      return setCollectionMethodTarget("/string/" + normalizedMethodName);
+    case primec::ReceiverElementFamily::FileError:
+      resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+      isBuiltinOut = resolvedOut == "/file_error/why";
+      return !resolvedOut.empty();
+    case primec::ReceiverElementFamily::VectorLike:
+    case primec::ReceiverElementFamily::Soa:
+      // R3: vector/array/soa share one dispatch shape; classified.collectionBaseName
+      // is the already-normalized elemBase the pre-migration cascade used here.
+      return setCollectionMethodTarget("/" + classified.collectionBaseName + "/" +
+                                        normalizedMethodName);
+    case primec::ReceiverElementFamily::Buffer:
       return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
-    }
-    if (isKeyValueSurfaceTypeName(elemBase)) {
-      auditFamily(primec::ReceiverElementFamily::KeyValue);
+    case primec::ReceiverElementFamily::KeyValue:
       return setPreferredKeyValueMethodTarget(receiverExpr, normalizedMethodName);
-    }
-    if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
+    case primec::ReceiverElementFamily::File:
       resolvedOut = preferredFileHelperTarget(normalizedMethodName,
                                              currentValidationState_.context.definitionPath);
       isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
-      auditFamily(primec::ReceiverElementFamily::File);
       return true;
-    }
-  }
-  if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
-    resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
-    auditFamily(primec::ReceiverElementFamily::Primitive);
-    return true;
+    case primec::ReceiverElementFamily::Primitive:
+      // R7: deliberately built from normalizedElemBaseType (the raw,
+      // non-Reference/Pointer-unwrapped text), matching production's
+      // documented wrapped-vs-unwrapped asymmetry - NOT from
+      // classified.normalizedElementBaseType, which the classifier always
+      // derives from the *unwrapped* text and would silently discard that
+      // asymmetry here.
+      resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
+      return true;
+    case primec::ReceiverElementFamily::StructOrUnknown:
+    default:
+      break;
   }
   std::string resolvedElemType =
       resolveMethodTargetStructTypePath(collectionElemType, receiverExpr.namespacePrefix);
@@ -276,10 +244,8 @@ bool SemanticsValidator::resolveArgsPackElementMethodTarget(
   }
   if (!resolvedElemType.empty()) {
     resolvedOut = resolvedElemType + "/" + normalizedMethodName;
-    auditFamily(primec::ReceiverElementFamily::StructOrUnknown);
     return true;
   }
-  auditFamily(primec::ReceiverElementFamily::StructOrUnknown);
   return false;
 }
 

@@ -42,6 +42,21 @@ namespace primec {
 // unaddressed) so its existing unit tests keep pinning the pre-Step-1b
 // approximation; it is not itself wired anywhere either.
 //
+// Step 2 (2026-09-08): classifyReceiverElementFamilyJoint now drives real
+// production behavior, not just observation - resolveArgsPackElementMethodTarget
+// (SemanticsValidatorMethodTargetArgsPackResolvers.cpp) delegates to it
+// directly, its own inline R1-R9 cascade deleted. resolveMethodTarget's
+// indexed-args-pack cascade (slice 2, SemanticsValidatorExprMethodTargetResolution.cpp)
+// remains only observationally wired behind PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT
+// as of this date - not yet migrated. See
+// docs/ReceiverTargetResolutionConsolidation.md's "Step 2" section for the
+// migration detail and zero-divergence proof, including a caller pitfall:
+// ReceiverElementFamilyResult::normalizedElementBaseType is always derived
+// from the joint input's unwrappedElementType, never rawElementBaseType -
+// a caller building the Primitive branch's resolved path from that result
+// field instead of its own raw/wrapped text would silently lose the R7
+// wrapped-vs-unwrapped asymmetry.
+//
 // Two families (Soa, KeyValue) are struct-metadata-backed and legitimately
 // resolved differently per stage (each stage has its own struct/definition
 // maps), so their membership test is a stage-supplied predicate - the same

@@ -948,6 +948,44 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     no call site switched to use the classifier's verdict (Step 2); every
     other Row A/B/C/D/E call site remains independently re-deriving
     receiver family membership and unwired. Still not marked `[x]`.
+  - implementation_notes (2026-09-08, Step 2 first migration): migrated
+    `resolveArgsPackElementMethodTarget`
+    (`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`) - Row category
+    A's entry point and the first of the two Step 1b diff-audit-harnessed
+    call sites - to actually delegate to
+    `classifyReceiverElementFamilyJoint` for real, per the doc's own Step 2
+    plan. The function's ~70-line inline R1-R9 if/else-return cascade
+    (string check, FileError method-name-gated check, template-shape-gated
+    vector/array/soa/Buffer/key-value/File block, primitive check,
+    struct-path fallback) is now a single classifier call plus a
+    family-keyed `switch` whose per-family bodies are the exact same
+    downstream actions the old cascade ran (unchanged call targets built
+    from the same local variables - `normalizedElemBaseType` for the
+    Primitive branch specifically, not the classifier's own returned
+    `normalizedElementBaseType` field, since that field is always derived
+    from the *unwrapped* text and would silently discard production's
+    documented wrapped-vs-unwrapped R7 asymmetry). Removed roughly 90 lines
+    of now-dead inline classification logic (the original cascade plus the
+    diff-audit harness scaffolding it carried, which is superseded by a
+    real migration - no longer meaningful to diff a classifier's verdict
+    against itself). Verification: fresh 3-suite baseline taken via
+    `git stash` back to unmodified `1f03e3d` (semantics 2767 cases/1
+    failure, backend_ir 1646/46, compile_run 2679/5 - matching the doc's
+    already-recorded Step 1b slice 2 numbers exactly), then rebuilt and
+    reran all three suites after the migration: test/assertion counts
+    identical in all three suites, and `diff` on the sorted failing-
+    test-case-name sets was empty for all three (byte-identical). No
+    divergence found - the migration is a pure refactor at this call site.
+    Full detail, including the two per-branch reasoning notes above, in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 2" section.
+    The second already-harnessed call site (`resolveMethodTarget`'s inline
+    indexed-args-pack cascade, slice 2) was deliberately left unmigrated
+    this round to avoid rushing a second migration in the same pass - its
+    diff-audit harness stays wired and observational, unchanged. Still not
+    marked `[x]`: this is one of potentially many Row A/B/C/D/E/F/G call
+    sites across three stages, and Step 0's own remaining-scope items
+    (Row B/C's sprawling functions, monomorphization, ir_lowerer) are
+    untouched.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

@@ -1,24 +1,24 @@
 # Receiver-Target Resolution Consolidation Plan
 
-Status: Step 1b, slice 2 landed (2026-09-08) - the joint `(type,
-methodName, templateShape)` classifier (`classifyReceiverElementFamilyJoint`)
-is now wired behind `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` into two
-call sites: `resolveArgsPackElementMethodTarget`
-(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`, slice 1) and
-`resolveMethodTarget`'s own inline indexed-args-pack-element cascade
-(`SemanticsValidatorExprMethodTargetResolution.cpp`, slice 2 - the
-`pack[i].method()` access shape, a near-duplicate of slice 1's cascade for
-the plain `pack_elem.method()` shape). Slice 2 needed no new classifier
-logic - the existing joint classifier already models its exact cascade;
-only its two text inputs relate differently (see "Step 1b slice 2" below
-for the full detail). See "Step 1b: diff-audit harness wired at
-resolveArgsPackElementMethodTarget, zero-divergence achieved (2026-09-08)"
-and "Step 1b slice 2: diff-audit harness wired at resolveMethodTarget's
-indexed-args-pack cascade, zero-divergence achieved (2026-09-08)" below for
-the full proofs. The harness stays observe-only and env-gated off by
-default; no call site delegates to the classifier's verdict yet (that is
-Step 2, not attempted this round). Step 0 (characterize the full rule
-table) is otherwise still in progress - see "Step 0 Rule Table" below;
+Status: Step 2, first real migration landed (2026-09-08) -
+`resolveArgsPackElementMethodTarget`
+(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`, Step 1b's slice 1
+call site) now delegates for real to the joint `(type, methodName,
+templateShape)` classifier (`classifyReceiverElementFamilyJoint`) instead
+of its own inline R1-R9 cascade; the diff-audit harness at that call site
+is retired (superseded by the real migration - diffing a classifier
+against itself is meaningless). See "Step 2: resolveArgsPackElementMethodTarget
+migrated to classifyReceiverElementFamilyJoint, zero-divergence achieved
+(2026-09-08)" below for the full detail and verification proof. The second
+already-harnessed call site, `resolveMethodTarget`'s own inline indexed-
+args-pack-element cascade (`SemanticsValidatorExprMethodTargetResolution.cpp`,
+slice 2 - the `pack[i].method()` access shape, a near-duplicate of slice
+1's cascade for the plain `pack_elem.method()` shape), is still only
+observationally wired behind `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`,
+not yet migrated - see "Step 1b slice 2" below for that harness's own
+zero-divergence proof, still valid and unchanged. Step 0 (characterize the
+full rule table) is otherwise still in progress - see "Step 0 Rule Table"
+below;
 semantics-stage method-target resolvers, all five snapshot-collection
 mechanisms, and monomorphization are now fully branch-enumerated; the
 `ir_lowerer` stage's own `resolveMethodCallDefinitionFromExpr` (Row G) is
@@ -196,12 +196,17 @@ re-derives receiver family membership - this round wired exactly one more
 function, deliberately, per this document's own staged-rollout
 discipline.
 
-### Step 2 — Migrate stage by stage (not started)
+### Step 2 — Migrate stage by stage (started 2026-09-08, one call site)
 
 Same order and discipline as the compat-spelling consolidation: semantics
 first (reference behavior), then monomorphization, then `ir_lowerer`, each
 gated on zero-divergence across `PrimeStruct_semantics_tests`,
-`PrimeStruct_backend_ir_tests`, and `PrimeStruct_compile_run_tests`.
+`PrimeStruct_backend_ir_tests`, and `PrimeStruct_compile_run_tests`. First
+real migration (`resolveArgsPackElementMethodTarget`, Row category A's
+entry point) landed this round - see the dedicated "Step 2" section below
+for the full detail and verification proof. Remaining scope: the second
+already-harnessed call site (`resolveMethodTarget`'s indexed-args-pack
+cascade, Step 1b slice 2) and every other Row A/B/C/D/E/F/G call site.
 
 ## Step 0 Progress: TODO-4760 Traced Further (2026-09-04)
 
@@ -2361,6 +2366,109 @@ call site's already-unwrapped text and reordered FileError check. The
 harness stays wired and env-gated off by default at both slices. No call
 site was switched to use the classifier's verdict for real (Step 2, not
 attempted this round).
+
+## Step 2: resolveArgsPackElementMethodTarget migrated to classifyReceiverElementFamilyJoint, zero-divergence achieved (2026-09-08)
+
+Per the Plan's Step 2 - the actual payoff of this whole consolidation
+effort - migrated one of the two Step 1b diff-audit-harnessed call sites
+for real: `resolveArgsPackElementMethodTarget`
+(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`), Row category A's
+entry point. Chosen over the second harnessed site
+(`resolveMethodTarget`'s indexed-args-pack cascade, slice 2) because it is
+its own dedicated function with a clean, already-fully-characterized
+boundary, rather than one `if` block embedded in a much larger dispatcher -
+the cleaner first migration this round's task explicitly asked for.
+
+**What changed.** The function's own ~70-line inline classification
+cascade (R1: string check; R2/R2b: FileError method-name-gated check;
+R3-R6b: template-shape-gated vector/array/soa -> Buffer -> key-value ->
+File block; R7: primitive check; R8/R9: struct-type-path fallback) is
+replaced by: (1) computing the same `ReceiverElementFamilyJointInput` the
+Step 1b diff-audit harness was already building for observation (no new
+computation - this promotes existing audit-only code into the primary
+path), (2) one call to `classifyReceiverElementFamilyJoint`, (3) a
+family-keyed `switch` whose body per family is *exactly* the same
+downstream action the old cascade's matching branch ran - same call
+targets, same helper calls (`preferredFileErrorHelperTarget`,
+`preferredBufferMethodTarget`, `setPreferredKeyValueMethodTarget`,
+`preferredFileHelperTarget`, `resolveMethodTargetStructTypePath`/
+`resolveTypePath`), same `isBuiltinOut` assignments. The Step 1b
+diff-audit-harness scaffolding (the cached `isReceiverTargetDiffAuditEnabled()`
+check, the `auditFamily` lambda, the per-return `auditFamily(...)` calls)
+is removed entirely from this call site - per this round's own task
+framing, once a call site delegates to the classifier for real there is no
+longer a second, independently-coded inline answer to diff it against;
+retaining the harness there would silently compare the classifier's
+verdict with itself, which proves nothing and would create a false sense
+of ongoing verification. This supersedes, not just supplements, the Step
+1b slice 1 harness at this one call site - the harness stays live and
+meaningful at the still-unmigrated slice 2 call site.
+
+**Two places downstream logic had to use the call site's own local
+variables, not the classifier result's fields, to stay byte-faithful:**
+
+- **Primitive branch (R7).** Production builds the resolved path from
+  `normalizedElemBaseType` - the *non*-Reference/Pointer-unwrapped text,
+  per the documented R7 wrapped-vs-unwrapped asymmetry (Step 1b's own
+  finding). The classifier result's `normalizedElementBaseType` field is
+  always derived from the classifier's `unwrappedElementType` input
+  (see `classifyReceiverElementFamilyJoint`'s implementation - it sets
+  that field unconditionally at the top, before any branch runs), so using
+  it here would silently discard that asymmetry for a
+  `Reference<i32>`/`Pointer<i32>`-typed args-pack element. The migrated
+  code keeps its own local `normalizedElemBaseType` variable (computed
+  once, before the classifier call, exactly as before) and builds the
+  resolved path from that, not from `classified.normalizedElementBaseType`.
+  Flagged in the header of the migrated function so a future reader does
+  not "simplify" this into using the classifier's own field.
+- **VectorLike/Soa branch (R3).** Here the classifier result's
+  `collectionBaseName` field *is* safe to use directly - it is set from
+  the caller-normalized `elemBase` inside the classifier's template-shaped
+  block, the same value the old cascade itself used to build
+  `"/" + elemBase + "/" + method"`. No asymmetry here; used as-is.
+
+**Verification.** Fresh baseline first, not a trusted prior number: `git
+stash` back to the unmodified tree at `1f03e3d` (confirmed via `git
+status`), rebuilt `PrimeStruct_semantics_tests`/`PrimeStruct_backend_ir_tests`/
+`PrimeStruct_compile_run_tests` clean, ran all three, and captured the
+*set* of failing test-case names (not just counts) per suite:
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+(Exactly matching the numbers Step 1b slice 2 already recorded as the
+pre-existing baseline - confirms no drift between sessions.) `git stash
+pop` restored the migration, rebuilt clean (no new warnings), reran all
+three suites:
+
+| suite | test cases | failed | assertions | failed | failing-name diff vs baseline |
+|---|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 | **empty** |
+| backend_ir | 1646 | 46 | 16428 | 137 | **empty** |
+| compile_run | 2679 | 5 | 15278 | 8 | **empty** |
+
+Every count identical, and `diff` on the sorted failing-test-case-name
+list per suite came back empty for all three - the exact same test cases
+fail before and after, byte-for-byte by name, not merely by count. No
+divergence found; the migration is a pure refactor at this call site, as
+Step 1b's own zero-divergence proof predicted it would be.
+
+**Conclusion.** One fewer duplicated receiver-classification
+implementation in the codebase: the ~70-line inline R1-R9 cascade plus the
+~50-line diff-audit-harness scaffolding it carried (roughly 90 net lines
+once the shared switch/classifier-call replacement is accounted for) are
+gone from this call site, replaced by one classifier call and a
+family-keyed dispatch over already-existing downstream helper calls. The
+second harnessed call site (`resolveMethodTarget`'s indexed-args-pack
+cascade, slice 2) was deliberately left as an observational harness this
+round rather than rushed through as a second migration in the same pass -
+per this round's own task guidance, one careful migration beats two
+rushed ones. Every other Row A/B/C/D/E/F/G call site this document's Step
+0 rule table catalogs still independently re-derives receiver family
+membership.
 
 ## Risks
 
