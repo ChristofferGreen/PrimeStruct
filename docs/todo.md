@@ -770,6 +770,40 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     reasoning. Per this task's own scope, Step 1b itself is NOT started
     and this task is NOT marked `[x]` - the completeness call is left for
     a human/next round to make explicitly.
+  - implementation_notes (2026-09-08, fifth round): cross-referenced a
+    prioritized 14-row sample of the ~68 `UNPINNED`-tagged rule-table rows
+    against the actual test suites by name, per the fourth round's own
+    flagged gap. Grepped `tests/` for the exact function names/literal
+    shapes each row names, plus built small `.prime` repros compiled via
+    the existing `build-release/primec` binary (all repro files stayed
+    under the session scratchpad, never copied into the repo). Result:
+    0 resolved to "has existing test coverage", 5 confirmed genuinely
+    zero coverage (R2b's FileError-args-pack-element method-name
+    fallthrough; R4b/R6b's Buffer/File-args-pack-element gaps - zero
+    `args<Buffer>`/`args<File>` occurrences anywhere in `tests/`; R13/H2's
+    `Pointer<...>`-wrapped and doubly-wrapped-Reference/Pointer
+    collection-specialization shapes - the one test file exercising
+    `collection_specializations` only ever asserts `isPointer==false`;
+    and E2b/R11-F4's pilot-routing-reachable divergence, the row this
+    document's own fourth round explicitly flagged "live, not merely
+    latent" - confirmed by reading all 3 worker-count>1 test fixtures in
+    full, none contains a `[spawn]` transform or a bare `count`/`capacity`
+    call even though both are well-tested elsewhere in isolation), 2
+    resolved from "unconfirmed reachability" to "confirmed
+    latent-only/unreachable" via direct repro (F11-eof's bound-`FileError`
+    `.eof()` call and F1-not's literal-`FileError`-receiver-with-bad-
+    method both rejected at the **semantics** stage itself before
+    monomorphization ever runs - closes two of the doc's own open
+    reachability questions without landing any fix), and 2 left
+    inconclusive with what was tried noted (`getNamespacedCollectionHelperName`'s
+    dead map-family branch's live-caller status - found 3 real callers in
+    `src/ir_lowerer/` this round that weren't previously named, but their
+    own reachability wasn't traced further; and RT1d's silent-defer-vs-
+    error split). See the doc's new "Step 0 UNPINNED test-coverage
+    cross-reference" section (after the Step 0 Rule Table) for the full
+    per-row detail, evidence, and the explicit list of what remains open
+    for a future round (~54 rows not yet touched). Per this task's scope,
+    still not marked `[x]` and Step 1b still not started.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

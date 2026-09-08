@@ -1537,6 +1537,222 @@ an assessment for whoever picks up the next phase to weigh, not a
 decision made here - per this task's own instructions, Step 1b work is
 explicitly not started in this round regardless of this assessment.
 
+## Step 0 UNPINNED test-coverage cross-reference (2026-09-08, fifth round)
+
+Per the fourth round's own synthesis ("Specific gap that could still
+matter before Step 1b scoping starts"), this round cross-references a
+prioritized subset of the accumulated `UNPINNED` rule-table rows against
+the actual test suites by name — grepping `tests/` for the exact function
+names and distinctive literal shapes each row names, and building small
+`.prime` repros compiled with `--dump-stage semantic-product` (or plain
+`--emit=native`) via the existing `build-release/primec` binary where a
+grep alone couldn't settle reachability. No source file was modified; all
+repro `.prime` files were written under the session scratchpad and never
+copied into the repo (confirmed via `git status`/`git diff --stat` before
+committing).
+
+**Starting count.** 68 individually-`UNPINNED`-tagged rows/sub-guards
+across Row categories A-G (counted by grepping this document's own
+`UNPINNED` occurrences), plus several inline "not independently verified"
+notes that don't carry the literal tag. Per this task's own budget
+instruction, this round did not attempt all 68 — it prioritized (a) rows
+this document's own fourth-round synthesis flagged as reachability-
+relevant or "live, not latent", then (b) rows in the most heavily-
+duplicated FileError/args-pack-element/collection-specialization logic,
+then stopped once a representative, evidence-based sample was in hand.
+**14 rows were audited this round**; the rest remain open for a future
+round (full list at the end of this section).
+
+### Resolved to "has coverage" (no longer UNPINNED)
+
+None of the 14 audited rows resolved to "yes, a specific existing test
+exercises exactly this branch" — the rows chosen for this round were
+deliberately the ones this document's own text already flagged as
+suspicious gaps, and the grep/repro evidence below confirms the suspicion
+in every case rather than turning up an overlooked test. This is not
+surprising given the prioritization criterion (rows already flagged
+"live, not latent" or newly-found-this-round were preferentially chosen
+over rows more likely to already be incidentally covered) — a future round
+sampling further down this document's own `UNPINNED` list (e.g. the many
+`RT`/`CH`/`G3c`/`G9` sub-guards in Row G, which weren't touched this round)
+is more likely to turn up incidental hits.
+
+### Confirmed genuinely zero test coverage
+
+- **R2b** (`resolveArgsPackElementMethodTarget`'s FileError-args-pack-
+  element-with-non-{why,is_eof,status,result}-method fallthrough to R7).
+  Grepped the whole `tests/` tree for every `args<FileError` occurrence
+  (3 hits, all in near-identical fixtures —
+  `test_compile_run_native_backend_core_error_and_file_variadics.cpp`,
+  `test_compile_run_emitters_loop_sugar_runtime.cpp`,
+  `test_ir_pipeline_conversions_variadic_file_errors.cpp`) — every one
+  calls only `.why()` on the args-pack `FileError` element, never any
+  other method name. Built a repro
+  (`score_errors([args<FileError>] values) { return(count(values[0i32].bogus_method())) }`)
+  confirming the shape compiles far enough to reach a generic "unable to
+  infer return type" semantic error rather than crashing or hitting an
+  unrelated diagnostic — the fallthrough path is reachable, just never
+  pinned by name.
+- **R4b** (Buffer-args-pack-element-with-non-helper-method fallthrough)
+  and **R6b** (bare, non-template `Buffer`/`File`-typed args-pack element
+  never reaching R3-R6 dispatch at all). Grepped the whole `tests/` tree
+  for `args<Buffer>` and `args<File>` — **zero hits for either**, in any
+  file. Both branches' entire guard shape (an args-pack element literally
+  typed `Buffer<...>`/`Buffer`/`File<...>`/`File`) is unexercised by the
+  test corpus, not just the specific fallthrough sub-case.
+- **R13/H2's `Pointer<...>`-wrapped and doubly-wrapped
+  `Reference<Pointer<...>>`/`Pointer<Reference<...>>` collection-
+  specialization shapes.** `collection_specializations` is exercised by
+  exactly one test file
+  (`test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp`
+  — confirmed via `grep -rl "collection_specializations" tests/unit/`,
+  one hit). Every `isPointer` assertion in that file is `CHECK_FALSE`
+  (`mapEntry`/`soaEntry`) — there is no fixture anywhere in it with a
+  genuine `Pointer<vector<T>>`/`Pointer<map<K,V>>`/`Pointer<soa<T>>`
+  binding, so `isPointer==true` is never observed, let alone a doubly-
+  wrapped chain.
+- **E2b / R11's F4, specifically in the pilot-routing-reachable window**
+  (`skipLocalAwareCallRefinement_` forced `true`, i.e. worker-count > 1
+  validation). This is the row this document's own fourth-round text
+  explicitly named as "live, not merely latent, for whatever definitions
+  get routed through the pilot path" and "not confirmed this round" —
+  now confirmed. Found every test that actually drives
+  `benchmarkSemanticDefinitionValidationWorkerCount`/
+  `definitionValidationWorkerCount` > 1 (4 call sites:
+  `test_semantics_tsan_smoke.cpp`'s two `TEST_CASE`s via
+  `buildParallelSuccessFixture`/`buildParallelDiagnosticFixture`, and
+  `test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp`'s
+  three worker-count stress cases via `buildMathStressSemanticSource`,
+  all three helpers defined in
+  `tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_shared.h`
+  and `test_semantics_tsan_smoke.cpp` itself — read all three source
+  generators in full). None contains a `[spawn]` transform or a bare
+  unqualified `count(...)`/`capacity(...)` call — every one is built from
+  `plus`/`assign`/`/std/math/abs`/simple leaf-function calls only. Task-
+  spawn (`[spawn]`) and bare `count(...)` are each independently
+  well-tested *elsewhere* in the corpus (confirmed: `[spawn]` appears in
+  5 other test files; bare `count(...)` appears throughout
+  `test_semantics_calls_and_flow_collections_count_helpers_and_bare_map_calls.cpp`),
+  just never together with worker-count > 1 in the same compilation unit
+  — so the E2b/F4 divergence is exercised in isolation but the specific
+  condition that makes it *reachable* (R10-only execution via forced
+  `skipLocalAwareCallRefinement_`) is not.
+
+### Resolved as latent-only (not "has coverage", but the open reachability question itself is answered)
+
+Two rows carried an explicit "not confirmed whether reachable in
+practice" qualifier; both were resolved this round via direct repro,
+without landing any fix (per this document's own non-goal), and without
+finding an existing named test either — so they remain formally
+`UNPINNED` for test-coverage purposes, but the harder question ("is this
+branch even reachable for a real program") is now answered rather than
+open:
+
+- **F11-eof** (monomorphization: a *bound* `FileError`-typed variable's
+  `.eof()` call, as opposed to `.is_eof()`, has no matching branch in
+  `resolveMethodCallTemplateTarget` and would fall through to the generic
+  F16 fallback). Repro: `[FileError] err{0i32} ... err.eof()` — rejected
+  at the **semantics** stage itself with `unknown method: /FileError/eof`
+  before monomorphization ever runs. Grepped the whole `tests/` tree for
+  bound-variable `.eof()` calls (as opposed to the literal-Name-receiver
+  `FileError.eof()` constructor-call shape, which is well-tested and
+  matches F1, not F11-eof) — zero hits, consistent with this being
+  rejected upstream for any program that passes semantics validation.
+  This resolves the document's own "not confirmed... mirroring the
+  TODO-5286 'real gap, unconfirmed live impact' shape" note at F11-eof:
+  it is real-but-unreachable, confirmed by direct evidence rather than
+  left open.
+- **F1-not** (monomorphization: a literal-`Name`-spelled `FileError`
+  receiver — not a bound variable — whose method isn't in the 5-name set
+  falls through the rest of the cascade "as if F1 didn't exist"). Repro:
+  `FileError.bogus_method()` — also rejected at the **semantics** stage
+  (`unknown method target for bogus_method`) before reaching
+  monomorphization. Same conclusion as F11-eof: real-but-unreachable for
+  any semantically-valid program. This strongly suggests (though this
+  round did not independently re-verify) that Row G's structurally
+  identical `ir_lowerer`-side gaps in this neighborhood (G6's bare-error-
+  Name method-name gate, and `resolveMethodReceiverTypeFromNameExpr`'s
+  unconditional-vs-gated divergence at line ~1193) are likely also
+  latent-only for the same reason — semantics validation gates method
+  names on FileError/ImageError/ContainerError/GfxError receivers before
+  either later stage ever sees the call — but that inference was not
+  independently repro'd for the `ir_lowerer`-specific shapes this round;
+  flagged for whoever picks this up next rather than asserted as
+  confirmed.
+
+### Inconclusive after reasonable effort (left `UNPINNED`, with what was tried)
+
+- **`getNamespacedCollectionHelperName`'s dead map-family branch** (fed
+  by the stubbed `resolveKeyValueHelperAliasName`, doc line ~1287-1288).
+  Broadened the grep beyond the two Row-G-continued files' own scope to
+  all of `src/` and `include/`: found the `ir_lowerer`-side function
+  (`IrLowererSetupTypeCollectionHelpers.cpp:1124`) does have three live
+  callers within `src/ir_lowerer/`
+  (`IrLowererLowerInferenceFallbackSetup.cpp`,
+  `IrLowererLowerInferenceCallReturnSetup.cpp`,
+  `IrLowererLowerInferenceDispatchSetup.cpp`), all of which only check
+  `helperName == "count"` on the result — i.e. they only care about the
+  vector-family branch (`resolveVectorHelperAliasName`, which works), not
+  the dead map-family branch specifically. Whether any of those three
+  call sites is ever reached with a receiver that would only resolve
+  through the map-family branch (making the dead branch load-bearing by
+  omission, silently returning "not count" for a map-family receiver that
+  should also return "not count" anyway) was not traced further this
+  round — the three call sites' full receiver-reachability conditions
+  weren't read in this pass. Also worth noting: there are **two entirely
+  separate functions** named `getNamespacedCollectionHelperName` in this
+  codebase (`SemanticsBuiltinPathHelpers.cpp:1272` for the semantics
+  stage, `IrLowererSetupTypeCollectionHelpers.cpp:1124` for `ir_lowerer`)
+  — a same-name-different-implementation collision this document hadn't
+  previously called out by name, though it's consistent with the general
+  pattern the whole document documents.
+- **RT1d** (`isEntryArgsName`-gated silent-defer-vs-hard-error split for
+  a bare args-pack-`Entry`-shaped receiver in
+  `resolveMethodCallReceiverExpr`). Traced `isEntryArgsName`'s actual
+  definition to `IrLowererCountAccessHelpers.cpp` (the map-constructor's
+  internal `args<Entry<K,V>>` machinery TODO-4760's final fix also
+  touched) but did not find or build a repro isolating this exact
+  silent-defer-vs-error split within this round's budget — left open,
+  flagged for a future round rather than guessed at.
+
+### Still open — not attempted this round
+
+The remaining ~54 `UNPINNED`-tagged rows were not individually
+cross-referenced this round, budgeted per this task's own instruction to
+prioritize breadth-appropriate depth over exhaustive coverage of every
+tag. Grouped by document row category for whoever picks this up next:
+
+- **Row A**: the `isBuiltinOut` per-branch-asymmetry note (no dedicated
+  row ID).
+- **Row B**: `classifyExplicitVectorHelperReceiver`'s fixed-order-priority
+  contract (the order itself, not its per-family consequences).
+- **Row E**: E5, E6, E7's R10-lacks-D5-guard asymmetry, E10 (silent
+  absence, not recorded), F6, F7, F9b, F10, F12, R12's G3/G4/G5/G7/G8
+  sub-rows, R13's H2b/H3b/H4b/H5b/H6 (the `return false` short-circuits,
+  as opposed to H2's positive-shape gap already resolved above), R13's
+  production-gate-piggyback-on-`binding_facts` design question, R14's
+  Q2/Q3/Q3b/Q4/Q5/Q5b and its own Pass-2-redundancy question.
+- **Row F**: F6 (wrapper-method-path), F7 (File-method dispatch details),
+  F9/F13/F13b/F13c (primitive/collection-family no-definition fallbacks),
+  F12/F14's SOA borrowed-vs-owned asymmetry, F15, F16, F3-N2 (unbound
+  `Name` receiver reachability), F3-C3a/b/c/d (the struct-return-path and
+  `return<T>`-annotation override-priority gaps).
+- **Row G**: G1, G2, G3b, G3c-i through G3c-v, G3d's per-sub-guard detail,
+  G9b through G9f, RT2's dead-code note (moot — branches never execute),
+  the CH-V4/CH-V5 and CH-V6/CH-V7/CH-V8 asymmetries in
+  `resolveVectorHelperAliasName`, and `normalizeMapImportAliasPath`'s
+  identity-function purpose.
+
+This round's evidence (5 confirmed-zero, 2 resolved-to-latent-only, 2
+inconclusive, out of 14 sampled) is consistent with the fourth round's
+prediction: rows this document already flagged as suspicious gaps tend to
+in fact be gaps, and FileError-shape method-name-gating divergences at
+the monomorphization/`ir_lowerer` layer are frequently masked by earlier,
+stricter semantics-stage validation — a pattern worth keeping in mind when
+Step 1b scopes which branches actually need differential-audit
+scaffolding versus which are dead weight for any semantically-valid
+input.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies
