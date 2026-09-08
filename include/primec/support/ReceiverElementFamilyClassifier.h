@@ -34,6 +34,14 @@ namespace primec {
 // the ir_lowerer receiver-target helpers each currently re-type from
 // scratch), not as a decision function ready to replace any of them.
 //
+// Step 1b (see classifyReceiverElementFamilyJoint below) resolves both
+// quirks by taking the joint (type, methodName, templateShape) inputs the
+// Step 0 Rule Table's Row A entry documents (R2/R2b, R3-R6b, R7) - that is
+// the function to use for any new call-site wiring. classifyReceiverElementFamily
+// above stays exactly as landed in Step 1a (type-text-only, quirks
+// unaddressed) so its existing unit tests keep pinning the pre-Step-1b
+// approximation; it is not itself wired anywhere either.
+//
 // Two families (Soa, KeyValue) are struct-metadata-backed and legitimately
 // resolved differently per stage (each stage has its own struct/definition
 // maps), so their membership test is a stage-supplied predicate - the same
@@ -85,5 +93,67 @@ bool isVectorLikeCollectionBaseName(std::string_view baseName);
 bool isBufferAccessorMethodName(std::string_view methodName);
 bool isFileHandleMethodName(std::string_view methodName);
 bool isPrimitiveReceiverElementTypeName(std::string_view name);
+
+// Step 1b of docs/ReceiverTargetResolutionConsolidation.md: the joint
+// (type, methodName, templateShape) classifier that resolves the two
+// quirks classifyReceiverElementFamily's header documents above, per the
+// Step 0 Rule Table's Row category A (resolveArgsPackElementMethodTarget,
+// SemanticsValidatorMethodTargetArgsPackResolvers.cpp:152-217) - branch
+// order and gating replicated exactly, including the fall-through cases
+// (R2b, R4b, R6b) that land on StructOrUnknown rather than a rejection.
+//
+// `unwrappedElementType` must be the Reference<T>/Pointer<T>-unwrapped
+// element type text (== resolveArgsPackElementMethodTarget's own
+// `collectionElemType`) - used for the String, FileError, and (when
+// `isTemplateShaped`) the VectorLike/Soa/Buffer/KeyValue/File checks.
+//
+// `rawElementBaseType` is the *non*-unwrapped element type text, minus a
+// leading '/' (== that function's own `normalizedElemBaseType`, computed
+// from `elementTypeText` before the Reference/Pointer unwrap) - used only
+// for the trailing Primitive check (R7). Production computes these two
+// texts from different intermediate variables, so a Reference<i32>-typed
+// element's String/FileError/VectorLike/... checks run against the
+// unwrapped "i32" while its Primitive check runs against the *wrapped*
+// "Reference<i32>" (not primitive) - this asymmetry is reproduced
+// verbatim, not corrected, to stay byte-faithful to production; if this
+// looks like a latent bug it is exactly the kind of finding Step 1b's
+// diff harness exists to surface as a fresh Step 0 quirk, not something
+// this classifier should silently "fix".
+//
+// `isTemplateShaped` and `templateShapedBaseName` must be the caller's own
+// splitTemplateTypeName(unwrappedElementType) result (success flag and
+// normalized base) - this classifier does not re-implement that parse
+// (its own "matching '>' at the exact end of the string" requirement is
+// stage-owned), it only gates on the caller's answer, per the Step 1a
+// quirk writeup's "template-shape gating" finding.
+struct ReceiverElementFamilyJointInput {
+  std::string_view unwrappedElementType;
+  std::string_view rawElementBaseType;
+  bool isTemplateShaped = false;
+  std::string_view templateShapedBaseName;
+  std::string_view normalizedMethodName;
+};
+
+ReceiverElementFamilyResult classifyReceiverElementFamilyJoint(
+    const ReceiverElementFamilyJointInput &input,
+    const ReceiverElementFamilyPredicates &predicates);
+
+// Env-gate for Step 1b's differential-audit harness
+// (docs/ReceiverTargetResolutionConsolidation.md): when
+// PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set (any value) in the
+// environment, a wired call site additionally computes this classifier's
+// verdict alongside its own existing inline answer and compares the two -
+// purely for observation/logging, never substituting for the inline
+// answer. Checked once and cached; unset by default, so default
+// production behavior at every call site is unaffected.
+bool isReceiverTargetDiffAuditEnabled();
+
+// Human-readable family name for the diff-audit harness's log/assert
+// messages. Deliberately NOT named "toString" - that name collides with
+// doctest's ADL-based stringification hook and breaks CHECK(... ==
+// ReceiverElementFamily::...) in any test file that has this header
+// visible (discovered the hard way while extending this module's own unit
+// tests).
+const char *describeReceiverElementFamily(ReceiverElementFamily family);
 
 } // namespace primec

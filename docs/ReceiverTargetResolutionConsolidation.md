@@ -1,10 +1,19 @@
 # Receiver-Target Resolution Consolidation Plan
 
-Status: Step 1a landed (name-set library only, unwired). Step 0
-(characterize the full rule table) in progress - see "Step 0 Rule Table"
-below; semantics-stage method-target resolvers, all five
-snapshot-collection mechanisms, and monomorphization are now fully
-branch-enumerated; the `ir_lowerer` stage's own
+Status: Step 1b started (2026-09-08) - the joint `(type, methodName,
+templateShape)` classifier (`classifyReceiverElementFamilyJoint`) is
+landed, unit-tested (including both Step 1a quirks), and wired behind
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` into exactly one call site,
+`resolveArgsPackElementMethodTarget`
+(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`) - see "Step 1b:
+diff-audit harness wired at resolveArgsPackElementMethodTarget,
+zero-divergence achieved (2026-09-08)" below for the full proof. The
+harness is observe-only and env-gated off by default; no call site
+delegates to the classifier's verdict yet (that is Step 2, not attempted
+this round). Step 0 (characterize the full rule table) is otherwise still
+in progress - see "Step 0 Rule Table" below; semantics-stage method-target
+resolvers, all five snapshot-collection mechanisms, and monomorphization
+are now fully branch-enumerated; the `ir_lowerer` stage's own
 `resolveMethodCallDefinitionFromExpr` (Row G) is now enumerated too, but
 its two sibling receiver-target-helper/collection-helper files remain
 open. This is the sibling
@@ -154,16 +163,20 @@ table:
   predicates, the same pattern `CollectionSpellingClassifier` uses for
   `CollectionDefinitionExistsFn`.
 
-### Step 1b — Full classifier plus differential-audit harness (not started)
+### Step 1b — Full classifier plus differential-audit harness (started 2026-09-08, one call site)
 
-Once Step 0's rule table exists, extend the Step 1a module (or replace it)
-to take the same `(type, methodName, templateShape)` joint inputs each
-stage already computes, wire it in behind a
-`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`-style env-gated comparison at
-one call site at a time (semantics first — it is the reference behavior,
-per the compat-spelling precedent's own governing principle), and drive it
-to zero divergence across the full 3-suite battery before any call site
-actually delegates.
+Extended the Step 1a module with `classifyReceiverElementFamilyJoint`,
+taking the `(type, methodName, templateShape)` joint inputs Row category
+A's rule table documents, and wired an env-gated
+(`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`) differential-audit harness
+into `resolveArgsPackElementMethodTarget` - see the dedicated Update
+section below for the full detail (classifier design, wiring mechanics,
+zero-divergence proof, unchanged-default-behavior proof). Remaining scope:
+every other Row A/B/C/D/E call site (`resolveMethodCallTemplateTarget` and
+siblings in monomorphization, `ir_lowerer`'s own helpers, and the
+snapshot-collection mechanisms) still independently re-derives receiver
+family membership - this round wired exactly one function, deliberately,
+per this document's own staged-rollout discipline.
 
 ### Step 2 — Migrate stage by stage (not started)
 
@@ -2026,6 +2039,148 @@ continue to resolve to real findings rather than false alarms at a high
 rate, and semantics-stage upstream validation continues to be the
 dominant reason a documented lower-stage gap turns out to be
 latent-only rather than live.
+
+## Step 1b: diff-audit harness wired at resolveArgsPackElementMethodTarget, zero-divergence achieved (2026-09-08)
+
+Following the Plan's own staged discipline: extended
+`ReceiverElementFamilyClassifier` and wired the differential-audit harness
+into exactly **one** call site this round -
+`resolveArgsPackElementMethodTarget`
+(`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`), Row category A's
+entry point and the most thoroughly characterized single function in the
+Step 0 rule table. No other call site was touched.
+
+**Classifier extension.** Added
+`classifyReceiverElementFamilyJoint(ReceiverElementFamilyJointInput,
+ReceiverElementFamilyPredicates)` alongside the existing (still-unwired)
+Step 1a `classifyReceiverElementFamily`, in
+`include/primec/support/ReceiverElementFamilyClassifier.h` /
+`src/support/ReceiverElementFamilyClassifier.cpp`. It replicates R1-R7 of
+Row category A's cascade exactly, resolving both quirks Step 1a's header
+flagged as open:
+
+- **FileError method-name gating (R2/R2b).** `FileError` only classifies
+  as the `FileError` family when `normalizedMethodName` is one of `{why,
+  is_eof, status, result}`; any other method name **falls through**
+  (continues evaluation, does not reject) to the template-shape block and
+  then the Primitive/StructOrUnknown fallback - reproduced by not
+  returning early on a method-name mismatch, exactly mirroring
+  production's control flow rather than special-casing it.
+- **Template-shape gating (R3-R6b).** The `VectorLike`/`Soa`/`Buffer`/
+  `KeyValue`/`File` checks only run when the caller reports
+  `isTemplateShaped == true` (computed by the caller's own
+  `splitTemplateTypeName`, not re-implemented in the classifier - its
+  "matching `>` at the exact end of the string" requirement stays
+  stage-owned). A bare non-template `"Buffer"` or `"File"` element type
+  skips the whole block and falls to Primitive/StructOrUnknown, reproduced
+  verbatim (`R6b`).
+- A third, previously-undocumented but symmetric quirk fell out of
+  extending the two above to `Buffer` and `File`'s own method-name gates
+  (`R4b`: `Buffer<T>` with an unrecognized accessor method; the File-side
+  equivalent of `R6b` for a template-shaped `File<T>` with an unrecognized
+  handle method) - both are the same "commit only on method-name match,
+  else fall through" shape as `R2b`, not a new independent finding, so
+  folded into the same rows rather than given new IDs.
+- A fourth, genuinely new observation surfaced while wiring the joint
+  input: production's Primitive check (R7) runs against
+  `normalizedElemBaseType` - the **non**-Reference/Pointer-unwrapped
+  element type text - while every other branch (R1-R6) runs against
+  `collectionElemType`, the **unwrapped** text. A `Reference<i32>`-typed
+  args-pack element therefore never classifies as `Primitive` in
+  production (the wrapped text `"Reference<i32>"` isn't in the primitive
+  name set), even though its unwrapped type is a primitive - it falls to
+  the struct-path fallback (R8) instead. The joint classifier takes two
+  separate text inputs (`unwrappedElementType` for R1-R6,
+  `rawElementBaseType` for R7) specifically to reproduce this asymmetry
+  rather than silently "fixing" it - flagged in the header as a candidate
+  fresh Step 0 finding for whoever next characterizes whether real
+  `args<Reference<i32>>`-shaped elements are reachable in practice (not
+  determined this round; out of scope for Step 1b, which only has to
+  match production, not judge it).
+
+Unit tests: `tests/unit/semantics/test_semantics_receiver_element_family_classifier.cpp`
+gained 12 new `TEST_CASE`s (22 total in the suite, all passing) pinning
+R1-R7 including both documented quirks, the R4b/File-mismatch
+fallthroughs, R6b for both `Buffer` and `File`, and the R7
+wrapped-vs-unwrapped asymmetry explicitly.
+
+**Doctest pitfall found and fixed.** The first attempt named the new
+logging helper `primec::toString(ReceiverElementFamily)`. Doctest's
+`CHECK(... == ReceiverElementFamily::...)` stringification does an
+ADL lookup for a function literally named `toString`, and colliding with
+it broke compilation of every existing `==` comparison on this enum
+(`invalid operands of types 'const char*' and 'const char*' to binary
+'operator+'` inside `doctest.h`, confirmed via `git stash` that the file
+built cleanly before this addition and broke immediately after adding
+that one function). Renamed to `describeReceiverElementFamily` and the
+build was clean again - documented in the header as a landmine for future
+additions to this module rather than left to be rediscovered.
+
+**Wiring mechanics.** `resolveArgsPackElementMethodTarget`'s own control
+flow, argument types, and return values are **completely unmodified**.
+The only additions: (1) a single cached `isReceiverTargetDiffAuditEnabled()`
+check near the top: if unset, the block that would compute the classifier
+verdict is skipped entirely (the `if (diffAuditEnabled) { ... }` body never
+runs); (2) one `auditFamily(...)` call inserted immediately before each of
+the function's existing `return` statements, which - when the env var is
+set - compares the family that production branch represents against the
+already-computed classifier verdict and logs a `[receiver-target-diff-audit]
+MISMATCH ...` line to stderr (plus a debug-only `assert`, a no-op in this
+Release build) on disagreement; when unset, `auditFamily` is a no-op
+(single boolean check, immediate return). No existing line's return
+expression, evaluation order relative to its own side effects, or the
+values written to `resolvedOut`/`isBuiltinOut` changed.
+
+**Zero-divergence proof.** Ran the full 3-suite battery
+(`PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`,
+`PrimeStruct_compile_run_tests`) with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+set:
+
+| suite | test cases | failed | assertions | failed | `[receiver-target-diff-audit] MISMATCH` lines |
+|---|---|---|---|---|---|
+| semantics | 2766 | 1 | 13341 | 2 | **0** |
+| backend_ir | 1646 | 46 | 16428 | 137 | **0** |
+| compile_run | 2679 | 5 | 15278 | 8 | **0** |
+
+Zero mismatch lines across all three suites - every call this function
+made while the harness was active agreed with the classifier's verdict.
+Failure counts above (1/46/5, the same pre-existing baseline this session
+independently re-confirmed byte-for-byte by test name before making any
+change - see below) are unrelated pre-existing issues, not caused by this
+round's work.
+
+**Unchanged-default-behavior proof.** Ran the same battery with the env
+var unset (default) and diffed the *set* of failing test-case names
+against a freshly re-confirmed pre-change baseline (`git stash`, rebuild,
+rerun, `git stash pop`, rebuild again) using `diff` on sorted name lists,
+not just counts:
+
+- `PrimeStruct_semantics_tests`: baseline and post-change failing-name
+  sets both exactly `{"semantic product validates direct return
+  method-like borrowed helper-return experimental soa reads"}` (the same
+  pre-existing flake this document's Update sections already reference) -
+  `diff` empty.
+- `PrimeStruct_backend_ir_tests`: baseline and post-change failing-name
+  sets both the same 46 names (the pre-existing baseline this document's
+  2026-09-05/06 Update already re-confirmed as not a regression) - `diff`
+  empty.
+- `PrimeStruct_compile_run_tests`: baseline and post-change failing-name
+  sets both the same 5 names (matches the 2026-09-06 Update's "dropped
+  ... to 5 failures" state) - `diff` empty.
+
+Total test-case counts are up by 12 in `semantics` (the new classifier
+unit tests themselves) and unchanged in the other two suites, exactly as
+expected for a purely-additive, env-gated change with no test additions
+in those files.
+
+**Conclusion.** Zero divergence achieved for this one call site on the
+first attempt - no classifier iteration was needed; the two Step 1a quirks
+plus the two new joint-extension findings (Buffer/File method-mismatch
+fallthrough, the wrapped-vs-unwrapped Primitive-check asymmetry) fully
+account for production's behavior at this call site. The harness stays
+wired and env-gated off by default. No call site was switched to use the
+classifier's verdict for real (Step 2, not attempted this round, per the
+task's explicit scope).
 
 ## Risks
 

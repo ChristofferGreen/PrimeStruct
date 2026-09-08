@@ -846,6 +846,52 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     test-coverage cross-reference (... sixth round)" section for full
     per-row detail and the updated "still open" list. Per this task's
     scope, still not marked `[x]` and Step 1b still not started.
+  - implementation_notes (2026-09-08, seventh round - Step 1b started):
+    extended `ReceiverElementFamilyClassifier` with
+    `classifyReceiverElementFamilyJoint`, taking the joint `(type,
+    methodName, templateShape)` inputs and resolving both quirks Step 1a's
+    header flagged open (FileError method-name gating, template-shape
+    gating for bare Buffer/File), plus two more symmetric findings made
+    while extending it (Buffer/File method-mismatch fallthrough mirrors
+    FileError's; the Primitive check (R7) runs against the
+    non-Reference/Pointer-unwrapped text while every other branch runs
+    against the unwrapped text - reproduced verbatim, flagged as a
+    candidate fresh Step 0 row, not "fixed"). 12 new unit tests added (22
+    total in the classifier's test file, all passing). Wired an env-gated
+    (`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`) differential-audit
+    harness into exactly one call site,
+    `resolveArgsPackElementMethodTarget`
+    (`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`, Row category
+    A's entry point) - the harness computes the classifier's verdict
+    alongside the existing inline answer and compares, but never
+    substitutes for it; production's own control flow, return values, and
+    side effects are unmodified (verified: `git stash`-based rebuild
+    confirmed the file compiled identically before/after modulo the
+    intended diff). Ran the full 3-suite battery with the env var SET:
+    zero `[receiver-target-diff-audit] MISMATCH` lines across all three
+    suites (semantics 2766 cases/1 known-flake failure, backend_ir 1646/46
+    pre-existing failures, compile_run 2679/5 pre-existing failures - all
+    three counts independently re-confirmed as the pre-change baseline by
+    a fresh `git stash` + rebuild + rerun before any change, and the exact
+    *set* of failing test-case names, not just counts, diffed
+    byte-for-byte identical with the env var both unset and set). Also hit
+    and fixed a doctest pitfall: a helper originally named
+    `primec::toString(ReceiverElementFamily)` collided with doctest's
+    ADL-based stringification hook and broke every `==` comparison on the
+    enum in the test file; renamed to `describeReceiverElementFamily` and
+    documented the landmine in the header. Full detail, the
+    divergence-count table, and the unchanged-default-behavior diff
+    methodology are in `docs/ReceiverTargetResolutionConsolidation.md`'s
+    new "Step 1b: diff-audit harness wired at
+    resolveArgsPackElementMethodTarget, zero-divergence achieved
+    (2026-09-08)" section. Scope explicitly NOT attempted this round, per
+    the task's own staging: no call site was switched to use the
+    classifier's verdict (Step 2); every other Row A/B/C/D/E call site
+    (monomorphization's `resolveMethodCallTemplateTarget` and siblings,
+    `ir_lowerer`'s receiver-target helpers, the four snapshot-collection
+    mechanisms) still independently re-derives receiver family membership
+    and is unwired. Still not marked `[x]` - this is one call site out of
+    a large remaining set.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

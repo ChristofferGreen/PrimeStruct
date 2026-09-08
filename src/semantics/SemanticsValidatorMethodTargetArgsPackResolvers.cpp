@@ -4,11 +4,14 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsValidatorMethodTargetResolutionDetail.h"
 #include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cstdint>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -166,7 +169,61 @@ bool SemanticsValidator::resolveArgsPackElementMethodTarget(
   if (extractWrappedPointeeType(normalizedElemType, wrappedPointeeType)) {
     collectionElemType = normalizeBindingTypeName(wrappedPointeeType);
   }
+
+  // Step 1b differential-audit harness
+  // (docs/ReceiverTargetResolutionConsolidation.md, PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT):
+  // computes the shared classifier's verdict alongside this function's own
+  // inline cascade below and compares the two, purely for observation - it
+  // never influences this function's actual return value. Zero-cost when
+  // the env var is unset (a single cached getenv check).
+  const bool diffAuditEnabled = primec::isReceiverTargetDiffAuditEnabled();
+  primec::ReceiverElementFamily classifierFamilyForAudit =
+      primec::ReceiverElementFamily::StructOrUnknown;
+  if (diffAuditEnabled) {
+    std::string auditElemBase;
+    std::string auditElemArgText;
+    const bool auditIsTemplateShaped =
+        splitTemplateTypeName(collectionElemType, auditElemBase, auditElemArgText);
+    if (auditIsTemplateShaped) {
+      auditElemBase = normalizeBindingTypeName(auditElemBase);
+    }
+    primec::ReceiverElementFamilyJointInput jointInput;
+    jointInput.unwrappedElementType = collectionElemType;
+    jointInput.rawElementBaseType = normalizedElemBaseType;
+    jointInput.isTemplateShaped = auditIsTemplateShaped;
+    jointInput.templateShapedBaseName = auditElemBase;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    primec::ReceiverElementFamilyPredicates auditPredicates{
+        [](std::string_view name) {
+          return isInternalSoaCollectionTypeName(name);
+        },
+        [](std::string_view name) {
+          return isKeyValueSurfaceTypeName(std::string(name));
+        },
+    };
+    classifierFamilyForAudit =
+        primec::classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
+  }
+  auto auditFamily = [&](primec::ReceiverElementFamily productionFamily) {
+    if (!diffAuditEnabled) {
+      return;
+    }
+    if (productionFamily != classifierFamilyForAudit) {
+      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
+                   "resolveArgsPackElementMethodTarget: elementTypeText=\""
+                << elementTypeText << "\" methodName=\"" << normalizedMethodName
+                << "\" production=" << primec::describeReceiverElementFamily(productionFamily)
+                << " classifier=" << primec::describeReceiverElementFamily(classifierFamilyForAudit)
+                << "\n";
+    }
+    assert(productionFamily == classifierFamilyForAudit &&
+           "receiver-target diff audit: classifier/production family disagreement "
+           "(PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
+           "docs/ReceiverTargetResolutionConsolidation.md Step 1b");
+  };
+
   if (collectionElemType == "string" || normalizedElemBaseType == "string") {
+    auditFamily(primec::ReceiverElementFamily::String);
     return setCollectionMethodTarget("/string/" + normalizedMethodName);
   }
   if (collectionElemType == "FileError" &&
@@ -174,6 +231,7 @@ bool SemanticsValidator::resolveArgsPackElementMethodTarget(
        normalizedMethodName == "status" || normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
     isBuiltinOut = resolvedOut == "/file_error/why";
+    auditFamily(primec::ReceiverElementFamily::FileError);
     return !resolvedOut.empty();
   }
   std::string elemBase;
@@ -182,26 +240,33 @@ bool SemanticsValidator::resolveArgsPackElementMethodTarget(
     elemBase = normalizeBindingTypeName(elemBase);
     if (elemBase == "vector" || elemBase == "array" ||
         isInternalSoaCollectionTypeName(elemBase)) {
+      auditFamily(elemBase == "vector" || elemBase == "array"
+                       ? primec::ReceiverElementFamily::VectorLike
+                       : primec::ReceiverElementFamily::Soa);
       return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
     }
     if (elemBase == "Buffer" &&
         (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
          normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
          normalizedMethodName == "load" || normalizedMethodName == "store")) {
+      auditFamily(primec::ReceiverElementFamily::Buffer);
       return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
     }
     if (isKeyValueSurfaceTypeName(elemBase)) {
+      auditFamily(primec::ReceiverElementFamily::KeyValue);
       return setPreferredKeyValueMethodTarget(receiverExpr, normalizedMethodName);
     }
     if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
       resolvedOut = preferredFileHelperTarget(normalizedMethodName,
                                              currentValidationState_.context.definitionPath);
       isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
+      auditFamily(primec::ReceiverElementFamily::File);
       return true;
     }
   }
   if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
     resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
+    auditFamily(primec::ReceiverElementFamily::Primitive);
     return true;
   }
   std::string resolvedElemType =
@@ -211,8 +276,10 @@ bool SemanticsValidator::resolveArgsPackElementMethodTarget(
   }
   if (!resolvedElemType.empty()) {
     resolvedOut = resolvedElemType + "/" + normalizedMethodName;
+    auditFamily(primec::ReceiverElementFamily::StructOrUnknown);
     return true;
   }
+  auditFamily(primec::ReceiverElementFamily::StructOrUnknown);
   return false;
 }
 

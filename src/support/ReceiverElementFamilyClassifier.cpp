@@ -1,6 +1,8 @@
 // collection-surface-audit: exempt
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 
+#include <cstdlib>
+
 namespace primec {
 
 bool isVectorLikeCollectionBaseName(std::string_view baseName) {
@@ -86,6 +88,121 @@ ReceiverElementFamilyResult classifyReceiverElementFamily(
   }
   result.family = ReceiverElementFamily::StructOrUnknown;
   return result;
+}
+
+namespace {
+
+std::string stripLeadingSlash(std::string_view text) {
+  return std::string(!text.empty() && text.front() == '/' ? text.substr(1) : text);
+}
+
+} // namespace
+
+ReceiverElementFamilyResult classifyReceiverElementFamilyJoint(
+    const ReceiverElementFamilyJointInput &input,
+    const ReceiverElementFamilyPredicates &predicates) {
+  ReceiverElementFamilyResult result;
+  result.normalizedElementBaseType = stripLeadingSlash(input.unwrappedElementType);
+
+  const std::string rawBase = stripLeadingSlash(input.rawElementBaseType);
+
+  // R1: string check - unconditional, no method-name/template-shape gating.
+  if (input.unwrappedElementType == "string" || rawBase == "string") {
+    result.family = ReceiverElementFamily::String;
+    return result;
+  }
+
+  // R2 / R2b: FileError only commits when the method name matches; on a
+  // mismatch it falls through (does NOT return/reject here) to whatever
+  // the template-shape block and R7 would otherwise decide - which, for
+  // the literal "FileError" base (never template-shaped in practice),
+  // lands on StructOrUnknown by falling all the way through below.
+  if (input.unwrappedElementType == "FileError") {
+    const std::string_view m = input.normalizedMethodName;
+    if (m == "why" || m == "is_eof" || m == "status" || m == "result") {
+      result.family = ReceiverElementFamily::FileError;
+      return result;
+    }
+    // R2b fallthrough: continue past this check, do not return.
+  }
+
+  // R3-R6b: template-shape gated. A non-template-shaped element type (even
+  // a bare "Buffer"/"File") skips this entire block, per the Step 1a
+  // "template-shape gating" quirk.
+  if (input.isTemplateShaped) {
+    const std::string elemBase = stripLeadingSlash(input.templateShapedBaseName);
+    if (isVectorLikeCollectionBaseName(elemBase)) {
+      result.family = ReceiverElementFamily::VectorLike;
+      result.collectionBaseName = elemBase;
+      return result;
+    }
+    if (predicates.isInternalSoaCollectionTypeName &&
+        predicates.isInternalSoaCollectionTypeName(elemBase)) {
+      result.family = ReceiverElementFamily::Soa;
+      result.collectionBaseName = elemBase;
+      return result;
+    }
+    if (elemBase == "Buffer") {
+      if (isBufferAccessorMethodName(input.normalizedMethodName)) {
+        result.family = ReceiverElementFamily::Buffer;
+        return result;
+      }
+      // R4b fallthrough: continue past this check, do not return.
+    } else if (predicates.isKeyValueSurfaceTypeName &&
+               predicates.isKeyValueSurfaceTypeName(elemBase)) {
+      // R5: no method-name gating.
+      result.family = ReceiverElementFamily::KeyValue;
+      return result;
+    } else if (elemBase == "File") {
+      if (isFileHandleMethodName(input.normalizedMethodName)) {
+        result.family = ReceiverElementFamily::File;
+        return result;
+      }
+      // R6b (method-mismatch case, distinct from the bare-non-template R6b
+      // named in the header): continue past this check, do not return.
+    }
+  }
+
+  // R7: primitive check - deliberately uses the *non-unwrapped* raw base
+  // type text, matching production's asymmetry (see header comment).
+  if (isPrimitiveReceiverElementTypeName(rawBase)) {
+    result.family = ReceiverElementFamily::Primitive;
+    return result;
+  }
+
+  // R8/R9: caller resolves the struct-type path (or reports unresolved).
+  result.family = ReceiverElementFamily::StructOrUnknown;
+  return result;
+}
+
+bool isReceiverTargetDiffAuditEnabled() {
+  static const bool enabled =
+      std::getenv("PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT") != nullptr;
+  return enabled;
+}
+
+const char *describeReceiverElementFamily(ReceiverElementFamily family) {
+  switch (family) {
+    case ReceiverElementFamily::String:
+      return "String";
+    case ReceiverElementFamily::FileError:
+      return "FileError";
+    case ReceiverElementFamily::VectorLike:
+      return "VectorLike";
+    case ReceiverElementFamily::Soa:
+      return "Soa";
+    case ReceiverElementFamily::Buffer:
+      return "Buffer";
+    case ReceiverElementFamily::KeyValue:
+      return "KeyValue";
+    case ReceiverElementFamily::File:
+      return "File";
+    case ReceiverElementFamily::Primitive:
+      return "Primitive";
+    case ReceiverElementFamily::StructOrUnknown:
+      return "StructOrUnknown";
+  }
+  return "<unknown ReceiverElementFamily>";
 }
 
 } // namespace primec
