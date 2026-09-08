@@ -680,6 +680,54 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     R10-R13 but never given its own table row - still missing), and all
     of `ir_lowerer`'s three named files beyond the one gate already in Row
     category D.
+  - implementation_notes (2026-09-08, third round): closed all three
+    items the previous round left open. F3 (monomorphization's
+    receiver-type-inference sub-cascade feeding `typeName` into
+    `resolveMethodCallTemplateTarget`) is now fully branch-enumerated
+    (`TemplateMonomorphMethodTargets.cpp:402-478`), surfacing two new
+    override-priority gaps: the `Call`-receiver sub-cascade's
+    `return<T>`-transform-scan step and its "no definition found"
+    `getBuiltinCollectionName` fallback both **unconditionally** overwrite
+    an already-computed `typeName` from the earlier
+    `inferBindingTypeForMonomorph`/`inferExprTypeTextForTemplatedVectorFallback`
+    steps, with no documented priority between "receiver's own inferred
+    type" and "receiver call's declared annotation/builtin-name guess" -
+    plus a field-asymmetry where the vector fallback step updates
+    `typeName`/`isBorrowedSoaReceiver` but not `wrappedReceiverTypeName`,
+    which matters for a later wrapper-path branch that reads that field
+    specifically. Added `query_facts` as R14 in Row category E, with an
+    important correction: it is not a sixth independent receiver-family
+    re-derivation - its `resolvedPath` is R11's own `inferCallSnapshotData`
+    output, reused directly - but its `typeText`/`resultInfo`/
+    `receiverBinding` layer on top is genuinely independent, including two
+    separately-coded Result-type inference paths selected by whether a
+    typed binding was already found, and a receiver-binding gate with no
+    counterpart in R10-R13. Also flagged (not resolved) whether
+    `query_facts`'s own local-aware traversal is exempt from the
+    `skipLocalAwareCallRefinement_` pilot-routing guard R11 respects - its
+    call chain has no such check anywhere, but the two known call sites
+    forcing that flag true don't appear to nest around `query_facts`'s own
+    call site either, so this reads as latent rather than live, unproven
+    either way. Established new Row category G for the `ir_lowerer` stage:
+    `resolveMethodCallDefinitionFromExpr`
+    (`IrLowererSetupTypeMethodCallResolution.cpp:377-1247`, ~870 lines,
+    the largest cascade found in this whole investigation) is fully
+    branch-enumerated at the same major-branch granularity Row F used.
+    Located the `SoaVector__`/specialization-suffix case this document's
+    own "Problem, Verified" section named but had never located - it
+    lives entirely in `IrLowererSetupTypeMethodCallResolution.cpp` itself
+    (`isExperimentalSoaVectorSpecializedStructPath`/
+    `resolveSpecializedExperimentalSoaVectorStructPath`), not in
+    `IrLowererSetupTypeCollectionHelpers.cpp` as that section's phrasing
+    implied - confirmed by grepping the latter file in full for
+    `SoaVector__`, zero hits. Still open, left for a future round:
+    `IrLowererSetupTypeReceiverTargetHelpers.cpp`'s
+    `resolveMethodCallReceiverExpr`/`resolveMethodReceiverTarget` (cited by
+    name only in Row G) and the bulk of `IrLowererSetupTypeCollectionHelpers.cpp`
+    beyond the `SoaVector__` search (the `preferred*ErrorHelperTarget`
+    family, `isExplicit*AliasPath` predicates, path-canonicalization
+    helpers). See the doc's Row categories E, F (F3 detail), and new Row G,
+    plus the updated "What remains" note, for full detail.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

@@ -2,9 +2,12 @@
 
 Status: Step 1a landed (name-set library only, unwired). Step 0
 (characterize the full rule table) in progress - see "Step 0 Rule Table"
-below; semantics-stage method-target resolvers substantially covered,
-the four snapshot-collection mechanisms and the ir_lowerer/
-monomorphization stages remain. This is the sibling
+below; semantics-stage method-target resolvers, all five
+snapshot-collection mechanisms, and monomorphization are now fully
+branch-enumerated; the `ir_lowerer` stage's own
+`resolveMethodCallDefinitionFromExpr` (Row G) is now enumerated too, but
+its two sibling receiver-target-helper/collection-helper files remain
+open. This is the sibling
 problem `docs/CompatPathResolutionConsolidation.md` explicitly deferred as
 a non-goal: "Method-call *receiver* inference (which type a method call
 dispatches on) stays where it is; the classifier only decides spelling
@@ -608,16 +611,14 @@ surface member name; disposition = excluded from builtin-array-access
 regardless of receiver type; pinned by `PrimeStruct_backend_ir_tests`
 (46 tests, per the 2026-09-04/05 near-regression finding above).
 
-### Row category E: the four snapshot-collection mechanisms (full branch enumeration, 2026-09-08)
+### Row category E: the five snapshot-collection mechanisms (full branch enumeration, 2026-09-08; R14/`query_facts` added 2026-09-08 second round)
 
 Documented in narrative form in the "Step 0 Progress" Update sections
 above from the TODO-4760 investigation; expanded here to full branch
 level per row (previous round left this at file:line pointers only).
-Note: the narrative above (see "Found the true root gate") also names a
-fifth sibling, `query_facts`, as independently duplicating the same gap -
-that mechanism is **not** covered by R10-R13 below and remains untraced;
-flagged again in "What remains" at the end of this section so it is not
-lost.
+The narrative above (see "Found the true root gate") also names a fifth
+sibling, `query_facts`, as independently duplicating the same gap - see
+R14 below, added this round.
 
 **R10 - `direct_call_targets` naive pass**
 (`collectDirectCallExpr`, `SemanticsValidatorSnapshots.cpp:1578-1640`,
@@ -745,7 +746,93 @@ build config that disables `binding_facts` specifically but leaves
 request one without the other. UNPINNED as an intentional-vs-accidental
 design choice; not found documented anywhere as deliberate.
 
-All four mechanisms were confirmed (2026-09-04, see Update sections
+**R14 - `query_facts`** (full branch enumeration, 2026-09-08 - the fifth
+sibling this document's own 2026-09-04 narrative named but never gave a
+row to). Producer: `SemanticsValidator::ensureQuerySnapshotFactCaches`
+(`SemanticsValidatorSnapshotLocals.cpp:420-`), which builds
+`queryFactSnapshotCache_` in two passes, both driven by
+`forEachLocalAwareSnapshotCall` (the same local-aware traversal R11 uses)
+and both delegating the actual per-call inference to
+`inferQuerySnapshotData` (`SemanticsValidatorSnapshotLocals.cpp:9-89`).
+
+Important correction to the 2026-09-04 narrative's framing: `query_facts`
+is **not** an independently-derived fifth answer at the `resolvedPath`
+level. `inferQuerySnapshotData`'s very first step
+(`SemanticsValidatorSnapshotLocals.cpp:34-38`) calls
+**`inferCallSnapshotData` directly** - the exact same function R11 already
+fully characterizes above - and takes its `resolvedPath`/`binding`
+verbatim. So `query_facts` inherits every one of R11's already-documented
+branches and divergences (F1/F2's task-wait/task-spawn early-returns,
+F4's bare-`count`/`capacity` R10-less branch, F9/F9b's D5 shadow-guard) at
+the resolvedPath layer for free - it is a *consumer* of R11's answer, not
+a sixth independent re-derivation of it. What genuinely is independent
+here is the `typeText`/`resultInfo`/`receiverBinding` machinery layered
+on top:
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| Q1 | `inferCallSnapshotData(defParams, activeLocals, expr, callData)` succeeds | `out.resolvedPath`/`out.binding` = `callData`'s (see R11 above - not re-derived here) | R11's own pinning |
+| Q2 | `out.typeText = bindingTypeText(out.binding)`; if that's empty | fall back to `inferQueryExprTypeText(expr, defParams, activeLocals, out.typeText)` (its own, separate type-text inference function - not itself branch-enumerated this round, flagged as a further-detail opportunity) | UNPINNED to this collector specifically |
+| Q3 | `!out.binding.typeName.empty()` | `resolveResultTypeFromTypeName(out.typeText, out.resultInfo)`; if it fails or `!isResult`, reset `resultInfo = {}` | UNPINNED |
+| Q3b | `out.binding.typeName.empty()` | `resolveResultTypeForExpr(expr, defParams, activeLocals, out.resultInfo)` instead (a **different** function than Q3's, its own independent Result-type inference path); same `!isResult` reset rule | UNPINNED - two independently-coded Result-type inference paths selected purely by whether `Q1` already produced a typed binding, mirroring this document's general "priority disagreement between independently-derived answers" shape one level deeper |
+| Q4 | `expr.kind==Call && !args.empty() && !out.resolvedPath.empty() && (expr.isMethodCall \|\| resolvedPath starts with "/std/collections/" \|\| resolvedPath starts with "/array/")` | receiver-query-candidate gate for `Q5`/`Q5b` below - this specific 3-way OR (method-call-shaped, or a collections-prefixed, or an array-prefixed resolved path) has no counterpart anywhere in R10-R13 | UNPINNED |
+| Q5 | Q4 true; `receiverExpr.kind == Name` | `findBinding(defParams, activeLocals, receiverExpr.name)`, if found, sets `out.receiverBinding` | UNPINNED to this collector |
+| Q5b | `out.receiverBinding.typeName` still empty AND `expr.isMethodCall` | `inferBindingTypeFromInitializer(receiverExpr, ...)` fallback; on failure or an empty resulting `typeName`, `out.receiverBinding` is reset to `{}` (matching R11's F11's own use of the identical helper for a different field) | UNPINNED |
+| Q6 | overall return value | `true` iff any of `resolvedPath`/`typeText`/`binding.typeName`/`resultInfo.isResult`/`receiverBinding.typeName` is non-empty/true | — |
+
+Producer's own two passes, both gated by `!out.resolvedPath.empty()`
+before an entry is ever pushed (`ensureQuerySnapshotFactCaches`,
+`SemanticsValidatorSnapshotLocals.cpp:420-`):
+
+- **Pass 1** (line 427): visits **every** `Call`-kind expr the local-aware
+  traversal reaches (no method-call/receiver-shape filter at all, unlike
+  Q4's gate which only restricts `Q5`/`Q5b`) via `inferQuerySnapshotData`;
+  pushes a `QueryFactSnapshotEntry` unconditionally whenever
+  `resolvedPath` is non-empty - **no de-duplication** for this pass.
+- **Pass 2** (line 467): specifically for `pick(...)` calls
+  (`isSimpleCallName(expr, "pick") && expr.args.size()==1 &&` the call has
+  body arguments) whose single argument is itself a `Call` - runs
+  `inferQuerySnapshotData` on that **inner target call**, not on the
+  `pick(...)` call itself, and appends only if an identical entry
+  (matched by scope path, call name, source line/column, resolvedPath,
+  and semanticNodeId) isn't already present. UNPINNED as to whether Pass 2
+  ever contributes an entry Pass 1 didn't already produce: since Pass 1's
+  traversal already recurses into every expr's `args` (including the
+  `Call` nested inside `pick`'s own single argument), the inner target
+  call would ordinarily already have its own Pass-1-produced entry at the
+  same line/column/semanticNodeId - not independently verified this round
+  whether some traversal-order or scope difference makes Pass 2 load-
+  bearing for any real call shape, or whether it is pure redundant
+  insurance.
+
+**Production gate and a new pilot-routing asymmetry, not yet in R10-R13's
+list.** `query_facts` is gated by the `"query_facts"` collector flag
+(`SemanticsValidatorSnapshots.cpp:1917-1920`); when
+`useMergedWorkerPublicationFacts` is true it uses
+`mergedWorkerPublicationFacts_.queryFacts` (merged across parallel
+workers), otherwise it calls `queryFactSnapshotForSemanticProduct()`
+fresh. Unlike R11's own call site
+(`SemanticsValidatorSnapshots.cpp:1662`, gated on
+`!useMergedWorkerPublicationFacts && !skipLocalAwareCallRefinement_`),
+`ensureQuerySnapshotFactCaches`'s call into `forEachLocalAwareSnapshotCall`
+has **no** `skipLocalAwareCallRefinement_` check anywhere in its own code
+or call chain (confirmed by reading
+`SemanticsValidatorSnapshotLocals.cpp` in full) - so if
+`queryFactSnapshotForSemanticProduct()` were ever reached while that flag
+is forced true, `query_facts` would keep running full local-aware
+refinement (and thus keep tracking R11's own answer, task-spawn handling
+included) exactly when `direct_call_targets` has fallen back to R10-only.
+On a first read this looks latent rather than live: the two known
+call sites that force `skipLocalAwareCallRefinement_ = true`
+(`SemanticsValidatorSnapshots.cpp:1061-1063`) bracket a call to
+`collectPilotRoutingSemanticProductFacts()` specifically, while
+`queryFactSnapshotForSemanticProduct()`'s own call site
+(`SemanticsValidatorSnapshots.cpp:1917-1920`, inside
+`takeSemanticPublicationSurfaceForSemanticProduct`) is a separate function
+not nested inside that bracket - not proven either way this round, flagged
+for whoever next audits the worker-parallel pilot-routing path as a whole.
+
+All four of R10-R13 were confirmed (2026-09-04, see Update sections
 above) to independently compute the same wrong answer for the TODO-4760
 repro before that bug's actual root cause (Row category D, not any of
 these four) was found - i.e. these four are a real, demonstrated instance
@@ -757,11 +844,19 @@ hardcoded per the compat-spelling document's own scope decision), so any
 future receiver-family classifier work here needs to treat R10-R13 as
 call/binding sites needing a receiver-aware answer plumbed in, not as
 receiver-logic to consolidate directly. The R10/R11 divergences found
-this round (task-spawn, bare count/capacity, the D5-guard asymmetry) are
-new findings beyond what TODO-4760's investigation already established -
-none of them were the TODO-4760 repro's root cause either (that was Row
-category D), but they are real, currently-uncharacterized-elsewhere
-behavioral differences between the two `direct_call_targets` producers.
+in the first Row-E round (task-spawn, bare count/capacity, the D5-guard
+asymmetry) are new findings beyond what TODO-4760's investigation already
+established - none of them were the TODO-4760 repro's root cause either
+(that was Row category D), but they are real, currently-uncharacterized-
+elsewhere behavioral differences between the two `direct_call_targets`
+producers. R14/`query_facts`, added this round, is a different case again:
+it is not a sixth independent receiver-family re-derivation at all (its
+`resolvedPath` is R11's own `inferCallSnapshotData` output, reused
+directly) - its independent surface is narrower (the `typeText`/
+`resultInfo`/`receiverBinding` layer on top, per R14's own table above),
+but that narrower surface has its own two independently-coded Result-type
+inference paths (Q3/Q3b) and its own receiver-binding gate (Q4/Q5/Q5b)
+with no counterpart in R10-R13.
 
 ### Row category F: monomorphization stage (`resolveMethodCallTemplateTarget` and its collection-compatibility-path helpers, 2026-09-08)
 
@@ -790,7 +885,7 @@ matters, first match returns:
 | F1 | receiver is a bare `Expr::Kind::Name` whose **literal spelling** (after `normalizeBindingTypeName`) is exactly `"FileError"` (not a binding lookup - the receiver identifier text itself must read `FileError`) AND method name ∈ `{result, status, why, is_eof, eof}` (5 names) | dispatch to a hardcoded `/std/file/FileError/<method>` path via `selectStaticHelperOverloadPath` | UNPINNED to this specific literal-receiver-spelling shape; not independently verified this round which test (if any) calls methods on a receiver expression that is literally the identifier `FileError` rather than a `FileError`-typed binding |
 | F1-not | receiver is `Name` spelled `FileError` but method NOT in that 5-name set | falls through to the rest of the cascade (F2 onward) exactly as if F1 didn't exist - `typeName` inference below will not treat this as a `FileError` at all (nothing in the receiver-type-inference block special-cases a bare `FileError`-spelled Name), so this receiver shape typically reaches `typeName.empty()` at F5 and returns false | UNPINNED |
 | F2 | `resolveIndexedArgsPackMapMethodTarget()` succeeds - a narrow shape: receiver is a non-binding, non-method `Call` named exactly `at`/`at_unsafe` with 2 args, whose own first arg is a `Name` bound (in `locals`) to an args-pack element type that itself extracts as a key-value (map) element type | dispatch to `metadataBackedCanonicalKeyValueHelperPath(helperName)`, with `count`/`contains`/`tryAt`/`at`/`at_unsafe`/`insert` renamed to their `_ref` borrowed variant when the args-pack element type is itself `Reference<...>`/`Pointer<...>`-wrapped | UNPINNED to this exact call shape this round; note this check runs **after** the full receiver-type-inference block (F3 below) has already run and possibly set `typeName`/`wrappedReceiverTypeName`, but **before** the `typeName.empty()` early-return (F5) - i.e. it can override an already-successfully-inferred `typeName`'s dispatch entirely if the args-pack-map shape also matches, a priority-ordering fact not documented anywhere in-source |
-| F3 | receiver-type inference (not itself branch-enumerated further here - see summary below) | sets `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver` for `Name`/`Literal`/`BoolLiteral`/`FloatLiteral`/`StringLiteral`/`Call`-kind receivers, each its own guarded sub-case (bound local, numeric/bool/string literal kinds each with a hardcoded type text, or a `Call` receiver that tries, in order: `inferBindingTypeForMonomorph`, then `inferExprTypeTextForTemplatedVectorFallback`, then - if `!receiver.isBinding` - recursing into `resolveMethodCallTemplateTarget` itself for a method-call receiver or `resolveCalleePath` for a direct-call receiver, looking up the resolved definition, and if it's a struct definition dispatching immediately to `<resolvedPath>/<method>` without any further type-family classification, else scanning its `return<T>` transform annotations or falling back to `inferDefinitionReturnBindingForTemplatedFallback`) | not independently branch-enumerated this round - flagged as a further-detail opportunity for a future pass, budget permitting |
+| F3 | receiver-type inference (full branch enumeration below, 2026-09-08) | sets `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver` for `Name`/`Literal`/`BoolLiteral`/`FloatLiteral`/`StringLiteral`/`Call`-kind receivers | see "F3 detail" table below |
 | F5 | `typeName.empty()` after F3 (and F2 didn't already return) | `return false` | — |
 | F6 | `!expr.templateArgs.empty()` (explicit method-call template args given) AND `wrappedReceiverTypeName`'s base (post-normalization) is `Reference`/`Pointer` with a non-empty arg | try a "wrapper method path" `/<Reference\|Pointer>/<method>`; dispatch to it **only if** both `hasTemplatedDefinitionFamilyPath` and `hasDefinitionFamilyPath` confirm a real definition family exists there - preferred over unwrapping to the inner type `T`'s own family when it applies | UNPINNED; source comment references a "wrapper temporary canonical vector count slash-method" test name (mirrors Row category B's `preferExplicitCanonicalVectorHelperForReceiver` note) - not independently re-verified which literal test file |
 | F7 | `typeName == "File"` or its leaf is `"File"`, AND `isFileMethodName(normalizedMethodName)` (`write`/`writeLine`/`write_line`/`writeByte`/`write_byte`/`readByte`/`read_byte`/`writeBytes`/`write_bytes`/`flush`/`close`) | dispatch via `preferredFileMethodTarget`, itself gated: builtin `/file/<name>` for most names; for `write`/`write_line` specifically, builtin also if `expr.args.size() > 10` or receiver is literally the `self` binding; otherwise prefer `/File/<name>` if a real definition exists there, else fall back to builtin | UNPINNED to this exact branch |
@@ -806,6 +901,32 @@ matters, first match returns:
 | F14 | `ctx.sourceDefs` **does** have a definition at `resolvedType`, AND it is specifically an experimental-SOA-*specialized* type path (`isConcreteExperimentalSoaReceiver`), AND method matches one of the same 4 pairs/`push`/`reserve` as F12 | dispatch via the same `preferredSamePath*MethodTarget` helpers as F12, but **without ever consulting `isBorrowedSoaReceiver`/`borrowedSoaWrapperMethodName`** - the borrowed-vs-owned renaming F12 applies for the generic (not-yet-concrete) SOA case is silently skipped once the receiver resolves to a concrete experimental-SOA type | UNPINNED - newly found this round; a genuine asymmetry between F12 and F14 for what should be the same logical distinction (borrowed vs. owned SOA receiver), not confirmed whether any real borrowed-and-concrete-experimental-SOA receiver shape is reachable to expose it |
 | F15 | none of the above; a `receiverHelperFamilyLeaf`-derived "rooted" path (`/<leaf>/<method>`) has a real definition family but the "same-path" `<resolvedType>/<method>` does not, and the two differ | dispatch to the rooted path instead of the same-path one | UNPINNED |
 | F16 | fallback (always reached if nothing above returned) | dispatch to `<resolvedType>/<normalizedMethodName>`, run through `preferVectorStdlibHelperPath` then `selectHelperOverloadPath` - **always returns true**, this function has no final "unresolved" `return false` once a definition exists at `resolvedType` | UNPINNED to this exact branch; this is also F11-eof's actual landing branch per the finding above |
+
+**F3 detail - receiver-type-inference sub-cascade (full branch enumeration, 2026-09-08).**
+`resolveMethodCallTemplateTarget`'s `typeName`/`wrappedReceiverTypeName`/
+`isBorrowedSoaReceiver` are computed by a receiver-kind dispatch
+(`TemplateMonomorphMethodTargets.cpp:402-478`), traced in full this round.
+Note first: `resolveIndexedArgsPackMapMethodTarget()` (F2's guard) is
+*textually* evaluated once this whole block finishes (line 479), not
+before it - so a call reaching F2's dispatch has already paid for the
+full F3 cascade below, and F2's dispatch (when it fires) discards
+whatever F3 computed, exactly as F2's own row above already notes.
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| F3-N1 | `receiver.kind == Name` AND `receiver.name` found in `locals` | sets `wrappedReceiverTypeName`/`isBorrowedSoaReceiver`/`typeName` from the bound local's type text (`bindingTypeText` → `qualifyImportedCollectionTypeText` → `unwrapImportedCollectionReceiverType`/`isBorrowedSoaReceiverType`) | args-pack/vector/map corpus generally |
+| F3-N2 | `receiver.kind == Name` AND NOT found in `locals` | `typeName` stays empty - no other branch in this cascade covers an unbound `Name` receiver, so this call falls straight to F5's `return false` unless F2's args-pack-map shape happens to also match (it can't, since F2 requires a `Call`-kind receiver) | UNPINNED - newly found; undetermined whether an unbound-`Name` method-call receiver is reachable past semantics-stage validation (which normally rejects unbound identifiers earlier) |
+| F3-L | `receiver.kind == Literal` | `typeName` = `"u64"`/`"i64"`/`"i32"` from `isUnsigned`/`intWidth` | primitive-literal-receiver corpus |
+| F3-B | `receiver.kind == BoolLiteral` | `typeName = "bool"` | same |
+| F3-Fl | `receiver.kind == FloatLiteral` | `typeName` = `"f64"`/`"f32"` from `floatWidth` | same |
+| F3-S | `receiver.kind == StringLiteral` | `typeName = "string"` | same |
+| F3-C1 | `receiver.kind == Call`; `inferBindingTypeForMonomorph(receiver, ...)` succeeds | sets `wrappedReceiverTypeName`/`isBorrowedSoaReceiver`/`typeName` from the inferred `BindingInfo`, same helper chain as F3-N1 | call-receiver corpus generally |
+| F3-C2 | `receiver.kind == Call`; `typeName` still empty after F3-C1 | `inferExprTypeTextForTemplatedVectorFallback(...)` sets `typeName`/`isBorrowedSoaReceiver` from its own inferred type text - **`wrappedReceiverTypeName` is NOT updated here**, an asymmetry with every other assignment site in this cascade (all of which set all three fields together) | UNPINNED - newly found; matters because F6 (the wrapper-method-path branch) reads `wrappedReceiverTypeName` specifically, so a receiver that only resolves via this fallback can never reach F6's wrapper-path dispatch even if it is genuinely `Reference`/`Pointer`-wrapped |
+| F3-C3 | `receiver.kind == Call`; `!receiver.isBinding` (always evaluated, regardless of whether F3-C1/C2 already set `typeName`) | resolves `receiver` itself as a call - `resolveMethodCallTemplateTarget` (recursive) if `receiver.isMethodCall`, else `resolveCalleePath` - to a `resolved` path | — |
+| F3-C3a | `resolved` found in `ctx.sourceDefs` AND it is a struct definition | **immediate return true**, `pathOut = resolved + "/" + methodName` - bypasses the rest of F3, F5, and the entire F6-F16 cascade for this call entirely, without any further type-family classification | UNPINNED to this branch specifically |
+| F3-C3b | `resolved` found, not a struct definition; first `return<T>` transform annotation with a non-`"auto"` arg | **unconditionally overwrites** `wrappedReceiverTypeName`/`isBorrowedSoaReceiver`/`typeName` with the annotation's type - this fires and wins **even if F3-C1/C2 already produced a `typeName`**, silently discarding it; no priority between "receiver's own inferred type" and "receiver call's declared return-type annotation" is documented anywhere in-source | UNPINNED - newly found; undetermined whether any real receiver shape has both a genuine F3-C1/C2 answer and a competing `return<T>` annotation that disagrees with it |
+| F3-C3c | `resolved` found, not a struct, no matching `return<T>` transform, AND `typeName` is (still) empty at this point | `inferDefinitionReturnBindingForTemplatedFallback(...)` sets `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver` if it succeeds - unlike F3-C3b, this step **is** gated on `typeName` being empty | UNPINNED |
+| F3-C3d | `resolved` NOT found in `ctx.sourceDefs` at all | `getBuiltinCollectionName(receiver, collection)`, if it succeeds, **unconditionally overwrites** `typeName = collection` - the same override-priority gap as F3-C3b, just via a different helper and a different "resolved" outcome (no definition at all, vs. a non-struct definition) | UNPINNED - newly found |
 
 Cross-reference: `unwrapCollectionReceiverEnvelope` and
 `normalizeCollectionReceiverTypeName` (`TemplateMonomorphCollectionCompatibilityPaths.cpp:215-316`)
@@ -827,41 +948,145 @@ not previously called out as a within-function duplication in TODO-5286's
 own writeup, though the net *effect* TODO-5286 measured (args stays
 "args", never unwraps) is unchanged by which loop copy hits it).
 
+### Row category G: `ir_lowerer` stage (`resolveMethodCallDefinitionFromExpr`, 2026-09-08)
+
+New row category for this round - the `ir_lowerer` stage's own
+independent receiver-target resolver, beyond the one name-collision gate
+Row D already covers. Entry point:
+`resolveMethodCallDefinitionFromExpr`
+(`IrLowererSetupTypeMethodCallResolution.cpp:377-1247`, ~870 lines - the
+largest single cascade found in this whole investigation, larger than
+monomorphization's 719-line file). It is the `ir_lowerer`-stage sibling of
+Row A's `resolveArgsPackElementMethodTarget` and Row F's
+`resolveMethodCallTemplateTarget`: given a method-call `Expr`, decide
+which `Definition*` it lowers to. Two sibling files it calls into,
+`IrLowererSetupTypeReceiverTargetHelpers.cpp` (778 lines -
+`resolveMethodCallReceiverExpr`, `resolveMethodReceiverTarget`) and
+`IrLowererSetupTypeCollectionHelpers.cpp` (1143 lines - the
+`preferredFileErrorHelperTarget` family, `canonicalKeyValueHelperPath`,
+`normalizeCollectionHelperPath`, the `isExplicit*AliasPath` predicates,
+etc.), are cross-referenced by name below but **not** branch-enumerated
+this round - left open per this round's own budget note at the end.
+
+Branch order matters; this is a strict cascade, first successful
+`return` wins, enumerated at the same major-branch granularity Row F used
+(sub-helpers cited by name, not further expanded, matching Row F's
+treatment of F7/F12):
+
+| # | guard condition | disposition | pinned by |
+|---|---|---|---|
+| G0 | `callExpr.kind != Call \|\| callExpr.isBinding` | `return nullptr` immediately | — |
+| G0b | `!callExpr.isMethodCall` (a direct-call, not a method-call) | `resolvedPath = resolveExprPath(callExpr)`; dispatch to `defMap[resolvedPath]` if found, else `nullptr` - a wholly separate, one-line path; nothing below this row ever runs for a direct call | — |
+| G1 | the (possibly-prefix-stripped) method name normalizes to one of the 12 canonical key-value helper names (`count`/`count_ref`/`size`/`contains`/`contains_ref`/`tryAt`/`tryAt_ref`/`at`/`at_ref`/`at_unsafe`/`at_unsafe_ref`/`insert`/`insert_ref`) AND (the receiver's `LocalInfo` has key-value kinds OR `resolveCollectionPairTypeInfo(...).isKeyValueTarget`) | try `canonicalKeyValueHelperPath(helperName)` at matching arity via `resolveDefinitionFamilyByArity`; dispatch if found, else **fall through** (not a hard return) | UNPINNED to this branch specifically |
+| G2 | `isExplicitKeyValueMethodAliasPath(explicitMethodPath)` (an explicit canonical map-helper spelling used directly) | if `semanticProgram` present and the receiver isn't itself a nested `Call`: try semantic-product method-call-target, then direct-call-target, then bridge-path-choice, in that order, dispatching via `resolveDefinitionFamilyByArity` on the first non-empty hit; **always terminates** the function from here - hard "unknown method" error and `return nullptr` if nothing resolved | UNPINNED |
+| G3 | `semanticProgram != nullptr` (the semantic-product-driven path - the dominant path for non-legacy builds) | large sub-cascade, detailed below; almost always returns from inside this block | see G3a-G3e below |
+| G3a | (within G3) `callExpr.semanticNodeId==0` AND (`sourceLine<=0 \|\| sourceColumn<=0 \|\| name.empty()`) AND (`args.empty() \|\| args.front().kind != Call`) | hard error "missing semantic-product method-call semantic id", `return nullptr` | — |
+| G3b | `resolvedPath = findSemanticProductMethodCallTarget(...)`; `resolvedPath == "/std/collections/soa/to_aos"` | clear error, `return nullptr` (deliberate "no definition, not an error" sentinel) | UNPINNED |
+| G3c | `resolvedPath` empty | chain of **four** semantic-product fallback lookups for `fallbackDirectTarget` (direct-call-target, then bridge-path-choice, then - only if that was empty - `findKeyValueConstructorBridgePathChoiceBySource`, a source-position-matched variant with no counterpart anywhere in Row E's R10-R14); see G3c-i..v below for what happens once that's found | — |
+| G3c-i | `fallbackDirectTarget` non-empty AND call is literally `at`/`at_unsafe` AND `blocksSyntheticCollectionFallbackDirectTarget(fallbackDirectTarget)` | resolve and dispatch **only if** the resolved def is non-null AND has a non-empty body (`!statements.empty()`) - the one dispatch site in this whole function that checks body-emptiness, no counterpart elsewhere in this cascade | UNPINNED |
+| G3c-ii | else: `fallbackDirectTarget` non-empty AND ((call is `count`/`capacity`/`at`/`at_unsafe` and not blocked) OR (call is literally `map` and the fallback is a key-value-constructor path)) | dispatch via `resolveLoweredDefinitionPath`; on failure, hard error "missing lowered definition", `return nullptr` | UNPINNED |
+| G3c-iii | else: call's method leaf is a builtin File-handle name (`write`/`write_line`/`write_byte`/`read_byte`/`write_bytes`/`flush`/`close`) | clear error, `return nullptr` (deliberately silent - handled elsewhere, e.g. codegen-level file intrinsics) | UNPINNED |
+| G3c-iv | else: NOT `allowsReceiverResolvedVectorMetadataFallback` AND receiver isn't a nested `Call` | hard error "missing semantic-product method-call target", `return nullptr` | UNPINNED |
+| G3c-v | else (none of G3c-i..iv) | **falls through past the entire G3 block** to G4+ below - the one escape hatch where `semanticProgram != nullptr` doesn't force a decision from inside G3 | UNPINNED - the only path by which the "legacy" cascade (G4+) is reachable at all when `semanticProgram != nullptr` |
+| G3d | `resolvedPath` non-empty (skips G3c entirely) | several count-method-specific sub-guards (`routesExplicitVectorCountMethodThroughMapMethodTarget`/`ThroughBuiltinScalarTarget`/`ThroughArgsPackCount`, each its own condition), then a general `resolveLoweredDefinitionPath(preferredResolvedPath)` attempt, then a further handful of "clear error, `return nullptr`" sentinels for `/file/*` paths, misfired `/string/count`, and misfired `soa/to_aos`, else a final hard "missing lowered definition" error | UNPINNED to each individual sub-guard |
+| G3e | none of G3a-G3d returned (reachable only via internal fallthrough, distinct from G3c-v) | `if (errorOut.empty())` sets a final generic "missing lowered definition" error and returns `nullptr` | — |
+| G4 | reached only when `semanticProgram == nullptr` OR G3c-v fired (the "legacy"/local cascade) | computes five independent builtin-classifier booleans up front (`isBuiltinAccessCall` via `getBuiltinArrayAccessName` - Row D's own function - plus count/capacity/mutator variants, each via its own helper), combined into `allowBuiltinFallback`, which is purely an **error-message-selection** flag (whether a later failure reports the original semantic-product-stage error or this cascade's own), not itself a dispatch decision | — |
+| G5 | `resolveMethodCallReceiverExpr(...)` (own function, `IrLowererSetupTypeReceiverTargetHelpers.cpp` - not re-derived this round) extracts `receiver` | on failure: restore `priorError` if `allowBuiltinFallback`, `return nullptr` | — |
+| G6 | `receiver->kind == Name` AND NOT found in `localsIn` | bare `FileError`/`ImageError`/`ContainerError`/`GfxError` static-error-family dispatch (mirrors Row F's F1/F11 and Row A's R2) - normalizes the method name by stripping one of 5 collection-prefix spellings first, then a 4-family table (`FileError`: `why`/`is_eof`/`eof`/`status`/`result` - **5** names, matching Row F's F1, not Row F's F11's 4-name set; `ImageError`/`ContainerError`/`GfxError`: `why`/`status`/`result` only, **no** `eof`/`is_eof`) dispatches to the matching `preferred*ErrorHelperTarget` (all four in `IrLowererSetupTypeCollectionHelpers.cpp`, cross-referenced not re-derived); if resolved and found in `defMap`, immediate return - otherwise **falls through** to G7 | UNPINNED to this exact branch |
+| G7 | `resolveMethodReceiverTarget(*receiver, ...)` (own function, sibling file - not re-derived this round) sets `typeName`/`resolvedTypePath` | on failure: restore `priorError` if `allowBuiltinFallback`, `return nullptr` | — |
+| G8 | `resolveMethodDefinitionFromReceiverTarget(explicitMethodPath, typeName, resolvedTypePath, defMap, lookupError)` (own function, cross-referenced not re-derived) | the "normal" dispatch attempt | — |
+| G9 | G8 failed AND `resolvedTypePath.empty()` AND `receiver->kind == Call` | large receiver-is-itself-a-call recovery sub-cascade, G9a-G9f below | — |
+| G9a | (within G9) resolve receiver's own path (`resolveExprPath`, else semantic-product direct-call-target, else bridge-path-choice, else the receiver's own literal name as a rooted path) to `receiverPath`; look up `receiverDef` via arity-aware `findDefinitionByReceiverPath` | — | — |
+| G9b | `receiverDef` not found AND `receiver->isMethodCall` | **recurses into `resolveMethodCallDefinitionFromExpr` itself** on the receiver expression to get `receiverDef`; a further guard (`isExplicitVectorReceiverProbeHelperExpr` + non-empty nested error) can propagate that nested error out immediately instead of continuing | UNPINNED |
+| G9c | `receiverDef` found | `inferStructReturnPathFromReceiverDef(*receiverDef)` (its own recursive struct-return-path inference, using `resolveStructTypePathFromScope` - **the function containing the `SoaVector__` special-case**, see below) yields `resolvedTypePath`; if non-empty, retry `resolveMethodDefinitionFromReceiverTarget` | UNPINNED |
+| G9d | still unresolved; `inferReceiverTypeFromDeclaredReturn(*receiverDef, typeName)` succeeds | retry via `resolveMethodDefinitionFromTypeNameWithAliasFallback` (its own further alias-fallback: type name directly, then a `"vector"`-literal special-case retry via `collectionTypePath("vector")`, then an import-alias lookup) | UNPINNED |
+| G9e | `receiverDef` found but G9d's declared-return check failed | `resolveReturnInfoKindForPath` (a **different**, value-kind-based inference mechanism) yields a `typeName`; retry via the same alias-fallback wrapper | UNPINNED |
+| G9f | `receiverDef` unresolved entirely, or none of G9c-e produced a definition | a further receiver-kind-inference fallback: four independent "blocks this fallback" probe predicates (explicit key-value-receiver-probe, a bare 2-arg key-value-access-shaped-call probe, a bare 2-arg `tryAt` key-value probe, an explicit-vector-receiver-probe-kind blocker) gate whether `inferBuiltinAccessReceiverResultKind`/`inferExprKind` is even consulted; if none block it and a kind is inferred, retry via the alias-fallback wrapper; failing that, a receiver-path-candidate loop (`collectionHelperPathCandidates`) tries declared-return inference against each syntactic path variant of the receiver's resolved definition path | UNPINNED |
+| G10 | still `resolvedDef == nullptr` after G9 | three "blocks the bare-vector fallback" checks (count/access/mutator-shaped call whose already-inferred `typeName == "vector"`) decide whether to restore `priorError` (when `allowBuiltinFallback` and none block it) or surface `lookupError` as the final error | — |
+
+**The `SoaVector__`/specialization-suffix case, located (2026-09-08).**
+This document's own "Problem, Verified" section names
+`IrLowererSetupTypeCollectionHelpers.cpp` as (implicitly) where the
+`SoaVector__`/specialization-suffix handling would live, alongside the
+other two files. That is not where it actually is: it is entirely
+contained in `IrLowererSetupTypeMethodCallResolution.cpp` itself -
+`isExperimentalSoaVectorSpecializedStructPath` (lines 95-99, matching
+three prefix shapes: the canonical specialized-type prefix, its bare
+variant, and the literal string `"SoaVector__"`) and
+`resolveSpecializedExperimentalSoaVectorStructPath` (lines 108-153, which
+recursively unwraps `Reference<T>`/`Pointer<T>` envelopes one layer at a
+time before checking, and once it reaches a bare `soa<T>` shape with
+exactly one template arg, calls
+`specializedExperimentalSoaVectorStructPathForElementType(T)` to build
+the specialized struct path for `T`). It is consulted from
+`resolveStructTypePathFromScope` (line 949, used by G9c above) as the
+**first** check, before the normal `structNames`-scoped lookup, the
+namespace-prefix walk, or the import-alias fallback - i.e. a receiver
+whose inferred type recursively unwraps to a `soa<T>` shape is diverted
+to this specialized-struct-path resolution before any of the other three
+lookup strategies in that function ever run.
+`IrLowererSetupTypeCollectionHelpers.cpp` (grepped in full this round) has
+**no** `SoaVector__` handling at all - it contains the family-membership
+predicates (`isBuiltinCollectionTypeName`, `isExperimentalCollectionTypeName`,
+`normalizeCollectionHelperPath`, etc.) that this file's cascade calls
+into, but the specialization-suffix case itself is unique to
+`IrLowererSetupTypeMethodCallResolution.cpp`.
+
+`IrLowererSetupTypeReceiverTargetHelpers.cpp`
+(`resolveMethodCallReceiverExpr` at line 142,
+`resolveMethodReceiverTarget` at line 527) and the remainder of
+`IrLowererSetupTypeCollectionHelpers.cpp` (the `preferred*ErrorHelperTarget`
+family at lines 227-393, the `isExplicit*AliasPath`/`isBuiltin*`
+predicates at lines 573-810, the canonical-path builders) are **not**
+branch-enumerated this round - left open per this round's own budget,
+flagged again below.
+
 ### What remains for Step 0
 
-Done as of this round (2026-09-08): Row category E's four
-snapshot-collection mechanisms (R10-R13) now have full branch-level
-enumeration, including three newly-found divergences not previously
-documented (R10/R11's task-spawn and bare-count/capacity gaps, R10's
-missing D5 shadow-precedence guard vs. R11; see Row category E). Row
-category F now covers monomorphization's `resolveMethodCallTemplateTarget`
-(`TemplateMonomorphMethodTargets.cpp`, all 17 top-level cascade branches
-F0-F16) and `TemplateMonomorphCollectionCompatibilityPaths.cpp` in full,
-cross-referencing rather than re-deriving TODO-5286's already-closed
-`unwrapCollectionReceiverEnvelope`/`args<T>` finding, and surfacing two
-further new gaps in the same neighborhood (the FileError `eof`-method
-dual-path asymmetry at F11-eof, and the borrowed-vs-owned SOA
-asymmetry between the generic and concrete-experimental SOA branches at
-F12/F14).
+Done as of this round (2026-09-08, third round): F3 within Row category F
+(the receiver-type-inference sub-cascade feeding `typeName` into
+`resolveMethodCallTemplateTarget`) now has full branch-level enumeration
+(F3-N1/N2, F3-L/B/Fl/S, F3-C1-C3d), surfacing two new override-priority
+gaps not previously documented (F3-C3b/C3d can silently overwrite an
+already-computed `typeName` from F3-C1/C2 with no documented priority
+rule) and one field-asymmetry (F3-C2 updates `typeName`/
+`isBorrowedSoaReceiver` but not `wrappedReceiverTypeName`, which matters
+for F6's wrapper-path branch). Row category E gained R14 (`query_facts`),
+with an important correction to this document's own 2026-09-04 framing:
+`query_facts` is not a sixth independent receiver-family re-derivation at
+the `resolvedPath` level - it reuses R11's `inferCallSnapshotData`
+directly - though its `typeText`/`resultInfo`/`receiverBinding` layer on
+top (Q1-Q6) is genuinely independent, including two separately-coded
+Result-type inference paths (Q3/Q3b) and a new, unresolved question about
+whether its own local-aware traversal is exempt from the
+`skipLocalAwareCallRefinement_` pilot-routing guard that R11 respects. A
+new Row category G was established for the `ir_lowerer` stage
+(`resolveMethodCallDefinitionFromExpr`, ~870 lines, the largest cascade
+found in this investigation, `IrLowererSetupTypeMethodCallResolution.cpp`)
+and fully branch-enumerated at the same major-branch granularity Row F
+used, including locating the `SoaVector__`/specialization-suffix case
+this document's own "Problem, Verified" section named but hadn't located
+- it turned out to live in this file, not
+`IrLowererSetupTypeCollectionHelpers.cpp` as that section's phrasing
+implied.
 
-Still not yet characterized to the same branch level: F3 within Row
-category F (the receiver-type-inference sub-cascade for `Name`/`Literal`/
-`Call`-kind receivers that feeds `typeName` before the main F0-F16
-cascade runs - noted as a further-detail opportunity, not attempted this
-round); the `query_facts` mechanism named in this document's own
-2026-09-04 narrative as a fifth sibling to R10-R13 but never added as its
-own table row (flagged again, not fixed, in Row category E above -
-whoever picks this up next should add it as R14 or fold it in); and
-`ir_lowerer`'s `IrLowererSetupTypeMethodCallResolution.cpp`,
-`IrLowererSetupTypeReceiverTargetHelpers.cpp`, and
-`IrLowererSetupTypeCollectionHelpers.cpp` beyond the one gate already
-covered in Row category D - entirely untouched so far, per this
-document's own "Problem, Verified" section naming these three files as
-the IR-lowering stage's independent re-implementation, including the
-`SoaVector__`/specialization-suffix case flagged there as having no
-counterpart in the other two stages. Per this document's own Step 0
-description, this is real, multi-session work - not expected to complete
-in one round.
+Still not yet characterized to the same branch level:
+`IrLowererSetupTypeReceiverTargetHelpers.cpp`'s
+`resolveMethodCallReceiverExpr`/`resolveMethodReceiverTarget` (Row G's
+G5/G7, cited by name only) and the bulk of
+`IrLowererSetupTypeCollectionHelpers.cpp` beyond the `SoaVector__` search
+(the `preferred*ErrorHelperTarget` family, the `isExplicit*AliasPath`
+predicates, `canonicalKeyValueHelperPath`, `normalizeCollectionHelperPath`)
+- both flagged in Row G above, left for a future round per this document's
+own "real, multi-session characterization work" framing. Also still open:
+`inferQueryExprTypeText`/`resolveResultTypeForExpr`/
+`resolveResultTypeFromTypeName` (Q2/Q3/Q3b's own sub-helpers, cited by
+name only in R14); Row category G's many `UNPINNED` sub-guards would
+benefit from a pass cross-referencing them against
+`PrimeStruct_backend_ir_tests` by name, not attempted this round; and
+whether R14's local-aware traversal is genuinely exempt from
+`skipLocalAwareCallRefinement_` in practice (flagged, not resolved, in
+R14's own section above).
 
 ## Risks
 
