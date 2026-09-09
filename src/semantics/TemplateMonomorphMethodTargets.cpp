@@ -33,6 +33,8 @@
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
+#include <cassert>
+#include <iostream>
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
@@ -720,6 +722,70 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   const bool isCollectionFamilyReceiver =
       typeName == "array" || typeName == "vector" || typeName == "map" ||
       isTemplateMonomorphSoaReceiverType(typeName);
+  // TODO-5294 Step 1b, monomorphization stage (third slice): observational
+  // diff-audit comparing F13/F13b/F13c (per
+  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) -
+  // the isCollectionFamilyReceiver membership test just above, a plain
+  // literal-set check ("array"/"vector"/"map") OR'd with
+  // isTemplateMonomorphSoaReceiverType(typeName) - against the shared
+  // classifier's VectorLike/Soa/KeyValue family verdict. By this point in
+  // the cascade typeName has already gone through
+  // normalizeCollectionReceiverTypeName above (same as the F9/F11 slices'
+  // own note), so it is already reduced to a bare base name with no
+  // generic-argument text left to parse; there is nothing for the
+  // classifier's own splitTemplateTypeName-shaped isTemplateShaped/
+  // templateShapedBaseName inputs to derive from, so this audit feeds them
+  // the same already-known base name directly (isTemplateShaped=true,
+  // templateShapedBaseName=typeName), the same "we already have the parsed
+  // base, so hand it over pre-parsed" approach the F9 slice used for its own
+  // isTemplateShaped=false case. The classifier's KeyValue predicate is
+  // supplied as a literal `== "map"` match, deliberately mirroring this
+  // exact production guard's own literal check (not any real struct-
+  // metadata-backed key-value surface predicate) - this audit's job is
+  // proving this *particular* production check's family disposition, not
+  // exercising the classifier's more general KeyValue path. Purely
+  // observational: computing the classifier's verdict and comparing it
+  // never changes this function's control flow, return value, or side
+  // effects. Zero-cost when PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is unset
+  // (one cached getenv check).
+  if (isReceiverTargetDiffAuditEnabled()) {
+    ReceiverElementFamilyJointInput jointInput;
+    jointInput.unwrappedElementType = typeName;
+    jointInput.rawElementBaseType = typeName;
+    jointInput.isTemplateShaped = true;
+    jointInput.templateShapedBaseName = typeName;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    ReceiverElementFamilyPredicates auditPredicates{};
+    auditPredicates.isInternalSoaCollectionTypeName =
+        [](std::string_view candidate) {
+          return isTemplateMonomorphSoaReceiverType(std::string(candidate));
+        };
+    auditPredicates.isKeyValueSurfaceTypeName =
+        [](std::string_view candidate) { return candidate == "map"; };
+    const ReceiverElementFamily classifierFamily =
+        classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
+    const bool classifierSaysCollectionFamily =
+        classifierFamily == ReceiverElementFamily::VectorLike ||
+        classifierFamily == ReceiverElementFamily::Soa ||
+        classifierFamily == ReceiverElementFamily::KeyValue;
+    if (isCollectionFamilyReceiver != classifierSaysCollectionFamily) {
+      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
+                   "resolveMethodCallTemplateTarget (F13/F13b/F13c collection-"
+                   "family slice): typeName=\""
+                << typeName << "\" methodName=\"" << normalizedMethodName
+                << "\" production="
+                << (isCollectionFamilyReceiver ? "collection-family"
+                                                : "not-collection-family")
+                << " classifier=" << describeReceiverElementFamily(classifierFamily)
+                << "\n";
+    }
+    assert(isCollectionFamilyReceiver == classifierSaysCollectionFamily &&
+           "receiver-target diff audit: monomorphization F13/F13b/F13c "
+           "collection-family slice disagreement "
+           "(PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
+           "docs/ReceiverTargetResolutionConsolidation.md Step 1b, "
+           "monomorphization stage");
+  }
   if (ctx.sourceDefs.count(resolvedType) == 0 && !isCollectionFamilyReceiver) {
     if (const std::string *importAlias =
             lookupScopedImportAliasForNamespace(normalizedTypeName, receiver.namespacePrefix, ctx);

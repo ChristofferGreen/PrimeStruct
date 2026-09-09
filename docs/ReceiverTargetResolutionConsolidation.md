@@ -30,6 +30,11 @@ Monomorphization now has two call sites (F9, F11) delegating to the shared
 classifier - two stages (semantics, monomorphization) now each have at
 least one call site delegating to the shared classifier; `ir_lowerer`
 remains untouched.
+A third monomorphization diff-audit harness (observation-only, not yet
+migrated) is now wired at the F13/F13b/F13c collection-family slice
+(`isCollectionFamilyReceiver`) - zero-divergence achieved (2026-09-09);
+see "Step 1b, monomorphization stage: third diff-audit harness at
+F13/F13b/F13c collection-family slice" below.
 Step 0 (characterize the full rule table) is otherwise still in
 progress - see "Step 0 Rule Table" below;
 semantics-stage method-target resolvers, all five snapshot-collection
@@ -3063,6 +3068,105 @@ Row A/B/C/D/E/F/G call site this document's Step 0 rule table catalogs
 still independently re-derives receiver family membership - in particular
 15 of Row F's 17 branches (F0-F8 minus F9, F10, F12-F16) and all of
 `ir_lowerer` remain completely untouched.
+
+## Step 1b, monomorphization stage: third diff-audit harness at F13/F13b/F13c collection-family slice, zero-divergence achieved (2026-09-09)
+
+Wired a third Step 1b diff-audit harness in the monomorphization stage,
+same discipline as F11's and F9's own harness rounds: observe only, do
+not migrate this round.
+
+**Branch chosen and why.** Row F's `isCollectionFamilyReceiver` membership
+test (`TemplateMonomorphMethodTargets.cpp`, feeding F13/F13b/F13c: "no
+source definition at `resolvedType`, dispatch generically when `typeName`
+is `array`/`vector`/`map`/soa-family; else `string`-dispatch (F13b); else
+reject (F13c)"). Considered and rejected two other candidates named in
+this round's own steering: F10 (the bare-`args`-leaf-name branch) has no
+matching family in `ReceiverElementFamily` at all - "args" is not a type
+classification the shared enum models, so wiring it here would mean
+inventing a new family rather than reusing an existing one, a worse fit
+than F13; F12/F14 were left alone entirely per this round's explicit
+instruction not to touch F14-adjacent code (F14 is known dead code, not
+yet deleted). F13 was the clean fit: a plain family-membership test with
+no method-name gating, mapping directly onto the classifier's
+VectorLike/Soa/KeyValue verdicts.
+
+**Wiring.** By the point in the cascade where `isCollectionFamilyReceiver`
+is computed, `typeName` has already gone through
+`normalizeCollectionReceiverTypeName` (same as the F9/F11 slices' own
+prior notes) - it is already a bare base name (`"array"`, `"vector"`,
+`"map"`, or a soa-family name) with no generic-argument text left for
+`splitTemplateTypeName` to parse. The harness therefore feeds the
+classifier's `isTemplateShaped`/`templateShapedBaseName` inputs that
+already-known base name directly (`isTemplateShaped=true`,
+`templateShapedBaseName=typeName`, and `unwrappedElementType=
+rawElementBaseType=typeName` since there is no separate wrapped/unwrapped
+text at this point either), mirroring F9's own "hand the classifier the
+already-known answer instead of re-deriving a parse with nothing left to
+do" approach for its `isTemplateShaped=false` case. The classifier's
+`isKeyValueSurfaceTypeName` predicate is supplied as a literal `== "map"`
+lambda - deliberately mirroring this *exact* production guard's own
+literal check (production's `typeName == "map"`, not any real
+struct-metadata-backed key-value surface lookup), since this audit's job
+is proving this particular guard's disposition, not exercising the
+classifier's more general key-value path. The `isInternalSoaCollectionTypeName`
+predicate is `isTemplateMonomorphSoaReceiverType`, the same function
+production itself calls. Purely observational: gated on
+`isReceiverTargetDiffAuditEnabled()`, computes both
+`isCollectionFamilyReceiver` (production) and
+`classifierFamily ∈ {VectorLike, Soa, KeyValue}` (classifier), logs a
+`[receiver-target-diff-audit] MISMATCH` line and asserts on disagreement,
+never substitutes for `isCollectionFamilyReceiver` itself. Zero-cost (one
+cached `getenv`) when the env var is unset - production's own
+`isCollectionFamilyReceiver` value and its two use sites (the import-alias
+substitution guard and the F13/F13b/F13c dispatch itself) are untouched.
+
+**Verification.** Fresh baseline first, not a trusted prior number:
+`git stash`'d this round's own edit back to the clean `2f2db975c` tree
+(confirmed via `git status`), rebuilt all three suites clean, and ran the
+full battery once with the env var unset:
+
+| suite | test cases | failed |
+|---|---|---|
+| semantics | 2767 | 1 |
+| backend_ir | 1646 | 46 |
+| compile_run | 2679 | 5 |
+
+Identical to every prior session's recorded numbers for this exact
+baseline - no drift. `git stash pop` restored the harness, rebuilt clean,
+then:
+
+- Ran all three suites once with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+  set: **zero** `MISMATCH` lines logged in any suite, no assertion fired
+  (no crash/abort), and the sorted failing-test-case-*name* set was
+  byte-identical to the baseline in all three suites (`diff` empty).
+- Ran all three suites twice more each with the env var unset (six runs
+  total): every run's sorted failing-test-case-*name* set was
+  byte-identical to the baseline (`diff` empty in all eighteen
+  baseline-vs-run pairwise comparisons across the three suites).
+
+| suite | env-set run: MISMATCH count | env-set run: names vs baseline | 2x env-unset reruns: names vs baseline |
+|---|---|---|---|
+| semantics | 0 | identical | identical (both reruns) |
+| backend_ir | 0 | identical | identical (both reruns) |
+| compile_run | 0 | identical | identical (both reruns) |
+
+Before trusting each `PrimeStruct_compile_run_tests` result, confirmed via
+`pgrep -af PrimeStruct_compile_run_tests` that no second instance of the
+binary was concurrently running (only this session's own polling-loop
+shell wrappers matched the grep pattern in their command text, not a
+second live instance of the test binary), per this document's own
+recorded segfault-artifact warning.
+
+**Conclusion.** Zero-divergence proven for the F13/F13b/F13c
+collection-family slice; production behavior is unchanged this round (the
+harness is purely observational, as required). This is the third
+diff-audit harness wired in the monomorphization stage, after F11's and
+F9's own (both since migrated for real). F13/F13b/F13c's own real
+migration is deliberately deferred to a future round, per this document's
+harness-then-migrate discipline. Remaining scope in Row F: F0-F8 (minus
+F9/F11), F10, F12/F14-F16 (14 of 17 branches, one fewer than before since
+F13/F13b/F13c is now harnessed), plus all of Row B/C/G and all of
+`ir_lowerer`.
 
 ## Risks
 

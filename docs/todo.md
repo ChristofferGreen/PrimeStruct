@@ -1177,6 +1177,70 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     F12-F16 - 15 of 17 branches), all of Row B/C/G, and all of
     `ir_lowerer` remain unmigrated; this note records real migration
     progress made alongside Step 0, not Step 0 completion.
+  - implementation_notes (2026-09-09, F13/F13b/F13c harness): wired a
+    third Step 1b diff-audit harness in
+    `TemplateMonomorphMethodTargets.cpp`'s `resolveMethodCallTemplateTarget`,
+    at the `isCollectionFamilyReceiver` membership test (Row F table's
+    F13/F13b/F13c - the "no source definition at `resolvedType`, dispatch
+    generically when `typeName` is array/vector/map/soa-family" fallback).
+    Chose this branch specifically per this round's steering guidance
+    ("the vector/array/soa family branches") over F10 (the bare-`args`
+    leaf-name branch, rejected: it has no counterpart family in
+    `ReceiverElementFamily` at all - "args" is not a type-family
+    classification the shared enum models, so stretching it onto this
+    interface would mean inventing a new family rather than reusing an
+    existing one) and over F12/F14 (left alone entirely, per the task's
+    own explicit instruction not to touch F14-adjacent code this round).
+    F13's own guard is a plain literal-set membership test
+    (`typeName == "array" || "vector" || "map"`) OR'd with
+    `isTemplateMonomorphSoaReceiverType(typeName)` - by this point in the
+    cascade `typeName` has already gone through
+    `normalizeCollectionReceiverTypeName` (same as F9's/F11's own prior
+    notes), so it is already a bare base name with no generic-argument
+    text left to parse; the harness feeds the classifier's
+    `isTemplateShaped`/`templateShapedBaseName` inputs that already-known
+    base name directly (`isTemplateShaped=true`,
+    `templateShapedBaseName=typeName`) rather than re-deriving a parse
+    that has nothing left to do, mirroring F9's own "hand the classifier
+    the already-known answer" approach for its `isTemplateShaped=false`
+    case. The classifier's `isKeyValueSurfaceTypeName` predicate is
+    supplied as a literal `== "map"` match - deliberately mirroring this
+    *exact* production guard's own literal check (not a real
+    struct-metadata-backed key-value surface predicate), since this
+    audit's job is proving this particular guard's disposition, not
+    exercising the classifier's more general key-value path. Purely
+    observational: `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`-gated,
+    computes both answers, logs+asserts on mismatch, never substitutes
+    for `isCollectionFamilyReceiver` itself; zero-cost (one cached
+    `getenv`) when unset. Verification, all against a fresh `git stash`
+    baseline (not a trusted old number): stashed the change back to the
+    clean `2f2db975c` tip, rebuilt, ran all three suites once with the env
+    var unset (semantics 2767 cases/1 failed, backend_ir 1646/46,
+    compile_run 2679/5 - matching every prior session's recorded
+    baseline) and recorded the sorted failing-test-case-*name* sets.
+    `git stash pop` restored the harness, rebuilt clean (no warnings), then
+    ran: (1) all three suites once with
+    `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` set - zero `MISMATCH` lines
+    logged, no assertion fired (no crash/abort in any suite), and the
+    sorted failing-name sets were byte-identical to the baseline in all
+    three suites; (2) all three suites twice more each with the env var
+    unset - all six runs produced sorted failing-name sets byte-identical
+    to the baseline, confirming default production behavior is completely
+    unchanged by this round's addition. Confirmed via `pgrep -af
+    PrimeStruct_compile_run_tests` before trusting each `compile_run`
+    result that no second instance of the binary was concurrently running
+    (only this session's own polling-loop shell wrappers matched the
+    grep pattern in their command text, not a second live instance of the
+    binary itself). No production code path changed - only observational
+    scaffolding was added. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
+    monomorphization stage: third diff-audit harness at F13/F13b/F13c
+    collection-family slice" section. Still not marked `[x]` - F13/F13b/
+    F13c's *real* migration (deleting the inline `isCollectionFamilyReceiver`
+    check in favor of the classifier verdict) is deliberately deferred to
+    a future round, per this document's own harness-then-migrate
+    discipline; F0-F8 (minus F9/F11), F10, F12/F14-F16, all of Row B/C/G,
+    and all of `ir_lowerer` remain unmigrated and/or unharnessed.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
