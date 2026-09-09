@@ -700,44 +700,41 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = selectStaticHelperOverloadPath("/std/gfx/GfxError/" + normalizedMethodName);
     return true;
   }
-  // TODO-5294 Step 1b, monomorphization stage (fifth slice): observational
-  // diff-audit comparing F12 (per docs/ReceiverTargetResolutionConsolidation.md's
-  // Step 0 Row F table) - the generic-SOA-receiver method-name-paired
-  // dispatch (count/count_ref, toAos/toAosRef, get/get_ref, push/reserve,
-  // ref/ref_ref), all five gated on the same
-  // isTemplateMonomorphSoaReceiverType(normalizedTypeName) family check -
-  // against the shared classifier's Soa family verdict. Unlike F9/F11's
-  // families, Soa family membership itself carries no method-name gating in
-  // the classifier (confirmed by direct reading of
-  // classifyReceiverElementFamilyJoint: the Soa check inside the template-
-  // shape block returns unconditionally once the predicate matches, no
-  // isBufferAccessorMethodName/isFileHandleMethodName-equivalent gate the
+  // TODO-5294 Step 2, monomorphization stage: F12's generic-SOA-receiver
+  // method-name-paired dispatch (count/count_ref, toAos/toAosRef, get/get_ref,
+  // push/reserve, ref/ref_ref) now delegates its family classification to the
+  // shared classifier instead of the inline
+  // isTemplateMonomorphSoaReceiverType(normalizedTypeName) gate, per the Step
+  // 1b diff-audit harness this call site carried (proven zero-divergence,
+  // 2026-09-09). Unlike F9/F11's families, Soa family membership itself
+  // carries no method-name gating in the classifier (confirmed by direct
+  // reading of classifyReceiverElementFamilyJoint: the Soa check inside the
+  // template-shape block returns unconditionally once the predicate matches,
+  // no isBufferAccessorMethodName/isFileHandleMethodName-equivalent gate the
   // way Buffer/File have) - so one classification call, made once before all
-  // five branches (which share the identical family gate), covers all of
-  // F12 rather than needing a separate audit per method-name pair. By this
-  // point typeName has already gone through normalizeCollectionReceiverTypeName
+  // five branches (which share the identical family gate), covers all of F12
+  // rather than needing a separate call per method-name pair. By this point
+  // typeName has already gone through normalizeCollectionReceiverTypeName
   // above (same as the F9/F11/F13 slices' own note), so there is no template
   // text left to parse - this feeds the classifier's isTemplateShaped/
   // templateShapedBaseName inputs the already-known base name directly
   // (isTemplateShaped=true, templateShapedBaseName=normalizedTypeName), the
-  // same "hand over the pre-parsed base" approach F13/F13b/F13c's slice
-  // used, including its identical isInternalSoaCollectionTypeName predicate
-  // wrapper (a bare `== templateMonomorphSoaReceiverTypeName()` string
-  // comparison via isTemplateMonomorphSoaReceiverType, not a real struct-
-  // metadata lookup for this stage). Purely observational: computing the
-  // classifier's verdict and comparing it never changes this function's
-  // control flow, return value, or side effects. Zero-cost when
-  // PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is unset (one cached getenv
-  // check).
-  if (isReceiverTargetDiffAuditEnabled()) {
+  // same "hand over the pre-parsed base" approach F13/F13b/F13c's slice used,
+  // including its identical isInternalSoaCollectionTypeName predicate wrapper
+  // (a bare `== templateMonomorphSoaReceiverTypeName()` string comparison via
+  // isTemplateMonomorphSoaReceiverType, not a real struct-metadata lookup for
+  // this stage). Only the *classification* moved here - the five branches'
+  // downstream helper-name/path-construction/return behavior below is
+  // byte-identical to what F12 always produced.
+  const bool isGenericSoaReceiver = [&] {
     ReceiverElementFamilyJointInput jointInput;
     jointInput.unwrappedElementType = normalizedTypeName;
     jointInput.rawElementBaseType = normalizedTypeName;
     jointInput.isTemplateShaped = true;
     jointInput.templateShapedBaseName = normalizedTypeName;
     jointInput.normalizedMethodName = normalizedMethodName;
-    ReceiverElementFamilyPredicates auditPredicates{};
-    auditPredicates.isInternalSoaCollectionTypeName =
+    ReceiverElementFamilyPredicates predicates{};
+    predicates.isInternalSoaCollectionTypeName =
         [](std::string_view candidate) {
           return isTemplateMonomorphSoaReceiverType(std::string(candidate));
         };
@@ -746,28 +743,10 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     // isTemplateMonomorphSoaReceiverType is a fixed-string match that, when
     // true, already committed to Soa above KeyValue's own check - a null
     // (never-matches) KeyValue predicate cannot change this outcome.
-    const ReceiverElementFamily classifierFamily =
-        classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
-    const bool productionSoaReceiver =
-        isTemplateMonomorphSoaReceiverType(normalizedTypeName);
-    const bool classifierSaysSoa = classifierFamily == ReceiverElementFamily::Soa;
-    if (productionSoaReceiver != classifierSaysSoa) {
-      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
-                   "resolveMethodCallTemplateTarget (F12 generic-Soa slice): "
-                   "typeName=\""
-                << normalizedTypeName << "\" methodName=\"" << normalizedMethodName
-                << "\" production="
-                << (productionSoaReceiver ? "Soa" : "not-Soa")
-                << " classifier=" << describeReceiverElementFamily(classifierFamily)
-                << "\n";
-    }
-    assert(productionSoaReceiver == classifierSaysSoa &&
-           "receiver-target diff audit: monomorphization F12 generic-Soa "
-           "slice disagreement (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - "
-           "see docs/ReceiverTargetResolutionConsolidation.md Step 1b, "
-           "monomorphization stage");
-  }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+    return classifyReceiverElementFamilyJoint(jointInput, predicates).family ==
+           ReceiverElementFamily::Soa;
+  }();
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
@@ -776,7 +755,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         expr, preferredSamePathSoaCountMethodTarget(helperName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == templateMonomorphSoaToAosHelperName() ||
        normalizedMethodName == templateMonomorphSoaToAosHelperName(true))) {
     const std::string helperName =
@@ -786,7 +765,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         expr, preferredSamePathSoaToAosMethodTarget(helperName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
@@ -795,13 +774,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         expr, preferredSamePathSoaGetMethodTarget(helperName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
     pathOut = selectHelperOverloadPath(
         expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)

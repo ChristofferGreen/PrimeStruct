@@ -3619,6 +3619,89 @@ existing proof above - this round re-confirmed rather than re-derived
 that finding. Remaining scope in Row F: F0-F6/F8, F10, F14-F16 (12 of 17
 branches) plus F12's still-open real migration, and all of `ir_lowerer`.
 
+## Step 2, monomorphization stage: resolveMethodCallTemplateTarget's F12 generic-Soa slice migrated to classifyReceiverElementFamilyJoint, zero-divergence achieved (2026-09-09)
+
+Migrated the Step 1b-harnessed F12 slice for real, the fifth real
+migration in the monomorphization stage (after F11, F9, F13/F13b/F13c,
+and F7), same harness-first/migrate-once-proven discipline.
+
+**What changed.** The five method-name-paired branches
+(`count`/`count_ref`, `toAos`/`toAosRef`, `get`/`get_ref`,
+`push`/`reserve`, `ref`/`ref_ref`) each tested their own inline
+`isTemplateMonomorphSoaReceiverType(normalizedTypeName)` call before this
+change. That call is now made exactly once, ahead of all five branches,
+via `classifyReceiverElementFamilyJoint` (the same
+`ReceiverElementFamilyJointInput`/`ReceiverElementFamilyPredicates`
+construction the Step 1b harness was already building for observation -
+`isTemplateShaped=true`, `templateShapedBaseName=normalizedTypeName`,
+the `isInternalSoaCollectionTypeName` predicate wrapper unchanged), with
+the resulting `bool isGenericSoaReceiver = ... family ==
+ReceiverElementFamily::Soa` bound once and referenced by all five
+branches in place of their own repeated inline calls - the harness's own
+proven finding (Soa family membership carries no method-name gating of
+its own in the classifier, unlike Buffer/File) is exactly what licenses
+sharing one classification across all five, rather than needing five
+separate ones. Downstream behavior in every branch is byte-identical:
+the same `isBorrowedSoaReceiver` ternary, the same
+`preferredSamePathSoa*MethodTarget` helper calls, the same
+`selectHelperOverloadPath` wrapping, the same return values - only the
+family-gate *computation* moved. The Step 1b diff-audit-harness
+scaffolding at this call site (the `isReceiverTargetDiffAuditEnabled()`
+check, the separate `auditPredicates`/`jointInput` construction, the
+`[receiver-target-diff-audit] MISMATCH` stderr line, the `assert`) is
+removed entirely, since the classifier's verdict is now load-bearing
+rather than observational. Net -21 lines in
+`TemplateMonomorphMethodTargets.cpp` (32 insertions, 53 deletions in the
+whole-file diff, entirely this slice). No other part of Row F's
+still-unmigrated cascade (F0-F6/F8, F10, F14-F16) was touched, F14
+(proven dead code) was left alone as separate cleanup, and F9's/F11's/
+F13's/F7's already-migrated code was left untouched.
+
+**Verification.** Fresh baseline first, not a trusted prior number:
+`git stash`'d this round's own edit back to the clean `7596991cc` tree
+(confirmed via `git status`/`git log`), rebuilt all three suites clean,
+and ran the full battery once as plain foreground commands (no
+backgrounding/polling across tool calls; each run was blocked on
+in-turn via a `while kill -0 <pid>` loop inside a single Bash
+invocation, never by waiting on a cross-turn notification):
+
+| suite | test cases | failed | assertions | failed assertions |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+`git stash pop`'d the F12 migration back, rebuilt all three suites
+clean, and ran the full battery two more times (plain foreground,
+`pgrep -fc` against the anchored full binary path
+`'^\./PrimeStruct_<suite>_tests$'` confirming zero concurrent instances
+before each check):
+
+| suite | test cases (run1/run2) | failed (run1/run2) | failing-name diff vs baseline (run1) | failing-name diff vs baseline (run2) | run1 vs run2 |
+|---|---|---|---|---|---|
+| semantics | 2767/2767 | 1/1 | **empty** | **empty** | **empty** |
+| backend_ir | 1646/1646 | 46/46 | **empty** | **empty** | **empty** |
+| compile_run | 2679/2679 | 5/5 | **empty** | **empty** | **empty** |
+
+Sorted failing-test-case-*name* lists (not just counts) came back
+byte-identical (`cmp` exits 0, no output) in all 9 pairwise comparisons
+across the three suites (baseline vs. run1, baseline vs. run2, run1 vs.
+run2). Semantics' single already-known-flaky pinned test (`semantic
+product validates direct return method-like borrowed helper-return
+experimental soa reads`) is the sole failure there in every run,
+matching this document's own recorded flake; backend_ir's 46 and
+compile_run's 5 failing names were likewise identical across every run.
+
+**Conclusion.** F12 is now migrated for real, alongside F11, F9,
+F13/F13b/F13c, and F7 - monomorphization now has five call sites
+delegating to `classifyReceiverElementFamilyJoint`. No diff-audit-harness
+scaffolding remains anywhere in `TemplateMonomorphMethodTargets.cpp` at
+this point. F14 remains untouched, proven dead code, separate cleanup.
+Every other Row A/B/C/D/E/F/G call site this document's Step 0 rule
+table catalogs still independently re-derives receiver family
+membership - in particular F0-F6/F8, F10, and F14-F16 (11 of Row F's 17
+branches) plus all of `ir_lowerer` remain completely untouched.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies

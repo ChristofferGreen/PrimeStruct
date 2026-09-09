@@ -1444,6 +1444,39 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     Remaining scope in Row F: 12 of its 17 branches (F0-F6/F8, F10,
     F14-F16) plus F12's still-open real migration, plus all of Row B/C/G
     and all of `ir_lowerer` - this task stays open, not `[x]`.
+  - implementation_notes (2026-09-09, F12 real migration): migrated the
+    fifth diff-audit harness (generic-Soa-receiver, `count`/`count_ref`,
+    `toAos`/`toAosRef`, `get`/`get_ref`, `push`/`reserve`, `ref`/`ref_ref`)
+    for real. The five method-name-paired branches previously each called
+    `isTemplateMonomorphSoaReceiverType(normalizedTypeName)` inline; now
+    one `classifyReceiverElementFamilyJoint` call, made once ahead of all
+    five branches, produces a single `isGenericSoaReceiver` bool that all
+    five reference in place of their own repeated inline calls - licensed
+    by the harness's own proven finding that Soa family membership carries
+    no method-name gating of its own. Downstream behavior in all five
+    branches (helper-name selection, path construction, return values) is
+    byte-identical; only the family-gate computation moved. The Step 1b
+    diff-audit scaffolding at this call site (env-gated audit block,
+    mismatch stderr line, assert) is removed. Net -21 lines in
+    `TemplateMonomorphMethodTargets.cpp` (32 insertions, 53 deletions).
+    Verification: fresh baseline via `git stash` back to the clean
+    `7596991cc` tree, rebuilt, ran all three suites once (semantics
+    2767/1 failed, backend_ir 1646/46 failed, compile_run 2679/5 failed -
+    identical to every prior recorded baseline), `git stash pop` to
+    restore the migration, rebuilt, ran the full battery two more times.
+    Sorted failing-test-case-*name* sets were byte-identical (`cmp` clean)
+    in all 9 pairwise comparisons across the three suites (baseline vs
+    run1, baseline vs run2, run1 vs run2). All test-suite invocations ran
+    as single, plain, foreground `Bash` calls, blocking on the actual PID
+    within one call when a run's own runtime exceeded the per-call
+    timeout, never via a cross-turn background/notification wait. Full
+    detail in `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step
+    2, monomorphization stage: resolveMethodCallTemplateTarget's F12
+    generic-Soa slice migrated to classifyReceiverElementFamilyJoint,
+    zero-divergence achieved" section. Remaining scope in Row F: F0-F6/F8,
+    F10, F14-F16 (11 of 17 branches, plus F14's dead-code deletion as
+    separate cleanup), plus all of Row B/C/G and all of `ir_lowerer` -
+    this task stays open, not `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
