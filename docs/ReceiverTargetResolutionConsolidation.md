@@ -64,6 +64,15 @@ dispatches on) stays where it is; the classifier only decides spelling
 disposition, not receiver typing." That document's own Risks section
 predicted this: "If Step 0 uncovers a third layer of the same shape, that
 is a signal to stop and reassess." This is that third layer.
+Step 1b for `ir_lowerer` was started 2026-09-09: the two candidates most
+analogous to the already-migrated File/Buffer/FileError slices (G6's
+bare-`Name` static-error dispatch, and the Receiver/Collection-helper
+files' unconditional Buffer/File `LocalInfo`-kind assignments) were both
+checked and turned out to be the already-excluded F1 and F3 shapes
+respectively, not clean fits - see "Step 1b, ir_lowerer stage: candidate
+branches assessed, none fit the classifier this round" below. No harness
+wired, no source changed; broader Row G/RT/CH scope remains open for a
+future round.
 
 ## The Problem, Verified
 
@@ -3897,6 +3906,126 @@ under this task's harness-then-migrate cadence.
 No source file was changed this round; no harness was wired; the 3-suite
 battery was not re-run since there is nothing to verify (production code
 is byte-identical to `2877b59d0`).
+
+## Step 1b, ir_lowerer stage: candidate branches assessed, none fit the classifier this round (2026-09-09)
+
+Per this document's own stage order - semantics first (both Row A call
+sites migrated), then monomorphization (just closed above as
+"exhausted" for this classifier's low-risk scope) - this round starts
+the same harness-then-migrate discipline for `ir_lowerer`. Re-read Row
+G's full G0-G10 cascade
+(`resolveMethodCallDefinitionFromExpr`,
+`IrLowererSetupTypeMethodCallResolution.cpp`) and Row category G
+continued (I)/(II) (`IrLowererSetupTypeReceiverTargetHelpers.cpp`,
+`IrLowererSetupTypeCollectionHelpers.cpp`) in full before picking a
+slice, per this round's own task instructions.
+
+**Candidate 1: G6's bare-`Name` static-error-family dispatch - looked
+like the F7/F11 shape, is actually the F1 shape.** G6
+(`IrLowererSetupTypeMethodCallResolution.cpp:848-893`) is the obvious
+first candidate: a receiver `kind == Name` not found in `localsIn`,
+literally spelled `FileError`/`ImageError`/`ContainerError`/`GfxError`,
+dispatched via `preferred*ErrorHelperTarget` gated on a per-family
+method-name set (`FileError`: 5 names `why`/`is_eof`/`eof`/`status`/
+`result`; the other three: 3 names `why`/`status`/`result` each, no
+`eof`/`is_eof`). This superficially matches the classifier's existing
+`FileError` family (R2/R2b) closely enough that the `FileError`
+sub-case's known 5-vs-4-name gap (`eof` present here, absent from the
+classifier's fixed set) is exactly the same quirk this document's Step
+0 table already flagged for Row F's F1 - a reassuring sign it was
+recognized correctly, not a new finding.
+
+But on inspection this is **not** an F11-shaped fit - it is the F1
+shape, which this document's own Step 1b/monomorphization rounds
+already rejected, for the same reason here: `receiver->name` is the
+receiver **expression's own literal source spelling**, checked directly
+against a hardcoded 4-name list, with no `LocalInfo` lookup or type
+resolution involved at all (the `localsIn.find(receiver->name) ==
+localsIn.end()` guard immediately above it exists specifically to
+select *only* the unbound case). The classifier's `unwrappedElementType`
+input is documented (see its header) as "must already be normalized
+... via the caller's `normalizeBindingTypeName`" - a resolved-type text,
+not a raw identifier spelling. F11's own FileError slice fit cleanly
+precisely because it operates on `typeName` *after* receiver-type
+inference has already run; G6 runs *before* any such inference for
+this exact receiver shape (bare unbound `Name`), by construction. Two
+further, independent problems compound this: (a) `ImageError`/
+`ContainerError`/`GfxError` have no corresponding family in
+`ReceiverElementFamily` at all - modeling them would mean adding three
+new enum values plus predicate plumbing, not just observing an
+existing branch; (b) even restricting to just the `FileError`
+sub-case (the one family the classifier does model), doing so here
+would repeat the exact scope decision this document already made for
+Row F's F1 - deliberately excluded as "a fundamentally different
+question than the classifier answers," not merely deprioritized.
+Consistent with that precedent, G6 is left unharnessed this round
+rather than force-fit.
+
+**Candidate 2: the Receiver/Collection-helper files' Buffer/File
+`LocalInfo`-kind assignments - the F3 shape, already rejected for the
+same reason.** Every `typeNameOut = "Buffer"`/`typeNameOut = "File"`
+assignment in `IrLowererSetupTypeReceiverTargetHelpers.cpp` (RT2a/RT2i,
+RT3b-i's `argsPackElementKind` table, RT3b-ii's dereferenced-receiver
+lambda) is an **unconditional** kind-driven assignment - `localInfo.kind
+== LocalInfo::Kind::Buffer` sets `typeNameOut = "Buffer"` with no
+method-name involved anywhere in the check. This is the same shape as
+Row F's F3 (the receiver-type-inference sub-cascade), already
+explicitly rejected in the monomorphization round as answering "what
+type does this receiver have," the converse of what
+`classifyReceiverElementFamilyJoint` answers ("what family does an
+already-known type/method pair belong to"). None of these assignments
+gate on `normalizedMethodName` at all, so there is no `(type,
+methodName)` pair to hand the classifier in the first place - not a
+narrower version of the right shape, a different question entirely,
+exactly per F3's own precedent.
+
+**Candidate 3: G3c-iii/G3d and `IrLowererSetupTypeCollectionHelpers.cpp`'s
+`isExplicit*AliasPath` family - path-shape or method-name-only
+classification, not `(type-text, methodName)`.** G3c-iii dispatches on
+the call's method leaf alone (7 File-handle names, no type check at
+all - a "handled elsewhere" silent no-op). G3d's
+`routesExplicitVectorCountMethodThrough*` sub-guards and the
+`isExplicit*AliasPath`/`isAllowedResolved*DirectCallPath` family in the
+CollectionHelpers file all classify **resolved semantic-product path
+strings** (`preferredResolvedPath`, `explicitMethodPath`) via prefix
+matching and registry-token resolution, not a normalized receiver
+type-text paired with a method name. This is a different input shape
+than the classifier's contract (`ReceiverElementFamilyJointInput`
+takes type text plus method name plus template-shape flag, not a
+resolved path string) - forcing it in would mean building a wholly
+separate path-classification interface, not reusing this one.
+
+**The key-value-alias-name stub asymmetry (per this round's task
+instructions) did not end up mattering for the decision.** None of
+the three candidates above route through
+`resolveKeyValueHelperAliasName`/`resolveBorrowedKeyValueHelperAliasName`
+(the permanent no-op stubs documented in Row category G continued
+(II)) closely enough to need to reason about that known asymmetry -
+G6 is FileError/ImageError/ContainerError/GfxError-only (no
+key-value path at all), and Candidates 2/3 are rejected on shape
+grounds before the key-value/vector asymmetry would even become
+relevant. Flagged here only to record that the asymmetry was kept in
+mind while scoping, per this round's task instructions, not because it
+changed the outcome.
+
+**Conclusion.** No branch examined this round is a clean,
+no-extension-needed fit for `classifyReceiverElementFamilyJoint`'s
+`(type, methodName, templateShape) -> family` interface - the two most
+plausible candidates (G6, and the Buffer/File `LocalInfo`-kind
+assignments) turn out to be, respectively, the F1 shape and the F3
+shape this document already established as out of scope for this
+classifier, and the remaining path/method-only classifiers (Candidate
+3) need a differently-shaped interface entirely. This is **not** the
+same as monomorphization's "exhausted" finding - only the branches most
+analogous to the already-migrated File/Buffer/FileError slices were
+checked this round, not every remaining branch in Row G/RT/CH (G1-G5,
+G7-G10's remaining sub-branches, and the rest of the two helper files'
+predicate family are still open, per the Step 0 table's own UNPINNED
+markers). No source file was changed, no harness was wired, and the
+3-suite battery was not re-run since production is byte-identical to
+`e86cd0221` - matching this document's own precedent for a
+scoping-only round (see the Row F "exhausted" section above) rather
+than a stalled migration.
 
 ## Risks
 

@@ -1538,6 +1538,49 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
     monomorphization stage: remaining Row F branches assessed, none fit
     the classifier" section. This task stays open, not `[x]`.
+  - implementation_notes (2026-09-09, ir_lowerer Step 1b started, no
+    branch fit found this round): per the doc's own stage order
+    (semantics, then monomorphization - now exhausted, then `ir_lowerer`),
+    started the same harness-then-migrate cycle for `ir_lowerer` this
+    round. Re-read Row G's full G0-G10 cascade
+    (`resolveMethodCallDefinitionFromExpr`,
+    `IrLowererSetupTypeMethodCallResolution.cpp`) plus Row category G
+    continued (I)/(II) (`IrLowererSetupTypeReceiverTargetHelpers.cpp`,
+    `IrLowererSetupTypeCollectionHelpers.cpp`). Per this round's own
+    hint, checked whether an analogous File/Buffer/FileError branch
+    exists (the shape that fit cleanly in F7/F11): G6's bare-`Name`
+    `FileError`/`ImageError`/`ContainerError`/`GfxError` dispatch
+    (`IrLowererSetupTypeMethodCallResolution.cpp:869-886`) looked like
+    the obvious candidate, but on inspection it classifies the receiver
+    *expression's own literal source spelling* (an unbound `Name` not
+    found in `localsIn`), not a resolved type - structurally identical
+    to Row F's F1, already explicitly rejected for this exact reason in
+    the monomorphization round. It also needs three families
+    (`ImageError`/`ContainerError`/`GfxError`) `ReceiverElementFamily`
+    has no slot for at all - a real interface extension, not
+    observation. Checked the alternative candidate next: every
+    Buffer/File `typeNameOut` assignment in the Receiver/Collection-
+    helper files (RT2a/RT2i, RT3b-i/RT3b-ii) is an unconditional
+    `LocalInfo`-kind-driven assignment with **no method-name gate
+    anywhere** - the same shape as Row F's F3 (receiver-type-inference:
+    "what type does this receiver have", not "what family does a known
+    type/method pair belong to"), already rejected for the identical
+    reason. G3c-iii/G3d and the `isExplicit*AliasPath`/path-normalization
+    family in `IrLowererSetupTypeCollectionHelpers.cpp` operate on
+    resolved semantic-product *paths* or bare method-name sets, not on
+    `(type-text, methodName)` pairs, a different input shape than the
+    classifier's contract - not force-fit either. Conclusion: no branch
+    examined this round is a clean, no-extension-needed fit; this
+    mirrors monomorphization's own "exhausted" finding but is this
+    stage's *first* round, so broader `ir_lowerer` scope (the parts of
+    Row G/RT/CH not yet individually re-examined against this specific
+    classifier shape) is not yet fully exhausted, only the most
+    plausible candidates checked this round. No source file was
+    changed, no harness was wired, and the 3-suite battery was not
+    rerun since production is byte-identical to `e86cd0221`. Full
+    per-branch reasoning in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
+    ir_lowerer stage" section. This task stays open, not `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
