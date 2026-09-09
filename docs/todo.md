@@ -1515,6 +1515,29 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     scope in Row F (now 16 branches, F14 removed): F0-F6/F8, F10,
     F15-F16 (11 branches), plus all of Row B/C/G and all of `ir_lowerer` -
     this task stays open, not `[x]`.
+  - implementation_notes (2026-09-09, Row F monomorphization scope
+    assessed as exhausted): re-read the F7-round rejections of F0-F6/F8/F10
+    against current source (unchanged), then read F15/F16 directly for the
+    first time this round (`TemplateMonomorphMethodTargets.cpp:877-890`,
+    the only two branches remaining after F14's deletion). Both are
+    definition-existence path selection (`hasDefinitionFamilyPath` lookups
+    on already-built candidate path strings for F15; an unconditional
+    fallback running `preferVectorStdlibHelperPath`/`selectHelperOverloadPath`
+    for F16), not `(type, methodName) -> family` classification decisions -
+    the same interface-shape mismatch already established for F2/F6/F8.
+    Conclusion: all 11 remaining Row F branches (F0-F6/F8, F10, F15, F16)
+    have now been individually assessed and none fit
+    `classifyReceiverElementFamilyJoint`'s interface without a
+    materially larger extension than this task's "smallest extension"
+    discipline allows. No harness wired, no source touched this round -
+    this is a scoping finding: Row F's monomorphization-stage low-risk
+    migration scope for this classifier is exhausted (5 of 17 original
+    branches migrated, 1 deleted as dead code, 11 assessed and rejected).
+    Row B/C/G and all of `ir_lowerer` remain completely untouched and are
+    the real remaining scope for this task. Full per-branch reasoning in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
+    monomorphization stage: remaining Row F branches assessed, none fit
+    the classifier" section. This task stays open, not `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

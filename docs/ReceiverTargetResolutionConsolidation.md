@@ -3800,6 +3800,104 @@ of `ir_lowerer`. F11, F9, F13/F13b/F13c, F7, and F12 remain migrated onto
 `classifyReceiverElementFamilyJoint` from prior rounds; nothing else in
 this round's scope touched them.
 
+## Step 1b, monomorphization stage: remaining Row F branches assessed, none fit the classifier (2026-09-09)
+
+This round's task was to pick the next well-scoped, not-yet-touched Row F
+branch (from the 11 remaining after F14's deletion: F0-F6/F8, F10, F15-F16)
+and wire a diff-audit harness. Conclusion: **no remaining branch fits**
+`classifyReceiverElementFamilyJoint`'s `(type, methodName, templateShape)
+-> family` interface. No harness was wired and no code was touched this
+round - this is a scoping finding, not a stalled migration.
+
+**F0-F6/F8 and F10 - already assessed and rejected in the F7 harness
+round** (see "Why this slice, not F3 or the rest of F0-F16" above, and the
+F7 Step 1b section's per-branch rundown). Re-read that assessment in full
+this round rather than trusting it secondhand, and re-confirmed each
+line against the current source (`TemplateMonomorphMethodTargets.cpp`,
+post-F12-migration/F14-deletion): F0/F5 are trivial cascade guards with no
+type-family question to answer; F1 classifies a receiver expression's
+*literal spelling*, not a resolved type; F2 and F6 need per-call context
+(`locals` lookups, `hasDefinitionFamilyPath`/`hasTemplatedDefinitionFamilyPath`
+existence checks) outside the classifier's pure `(type, methodName)` input
+shape; F3 answers "what type does this receiver have," the converse
+question to what the classifier answers; F8 delegates to a different,
+already-purpose-built classifier (`CollectionSpellingClassifier`) for a
+different question (compat-spelling rejection); F10 is a narrower,
+differently-shaped rule (3 hardcoded method names, unconditional `array`
+dispatch) than the classifier's VectorLike family (any method name once
+the family matches). None of this changed since the F7 round - re-deriving
+it against current code did not surface anything new.
+
+**F15 and F16 - newly assessed this round, both rejected for the same
+reason as F6/F8/F15's own neighbor conditions: they are not
+type-family-classification decisions at all.** Read
+`TemplateMonomorphMethodTargets.cpp:877-890` directly (the only two
+branches left in the function after F14's deletion):
+
+```cpp
+const std::string samePathMethodTarget = resolvedType + "/" + normalizedMethodName;
+const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
+if (!receiverHelperLeaf.empty()) {
+  const std::string rootedHelperTarget = "/" + receiverHelperLeaf + "/" + normalizedMethodName;
+  if (samePathMethodTarget != rootedHelperTarget &&
+      !hasDefinitionFamilyPath(samePathMethodTarget) &&
+      hasDefinitionFamilyPath(rootedHelperTarget)) {
+    pathOut = selectHelperOverloadPath(expr, rootedHelperTarget, ctx);
+    return true;                                            // F15
+  }
+}
+pathOut = preferVectorStdlibHelperPath(resolvedType + "/" + normalizedMethodName, ctx.sourceDefs);
+pathOut = selectHelperOverloadPath(expr, pathOut, ctx);
+return true;                                                  // F16
+```
+
+F15 picks between two already-constructed candidate path strings
+(`samePathMethodTarget` vs. `rootedHelperTarget`) based purely on whether
+`ctx.sourceDefs` (via `hasDefinitionFamilyPath`) actually has a definition
+at each literal path - a source-definition-table lookup, not a
+`(type, methodName)` classification. `receiverHelperFamilyLeaf` (the
+function-local lambda at line 254) is itself a generic path-leaf-extraction
+utility (strip everything up to the last `/`, then truncate at the first
+`__t`/`__ov`/`<`) with no receiver-family awareness at all - it would
+produce the same leaf text for a struct-family receiver as for a
+collection-family one. F16 is the unconditional fallback: it always
+`return true`s, running `preferVectorStdlibHelperPath` then
+`selectHelperOverloadPath` on whatever `resolvedType` already is - there is
+no "is this family X" decision left to make by the time control reaches
+F16; every actual family-classification decision in this function already
+happened at F7/F9/F11/F12/F13/F13b/F13c above. Force-fitting either F15 or
+F16 onto the classifier would mean inventing a new interface for
+"does a source definition exist at this literal path" (a
+`ctx.sourceDefs`/`hasDefinitionFamilyPath` question), which is a
+fundamentally different kind of input than the classifier's pure
+type/method-name pair - the same shape mismatch F2/F6/F8 already
+established, not a new problem.
+
+**Conclusion: Row F's monomorphization-stage scope for this classifier is
+exhausted.** Every one of Row F's 16 remaining branches (after F14's
+deletion) has now been individually assessed against
+`classifyReceiverElementFamilyJoint`'s interface: F7, F9, F11, F12,
+F13/F13b/F13c fit and are migrated (5 of the original 17, F14 deleted as
+dead code); F0-F6/F8, F10, F15, F16 (11 branches) do not fit, for reasons
+that fall into three buckets - (a) not a classification decision at all
+(F0/F5/F15/F16), (b) classifies something other than a resolved
+type/method pair - literal spelling (F1) or the inverse question, "what
+type is this" (F3), or (c) needs a per-call input dimension the classifier
+has no slot for - `locals`, definition-existence lookups, or a
+distinct-classifier's own scope (F2/F6/F8/F10). This is not a dead end for
+TODO-5294 as a whole - Row B/C/G and all of `ir_lowerer` remain completely
+untouched and are the real remaining scope - but it does mean Row F
+specifically has no more low-risk "clean fit" migrations left for this
+particular classifier; extending the classifier's interface to cover F2/F6/
+F10/F15/F16's shapes would be a materially larger, riskier undertaking than
+this document's "smallest extension" discipline calls for, and is better
+scoped as its own future decision (not started this round) than forced in
+under this task's harness-then-migrate cadence.
+
+No source file was changed this round; no harness was wired; the 3-suite
+battery was not re-run since there is nothing to verify (production code
+is byte-identical to `2877b59d0`).
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies
