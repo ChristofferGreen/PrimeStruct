@@ -33,8 +33,6 @@
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
-#include <cassert>
-#include <iostream>
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
@@ -565,21 +563,20 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   const std::string fileErrorMethodName =
       normalizeFileErrorMethodName(normalizedMethodName);
-  // TODO-5294 Step 1b, monomorphization stage (first slice): observational
-  // diff-audit comparing this branch (F11's FileError sub-case, per
-  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table)
-  // against the shared classifier's FileError family verdict. Scoped
-  // deliberately narrow: only the normalizedReceiverLeafName == "FileError"
-  // case is audited here - NOT F1's separate literal-Name-spelled-"FileError"
-  // receiver shape a few dozen lines above (a different guard entirely, not a
-  // type classification at all), and NOT the ImageError/ContainerError/
+  // TODO-5294 Step 2, monomorphization stage: F11's FileError sub-case (per
+  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now
+  // delegates its family/method-name-gate decision to the shared classifier
+  // instead of its own inline 4-name check, per the Step 1b diff-audit
+  // harness this call site carried (proven zero-divergence, 2026-09-09).
+  // Only the *classification* moved here - the resolved-path construction,
+  // isBuiltinOut default, and return-value behavior below are byte-identical
+  // to what F11 always did. Scoped deliberately narrow, matching the
+  // harness's own scope: NOT F1's separate literal-Name-spelled-"FileError"
+  // receiver shape a few dozen lines above (a different guard entirely, not
+  // a type classification at all), and NOT the ImageError/ContainerError/
   // GfxError sub-cases immediately below (same shape, but the classifier has
-  // no family for those - out of scope for this slice). Purely observational:
-  // computing the classifier's verdict and comparing it never changes this
-  // function's control flow, return value, or side effects. Zero-cost when
-  // PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is unset (one cached getenv check).
-  if (isReceiverTargetDiffAuditEnabled() &&
-      normalizedReceiverLeafName == "FileError") {
+  // no family for those - left as inline checks, unmigrated).
+  {
     ReceiverElementFamilyJointInput jointInput;
     // Production's guard compares the leaf-extracted type name (post
     // slash-split), not the raw typeName text, so that is what is fed to the
@@ -593,43 +590,21 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     // Production compares fileErrorMethodName (already normalized via
     // normalizeFileErrorMethodName's isEof->is_eof mapping), so that
     // already-normalized value - not the raw normalizedMethodName - is what
-    // the classifier's own method-name gate should see, mirroring how the
+    // the classifier's own method-name gate sees, mirroring how the
     // already-migrated semantics-stage call sites pass their own
     // already-normalized method name in.
     jointInput.normalizedMethodName = fileErrorMethodName;
-    // Soa/KeyValue predicates are unreachable from this audit: the
-    // classifier's FileError check (R2) runs before either, so a null
-    // (never-matches) predicate here cannot change this comparison's
-    // outcome for a "FileError" leaf.
-    ReceiverElementFamilyPredicates auditPredicates{};
-    const ReceiverElementFamily classifierFamily =
-        classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
-    const bool productionDispatchesFileError =
-        fileErrorMethodName == "why" || fileErrorMethodName == "is_eof" ||
-        fileErrorMethodName == "status" || fileErrorMethodName == "result";
-    const bool classifierSaysFileError =
-        classifierFamily == ReceiverElementFamily::FileError;
-    if (productionDispatchesFileError != classifierSaysFileError) {
-      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
-                   "resolveMethodCallTemplateTarget (F11 FileError slice): "
-                   "typeName=\""
-                << typeName << "\" methodName=\"" << fileErrorMethodName
-                << "\" production="
-                << (productionDispatchesFileError ? "FileError" : "not-FileError")
-                << " classifier=" << describeReceiverElementFamily(classifierFamily)
-                << "\n";
+    // Soa/KeyValue predicates are unreachable here: the classifier's
+    // FileError check (R2) runs before either, so a null (never-matches)
+    // predicate cannot change this outcome for a "FileError" leaf.
+    ReceiverElementFamilyPredicates predicates{};
+    const ReceiverElementFamily family =
+        classifyReceiverElementFamilyJoint(jointInput, predicates).family;
+    if (normalizedReceiverLeafName == "FileError" &&
+        family == ReceiverElementFamily::FileError) {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + fileErrorMethodName);
+      return true;
     }
-    assert(productionDispatchesFileError == classifierSaysFileError &&
-           "receiver-target diff audit: monomorphization F11 FileError slice "
-           "disagreement (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
-           "docs/ReceiverTargetResolutionConsolidation.md Step 1b, "
-           "monomorphization stage");
-  }
-  if (normalizedReceiverLeafName == "FileError" &&
-      (fileErrorMethodName == "why" || fileErrorMethodName == "is_eof" ||
-       fileErrorMethodName == "status" || fileErrorMethodName == "result")) {
-    pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + fileErrorMethodName);
-    return true;
   }
   if (normalizedReceiverLeafName == "ImageError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||

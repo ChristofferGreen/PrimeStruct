@@ -1074,6 +1074,35 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     monomorphization stage" section. Still not marked `[x]` - this is one
     narrow slice of Row F's 17-branch cascade; F1-F10/F12-F16 and every
     Row B/C/G call site remain unharnessed and unmigrated.
+  - implementation_notes (2026-09-09, real migration): migrated the
+    monomorphization-stage F11 FileError sub-case
+    (`resolveMethodCallTemplateTarget`, `TemplateMonomorphMethodTargets.cpp`)
+    for real onto `classifyReceiverElementFamilyJoint` - the first Step 2
+    migration in the monomorphization stage, following the exact same
+    "promote the harness's own computation into the primary path, retire
+    the now-meaningless self-diff scaffolding" pattern the two
+    semantics-stage migrations used. F11's inline 4-name method-name gate
+    is replaced by one classifier call gating the identical
+    `selectStaticHelperOverloadPath("/std/file/FileError/" + ...)`
+    dispatch; the diff-audit-harness code (env-var check, stderr line,
+    assert, and the `<cassert>`/`<iostream>` includes it needed) is
+    removed from this call site. Verified with a fresh baseline (`git
+    stash` back to the unmodified `538a1ec` tree, confirmed via `git
+    status`) run twice, then the migration built clean and run twice more:
+    all four runs across all three suites (semantics 2767/1,
+    backend_ir 1646/46, compile_run 2679/5 - matching every prior
+    session's recorded numbers) produced byte-identical sorted
+    failing-test-case-*name* sets in every pairwise comparison, not just
+    matching counts. Confirmed via `pgrep`/`ps` that exactly one
+    `PrimeStruct_compile_run_tests` instance ran at a time before trusting
+    each result, per the segfault-artifact warning the prior round's note
+    above left for this one. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 2,
+    monomorphization stage" section. Still not marked `[x]` - this Step 0
+    task's own rule table still needs full branch-level coverage, and the
+    rest of Row F (16 of 17 branches), all of Row B/C/G, and all of
+    `ir_lowerer` remain unmigrated; this note records real migration
+    progress made alongside Step 0, not Step 0 completion.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
