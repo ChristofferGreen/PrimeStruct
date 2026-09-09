@@ -42,15 +42,17 @@ namespace primec {
 // unaddressed) so its existing unit tests keep pinning the pre-Step-1b
 // approximation; it is not itself wired anywhere either.
 //
-// Step 2 (2026-09-08): classifyReceiverElementFamilyJoint now drives real
+// Step 2 (2026-09-08/09): classifyReceiverElementFamilyJoint now drives real
 // production behavior, not just observation - resolveArgsPackElementMethodTarget
 // (SemanticsValidatorMethodTargetArgsPackResolvers.cpp) delegates to it
-// directly, its own inline R1-R9 cascade deleted. resolveMethodTarget's
-// indexed-args-pack cascade (slice 2, SemanticsValidatorExprMethodTargetResolution.cpp)
-// remains only observationally wired behind PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT
-// as of this date - not yet migrated. See
-// docs/ReceiverTargetResolutionConsolidation.md's "Step 2" section for the
-// migration detail and zero-divergence proof, including a caller pitfall:
+// directly, its own inline R1-R9 cascade deleted (2026-09-08), and
+// resolveMethodTarget's indexed-args-pack cascade (slice 2,
+// SemanticsValidatorExprMethodTargetResolution.cpp) likewise delegates to
+// it directly, its own inline cascade deleted (2026-09-09) - both Step 1b
+// diff-audit harnesses are retired, superseded by the real migrations. See
+// docs/ReceiverTargetResolutionConsolidation.md's "Step 2" and "Step 2,
+// second migration" sections for the migration detail and zero-divergence
+// proof, including a caller pitfall:
 // ReceiverElementFamilyResult::normalizedElementBaseType is always derived
 // from the joint input's unwrappedElementType, never rawElementBaseType -
 // a caller building the Primitive branch's resolved path from that result

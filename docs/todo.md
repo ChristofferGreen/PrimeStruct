@@ -986,6 +986,50 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     sites across three stages, and Step 0's own remaining-scope items
     (Row B/C's sprawling functions, monomorphization, ir_lowerer) are
     untouched.
+  - implementation_notes (2026-09-09, Step 2 second migration): migrated
+    the second (and last) Step 1b diff-audit-harnessed call site -
+    `resolveMethodTarget`'s own inline indexed-args-pack-element cascade
+    (`SemanticsValidatorExprMethodTargetResolution.cpp`, the
+    `pack[i].method()` access shape, Step 1b slice 2) - to delegate to
+    `classifyReceiverElementFamilyJoint` for real, same pattern as the
+    first Step 2 migration. The block's ~60-line inline cascade (string
+    check, template-shape-gated vector/array/soa/Buffer/key-value/File
+    block, FileError check positioned after the template block at this
+    call site, primitive check, struct-path fallback) is now a single
+    classifier call plus a family-keyed `switch` whose per-family bodies
+    are the exact same downstream actions the old cascade ran, including
+    this call site's own two-step KeyValue dispatch
+    (`setIndexedArgsPackKeyValueMethodTarget` tried first, falling back to
+    `setPreferredKeyValueMethodTarget`) - a call-site-specific detail
+    unrelated to family classification, preserved verbatim. Both of this
+    site's documented input-convention differences from slice 1 (no
+    wrapped/unwrapped Primitive-check asymmetry - both classifier inputs
+    and the Primitive branch's own path construction use the same
+    already-unwrapped text; FileError checked after the template block,
+    proven equivalent to the classifier's fixed ordering since a
+    template-shaped base name can never be the bare literal "FileError")
+    were preserved by relying on Step 1b slice 2's own proofs, not
+    re-derived. The diff-audit-harness scaffolding at this call site is
+    removed entirely (superseded by the real migration, same reasoning as
+    the first migration). Verification: fresh baseline confirmed via
+    `git status` at unmodified `8bd5084`, then the full 3-suite battery
+    run **twice** before any change (semantics 2767 cases/1 failure,
+    backend_ir 1646/46, compile_run 2679/5 - matching both prior sessions'
+    recorded numbers exactly, with byte-identical failing-name sets and
+    identical assertion counts between the two baseline runs - no
+    nondeterminism observed this round), then rebuilt after the migration
+    and run twice more: all four runs (2 baseline + 2 post-migration)
+    produced identical test/assertion counts and byte-identical sorted
+    failing-test-case-name sets in every pairwise comparison. No
+    divergence found - a pure refactor at this call site, as Step 1b
+    slice 2's own zero-divergence proof predicted. Net 35 lines removed
+    per `git diff --stat` (mostly the retired harness). Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 2, second
+    migration" section. Both Step 1b-harnessed call sites are now
+    migrated; still not marked `[x]` - every other Row A/B/C/D/E/F/G call
+    site (Row B/C's sprawling functions, monomorphization's
+    `resolveMethodCallTemplateTarget`, `ir_lowerer`) remains unmigrated and
+    is this task's own remaining scope.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

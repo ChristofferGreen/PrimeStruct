@@ -1897,118 +1897,88 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             normalizedElemBaseType.erase(normalizedElemBaseType.begin());
           }
 
-          // Step 1b differential-audit harness, slice 2
-          // (docs/ReceiverTargetResolutionConsolidation.md,
-          // PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT): same classifier, same
-          // pattern as resolveArgsPackElementMethodTarget's slice-1 wiring -
-          // computes the shared classifier's verdict alongside this block's
-          // own inline cascade below and compares, purely for observation.
-          // Unlike slice 1, this call site's element text is already
-          // Reference/Pointer-unwrapped before either check runs, so both
-          // classifier inputs use the same normalizedElemType/
-          // normalizedElemBaseType text - see the header comment on
-          // classifyReceiverElementFamilyJoint for why that is provably
-          // equivalent to slice 1's wrapped/unwrapped split at this call
-          // site. Zero-cost when the env var is unset.
-          const bool diffAuditEnabled2 = primec::isReceiverTargetDiffAuditEnabled();
-          primec::ReceiverElementFamily classifierFamilyForAudit2 =
-              primec::ReceiverElementFamily::StructOrUnknown;
-          if (diffAuditEnabled2) {
-            std::string auditElemBase2;
-            std::string auditElemArgText2;
-            const bool auditIsTemplateShaped2 =
-                splitTemplateTypeName(normalizedElemType, auditElemBase2, auditElemArgText2);
-            if (auditIsTemplateShaped2) {
-              auditElemBase2 = normalizeBindingTypeName(auditElemBase2);
-            }
-            primec::ReceiverElementFamilyJointInput jointInput2;
-            jointInput2.unwrappedElementType = normalizedElemType;
-            jointInput2.rawElementBaseType = normalizedElemBaseType;
-            jointInput2.isTemplateShaped = auditIsTemplateShaped2;
-            jointInput2.templateShapedBaseName = auditElemBase2;
-            jointInput2.normalizedMethodName = normalizedMethodName;
-            primec::ReceiverElementFamilyPredicates auditPredicates2{
-                [](std::string_view name) {
-                  return isInternalSoaCollectionTypeName(name);
-                },
-                [](std::string_view name) {
-                  return isKeyValueSurfaceTypeName(std::string(name));
-                },
-            };
-            classifierFamilyForAudit2 =
-                primec::classifyReceiverElementFamilyJoint(jointInput2, auditPredicates2).family;
-          }
-          auto auditFamily2 = [&](primec::ReceiverElementFamily productionFamily) {
-            if (!diffAuditEnabled2) {
-              return;
-            }
-            if (productionFamily != classifierFamilyForAudit2) {
-              std::cerr << "[receiver-target-diff-audit] MISMATCH in "
-                           "resolveMethodTarget (indexed args-pack cascade): "
-                           "accessElemType=\""
-                        << accessElemType << "\" methodName=\"" << normalizedMethodName
-                        << "\" production=" << primec::describeReceiverElementFamily(productionFamily)
-                        << " classifier=" << primec::describeReceiverElementFamily(classifierFamilyForAudit2)
-                        << "\n";
-            }
-            assert(productionFamily == classifierFamilyForAudit2 &&
-                   "receiver-target diff audit (slice 2): classifier/production family "
-                   "disagreement (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
-                   "docs/ReceiverTargetResolutionConsolidation.md Step 1b");
-          };
-
-          if (normalizedElemType == "string" || normalizedElemBaseType == "string") {
-            auditFamily2(primec::ReceiverElementFamily::String);
-            return setCollectionMethodTarget("/string/" + normalizedMethodName);
-          }
+          // Step 2 of docs/ReceiverTargetResolutionConsolidation.md
+          // (second migration): this block's own inline classification
+          // cascade (a near-duplicate of resolveArgsPackElementMethodTarget's
+          // R1-R9, Step 1b slice 2's own harnessed call site) has been
+          // replaced by a single call into the shared classifier, proven
+          // byte-faithful by that slice's diff-audit harness. Two
+          // site-specific input conventions (documented on
+          // classifyReceiverElementFamilyJoint's own header, "slice 2"):
+          // this call site's element text is already Reference/Pointer-
+          // unwrapped before either classifier input is computed, so both
+          // `unwrappedElementType` and `rawElementBaseType` below use the
+          // exact same normalizedElemType/normalizedElemBaseType text (no
+          // wrapped/unwrapped asymmetry, unlike
+          // resolveArgsPackElementMethodTarget's R7); and this block's own
+          // FileError check historically sits after the template-shape
+          // block, which is provably equivalent to the classifier's fixed
+          // FileError-before-template ordering since a template-shaped
+          // base name can never equal the bare literal "FileError". Only
+          // the *downstream* action per family below is unchanged from the
+          // pre-migration inline cascade.
           std::string elemBase;
           std::string elemArgText;
-          if (splitTemplateTypeName(normalizedElemType, elemBase, elemArgText)) {
+          const bool isTemplateShaped2 =
+              splitTemplateTypeName(normalizedElemType, elemBase, elemArgText);
+          if (isTemplateShaped2) {
             elemBase = normalizeBindingTypeName(elemBase);
-            if (elemBase == "vector" || elemBase == "array" ||
-                isInternalSoaCollectionTypeName(elemBase)) {
-              auditFamily2(elemBase == "vector" || elemBase == "array"
-                               ? primec::ReceiverElementFamily::VectorLike
-                               : primec::ReceiverElementFamily::Soa);
-              return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
-            }
-            if (elemBase == "Buffer" &&
-                (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
-                 normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
-                 normalizedMethodName == "load" || normalizedMethodName == "store")) {
-              auditFamily2(primec::ReceiverElementFamily::Buffer);
+          }
+          primec::ReceiverElementFamilyJointInput jointInput2;
+          jointInput2.unwrappedElementType = normalizedElemType;
+          jointInput2.rawElementBaseType = normalizedElemBaseType;
+          jointInput2.isTemplateShaped = isTemplateShaped2;
+          jointInput2.templateShapedBaseName = elemBase;
+          jointInput2.normalizedMethodName = normalizedMethodName;
+          primec::ReceiverElementFamilyPredicates predicates2{
+              [](std::string_view name) {
+                return isInternalSoaCollectionTypeName(name);
+              },
+              [](std::string_view name) {
+                return isKeyValueSurfaceTypeName(std::string(name));
+              },
+          };
+          const primec::ReceiverElementFamilyResult classified2 =
+              primec::classifyReceiverElementFamilyJoint(jointInput2, predicates2);
+
+          switch (classified2.family) {
+            case primec::ReceiverElementFamily::String:
+              return setCollectionMethodTarget("/string/" + normalizedMethodName);
+            case primec::ReceiverElementFamily::VectorLike:
+            case primec::ReceiverElementFamily::Soa:
+              // classified2.collectionBaseName is the already-normalized
+              // elemBase the pre-migration cascade used here.
+              return setCollectionMethodTarget("/" + classified2.collectionBaseName + "/" +
+                                                normalizedMethodName);
+            case primec::ReceiverElementFamily::Buffer:
               return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
-            }
-            if (isKeyValueSurfaceTypeName(elemBase)) {
-              auditFamily2(primec::ReceiverElementFamily::KeyValue);
+            case primec::ReceiverElementFamily::KeyValue:
               if (setIndexedArgsPackKeyValueMethodTarget(
                       receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
-            normalizedMethodName, params, locals,
-            resolvedOut, isBuiltinOut)) {
+                      normalizedMethodName, params, locals,
+                      resolvedOut, isBuiltinOut)) {
                 return true;
               }
               return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
-            }
-            if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
+            case primec::ReceiverElementFamily::File:
               resolvedOut = preferredFileHelperTarget(normalizedMethodName,
                                                      currentValidationState_.context.definitionPath);
               isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
-              auditFamily2(primec::ReceiverElementFamily::File);
               return true;
-            }
-          }
-          if (normalizedElemType == "FileError" &&
-              (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
-               normalizedMethodName == "status" || normalizedMethodName == "result")) {
-            resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
-            isBuiltinOut = resolvedOut == "/file_error/why";
-            auditFamily2(primec::ReceiverElementFamily::FileError);
-            return !resolvedOut.empty();
-          }
-          if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
-            resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
-            auditFamily2(primec::ReceiverElementFamily::Primitive);
-            return true;
+            case primec::ReceiverElementFamily::FileError:
+              resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+              isBuiltinOut = resolvedOut == "/file_error/why";
+              return !resolvedOut.empty();
+            case primec::ReceiverElementFamily::Primitive:
+              // No wrapped/unwrapped asymmetry at this call site (see the
+              // header comment above) - normalizedElemBaseType is safe to
+              // use directly here, unlike resolveArgsPackElementMethodTarget's
+              // R7, which must keep its own separately-tracked raw text.
+              resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
+              return true;
+            case primec::ReceiverElementFamily::StructOrUnknown:
+            default:
+              break;
           }
           std::string resolvedElemType = resolveStructTypePath(normalizedElemType, receiver.namespacePrefix);
           if (resolvedElemType.empty()) {
@@ -2016,7 +1986,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           }
           if (!resolvedElemType.empty()) {
             resolvedOut = resolvedElemType + "/" + normalizedMethodName;
-            auditFamily2(primec::ReceiverElementFamily::StructOrUnknown);
             return true;
           }
           // No return here: production falls through to further,
@@ -2025,11 +1994,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           // fallback itself fails - this cascade does not "commit" to
           // StructOrUnknown as ITS OWN final answer in that case (unlike
           // resolveArgsPackElementMethodTarget's R9, which does return
-          // false as this function's own terminal verdict). Auditing here
-          // would compare against a decision production never actually
-          // makes at this call site, so it is deliberately skipped -
-          // matching this round's "audit only at existing return points"
-          // discipline.
+          // false as this function's own terminal verdict).
         }
         if (this->resolveStringTarget(accessReceiver, params, locals, resolveArgsPackAccessTarget)) {
           resolvedOut = "/i32/" + normalizedMethodName;
