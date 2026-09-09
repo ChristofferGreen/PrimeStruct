@@ -1399,6 +1399,51 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     `TemplateMonomorphMethodTargets.cpp`. Remaining scope in Row F: 13 of
     its 17 branches (F0-F6/F8, F10, F12, F14-F16), plus all of Row B/C/G
     and all of `ir_lowerer` - this task stays open, not `[x]`.
+  - implementation_notes (2026-09-09, F12 harness, migration deferred):
+    picked up an in-progress, uncommitted F12 diff (generic-SOA-receiver
+    method-name-paired dispatch - `count`/`count_ref`, `toAos`/`toAosRef`,
+    `get`/`get_ref`, `push`/`reserve`, `ref`/`ref_ref`, all five gated on
+    `isTemplateMonomorphSoaReceiverType`) left behind by an earlier round
+    of this same session after a container restart, sitting unstaged on
+    top of the F7-migration commit (`a86fba854`). Inspected it: correct
+    pattern match to F7/F9/F13's harnesses, correctly hands the classifier
+    the pre-normalized base name (`isTemplateShaped=true`,
+    `templateShapedBaseName=normalizedTypeName`), one classification call
+    covers all five method-name branches (confirmed by direct reading that
+    Soa family membership in the classifier carries no method-name gate of
+    its own, unlike Buffer/File/FileError), purely observational, all
+    referenced symbols/headers already exist and are already included.
+    Judged sound as-is, no edits needed. Verification: fresh baseline via
+    `git stash` back to the clean `a86fba854` tree, rebuilt, ran all three
+    suites once (semantics 2767/1 failed, backend_ir 1646/46 failed,
+    compile_run 2679/5 failed - identical to every prior recorded
+    baseline), `git stash pop` to restore the F12 diff, rebuilt, ran the
+    full battery once with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` set
+    (zero `[receiver-target-diff-audit] MISMATCH` lines, identical counts
+    to baseline in all three suites), then two more times with the env var
+    unset. Sorted failing-test-case-*name* sets were byte-identical
+    (`diff` empty) in every comparison across all three suites (audit run
+    vs baseline, rerun1 vs baseline, rerun2 vs baseline). All test-suite
+    invocations this round ran as single, plain, foreground `Bash` calls
+    (the harness's own 580s per-call cap auto-backgrounds
+    `compile_run_tests`' longer runs regardless of intent; each such run
+    was handled by blocking on its actual PID within one foreground call,
+    never by leaving a background/polling loop unattended across turns -
+    one such loop from a mid-round misstep was caught, killed, and its
+    resulting `SIGTERM`-contaminated log discarded and rerun clean before
+    being trusted). F12's harness is committed observation-only, no
+    behavior change; its real migration (promoting the audit-only
+    classification into the primary dispatch path, the way F7's round
+    did) is deliberately deferred to a future Step 2 round, matching this
+    doc's own harness-first/migrate-once-proven discipline. F14 remains
+    untouched and dead, per the existing proof - re-confirmed, not
+    re-derived, this round. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
+    monomorphization stage: fifth diff-audit harness at F12 generic-Soa
+    slice, zero-divergence verified, migration deferred" section.
+    Remaining scope in Row F: 12 of its 17 branches (F0-F6/F8, F10,
+    F14-F16) plus F12's still-open real migration, plus all of Row B/C/G
+    and all of `ir_lowerer` - this task stays open, not `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

@@ -1,6 +1,7 @@
 # Receiver-Target Resolution Consolidation Plan
 
-Status: Step 2, six call sites migrated (2026-09-08/09) -
+Status: Step 2, six call sites migrated (2026-09-08/09), plus a seventh
+call site (F12) harnessed for observation but not yet migrated -
 `resolveArgsPackElementMethodTarget`
 (`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`, Step 1b's slice 1
 call site), `resolveMethodTarget`'s own inline indexed-args-pack-element
@@ -37,12 +38,19 @@ Monomorphization now has four call sites (F9, F11, F13/F13b/F13c, F7)
 delegating to the shared classifier - two stages (semantics,
 monomorphization) now each have at least one call site delegating to the
 shared classifier; `ir_lowerer` remains untouched.
-Remaining scope in Row F: 13 of its 17 branches (F0-F6/F8, F10, F12,
-F14-F16) - see "Step 1b, monomorphization stage: fourth diff-audit
-harness at F7 File-family slice" below for why every other
-still-unmigrated Row F branch either needs no classifier work (trivial
-guards), needs a broader interface extension than F7 did, or was already
-ruled a non-fit in a prior round.
+A fifth monomorphization diff-audit harness, F12 (generic-Soa-receiver
+method-name-paired dispatch), was landed and verified zero-divergence
+2026-09-09 - see "Step 1b, monomorphization stage: fifth diff-audit
+harness at F12 generic-Soa slice, zero-divergence verified, migration
+deferred" below; unlike the other five harnesses it is not yet migrated
+for real (deliberately deferred to a future Step 2 round), so it is the
+one diff-audit harness still present in `TemplateMonomorphMethodTargets.cpp`.
+Remaining scope in Row F: 12 of its 17 branches (F0-F6/F8, F10, F14-F16)
+plus F12's still-open real migration - see "Step 1b, monomorphization
+stage: fourth diff-audit harness at F7 File-family slice" below for why
+every other still-unmigrated Row F branch either needs no classifier work
+(trivial guards), needs a broader interface extension than F7 did, or was
+already ruled a non-fit in a prior round.
 Step 0 (characterize the full rule table) is otherwise still in
 progress - see "Step 0 Rule Table" below;
 semantics-stage method-target resolvers, all five snapshot-collection
@@ -3522,6 +3530,94 @@ Every other Row A/B/C/D/E/F/G call site this document's Step 0 rule table
 catalogs still independently re-derives receiver family membership - in
 particular 13 of Row F's 17 branches (F0-F6/F8, F10, F12, F14-F16) and all
 of `ir_lowerer` remain completely untouched.
+
+## Step 1b, monomorphization stage: fifth diff-audit harness at F12 generic-Soa slice, zero-divergence verified, migration deferred (2026-09-09)
+
+Picked up an in-progress, uncommitted diff for F12 (generic-SOA-receiver
+method-name-paired dispatch - `count`/`count_ref`, `toAos`/`toAosRef`,
+`get`/`get_ref`, `push`/`reserve`, `ref`/`ref_ref`, all five gated on the
+same `isTemplateMonomorphSoaReceiverType(normalizedTypeName)` family
+check) left behind by an earlier round of this same session after a
+container restart, sitting unstaged on top of the F7-migration commit
+(`a86fba854`). Inspected it against this document's own established
+pattern (same shape as F7/F9/F13's harnesses) and against the "Headline
+finding: Row F's F12/F14 SOA 'asymmetry' is not an inconsistency, it is
+dead code" section above (which independently proves F12's guard has no
+method-name gating on family membership itself - method name only
+selects which of the five dispatch branches runs once the family already
+matched - and that F14's guard is a strict, always-losing superset of
+F12's). Both lines of evidence agree: unlike F7/File and the semantics-
+stage Buffer/FileError families, Soa family membership in the shared
+classifier (`classifyReceiverElementFamilyJoint`) carries no method-name
+gate of its own, so one classification call made once before all five
+branches (sharing the identical family gate) covers all of F12, rather
+than needing a separate audit per method-name pair the way some other
+slices did. Confirmed on inspection that the harness correctly hands the
+classifier the already-normalized base name directly
+(`isTemplateShaped=true`, `templateShapedBaseName=normalizedTypeName`,
+same "hand over the pre-parsed base" approach F13/F13b/F13c's slice
+used), wires the identical `isInternalSoaCollectionTypeName` predicate
+wrapper pattern, is purely observational (never changes control flow,
+return value, or side effects), and is zero-cost when
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` is unset. All referenced symbols
+(`isReceiverTargetDiffAuditEnabled`, `describeReceiverElementFamily`,
+`ReceiverElementFamilyJointInput`, `ReceiverElementFamilyPredicates`,
+`classifyReceiverElementFamilyJoint`) and headers (`<cassert>`,
+`<iostream>`) already exist and are already included in
+`TemplateMonomorphMethodTargets.cpp`. Judged sound as written - no edits
+needed.
+
+**Verification.** Fresh baseline first, not a trusted prior number:
+`git stash`'d this diff back to the clean `a86fba854` tree (confirmed via
+`git status`/`git log`), rebuilt all three suites clean, and ran the full
+battery once as plain foreground commands (no backgrounding/polling
+across tool calls - a discipline this exact round re-learned the hard
+way after briefly backgrounding a run mid-session and then having to
+discard a `SIGTERM`-contaminated log and rerun clean):
+
+| suite | test cases | failed | assertions | failed assertions |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+`git stash pop`'d the F12 diff back, rebuilt all three suites, then ran
+the full battery once with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+set: zero `[receiver-target-diff-audit] MISMATCH` lines in any of the
+three suites' output, and test-case/assertion counts identical to
+baseline in all three. Then, with the env var unset, ran the full battery
+two more times (plain foreground, `pgrep -fc` against the anchored full
+binary path confirming no concurrent instance before each run):
+
+| suite | failing-name diff vs baseline (rerun 1) | failing-name diff vs baseline (rerun 2) |
+|---|---|---|
+| semantics | **empty** | **empty** |
+| backend_ir | **empty** | **empty** |
+| compile_run | **empty** | **empty** |
+
+Sorted failing-test-case-*name* lists (not just counts) came back
+byte-identical (`diff` empty) in every comparison: audit-run vs baseline,
+rerun1 vs baseline, and rerun2 vs baseline, across all three suites.
+Semantics' pinned known-flaky test
+(`semantic product validates direct return method-like borrowed
+helper-return experimental soa reads`) is the sole failure there
+throughout, matching this document's own recorded flake; backend_ir's 46
+and compile_run's 5 failing names were likewise identical across every
+run.
+
+**Conclusion.** F12's harness is verified sound and committed as-is,
+observation-only, no behavior change - the sixth diff-audit harness
+landed at a monomorphization call site (after F11, F9, F13/F13b/F13c,
+F7), and the first case in this document where an uncommitted harness
+diff survived a container restart across sessions rather than being
+authored and verified in one sitting. Real migration (promoting the
+audit-only classification into the primary dispatch path, the way F7's
+round did) is deliberately deferred to a future Step 2 round, not
+attempted here, matching this document's own harness-first/
+migrate-once-proven discipline. F14 remains untouched and dead, per the
+existing proof above - this round re-confirmed rather than re-derived
+that finding. Remaining scope in Row F: F0-F6/F8, F10, F14-F16 (12 of 17
+branches) plus F12's still-open real migration, and all of `ir_lowerer`.
 
 ## Risks
 
