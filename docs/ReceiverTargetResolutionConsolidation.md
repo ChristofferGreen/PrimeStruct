@@ -986,7 +986,7 @@ matters, first match returns:
 | F13 | none of F7-F12; `ctx.sourceDefs` lacks a definition at `resolveTypePath(typeName, ...)`, resolved via optional import-alias substitution first, AND `typeName` ∈ `{array, vector, map, soa-family}` | dispatch to `/<typeName>/<normalizedMethodName>`, run through `preferVectorStdlibHelperPath` | UNPINNED to this branch specifically |
 | F13b | same "no definition" condition, `typeName == "string"` | dispatch to `/string/<normalizedMethodName>` | UNPINNED |
 | F13c | same "no definition" condition, neither a collection family nor string | `return false` | UNPINNED |
-| F14 | `ctx.sourceDefs` **does** have a definition at `resolvedType`, AND it is specifically an experimental-SOA-*specialized* type path (`isConcreteExperimentalSoaReceiver`), AND method matches one of the same 4 pairs/`push`/`reserve` as F12 | dispatch via the same `preferredSamePath*MethodTarget` helpers as F12, but **without ever consulting `isBorrowedSoaReceiver`/`borrowedSoaWrapperMethodName`** - the borrowed-vs-owned renaming F12 applies for the generic (not-yet-concrete) SOA case is silently skipped once the receiver resolves to a concrete experimental-SOA type | UNPINNED - newly found this round; a genuine asymmetry between F12 and F14 for what should be the same logical distinction (borrowed vs. owned SOA receiver), not confirmed whether any real borrowed-and-concrete-experimental-SOA receiver shape is reachable to expose it |
+| F14 | **DELETED** (2026-09-09). Was: `ctx.sourceDefs` **does** have a definition at `resolvedType`, AND it is specifically an experimental-SOA-*specialized* type path (`isConcreteExperimentalSoaReceiver`), AND method matches one of the same 4 pairs/`push`/`reserve` as F12 | Was: dispatch via the same `preferredSamePath*MethodTarget` helpers as F12, but **without ever consulting `isBorrowedSoaReceiver`/`borrowedSoaWrapperMethodName`** - the borrowed-vs-owned renaming F12 applies for the generic (not-yet-concrete) SOA case is silently skipped once the receiver resolves to a concrete experimental-SOA type | N/A - branch removed. Confirmed unreachable dead code (proof re-derived against F12's post-migration, classifier-based guard - see "F14 deleted" section near the end of this document) and deleted outright rather than migrated; the "asymmetry" this row used to describe was never observable at runtime because F12 always returns first for every input that could also satisfy F14's guard. |
 | F15 | none of the above; a `receiverHelperFamilyLeaf`-derived "rooted" path (`/<leaf>/<method>`) has a real definition family but the "same-path" `<resolvedType>/<method>` does not, and the two differ | dispatch to the rooted path instead of the same-path one | UNPINNED |
 | F16 | fallback (always reached if nothing above returned) | dispatch to `<resolvedType>/<normalizedMethodName>`, run through `preferVectorStdlibHelperPath` then `selectHelperOverloadPath` - **always returns true**, this function has no final "unresolved" `return false` once a definition exists at `resolvedType` | UNPINNED to this exact branch; this is also F11-eof's actual landing branch per the finding above |
 
@@ -3701,6 +3701,104 @@ Every other Row A/B/C/D/E/F/G call site this document's Step 0 rule
 table catalogs still independently re-derives receiver family
 membership - in particular F0-F6/F8, F10, and F14-F16 (11 of Row F's 17
 branches) plus all of `ir_lowerer` remain completely untouched.
+
+### F14 deleted (2026-09-09): proven-dead code removed outright
+
+This round's task: F14 (the `isConcreteExperimentalSoaReceiver`-gated
+dispatch in `TemplateMonomorphMethodTargets.cpp`) had been deliberately
+left untouched through every prior F7/F9/F11/F12/F13-family migration
+round specifically because its own dead-code proof had been written
+against F12's *pre-migration* code (the inline
+`isTemplateMonomorphSoaReceiverType(normalizedTypeName)` gate). With F12
+now migrated onto `classifyReceiverElementFamilyJoint` (previous round,
+commit `fb13216f9`), this round's job was to re-derive the proof against
+the CURRENT code before deleting anything, per the area's history of
+punishing "trust the old proof" shortcuts.
+
+**Re-derivation, against current code, from direct source reading (not a
+repro).** F12's `isGenericSoaReceiver` lambda feeds the classifier
+`unwrappedElementType = rawElementBaseType = templateShapedBaseName =
+normalizedTypeName`, `isTemplateShaped = true`, and an
+`isInternalSoaCollectionTypeName` predicate that is exactly
+`isTemplateMonomorphSoaReceiverType`. Tracing
+`classifyReceiverElementFamilyJoint` for this input: R1 (string) can only
+match if `normalizedTypeName == "string"`; R2 (FileError) only if it
+equals `"FileError"`; the template-shape block's `VectorLike` check only
+if it is `"vector"`/`"array"`. The internal SOA receiver type name
+(`templateMonomorphSoaReceiverTypeName()`, a fixed distinct constant) is
+none of those, so whenever `isTemplateMonomorphSoaReceiverType(normalizedTypeName)`
+is true, none of R1/R2/VectorLike can have matched first, and the
+classifier's `isInternalSoaCollectionTypeName` check is the first (and
+only) one left standing - it matches unconditionally, returning `Soa`.
+This proves, from the classifier's own current logic (not merely by
+inference from the harness's earlier zero-divergence result), that
+**`isGenericSoaReceiver` is exactly `isTemplateMonomorphSoaReceiverType(normalizedTypeName)`** -
+still true post-migration, with no narrowing or widening introduced by
+the classifier hand-off.
+
+F14's guard (`isConcreteExperimentalSoaReceiver`) is
+`isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+isExperimentalSoaVectorSpecializedTypePath(resolvedType)` - its first
+conjunct is therefore identical to F12's entire gate. `normalizedTypeName`
+is assigned once (near the top of the function) and never reassigned
+before either call site; `normalizedMethodName` is `const` and likewise
+fixed for the whole function. F14's five branches gate on the same six
+method-name pairs as F12's five branches (`count`/`count_ref`,
+`toAos`/`toAosRef`-family names, `get`/`get_ref`, `push`/`reserve`,
+`ref`/`ref_ref`), and every F12 branch `return true`s unconditionally on
+a match - no fallthrough. So for any input where F14's guard could hold
+and a shared method name could match, F12's identical gate already held
+and had already returned, dozens of lines earlier in the same function,
+before F14's guard expression (which additionally depends on
+`resolvedType`, computed even later) was even evaluated. F14's second
+conjunct (`isExperimentalSoaVectorSpecializedTypePath(resolvedType)`)
+cannot rescue any reachability - it only narrows an already-unreachable
+branch. The same conclusion the sixth Step 0 round reached against the
+pre-migration code holds unchanged against the current, classifier-based
+code: F14 is unreachable dead code, not merely dead-in-practice.
+
+**Deletion.** Removed all five `isConcreteExperimentalSoaReceiver`-gated
+`if` blocks and the `isConcreteExperimentalSoaReceiver` local, replacing
+them with an explanatory comment. `isConcreteExperimentalSoaReceiver`
+was a local `const bool`, not a shared helper - nothing else referenced
+it. Checked whether any other helper became orphaned as a result:
+`isExperimentalSoaVectorSpecializedTypePath` and
+`isTemplateMonomorphSoaReceiverType` are both still called from many
+other call sites across the codebase (`SemanticsValidator*.cpp`,
+`TemplateMonomorph*.cpp` and headers) and were left untouched - nothing
+else became unused.
+
+**Zero-divergence proof.** Fresh 3-suite baseline taken first: `git
+stash`'d the change back to a clean `fb13216f9` tree (`git status`
+confirmed clean before stashing), rebuilt
+`PrimeStruct_semantics_tests`/`PrimeStruct_backend_ir_tests`/
+`PrimeStruct_compile_run_tests`, and ran all three (foreground only, one
+at a time). Then restored the change (`git stash pop`), rebuilt clean,
+and ran the full battery twice more:
+
+| suite | baseline | run1 | run2 |
+|---|---|---|---|
+| semantics | 2767 cases / 1 failed / 13343 assertions / 2 failed | identical | identical |
+| backend_ir | 1646 cases / 46 failed / 16428 assertions / 137 failed | identical | identical |
+| compile_run | 2679 cases / 5 failed / 15278 assertions / 8 failed | identical | identical |
+
+Sorted failing-test-case-*name* sets (not just counts) came back
+byte-identical (`diff` empty) across all pairwise comparisons - baseline
+vs. run1, baseline vs. run2, and run1 vs. run2 - for all three suites.
+Semantics' single already-known flake (`semantic product validates
+direct return method-like borrowed helper-return experimental soa
+reads`) is the only failure there in every run, matching this document's
+recorded flake; backend_ir's 46 and compile_run's 5 failing names were
+identical, name-for-name, in every run.
+
+**Conclusion.** F14 is deleted, not merely dead. Deleting genuinely
+unreachable code was, as expected, a pure no-op on behavior - byte-
+identical failing-test-name sets prove it. Row F now has 16 branches
+(F14 removed); of these, F0-F6/F8, F10, F15-F16 (11 branches) remain
+unmigrated/uncharacterized for migration, plus all of Row B/C/G and all
+of `ir_lowerer`. F11, F9, F13/F13b/F13c, F7, and F12 remain migrated onto
+`classifyReceiverElementFamilyJoint` from prior rounds; nothing else in
+this round's scope touched them.
 
 ## Risks
 

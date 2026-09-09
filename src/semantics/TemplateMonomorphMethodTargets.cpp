@@ -853,40 +853,27 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   }
-  const bool isConcreteExperimentalSoaReceiver =
-      isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
-      isExperimentalSoaVectorSpecializedTypePath(resolvedType);
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaCountMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaGetMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaRefMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == templateMonomorphSoaToAosHelperName() ||
-       normalizedMethodName == templateMonomorphSoaToAosHelperName(true))) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaToAosMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
+  // TODO-5294: F14 (the isConcreteExperimentalSoaReceiver dispatch that used
+  // to live here - isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  // isExperimentalSoaVectorSpecializedTypePath(resolvedType), gating the same
+  // six method-name pairs as F12 above: count/count_ref, get/get_ref,
+  // push/reserve, ref/ref_ref, toAos/toAosRef) was deleted as proven-
+  // unreachable dead code (see
+  // docs/ReceiverTargetResolutionConsolidation.md, Step 0's "F12/F14 dead
+  // code" finding, re-confirmed against this file's current (post-F12-
+  // migration) code before deletion). F12's isGenericSoaReceiver gate a few
+  // dozen lines above is exactly
+  // isTemplateMonomorphSoaReceiverType(normalizedTypeName) (confirmed by
+  // direct classifier trace: that fixed internal SOA name matches neither
+  // "string" nor "FileError" nor vector/array, so the classifier's
+  // isInternalSoaCollectionTypeName predicate is the first and only thing
+  // that can match it, unconditionally landing on Soa) - both normalizedType-
+  // Name and normalizedMethodName are unchanged between the two call sites,
+  // so whenever F14's first conjunct held, F12's gate already held too, and
+  // for any of the six shared method-name pairs F12 had already returned
+  // long before reaching here. F14's second conjunct
+  // (isExperimentalSoaVectorSpecializedTypePath(resolvedType)) could
+  // therefore never matter: it only narrows an already-unreachable branch.
   const std::string samePathMethodTarget = resolvedType + "/" + normalizedMethodName;
   const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
   if (!receiverHelperLeaf.empty()) {

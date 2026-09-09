@@ -1477,6 +1477,44 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     F10, F14-F16 (11 of 17 branches, plus F14's dead-code deletion as
     separate cleanup), plus all of Row B/C/G and all of `ir_lowerer` -
     this task stays open, not `[x]`.
+  - implementation_notes (2026-09-09, F14 deleted): re-derived the dead-
+    code proof against F12's post-migration (classifier-based) code from
+    direct source reading, not by trusting the earlier proof written
+    against F12's pre-migration inline gate. Confirmed
+    `isGenericSoaReceiver` (F12's gate) is exactly
+    `isTemplateMonomorphSoaReceiverType(normalizedTypeName)` by tracing
+    `classifyReceiverElementFamilyJoint`'s current logic directly (R1/R2/
+    VectorLike cannot match the internal SOA receiver type's fixed
+    constant name, so the `isInternalSoaCollectionTypeName` predicate -
+    itself exactly `isTemplateMonomorphSoaReceiverType` - is the first and
+    only check left to match, and it matches unconditionally). Since
+    F14's guard's first conjunct is that same expression, and
+    `normalizedTypeName`/`normalizedMethodName` are unchanged between the
+    two call sites, and F14's five branches gate on the identical six
+    method-name pairs as F12's five (each of which unconditionally
+    returns on a match), F14 remains provably unreachable against the
+    current code - deleted the whole `isConcreteExperimentalSoaReceiver`
+    block (5 `if`s + the local bool) outright rather than migrating it.
+    No helper became newly unused: `isConcreteExperimentalSoaReceiver`
+    was a local, and both `isExperimentalSoaVectorSpecializedTypePath`
+    and `isTemplateMonomorphSoaReceiverType` are still called from many
+    other sites (checked via grep before concluding this). Verification:
+    fresh baseline via `git stash` back to the clean `fb13216f9` tree,
+    rebuilt, ran all three suites once (semantics 2767/1 failed,
+    backend_ir 1646/46 failed, compile_run 2679/5 failed - identical to
+    every prior recorded baseline), `git stash pop` to restore the
+    deletion, rebuilt, ran the full battery two more times. Sorted
+    failing-test-case-*name* sets were byte-identical in all pairwise
+    comparisons (baseline vs run1, baseline vs run2, run1 vs run2) across
+    all three suites - a pure no-op on behavior, as expected for deleting
+    genuinely dead code. All runs were single, plain, foreground `Bash`
+    calls. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "F14 deleted
+    (2026-09-09): proven-dead code removed outright" section; the Step 0
+    Rule Table's F14 row is updated to record the deletion. Remaining
+    scope in Row F (now 16 branches, F14 removed): F0-F6/F8, F10,
+    F15-F16 (11 branches), plus all of Row B/C/G and all of `ir_lowerer` -
+    this task stays open, not `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
