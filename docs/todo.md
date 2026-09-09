@@ -1030,6 +1030,50 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     site (Row B/C's sprawling functions, monomorphization's
     `resolveMethodCallTemplateTarget`, `ir_lowerer`) remains unmigrated and
     is this task's own remaining scope.
+  - implementation_notes (2026-09-09, Step 1b started for
+    monomorphization): per the doc's own stage-by-stage order (semantics
+    done, monomorphization next), started the same harness-then-migrate
+    cycle for `resolveMethodCallTemplateTarget` (Row F). Assessed the
+    classifier's fit first, per this round's own instructions: Row F's F3
+    receiver-type-inference sub-cascade answers a different-shaped
+    question than the classifier does (what type a receiver expression
+    has, not what family a known type/method pair belongs to) and was
+    left unwired rather than stretched onto this interface; Row F's F11
+    FileError sub-case (`normalizedReceiverLeafName == "FileError"` with
+    method name in a fixed 4-name set), by contrast, is a direct,
+    no-extension-needed match for the classifier's existing FileError
+    family branch. Wired the same env-gated
+    (`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`) observational diff-audit
+    pattern at exactly that one sub-case in
+    `TemplateMonomorphMethodTargets.cpp`, deliberately excluding F1's
+    separate literal-Name-spelled-"FileError" receiver shape (a different
+    guard entirely, not a type classification) and the
+    ImageError/ContainerError/GfxError siblings (same shape, but no
+    corresponding family in the classifier's enum) - re-confirmed the
+    `FileError.eof()` reachability gap this task's own instructions named
+    is unchanged (F11's 4-name set still excludes `eof`; only F1's
+    literal-spelling path reaches an eof-style dispatch) and re-confirmed
+    via the sixth Step 0 round's own finding (cross-referenced, not
+    re-derived) that the F12/F14 SOA "asymmetry" is dead code, not a live
+    divergence needing an audit. Verification: fresh 3-suite baseline
+    (semantics 2767 cases/1 known flake, backend_ir 1646/46, compile_run
+    2679/5 - matching this document's own previously-recorded numbers
+    exactly), then the full battery with the env var set (zero
+    `[receiver-target-diff-audit] MISMATCH` lines, identical
+    test/assertion counts in all three suites) and with it unset (sorted
+    failing-test-case-name sets byte-identical to the baseline in all
+    three suites). One operational note: running two instances of
+    `PrimeStruct_compile_run_tests` concurrently (an artifact of this
+    round's own retry sequencing) caused genuine VM-backend subprocess
+    segfaults unrelated to the code change - resolved by confirming via
+    `ps`/`pgrep` that exactly one instance was running before trusting any
+    result. No classifier iteration was needed - zero divergence on the
+    first attempt. Step 2 (real migration) not attempted this round, per
+    the task's own staged discipline. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
+    monomorphization stage" section. Still not marked `[x]` - this is one
+    narrow slice of Row F's 17-branch cascade; F1-F10/F12-F16 and every
+    Row B/C/G call site remain unharnessed and unmigrated.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

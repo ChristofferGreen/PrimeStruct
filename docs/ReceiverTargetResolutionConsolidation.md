@@ -15,8 +15,14 @@ classifyReceiverElementFamilyJoint, zero-divergence achieved (2026-09-08)"
 and "Step 2, second migration: resolveMethodTarget's indexed-args-pack
 cascade migrated to classifyReceiverElementFamilyJoint, zero-divergence
 achieved (2026-09-09)" below for the full detail and verification proof of
-each. Step 0 (characterize the full rule table) is otherwise still in
-progress - see "Step 0 Rule Table" below;
+each. Step 1b has now also started for the monomorphization stage: a
+narrow, no-classifier-extension-needed diff-audit harness is wired at
+`resolveMethodCallTemplateTarget`'s F11 FileError sub-case
+(`TemplateMonomorphMethodTargets.cpp`), zero-divergence achieved - see
+"Step 1b, monomorphization stage: diff-audit harness wired at
+resolveMethodCallTemplateTarget's F11 FileError sub-case, zero-divergence
+achieved (2026-09-09)" below. Step 0 (characterize the full rule table) is
+otherwise still in progress - see "Step 0 Rule Table" below;
 semantics-stage method-target resolvers, all five snapshot-collection
 mechanisms, and monomorphization are now fully branch-enumerated; the
 `ir_lowerer` stage's own `resolveMethodCallDefinitionFromExpr` (Row G) is
@@ -2591,6 +2597,181 @@ shape for this classifier without further design work (per Step 1b slice
 `resolveMethodCallTemplateTarget` (Row F, 17 branches, already fully
 characterized) is next in this document's own stage-by-stage migration
 order - not attempted this round.
+
+## Step 1b, monomorphization stage: diff-audit harness wired at resolveMethodCallTemplateTarget's F11 FileError sub-case, zero-divergence achieved (2026-09-09)
+
+Following the exact same staged discipline the semantics-stage Step 1b
+rounds used: start with observation on the smallest well-bounded slice,
+not a migration, and not the whole 17-branch Row F cascade at once.
+
+**Shape assessment (per this round's task instructions): does
+`resolveMethodCallTemplateTarget`'s classification logic fit the existing
+`classifyReceiverElementFamilyJoint`'s `(type, methodName, templateShape)
+-> family` shape, or does it need extension?** Both, depending on which
+part of the function is asked:
+
+- Row F's **F3 receiver-type-inference sub-cascade** (the block that
+  computes `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver`
+  from the receiver *expression*'s kind - `Name`/`Literal`/`BoolLiteral`/
+  `FloatLiteral`/`StringLiteral`/`Call`) is a genuinely different-shaped
+  question than the classifier answers: it decides *what type the
+  receiver has* (an expression-kind dispatch, several steps of which
+  recurse into binding lookups, return-type annotations, and even a
+  nested call to `resolveMethodCallTemplateTarget` itself), not *what
+  family a known type/method pair belongs to*. Wiring an audit harness
+  here would mean inventing a shared decision function for a problem the
+  classifier was never designed to solve - out of scope for "wire the
+  existing classifier," and exactly the kind of premature interface
+  stretch this document's own Step 0 discipline warns against. Left
+  unwired this round; F3's own branches stay fully characterized in the
+  Step 0 Rule Table (F3-N1/N2, F3-L/B/Fl/S, F3-C1 through F3-C3d) but
+  none delegate to anything.
+- Row F's **F11 FileError sub-case** (`normalizedReceiverLeafName ==
+  "FileError"` with a method name in `{why, is_eof, status, result}`,
+  once `typeName` is already known) is a **direct, no-extension-needed
+  match** for the classifier's existing FileError family branch (R2/R2b):
+  same fixed 4-name method set, same "family membership + method-name
+  gate" shape, no template-shape or struct-metadata predicate involved.
+  This is the slice picked for this round's harness - see below.
+
+No classifier interface extension was needed for this slice. (Whether F3
+someday needs its own, differently-shaped shared decision function is an
+open question for a future round, not resolved here - flagging it,
+consistent with the task's own "characterize rather than guess"
+instruction, rather than building one on spec.)
+
+**Why this slice, not F3 or the rest of F0-F16.** The task's own guidance
+named F3 as one candidate ("already the most thoroughly characterized
+single piece") and a single well-isolated main-cascade branch as the
+other. Per the shape assessment above, F3 turned out not to fit what this
+classifier answers at all, so the well-isolated-branch option was taken
+instead. F11's FileError sub-case is: (a) a single guard with a fixed,
+already-known-and-tested 4-name method set, not entangled with any other
+branch's control flow (F9's primitive check and F10's `args` check run
+before it but can never themselves match a `"FileError"`-leafed
+`typeName`, so reaching F11 is unconditional for that receiver shape);
+(b) already flagged by name in this round's task instructions (the
+"`FileError.eof()` reachability split" gap) as worth checking; and (c)
+the one sub-case of F11 the classifier's existing family enum actually
+models - `ImageError`/`ContainerError`/`GfxError` (F11's three siblings,
+same shape, different static path domains) have no corresponding family
+in `ReceiverElementFamily` and were deliberately left out of this slice's
+scope, not merely overlooked.
+
+**The `FileError.eof()` gap, re-examined at this call site.** F11's own
+guard set is `{why, is_eof, status, result}` - four names, `eof` absent -
+confirmed unchanged from the Step 0 Rule Table's F11/F11-eof rows. The
+only path that reaches an `/eof`-style dispatch is F1 (a few dozen lines
+earlier in the same function), and F1 fires on a **completely different
+condition**: the receiver expression being a bare `Name` whose *literal
+source spelling* is exactly `"FileError"` (i.e. `FileError.eof()` where
+`FileError` is used as if it were the receiver's own identifier text, not
+a variable bound to a `FileError`-typed value) - not on `typeName`
+inference at all. This round's classifier-fit slice is scoped to F11
+(the `typeName`-based leaf check) specifically, so F1's literal-spelling
+special case is out of scope for this harness by design, not by
+oversight - consistent with the Step 1a/1b precedent of scoping narrowly
+and documenting what's deliberately excluded rather than folding
+unrelated shapes into one slice. The gap itself (a bound `FileError`-typed
+variable's `.eof()` call has no matching branch anywhere in this function
+and falls through all the way to F16's generic fallback) is unchanged by
+this round's work - still an open, undetermined-reachability finding per
+the Step 0 table, not fixed or newly resolved here.
+
+**The F12/F14 SOA "asymmetry" was checked against this round's own
+instructions and correctly treated as closed, not reopened.** Per the
+sixth Step 0 round's finding (cross-referenced, not re-derived this
+round): F14 is unreachable dead code, not a live divergence - F12's guard
+(`isTemplateMonomorphSoaReceiverType(normalizedTypeName)`) is a strict
+subset of F14's guard over the identical six method-name pairs, and every
+F12 branch unconditionally returns before execution could ever reach
+F14's lines. No audit harness was wired for this pair; there is nothing
+live to observe agreement or disagreement on.
+
+**Wiring mechanics.** Added `#include
+"primec/support/ReceiverElementFamilyClassifier.h"` (plus `<cassert>`/
+`<iostream>`) to `TemplateMonomorphMethodTargets.cpp`. Inserted one
+`if (isReceiverTargetDiffAuditEnabled() && normalizedReceiverLeafName ==
+"FileError") { ... }` block immediately before F11's existing FileError
+dispatch check - guarded so it only runs (a) when the env var is set and
+(b) when the receiver's leaf type is literally `"FileError"`, so this
+audit is a no-op for every other receiver shape regardless of the env
+var. Inside the block: builds a `ReceiverElementFamilyJointInput` with
+`unwrappedElementType`/`rawElementBaseType` both set to
+`normalizedReceiverLeafName` (this call site has no separate
+wrapped-vs-unwrapped text at this point in the function - `typeName` has
+already gone through `normalizeCollectionReceiverTypeName` above, unlike
+semantics-stage R7's asymmetry), `isTemplateShaped = false` (F11's guard
+is a leaf-string compare, not a `splitTemplateTypeName` result), and
+`normalizedMethodName = fileErrorMethodName` (the *already*
+`normalizeFileErrorMethodName`-normalized value, i.e. `isEof` already
+mapped to `is_eof` - mirroring how the already-migrated semantics call
+sites pass their own pre-normalized method name into the classifier
+rather than re-normalizing inside it). Compares the classifier's
+`family == ReceiverElementFamily::FileError` verdict against production's
+own `fileErrorMethodName ∈ {why, is_eof, status, result}` boolean, logs a
+`[receiver-target-diff-audit] MISMATCH ...` line to stderr plus a
+debug-only `assert` on disagreement. Production's existing FileError
+dispatch check immediately below is completely unmodified - same
+condition, same `selectStaticHelperOverloadPath` call, same return.
+
+**Zero-divergence proof.** Fresh 3-suite baseline taken first (`git
+status` confirmed clean before any change), then rebuilt with the harness
+and reran all three suites with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`:
+
+| suite | test cases | failed | assertions | failed | `[receiver-target-diff-audit] MISMATCH` lines |
+|---|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 | **0** |
+| backend_ir | 1646 | 46 | 16428 | 137 | **0** |
+| compile_run | 2679 | 5 | 15278 | 8 | **0** |
+
+Zero mismatch lines and identical test/assertion counts to the freshly
+re-confirmed baseline in all three suites - this narrow FileError slice
+needed no classifier iteration; F11's guard and the classifier's existing
+R2 branch already agree on every call this build's corpus makes.
+
+**Unchanged-default-behavior proof.** Ran the same battery with the env
+var unset (default) and diffed the sorted failing-test-case-*name* sets
+against the fresh baseline, not just counts:
+
+- `PrimeStruct_semantics_tests`: baseline and post-change failing-name
+  sets both exactly the one known pre-existing flake ("semantic product
+  validates direct return method-like borrowed helper-return
+  experimental soa reads") - `diff` empty.
+- `PrimeStruct_backend_ir_tests`: baseline and post-change both the same
+  46 pre-existing failing names - `diff` empty.
+- `PrimeStruct_compile_run_tests`: baseline and post-change both the same
+  5 pre-existing failing names - `diff` empty.
+
+One operational note from this round, unrelated to the code change
+itself: running two instances of `PrimeStruct_compile_run_tests`
+concurrently (an artifact of this round's own retry sequencing, not
+anything the harness does) caused genuine segfaults in the VM-backend
+subprocess tests it spawns, with the doctest run never reaching its final
+summary line - purely a resource-contention artifact of this
+4-core/15GB sandbox, reproduced and then eliminated by re-running exactly
+one instance at a time (confirmed via `ps`/`pgrep` before trusting a
+result). Flagged here as a process-hygiene note for whoever runs this
+suite next in a similar sandbox, not a finding about this document's
+subject matter.
+
+**Conclusion.** The smallest well-bounded slice into monomorphization is
+now harnessed and green: F11's FileError sub-case, the one part of Row
+F's 17-branch cascade already provably a no-extension-needed fit for the
+existing classifier. F3 (the receiver-type-inference sub-cascade) is a
+different-shaped problem and was deliberately left unwired, not migrated
+onto anything. The rest of Row F - F1's literal-`Name`-spelled-`FileError`
+special case, F2's indexed-args-pack-map shape, F6's wrapper-method-path
+branch, F7's File-method dispatch, F8's removed-alias rejection, F9's
+primitive dispatch (which, note for a future round, already calls the
+exact same shared `semantics::isPrimitiveBindingTypeName` function the
+semantics-stage call sites use - no divergence risk there by
+construction, unlike everything else in this row), F10's `args`-leaf
+special case, the ImageError/ContainerError/GfxError siblings of F11, and
+F12/F13/F13b/F13c/F15/F16 - all remain unharnessed and unmigrated, per
+this document's own "resist the temptation to cover the whole cascade"
+staging discipline. Step 2 (real migration) for monomorphization was not
+attempted this round, per the task's explicit scope.
 
 ## Risks
 

@@ -59,6 +59,20 @@ namespace primec {
 // field instead of its own raw/wrapped text would silently lose the R7
 // wrapped-vs-unwrapped asymmetry.
 //
+// Step 1b, monomorphization stage (2026-09-09): a second, narrower
+// diff-audit harness is now also wired at resolveMethodCallTemplateTarget's
+// F11 FileError sub-case (TemplateMonomorphMethodTargets.cpp) - a direct,
+// no-extension-needed fit for this classifier's existing FileError family
+// branch (same fixed 4-name method-name gate). Observational only, same
+// PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT env gate, zero-divergence
+// achieved. Monomorphization's own F3 receiver-type-inference sub-cascade
+// was assessed and found NOT to fit this classifier's (type, methodName,
+// templateShape) -> family shape at all (it answers "what type does this
+// receiver expression have", not "what family does a known type/method
+// pair belong to") - left unwired, not stretched onto this interface. See
+// docs/ReceiverTargetResolutionConsolidation.md's "Step 1b, monomorphization
+// stage" section for the full shape-fit reasoning and verification proof.
+//
 // Two families (Soa, KeyValue) are struct-metadata-backed and legitimately
 // resolved differently per stage (each stage has its own struct/definition
 // maps), so their membership test is a stage-supplied predicate - the same
