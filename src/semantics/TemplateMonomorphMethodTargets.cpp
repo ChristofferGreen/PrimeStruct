@@ -33,8 +33,6 @@
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
-#include <cassert>
-#include <iostream>
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
@@ -719,73 +717,49 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
-  const bool isCollectionFamilyReceiver =
-      typeName == "array" || typeName == "vector" || typeName == "map" ||
-      isTemplateMonomorphSoaReceiverType(typeName);
-  // TODO-5294 Step 1b, monomorphization stage (third slice): observational
-  // diff-audit comparing F13/F13b/F13c (per
-  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) -
-  // the isCollectionFamilyReceiver membership test just above, a plain
-  // literal-set check ("array"/"vector"/"map") OR'd with
-  // isTemplateMonomorphSoaReceiverType(typeName) - against the shared
-  // classifier's VectorLike/Soa/KeyValue family verdict. By this point in
-  // the cascade typeName has already gone through
+  // TODO-5294 Step 2, monomorphization stage: F13/F13b/F13c's collection-
+  // family membership test (per
+  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now
+  // delegates its family classification to the shared classifier instead of
+  // the inline literal-set check ("array"/"vector"/"map" OR'd with
+  // isTemplateMonomorphSoaReceiverType(typeName)), per the Step 1b diff-audit
+  // harness this call site carried (proven zero-divergence, 2026-09-09). By
+  // this point in the cascade typeName has already gone through
   // normalizeCollectionReceiverTypeName above (same as the F9/F11 slices'
   // own note), so it is already reduced to a bare base name with no
   // generic-argument text left to parse; there is nothing for the
   // classifier's own splitTemplateTypeName-shaped isTemplateShaped/
-  // templateShapedBaseName inputs to derive from, so this audit feeds them
+  // templateShapedBaseName inputs to derive from, so this call feeds them
   // the same already-known base name directly (isTemplateShaped=true,
   // templateShapedBaseName=typeName), the same "we already have the parsed
   // base, so hand it over pre-parsed" approach the F9 slice used for its own
   // isTemplateShaped=false case. The classifier's KeyValue predicate is
   // supplied as a literal `== "map"` match, deliberately mirroring this
   // exact production guard's own literal check (not any real struct-
-  // metadata-backed key-value surface predicate) - this audit's job is
-  // proving this *particular* production check's family disposition, not
-  // exercising the classifier's more general KeyValue path. Purely
-  // observational: computing the classifier's verdict and comparing it
-  // never changes this function's control flow, return value, or side
-  // effects. Zero-cost when PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is unset
-  // (one cached getenv check).
-  if (isReceiverTargetDiffAuditEnabled()) {
+  // metadata-backed key-value surface predicate). Only the *classification*
+  // moved here - the downstream dispatch/import-alias-substitution/string-
+  // fallback/rejection behavior below is byte-identical to what F13/F13b/F13c
+  // always did.
+  const ReceiverElementFamily collectionFamilyVerdict = [&] {
     ReceiverElementFamilyJointInput jointInput;
     jointInput.unwrappedElementType = typeName;
     jointInput.rawElementBaseType = typeName;
     jointInput.isTemplateShaped = true;
     jointInput.templateShapedBaseName = typeName;
     jointInput.normalizedMethodName = normalizedMethodName;
-    ReceiverElementFamilyPredicates auditPredicates{};
-    auditPredicates.isInternalSoaCollectionTypeName =
+    ReceiverElementFamilyPredicates predicates{};
+    predicates.isInternalSoaCollectionTypeName =
         [](std::string_view candidate) {
           return isTemplateMonomorphSoaReceiverType(std::string(candidate));
         };
-    auditPredicates.isKeyValueSurfaceTypeName =
+    predicates.isKeyValueSurfaceTypeName =
         [](std::string_view candidate) { return candidate == "map"; };
-    const ReceiverElementFamily classifierFamily =
-        classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
-    const bool classifierSaysCollectionFamily =
-        classifierFamily == ReceiverElementFamily::VectorLike ||
-        classifierFamily == ReceiverElementFamily::Soa ||
-        classifierFamily == ReceiverElementFamily::KeyValue;
-    if (isCollectionFamilyReceiver != classifierSaysCollectionFamily) {
-      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
-                   "resolveMethodCallTemplateTarget (F13/F13b/F13c collection-"
-                   "family slice): typeName=\""
-                << typeName << "\" methodName=\"" << normalizedMethodName
-                << "\" production="
-                << (isCollectionFamilyReceiver ? "collection-family"
-                                                : "not-collection-family")
-                << " classifier=" << describeReceiverElementFamily(classifierFamily)
-                << "\n";
-    }
-    assert(isCollectionFamilyReceiver == classifierSaysCollectionFamily &&
-           "receiver-target diff audit: monomorphization F13/F13b/F13c "
-           "collection-family slice disagreement "
-           "(PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
-           "docs/ReceiverTargetResolutionConsolidation.md Step 1b, "
-           "monomorphization stage");
-  }
+    return classifyReceiverElementFamilyJoint(jointInput, predicates).family;
+  }();
+  const bool isCollectionFamilyReceiver =
+      collectionFamilyVerdict == ReceiverElementFamily::VectorLike ||
+      collectionFamilyVerdict == ReceiverElementFamily::Soa ||
+      collectionFamilyVerdict == ReceiverElementFamily::KeyValue;
   if (ctx.sourceDefs.count(resolvedType) == 0 && !isCollectionFamilyReceiver) {
     if (const std::string *importAlias =
             lookupScopedImportAliasForNamespace(normalizedTypeName, receiver.namespacePrefix, ctx);

@@ -1241,6 +1241,59 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     a future round, per this document's own harness-then-migrate
     discipline; F0-F8 (minus F9/F11), F10, F12/F14-F16, all of Row B/C/G,
     and all of `ir_lowerer` remain unmigrated and/or unharnessed.
+  - implementation_notes (2026-09-09, F13/F13b/F13c real migration):
+    migrated the F13/F13b/F13c collection-family slice for real, the third
+    monomorphization-stage migration after F11 and F9, same
+    harness-first/migrate-once-proven discipline. The inline
+    `isCollectionFamilyReceiver` literal-set check
+    (`typeName == "array" || typeName == "vector" || typeName == "map" ||
+    isTemplateMonomorphSoaReceiverType(typeName)`) is replaced by one call
+    to `classifyReceiverElementFamilyJoint` (the same joint-input
+    construction the Step 1b harness was already building for observation,
+    now promoted into the primary path) with its verdict tested against
+    `VectorLike`/`Soa`/`KeyValue`; only the classification moved, the
+    downstream import-alias-substitution guard, the generic
+    array/vector/map/soa dispatch (F13, `preferVectorStdlibHelperPath` +
+    `selectHelperOverloadPath`), the string fallback (F13b), and the
+    rejection (F13c, `return false`) are byte-identical to before. The
+    diff-audit-harness scaffolding at this call site (the
+    `isReceiverTargetDiffAuditEnabled()` check, the MISMATCH cerr line, the
+    assert) is removed; confirmed no remaining `assert(`/`std::cerr`/
+    `isReceiverTargetDiffAuditEnabled`/`describeReceiverElementFamily` uses
+    anywhere else in `TemplateMonomorphMethodTargets.cpp`, so the now-dead
+    `<cassert>`/`<iostream>` includes were removed too (net -72/+23 lines
+    in the file). Verification: fresh baseline via `git stash` back to the
+    clean `f780157d7` tree, rebuilt all three suites, ran once (semantics
+    2767/1 failed, backend_ir 1646/46 failed, compile_run 2679/5 failed -
+    identical to every prior session's recorded numbers for this baseline,
+    no drift), `git stash pop` to restore the migration, rebuilt clean, ran
+    the full battery three more times. Every run's sorted failing-test-
+    case-*name* set (not just the counts) was byte-identical to the
+    baseline and to each other in all pairwise comparisons across all
+    three suites - `diff` empty in every case, assertion totals identical
+    too (13343/2 failed for semantics, 16428/137 failed for backend_ir,
+    15278/8 failed for compile_run, all three runs). One `compile_run` run
+    (run 2) showed a `std::bad_alloc`/`Aborted` line and another (run 3,
+    first attempt) hung and had to be killed and rerun once - both
+    confirmed as expected in-test child-subprocess crash/exit-code
+    behavior already pinned by two of the 5 known baseline failures
+    (`runs vm shared stdlib map conformance harness` expects exit code 22
+    but a child process aborts with 134/SIGABRT as part of that test's own
+    assertion), not a divergence in the outer doctest binary's own result -
+    confirmed by the fact that both runs' final `[doctest] test cases`
+    summary line matched the baseline exactly once each run was let/rerun
+    to full completion. Before trusting each `compile_run` result,
+    confirmed via `pgrep -af PrimeStruct_compile_run_tests` that exactly
+    one instance of the binary was running (or none, before starting a new
+    one) at a time, per this document's own recorded segfault-artifact
+    warning. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 2,
+    monomorphization stage: resolveMethodCallTemplateTarget's
+    F13/F13b/F13c collection-family slice migrated..." section. Still not
+    marked `[x]` - monomorphization now has three call sites (F9, F11,
+    F13/F13b/F13c) delegating to the shared classifier, but F0-F8 (minus
+    F9/F11), F10, F12/F14-F16 (14 of 17 Row F branches) remain unmigrated,
+    plus all of Row B/C/G and all of `ir_lowerer`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
