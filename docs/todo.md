@@ -1294,6 +1294,63 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     F13/F13b/F13c) delegating to the shared classifier, but F0-F8 (minus
     F9/F11), F10, F12/F14-F16 (14 of 17 Row F branches) remain unmigrated,
     plus all of Row B/C/G and all of `ir_lowerer`.
+  - implementation_notes (2026-09-09, F7 File-family harness): wired a
+    fourth monomorphization diff-audit harness at F7 (per
+    docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) -
+    the File-family dispatch gated on `(typeName == "File" ||
+    normalizedReceiverLeafName == "File") && isFileMethodName(...)`.
+    Considered every remaining Row F branch (F0-F8 minus F9/F11, F10, F12,
+    F14-F16) before picking this one: F0/F5 are trivial cascade guards
+    with no receiver-type classification at all; F1 classifies a raw
+    receiver-*expression*-spelling, not a resolved type, and uses a
+    5-name FileError method set (F1 includes `eof`) that does not match
+    the classifier's fixed 4-name set - a real, pre-existing quirk not
+    something to paper over by force-fitting it here; F2/F6 need broader
+    per-call context (locals/args-pack-map shape, or
+    hasDefinitionFamilyPath lookups) beyond (type, methodName); F3 was
+    already assessed and rejected in the classifier header itself ("what
+    type does this receiver expression have", not "what family does a
+    known type/method pair belong to"); F8 already delegates to a
+    different, purpose-built classifier (`CollectionSpellingClassifier`)
+    for a different problem (compat-spelling rejection, not family
+    membership); F10 dispatches only 3 hardcoded method names
+    (`count`/`at`/`at_unsafe`) to the `array` family unconditionally, a
+    narrower and differently-shaped rule than the classifier's
+    unconditional-VectorLike-family-then-any-method contract; F12
+    additionally needs `isBorrowedSoaReceiver` state to pick the `_ref`
+    variant, which the (type, methodName) classifier interface has no
+    slot for; F14 is confirmed dead code per this document's own prior
+    finding, left untouched per this round's explicit instruction. F7 was
+    the clean fit: needs zero interface extension (the classifier's
+    existing File family + `isFileHandleMethodName` already mirrors this
+    file's own `isFileMethodName` lambda name-for-name, 11 names,
+    verified identical by direct comparison), and - like the F13/F13b/F13c
+    slice - typeName has already been reduced to a bare leaf by the time
+    F7 runs, so the classifier's `isTemplateShaped`/`templateShapedBaseName`
+    inputs are fed the already-known leaf directly. Verification: fresh
+    baseline via `git stash` back to the clean `0713e5bdf` tree, rebuilt,
+    ran all three suites once (semantics 2767/1 failed, backend_ir
+    1646/46 failed, compile_run 2679/5 failed - identical to every prior
+    session's recorded baseline numbers, no drift), `git stash pop` to
+    restore the harness, rebuilt clean, ran the audited battery
+    (`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`) across all three suites:
+    zero `[receiver-target-diff-audit] MISMATCH` lines, and every suite's
+    sorted failing-test-case-*name* set byte-identical to the baseline
+    (`diff` empty in all three). Then ran two more full 3-suite passes
+    with the env var unset (default production path) - both also
+    byte-identical to the baseline by name in all three suites. Before
+    trusting each `compile_run` result, confirmed via `ps aux | grep
+    '\./PrimeStruct_compile_run_tests'` (a stricter check than plain
+    `pgrep -f`, which false-positive-matched the string appearing in this
+    session's own shell command lines) that exactly one instance of the
+    binary was running, or none, before starting a new one - no
+    concurrent-run artifacts observed this round. No new quirk surfaced;
+    F7 is a clean, direct fit with zero divergence. Per the established
+    harness-then-migrate discipline, F7 is NOT migrated for real this
+    round - that stays a separate future Step 2 round. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
+    monomorphization stage: fourth diff-audit harness at F7 File-family
+    slice" section.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

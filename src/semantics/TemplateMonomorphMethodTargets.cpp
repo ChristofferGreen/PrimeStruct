@@ -33,6 +33,8 @@
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
+#include <cassert>
+#include <iostream>
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
@@ -539,6 +541,70 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return slash == std::string::npos ? normalizedTypeName
                                       : normalizedTypeName.substr(slash + 1);
   }();
+  // TODO-5294 Step 1b, monomorphization stage (fourth slice): observational
+  // diff-audit comparing F7 (per docs/ReceiverTargetResolutionConsolidation.md's
+  // Step 0 Row F table) - the File-family dispatch, gated on
+  // (typeName == "File" || normalizedReceiverLeafName == "File") AND
+  // isFileMethodName(normalizedMethodName) - against the shared classifier's
+  // File family verdict. This is the cleanest fit found so far: the
+  // classifier's own File family check (inside its template-shape-gated
+  // block) already uses isFileHandleMethodName, which mirrors this file's
+  // own isFileMethodName lambda name-for-name (11 names, verified identical
+  // by direct comparison against src/support/ReceiverElementFamilyClassifier.cpp).
+  // By this point typeName has already gone through
+  // normalizeCollectionReceiverTypeName above (same as the F9/F11/F13 slices'
+  // own note), so there is no template text left to parse - this feeds the
+  // classifier's isTemplateShaped/templateShapedBaseName inputs the already-
+  // known leaf name directly (isTemplateShaped=true,
+  // templateShapedBaseName=normalizedReceiverLeafName), the same
+  // "hand over the pre-parsed base" approach the F13/F13b/F13c slice used.
+  // Production's guard is an OR of typeName itself and the leaf; in practice
+  // the two only differ when typeName carries an internal '/' with a "File"
+  // leaf, which qualifyImportedCollectionTypeText/normalizeCollectionReceiverTypeName
+  // do not appear to produce for this receiver shape (not proven unreachable,
+  // just not observed) - the audit compares against the OR'd production
+  // condition directly (not just the leaf) so any such case would still
+  // surface as a MISMATCH rather than being silently assumed away. Purely
+  // observational: computing the classifier's verdict and comparing it never
+  // changes this function's control flow, return value, or side effects.
+  // Zero-cost when PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is unset (one
+  // cached getenv check).
+  if (isReceiverTargetDiffAuditEnabled()) {
+    ReceiverElementFamilyJointInput jointInput;
+    jointInput.unwrappedElementType = normalizedReceiverLeafName;
+    jointInput.rawElementBaseType = normalizedReceiverLeafName;
+    jointInput.isTemplateShaped = true;
+    jointInput.templateShapedBaseName = normalizedReceiverLeafName;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    // Soa/KeyValue predicates are unreachable here for a "File" leaf: the
+    // classifier's template-shape block checks VectorLike, then Soa, then
+    // Buffer, then KeyValue, then File in that fixed order - none of the
+    // earlier checks can match the literal base "File", so a null
+    // (never-matches) predicate cannot change this outcome.
+    ReceiverElementFamilyPredicates auditPredicates{};
+    const ReceiverElementFamily classifierFamily =
+        classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
+    const bool productionDispatchesFile =
+        (typeName == "File" || normalizedReceiverLeafName == "File") &&
+        isFileMethodName(normalizedMethodName);
+    const bool classifierSaysFile = classifierFamily == ReceiverElementFamily::File;
+    if (productionDispatchesFile != classifierSaysFile) {
+      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
+                   "resolveMethodCallTemplateTarget (F7 File slice): "
+                   "typeName=\""
+                << typeName << "\" leaf=\"" << normalizedReceiverLeafName
+                << "\" methodName=\"" << normalizedMethodName
+                << "\" production="
+                << (productionDispatchesFile ? "File" : "not-File")
+                << " classifier=" << describeReceiverElementFamily(classifierFamily)
+                << "\n";
+    }
+    assert(productionDispatchesFile == classifierSaysFile &&
+           "receiver-target diff audit: monomorphization F7 File slice "
+           "disagreement (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
+           "docs/ReceiverTargetResolutionConsolidation.md Step 1b, "
+           "monomorphization stage");
+  }
   if ((typeName == "File" || normalizedReceiverLeafName == "File") &&
       isFileMethodName(normalizedMethodName)) {
     pathOut = preferredFileMethodTarget(normalizedMethodName);

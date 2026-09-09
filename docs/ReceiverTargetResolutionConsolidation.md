@@ -34,6 +34,13 @@ Monomorphization now has three call sites (F9, F11, F13/F13b/F13c)
 delegating to the shared classifier - two stages (semantics,
 monomorphization) now each have at least one call site delegating to the
 shared classifier; `ir_lowerer` remains untouched.
+A fourth monomorphization diff-audit harness (observational only, not yet
+a real migration) is now wired at F7's File-family dispatch, zero-divergence
+proven (2026-09-09) - see "Step 1b, monomorphization stage: fourth
+diff-audit harness at F7 File-family slice" below for the full detail,
+including why every other still-unmigrated Row F branch either needs no
+classifier work (trivial guards), needs a broader interface extension than
+F7 does, or was already ruled a non-fit in a prior round.
 Step 0 (characterize the full rule table) is otherwise still in
 progress - see "Step 0 Rule Table" below;
 semantics-stage method-target resolvers, all five snapshot-collection
@@ -3270,6 +3277,155 @@ site this document's Step 0 rule table catalogs still independently
 re-derives receiver family membership - in particular 14 of Row F's 17
 branches (F0-F8 minus F9/F11, F10, F12, F14-F16) and all of `ir_lowerer`
 remain completely untouched.
+
+## Step 1b, monomorphization stage: fourth diff-audit harness at F7 File-family slice, zero-divergence achieved (2026-09-09)
+
+Wired a fourth monomorphization diff-audit harness (observational only, no
+behavior change), this time at `resolveMethodCallTemplateTarget`'s F7 slice
+- the File-family dispatch, gated on `(typeName == "File" ||
+normalizedReceiverLeafName == "File") && isFileMethodName(normalizedMethodName)`.
+
+**Why this slice.** Every remaining Row F branch not yet touched
+(F0-F8 minus F9/F11, F10, F12, F14-F16) was assessed against the classifier's
+`(type, methodName, templateShape) -> family` interface before picking one:
+
+- **F0/F5** are trivial cascade guards (`!isMethodCall`/empty
+  args/name; `typeName.empty()`) with no receiver-type classification at
+  all - nothing for a family classifier to decide.
+- **F1** classifies the receiver *expression's own literal spelling*
+  ("is this identifier text literally `FileError`"), not a resolved
+  type - a fundamentally different question than the classifier answers.
+  It also uses a 5-name method set including `eof`, which the classifier's
+  fixed FileError set (4 names, no `eof`) does not match - a real,
+  pre-existing quirk this document's own Step 0 table already flagged
+  (see F1's row above), not something to force-fit onto the classifier by
+  guessing which behavior is "correct."
+- **F2** (`resolveIndexedArgsPackMapMethodTarget`) and **F6** (the
+  wrapper Reference/Pointer method-path branch) both need broader
+  per-call context beyond a `(type, methodName)` pair - `locals` lookups
+  and args-pack-map shape detection for F2, `hasTemplatedDefinitionFamilyPath`/
+  `hasDefinitionFamilyPath` existence checks for F6 - neither fits the
+  classifier's pure-function interface without a much larger extension
+  than this round's "smallest extension" guidance calls for.
+- **F3** (the receiver-type-inference sub-cascade itself) was already
+  assessed and explicitly rejected in the classifier header's own Step 1b
+  comment: it answers "what type does this receiver expression have," not
+  "what family does an already-known type/method pair belong to" - the
+  wrong shape entirely, not merely a larger version of the right shape.
+- **F8** (`isExplicitRemovedCollectionMethodAlias`) already delegates to a
+  different, purpose-built classifier
+  (`CollectionSpellingClassifier`/`CompatPathResolutionConsolidation.md`'s
+  own solved problem) for a genuinely different question - compat-spelling
+  rejection, not type-family membership. Out of this document's own
+  stated scope (see "Non-Goals").
+- **F10** dispatches only 3 hardcoded method names
+  (`count`/`at`/`at_unsafe`) to the `array` family unconditionally when
+  the leaf is `"args"` - a narrower, differently-shaped rule than the
+  classifier's VectorLike family, which (once the family matches) accepts
+  *any* method name unconditionally. Force-fitting F10 onto the
+  classifier would either silently widen the accepted method set or
+  require a new, F10-specific narrowing parameter - a real interface
+  extension, not the "smallest extension" this slice needed.
+- **F12** needs `isBorrowedSoaReceiver` state (to pick the `_ref`-suffixed
+  wrapper method name) that the `(type, methodName)` classifier interface
+  has no slot for at all - a genuine third input dimension, not covered
+  by the existing joint-input struct.
+- **F14** is confirmed dead code by this document's own prior
+  finding ("Headline finding: Row F's F12/F14 SOA 'asymmetry' is not an
+  asymmetry - F14 is dead code" above); left untouched per this round's
+  explicit instruction not to touch F14-adjacent code.
+
+**F7 was the clean fit, needing zero interface extension.** The
+classifier's existing File family check (inside its template-shape-gated
+block) already calls `isFileHandleMethodName`
+(`src/support/ReceiverElementFamilyClassifier.cpp`), which mirrors this
+file's own `isFileMethodName` lambda (line ~145) name-for-name - both are
+the identical 11-name set (`write`/`writeLine`/`write_line`/`writeByte`/
+`write_byte`/`readByte`/`read_byte`/`writeBytes`/`write_bytes`/`flush`/
+`close`), verified by direct side-by-side comparison, not assumed. And
+- exactly like the already-migrated F13/F13b/F13c slice - by the point F7
+runs, `typeName` has already gone through `normalizeCollectionReceiverTypeName`
+above and is already reduced to a bare leaf name with nothing left for
+`splitTemplateTypeName` to parse, so this harness feeds the classifier's
+`isTemplateShaped`/`templateShapedBaseName` inputs the already-known leaf
+(`normalizedReceiverLeafName`) directly - the same "hand over the
+pre-parsed base" approach F9/F11/F13 all used. Production's guard is an OR
+of `typeName` itself and the leaf; in every case actually observed
+(`typeName == "File"` implies the leaf is also `"File"`, since no internal
+`/` is present), the two conditions are equivalent - not proven
+unreachable in the general case, just not observed, and the harness
+compares against production's actual OR'd condition (not just the leaf)
+so any such divergence would still surface as a MISMATCH rather than
+being silently assumed away.
+
+**Wiring mechanics.** Same pattern as the F9/F11/F13 harnesses: an
+`isReceiverTargetDiffAuditEnabled()`-gated block placed immediately before
+F7's existing `if` (unchanged), building a `ReceiverElementFamilyJointInput`
+from the already-computed `normalizedReceiverLeafName`/`normalizedMethodName`,
+calling `classifyReceiverElementFamilyJoint` with a default-constructed
+(never-matches) `ReceiverElementFamilyPredicates` (Soa/KeyValue predicates
+are structurally unreachable for a `"File"` leaf, since the classifier
+checks VectorLike, then Soa, then Buffer, then KeyValue, then File in that
+fixed order - none of the earlier checks can match `"File"`), comparing the
+classifier's `File`-vs-not verdict against production's own boolean, and
+logging/asserting on mismatch. `#include <cassert>`/`<iostream>` were
+re-added (removed when F13's harness was retired into real migration).
+Purely observational - the harness computes an answer and compares it;
+production's own `if` immediately below is untouched, byte-identical to
+before this round.
+
+**Verification.** Fresh baseline first, not a trusted prior number:
+`git stash`'d this round's own edit back to the clean `0713e5bdf` tree
+(confirmed via `git status`), rebuilt all three suites clean, and ran the
+full battery once:
+
+| suite | test cases | failed | assertions | failed assertions |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15294 | 8 |
+
+Identical to every prior session's recorded numbers for this exact
+baseline - no drift. `git stash pop` restored the harness, rebuilt clean,
+and ran the audited battery once with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+set:
+
+| suite | test cases | failed | [receiver-target-diff-audit] MISMATCH lines | failing-name diff vs baseline |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 0 | **empty** |
+| backend_ir | 1646 | 46 | 0 | **empty** |
+| compile_run | 2679 | 5 | 0 | **empty** |
+
+Then ran two more full 3-suite passes with the env var unset (default
+production behavior, which this round does not change at all) - both also
+produced sorted failing-test-case-*name* sets byte-identical to the
+baseline in all three suites (`diff` empty in every pairwise comparison:
+baseline vs. run 1, baseline vs. run 2, run 1 vs. run 2, per suite - 9
+comparisons total, all empty). Before trusting each `compile_run` result,
+checked for a concurrent instance via `ps aux | grep
+'\./PrimeStruct_compile_run_tests' | grep -v grep` rather than plain
+`pgrep -f PrimeStruct_compile_run_tests` - the latter produced false
+positives this round, matching the literal string inside this session's
+own shell command lines (e.g. the `pgrep` invocation itself, and earlier
+polling-loop commands), not an actual second instance of the test binary;
+`ps aux` filtered to the real executed command line correctly showed
+either exactly one or zero real instances at every check. No transient
+subprocess-level crash noise was observed this round (unlike the F13
+harness round's `bad_alloc`/hang artifacts) - all runs completed cleanly
+to their final `[doctest]` summary line on the first attempt.
+
+**Conclusion.** Zero-divergence proven for the F7 File-family slice; no
+new quirk surfaced (the OR-vs-leaf-only equivalence held on the full
+corpus, and the 11-name method sets matched exactly). Production behavior
+is unchanged this round - the harness is purely observational, as
+required. This is the fourth diff-audit harness wired in the
+monomorphization stage, after F11's, F9's, and F13/F13b/F13c's own (all
+three since migrated for real). Per the established
+harness-then-migrate discipline, F7 is **not** migrated for real this
+round - that stays a separate future Step 2 round. Remaining scope in Row
+F after this round: F0-F6/F8 (minus F1/F2/F3/F5/F6/F8's already-documented
+non-fits above), F10, F12/F14-F16 (13 of 17 branches once F7 itself is
+later migrated), plus all of Row B/C/G and all of `ir_lowerer`.
 
 ## Risks
 
