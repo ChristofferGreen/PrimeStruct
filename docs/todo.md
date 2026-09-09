@@ -1581,6 +1581,59 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     per-branch reasoning in
     `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
     ir_lowerer stage" section. This task stays open, not `[x]`.
+  - implementation_notes (2026-09-09, ir_lowerer Step 1b, second round -
+    remaining branches exhausted, none fit): continued directly from the
+    previous round's explicit "still open" list (G1-G5, G7-G10's
+    remaining sub-branches, and the rest of the two helper files'
+    predicate family) instead of re-checking already-rejected candidates.
+    Found and traced a genuinely new function neither prior round had
+    opened - `resolveMethodDefinitionFromReceiverTarget`
+    (`IrLowererSetupTypeMethodTargetHelpers.cpp`, G8's own dispatch
+    function) - the single most classifier-shaped candidate in the whole
+    cascade (it does gate on a type-membership predicate *and* a
+    method-name set, like the classifier's R3/R5 branches), but still
+    rejected on four independent grounds: it answers a narrower
+    "which path prefix to prefer" question rather than "what family",
+    consumes resolved path/type-name strings rather than the classifier's
+    normalized binding-type text, fuses classification with an actual
+    `defMap` lookup in the same branch, and uses a different method-name
+    set than the classifier's own (includes vector mutators
+    `push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap` that the
+    classifier's VectorLike branch does not gate on at all). Also checked
+    G1 (method-name-only gate, no type-text input), G2/G3/G3a-e (resolved
+    path-string comparisons, confirming rather than extending the
+    previous round's Candidate 3 finding), G4/G10 (error-message-
+    selection flags, not classification, despite G10 superficially
+    looking `(type, methodName)`-shaped), the remainder of G7/RT2/RT3 and
+    G9's sub-branches (confirmed F3-shaped - "what type does this
+    receiver have" - across the *entire* function, not just the
+    Buffer/File cases the previous round sampled), and the remaining
+    `IrLowererSetupTypeCollectionHelpers.cpp` predicate family
+    (`preferred*ErrorHelperTarget`, `isBuiltinCollectionTypeName`/
+    `isExperimentalCollectionTypeName`, path-builder helpers - all
+    confirming already-established rejection shapes, not new ones).
+    Every top-level G-row and both helper files' full predicate surface
+    has now been examined across the two `ir_lowerer` rounds combined,
+    and none fit `classifyReceiverElementFamilyJoint`'s existing
+    interface. Documented a cross-cutting pattern: every rejected branch
+    falls into one of four shapes (receiver-type inference, i.e. the
+    converse question; resolved-path-string classification instead of
+    normalized-type-text; method-name-only gates with no type input; or
+    fused classification+resolution/error-selection rather than a
+    standalone family verdict) - none of which is a small, scoped gap in
+    the classifier (like "add one more family" would be); closing it for
+    real would need either accepting `ir_lowerer` cannot cleanly reuse a
+    pure classifier without duplicating resolution logic, or a
+    differently-shaped module pair (a resolved-path classifier plus a
+    receiver-type inferencer) - flagged as a design decision for whoever
+    picks this up next, not attempted this round per this round's own
+    task instructions. No production code changed, no harness wired,
+    3-suite battery not rerun (byte-identical to the previous round's
+    baseline). Full per-branch reasoning in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s "Step 1b,
+    ir_lowerer stage: remaining Row G/RT/CH branches assessed, none fit
+    the classifier (2026-09-09, second round)" section. This task stays
+    open, not `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

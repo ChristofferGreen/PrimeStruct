@@ -4027,6 +4027,247 @@ markers). No source file was changed, no harness was wired, and the
 scoping-only round (see the Row F "exhausted" section above) rather
 than a stalled migration.
 
+## Step 1b, ir_lowerer stage: remaining Row G/RT/CH branches assessed, none fit the classifier (2026-09-09, second round)
+
+Continuing directly from the previous round's conclusion ("only the
+branches most analogous to the already-migrated File/Buffer/FileError
+slices were checked... G1-G5, G7-G10's remaining sub-branches, and the
+rest of the two helper files' predicate family are still open"). This
+round goes through that explicit remaining list systematically rather
+than picking one more candidate, per this round's own task instructions.
+Re-read the full G0-G10 cascade, Row category G continued (I)/(II), and
+the previous round's rejection reasoning in full before starting.
+
+**G1 (canonical key-value helper name gate,
+`IrLowererSetupTypeMethodCallResolution.cpp:419-492`) - method-name-only
+gate, no type-text input at all.** `sourceKeyValueMethodHelperName()`
+strips a canonical/rooted key-value path prefix from `explicitMethodPath`
+and returns the bare method name only if it is one of the 12 canonical
+key-value helper spellings (`count`/`count_ref`/`size`/`contains`/
+`contains_ref`/`tryAt`/`tryAt_ref`/`at`/`at_ref`/`at_unsafe`/
+`at_unsafe_ref`/`insert`/`insert_ref`) - otherwise returns empty and the
+whole branch is skipped. The receiver-is-key-value test that gates the
+actual dispatch is `receiverHasKeyValueLocalInfo()` (a `LocalInfo` flag
+check via `hasKeyValueKinds`) OR `resolveCollectionPairTypeInfo(...)
+.isKeyValueTarget` (a from-scratch semantic-lookup call) - neither is a
+normalized type-text string the classifier's `unwrappedElementType`
+input could stand in for. On top of that shape mismatch, a match here
+does not classify and stop: it directly resolves and dispatches
+(`resolveDefinitionFamilyByArity` against `canonicalKeyValueHelperPath`),
+fusing classification with resolution the way G8 below also does, and a
+non-match does not reject - it silently falls through to G2. Three
+independent reasons this is not a `(type, methodName)`-pair fit: no
+type-text input, fused classification+resolution, and soft (not
+authoritative) fall-through semantics.
+
+**G2 (`isExplicitKeyValueMethodAliasPath(explicitMethodPath)`) -
+confirms, does not extend, the previous round's Candidate 3 finding.**
+Already covered in substance by the prior round's "path-shape or
+method-name-only classification, not `(type-text, methodName)`" finding
+for the `isExplicit*AliasPath` family; re-verified this round by reading
+the surrounding dispatch (semantic-product method-call-target, then
+direct-call-target, then bridge-path-choice, arity-dispatched) - all
+resolved-path-string lookups, no type-text classification anywhere in
+this branch.
+
+**G3/G3a-G3e - resolved semantic-product path-string comparisons, same
+shape as G2/G3d, not re-derived branch by branch.** `resolvedPath`
+(from `findSemanticProductMethodCallTarget`) is compared against literal
+path strings (`/std/collections/soa/to_aos`), method-leaf name sets
+(G3c-iii's 7 File-handle names), and dispatched via
+`resolveLoweredDefinitionPath`/`blocksSyntheticCollectionFallbackDirectTarget`
+- every sub-branch operates on a resolved path or a bare method-name set,
+never a `(type-text, methodName)` pair as the classifier requires. G3a's
+guard is purely about missing semantic-node-id bookkeeping (not a
+classification question at all). Same shape-mismatch conclusion as the
+previous round's Candidate 3, generalized to the rest of G3.
+
+**G4 - error-message-selection flag, not a dispatch decision (already
+noted as such in the Step 0 rule table; confirmed, not re-derived).**
+`allowBuiltinFallback` here is purely which error text a later failure
+reports, computed from five classifier-callback booleans; it never picks
+a `ReceiverElementFamily` or a definition.
+
+**G5/RT1a-e (`resolveMethodCallReceiverExpr`) - already read and
+enumerated in Row category G continued (I); re-confirmed this round.**
+RT1a-b are shape/arity guards unrelated to type. RT1c/RT1d compute a
+locally-scoped `allowBuiltinFallback` from the *same* five-classifier
+formula as G4 (a documented naming collision, not a new branch) gating
+only whether a bare-`Entry` receiver silently defers or hard-errors -
+still not a family classification.
+
+**G6 - already rejected last round (the F1 shape); re-confirmed, not
+re-derived.**
+
+**G7/RT2/RT3 (`resolveMethodReceiverTarget` and
+`resolveMethodReceiverTypeFromLocalInfo`) - the full F3-shaped
+receiver-type-inference cascade, of which the previous round only
+checked the Buffer/File sub-cases. This round checked the rest
+(RT2e-h/j-n's Array/Soa/Vector/KeyValue-family `typeNameOut`
+assignments, RT3a's struct-type-name-by-namespace-walk fallback, RT3b's
+whole `Call`-kind sub-cascade including its args-pack-kind table and
+`dereference`-lambda) and they are all the same shape as the
+already-rejected Buffer/File case: unconditional kind/shape-driven
+`typeNameOut` assignment with zero method-name gating anywhere. This
+confirms (rather than merely extends) the previous round's finding: the
+entire `resolveMethodReceiverTarget` function, top to bottom, answers
+"what type does this receiver have" - the converse of the classifier's
+question - with no exception found in the parts left unchecked last
+round.**
+
+**G8 (`resolveMethodDefinitionFromReceiverTarget`,
+`IrLowererSetupTypeMethodTargetHelpers.cpp`) - a genuinely new function
+this round traced for the first time (cross-referenced but not
+branch-enumerated in either prior round); the single most classifier-
+shaped candidate found this round, and still not a fit.** This is G8's
+own function - the "normal dispatch attempt" both prior rounds left
+unopened. It takes `(methodName, typeName, resolvedTypePath, defMap)` -
+superficially the closest thing in the whole cascade to the classifier's
+`(type, methodName) -> family` contract. Its `shouldPreferCanonicalVectorPath`/
+`shouldPreferCanonicalKeyValuePath` lambdas even gate on a type-membership
+test (`isVectorReceiverTarget`/`isKeyValueReceiverTarget`, themselves
+built from `isBuiltinCollectionTypeName`/`isExperimentalCollectionTypeName` -
+the "seventh independent family-membership predicate" this document's
+Row G continued (II) section already flagged) AND a method-name set
+(vector: `count`/`capacity`/`at`/`at_unsafe`/`push`/`pop`/`reserve`/
+`clear`/`remove_at`/`remove_swap`; key-value: `count`/`contains`/`tryAt`/
+`at`/`at_unsafe`/`insert`) - the same *shape* of gate the classifier's
+R3-R6 use. Four independent reasons it still does not fit:
+  1. **Different question.** The classifier's VectorLike/KeyValue
+     branches (R3, R5) answer "is this element a vector/key-value family
+     member" unconditionally (any method name qualifies once the type
+     matches). G8's method-name set instead answers "should path
+     construction prefer the canonical stdlib path over the receiver's
+     own resolved type path" - a narrower, path-selection question. A
+     vector-typed receiver calling a method *not* in that list does not
+     get rejected/StructOrUnknown here; it keeps using
+     `normalizedResolvedTypePath` and proceeds straight to a definition
+     lookup regardless - there is no family-classification outcome to
+     hand back at all for that case.
+  2. **Wrong input text.** `typeName`/`resolvedTypePath` here are already
+     G7-resolved *type paths or names* (e.g. `"vector"`, a specialized
+     struct path, an import-aliased struct path) - not the classifier's
+     `unwrappedElementType`/`templateShapedBaseName` (a normalized
+     *binding* type text such as `"vector<i32>"` that the caller's own
+     `splitTemplateTypeName` has already parsed). `isVectorReceiverTarget`
+     et al. are resolved-path-string classifiers (per the point above,
+     the "seventh predicate" already noted, string-shape not
+     `LocalInfo`/`Expr`-based) - the same input-shape mismatch the
+     previous round's Candidate 3 already established for G3d/
+     `isExplicit*AliasPath`, now confirmed for G8's own predicates too.
+  3. **Fused with resolution, not a pure classification.** Every path
+     through this function ends in an actual `findMethodDefinitionByPath`/
+     `defMap` lookup and returns a `const Definition *` (or a specific
+     error string) - there is no point where it merely answers "what
+     family" and stops; the classifier's contract is deliberately just
+     the family verdict, decoupled from resolution.
+  4. **Different method-name sets even where the shapes align.** Even
+     restricting to the cases that do line up conceptually (vector
+     accessor names), G8's vector set additionally includes the five
+     vector *mutator* names (`push`/`pop`/`reserve`/`clear`/`remove_at`/
+     `remove_swap`) that the classifier's R3 branch does not gate on at
+     all (R3 has no method-name gate whatsoever) - so even a
+     narrow "harness just the accessor overlap" attempt would not
+     observe the same decision boundary as production here.
+
+**G9/G9a-f (receiver-is-itself-a-call recovery cascade) - the same
+F3-shaped type-inference question as G7, confirmed for the sub-branches
+not previously read in detail.** G9c (`inferStructReturnPathFromReceiverDef`),
+G9d (`inferReceiverTypeFromDeclaredReturn`), and G9e
+(`resolveReturnInfoKindForPath`) are three independently-coded "what type
+does this definition return" inference mechanisms, each retried through
+the same `resolveMethodDefinitionFromTypeNameWithAliasFallback` wrapper -
+none take a method name as an input to the type decision itself (the
+method name is only used afterward, once a `typeName` has already been
+settled, to build the retry path) - so this is F3-shaped, not
+`(type, methodName)`-joint, same conclusion as G7.
+
+**G10 (final fallback-error-selection block,
+`IrLowererSetupTypeMethodCallResolution.cpp:1224-1245`) - a second,
+previously-unexamined error-message-selection gate, not a
+classification.** Superficially looks `(type, methodName)`-shaped
+(`typeName == "vector"` AND the call is a bare `count`/access/mutator-
+shaped call), but the three `blocksBuiltinBareVector*` booleans decide
+only whether `errorOut` is set to `priorError` or `lookupError` - there
+is no `ReceiverElementFamily`, no definition, no path constructed from
+this decision at all. Same shape as G4 (error-text selection), not a
+dispatch/classification branch - rejected on that basis, not force-fit
+despite superficially resembling a `(type, methodName)` pair.
+
+**Remaining `IrLowererSetupTypeCollectionHelpers.cpp` predicate family,
+checked for completeness.** `preferredFileErrorHelperTarget`/
+`preferredImageErrorHelperTarget`/`preferredContainerErrorHelperTarget`/
+`preferredGfxErrorHelperTarget` (G6's own dispatch targets) take
+*methodName only* - no type-text input at all, confirming G6's rejection
+shape rather than presenting a new one (the "type" is implicit in which
+of the four functions the caller already chose to call, based on the
+bare receiver spelling). `isBuiltinCollectionTypeName`/
+`isExperimentalCollectionTypeName` (the "seventh predicate" from Row G
+continued (II)) are resolved-path-string membership tests with no
+method-name involvement whatsoever - building blocks G8 composes into
+its method-name-gated lambdas above, not classifiers in their own right.
+`normalizeCollectionHelperPath`/`canonicalKeyValueHelperPath` are pure
+path builders, not decision points.
+
+**Cross-cutting pattern across both `ir_lowerer` rounds (the "call for
+whoever picks this up next" this round's task instructions asked for).**
+Every branch examined across both rounds - all ten top-level G-rows,
+both helper files' full predicate surface - falls into exactly one of
+four shapes, none of which is the classifier's `(type-text, methodName)
+-> family` contract:
+  1. **Receiver-type inference** (G7/RT2/RT3, G9c-e): "what type does
+     this receiver/definition have" - the converse question, already
+     named F3-shaped in the monomorphization round and now confirmed to
+     cover the *entire* Row G continued (I) file, not just its Buffer/
+     File cases.
+  2. **Resolved-path-string classification** (G2, G3/G3a-e, G8's
+     `isVectorReceiverTarget`/`isKeyValueReceiverTarget`,
+     `isBuiltinCollectionTypeName`/`isExperimentalCollectionTypeName`,
+     the `isExplicit*AliasPath`/`isAllowedResolved*DirectCallPath`
+     family): classifies an already-resolved semantic-product or
+     definition path string, not a normalized *binding* type text -
+     wrong input shape even where the method-name gating looks similar.
+  3. **Method-name-only gates with no type input** (G1's
+     `sourceKeyValueMethodHelperName`, G3c-iii's File-handle-name set,
+     the `preferred*ErrorHelperTarget` family): the "type" is fixed by
+     which code path already ran, never carried as an explicit
+     classifier input.
+  4. **Fused classification+resolution, or pure error-message
+     selection, rather than a standalone family verdict** (G1, G8, G4,
+     G10): every candidate that does gate on both a type-shaped
+     predicate and a method-name set (G1, G8) immediately proceeds to an
+     actual `defMap`/`findMethodDefinitionByPath` lookup in the same
+     branch rather than returning a family for the caller to act on
+     separately, and the two branches that superficially look
+     `(type, methodName)`-shaped without doing a lookup (G4, G10) turn
+     out to only be selecting which error string to report.
+This is a structural observation, not a scoped classifier-extension
+request: unlike a missing family (which would be a small, well-defined
+extension), shapes 2-4 above are not gaps in what
+`classifyReceiverElementFamilyJoint` currently models - they are answers
+to different questions than a family classifier answers at all. Handing
+`ir_lowerer` a real reuse win would mean either (a) accepting that this
+stage's cascade is fundamentally a fused resolve-and-dispatch machine
+that a pure classifier cannot cleanly slot into without duplicating its
+resolution logic on the other side of the interface, or (b) a much
+larger redesign (a resolved-path-string classifier plus a receiver-type
+inferencer, as two new, differently-shaped modules) rather than an
+extension of this classifier - a design decision for whoever picks this
+up next, not something attempted this round per this round's own task
+instructions.
+
+**Conclusion.** No production code changed, no harness wired, 3-suite
+battery not rerun (production remains byte-identical to the previous
+round's baseline, itself unchanged from `59dfd5332`). Unlike
+monomorphization's "exhausted" finding (which closed that stage's
+low-risk scope entirely), this round *is* the closing round for
+`ir_lowerer`'s Row G/RT/CH scope specifically for this classifier's
+existing shape: every top-level G-row and every predicate in both helper
+files has now been examined across the two `ir_lowerer` rounds, and none
+fit. Whether `ir_lowerer` has further low-risk consolidation potential
+under a *different*, purpose-built interface (per the pattern above) is
+now a scoping question for a future round, not a branch-hunting one.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies
