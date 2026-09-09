@@ -1351,6 +1351,54 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
     monomorphization stage: fourth diff-audit harness at F7 File-family
     slice" section.
+  - implementation_notes (2026-09-09, F7 real migration): migrated the
+    Step 1b-harnessed F7 slice for real, the fourth real migration in the
+    monomorphization stage (after F11, F9, and F13/F13b/F13c). The
+    audit-only `ReceiverElementFamilyJointInput` construction and
+    `classifyReceiverElementFamilyJoint` call were promoted into the
+    primary path (unchanged computation), the classifier's `File` family
+    verdict now drives the same `preferredFileMethodTarget(normalizedMethodName)`
+    dispatch the inline `(typeName == "File" ||
+    normalizedReceiverLeafName == "File") && isFileMethodName(...)` gate
+    used to, and the diff-audit-harness scaffolding (the
+    `isReceiverTargetDiffAuditEnabled()` block, the
+    `[receiver-target-diff-audit] MISMATCH` stderr line, the `assert`) was
+    deleted entirely, along with the now-dead inline `isFileMethodName`
+    lambda (superseded by the classifier's own `isFileHandleMethodName`,
+    already proven name-for-name identical). Net -39 lines in
+    `TemplateMonomorphMethodTargets.cpp` (26 insertions, 65 deletions).
+    Downstream path construction is byte-identical - only the
+    *classification* moved; F9's/F11's/F13's already-migrated code and
+    every other still-unmigrated Row F branch were left untouched.
+    Verification: fresh baseline via `git stash` back to the clean
+    `281de699f` tree, rebuilt, ran all three suites once (semantics
+    2767/1 failed, backend_ir 1646/46 failed, compile_run 2679/5 failed -
+    identical to every prior session's recorded baseline, no drift),
+    `git stash pop` to restore the migration, rebuilt clean, ran the full
+    battery two more times. Every suite's test-case count and failure
+    count matched across all three runs; the sorted failing-test-case-
+    *name* set was byte-identical in all 9 pairwise comparisons (baseline
+    vs run1, baseline vs run2, run1 vs run2, across 3 suites).
+    Semantics' one already-known-flaky pinned test toggled between 1 and
+    2 failed assertions across runs (same test name every time, matching
+    this doc's own recorded "1 known flake") - the name-level set was
+    unaffected. Before trusting each result, confirmed via `pgrep -fc`
+    anchored against the full binary path (`'^\./PrimeStruct_<suite>_tests$'`)
+    that exactly one real test-binary instance was running, or none - a
+    bare substring `pgrep`/`ps -eo comm` check this round found produces
+    false "still running"/false "done" reports against unrelated leftover
+    polling-loop shell wrappers from earlier sessions in this same
+    sandbox (comm is truncated to 15 chars, silently breaking longer
+    substring matches) and had to be corrected mid-round. No
+    concurrent-run segfault artifact or crash noise observed. Full detail
+    in `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 2,
+    monomorphization stage: resolveMethodCallTemplateTarget's F7
+    File-family slice migrated..." section. Monomorphization now has four
+    call sites (F9, F11, F13/F13b/F13c, F7) delegating to the shared
+    classifier, with no diff-audit scaffolding remaining anywhere in
+    `TemplateMonomorphMethodTargets.cpp`. Remaining scope in Row F: 13 of
+    its 17 branches (F0-F6/F8, F10, F12, F14-F16), plus all of Row B/C/G
+    and all of `ir_lowerer` - this task stays open, not `[x]`.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

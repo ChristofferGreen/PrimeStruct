@@ -1,18 +1,18 @@
 # Receiver-Target Resolution Consolidation Plan
 
-Status: Step 2, five call sites migrated (2026-09-08/09) -
+Status: Step 2, six call sites migrated (2026-09-08/09) -
 `resolveArgsPackElementMethodTarget`
 (`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`, Step 1b's slice 1
 call site), `resolveMethodTarget`'s own inline indexed-args-pack-element
 cascade (`SemanticsValidatorExprMethodTargetResolution.cpp`, slice 2 - the
 `pack[i].method()` access shape), and monomorphization's
 `resolveMethodCallTemplateTarget`'s F11 FileError sub-case, F9 primitive
-slice, and F13/F13b/F13c collection-family slice (all three in
-`TemplateMonomorphMethodTargets.cpp`) now all delegate for real to the
-joint `(type, methodName, templateShape)` classifier
+slice, F13/F13b/F13c collection-family slice, and F7 File-family slice
+(all four in `TemplateMonomorphMethodTargets.cpp`) now all delegate for
+real to the joint `(type, methodName, templateShape)` classifier
 (`classifyReceiverElementFamilyJoint`) instead of their own inline
-R1-R9/F11/F9/F13-shaped checks; the diff-audit harness at each call site
-is retired (superseded by the real migration - diffing a classifier
+R1-R9/F11/F9/F13/F7-shaped checks; the diff-audit harness at each call
+site is retired (superseded by the real migration - diffing a classifier
 against itself is meaningless). See "Step 2: resolveArgsPackElementMethodTarget
 migrated to classifyReceiverElementFamilyJoint, zero-divergence achieved
 (2026-09-08)", "Step 2, second migration: resolveMethodTarget's
@@ -23,24 +23,26 @@ to classifyReceiverElementFamilyJoint, zero-divergence achieved
 (2026-09-09)", "Step 2, monomorphization stage:
 resolveMethodCallTemplateTarget's F9 primitive slice migrated to
 classifyReceiverElementFamilyJoint, zero-divergence achieved (2026-09-09)",
-and "Step 2, monomorphization stage: resolveMethodCallTemplateTarget's
+"Step 2, monomorphization stage: resolveMethodCallTemplateTarget's
 F13/F13b/F13c collection-family slice migrated to
-classifyReceiverElementFamilyJoint, zero-divergence achieved (2026-09-09)"
-below for the full detail and verification proof of each.
-All three monomorphization diff-audit harnesses (F11, F9, and
-F13/F13b/F13c) are now fully retired - no diff-audit scaffolding remains
+classifyReceiverElementFamilyJoint, zero-divergence achieved (2026-09-09)",
+and "Step 2, monomorphization stage: resolveMethodCallTemplateTarget's F7
+File-family slice migrated to classifyReceiverElementFamilyJoint,
+zero-divergence achieved (2026-09-09)" below for the full detail and
+verification proof of each.
+All four monomorphization diff-audit harnesses (F11, F9, F13/F13b/F13c,
+and F7) are now fully retired - no diff-audit scaffolding remains
 anywhere in `TemplateMonomorphMethodTargets.cpp`.
-Monomorphization now has three call sites (F9, F11, F13/F13b/F13c)
+Monomorphization now has four call sites (F9, F11, F13/F13b/F13c, F7)
 delegating to the shared classifier - two stages (semantics,
 monomorphization) now each have at least one call site delegating to the
 shared classifier; `ir_lowerer` remains untouched.
-A fourth monomorphization diff-audit harness (observational only, not yet
-a real migration) is now wired at F7's File-family dispatch, zero-divergence
-proven (2026-09-09) - see "Step 1b, monomorphization stage: fourth
-diff-audit harness at F7 File-family slice" below for the full detail,
-including why every other still-unmigrated Row F branch either needs no
-classifier work (trivial guards), needs a broader interface extension than
-F7 does, or was already ruled a non-fit in a prior round.
+Remaining scope in Row F: 13 of its 17 branches (F0-F6/F8, F10, F12,
+F14-F16) - see "Step 1b, monomorphization stage: fourth diff-audit
+harness at F7 File-family slice" below for why every other
+still-unmigrated Row F branch either needs no classifier work (trivial
+guards), needs a broader interface extension than F7 did, or was already
+ruled a non-fit in a prior round.
 Step 0 (characterize the full rule table) is otherwise still in
 progress - see "Step 0 Rule Table" below;
 semantics-stage method-target resolvers, all five snapshot-collection
@@ -241,10 +243,14 @@ resolveMethodCallTemplateTarget's F9 primitive slice migrated..." section
 below. A fifth migration, monomorphization's F13/F13b/F13c
 collection-family slice, landed the same day too - see the dedicated
 "Step 2, monomorphization stage: resolveMethodCallTemplateTarget's
-F13/F13b/F13c collection-family slice migrated..." section below.
+F13/F13b/F13c collection-family slice migrated..." section below. A
+sixth migration, monomorphization's F7 File-family slice, landed the
+same day too - see the dedicated "Step 2, monomorphization stage:
+resolveMethodCallTemplateTarget's F7 File-family slice migrated..."
+section below.
 Remaining scope is every other Row A/B/C/D/E/F/G call site this
-document's Step 0 rule table catalogs, including 14 of Row F's 17
-branches (F0-F8 minus F9/F11, F10, F12, F14-F16) and all of `ir_lowerer`.
+document's Step 0 rule table catalogs, including 13 of Row F's 17
+branches (F0-F6/F8, F10, F12, F14-F16) and all of `ir_lowerer`.
 
 ## Step 0 Progress: TODO-4760 Traced Further (2026-09-04)
 
@@ -3426,6 +3432,96 @@ round - that stays a separate future Step 2 round. Remaining scope in Row
 F after this round: F0-F6/F8 (minus F1/F2/F3/F5/F6/F8's already-documented
 non-fits above), F10, F12/F14-F16 (13 of 17 branches once F7 itself is
 later migrated), plus all of Row B/C/G and all of `ir_lowerer`.
+
+## Step 2, monomorphization stage: resolveMethodCallTemplateTarget's F7 File-family slice migrated to classifyReceiverElementFamilyJoint, zero-divergence achieved (2026-09-09)
+
+Migrated the Step 1b-harnessed F7 slice for real, the fourth real
+migration in the monomorphization stage (after F11, F9, and
+F13/F13b/F13c), same harness-first/migrate-once-proven discipline.
+
+**What changed.** The inline `(typeName == "File" ||
+normalizedReceiverLeafName == "File") && isFileMethodName(normalizedMethodName)`
+gate is replaced by: (1) building the same `ReceiverElementFamilyJointInput`
+the Step 1b diff-audit harness was already constructing for observation
+(no new computation - the audit-only code is promoted into the primary
+path, with `isTemplateShaped=true`/`templateShapedBaseName=
+normalizedReceiverLeafName`, feeding the classifier the already-known
+leaf name directly, same "hand the classifier the already-known answer"
+approach F9/F11/F13 all used), (2) one call to
+`classifyReceiverElementFamilyJoint`, (3) dispatching to
+`preferredFileMethodTarget(normalizedMethodName)` when the classifier's
+family verdict is `File` (the harness's own proven equivalence - the
+classifier's File family check already uses `isFileHandleMethodName`, the
+identical 11-name method set as this file's own `isFileMethodName`
+lambda, verified name-for-name in the Step 1b harness round). Downstream
+behavior is byte-identical: `preferredFileMethodTarget` is called with
+exactly the same argument (`normalizedMethodName`) as before, so path
+construction (the `/file/<method>` vs `/File/<method>` split, the
+`self`-receiver special case, the >10-arg fallback) is untouched; only the
+*classification* moved. The now-dead inline `isFileMethodName` lambda
+(no longer called anywhere in the file once the migration promoted the
+classifier's own equivalent check) was removed along with it. The Step 1b
+diff-audit-harness scaffolding at this call site (the
+`isReceiverTargetDiffAuditEnabled()` check, the comparison, the
+`[receiver-target-diff-audit] MISMATCH` stderr line, the `assert`) is
+removed entirely; net -39/+0 lines in `TemplateMonomorphMethodTargets.cpp`
+(26 insertions, 65 deletions across the whole file diff, mostly this
+slice). No other part of Row F's still-unmigrated cascade (F0-F6/F8, F10,
+F12, F14-F16) was touched, and F9's/F11's/F13's already-migrated code was
+left untouched.
+
+**Verification.** Fresh baseline first, not a trusted prior number:
+`git stash`'d this round's own edit back to the clean `281de699f` tree
+(confirmed via `git status`), rebuilt all three suites clean, and ran the
+full battery once:
+
+| suite | test cases | failed | assertions | failed assertions |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 1 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+(Semantics' single known-flaky pinned test toggled between 1 and 2 failed
+assertions across runs this round, same test name every time - see below;
+this does not affect the test-case-name-level comparison this document's
+discipline is scoped to.) `git stash pop` restored the migration, rebuilt
+clean, and ran the full battery two more times:
+
+| suite | test cases | failed | assertions | failed assertions | failing-name diff vs baseline |
+|---|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 1-2 (flake) | **empty** (both runs) |
+| backend_ir | 1646 | 46 | 16428 | 137 | **empty** (both runs) |
+| compile_run | 2679 | 5 | 15278 | 8 | **empty** (both runs) |
+
+Test-case counts identical across all three runs (1 baseline + 2
+post-migration) in every suite, and `diff` on the sorted failing-test-
+case-*name* list per suite came back empty in every pairwise comparison
+checked (baseline vs. run 1, baseline vs. run 2, run 1 vs. run 2 - 9
+comparisons total across the three suites, all empty). Semantics'
+single already-known-flaky pinned test (`semantic product validates
+direct return method-like borrowed helper-return experimental soa reads`)
+toggled between 1 and 2 failed assertions within that one test case
+across the baseline/run1/run2 runs, exactly matching this document's own
+recorded "1 known flake" - the *set* of failing test-case names was
+identical in all three runs regardless. Before trusting each
+`compile_run`/`backend_ir`/`semantics` result, confirmed via `pgrep -af`
+against the anchored full binary path (`'^\./PrimeStruct_<suite>_tests$'`,
+not a bare substring match, which this round found produces false
+"still running" reports against unrelated leftover polling-loop shell
+wrappers from earlier sessions in this same sandbox) that exactly one
+real instance of the test binary was running, or none, at each check. No
+concurrent-run segfault artifact or mid-run crash noise was observed this
+round - all six runs (1 baseline + 2 full post-migration passes across
+three suites) completed cleanly to their final `[doctest]` summary line.
+
+**Conclusion.** F7 is now migrated for real, alongside F11, F9, and
+F13/F13b/F13c - monomorphization now has four call sites delegating to
+`classifyReceiverElementFamilyJoint`. No diff-audit-harness scaffolding
+remains anywhere in `TemplateMonomorphMethodTargets.cpp` at this point.
+Every other Row A/B/C/D/E/F/G call site this document's Step 0 rule table
+catalogs still independently re-derives receiver family membership - in
+particular 13 of Row F's 17 branches (F0-F6/F8, F10, F12, F14-F16) and all
+of `ir_lowerer` remain completely untouched.
 
 ## Risks
 
