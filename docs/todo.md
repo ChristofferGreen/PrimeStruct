@@ -1137,6 +1137,46 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     round, matching how F11's harness and its real migration were kept as
     two separate rounds); F1-F8/F10/F12-F16 and every Row B/C/G call site
     remain unharnessed and unmigrated.
+  - implementation_notes (2026-09-09, F9 real migration): migrated F9 for
+    real - `resolveMethodCallTemplateTarget`'s plain, unconditional
+    `isPrimitiveBindingTypeName(typeName)` gate
+    (`TemplateMonomorphMethodTargets.cpp`) now delegates its family
+    classification to `classifyReceiverElementFamilyJoint`, dispatching
+    when the verdict is `Primitive` **or** `String` (the harness's own
+    proven equivalence). `normalizeBindingTypeName(typeName)` still runs
+    on the original `typeName` text below - the classifier's verdict
+    decides only whether the branch fires, not what path string gets
+    built; double-checked this was not accidentally substituted. The
+    Step 1b diff-audit-harness scaffolding at this call site (env-var
+    check, comparison, stderr line, assert) is deleted, along with the
+    now-unused `<cassert>`/`<iostream>` includes (confirmed unused
+    file-wide first). No diff-audit scaffolding remains anywhere in
+    `TemplateMonomorphMethodTargets.cpp` after this round - both F9's and
+    F11's harnesses are now fully retired. Fresh baseline via `git stash`
+    back to the clean `4205980` tree (confirmed via `git status`),
+    rebuilt, ran the full 3-suite battery once (semantics 2767/1,
+    backend_ir 1646/46, compile_run 2679/5 - identical to every prior
+    session's recorded baseline). `git stash pop` restored the migration,
+    rebuilt clean, and ran the full battery three more times total (twice
+    right after the migration, once more after removing the now-dead
+    includes, to confirm that cleanup itself changed nothing). All four
+    runs (1 baseline + 3 post-migration) produced byte-identical sorted
+    failing-test-case-*name* sets in every pairwise comparison across all
+    three suites - zero divergence. One run's `PrimeStruct_compile_run_tests`
+    assertion-total count fluctuated by 16 (15278 vs 15294) with the exact
+    same 5 failing names and 8 failed assertions both times - consistent
+    with this doc's own previously-recorded environment-noise class, not a
+    real divergence, since the failing-name set never moved. Confirmed via
+    `pgrep` that exactly one `PrimeStruct_compile_run_tests` instance ran
+    at a time before trusting each result. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 2,
+    monomorphization stage: resolveMethodCallTemplateTarget's F9 primitive
+    slice migrated to classifyReceiverElementFamilyJoint" section. Still
+    not marked `[x]` - this Step 0 task's own rule table still needs full
+    branch-level coverage, and the rest of Row F (F0-F8 minus F9, F10,
+    F12-F16 - 15 of 17 branches), all of Row B/C/G, and all of
+    `ir_lowerer` remain unmigrated; this note records real migration
+    progress made alongside Step 0, not Step 0 completion.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
