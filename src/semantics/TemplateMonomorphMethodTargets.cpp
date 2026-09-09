@@ -33,6 +33,8 @@
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
+#include <cassert>
+#include <iostream>
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
@@ -546,6 +548,65 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (isExplicitRemovedCollectionMethodAlias(typeName, rawMethodName)) {
     return false;
+  }
+  // TODO-5294 Step 1b, monomorphization stage (second slice): observational
+  // diff-audit comparing F9 (per docs/ReceiverTargetResolutionConsolidation.md's
+  // Step 0 Row F table) - the plain isPrimitiveBindingTypeName(typeName) gate,
+  // unconditional, no method-name/template-shape gating in production at all
+  // - against the shared classifier's Primitive/String family verdict. Runs
+  // unconditionally at this point in the cascade (not gated on any leaf-name
+  // match, unlike the F11 FileError slice above), since F9's own production
+  // guard has no comparable "leaf name matches, method may or may not" shape
+  // to narrow on - every call reaching this point is a candidate. Purely
+  // observational: computing the classifier's verdict and comparing it never
+  // changes this function's control flow, return value, or side effects.
+  // Zero-cost when PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is unset (one
+  // cached getenv check).
+  if (isReceiverTargetDiffAuditEnabled()) {
+    ReceiverElementFamilyJointInput jointInput;
+    // F9 has no wrapped/unwrapped asymmetry to reproduce (typeName has
+    // already gone through normalizeCollectionReceiverTypeName above, and F9
+    // itself never re-derives a separate raw/wrapped variant), so both
+    // classifier inputs are the same text, mirroring the F11 slice's own
+    // "no separate wrapped/unwrapped text at this point" note.
+    jointInput.unwrappedElementType = typeName;
+    jointInput.rawElementBaseType = typeName;
+    jointInput.isTemplateShaped = false;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    // Soa/KeyValue predicates are unreachable from this audit: isTemplateShaped
+    // is false, so the classifier's template-shape-gated block (which is the
+    // only place either predicate is consulted) never runs.
+    ReceiverElementFamilyPredicates auditPredicates{};
+    const ReceiverElementFamily classifierFamily =
+        classifyReceiverElementFamilyJoint(jointInput, auditPredicates).family;
+    const bool productionDispatchesPrimitive = isPrimitiveBindingTypeName(typeName);
+    // The classifier's R1 (String) check runs before its R7 (Primitive) check
+    // and claims "string" for its own separate family, whereas production's
+    // F9 guard (isPrimitiveBindingTypeName) folds "string" into the same
+    // primitive-like bucket as i32/bool/etc, dispatching it through the
+    // identical "/<typeName>/<method>" path formula either way - so a
+    // classifier verdict of String is treated as agreeing with "primitive"
+    // for this comparison's purposes; only a StructOrUnknown/other-family
+    // verdict on a typeName production treats as primitive (or vice versa)
+    // counts as a real divergence.
+    const bool classifierSaysPrimitiveLike =
+        classifierFamily == ReceiverElementFamily::Primitive ||
+        classifierFamily == ReceiverElementFamily::String;
+    if (productionDispatchesPrimitive != classifierSaysPrimitiveLike) {
+      std::cerr << "[receiver-target-diff-audit] MISMATCH in "
+                   "resolveMethodCallTemplateTarget (F9 primitive slice): "
+                   "typeName=\""
+                << typeName << "\" methodName=\"" << normalizedMethodName
+                << "\" production="
+                << (productionDispatchesPrimitive ? "Primitive" : "not-Primitive")
+                << " classifier=" << describeReceiverElementFamily(classifierFamily)
+                << "\n";
+    }
+    assert(productionDispatchesPrimitive == classifierSaysPrimitiveLike &&
+           "receiver-target diff audit: monomorphization F9 primitive slice "
+           "disagreement (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) - see "
+           "docs/ReceiverTargetResolutionConsolidation.md Step 1b, "
+           "monomorphization stage");
   }
   if (isPrimitiveBindingTypeName(typeName)) {
     pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);

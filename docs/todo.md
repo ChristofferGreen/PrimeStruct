@@ -1103,6 +1103,40 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     rest of Row F (16 of 17 branches), all of Row B/C/G, and all of
     `ir_lowerer` remain unmigrated; this note records real migration
     progress made alongside Step 0, not Step 0 completion.
+  - implementation_notes (2026-09-09, second Step 1b slice, harness only):
+    wired a second monomorphization diff-audit harness at F9 (the plain,
+    unconditional `isPrimitiveBindingTypeName(typeName)` gate,
+    `resolveMethodCallTemplateTarget`, `TemplateMonomorphMethodTargets.cpp`)
+    - observational only, no migration. Unlike F11's harness, F9 has no
+    method-name-leaf narrowing of its own, so the audit block runs
+    unconditionally at that point in the cascade rather than being gated
+    on a leaf-name match. The harness treats the shared classifier's
+    separate String (R1) and Primitive (R7) verdicts as both agreeing
+    with production, since `isPrimitiveBindingTypeName` folds `string` in
+    with the numeric/bool primitives and both route through the identical
+    `/<typeName>/<method>` path formula - checked this claim rather than
+    trusting the comment alone: confirmed `isPrimitiveBindingTypeName`'s
+    own name set does include `"string"`, and confirmed the audited run
+    produced zero MISMATCH lines across the full 3-suite corpus (which
+    would not hold if String and Primitive genuinely diverged in this
+    corpus). Fresh baseline via `git stash` back to the clean `5bcd79f`
+    tree (confirmed via `git status`), rebuilt, ran once; `git stash pop`
+    restored the harness, rebuilt clean, ran the audited battery once and
+    the unset-env-var battery twice more. All runs across all three
+    suites (semantics 2767/1, backend_ir 1646/46, compile_run 2679/5)
+    produced byte-identical sorted failing-test-case-*name* sets in every
+    pairwise comparison against the baseline, and zero
+    `[receiver-target-diff-audit] MISMATCH` lines. Confirmed via `ps`/
+    `pgrep` that exactly one `PrimeStruct_compile_run_tests` instance ran
+    at a time before trusting each result. Full detail in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1b,
+    monomorphization stage: diff-audit harness wired at
+    resolveMethodCallTemplateTarget's F9 primitive slice" section. Still
+    not marked `[x]` - per the established one-slice-at-a-time discipline,
+    F9 is not migrated for real this round (a separate future Step 2
+    round, matching how F11's harness and its real migration were kept as
+    two separate rounds); F1-F8/F10/F12-F16 and every Row B/C/G call site
+    remain unharnessed and unmigrated.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

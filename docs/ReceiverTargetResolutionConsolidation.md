@@ -20,6 +20,11 @@ zero-divergence achieved (2026-09-09)", and "Step 2, monomorphization
 stage: resolveMethodCallTemplateTarget's F11 FileError sub-case migrated
 to classifyReceiverElementFamilyJoint, zero-divergence achieved
 (2026-09-09)" below for the full detail and verification proof of each.
+A fourth diff-audit-only harness (not a migration) is also wired at
+monomorphization's F9 primitive-family slice (same file), observational
+only, zero-divergence - see "Step 1b, monomorphization stage: diff-audit
+harness wired at resolveMethodCallTemplateTarget's F9 primitive slice,
+zero-divergence achieved (2026-09-09)" below.
 This is the first real migration in the monomorphization stage - two
 stages (semantics, monomorphization) now each have at least one call site
 delegating to the shared classifier; `ir_lowerer` remains untouched.
@@ -2862,6 +2867,118 @@ table catalogs still independently re-derives receiver family
 membership - in particular the rest of Row F's 17-branch cascade (16 of
 17 branches, F11 now excepted) and all of `ir_lowerer` remain completely
 untouched.
+
+## Step 1b, monomorphization stage: diff-audit harness wired at resolveMethodCallTemplateTarget's F9 primitive slice, zero-divergence achieved (2026-09-09)
+
+A second monomorphization diff-audit slice, following the exact
+harness-first discipline the F11 slice above used - observation only,
+no migration this round. Written by a prior session (uncommitted when its
+container restarted), picked up and verified fresh in this round rather
+than re-derived from scratch, since inspection found the diff sound and
+complete.
+
+**Which branch, and why it needed no leaf-name gate.** Per the Step 0
+Rule Table (Row F): F9 is `isPrimitiveBindingTypeName(typeName)` ->
+dispatch to `/<typeName>/<normalizedMethodName>` unconditionally, with no
+method-name-leaf narrowing of its own (unlike F11, which only fires when
+`normalizedReceiverLeafName == "FileError"`). Every call reaching this
+point in the cascade is a candidate for F9, so the harness is wired
+unconditionally (gated only on `isReceiverTargetDiffAuditEnabled()`),
+immediately before production's own `isPrimitiveBindingTypeName(typeName)`
+check - not narrowed to a leaf-name match the way F11's was, because F9
+itself has no comparable narrowing to mirror.
+
+**Wiring mechanics.** Same pattern as the F11 slice: builds a
+`ReceiverElementFamilyJointInput` with `unwrappedElementType` and
+`rawElementBaseType` both set to `typeName` (F9, like F11, has no
+separate wrapped/unwrapped text at this point - `typeName` has already
+gone through `normalizeCollectionReceiverTypeName` above), `isTemplateShaped
+= false` (so the classifier's Soa/KeyValue predicate block, which is
+template-shape-gated, is unreachable from this audit - the passed-in
+`ReceiverElementFamilyPredicates{}` is a deliberately-inert default),
+and `normalizedMethodName` passed through as-is. Compares the classifier's
+verdict against `isPrimitiveBindingTypeName(typeName)`, logs a
+`[receiver-target-diff-audit] MISMATCH ... (F9 primitive slice)` line to
+stderr plus a debug-only `assert` on disagreement, then falls through to
+production's own unmodified `isPrimitiveBindingTypeName` dispatch. Purely
+observational - the audit block's result never feeds back into control
+flow.
+
+**The String/Primitive equivalence, verified.** The diff's own inline
+comments claim: the classifier's separate String (R1) and Primitive (R7)
+verdicts should *both* be treated as "production dispatches primitive-like"
+for this comparison, because production's `isPrimitiveBindingTypeName`
+folds `string` in with `i32`/`bool`/etc into the same bucket, and both
+route through the identical `/<typeName>/<method>` path formula - so the
+comparison uses `classifierFamily == Primitive || classifierFamily ==
+String` as its "matches production" predicate, not `== Primitive` alone.
+Checked this claim two ways rather than assuming it: (1) read
+`isPrimitiveBindingTypeName`'s own definition and confirmed it does
+include `"string"` in its name set, alongside the numeric/bool primitive
+names - so production genuinely treats `string` as F9-dispatchable, not
+merely by coincidence of this one call site; (2) ran the full audited
+battery and confirmed **zero** MISMATCH lines were produced at all,
+across all three suites' entire corpus of receiver types including every
+`string`-typed call this corpus exercises - if the equivalence claim were
+wrong, a bare `classifierFamily == Primitive` comparison (String excluded)
+would have produced a MISMATCH on every `string`-receiver primitive-style
+call in the corpus, and it did not, corroborating the claim rather than
+merely resting on the comment's say-so. The equivalence holds as
+documented; no classifier bug found.
+
+**Zero-divergence proof.** Fresh 3-suite baseline taken first via `git
+stash` back to a clean `5bcd79f` tree (confirmed via `git status`),
+rebuilt, ran the full battery once. `git stash pop` restored the F9
+harness, rebuilt clean, and ran the full battery with
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`:
+
+| suite | test cases | failed | assertions | failed | `[receiver-target-diff-audit] MISMATCH` lines |
+|---|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 | **0** |
+| backend_ir | 1646 | 46 | 16428 | 137 | **0** |
+| compile_run | 2679 | 5 | 15278 | 8 | **0** |
+
+Identical test/assertion counts to the freshly re-confirmed baseline in
+all three suites, and zero mismatch lines - this F9 slice needed no
+classifier iteration either; production's `isPrimitiveBindingTypeName`
+and the classifier's Primitive/String verdicts already agree on every
+call this build's corpus makes, once the documented String/Primitive
+equivalence is applied.
+
+**Unchanged-default-behavior proof.** Ran the same battery with the env
+var unset (default), twice, and diffed the sorted failing-test-case-*name*
+sets against the fresh baseline - not just counts:
+
+- `PrimeStruct_semantics_tests`: baseline and both post-change runs all
+  exactly the one known pre-existing flake ("semantic product validates
+  direct return method-like borrowed helper-return experimental soa
+  reads") - `diff` empty in every pairwise comparison.
+- `PrimeStruct_backend_ir_tests`: baseline and both post-change runs all
+  the same 46 pre-existing failing names - `diff` empty.
+- `PrimeStruct_compile_run_tests`: baseline and both post-change runs all
+  the same 5 pre-existing failing names ("C++ emitter runs canonical map
+  reference string access", "map wildcard import rejects stdlib-owned
+  surface in C++ emitter", "runs collection literals with map at in C++
+  emitter", "runs vm canonical map reference string access with imported
+  canonical helpers", "runs vm shared stdlib map conformance harness") -
+  `diff` empty in every pairwise comparison (baseline vs run1, baseline
+  vs run2, run1 vs run2).
+
+Before trusting each `PrimeStruct_compile_run_tests` result, confirmed
+via `ps`/`pgrep` that exactly one instance of the binary was running at a
+time, per this document's own recorded segfault-artifact warning from the
+F11 round - no concurrent-run artifact seen this round.
+
+**Conclusion.** F9's primitive-family slice is now harnessed and green,
+purely observationally - no behavior change, no classifier iteration
+needed, and the diff's own documented String/Primitive equivalence claim
+checked out rather than assumed. Per the established one-slice-at-a-time
+discipline, F9 is **not** migrated for real this round - that is a
+separate future Step 2 round, matching how F11's harness (Step 1b) and
+F11's real migration (Step 2) were deliberately kept as two separate
+rounds. The rest of Row F's cascade - F1, F2, F3, F6, F7, F8, F10, the
+ImageError/ContainerError/GfxError siblings of F11, F12-F16 - remains
+unharnessed and unmigrated.
 
 ## Risks
 
