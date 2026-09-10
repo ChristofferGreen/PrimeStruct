@@ -1689,6 +1689,51 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     already-delivered work. This task stays open, not `[x]` - this is
     scoping, not implementation, and the overall consolidation effort is
     far from done.
+  - implementation_notes (2026-09-10, ninth round - Step 1c open question
+    resolved): resolved the one open design question last round left
+    unresolved - whether args-pack storage facts (`isArgsPackElement`/
+    `elemSlotCount`) belong inside `CanonicalReceiverType`'s output or as
+    stage-specific input to `resolveReceiverType`. Traced both sides
+    concretely rather than guessing: `ir_lowerer`'s RT3b-i
+    (`resolveMethodReceiverTarget`'s `Call`-kind args-pack branch,
+    `IrLowererSetupTypeReceiverTargetHelpers.cpp:556-705`) turned out to be
+    inline inference sharing the same cascade/output parameters as
+    RT3a/RT3c, already fed by the `Expr`+`LocalMap` input the function
+    takes regardless - no new field needed on either side. Monomorphization's
+    F2 (`resolveIndexedArgsPackMapMethodTarget`,
+    `TemplateMonomorphMethodTargets.cpp:322-372`, invoked at line 474)
+    turned out to be structurally F3-C3a's sibling, not RT3b-i's - a
+    genuinely separate closure, called after F3 finishes, that never reads
+    F3's output and short-circuits straight to a resolved path, bypassing
+    classification entirely. Also confirmed `elemSlotCount` is not a
+    receiver-type-inference fact in either stage at all - it lives
+    exclusively in `ArrayVectorAccessTargetInfo`
+    (`IrLowererCallHelperTypes.h`), a distinct, downstream call/access-
+    target-resolution struct computed in
+    `IrLowererAccessTargetResolution.cpp`, never touching RT2/RT3's own
+    file. Confirmed `classifyReceiverElementFamilyJoint` never consults
+    args-pack-ness at all (zero grep matches). Conclusion: both
+    `isArgsPackElement` and `elemSlotCount` are removed from
+    `CanonicalReceiverTypeSketch.h` outright rather than kept as
+    placeholders - the shared struct needs nothing for args-pack facts on
+    either side; F2 joins F3-C3a as a call-site pre-step that stays outside
+    `resolveReceiverType`/`CanonicalReceiverType`. Also did a full sanity
+    re-pass of the whole sketch against F3/RT2/RT3/G7/F2 together - no
+    further gaps found beyond the args-pack removal. Since this concludes
+    the Step 1c design-scoping phase, wrote a "ready to implement"
+    checklist (7 ordered steps: promote the sketch to a real header, pick
+    `ir_lowerer` as the first stage, harness it the same way the classifier
+    migrations were harnessed, prove zero-divergence on the full 3-suite
+    battery before wiring any call site, migrate one call site at a time,
+    keep F3-C3a/F2 as call-site logic, do not implement both stages in one
+    round). No production code touched beyond the still-unwired sketch
+    header. Full writeup in
+    `docs/ReceiverTargetResolutionConsolidation.md`'s Step 1c section
+    ("Open question, resolved", "Final sanity pass", and "Ready to
+    implement" subsections, appended after the existing open-question
+    writeup). This task stays open, not `[x]` - Step 1c's design-scoping is
+    now done, but implementation (the checklist above) has not started, and
+    the overall consolidation effort remains far from complete.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

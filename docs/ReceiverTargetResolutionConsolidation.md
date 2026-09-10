@@ -4412,7 +4412,7 @@ fields as an (unwired, non-compiling-by-design) C++ struct. Summary:
 | `templateArgTexts` | parsed template-argument texts (`vector<T>` → `["T"]`, `map<K,V>` → `["K","V"]`) | **aspirational** - neither F3 nor RT2/RT3 currently retain individual parsed arg texts beyond an arg-count check (see sketch file comment); included because the task background names "template args" as part of the required union, not because current code fills it |
 | `isWrapped` / `wrappedBaseTypeName` | `Reference<T>`/`Pointer<T>` wrapping facts | F3 via its (asymmetric) `wrappedReceiverTypeName` text; RT2/RT3 via `LocalInfo::Kind`'s `Reference`/`Pointer` variants directly - two structurally different derivations of the same two output fields, not a shared code path |
 | `isBorrowed` | SOA/collection borrowed-vs-owned fact, feeding `_ref` method-name selection | F3 only (its `isBorrowedSoaReceiver`); RT2/RT3 never - `ir_lowerer`'s borrowed/owned renaming happens downstream, inside `IrLowererSetupTypeCollectionHelpers.cpp`'s registry-backed helper-name resolution, not as a receiver-type-inference output at all |
-| `isArgsPackElement` / `elemSlotCount` | args-pack storage-layout facts | **open question, not resolved this round** - see below |
+| ~~`isArgsPackElement` / `elemSlotCount`~~ | args-pack storage-layout facts | **removed from the struct** - resolved this round (2026-09-10) as belonging to neither `CanonicalReceiverType`'s output nor a new stage-specific input field; see "Open question, resolved" below |
 
 ### Mapping each site onto the struct
 
@@ -4574,6 +4574,207 @@ outside inference proper) rather than adding `isArgsPackElement`/
 `elemSlotCount` output fields to `CanonicalReceiverType` at all - which
 would make the sketch file's current placeholder fields for these two
 facts non-final, pending that decision.
+
+### Open question, resolved (2026-09-10): args-pack storage facts belong in NEITHER `CanonicalReceiverType`'s output NOR a new stage-specific input field
+
+Traced concretely rather than guessed at, per this round's task. The
+question as originally framed offered two options - shared output field,
+or stage-specific input field - and assumed F2 (monomorphization) and
+RT3b-i (`ir_lowerer`) were the same underlying question answered two
+different ways. Tracing both functions' actual bodies shows that
+assumption is wrong in a way that dissolves the question rather than
+forcing a pick between the two offered options.
+
+**RT3b-i is not a separate function consulting an external input - it is
+inline inference, already fed by inputs `resolveReceiverType` already has.**
+`resolveMethodReceiverTarget`'s `Call`-kind sub-cascade
+(`IrLowererSetupTypeReceiverTargetHelpers.cpp:556-705`) is one function,
+one cascade: RT3a (`Name`-kind, delegating to RT2), RT3b's args-pack
+branch (lines 620-705), RT3b's later dereference/bare-key-value/fallback
+branches, and RT3c (the `typeNameForValueKind` fallback) all live in the
+same `if`/`else if` chain inside the same function, filling the exact
+same `typeNameOut`/`resolvedTypePathOut` output parameters. RT3b-i's own
+"is this receiver an args-pack access" test
+(`localIt->second.isArgsPack`, line 627) reads a field directly off the
+`LocalInfo` the function already looked up from the `LocalMap` parameter
+it already takes - `argsPackElementKind` (line 18 of
+`IrLowererSharedTypes.h`) is likewise already sitting on that same
+`LocalInfo`. Nothing new needs to reach the function from outside; the
+"input" the open question worried about is already part of the existing
+`Expr`+`LocalMap` input shape `resolveReceiverType` would take regardless
+of args-pack handling. And RT3b-i's args-pack branches terminate exactly
+like every other branch in the cascade - by setting `typeNameOut`/
+`resolvedTypePathOut` and returning `true` - so nothing downstream ever
+receives a separate "this came from an args-pack" signal either;
+confirmed by grepping `ReceiverElementFamilyClassifier.{h,cpp}` for
+`isArgsPack`/`ArgsPackElement`: zero matches. The classifier that
+`resolveReceiverType`'s output eventually feeds never consults
+args-pack-ness at all. The fact is produced, consumed, and fully resolved
+into an ordinary `collectionBaseName`/`resolvedTypePath` answer entirely
+*inside* inference - it has no reason to be a named field on either side
+of the interface.
+
+**Monomorphization's F2 is not RT3b-i's counterpart - it is F3-C3a's.**
+`resolveIndexedArgsPackMapMethodTarget`
+(`TemplateMonomorphMethodTargets.cpp:322-372`, invoked at line 474, after
+F3's entire receiver-type-inference cascade at lines 397-473 has already
+run) never reads any of F3's outputs. It independently re-looks-up the
+pack receiver (`receiver.args.front()`) in `locals` and re-derives its
+own `elemType`/`keyType`/`valueType` via `getArgsPackElementType`/
+`extractKeyValueCollectionTypesFromTypeText` (lines 333-345), entirely
+disjoint from F3's `typeName`/`wrappedReceiverTypeName`/
+`isBorrowedSoaReceiver`. When F2 matches, it computes its own `pathOut`
+(line 369) and returns `true` directly - short-circuiting
+`classifyReceiverElementFamilyJoint` and the entire F6-F16
+family-dispatch cascade exactly the way F3-C3a does, for the same
+structural reason: it answers "what is the fully resolved method-target
+path for this call", a *resolution* question, not "what type does this
+receiver have", an *inference* question. F2 is a second instance of the
+F3-C3a shape, not a divergent implementation of RT3b-i's shape - the
+design doc's own note under F3-C3a already observed this in passing
+("mirroring how F2's args-pack-map shape already runs as a wholly
+separate pre/post step around F3 today") without yet drawing the
+conclusion that this makes F2 (not RT3b-i) its true structural sibling.
+
+**Conclusion: `isArgsPackElement` and `elemSlotCount` are removed from
+`CanonicalReceiverTypeSketch.h` outright, not retained as placeholders on
+either side of the interface.** Two independent reasons, one per field:
+
+- `elemSlotCount` is not a receiver-type-inference fact in either stage to
+  begin with. In `ir_lowerer` it is computed exclusively inside
+  `IrLowererAccessTargetResolution.cpp`, onto `ArrayVectorAccessTargetInfo`
+  (`IrLowererCallHelperTypes.h:75-86`) - a distinct struct for a distinct,
+  downstream *call/access-target-resolution* concern (codegen slot
+  layout, consumed by `IrLowererIndexedAccessEmit.cpp`,
+  `IrLowererLowerStatementsCallsStep.cpp`, etc.), never appearing anywhere
+  in RT2/RT3's own file. Monomorphization has no elemSlotCount-shaped
+  concept anywhere. Nothing in receiver-type inference, in either stage,
+  ever needs to produce or consume it.
+- `isArgsPackElement` is fully internal to `ir_lowerer`'s inference (see
+  above - already derivable from the existing `Expr`+`LocalMap` input,
+  never surfaced to any consumer) and, on the monomorphization side, is
+  the wrong stage's field entirely - the thing that needs representing
+  there is F2's pre-step/short-circuit status, which is exactly the
+  F3-C3a shape already ruled out of `CanonicalReceiverType` above, not a
+  type-inference fact.
+
+**Practical implication for a future implementation round:** a
+monomorphization-side `resolveReceiverType` needs to keep F2 as call-site
+logic that runs *before* (or instead of) calling into
+`resolveReceiverType` at all for a given call site - same guidance as
+F3-C3a, and for the same reason. An `ir_lowerer`-side `resolveReceiverType`
+needs no special accommodation for args-pack receivers beyond passing it
+the `Expr` and `LocalMap` it needs anyway; RT3b-i's args-pack branches
+port into its body unchanged, reading `LocalInfo::isArgsPack`/
+`argsPackElementKind` exactly as they do today, with no new parameter and
+no new output field. Both stages' `resolveReceiverType` end up with the
+identical `CanonicalReceiverType` output shape after this resolution -
+the struct did not grow to accommodate either stage's args-pack handling,
+which is the strongest evidence available that this was a genuine
+non-issue once traced, not two stages disagreeing about a real shared
+concern.
+
+### Final sanity pass over the full sketch (2026-09-10, this round)
+
+Re-read `CanonicalReceiverTypeSketch.h` fresh against F3, RT2, RT3/G7, and
+F2's characterizations together (not just the args-pack field in
+isolation), specifically looking for any other field or asymmetry the
+prior round's mapping might have missed:
+
+- `family`/`collectionBaseName`/`resolvedTypePath` - re-verified RT2's
+  `typeNameOut`/`resolvedTypePathOut` bifurcation
+  (`IrLowererSetupTypeReceiverTargetHelpers.cpp:539-540`) and F3's single
+  `typeName` text (`TemplateMonomorphMethodTargets.cpp:397`) against the
+  struct; the composition note's account of both still matches the code
+  read this round. No change.
+- `isTemplateShaped`/`templateShapedBaseName`/`templateArgTexts` - no new
+  evidence found this round that either stage retains parsed template-arg
+  texts beyond an arg-count probe; the "aspirational" framing already in
+  the sketch still holds.
+- `isWrapped`/`wrappedBaseTypeName` - re-confirmed F3's asymmetric
+  `wrappedReceiverTypeName` (set at lines 401, 416, 450, 460 - the C2
+  fallback at line ~422-425 is the one path that leaves it stale) against
+  RT2/RT3's direct `LocalInfo::Kind::Reference`/`Pointer` derivation;
+  matches the sketch's existing note, no change needed.
+- `isBorrowed` - re-confirmed `isBorrowedSoaReceiver` is set at every F3
+  assignment site (lines 402, 417, 424, 451, 461) and that RT2/RT3 never
+  set an equivalent field anywhere in
+  `IrLowererSetupTypeReceiverTargetHelpers.cpp`; matches the sketch's
+  existing note.
+- Double-checked and confirmed NOT a gap: whether RT3b-i's `FileError`/
+  `File` args-pack branches (lines 628-641) need a field beyond
+  `collectionBaseName` to represent "resolved via an args-pack access" -
+  they don't, since (as established above) nothing downstream of
+  `resolveReceiverType`'s output ever needs that fact separately from the
+  type name itself.
+
+**No further gaps found this round.** The struct, as amended by this
+round's args-pack-field removal, is judged ready for a future
+implementation round to build against as-is; the remaining open item is
+not a missing field but the F3-C3a/F2 call-site-logic carve-out already
+documented above (unchanged from last round), which by design lives
+outside this struct rather than inside it.
+
+### Ready to implement: checklist for the next round
+
+This round concludes the design-scoping phase for `CanonicalReceiverType`
+- both design questions Step 1c set out to resolve (the F3-C3a
+irreconcilable case, and this round's args-pack-fact placement question)
+now have grounded answers, and the final sanity pass above found no
+further gaps. A future implementation round should, in order:
+
+1. **Move `CanonicalReceiverTypeSketch.h`'s content into a real,
+   compiling header** (e.g. `include/primec/support/CanonicalReceiverType.h`),
+   replacing the placeholder `int family` with the real
+   `primec::ReceiverElementFamily` enum, deleting the sketch-only
+   commentary, and wiring it into exactly one build target to start -
+   whichever of the two stages goes first (see next item).
+2. **Pick one stage to implement first** - `ir_lowerer`'s RT2/RT3/G7 is the
+   better first candidate: it already bifurcates `typeNameOut`/
+   `resolvedTypePathOut` the way the struct wants, needs no new
+   builtin-vs-struct classification step the way F3 does, and per this
+   round's finding needs zero new machinery for args-pack handling -
+   the smallest first slice. Implement `resolveReceiverType` for that
+   stage ONLY, as a new function living alongside the existing
+   `resolveMethodReceiverTypeFromLocalInfo`/`resolveMethodReceiverTarget`
+   - do not delete or modify those yet.
+3. **Harness it exactly the way the classifier migrations were harnessed**
+   (see the F7/F9/F11/F13 "Wiring mechanics"/"Verification" write-ups
+   above for the pattern): an `isReceiverTargetDiffAuditEnabled()`-gated
+   block that runs the new `resolveReceiverType` *alongside* the existing
+   ad hoc inference logic it is meant to replace, compares every field of
+   its `CanonicalReceiverType` output against what the existing code path
+   would have produced (not just the final family verdict - `isWrapped`/
+   `isBorrowed`/`resolvedTypePath` too, since those are exactly the fields
+   this design added beyond what the classifier alone covers), and
+   logs/asserts on any divergence. Purely observational; production's own
+   existing code path stays untouched and authoritative during this
+   phase.
+4. **Prove zero-divergence across the full 3-suite battery** (semantics/
+   backend_ir/compile_run) with the audit flag set, using the same
+   fresh-baseline-first discipline documented in this file's other
+   "Verification" sections (stash to a clean baseline, run once to record
+   baseline failing-test-name sets, then run the harnessed build and diff
+   the failing-name sets, not raw pass/fail counts, since this project's
+   suites carry pre-existing unrelated failures) - only once this is
+   clean should the next step touch dispatch.
+5. **Only after zero-divergence is proven**, wire the real call site
+   (starting with the narrowest one - e.g. RT3a's `Name`-kind delegation
+   to RT2, which per this round's mapping is the most direct fit) to
+   consume `resolveReceiverType`'s `CanonicalReceiverType` output instead
+   of the raw `(type-text, templateShape)` pair it builds today, and
+   retire the harness for that call site. Repeat per call site, not all
+   at once - this document's own Step 1b migrations (F7 then F9/F11 then
+   F13) already established that one-clean-fit-at-a-time is the safe
+   cadence here.
+6. **Keep F3-C3a and F2 (monomorphization) as call-site pre-steps outside
+   `resolveReceiverType`/`CanonicalReceiverType`**, per both this round's
+   and last round's findings - do not attempt to fold either into the
+   shared struct or function when monomorphization's turn comes.
+7. Do not implement both stages' `resolveReceiverType` in the same round;
+   this document's own Step 0/Step 1b history (one clean-fit slice per
+   round, verified end-to-end before starting the next) is the pattern to
+   keep following here too.
 
 ### Supersedes/refines, does not contradict, the original Step 1b/Step 2 plan
 

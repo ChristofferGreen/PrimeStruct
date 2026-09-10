@@ -136,31 +136,60 @@ struct CanonicalReceiverType {
   // dispatch stays exactly where it lives today, outside this struct.
   bool isBorrowed = false;
 
-  // --- Args-pack storage facts (elemSlotCount/isArgsPack from the task
-  // background, and TODO-5289's elemSlotCount/isSingleSlotPointerStyleKeyValueStorage
-  // predicates).
+  // --- Args-pack storage facts: RESOLVED this round (2026-09-10), removed
+  // from the struct rather than added as a placeholder. See the "Open
+  // question, resolved" subsection of the Step 1c section in
+  // docs/ReceiverTargetResolutionConsolidation.md for the full trace; the
+  // one-line version:
   //
-  // OPEN QUESTION, not resolved by this sketch: ir_lowerer's RT3b-i
-  // sub-cascade keys its *entire* family classification off a distinct
-  // `argsPackElementKind` (not the receiver's own plain LocalInfo::Kind) -
-  // i.e. "is this receiver an args-pack element, and what element kind
-  // does it have" is an INPUT ir_lowerer's inference needs before it can
-  // decide family at all, not a fact only worth reporting on the way out.
-  // Monomorphization's F3, by contrast, does not consult args-pack-ness
-  // during type inference at all - args-pack handling there lives entirely
-  // in the sibling function F2 (resolveIndexedArgsPackMapMethodTarget),
-  // which runs AFTER F3 and unconditionally discards whatever F3 inferred
-  // if it fires. So it is genuinely unclear from the currently
-  // characterized code whether isArgsPackElement/elemSlotCount belong
-  // INSIDE CanonicalReceiverType as an inference OUTPUT fact (ir_lowerer's
-  // shape) or as part of the STAGE-SPECIFIC INPUT to resolveReceiverType,
-  // sitting entirely outside this struct (monomorphization's shape,
-  // where it is a separate, higher-priority cascade rather than a fact
-  // folded into type inference). Included here as placeholder fields with
-  // this note attached rather than silently picking one stage's shape as
-  // canonical.
-  bool isArgsPackElement = false;
-  int elemSlotCount = -1;  // -1 == not applicable / not determined
+  // - `elemSlotCount` is not a receiver-type-inference fact at all in
+  //   either stage. In ir_lowerer it is computed exclusively inside
+  //   `IrLowererAccessTargetResolution.cpp` onto a wholly different struct,
+  //   `ArrayVectorAccessTargetInfo` (`IrLowererCallHelperTypes.h`), which
+  //   is itself downstream of and structurally separate from RT2/RT3
+  //   (`IrLowererSetupTypeReceiverTargetHelpers.cpp`) - a call/access
+  //   *target-resolution* (post-classification, codegen slot-layout)
+  //   concern, not a "what type does this receiver have" concern. It never
+  //   appears anywhere near RT2/RT3's own code. Monomorphization's F2/F3
+  //   have no elemSlotCount-shaped concept at all. This field does not
+  //   belong in CanonicalReceiverType, on the input OR the output side.
+  //
+  // - `isArgsPackElement`: traced RT3b-i concretely
+  //   (`IrLowererSetupTypeReceiverTargetHelpers.cpp:556-705`,
+  //   `resolveMethodReceiverTarget`'s `Call`-kind sub-cascade) - it is NOT
+  //   a separate function consulting an external input the way the open
+  //   question's framing assumed. It is inline, in the SAME cascade as
+  //   RT3a/RT3c, filling the SAME `typeNameOut`/`resolvedTypePathOut`
+  //   output parameters as every other branch, and its own "is this an
+  //   args-pack access" determination (`localIt->second.isArgsPack`) is
+  //   read directly off the `LocalInfo` the function already looks up from
+  //   the `LocalMap` it already takes as a parameter - no NEW input field
+  //   is needed, the fact is already present in the existing input shape.
+  //   `classifyReceiverElementFamilyJoint` itself never consults args-pack-
+  //   ness anywhere (verified: zero matches for isArgsPack/ArgsPackElement
+  //   in ReceiverElementFamilyClassifier.{h,cpp}) - nothing downstream ever
+  //   needs it surfaced as an output fact either. It is fully absorbed,
+  //   internally, into the ordinary collectionBaseName/resolvedTypePath
+  //   answer.
+  //
+  //   Monomorphization's F2 (`resolveIndexedArgsPackMapMethodTarget`,
+  //   `TemplateMonomorphMethodTargets.cpp:322-372`, called at line 474) is
+  //   NOT the same question reinvented - traced concretely, it is a
+  //   genuinely separate closure called AFTER F3's entire cascade
+  //   completes, that never reads any of F3's outputs (`typeName`/
+  //   `wrappedReceiverTypeName`/`isBorrowedSoaReceiver`) at all; it
+  //   independently re-looks-up the pack receiver in `locals` and
+  //   re-derives `elemType` via `getArgsPackElementType`, then returns its
+  //   own fully-resolved `pathOut` directly, short-circuiting
+  //   classification entirely - structurally identical to F3-C3a (the
+  //   already-documented irreconcilable case above), not to RT3b-i. F2
+  //   belongs outside `resolveReceiverType`/`CanonicalReceiverType` as a
+  //   call-site pre-step, exactly like F3-C3a; RT3b-i belongs INSIDE
+  //   `resolveReceiverType`, using inputs the function already has, with
+  //   no new field anywhere. So the two originally-sketched placeholder
+  //   fields for this (isArgsPackElement/elemSlotCount) were deliberately
+  //   deleted from this struct, not left in place - the shared struct
+  //   needs nothing for args-pack facts on either side.
 };
 
 }  // namespace primec
