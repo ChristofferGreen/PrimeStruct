@@ -1734,6 +1734,43 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     writeup). This task stays open, not `[x]` - Step 1c's design-scoping is
     now done, but implementation (the checklist above) has not started, and
     the overall consolidation effort remains far from complete.
+  - implementation_notes (2026-09-10, first implementation round): per the
+    "Ready to implement" checklist, promoted the design sketch into a real,
+    compiling header (`include/primec/support/CanonicalReceiverType.h`,
+    `primec::CanonicalReceiverType` with the real `ReceiverElementFamily`
+    field type) and implemented `ir_lowerer`'s `resolveReceiverType(const
+    LocalInfo &, CanonicalReceiverType &)` - RT2's logic
+    (`resolveMethodReceiverTypeFromLocalInfo`,
+    `IrLowererSetupTypeReceiverTargetHelpers.cpp`) - as a new, INDEPENDENTLY
+    written sibling function living alongside the existing one, which stays
+    100% unmodified in its own computation/control-flow. Wired an
+    observational `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`-gated diff-audit
+    harness (one `auditReceiverTypeAgainstLocalInfo(...)` call before each of
+    `resolveMethodReceiverTypeFromLocalInfo`'s ~14 `return` statements,
+    matching the exact wiring-mechanics pattern the classifier migrations
+    used) comparing the new function's `collectionBaseName`/`resolvedTypePath`/
+    result against the legacy function's about-to-be-returned values. Fresh
+    baseline taken via `git stash` before any change (semantics 1/2766,
+    backend_ir 46/1646, compile_run 5/2679 failing - all matching this
+    document's already-recorded pre-existing baseline). Zero-divergence
+    proof: ran the full 3-suite battery with the audit flag set - 0
+    `[receiver-target-diff-audit]` MISMATCH lines in all three suites, same
+    failure counts as baseline. Unchanged-default-behavior proof: with the
+    flag unset, 2 reruns per suite, failing-test-case-NAME sets
+    byte-identical to the freshly-taken baseline in all 6 runs (`diff`
+    empty). Did NOT migrate any call site (the old function remains the sole
+    production code path) and did NOT implement monomorphization's F3 side
+    this round, per the checklist's own "one stage per round" discipline.
+    No new gaps or quirks surfaced - RT2's cascade ported into
+    `resolveReceiverType` exactly as characterized in the Step 1c scoping
+    round, with `family`/template-shape facts/`isBorrowed` left at their
+    struct defaults (RT2 has no method name to hand to
+    `classifyReceiverElementFamilyJoint`, and no template-shape or
+    borrowed-ness facts in its own input, matching the design doc's
+    composition note). Full writeup: `docs/ReceiverTargetResolutionConsolidation.md`'s
+    new "Step 1c, first implementation round" section. This task stays open
+    - RT2's slice is harnessed and proven, not migrated; RT3/G7 and F3
+    remain unimplemented.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

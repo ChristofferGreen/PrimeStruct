@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/CanonicalReceiverType.h"
 
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSharedTypes.h"
@@ -51,6 +52,18 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
 bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
                                             std::string &typeNameOut,
                                             std::string &resolvedTypePathOut);
+
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): the new,
+// CanonicalReceiverType-producing sibling of
+// resolveMethodReceiverTypeFromLocalInfo above, covering the identical
+// LocalInfo->type-family cascade (RT2 in the design doc's Step 0 Rule
+// Table). This round wires it ONLY behind an observational diff-audit
+// harness inside resolveMethodReceiverTypeFromLocalInfo itself
+// (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1) - resolveMethodReceiverTypeFromLocalInfo
+// remains the sole production code path; no call site has been switched to
+// call this function directly yet. See CanonicalReceiverType.h for why
+// `family`/template-shape/`isBorrowed` are never filled by this function.
+bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
                                                       const ResolveReceiverExprPathFn &resolveExprPath = {});

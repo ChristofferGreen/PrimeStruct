@@ -14,6 +14,7 @@
 #include "primec/ast/Ast.h"
 #include "primec/ir/Ir.h"
 #include "primec/frontend/SemanticProduct.h"
+#include "primec/support/CanonicalReceiverType.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererGpuEffects.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererNativeEffects.h"

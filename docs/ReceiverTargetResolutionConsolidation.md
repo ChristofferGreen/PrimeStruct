@@ -4776,6 +4776,180 @@ further gaps. A future implementation round should, in order:
    round, verified end-to-end before starting the next) is the pattern to
    keep following here too.
 
+## Step 1c, first implementation round: `resolveReceiverType` for `ir_lowerer`'s RT2, harnessed, zero-divergence achieved (2026-09-10)
+
+Following the previous round's "Ready to implement" checklist in order.
+This round implements exactly checklist items 1-4: promote the sketch to a
+real header, implement RT2's `resolveReceiverType` (the "smallest first
+slice" the checklist identified), harness it observationally, and prove
+zero-divergence. Items 5-7 (real call-site migration, F3, and doing both
+stages in one round) are explicitly **not** attempted this round.
+
+### What got promoted from sketch to real code
+
+`include/primec/support/CanonicalReceiverTypeSketch.h`'s content moved into
+a new, real, compiling header,
+`include/primec/support/CanonicalReceiverType.h` (`primec::CanonicalReceiverType`),
+replacing the placeholder `int family` with the real `ReceiverElementFamily`
+enum (via `#include "primec/support/ReceiverElementFamilyClassifier.h"`)
+and stripping the sketch-only "not wired into any build target" framing -
+the struct is now a genuine, header-only data type included from production
+code (`src/ir_lowerer/IrLowererSetupTypeHelpers.h`, and the corresponding
+`include/primec/testing/IrLowererHelpers.h`/`ir_lowerer_helpers/IrLowererSetupTypeHelpers.h`
+testing mirror). The old sketch file is left in place, untouched, as
+historical record of the design-scoping round; nothing references it
+anymore.
+
+`ir_lowerer`'s `resolveReceiverType(const LocalInfo &localInfo,
+CanonicalReceiverType &out) -> bool` is implemented in
+`IrLowererSetupTypeReceiverTargetHelpers.cpp`, immediately after
+`resolveMethodReceiverTypeFromLocalInfo` (RT2). It is a deliberately
+**independent reimplementation** of RT2's cascade - not a thin wrapper
+delegating to RT2 and copying its two out-parameters into the struct - so
+that the diff-audit harness (below) is a genuine two-implementation
+comparison, not a tautology that could hide a shared bug. It fills
+`collectionBaseName`/`resolvedTypePath` exactly as RT2's own
+`typeNameOut`/`resolvedTypePathOut` bifurcation does, and additionally
+fills `isWrapped`/`wrappedBaseTypeName` (true whenever the successful
+resolution came from a `LocalInfo::Kind::Reference`/`Pointer` branch -
+RT2 itself tracks no such fact, so this is new information, not something
+diffed against). Per `CanonicalReceiverType.h`'s own documented rationale,
+`family`, the template-shape fields, and `isBorrowed` are left at their
+struct defaults - `family` because RT2 has no method name to hand
+`classifyReceiverElementFamilyJoint` (that composition is a future
+call-site-level concern, per the prior round's composition note); the
+others because RT2's own `LocalInfo`-only input carries neither fact at
+all.
+
+One genuine implementation subtlety worth recording (not a divergence, a
+faithful-reproduction note): RT2's own cascade checks `!structTypeName.empty()`
+unconditionally as its *second* branch, before any `LocalInfo::Kind` check -
+so a `Reference`/`Pointer`-kind local with a populated `structTypeName`
+resolves there, not in the later `kind == Reference && !structTypeName.empty()`
+branch (which is dead code in RT2 as written, always pre-empted by the
+earlier check). `resolveReceiverType` reproduces this exact branch order
+and does not mark `isWrapped` for that early branch (only the
+`Kind`-gated branches below it set `isWrapped`) - a deliberate choice, not
+an oversight: RT2 has no field there to disagree with, so there is nothing
+for the harness to diff on this point either way.
+
+### What got harnessed and how
+
+`resolveMethodReceiverTypeFromLocalInfo` (RT2) itself is **unmodified** in
+every computed value and every `return`'s control flow. The only addition:
+one `auditReceiverTypeAgainstLocalInfo(localInfo, <result>, typeNameOut,
+resolvedTypePathOut)` call inserted immediately before each of its ~14
+`return` statements - the same "one audit call per existing return"
+wiring-mechanics pattern the classifier's Step 1b harnesses used at
+`resolveArgsPackElementMethodTarget` and the monomorphization call sites.
+`auditReceiverTypeAgainstLocalInfo` (a file-local helper in
+`IrLowererSetupTypeReceiverTargetHelpers.cpp`) is gated by the existing
+`isReceiverTargetDiffAuditEnabled()` (`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`
+env var) - a no-op, single boolean check, when unset. When set, it
+independently calls `resolveReceiverType(localInfo, canonical)` fresh and
+compares `canonical.collectionBaseName`/`canonical.resolvedTypePath`/the
+boolean result against the values RT2 is about to return, logging a
+`[receiver-target-diff-audit] MISMATCH (RT2/resolveReceiverType): ...` line
+to stderr (plus a debug-only `assert`, a no-op in this Release build) on
+any disagreement. `isWrapped`/`isBorrowed`/`family`/template-shape fields
+are **not** part of this comparison - RT2 produces no equivalent value for
+any of them (see above), so there is nothing on the legacy side to diff
+against; this is the same "some fields aren't filled by a given stage, and
+that's fine" allowance the design doc's own field-list table already
+documents, not a gap in the harness.
+
+### Zero-divergence proof
+
+Fresh baseline taken via `git stash -u` to a clean tree, rebuilt, and run
+(foreground, one suite per call) before any of this round's code existed:
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+All three match this document's already-recorded pre-existing baseline
+(the same single `soa reads` semantics flake, the same 46 `backend_ir`
+names, the same 5 `compile_run` names - `map`-conformance-related, not
+receiver-target-related). `git stash pop` restored this round's changes;
+rebuilt clean (no warnings/errors); reran the same battery with
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`:
+
+| suite | test cases | failed | assertions | failed | `[receiver-target-diff-audit]` MISMATCH lines |
+|---|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 | **0** |
+| backend_ir | 1646 | 46 | 16428 | 137 | **0** |
+| compile_run | 2679 | 5 | 15278 | 8 | **0** |
+
+Zero mismatch lines in all three suites, identical failure counts to
+baseline - `resolveReceiverType` agrees with `resolveMethodReceiverTypeFromLocalInfo`
+on every call made across the full battery on the first attempt; no
+classifier/implementation iteration was needed.
+
+### Unchanged-default-behavior proof
+
+With the env var unset (default), ran each suite **twice** (foreground,
+one call each) and diffed the sorted set of failing test-case *names*
+against the freshly-taken baseline above (not just pass/fail counts):
+
+- `PrimeStruct_semantics_tests`: both reruns' failing-name set exactly
+  `{"semantic product validates direct return method-like borrowed
+  helper-return experimental soa reads"}`, matching baseline - `diff`
+  empty both times.
+- `PrimeStruct_backend_ir_tests`: both reruns' 46-name failing set
+  identical to baseline - `diff` empty both times.
+- `PrimeStruct_compile_run_tests`: both reruns' 5-name failing set
+  (`C++ emitter runs canonical map reference string access`, `map
+  wildcard import rejects stdlib-owned surface in C++ emitter`, `runs
+  collection literals with map at in C++ emitter`, `runs vm canonical map
+  reference string access with imported canonical helpers`, `runs vm
+  shared stdlib map conformance harness`) identical to baseline - `diff`
+  empty both times.
+
+Total test-case counts are unchanged in all three suites (no test files
+added or modified this round). Production behavior of
+`resolveMethodReceiverTypeFromLocalInfo` - the only function any real call
+site still calls - is proven unchanged by construction (its own code is
+untouched) and confirmed unchanged in practice by the byte-identical
+failing-name sets across all 6 post-change runs (2 reruns × 3 suites).
+
+### What this round deliberately did not do
+
+Per the checklist's own explicit ordering and "one stage per round"
+discipline:
+
+- No real call site was migrated to consume `resolveReceiverType`'s
+  output - `resolveMethodReceiverTypeFromLocalInfo` remains the sole
+  production code path everywhere it's called. That is checklist item 5,
+  for a future round.
+- Monomorphization's F3-side `resolveReceiverType` was not attempted -
+  checklist item 7 ("don't implement both stages in one round").
+  Monomorphization's F3-C3a and F2 call-site pre-steps remain exactly
+  where the prior round's design work placed them (outside
+  `resolveReceiverType`/`CanonicalReceiverType` entirely) - unchanged,
+  since no monomorphization code was touched this round at all.
+- RT3/RT3b/RT3c/G7 (`resolveMethodReceiverTarget`) were not implemented -
+  only RT2 (`resolveMethodReceiverTypeFromLocalInfo`), the narrowest slice
+  the prior round identified. RT3a's eventual delegation to RT2's mapping
+  (the checklist's suggested first real call-site migration target) still
+  needs its own round.
+
+### No new quirks or gaps found
+
+Unlike some earlier classifier-migration rounds, this round found no new
+production quirk while writing `resolveReceiverType` - RT2's cascade,
+traced and re-verified during the prior round's scoping work, ported
+directly with zero surprises, and the harness confirmed this empirically
+(zero divergence on the first attempt, no iteration needed). The one
+implementation subtlety noted above (the dead-code `Reference &&
+!structTypeName.empty()` branch, pre-empted by the earlier unconditional
+`structTypeName` check) is a faithful reproduction of existing RT2
+behavior, not a new finding - the prior round's re-grounding section
+already read this cascade in full and did not flag it as a gap, and this
+round's independent reimplementation confirms that reading was accurate by
+matching it exactly.
+
 ### Supersedes/refines, does not contradict, the original Step 1b/Step 2 plan
 
 This section describes a new phase - tentatively **Step 1c** - that sits

@@ -46,6 +46,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
 bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
                                             std::string &typeNameOut,
                                             std::string &resolvedTypePathOut);
+bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
                                                       const ResolveReceiverExprPathFn &resolveExprPath = {});
