@@ -49,19 +49,13 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const IsMethodCallClassifierFn &isEntryArgsName,
                                    const Expr *&receiverOut,
                                    std::string &errorOut);
-bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
-                                            std::string &typeNameOut,
-                                            std::string &resolvedTypePathOut);
-
-// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): the new,
-// CanonicalReceiverType-producing sibling of
-// resolveMethodReceiverTypeFromLocalInfo above, covering the identical
-// LocalInfo->type-family cascade (RT2 in the design doc's Step 0 Rule
-// Table). This round wires it ONLY behind an observational diff-audit
-// harness inside resolveMethodReceiverTypeFromLocalInfo itself
-// (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1) - resolveMethodReceiverTypeFromLocalInfo
-// remains the sole production code path; no call site has been switched to
-// call this function directly yet. See CanonicalReceiverType.h for why
+// Step 1c/Step 2 (docs/ReceiverTargetResolutionConsolidation.md): the
+// consolidated LocalInfo->type-family cascade for RT2 in the design doc's
+// Step 0 Rule Table - the sole production implementation of this cascade
+// (the old resolveMethodReceiverTypeFromLocalInfo, with its separate
+// (typeNameOut, resolvedTypePathOut) output-parameter shape, has been
+// removed; its fields now live as CanonicalReceiverType's
+// collectionBaseName/resolvedTypePath). See CanonicalReceiverType.h for why
 // `family`/template-shape/`isBorrowed` are never filled by this function.
 bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,

@@ -1771,6 +1771,48 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     new "Step 1c, first implementation round" section. This task stays open
     - RT2's slice is harnessed and proven, not migrated; RT3/G7 and F3
     remain unimplemented.
+  - implementation_notes (2026-09-10, RT2 real call-site migration):
+    completed checklist item 5 for RT2. Inspected the uncommitted diff left
+    from a prior round's container restart in full before touching
+    anything; it was sound as delivered - no edits needed. Migrated
+    `resolveMethodReceiverTypeFromNameExpr` (RT2's sole production caller)
+    to call `resolveReceiverType` directly and adapt its
+    `CanonicalReceiverType` output into the existing `(typeNameOut,
+    resolvedTypePathOut)` shape; deleted the old 17-branch
+    `resolveMethodReceiverTypeFromLocalInfo` and its
+    `auditReceiverTypeAgainstLocalInfo` diff-audit harness outright, along
+    with both forward declarations (`src/ir_lowerer/IrLowererSetupTypeHelpers.h`
+    and the testing mirror). A whole-repo grep for
+    `resolveMethodReceiverTypeFromLocalInfo` post-deletion turns up only
+    comments/prose (this doc, the consolidation doc, and the historical
+    `CanonicalReceiverTypeSketch.h`) - no remaining call sites. The one
+    direct unit test exercising RT2 by name got a small file-local
+    `resolveReceiverTypeAsLegacyOutParams` adapter re-exposing the old
+    two-out-parameter shape, preserving identical coverage without
+    rewriting test bodies. Left the shared
+    `isReceiverTargetDiffAuditEnabled()` env-gate helper in
+    `ReceiverElementFamilyClassifier.cpp`/`.h` in place (reusable
+    infrastructure for future RT3/G7 harnesses, out of scope for this
+    single call-site migration) even though it has no remaining caller as
+    of this round. Verification: fresh baseline via `git stash -u` back to
+    the clean `b617485fd` tree, rebuilt, ran all three suites once
+    (semantics 2767/1 failed, backend_ir 1646/46 failed, compile_run
+    2679/5 failed - identical to every prior session's recorded baseline,
+    no drift). `git stash pop` restored the migration, rebuilt clean (no
+    warnings/errors), ran the full battery two more times, all foreground
+    (compile_run_tests run detached-and-`wait`ed on its own known PID
+    within a single foreground call each time, since its runtime exceeds
+    the harness's per-call timeout). Every run's counts matched exactly;
+    the sorted failing-test-case-*name* set was byte-identical in all
+    pairwise comparisons (baseline vs run1, baseline vs run2) across all
+    three suites - `diff` empty in every case. Net -150 lines across the
+    five changed files (69 insertions, 219 deletions); the production
+    `.cpp` file alone nets -159 lines. Full writeup:
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1c, real
+    call-site migration" section. This task stays open - RT2 is now fully
+    migrated (no duplicate implementation, no harness scaffolding left at
+    this call site), but RT3/RT3b/RT3c, G7's `Call`-kind sub-cascade, and
+    monomorphization's F3 producer remain entirely unimplemented.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

@@ -1,5 +1,23 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
+namespace {
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): resolveReceiverType
+// is now the production RT2 implementation (resolveMethodReceiverTypeFromLocalInfo
+// has been removed). This adapter re-exposes the old (typeNameOut,
+// resolvedTypePathOut) output-parameter shape these tests were written
+// against, translating from CanonicalReceiverType's collectionBaseName/
+// resolvedTypePath fields, which map onto it 1:1.
+bool resolveReceiverTypeAsLegacyOutParams(const primec::ir_lowerer::LocalInfo &localInfo,
+                                          std::string &typeNameOut,
+                                          std::string &resolvedTypePathOut) {
+  primec::CanonicalReceiverType canonical;
+  const bool result = primec::ir_lowerer::resolveReceiverType(localInfo, canonical);
+  typeNameOut = canonical.collectionBaseName;
+  resolvedTypePathOut = canonical.resolvedTypePath;
+  return result;
+}
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE(
@@ -320,20 +338,20 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
 
   LocalInfo arrayLocal;
   arrayLocal.kind = LocalInfo::Kind::Array;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(arrayLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(arrayLocal, typeName, resolvedTypePath));
   CHECK(typeName == "array");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo structArrayLocal;
   structArrayLocal.kind = LocalInfo::Kind::Array;
   structArrayLocal.structTypeName = "/pkg/Vec3";
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(structArrayLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(structArrayLocal, typeName, resolvedTypePath));
   CHECK(typeName.empty());
   CHECK(resolvedTypePath == "/pkg/Vec3");
 
   LocalInfo vectorLocal;
   vectorLocal.kind = LocalInfo::Kind::Vector;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(vectorLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(vectorLocal, typeName, resolvedTypePath));
   CHECK(typeName == "vector");
   CHECK(resolvedTypePath.empty());
 
@@ -346,13 +364,13 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   mapLocal.kind = LocalInfo::Kind::Value;
   mapLocal.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   mapLocal.keyValueValueKind = LocalInfo::ValueKind::Int32;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(mapLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(mapLocal, typeName, resolvedTypePath));
   CHECK(typeName == "map");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo bufferLocal;
   bufferLocal.kind = LocalInfo::Kind::Buffer;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(bufferLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(bufferLocal, typeName, resolvedTypePath));
   CHECK(typeName == "Buffer");
   CHECK(resolvedTypePath.empty());
 
@@ -360,35 +378,35 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   soaVectorLocal.kind = LocalInfo::Kind::Value;
   soaVectorLocal.valueKind = LocalInfo::ValueKind::Unknown;
   soaVectorLocal.isSoaVector = true;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(soaVectorLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(soaVectorLocal, typeName, resolvedTypePath));
   CHECK(typeName == "soa");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo referenceArrayLocal;
   referenceArrayLocal.kind = LocalInfo::Kind::Reference;
   referenceArrayLocal.referenceToArray = true;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(referenceArrayLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(referenceArrayLocal, typeName, resolvedTypePath));
   CHECK(typeName == "array");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo referenceBufferLocal;
   referenceBufferLocal.kind = LocalInfo::Kind::Reference;
   referenceBufferLocal.referenceToBuffer = true;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(referenceBufferLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(referenceBufferLocal, typeName, resolvedTypePath));
   CHECK(typeName == "Buffer");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo pointerBufferLocal;
   pointerBufferLocal.kind = LocalInfo::Kind::Pointer;
   pointerBufferLocal.pointerToBuffer = true;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(pointerBufferLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(pointerBufferLocal, typeName, resolvedTypePath));
   CHECK(typeName == "Buffer");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo valueLocal;
   valueLocal.kind = LocalInfo::Kind::Value;
   valueLocal.valueKind = LocalInfo::ValueKind::Int64;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(valueLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(valueLocal, typeName, resolvedTypePath));
   CHECK(typeName == "i64");
   CHECK(resolvedTypePath.empty());
 
@@ -397,14 +415,14 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   fileLocal.valueKind = LocalInfo::ValueKind::Int64;
   fileLocal.isFileHandle = true;
   fileLocal.structTypeName = "/std/file/File<Read>";
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(fileLocal, typeName, resolvedTypePath));
+  CHECK(resolveReceiverTypeAsLegacyOutParams(fileLocal, typeName, resolvedTypePath));
   CHECK(typeName == "File");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo unknownValueLocal;
   unknownValueLocal.kind = LocalInfo::Kind::Value;
   unknownValueLocal.valueKind = LocalInfo::ValueKind::Unknown;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(
+  CHECK(resolveReceiverTypeAsLegacyOutParams(
       unknownValueLocal, typeName, resolvedTypePath));
   CHECK(typeName.empty());
   CHECK(resolvedTypePath.empty());
@@ -418,7 +436,7 @@ TEST_CASE("ir lowerer setup type helper rejects pointer and non-array reference 
 
   LocalInfo pointerLocal;
   pointerLocal.kind = LocalInfo::Kind::Pointer;
-  CHECK_FALSE(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(
+  CHECK_FALSE(resolveReceiverTypeAsLegacyOutParams(
       pointerLocal, typeName, resolvedTypePath));
   CHECK(typeName.empty());
   CHECK(resolvedTypePath.empty());
@@ -427,7 +445,7 @@ TEST_CASE("ir lowerer setup type helper rejects pointer and non-array reference 
   resolvedTypePath = "stale";
   LocalInfo referenceLocal;
   referenceLocal.kind = LocalInfo::Kind::Reference;
-  CHECK_FALSE(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(
+  CHECK_FALSE(resolveReceiverTypeAsLegacyOutParams(
       referenceLocal, typeName, resolvedTypePath));
   CHECK(typeName.empty());
   CHECK(resolvedTypePath.empty());

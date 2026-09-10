@@ -4964,6 +4964,109 @@ classifier structurally cannot (and should not) absorb. See the updated
 "Plan" section above for where Step 1c sits in the document's own
 numbering.
 
+## Step 1c, real call-site migration: RT2's `resolveMethodReceiverTypeFromLocalInfo` deleted, `resolveReceiverType` now sole production path (2026-09-10)
+
+Checklist item 5 from the prior round ("migrate the real call site") is
+completed this round. `resolveMethodReceiverTypeFromNameExpr` - the sole
+production caller of RT2 - now calls `resolveReceiverType(it->second,
+canonical)` directly and copies `canonical.collectionBaseName` /
+`canonical.resolvedTypePath` into its own `typeNameOut` /
+`resolvedTypePathOut` out-parameters. The old 17-branch
+`resolveMethodReceiverTypeFromLocalInfo` function and its observational
+`auditReceiverTypeAgainstLocalInfo` diff-audit harness (both described in
+the section above) are deleted outright from
+`IrLowererSetupTypeReceiverTargetHelpers.cpp`, along with their forward
+declarations in both `src/ir_lowerer/IrLowererSetupTypeHelpers.h` and the
+testing mirror `include/primec/testing/ir_lowerer_helpers/IrLowererSetupTypeHelpers.h`.
+`resolveReceiverType` itself is untouched at the logic level - only its
+header comment and the header comment on `CanonicalReceiverType.h` were
+updated to describe it as the sole production implementation rather than
+an audited sibling. A whole-repo grep for
+`resolveMethodReceiverTypeFromLocalInfo` after the deletion turns up only
+comments/prose (this doc, `docs/todo.md`, and the
+`CanonicalReceiverTypeSketch.h` historical file) - no remaining call
+sites or declarations anywhere.
+
+The one direct unit test exercising RT2 by name
+(`test_ir_pipeline_validation_ir_lowerer_uninitialized_type_helpers_build_bundled_program_entry_return_runtime_and_setup.cpp`)
+was updated with a small file-local adapter,
+`resolveReceiverTypeAsLegacyOutParams`, that calls `resolveReceiverType`
+and re-exposes its `CanonicalReceiverType` output as the old
+`(typeNameOut, resolvedTypePathOut)` two-out-parameter shape the test
+cases were written against - preserving the exact same coverage (every
+`LocalInfo` shape the old test drove) without rewriting the test bodies
+themselves.
+
+The shared `isReceiverTargetDiffAuditEnabled()` /
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` env-gate helper in
+`src/support/ReceiverElementFamilyClassifier.cpp`/`.h` was deliberately
+left in place (not deleted this round) - it is shared infrastructure used
+by the harness pattern across this whole consolidation effort, and RT3/G7
+audits in future rounds are expected to reuse it. It has no remaining
+caller in production code as of this round (RT2's harness was its last
+user), but removing genuinely shared, reusable scaffolding is out of scope
+for a single call-site migration and is left for whoever lands the next
+harness or for a dedicated cleanup pass if it turns out nothing ever reuses
+it.
+
+### Verification
+
+Fresh baseline via `git stash -u` back to clean `b617485fd` (the last
+commit before this migration), rebuilt, all three suites run foreground
+(one call each; `PrimeStruct_compile_run_tests` run detached-and-`wait`ed
+on its own PID within a single foreground call, since its runtime exceeds
+the harness's single-call cap):
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+Identical counts and names to every prior round's recorded baseline.
+`git stash pop` restored the migration; rebuilt clean (no warnings or
+errors); ran the same battery **twice more** (foreground only, same
+per-suite methodology):
+
+| run | semantics failed | backend_ir failed | compile_run failed |
+|---|---|---|---|
+| baseline | 1 | 46 | 5 |
+| run 1 (migration applied) | 1 | 46 | 5 |
+| run 2 (migration applied) | 1 | 46 | 5 |
+
+For all three suites, the sorted set of failing test-case *names* (not
+just counts) was diffed pairwise - baseline vs. run 1, baseline vs. run
+2 - and came back byte-identical (`diff` empty) in all six comparisons.
+The failing names themselves are the same pre-existing, receiver-target-unrelated
+set recorded in every earlier round of this effort (the one `soa reads`
+semantics flake, the same 46 `backend_ir` names, the same 5 `map`-conformance
+`compile_run` names). No new failures, no fixed failures, no flakes
+introduced.
+
+### Net code removed
+
+```
+ include/primec/support/CanonicalReceiverType.h                          |  13 +- (comment only)
+ include/primec/testing/ir_lowerer_helpers/IrLowererSetupTypeHelpers.h   |   3 - (declaration only)
+ src/ir_lowerer/IrLowererSetupTypeHelpers.h                              |  13 -  (declaration + comment)
+ src/ir_lowerer/IrLowererSetupTypeReceiverTargetHelpers.cpp              | 159 -  (old function + harness deleted, net)
+ tests/.../test_..._build_bundled_program_entry_return_runtime_and_setup.cpp | +18  (legacy-shape adapter added)
+```
+
+Net across all five files: **-150 lines** (69 insertions, 219 deletions).
+The production `.cpp` file alone nets **-159 lines** (17 insertions, 176
+deletions) - the 17-branch duplicate cascade and its diff-audit harness
+are gone; `resolveReceiverType` is now the only implementation of RT2's
+logic in the codebase.
+
+### What remains unmigrated
+
+Per the design doc's own scope (see "Step 1c Scoping" above): RT3/RT3b/RT3c
+and G7 (`resolveMethodReceiverTarget`'s `Call`-kind sub-cascade) are not
+touched by this round, and monomorphization's F3 producer for
+`CanonicalReceiverType` has not been implemented at all. TODO-5294 remains
+open; see `docs/todo.md` for the current per-item status.
+
 ## Risks
 
 - Same environment-noise and rule-table-surfaces-real-inconsistencies

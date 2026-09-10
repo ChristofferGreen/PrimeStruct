@@ -23,19 +23,19 @@ namespace primec {
 // as-is, consuming this struct's fields instead of a raw
 // (type-text, templateShape) pair.
 //
-// This round (2026-09-10) implements exactly one producer of this struct:
-// ir_lowerer's resolveReceiverType(const LocalInfo &), covering RT2's logic
-// (resolveMethodReceiverTypeFromLocalInfo,
-// IrLowererSetupTypeReceiverTargetHelpers.cpp) - see that file. It is a NEW
-// function living alongside the existing
-// resolveMethodReceiverTypeFromLocalInfo, wired only behind an
-// env-gated observational diff-audit harness
-// (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1) - the old function remains the
-// sole production code path this round. No call site has been migrated to
-// consume this struct's output yet; monomorphization's F3 producer has not
-// been implemented yet either (see the design doc's "Ready to implement"
-// checklist for the intended order - RT2 first, F3 later, one stage per
-// round).
+// As of 2026-09-10 this struct has exactly one producer: ir_lowerer's
+// resolveReceiverType(const LocalInfo &), covering RT2's logic
+// (IrLowererSetupTypeReceiverTargetHelpers.cpp) - see that file. It was
+// first landed as a NEW function living alongside the old
+// resolveMethodReceiverTypeFromLocalInfo, wired only behind an env-gated
+// observational diff-audit harness (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1)
+// that proved zero-divergence between the two independent implementations;
+// a later round then migrated RT2's sole production call site
+// (resolveMethodReceiverTypeFromNameExpr) onto resolveReceiverType and
+// deleted the old function and the diff-audit harness. Monomorphization's
+// F3 producer has not been implemented yet (see the design doc's "Ready to
+// implement" checklist for the intended order - RT2 first, F3 later, one
+// stage per round).
 //
 // `family` is deliberately NOT filled by ir_lowerer's resolveReceiverType
 // this round: producing a real family verdict requires handing the

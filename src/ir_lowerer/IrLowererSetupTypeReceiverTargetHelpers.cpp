@@ -1,9 +1,6 @@
 // soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
-#include <cassert>
-#include <iostream>
-
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
@@ -75,51 +72,6 @@ std::string resolveStructTypePathFromName(const std::string &typeName,
     return importIt->second;
   }
   return "";
-}
-
-// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): observational
-// diff-audit harness comparing resolveMethodReceiverTypeFromLocalInfo's
-// (production, unmodified) verdict against the new, independently-written
-// resolveReceiverType's CanonicalReceiverType verdict for the same
-// LocalInfo. Gated behind PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT - a no-op
-// (single boolean check, immediate return) when unset, so production
-// behavior of resolveMethodReceiverTypeFromLocalInfo is untouched either
-// way. Logs a MISMATCH line to stderr (plus a debug-only assert, a no-op in
-// Release builds) on disagreement; never changes what
-// resolveMethodReceiverTypeFromLocalInfo returns or writes to its own
-// out-parameters.
-void auditReceiverTypeAgainstLocalInfo(const LocalInfo &localInfo,
-                                       bool legacyResult,
-                                       const std::string &legacyTypeNameOut,
-                                       const std::string &legacyResolvedTypePathOut) {
-  if (!isReceiverTargetDiffAuditEnabled()) {
-    return;
-  }
-
-  CanonicalReceiverType canonical;
-  const bool newResult = resolveReceiverType(localInfo, canonical);
-
-  bool mismatch = false;
-  std::string detail;
-  auto noteMismatch = [&](const std::string &field, const std::string &legacy, const std::string &fresh) {
-    mismatch = true;
-    detail += " " + field + "(legacy=" + legacy + " new=" + fresh + ")";
-  };
-
-  if (newResult != legacyResult) {
-    noteMismatch("result", legacyResult ? "true" : "false", newResult ? "true" : "false");
-  }
-  if (canonical.collectionBaseName != legacyTypeNameOut) {
-    noteMismatch("collectionBaseName", legacyTypeNameOut, canonical.collectionBaseName);
-  }
-  if (canonical.resolvedTypePath != legacyResolvedTypePathOut) {
-    noteMismatch("resolvedTypePath", legacyResolvedTypePathOut, canonical.resolvedTypePath);
-  }
-
-  if (mismatch) {
-    std::cerr << "[receiver-target-diff-audit] MISMATCH (RT2/resolveReceiverType):" << detail << "\n";
-    assert(false && "receiver-target-diff-audit: resolveReceiverType diverged from resolveMethodReceiverTypeFromLocalInfo");
-  }
 }
 
 } // namespace
@@ -248,133 +200,19 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   return true;
 }
 
-bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
-                                            std::string &typeNameOut,
-                                            std::string &resolvedTypePathOut) {
-  typeNameOut.clear();
-  resolvedTypePathOut.clear();
-
-  // Step 1c diff-audit: every `return` below is preceded by a call to
-  // auditReceiverTypeAgainstLocalInfo, which - only when
-  // PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set - independently computes
-  // resolveReceiverType(localInfo, ...) and compares its
-  // CanonicalReceiverType verdict against the value about to be returned
-  // here, logging a MISMATCH on disagreement. Purely observational: this
-  // function's own control flow, computed values, and return values are
-  // otherwise completely unmodified from before this round.
-  if (localInfo.isFileHandle) {
-    typeNameOut = "File";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (!localInfo.structTypeName.empty()) {
-    resolvedTypePathOut = localInfo.structTypeName;
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (!localInfo.errorHelperNamespacePath.empty()) {
-    resolvedTypePathOut = localInfo.errorHelperNamespacePath;
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (!localInfo.errorTypeName.empty()) {
-    typeNameOut = localInfo.errorTypeName;
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-
-  if (localInfo.kind == LocalInfo::Kind::Array) {
-    typeNameOut = "array";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.isSoaVector) {
-    typeNameOut = "soa";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Vector) {
-    typeNameOut = "vector";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo)) {
-    typeNameOut = "map";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Buffer) {
-    typeNameOut = "Buffer";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Reference &&
-      (localInfo.referenceToArray || localInfo.referenceToVector || hasKeyValueKinds(localInfo) ||
-       localInfo.referenceToBuffer)) {
-    if (!localInfo.structTypeName.empty()) {
-      resolvedTypePathOut = localInfo.structTypeName;
-    } else {
-      typeNameOut = hasKeyValueKinds(localInfo) ? "map"
-                                             : (localInfo.referenceToVector ? (localInfo.isSoaVector ? "soa"
-                                                                                                     : "vector")
-                                                                            : (localInfo.referenceToBuffer ? "Buffer"
-                                                                                                            : "array"));
-    }
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToArray) {
-    typeNameOut = "array";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToVector) {
-    typeNameOut = localInfo.isSoaVector ? "soa" : "vector";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Pointer && hasKeyValueKinds(localInfo)) {
-    typeNameOut = "map";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer) {
-    typeNameOut = "Buffer";
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Reference && !localInfo.structTypeName.empty()) {
-    resolvedTypePathOut = localInfo.structTypeName;
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Pointer || localInfo.kind == LocalInfo::Kind::Reference) {
-    auditReceiverTypeAgainstLocalInfo(localInfo, false, typeNameOut, resolvedTypePathOut);
-    return false;
-  }
-  if (localInfo.kind == LocalInfo::Kind::Value && !localInfo.structTypeName.empty()) {
-    resolvedTypePathOut = localInfo.structTypeName;
-    auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-    return true;
-  }
-
-  typeNameOut = typeNameForValueKind(localInfo.valueKind);
-  auditReceiverTypeAgainstLocalInfo(localInfo, true, typeNameOut, resolvedTypePathOut);
-  return true;
-}
-
-// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): the new,
-// CanonicalReceiverType-producing sibling of
-// resolveMethodReceiverTypeFromLocalInfo above (RT2 in the design doc's
-// Step 0 Rule Table). Deliberately written as an INDEPENDENT
-// reimplementation of the same LocalInfo->type-family cascade (not a thin
-// wrapper delegating to resolveMethodReceiverTypeFromLocalInfo and copying
-// its outputs into a CanonicalReceiverType), so that
-// auditReceiverTypeAgainstLocalInfo's comparison is a genuine two-implementation
-// diff, not a tautology. See CanonicalReceiverType.h for why `family`,
-// template-shape facts, and `isBorrowed` are never filled here - this
-// function only fills collectionBaseName/resolvedTypePath/isWrapped/
-// wrappedBaseTypeName, RT2's own native output shape.
+// Step 1c/Step 2 (docs/ReceiverTargetResolutionConsolidation.md): the
+// consolidated LocalInfo->type-family cascade for RT2 in the design doc's
+// Step 0 Rule Table. This is now the sole production implementation of
+// this cascade - it replaced the old resolveMethodReceiverTypeFromLocalInfo
+// (which used the same (typeNameOut, resolvedTypePathOut) output-parameter
+// shape now folded into CanonicalReceiverType's collectionBaseName/
+// resolvedTypePath fields) after a prior round proved zero-divergence
+// between the two independently-written implementations via an
+// observational diff-audit harness (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT),
+// since removed along with the old function. See CanonicalReceiverType.h
+// for why `family`, template-shape facts, and `isBorrowed` are never filled
+// here - this function only fills collectionBaseName/resolvedTypePath/
+// isWrapped/wrappedBaseTypeName, RT2's own native output shape.
 bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out) {
   out = CanonicalReceiverType{};
 
@@ -700,10 +538,13 @@ bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
     errorOut = "native backend does not know identifier: " + receiverNameExpr.name;
     return false;
   }
-  if (!resolveMethodReceiverTypeFromLocalInfo(it->second, typeNameOut, resolvedTypePathOut)) {
+  CanonicalReceiverType canonical;
+  if (!resolveReceiverType(it->second, canonical)) {
     errorOut = "unknown method target for " + methodName;
     return false;
   }
+  typeNameOut = canonical.collectionBaseName;
+  resolvedTypePathOut = canonical.resolvedTypePath;
   return true;
 }
 
