@@ -58,6 +58,25 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
 // collectionBaseName/resolvedTypePath). See CanonicalReceiverType.h for why
 // `family`/template-shape/`isBorrowed` are never filled by this function.
 bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out);
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): the RT3b
+// (Call-kind receiver) sibling of resolveReceiverType above. Mirrors the
+// Call-kind branch of resolveMethodReceiverTarget below (RT3b in the design
+// doc's Row G table) exactly, producing the same verdict as a
+// CanonicalReceiverType instead of the raw (typeNameOut, resolvedTypePathOut)
+// pair. NOT wired into any production call site yet - see the harness
+// (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) inside resolveMethodReceiverTarget's
+// own Call-kind branch, which runs this function observationally alongside
+// the still-authoritative legacy logic. Always returns true, matching RT3b's
+// own "never fails" behavior for Call-kind receivers.
+bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
+                                     const LocalMap &localsIn,
+                                     const InferReceiverExprKindFn &inferExprKind,
+                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     const std::unordered_set<std::string> &structNames,
+                                     const SemanticProgram *semanticProgram,
+                                     const SemanticProductIndex *semanticIndex,
+                                     CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
                                                       const ResolveReceiverExprPathFn &resolveExprPath = {});

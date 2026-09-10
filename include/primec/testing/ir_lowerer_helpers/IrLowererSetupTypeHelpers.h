@@ -44,6 +44,15 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const Expr *&receiverOut,
                                    std::string &errorOut);
 bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out);
+bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
+                                     const LocalMap &localsIn,
+                                     const InferReceiverExprKindFn &inferExprKind,
+                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     const std::unordered_set<std::string> &structNames,
+                                     const SemanticProgram *semanticProgram,
+                                     const SemanticProductIndex *semanticIndex,
+                                     CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
                                                       const ResolveReceiverExprPathFn &resolveExprPath = {});

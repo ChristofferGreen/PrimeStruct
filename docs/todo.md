@@ -1813,6 +1813,51 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     migrated (no duplicate implementation, no harness scaffolding left at
     this call site), but RT3/RT3b/RT3c, G7's `Call`-kind sub-cascade, and
     monomorphization's F3 producer remain entirely unimplemented.
+  - implementation_notes (2026-09-10, RT3b Call-kind harness round, NOT
+    migrated): picked up an orphaned diff from a prior round's rate-limit
+    interruption (3 files, 318 insertions, additive-only) that added
+    `resolveReceiverTypeFromCallExpr` - an independent reimplementation of
+    `resolveMethodReceiverTarget`'s `Call`-kind sub-cascade (RT3b) writing
+    a `CanonicalReceiverType` instead of the legacy `(typeNameOut,
+    resolvedTypePathOut)` pair - plus its `auditReceiverTypeAgainstCallExpr`
+    diff-audit helper, but had not wired the audit call into
+    `resolveMethodReceiverTarget` itself. Inspected the diff in full: both
+    functions were sound and complete as written, mirroring the legacy
+    branch's control flow (including the args-pack-kind classification)
+    correctly - no bugs found, nothing needed fixing. Completed the
+    wiring with a scope-exit guard (a local RAII object declared at the
+    top of the `Call`-kind branch, whose destructor calls the audit
+    helper) rather than touching any of that branch's many `return true;`
+    exit points individually - the guard's destructor runs on every path
+    out regardless of which return fires, so the audit runs exactly once
+    per resolution with zero risk of altering the branch's actual control
+    flow, return value, or out-parameters (the audit function takes
+    `typeNameOut`/`resolvedTypePathOut` by `const` reference and only
+    acts when `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` is set). Verification:
+    clean release rebuild with `-Werror` (no unused-function warnings,
+    confirming the wiring is real). Fresh baseline via `git stash -u` back
+    to `0646d0444`, rebuilt, ran all three suites once foreground
+    (semantics 2767/1 failed, backend_ir 1646/46 failed, compile_run
+    2679/5 failed - the same pre-existing, receiver-target-unrelated names
+    recorded in every earlier round). `git stash pop` restored the
+    harness, rebuilt clean, ran all three suites with
+    `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`: **zero MISMATCH lines**,
+    identical failure counts/names to the fresh baseline - RT3b's new
+    function agrees with the legacy cascade on every receiver shape these
+    suites exercise. With the env var unset again, ran the full battery
+    two more times (compile_run_tests, which exceeds the harness's
+    per-call timeout, run detached via `nohup`+`disown` and `wait`-ed on
+    by PID across as many foreground calls as needed until it actually
+    exited - never treated as complete without observing its exit
+    directly); the sorted failing-test-case-*name* set was byte-identical
+    across baseline/run1/run2 in all three suites. Production's
+    `Call`-kind branch is behaviorally unchanged this round - only the
+    observational guard was added. Full writeup:
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1c, RT3b
+    (Call-kind receiver) harness round" section. Per RT2's own two-round
+    precedent, migrating this call site onto `resolveReceiverTypeFromCallExpr`
+    for real is deliberately left for a future round; this task stays
+    open.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

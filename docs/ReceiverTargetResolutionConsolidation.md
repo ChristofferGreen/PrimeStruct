@@ -5078,3 +5078,128 @@ open; see `docs/todo.md` for the current per-item status.
   branch than the spelling-disposition problem did. Budget Step 0
   accordingly — it will likely be larger than the compat-spelling
   document's own Step 0.
+
+## Step 1c, RT3b (Call-kind receiver) harness round: `resolveReceiverTypeFromCallExpr`, zero-divergence achieved, NOT migrated (2026-09-10)
+
+This round gives RT3b - the `Call`-kind receiver sub-cascade of
+`resolveMethodReceiverTarget` in `IrLowererSetupTypeReceiverTargetHelpers.cpp`
+(the one shape "What remains unmigrated" above flagged as untouched) - the
+same harness-then-migrate treatment RT2 went through across its own two
+rounds. This round is the harness round only, matching RT2's own first
+round: a new, independently-written `resolveReceiverTypeFromCallExpr`
+function is added alongside the legacy cascade and proven to agree with it
+observationally. **No production call site is migrated this round** -
+`resolveMethodReceiverTarget`'s own `Call`-kind branch is byte-for-byte
+unchanged in its logic; the only addition to it is a scope-exit audit
+guard (below) that has zero effect unless
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` is set.
+
+### `resolveReceiverTypeFromCallExpr`
+
+Declared in both `src/ir_lowerer/IrLowererSetupTypeHelpers.h` and the
+testing mirror `include/primec/testing/ir_lowerer_helpers/IrLowererSetupTypeHelpers.h`,
+defined in `IrLowererSetupTypeReceiverTargetHelpers.cpp`. It takes the
+same inputs `resolveMethodReceiverTarget`'s `Call`-kind branch closes over
+(`receiverExpr`, `localsIn`, `inferExprKind`, `resolveExprPath`,
+`importAliases`, `structNames`, `semanticProgram`, `semanticIndex`) and
+writes a `CanonicalReceiverType` instead of the legacy
+`(typeNameOut, resolvedTypePathOut)` out-parameter pair - mirroring RT3a's
+existing `resolveMethodReceiverTypeFromNameExpr` → `resolveReceiverType`
+relationship, but for the `Call`-kind shape.
+
+It is a deliberate, independent reimplementation of the `Call`-kind
+branch's control flow, including the args-pack-kind classification for
+receivers that are an `isArgsPack` local accessed via a builtin-access/
+`at`-shaped call (RT3b-i in the Step 1c Scoping round's terms) - per that
+round's "Open question, resolved" finding, this needs no new
+`CanonicalReceiverType` field and no new input beyond what `localsIn`
+already exposes via `LocalInfo::isArgsPack`/`argsPackElementKind`, so it
+is a genuine `resolveReceiverType`-shaped question rather than call-site
+logic that has to stay outside the shared function. Like the legacy
+branch it mirrors, it always returns `true` - the `Call`-kind branch has
+no failure exit anywhere in `resolveMethodReceiverTarget`.
+
+### Wiring: a scope-exit audit guard, not an inline call
+
+The orphaned diff this round started from wrote the function and its
+`auditReceiverTypeAgainstCallExpr` comparison helper but had not yet
+wired the helper into `resolveMethodReceiverTarget` itself. Both were
+otherwise complete and correct on inspection (control flow, `LocalInfo`
+field usage, and out-parameter handling all matched the legacy branch
+they mirror) - no bugs were found or fixed in the orphaned code this
+round, only the wiring gap was closed.
+
+The `Call`-kind branch has many exit points - every one of them is
+`return true;`, at various nesting depths, with no shared tail. Rather
+than touch each return site (risking an actual behavior change) or
+restructure the branch's control flow, the wiring adds a single
+scope-exit guard object, declared at the top of the branch:
+
+```cpp
+if (receiverExpr.kind == Expr::Kind::Call) {
+  struct ReceiverTargetDiffAuditGuard {
+    // ...captured-by-reference inputs, plus typeNameOut/resolvedTypePathOut...
+    ~ReceiverTargetDiffAuditGuard() {
+      auditReceiverTypeAgainstCallExpr(receiverExpr, localsIn, inferExprKind, resolveExprPath,
+                                        importAliases, structNames, semanticProgram, semanticIndex,
+                                        typeNameOut, resolvedTypePathOut);
+    }
+  } receiverTargetDiffAuditGuard{ /* ... */ };
+  // ...branch body unchanged, every `return true;` left exactly as it was...
+}
+```
+
+C++ guarantees the guard's destructor runs on every path out of its
+enclosing scope, including through nested `if`s, on the way out via any
+of the branch's `return true;` statements - so the audit call fires
+exactly once per `Call`-kind receiver resolution, with whatever
+`typeNameOut`/`resolvedTypePathOut` the legacy logic ended up settling
+on, without any of the branch's existing `return` statements being
+touched. `auditReceiverTypeAgainstCallExpr` itself only reads
+`typeNameOut`/`resolvedTypePathOut` (both taken by `const` reference) and
+no-ops immediately when the env var is unset, so neither the guard nor
+the audit it runs can change `resolveMethodReceiverTarget`'s return
+value, out-parameters, or control flow.
+
+### Verification
+
+Build: clean release rebuild (`-Wall -Wextra -Wpedantic -Werror`) of
+`primec_ir_lib` and all three suites below with the harness applied -
+no warnings (in particular, no unused-function warning for
+`resolveReceiverTypeFromCallExpr`/`auditReceiverTypeAgainstCallExpr`,
+confirming the wiring is real, not dead code).
+
+Fresh baseline (`git stash -u` back to `0646d0444`, clean release
+rebuild, all three suites run foreground): `PrimeStruct_semantics_tests`
+1 failed (`semantic product validates direct return method-like borrowed
+helper-return experimental soa reads`), `PrimeStruct_backend_ir_tests` 46
+failed, `PrimeStruct_compile_run_tests` 5 failed (the `map`-conformance/
+`canonical map reference` cluster) - the same pre-existing,
+receiver-target-unrelated names as every earlier round of this effort.
+
+With the harness applied and `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+set, all three suites run foreground: **zero `[receiver-target-diff-audit]
+MISMATCH` lines** across all of them, and the same failed-test-case
+counts/names as the fresh baseline (1 / 46 / 5, identical names) - the
+pre-existing failures are unrelated to receiver-target resolution and the
+audit assertion did not fire on any of them, so `resolveReceiverTypeFromCallExpr`
+agrees with the legacy `Call`-kind cascade on every receiver shape these
+three suites exercise.
+
+With the env var unset again, the full three-suite battery was run twice
+more (foreground); the failing-test-case **names** were extracted and
+diffed byte-for-byte against the fresh baseline and against each other -
+identical in all three suites, both reruns. This confirms the scope-exit
+guard's presence has no observable effect on `resolveMethodReceiverTarget`
+in its default (un-audited) configuration.
+
+### What remains unmigrated
+
+`resolveMethodReceiverTarget`'s `Call`-kind branch is still the sole
+production implementation of RT3b - `resolveReceiverTypeFromCallExpr` is
+proven-equivalent but unused in production. Migrating the call site
+(replacing the branch's body with a call to `resolveReceiverTypeFromCallExpr`
+plus a copy into the legacy out-parameters, the same shape RT2's own
+migration round took) is left for a future round, along with RT3c and G7
+generally, and monomorphization's F3 producer. TODO-5294 remains open;
+see `docs/todo.md` for current per-item status.

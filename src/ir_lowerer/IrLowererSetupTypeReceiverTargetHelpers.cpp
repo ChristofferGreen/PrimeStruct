@@ -1,6 +1,9 @@
 // soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
+#include <cassert>
+#include <iostream>
+
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
@@ -548,6 +551,293 @@ bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
   return true;
 }
 
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): resolveReceiverType
+// for RT3b, the Call-kind receiver sub-cascade of resolveMethodReceiverTarget
+// below (RT3 in the design doc's Row G table; RT3a's Name-kind branch already
+// delegates to resolveReceiverType(const LocalInfo&) via
+// resolveMethodReceiverTypeFromNameExpr above, so this function covers the
+// one remaining un-migrated shape). It is a deliberate, independent
+// reimplementation of resolveMethodReceiverTarget's `receiverExpr.kind ==
+// Call` branch (lines below), mirroring its control flow exactly but writing
+// to a CanonicalReceiverType instead of the raw (typeNameOut,
+// resolvedTypePathOut) out-parameter pair.
+//
+// Per the Step 1c Scoping round's "Open question, resolved" finding: RT3b-i's
+// args-pack-kind classification (the receiver being an `isArgsPack` local
+// accessed via a builtin-access/`at`-shaped call) needs no new field on
+// CanonicalReceiverType and no new stage-specific input parameter beyond
+// this function's own Expr+LocalMap shape - `LocalInfo::isArgsPack` and
+// `LocalInfo::argsPackElementKind` are already reachable from `localsIn`,
+// exactly as resolveMethodReceiverTarget itself reaches them today. This
+// function is therefore a genuine resolveReceiverType-shaped question, not
+// call-site logic that needs to stay outside the shared inference function
+// (unlike monomorphization's F3-C3a/F2, which the same round found DO need
+// to stay outside - see that section for why the two cases differ: F3-C3a/F2
+// short-circuit to an already-resolved *definition path*, a resolution
+// concern, whereas RT3b-i (like every other branch here) only ever answers
+// "what type does this receiver have").
+//
+// Always returns true, matching RT3b-vii's own behavior: the Call-kind
+// branch of resolveMethodReceiverTarget has no failure exit anywhere (RT3a's
+// Name-kind branch is the function's only path that can fail).
+//
+// NOT wired into any production call site this round - see the observational
+// diff-audit harness (auditReceiverTypeAgainstCallExpr, just below) wired
+// into resolveMethodReceiverTarget's own Call-kind branch instead, which
+// proves this function agrees with production before any call site is
+// migrated onto it, per this document's harness-then-migrate discipline.
+bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
+                                     const LocalMap &localsIn,
+                                     const InferReceiverExprKindFn &inferExprKind,
+                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     const std::unordered_set<std::string> &structNames,
+                                     const SemanticProgram *semanticProgram,
+                                     const SemanticProductIndex *semanticIndex,
+                                     CanonicalReceiverType &out) {
+  out = CanonicalReceiverType{};
+
+  auto classifyLocal = [](const LocalInfo &localInfo, bool fromArgsPack,
+                          std::string &typeNameOut, std::string &resolvedTypePathOut) -> bool {
+    const LocalInfo::Kind receiverKind = fromArgsPack ? localInfo.argsPackElementKind : localInfo.kind;
+    const bool isReferenceArray = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToArray;
+    const bool isPointerArray = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToArray;
+    const bool isReferenceVector = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToVector;
+    const bool isPointerVector = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToVector;
+    const bool isReferenceKeyValue = receiverKind == LocalInfo::Kind::Reference && hasKeyValueKinds(localInfo);
+    const bool isPointerKeyValue = receiverKind == LocalInfo::Kind::Pointer && hasKeyValueKinds(localInfo);
+    const bool isReferenceBuffer = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToBuffer;
+    const bool isPointerBuffer = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer;
+    if (localInfo.isFileError &&
+        (receiverKind == LocalInfo::Kind::Reference || receiverKind == LocalInfo::Kind::Pointer)) {
+      typeNameOut = "FileError";
+      return true;
+    }
+    if (localInfo.isFileHandle &&
+        (receiverKind == LocalInfo::Kind::Reference || receiverKind == LocalInfo::Kind::Pointer)) {
+      typeNameOut = "File";
+      return true;
+    }
+    if (isReferenceArray || isPointerArray) {
+      typeNameOut = "array";
+      return true;
+    }
+    if (isReferenceVector || isPointerVector) {
+      typeNameOut = localInfo.isSoaVector ? "soa" : "vector";
+      return true;
+    }
+    if (receiverKind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo)) {
+      typeNameOut = "map";
+      return true;
+    }
+    if (isReferenceKeyValue || isPointerKeyValue) {
+      typeNameOut = "map";
+      return true;
+    }
+    if (isReferenceBuffer || isPointerBuffer) {
+      typeNameOut = "Buffer";
+      return true;
+    }
+    (void)resolvedTypePathOut;
+    return false;
+  };
+
+  auto resolveDereferencedCollectionOrFileErrorReceiver = [&](const Expr &targetExpr,
+                                                              std::string &typeNameOut,
+                                                              std::string &resolvedTypePathOut) {
+    if (targetExpr.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(targetExpr.name);
+      return localIt != localsIn.end() && classifyLocal(localIt->second, false, typeNameOut, resolvedTypePathOut);
+    }
+
+    std::string derefAccessName;
+    if (targetExpr.kind == Expr::Kind::Call &&
+        (getBuiltinArrayAccessName(targetExpr, derefAccessName) || isSimpleCallName(targetExpr, "at")) &&
+        targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(targetExpr.args.front().name);
+      return localIt != localsIn.end() && localIt->second.isArgsPack &&
+             classifyLocal(localIt->second, true, typeNameOut, resolvedTypePathOut);
+    }
+
+    return false;
+  };
+
+  std::string typeNameOut;
+  std::string resolvedTypePathOut;
+
+  std::string accessName;
+  if ((getBuiltinArrayAccessName(receiverExpr, accessName) || isSimpleCallName(receiverExpr, "at")) &&
+      receiverExpr.args.size() == 2) {
+    const Expr &accessReceiver = receiverExpr.args.front();
+    if (accessReceiver.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(accessReceiver.name);
+      if (localIt != localsIn.end() && localIt->second.isArgsPack) {
+        if (localIt->second.isFileError &&
+            (localIt->second.argsPackElementKind == LocalInfo::Kind::Value ||
+             localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+             localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
+          typeNameOut = "FileError";
+        } else if (localIt->second.isFileHandle &&
+                   (localIt->second.argsPackElementKind == LocalInfo::Kind::Value ||
+                    localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+                    localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
+          typeNameOut = "File";
+        } else if (!localIt->second.structTypeName.empty()) {
+          resolvedTypePathOut = localIt->second.structTypeName;
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Vector) {
+          typeNameOut = localIt->second.isSoaVector ? "soa" : "vector";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+                   localIt->second.referenceToArray) {
+          typeNameOut = "array";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+                   localIt->second.pointerToArray) {
+          typeNameOut = "array";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+                   localIt->second.referenceToVector) {
+          typeNameOut = localIt->second.isSoaVector ? "soa" : "vector";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+                   localIt->second.pointerToVector) {
+          typeNameOut = localIt->second.isSoaVector ? "soa" : "vector";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+                   hasKeyValueKinds(localIt->second)) {
+          typeNameOut = "map";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+                   hasKeyValueKinds(localIt->second)) {
+          typeNameOut = "map";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Array) {
+          typeNameOut = "array";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Value &&
+                   hasKeyValueKinds(localIt->second)) {
+          typeNameOut = "map";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Buffer) {
+          typeNameOut = "Buffer";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+                   localIt->second.referenceToBuffer) {
+          typeNameOut = "Buffer";
+        } else if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+                   localIt->second.pointerToBuffer) {
+          typeNameOut = "Buffer";
+        }
+      }
+    }
+  }
+
+  if (typeNameOut.empty() && resolvedTypePathOut.empty() && isSimpleCallName(receiverExpr, "dereference") &&
+      receiverExpr.args.size() == 1) {
+    const Expr &targetExpr = receiverExpr.args.front();
+    resolveDereferencedCollectionOrFileErrorReceiver(targetExpr, typeNameOut, resolvedTypePathOut);
+  }
+
+  if (typeNameOut.empty() && resolvedTypePathOut.empty()) {
+    auto isBareKeyValueAccessReceiverProbeExpr = [&](const Expr &candidateExpr) {
+      if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.args.size() != 2) {
+        return false;
+      }
+      std::string localAccessName;
+      return (getBuiltinArrayAccessName(candidateExpr, localAccessName) || isSimpleCallName(candidateExpr, "at")) &&
+             resolveCollectionPairTypeInfo(candidateExpr.args.front(), localsIn, {}, semanticProgram, semanticIndex)
+                 .isKeyValueTarget;
+    };
+    if (isBareKeyValueAccessReceiverProbeExpr(receiverExpr)) {
+      typeNameOut = "map";
+    } else {
+      auto isBareKeyValueTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
+        return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
+               isSimpleCallName(candidateExpr, "tryAt") &&
+               resolveCollectionPairTypeInfo(candidateExpr.args.front(), localsIn, {}, semanticProgram, semanticIndex)
+                   .isKeyValueTarget;
+      };
+      const bool blocksExplicitKeyValueReceiverProbeKindFallback =
+          isExplicitKeyValueReceiverProbeHelperExpr(receiverExpr);
+      const bool blocksBareKeyValueAccessReceiverProbeKindFallback =
+          isBareKeyValueAccessReceiverProbeExpr(receiverExpr);
+      const bool blocksBareKeyValueTryAtReceiverProbeKindFallback =
+          isBareKeyValueTryAtReceiverProbeExpr(receiverExpr);
+      const bool blocksExplicitVectorReceiverProbeKindFallback =
+          blocksExplicitVectorReceiverProbeKindFallbackExpr(receiverExpr);
+      const LocalInfo::ValueKind inferredKind =
+          (inferExprKind && !blocksExplicitKeyValueReceiverProbeKindFallback &&
+           !blocksBareKeyValueAccessReceiverProbeKindFallback &&
+           !blocksBareKeyValueTryAtReceiverProbeKindFallback && !blocksExplicitVectorReceiverProbeKindFallback)
+              ? inferExprKind(receiverExpr, localsIn)
+              : LocalInfo::ValueKind::Unknown;
+      typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind, resolveExprPath);
+      if (typeNameOut.empty() && !blocksExplicitKeyValueReceiverProbeKindFallback &&
+          !blocksBareKeyValueAccessReceiverProbeKindFallback &&
+          !blocksBareKeyValueTryAtReceiverProbeKindFallback && !blocksExplicitVectorReceiverProbeKindFallback &&
+          receiverExpr.isMethodCall && receiverExpr.args.size() == 2) {
+        std::string builtinAccessName;
+        if (getBuiltinArrayAccessName(receiverExpr, builtinAccessName) && inferExprKind &&
+            inferExprKind(receiverExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+          typeNameOut = "i32";
+        }
+      }
+      if (typeNameOut.empty()) {
+        resolvedTypePathOut = resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverExpr, resolveExprPath(receiverExpr), importAliases, structNames);
+      }
+    }
+  }
+
+  out.collectionBaseName = typeNameOut;
+  out.resolvedTypePath = resolvedTypePathOut;
+  return true;
+}
+
+namespace {
+
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): observational
+// diff-audit harness comparing resolveMethodReceiverTarget's (production,
+// unmodified) Call-kind verdict against resolveReceiverTypeFromCallExpr's
+// independently-computed CanonicalReceiverType verdict for the same receiver
+// Expr. Gated behind PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT - a no-op (single
+// boolean check, immediate return) when unset, so production behavior of
+// resolveMethodReceiverTarget's Call-kind branch is untouched either way.
+// Logs a MISMATCH line to stderr (plus a debug-only assert, a no-op in
+// Release builds) on disagreement; never changes what
+// resolveMethodReceiverTarget returns or writes to its own out-parameters.
+void auditReceiverTypeAgainstCallExpr(const Expr &receiverExpr,
+                                      const LocalMap &localsIn,
+                                      const InferReceiverExprKindFn &inferExprKind,
+                                      const ResolveReceiverExprPathFn &resolveExprPath,
+                                      const std::unordered_map<std::string, std::string> &importAliases,
+                                      const std::unordered_set<std::string> &structNames,
+                                      const SemanticProgram *semanticProgram,
+                                      const SemanticProductIndex *semanticIndex,
+                                      const std::string &legacyTypeNameOut,
+                                      const std::string &legacyResolvedTypePathOut) {
+  if (!isReceiverTargetDiffAuditEnabled()) {
+    return;
+  }
+
+  CanonicalReceiverType canonical;
+  resolveReceiverTypeFromCallExpr(receiverExpr, localsIn, inferExprKind, resolveExprPath, importAliases,
+                                  structNames, semanticProgram, semanticIndex, canonical);
+
+  bool mismatch = false;
+  std::string detail;
+  auto noteMismatch = [&](const std::string &field, const std::string &legacy, const std::string &fresh) {
+    mismatch = true;
+    detail += " " + field + "(legacy=" + legacy + " new=" + fresh + ")";
+  };
+
+  if (canonical.collectionBaseName != legacyTypeNameOut) {
+    noteMismatch("collectionBaseName", legacyTypeNameOut, canonical.collectionBaseName);
+  }
+  if (canonical.resolvedTypePath != legacyResolvedTypePathOut) {
+    noteMismatch("resolvedTypePath", legacyResolvedTypePathOut, canonical.resolvedTypePath);
+  }
+
+  if (mismatch) {
+    std::cerr << "[receiver-target-diff-audit] MISMATCH (RT3b/resolveReceiverTypeFromCallExpr):" << detail << "\n";
+    assert(false &&
+           "receiver-target-diff-audit: resolveReceiverTypeFromCallExpr diverged from "
+           "resolveMethodReceiverTarget's Call-kind branch");
+  }
+}
+
+} // namespace
+
 bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                  const LocalMap &localsIn,
                                  const std::string &methodName,
@@ -578,6 +868,37 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     return false;
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
+    // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): observational
+    // diff-audit harness. Every exit from this branch below is `return
+    // true;`, so a scope-exit guard declared here runs the audit exactly
+    // once on the way out, on whichever legacy (typeNameOut,
+    // resolvedTypePathOut) values this branch ends up settling on - without
+    // touching any of the branch's existing return statements or control
+    // flow. auditReceiverTypeAgainstCallExpr itself no-ops immediately
+    // unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set, and never
+    // mutates typeNameOut/resolvedTypePathOut (both taken by const ref), so
+    // this guard cannot change what resolveMethodReceiverTarget returns.
+    struct ReceiverTargetDiffAuditGuard {
+      const Expr &receiverExpr;
+      const LocalMap &localsIn;
+      const InferReceiverExprKindFn &inferExprKind;
+      const ResolveReceiverExprPathFn &resolveExprPath;
+      const std::unordered_map<std::string, std::string> &importAliases;
+      const std::unordered_set<std::string> &structNames;
+      const SemanticProgram *semanticProgram;
+      const SemanticProductIndex *semanticIndex;
+      const std::string &typeNameOut;
+      const std::string &resolvedTypePathOut;
+      ~ReceiverTargetDiffAuditGuard() {
+        auditReceiverTypeAgainstCallExpr(receiverExpr, localsIn, inferExprKind, resolveExprPath, importAliases,
+                                          structNames, semanticProgram, semanticIndex, typeNameOut,
+                                          resolvedTypePathOut);
+      }
+    } receiverTargetDiffAuditGuard{receiverExpr,      localsIn,           inferExprKind,     resolveExprPath,
+                                    importAliases,     structNames,        semanticProgram,   semanticIndex,
+                                    typeNameOut,        resolvedTypePathOut};
+    (void)receiverTargetDiffAuditGuard;
+
     auto resolveDereferencedCollectionOrFileErrorReceiver = [&](const Expr &targetExpr) {
       auto classifyLocal = [&](const LocalInfo &localInfo, bool fromArgsPack) -> bool {
         const LocalInfo::Kind receiverKind =
