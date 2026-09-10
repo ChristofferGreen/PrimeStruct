@@ -1858,6 +1858,51 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     precedent, migrating this call site onto `resolveReceiverTypeFromCallExpr`
     for real is deliberately left for a future round; this task stays
     open.
+  - implementation_notes (2026-09-10, RT3b real call-site migration):
+    migrated `resolveMethodReceiverTarget`'s `Call`-kind branch itself onto
+    `resolveReceiverTypeFromCallExpr`, mirroring RT2's own migration
+    (item 5's first implementation_notes above): the branch now calls
+    `resolveReceiverTypeFromCallExpr(...)` directly and copies its
+    `CanonicalReceiverType` output (`collectionBaseName`/`resolvedTypePath`)
+    into the function's legacy `(typeNameOut, resolvedTypePathOut)`
+    out-parameters, then `return true;`. Deleted the old inline cascade
+    (the args-pack-kind block, the `dereference(...)`-wrapped lambda, the
+    bare-key-value-access/tryAt probes, the `inferExprKind` fallback, and
+    the struct-type-path fallback - RT3b-i through RT3b-vi from the Step 1c
+    Scoping round's terms) along with the `auditReceiverTypeAgainstCallExpr`
+    diff-audit function and its `ReceiverTargetDiffAuditGuard` scope-exit
+    RAII wiring - diffing the migrated function against itself is
+    meaningless once it *is* the sole implementation, same as every prior
+    migration's harness retirement. Left the shared
+    `isReceiverTargetDiffAuditEnabled()` env-gate helper in
+    `ReceiverElementFamilyClassifier.cpp`/`.h` in place (still reusable for
+    a future RT3c/G7 harness); dropped this file's now-unused include of
+    that header plus its now-unused `<cassert>`/`<iostream>` includes. A
+    whole-repo grep for `auditReceiverTypeAgainstCallExpr` and
+    `ReceiverTargetDiffAuditGuard` after the deletion turns up no
+    references outside this doc/`docs/todo.md`'s own prose - no stale call
+    sites anywhere. Verification: fresh baseline via `git stash -u` back to
+    the clean `b422c5378` tree, rebuilt, ran all three suites once
+    foreground (semantics 2767/1 failed, backend_ir 1646/46 failed,
+    compile_run 2679/5 failed - identical to every prior round's recorded
+    baseline). `git stash pop` restored the migration, rebuilt clean (no
+    warnings/errors), ran the full battery two more times, all foreground
+    (`PrimeStruct_compile_run_tests` run via `nohup` and `wait`-ed on by
+    PID across as many foreground calls as needed until it actually
+    exited). Every run's counts matched exactly (1/46/5); the sorted
+    failing-test-case-*name* set was byte-identical in every pairwise
+    comparison (baseline vs run1, baseline vs run2, run1 vs run2) across
+    all three suites - `diff` empty in all nine comparisons. Net -287
+    lines across the two changed files (30 insertions, 317 deletions); the
+    production `.cpp` file alone nets -286 lines. Full writeup:
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1c, RT3b
+    real call-site migration" section. RT3b is now fully migrated (no
+    duplicate implementation, no harness scaffolding left at this call
+    site); RT3/RT3a/RT2 were already migrated by prior rounds. This task
+    stays open - RT3c, G7's `Call`-kind sub-cascade in
+    `IrLowererSetupTypeMethodCallResolution.cpp`, and monomorphization's F3
+    producer remain entirely unimplemented/unmigrated in this module's
+    scope.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

@@ -59,15 +59,14 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
 // `family`/template-shape/`isBorrowed` are never filled by this function.
 bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out);
 // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): the RT3b
-// (Call-kind receiver) sibling of resolveReceiverType above. Mirrors the
-// Call-kind branch of resolveMethodReceiverTarget below (RT3b in the design
-// doc's Row G table) exactly, producing the same verdict as a
-// CanonicalReceiverType instead of the raw (typeNameOut, resolvedTypePathOut)
-// pair. NOT wired into any production call site yet - see the harness
-// (PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT) inside resolveMethodReceiverTarget's
-// own Call-kind branch, which runs this function observationally alongside
-// the still-authoritative legacy logic. Always returns true, matching RT3b's
-// own "never fails" behavior for Call-kind receivers.
+// (Call-kind receiver) sibling of resolveReceiverType above. Now the sole
+// production implementation of RT3b's Call-kind classification -
+// resolveMethodReceiverTarget's own Call-kind branch below calls this
+// function directly and copies its CanonicalReceiverType output into its
+// legacy (typeNameOut, resolvedTypePathOut) out-parameters. A prior round
+// proved zero-divergence against the old inline cascade this replaced via
+// an observational diff-audit harness, since removed. Always returns true,
+// matching RT3b's own "never fails" behavior for Call-kind receivers.
 bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
                                      const LocalMap &localsIn,
                                      const InferReceiverExprKindFn &inferExprKind,

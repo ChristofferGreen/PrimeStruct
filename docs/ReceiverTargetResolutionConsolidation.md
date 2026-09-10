@@ -5193,7 +5193,7 @@ identical in all three suites, both reruns. This confirms the scope-exit
 guard's presence has no observable effect on `resolveMethodReceiverTarget`
 in its default (un-audited) configuration.
 
-### What remains unmigrated
+### What remains unmigrated (as of the harness round)
 
 `resolveMethodReceiverTarget`'s `Call`-kind branch is still the sole
 production implementation of RT3b - `resolveReceiverTypeFromCallExpr` is
@@ -5202,4 +5202,126 @@ proven-equivalent but unused in production. Migrating the call site
 plus a copy into the legacy out-parameters, the same shape RT2's own
 migration round took) is left for a future round, along with RT3c and G7
 generally, and monomorphization's F3 producer. TODO-5294 remains open;
-see `docs/todo.md` for current per-item status.
+see `docs/todo.md` for current per-item status. **Superseded by the real
+migration below - this call site is no longer unmigrated.**
+
+## Step 1c, RT3b real call-site migration: old inline `Call`-kind cascade deleted, `resolveReceiverTypeFromCallExpr` now sole production path (2026-09-10)
+
+This round completes RT3b's harness-then-migrate arc (the harness round
+above proved zero-divergence; this round lands the migration), mirroring
+RT2's own two-round precedent exactly. `resolveMethodReceiverTarget`'s
+`Call`-kind branch is now:
+
+```cpp
+if (receiverExpr.kind == Expr::Kind::Call) {
+  CanonicalReceiverType canonical;
+  resolveReceiverTypeFromCallExpr(receiverExpr, localsIn, inferExprKind, resolveExprPath, importAliases,
+                                  structNames, semanticProgram, semanticIndex, canonical);
+  typeNameOut = canonical.collectionBaseName;
+  resolvedTypePathOut = canonical.resolvedTypePath;
+  return true;
+}
+```
+
+replacing the ~250-line old inline cascade (the args-pack-kind
+classification block, the `dereference(...)`-wrapped-receiver lambda, the
+bare-key-value-access/`tryAt` probes gating the `inferExprKind` fallback,
+and the struct-type-path fallback - RT3b-i through RT3b-vi in the Step 1c
+Scoping round's terms). The output translation is the same shape RT2's
+migration used for `resolveMethodReceiverTypeFromNameExpr`: copy
+`canonical.collectionBaseName` into `typeNameOut` and
+`canonical.resolvedTypePath` into `resolvedTypePathOut`, since
+`resolveReceiverTypeFromCallExpr` already writes exactly those two
+`CanonicalReceiverType` fields (see its own definition above) and nothing
+else RT3b's legacy shape needs. `resolveReceiverTypeFromCallExpr` itself
+is untouched at the logic level - only its header comments (here and in
+`IrLowererSetupTypeHelpers.h`) were updated to describe it as the sole
+production implementation rather than an audited sibling.
+
+Also deleted: the `auditReceiverTypeAgainstCallExpr` diff-audit function
+and the `ReceiverTargetDiffAuditGuard` scope-exit RAII object that wired
+it into the branch (both described in the harness round above) - diffing
+the migrated function against itself post-migration is meaningless, the
+same pattern as RT2's own harness retirement. This file's now-unused
+`#include "primec/support/ReceiverElementFamilyClassifier.h"` (the header
+declaring `isReceiverTargetDiffAuditEnabled`, this file's only use of that
+header) and its now-unused `<cassert>`/`<iostream>` includes were dropped
+along with the harness code that used them. The shared
+`isReceiverTargetDiffAuditEnabled()` /
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` env-gate helper itself in
+`src/support/ReceiverElementFamilyClassifier.cpp`/`.h` was deliberately
+left in place, same rationale as RT2's migration: reusable infrastructure
+for a future RT3c/G7 harness, out of scope for a single call-site
+migration, even though it currently has no remaining caller anywhere in
+the tree.
+
+A whole-repo grep for `auditReceiverTypeAgainstCallExpr` and
+`ReceiverTargetDiffAuditGuard` after the deletion turns up no references
+outside this doc's own and `docs/todo.md`'s own prose describing the
+now-completed migration - no stale call sites, declarations, or dangling
+comments anywhere else in the tree. The old inline cascade was never a
+separately-named function (it lived directly inside
+`resolveMethodReceiverTarget`'s `Call`-kind branch), so there is no
+separate symbol to grep for beyond the branch itself, which is now the
+migrated code.
+
+### Verification
+
+Fresh baseline via `git stash -u` back to the clean `b422c5378` tree (the
+harness round's own commit), rebuilt, all three suites run foreground (one
+call each; `PrimeStruct_compile_run_tests` run via `nohup` and `wait`-ed
+on by its own PID across as many foreground calls as needed until it
+actually exited, since its runtime exceeds the harness's single-call
+cap):
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+Identical counts to every prior round's recorded baseline (the one `soa
+reads` semantics flake, the same 46 `backend_ir` names, the same 5
+`map`-conformance `compile_run` names). `git stash pop` restored the
+migration; rebuilt clean (no warnings or errors, confirming no leftover
+dead code or unused-include diagnostics from the deleted harness).
+
+Ran the same battery **twice more** (foreground only, same per-suite
+methodology):
+
+| run | semantics failed | backend_ir failed | compile_run failed |
+|---|---|---|---|
+| baseline | 1 | 46 | 5 |
+| run 1 (migration applied) | 1 | 46 | 5 |
+| run 2 (migration applied) | 1 | 46 | 5 |
+
+For all three suites, the sorted set of failing test-case *names* (not
+just counts) was diffed pairwise - baseline vs. run 1, baseline vs. run
+2, and run 1 vs. run 2 - and came back byte-identical (`diff` empty) in
+all nine comparisons. No new failures, no fixed failures, no flakes
+introduced.
+
+### Net code removed
+
+```
+ src/ir_lowerer/IrLowererSetupTypeHelpers.h                 |   8 +-   9 - (comments only, net -1)
+ src/ir_lowerer/IrLowererSetupTypeReceiverTargetHelpers.cpp |  22 +- 308 - (old cascade + harness deleted, net -286)
+```
+
+Net across both files: **-287 lines** (30 insertions, 317 deletions). The
+production `.cpp` file alone nets **-286 lines** - the ~250-line inline
+`Call`-kind cascade and its diff-audit harness are gone;
+`resolveReceiverTypeFromCallExpr` is now the only implementation of RT3b's
+logic in the codebase, and `resolveMethodReceiverTarget`'s `Call`-kind
+branch is 7 lines.
+
+### What remains unmigrated
+
+RT2, RT3/RT3a (delegates to RT2), and RT3b are now all fully migrated -
+each has exactly one production implementation, no duplicate cascades, no
+harness scaffolding left at any of their call sites. Per the design doc's
+own scope: RT3c and G7's `Call`-kind sub-cascade in
+`IrLowererSetupTypeMethodCallResolution.cpp` remain untouched, and
+monomorphization's F3 producer for `CanonicalReceiverType` has not been
+implemented at all. TODO-5294 remains open; see `docs/todo.md` for
+current per-item status.
