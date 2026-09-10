@@ -76,6 +76,17 @@ bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
                                      const SemanticProgram *semanticProgram,
                                      const SemanticProductIndex *semanticIndex,
                                      CanonicalReceiverType &out);
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): resolveReceiverType
+// for RT3c, the final fallback of resolveMethodReceiverTarget below (neither
+// Name- nor Call-kind receiver). Independently reimplements RT3c's one-line
+// body (typeNameForValueKind(inferExprKind(receiverExpr, localsIn))), writing
+// only CanonicalReceiverType::collectionBaseName - RT3c's own narrowest-filled
+// shape (see the Step 1c Scoping round's RT3/G7 note). Always returns true,
+// matching RT3c's own "never fails" behavior.
+bool resolveReceiverTypeFromFallbackExpr(const Expr &receiverExpr,
+                                         const LocalMap &localsIn,
+                                         const InferReceiverExprKindFn &inferExprKind,
+                                         CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
                                                       const ResolveReceiverExprPathFn &resolveExprPath = {});

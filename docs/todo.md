@@ -1903,6 +1903,54 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     `IrLowererSetupTypeMethodCallResolution.cpp`, and monomorphization's F3
     producer remain entirely unimplemented/unmigrated in this module's
     scope.
+  - implementation_notes (2026-09-10, RT3c harness round, NOT migrated):
+    re-checked `resolveMethodReceiverTarget`'s structure post-RT3b
+    migration and confirmed it is now exactly three branches - RT3a
+    (`Name`), RT3b (`Call`, already sole-implemented via
+    `resolveReceiverTypeFromCallExpr`), and a final unconditional fallback
+    (RT3c) that is still the one un-migrated piece. RT3c's own body is a
+    single expression -
+    `typeNameOut = inferExprKind ? typeNameForValueKind(inferExprKind(...)) : ""`
+    - followed by an unconditional `return true;`, unchanged from the Step
+    1c Scoping round's characterization. Chose to finish this function
+    (RT3c) over starting G7 this round: RT3c is squarely inside this
+    module's already-scoped `resolveMethodReceiverTarget` surface with
+    harness infrastructure already proven for its other two branches,
+    judged lower-risk than opening a new file; G7 was re-confirmed this
+    round as a genuine `resolveReceiverType`-shaped candidate for a future
+    round (its inference shape, rejected earlier as a classifier
+    candidate, is exactly why it fits this module) rather than assessed as
+    wrong-shaped. Added `resolveReceiverTypeFromFallbackExpr` (declared in
+    both `IrLowererSetupTypeHelpers.h` and its testing mirror, defined in
+    `IrLowererSetupTypeReceiverTargetHelpers.cpp`), an independent
+    reimplementation writing only `CanonicalReceiverType::collectionBaseName`
+    (the narrowest-filled shape of RT2/RT3b/RT3c, as the Step 1c Scoping
+    round predicted). Wired a direct (non-RAII) audit call -
+    `auditReceiverTypeAgainstFallbackExpr`, gated by the same
+    `isReceiverTargetDiffAuditEnabled()`/`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`
+    helper RT3b's round left in place - immediately after the legacy
+    line's `typeNameOut` assignment (RT3c's single exit point needs no
+    scope-exit guard, unlike RT3b's many-exit-point cascade). No
+    production call site migrated this round; the legacy fallback logic
+    is byte-for-byte unchanged. Verification: fresh baseline via
+    `git stash -u` back to the clean `9d9c10ddc` tree, rebuilt, ran all
+    three suites once foreground (semantics 2767/1 failed, backend_ir
+    1646/46 failed, compile_run 2679/5 failed - identical to every prior
+    round). `git stash pop` restored the harness, rebuilt clean (`-Wall
+    -Wextra -Wpedantic -Werror`, no warnings). With
+    `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` set, ran all three suites
+    foreground: zero `[receiver-target-diff-audit] MISMATCH` lines, same
+    failed counts (1/46/5) as baseline. With the env var unset, ran the
+    full battery two more times foreground
+    (`PrimeStruct_compile_run_tests` polled to completion across as many
+    foreground calls as needed each time); failing-test-case *names* were
+    diffed pairwise (baseline vs run1, baseline vs run2, run1 vs run2)
+    across all three suites - all nine comparisons byte-identical. Full
+    writeup: `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step
+    1c, RT3c harness round" section. This task stays open - RT3c's own
+    call-site migration, G7's `Call`-kind sub-cascade in
+    `IrLowererSetupTypeMethodCallResolution.cpp`, and monomorphization's F3
+    producer remain unmigrated/unimplemented in this module's scope.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

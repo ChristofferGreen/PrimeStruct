@@ -5325,3 +5325,146 @@ own scope: RT3c and G7's `Call`-kind sub-cascade in
 monomorphization's F3 producer for `CanonicalReceiverType` has not been
 implemented at all. TODO-5294 remains open; see `docs/todo.md` for
 current per-item status.
+
+## Step 1c, RT3c harness round: `resolveReceiverTypeFromFallbackExpr`, zero-divergence achieved, NOT migrated (2026-09-10)
+
+This round re-confirmed `resolveMethodReceiverTarget`'s structure post-RT3b
+migration: the function is now exactly three branches -
+`receiverExpr.kind == Name` (RT3a, delegating to RT2 via
+`resolveMethodReceiverTypeFromNameExpr`/`resolveReceiverType`),
+`receiverExpr.kind == Call` (RT3b, now `resolveReceiverTypeFromCallExpr`
+directly), and a final unconditional fallback for every other `Expr::Kind`
+(RT3c) - confirming nothing besides RT3c remains unmigrated in this
+function. RT3c's own body is unchanged from the Step 1c Scoping round's
+characterization: a single expression,
+`typeNameOut = inferExprKind ? typeNameForValueKind(inferExprKind(receiverExpr, localsIn)) : ""`,
+followed by an unconditional `return true` (the branch has no failure
+exit, matching every other branch in this function except RT3a's).
+
+Rather than moving to G7 this round (deferred - see below), RT3c got the
+same harness-then-migrate treatment RT2 and RT3b already went through,
+since it is the one remaining un-migrated piece squarely inside this
+module's already-agreed ir_lowerer scope (`resolveMethodReceiverTarget`
+itself) and finishing it keeps that function fully consolidated before
+opening a new file (G7's `IrLowererSetupTypeMethodCallResolution.cpp`) or
+a new stage (monomorphization's F3). This round is the harness round
+only - the production fallback branch's logic is byte-for-byte unchanged;
+the only addition is an audit call that no-ops unless
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` is set.
+
+### `resolveReceiverTypeFromFallbackExpr`
+
+Declared in both `src/ir_lowerer/IrLowererSetupTypeHelpers.h` and the
+testing mirror `include/primec/testing/ir_lowerer_helpers/IrLowererSetupTypeHelpers.h`,
+defined in `IrLowererSetupTypeReceiverTargetHelpers.cpp` immediately before
+`resolveMethodReceiverTarget`. It takes `receiverExpr`, `localsIn`, and
+`inferExprKind` (the only three inputs RT3c's own legacy body reads) and
+writes only `CanonicalReceiverType::collectionBaseName` - every other
+field stays at its struct default, exactly as the Step 1c Scoping round's
+RT3/G7 note predicted this would be "the *narrowest*-filled path found
+across all three/four sites" (no template-shape, wrapped, resolved-path,
+or family facts are available at this fallback tier at all). Always
+returns `true`, matching RT3c's "never fails" behavior.
+
+### Wiring: a direct audit call, not a scope-exit guard
+
+Unlike RT3b's `Call`-kind branch (many exit points scattered through a
+~250-line cascade, which needed a `ReceiverTargetDiffAuditGuard` RAII
+object to fire exactly once regardless of which `return` fired), RT3c's
+legacy body has exactly one statement and one `return true;` at the very
+end of `resolveMethodReceiverTarget` itself - the simpler direct-call
+pattern RT2's own harness round used fits cleanly. A new
+`auditReceiverTypeAgainstFallbackExpr` helper (anonymous-namespace,
+audit-only) is called with `receiverExpr`, `localsIn`, `inferExprKind`,
+and the legacy branch's own `typeNameOut` immediately after that line
+computes it, before the shared `return true;`. It no-ops immediately
+unless `isReceiverTargetDiffAuditEnabled()` (the same
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`-gated helper in
+`src/support/ReceiverElementFamilyClassifier.{h,cpp}` RT3b's harness round
+already used and deliberately left in place for a future round); when
+enabled it calls `resolveReceiverTypeFromFallbackExpr` independently and
+compares its `collectionBaseName` against the legacy `typeNameOut`,
+`assert`-ing on any mismatch. It only reads `typeNameOut` (by const
+reference) and never writes any out-parameter, so it cannot change
+`resolveMethodReceiverTarget`'s return value, out-parameters, or control
+flow in either configuration.
+
+### Verification
+
+Build: clean release rebuild (`-Wall -Wextra -Wpedantic -Werror`) of
+`primec_ir_lib` and all three suites below with the harness applied - no
+warnings (confirming `resolveReceiverTypeFromFallbackExpr`/
+`auditReceiverTypeAgainstFallbackExpr` are both real, wired code, not
+dead functions).
+
+Fresh baseline (`git stash -u` back to the clean `9d9c10ddc` tree, clean
+release rebuild, all three suites run foreground):
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15294 | 8 |
+
+Identical failed-test-case counts/names to every prior round of this
+effort (the one `soa reads` semantics flake, the same 46 `backend_ir`
+names, the same 5 `map`-conformance `compile_run` names; `compile_run`'s
+own assertion *count* varies slightly run-to-run independent of any code
+change here - see below, this is pre-existing and unrelated).
+
+`git stash pop` restored the harness; rebuilt clean (no warnings/errors).
+With the harness applied and `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+set, all three suites run foreground: **zero
+`[receiver-target-diff-audit] MISMATCH` lines** across all of them, and
+the same failed-test-case counts as the fresh baseline (1 / 46 / 5) -
+`resolveReceiverTypeFromFallbackExpr` agrees with the legacy RT3c fallback
+on every receiver shape these three suites exercise.
+
+With the env var unset again, the full three-suite battery was run twice
+more (foreground). The failing-test-case **names** (not just counts) were
+diffed pairwise - baseline vs. run 1, baseline vs. run 2, run 1 vs. run
+2 - across all three suites: all nine comparisons came back byte-identical
+(`diff` empty). Note: `compile_run`'s own total assertion count was 15294
+in the very first (stash-baseline) run and a stable 15278 in both
+un-audited reruns after the harness was restored - the same small
+run-to-run assertion-count wobble this doc's RT3b round also recorded
+(15278 there too), pre-existing and confined to `compile_run`'s own
+timing/ordering-sensitive assertions, not to failing-test-case identity
+(which was checked and is identical in all nine pairwise diffs) and not
+caused by this round's harness (the wobble appears both with and without
+the harness present). This confirms the audit call's presence has no
+observable effect on `resolveMethodReceiverTarget` in its default
+(un-audited) configuration.
+
+### What remains unmigrated (as of the harness round)
+
+`resolveMethodReceiverTarget`'s fallback branch is still the sole
+production implementation of RT3c - `resolveReceiverTypeFromFallbackExpr`
+is proven-equivalent but unused in production. Migrating the call site
+(replacing the branch's body with a call to
+`resolveReceiverTypeFromFallbackExpr` plus a copy into the legacy
+`typeNameOut` out-parameter, the same shape RT2's and RT3b's own
+migration rounds took) is left for a future round. After that migration,
+`resolveMethodReceiverTarget` will have exactly zero un-migrated logic
+left - RT2, RT3a, RT3b, and RT3c will all be single-production-path. G7's
+own `Call`-kind sub-cascade in `IrLowererSetupTypeMethodCallResolution.cpp`
+and monomorphization's F3 producer remain untouched. TODO-5294 remains
+open; see `docs/todo.md` for current per-item status.
+
+### Why G7 was not started this round
+
+The task offered G7 as this round's candidate if RT3c turned out to be
+either already-covered or wrong-shaped for this module. Neither was true:
+RT3c was confirmed still un-migrated (see above), and it is squarely
+inside this module's already-scoped `resolveMethodReceiverTarget` surface
+- finishing the function already in flight, with its harness
+infrastructure already in place and proven for two of its three branches,
+was judged the lower-risk, higher-continuity choice over opening a new
+file this round. G7 itself was re-confirmed as a genuine
+`resolveReceiverType`-shaped candidate (its own row in the Step 0/Step 1b
+sweep: `resolveMethodReceiverTarget(*receiver, ...)` setting
+`typeName`/`resolvedTypePath`, an inference question, not a resolution
+one - the same shape RT2/RT3 already are, and the reason it was rejected
+as a `classifyReceiverElementFamilyJoint` candidate earlier is exactly
+why it fits *this* module) and remains next in line once RT3c's migration
+lands.

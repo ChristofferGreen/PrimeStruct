@@ -53,6 +53,10 @@ bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
                                      const SemanticProgram *semanticProgram,
                                      const SemanticProductIndex *semanticIndex,
                                      CanonicalReceiverType &out);
+bool resolveReceiverTypeFromFallbackExpr(const Expr &receiverExpr,
+                                         const LocalMap &localsIn,
+                                         const InferReceiverExprKindFn &inferExprKind,
+                                         CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
                                                       const ResolveReceiverExprPathFn &resolveExprPath = {});
