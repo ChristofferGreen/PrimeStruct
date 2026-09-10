@@ -1951,6 +1951,47 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     call-site migration, G7's `Call`-kind sub-cascade in
     `IrLowererSetupTypeMethodCallResolution.cpp`, and monomorphization's F3
     producer remain unmigrated/unimplemented in this module's scope.
+  - implementation_notes (2026-09-10, RT3c real migration -
+    `resolveMethodReceiverTarget` fully migrated): migrated RT3c's
+    final-fallback branch to call `resolveReceiverTypeFromFallbackExpr`
+    directly and copy its `CanonicalReceiverType::collectionBaseName` into
+    the legacy `typeNameOut` out-parameter, the same shape RT2's and
+    RT3b's own migration rounds took. Deleted the old one-line inline
+    fallback body and the `auditReceiverTypeAgainstFallbackExpr`
+    diff-audit harness the prior round wired at this call site (diffing
+    the new function against itself post-migration is meaningless - same
+    retirement pattern as RT2/RT3b). Also removed the now-unused
+    `<cassert>`/`<iostream>` and
+    `primec/support/ReceiverElementFamilyClassifier.h` includes, mirroring
+    RT3b's migration commit exactly. With this, all three of
+    `resolveMethodReceiverTarget`'s branches (RT3a/RT2, RT3b, RT3c) are
+    single-production-path - the function itself is now fully migrated
+    end-to-end. Re-read the whole function fresh afterward: the `Call`-
+    and fallback-branches are now pure thin-dispatch (construct a
+    `CanonicalReceiverType`, call the sibling function, copy fields,
+    return), but the `Name`-kind branch still carries one piece of genuine
+    call-site wrapping logic beyond RT2's own delegation - a
+    `resolveStructTypePathFromName` second-chance lookup used only when
+    `resolveMethodReceiverTypeFromNameExpr` fails, which was never
+    proposed for folding into `CanonicalReceiverType` by any prior round.
+    Noted as an observation for a future pass, not acted on this round.
+    Verification: fresh baseline via `git stash -u` back to the clean
+    `eba4a4208` tree, rebuilt (no warnings), ran all three suites once
+    foreground (semantics 2767/1 failed, backend_ir 1646/46 failed,
+    compile_run 2679/5 failed - identical to every prior round, and this
+    round's assertion counts also matched exactly across every rerun with
+    no wobble). `git stash pop` restored the migration, rebuilt clean.
+    Ran the full battery two more times foreground; failing-test-case
+    *names* were diffed pairwise (baseline vs run1, baseline vs run2,
+    run1 vs run2) across all three suites - all nine comparisons
+    byte-identical. Confirmed via `pgrep -fc
+    '^\./PrimeStruct_<suite>_tests$'` that no concurrent instance ran.
+    Full writeup: `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "Step 1c, RT3c real migration" section. This task stays open - G7's
+    `Call`-kind sub-cascade in
+    `IrLowererSetupTypeMethodCallResolution.cpp` and monomorphization's F3
+    producer remain unmigrated/unimplemented; `resolveMethodReceiverTarget`
+    itself has no un-migrated branch logic left.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

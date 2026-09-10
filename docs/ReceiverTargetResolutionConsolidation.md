@@ -5468,3 +5468,104 @@ one - the same shape RT2/RT3 already are, and the reason it was rejected
 as a `classifyReceiverElementFamilyJoint` candidate earlier is exactly
 why it fits *this* module) and remains next in line once RT3c's migration
 lands.
+
+## Step 1c, RT3c real migration: `resolveMethodReceiverTarget` fully migrated end-to-end (2026-09-10)
+
+Migrates `resolveMethodReceiverTarget`'s final-fallback branch (reached
+when `receiverExpr` is neither `Name`- nor `Call`-kind) to call
+`resolveReceiverTypeFromFallbackExpr` directly and copy its
+`CanonicalReceiverType::collectionBaseName` output into the legacy
+`typeNameOut` out-parameter - the same shape RT2's (`0646d0444`) and
+RT3b's (`9d9c10ddc`) own migration rounds took. The old one-line inline
+body (`typeNameOut = inferExprKind ? typeNameForValueKind(inferExprKind(
+receiverExpr, localsIn)) : "";`) is deleted, along with the
+`auditReceiverTypeAgainstFallbackExpr` observational diff-audit harness
+this round's predecessor (`eba4a4208`) wired at this call site - diffing
+`resolveReceiverTypeFromFallbackExpr` against itself post-migration is
+meaningless, the same retirement reasoning RT2 and RT3b's own migration
+rounds used. The now-unused `<cassert>`/`<iostream>` includes and the
+`primec/support/ReceiverElementFamilyClassifier.h` include (needed only by
+the retired harness's `isReceiverTargetDiffAuditEnabled()` check) were
+removed too, mirroring RT3b's migration commit exactly.
+
+With this change, **all three of `resolveMethodReceiverTarget`'s
+branches - RT3a/RT2 (`Name`-kind), RT3b (`Call`-kind), and RT3c (the
+fallback) - are single-production-path**, each delegating to its own
+`CanonicalReceiverType`-producing sibling function above it in this file.
+This is the last piece of `resolveMethodReceiverTarget` itself; the
+function is now fully migrated onto the new module.
+
+### Re-reading `resolveMethodReceiverTarget` fresh: is it now a thin dispatcher?
+
+Mostly, but not entirely. The `Call`-kind and fallback branches are now
+pure delegation: construct a `CanonicalReceiverType`, call the sibling
+function, copy its fields into the legacy out-parameters, `return true`.
+Nothing else happens in either branch.
+
+The `Name`-kind branch (RT3a) is different and is the one place genuine
+wrapping logic still lives directly in `resolveMethodReceiverTarget`
+itself, beyond the three branches' own bodies: after calling
+`resolveMethodReceiverTypeFromNameExpr` (RT2's own thin wrapper around
+`resolveReceiverType`), if that call fails the branch falls through to a
+second, independent resolution attempt -
+`resolveStructTypePathFromName(receiverExpr.name, receiverExpr.namespacePrefix,
+importAliases, structNames)` - and only returns `false` (the function's
+*only* failure exit) if that second attempt also comes up empty. This
+`resolveStructTypePathFromName` fallback is call-site logic, not part of
+RT2's `resolveReceiverType` question ("what type does this local have"),
+and it was never proposed for delegation into `CanonicalReceiverType` by
+any prior round - RT2's own migration left it exactly where it already
+was. It is a legitimate candidate for a future round to look at (whether
+it belongs inside `resolveReceiverType` itself, as a second-chance
+struct-path lookup when the local-based classification fails, or should
+stay call-site logic as-is) but is **not** acted on this round - noted
+here only as an observation per this round's task.
+
+Net: `resolveMethodReceiverTarget` is now a thin dispatcher for two of
+its three branches (`Call` and fallback), with one small piece of
+genuine, never-yet-migrated wrapping logic remaining around the
+`Name`-kind branch's failure path.
+
+### Verification
+
+Fresh baseline (`git stash -u` back to the clean `eba4a4208` tree, clean
+release rebuild of `primec_ir_lib` and all three suites with
+`-Wall -Wextra -Wpedantic -Werror`, no warnings, all three suites run
+foreground):
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+Identical failed-test-case counts to every prior round of this effort
+(the one `soa reads` semantics flake, the same 46 `backend_ir` names, the
+same 5 `map`-conformance `compile_run` names).
+
+`git stash pop` restored the migration; rebuilt clean (no warnings/
+errors, confirming `resolveReceiverTypeFromFallbackExpr` and
+`CanonicalReceiverType` are both real, exercised production code paths
+now - not dead functions). The full three-suite battery was then run
+twice more (foreground only, per this doc's safety discipline). Failing
+test-case **names** (not just counts) were diffed pairwise across all
+three runs (baseline vs. run 1, baseline vs. run 2, run 1 vs. run 2) for
+all three suites - all nine comparisons came back byte-identical (`diff`
+empty). Every run's assertion counts also matched exactly across all
+three runs for all three suites (16428/137 backend_ir, 15278/8
+compile_run, 13343/2 semantics) - no run-to-run wobble this round,
+unlike the small `compile_run` assertion-count variance noted in prior
+rounds' verification sections (pre-existing, unrelated to this change).
+Confirmed via `pgrep -fc '^\./PrimeStruct_<suite>_tests$'` (anchored full
+binary path) that no concurrent test-suite instance ran at any point.
+
+### What remains after this round
+
+`resolveMethodReceiverTarget` itself has no un-migrated branch logic
+left. Two items remain open for TODO-5294 overall: G7's own `Call`-kind
+sub-cascade in `IrLowererSetupTypeMethodCallResolution.cpp` (re-confirmed
+above as next in line, a genuine `resolveReceiverType`-shaped candidate)
+and monomorphization's F3 producer. See `docs/todo.md` for current
+per-item status. The `Name`-kind branch's `resolveStructTypePathFromName`
+fallback (see above) is a smaller, non-blocking observation for whoever
+picks up G7 or does a future pass over this file, not a scoped item.

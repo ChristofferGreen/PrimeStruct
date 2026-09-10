@@ -1,15 +1,11 @@
 // soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
-#include <cassert>
-#include <iostream>
-
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/support/ReceiverElementFamilyClassifier.h"
 
 namespace primec::ir_lowerer {
 
@@ -802,6 +798,16 @@ bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
 // Always returns true, matching RT3c's own "never fails" behavior: like
 // RT3b, this is not a failure exit anywhere in resolveMethodReceiverTarget
 // (RT3a's Name-kind branch is the function's only path that can fail).
+//
+// This is now the sole production implementation of RT3c's fallback
+// classification: resolveMethodReceiverTarget's own final-fallback branch
+// below calls this function directly and copies its CanonicalReceiverType
+// output into its legacy typeNameOut out-parameter. A prior round proved
+// zero-divergence between this function and the old inline expression it
+// replaced via an observational diff-audit harness
+// (auditReceiverTypeAgainstFallbackExpr), since removed along with that old
+// inline expression. With this, all three of resolveMethodReceiverTarget's
+// branches (RT3a/RT2, RT3b, RT3c) are single-production-path.
 bool resolveReceiverTypeFromFallbackExpr(const Expr &receiverExpr,
                                          const LocalMap &localsIn,
                                          const InferReceiverExprKindFn &inferExprKind,
@@ -809,34 +815,6 @@ bool resolveReceiverTypeFromFallbackExpr(const Expr &receiverExpr,
   out.collectionBaseName = inferExprKind ? typeNameForValueKind(inferExprKind(receiverExpr, localsIn)) : "";
   return true;
 }
-
-namespace {
-
-// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): observational
-// diff-audit helper for RT3c, mirroring the (now-retired) RT3b
-// auditReceiverTypeAgainstCallExpr pattern. Compares the legacy fallback
-// branch's typeNameOut (the only field RT3c ever fills) against
-// resolveReceiverTypeFromFallbackExpr's independent CanonicalReceiverType
-// output. No-ops unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set; never
-// changes any out-parameter or return value.
-void auditReceiverTypeAgainstFallbackExpr(const Expr &receiverExpr,
-                                          const LocalMap &localsIn,
-                                          const InferReceiverExprKindFn &inferExprKind,
-                                          const std::string &legacyTypeName) {
-  if (!isReceiverTargetDiffAuditEnabled()) {
-    return;
-  }
-  CanonicalReceiverType canonical;
-  resolveReceiverTypeFromFallbackExpr(receiverExpr, localsIn, inferExprKind, canonical);
-  if (canonical.collectionBaseName != legacyTypeName) {
-    std::cerr << "[receiver-target-diff-audit] MISMATCH RT3c: legacy typeName=\"" << legacyTypeName
-               << "\" resolveReceiverTypeFromFallbackExpr collectionBaseName=\"" << canonical.collectionBaseName
-               << "\"\n";
-    assert(false && "resolveReceiverTypeFromFallbackExpr diverged from legacy RT3c fallback");
-  }
-}
-
-}  // namespace
 
 bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                  const LocalMap &localsIn,
@@ -885,12 +863,17 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     return true;
   }
 
-  typeNameOut = inferExprKind ? typeNameForValueKind(inferExprKind(receiverExpr, localsIn)) : "";
-  // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): observational
-  // diff-audit only - zero effect unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT
-  // is set. resolveReceiverTypeFromFallbackExpr is not yet the production
-  // path for this branch.
-  auditReceiverTypeAgainstFallbackExpr(receiverExpr, localsIn, inferExprKind, typeNameOut);
+  // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): RT3c's fallback
+  // classification is now delegated entirely to
+  // resolveReceiverTypeFromFallbackExpr, the independently-written
+  // CanonicalReceiverType-producing sibling above (proven zero-divergent
+  // against the old inline expression this replaced by a prior round's
+  // observational diff-audit harness). Copy its output into the legacy
+  // typeNameOut out-parameter this function's own callers still expect -
+  // mirroring RT2's and RT3b's own migrations above.
+  CanonicalReceiverType canonical;
+  resolveReceiverTypeFromFallbackExpr(receiverExpr, localsIn, inferExprKind, canonical);
+  typeNameOut = canonical.collectionBaseName;
   return true;
 }
 
