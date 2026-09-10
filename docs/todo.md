@@ -1634,6 +1634,61 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     ir_lowerer stage: remaining Row G/RT/CH branches assessed, none fit
     the classifier (2026-09-09, second round)" section. This task stays
     open, not `[x]`.
+  - implementation_notes (2026-09-10, Step 1c scoping - new module,
+    no implementation yet): both exhaustive sweeps above agreed every
+    remaining unmigrated branch (F3; RT2/RT3/G7) is receiver-type
+    *inference* ("what type does this receiver have"), the converse of
+    what `classifyReceiverElementFamilyJoint` answers - so this round
+    scoped a new, separate module (`CanonicalReceiverType` output shape
+    plus a per-stage `resolveReceiverType(...)` inference function) rather
+    than continuing to force-fit that shape onto the existing classifier.
+    Re-read F3 (`TemplateMonomorphMethodTargets.cpp:402-478`), RT2
+    (`resolveMethodReceiverTypeFromLocalInfo`), and RT3/G7
+    (`resolveMethodReceiverTarget`, both in
+    `IrLowererSetupTypeReceiverTargetHelpers.cpp`) in full, extracted each
+    site's actual input shape (AST `Expr` + monomorphization's own
+    binding-type-text machinery for F3; already-classified `LocalInfo` for
+    RT2; `Expr`+`LocalInfo`+a distinct args-pack-scoped kind enum for
+    RT3b) and output fields (`typeName`/`wrappedReceiverTypeName`/
+    `isBorrowedSoaReceiver` for F3; the bifurcated
+    `typeNameOut`/`resolvedTypePathOut` for RT2/RT3, no
+    `isBorrowedSoaReceiver`-equivalent field anywhere in ir_lowerer),
+    drafted a first-cut `CanonicalReceiverType` field list (family,
+    collectionBaseName, resolvedTypePath, template-shape facts,
+    isWrapped/wrappedBaseTypeName, isBorrowed, isArgsPackElement/
+    elemSlotCount), and mapped each site onto it field-by-field. Found one
+    genuinely irreconcilable case: monomorphization's F3-C3a (a `Call`
+    receiver that itself resolves to a struct definition) is not
+    receiver-type inference at all - it short-circuits to an
+    already-fully-resolved method-definition path, bypassing family
+    classification entirely - and cannot be expressed as a
+    `CanonicalReceiverType` without smuggling a resolution-shaped field
+    into what must stay a pure inference/classification concern
+    (documented, not papered over, with two rejected alternatives before
+    concluding it must stay outside `resolveReceiverType` as call-site
+    logic, same as F2's existing args-pack-map pre/post-step precedent).
+    Also flagged one deliberately-unresolved open question: whether
+    args-pack storage facts (`isArgsPackElement`/`elemSlotCount`) belong
+    inside `CanonicalReceiverType`'s output (ir_lowerer's RT3b-i needs
+    args-pack-kind as an input to its own classification) or in
+    `resolveReceiverType`'s stage-specific input (monomorphization's F3
+    never consults args-pack-ness at all - that's the sibling function
+    F2's job, run after and independent of F3) - the two stages' existing
+    structure disagrees, so this is named as the one concrete open
+    question a future implementation round must resolve, not guessed at.
+    Wrote an unwired, non-compiling-by-design header-only design sketch,
+    `include/primec/support/CanonicalReceiverTypeSketch.h` (not added to
+    any CMakeLists.txt target, not included anywhere), to make the
+    field-by-field discussion concrete for whoever implements this next.
+    No production `.cpp`/`.h` file changed; `classifyReceiverElementFamilyJoint`
+    itself untouched, per the task's own instruction not to widen it. Full
+    writeup in `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "Step 1c Scoping: `CanonicalReceiverType` and `resolveReceiverType`"
+    section, with the Plan section updated to describe Step 1c as
+    refining (not contradicting) Step 1b/Step 2, which remain valid,
+    already-delivered work. This task stays open, not `[x]` - this is
+    scoping, not implementation, and the overall consolidation effort is
+    far from done.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

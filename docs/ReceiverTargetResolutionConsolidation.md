@@ -267,7 +267,39 @@ resolveMethodCallTemplateTarget's F7 File-family slice migrated..."
 section below.
 Remaining scope is every other Row A/B/C/D/E/F/G call site this
 document's Step 0 rule table catalogs, including 13 of Row F's 17
-branches (F0-F6/F8, F10, F12, F14-F16) and all of `ir_lowerer`.
+branches (F0-F6/F8, F10, F12, F14-F16) and all of `ir_lowerer`. Both
+stages' remaining scope, as of the two exhaustive Step 1b sweeps
+(monomorphization's Row F and `ir_lowerer`'s Row G/RT/CH, both
+2026-09-09), turned out to be receiver-type-inference shaped (F3;
+RT2/RT3/G7), not classifier-shaped - see Step 1c below, which refines
+where that remaining scope goes rather than reopening Step 2 for the
+classifier itself.
+
+### Step 1c — Separate receiver-type inference from receiver-family classification (scoping started 2026-09-10; no code yet)
+
+Refines, does not contradict, Step 1b/Step 2 above: those steps'
+`(type, methodName, templateShape) -> family` classifier
+(`classifyReceiverElementFamilyJoint`) and its 8 landed migrations stay
+exactly as delivered and are not touched here. Step 1c is new scope for
+the receiver-type-*inference* question (F3 in monomorphization;
+RT2/RT3/G7 in `ir_lowerer`) that both stages' exhaustive Step 1b sweeps
+found the classifier structurally cannot absorb without recreating the
+entanglement this document exists to untangle - a new, canonical
+receiver-type output shape (`CanonicalReceiverType`) that a new
+per-stage `resolveReceiverType(<stage-specific input>, stage-context)`
+converges on producing, feeding into (not replacing)
+`classifyReceiverElementFamilyJoint` for the family verdict. This
+round's task was Step 0-style characterization only for this new
+module - no `CanonicalReceiverType`/`resolveReceiverType` implementation,
+no production code touched. See the dedicated "Step 1c Scoping" section
+below for the field-by-field F3/RT2/RT3/G7 mapping, the one
+irreconcilable case found (F3-C3a, which fuses resolution into what is
+otherwise a pure inference cascade and must stay outside this design
+entirely), and one deliberately-unresolved open question (whether
+args-pack storage facts belong in `CanonicalReceiverType`'s output or in
+`resolveReceiverType`'s stage-specific input). A future round implements
+`CanonicalReceiverType`/`resolveReceiverType` proper, grounded in this
+scoping rather than guessing at the interface.
 
 ## Step 0 Progress: TODO-4760 Traced Further (2026-09-04)
 
@@ -4267,6 +4299,295 @@ files has now been examined across the two `ir_lowerer` rounds, and none
 fit. Whether `ir_lowerer` has further low-risk consolidation potential
 under a *different*, purpose-built interface (per the pattern above) is
 now a scoping question for a future round, not a branch-hunting one.
+
+## Step 1c Scoping: `CanonicalReceiverType` and `resolveReceiverType` (2026-09-10, characterization only, no code wired)
+
+This section is a new phase, not another migration slice. Both stages'
+Step 1b sweeps above (monomorphization's Row F "exhausted" conclusion and
+`ir_lowerer`'s two-round Row G/RT/CH sweep) independently landed on the
+same structural finding: **every remaining unmigrated branch is
+receiver-type *inference* ("what type does this receiver have"), the
+converse of what `classifyReceiverElementFamilyJoint` answers** ("given a
+known type-text/method-name pair, what family is it"). Enlarging the
+classifier itself to also do inference would recreate the exact
+entanglement this whole investigation exists to untangle. The direction
+agreed instead: split receiver-type inference from receiver-family
+classification into two distinct, composable concerns - a new, canonical
+output shape (`CanonicalReceiverType`) that every stage's own
+`resolveReceiverType(<stage-specific input>, stage-context)` inference
+function converges on producing, with the existing classifier consuming
+that shape instead of a raw `(type-text, templateShape)` pair. This
+round's task is to characterize what the three/four already-documented
+inference sites (F3, RT2, RT3/G7) actually need from that shape, ground
+enough to let a future round implement it without guessing. **No
+production code changes this round.** A header-only design sketch,
+`include/primec/support/CanonicalReceiverTypeSketch.h`, accompanies this
+section - not wired into any build target, not included by any `.cpp`
+file, written only to make the field-by-field discussion below concrete.
+
+### Re-grounding: what F3, RT2, and RT3/G7 already established (re-read in full this round)
+
+- **F3** (`TemplateMonomorphMethodTargets.cpp:402-478`, the Step 0 Rule
+  Table's "F3 detail" sub-table, F3-N1/N2, F3-L/B/Fl/S, F3-C1-C3d) infers
+  `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver` for
+  `Name`/`Literal`/`BoolLiteral`/`FloatLiteral`/`StringLiteral`/`Call`-kind
+  AST receiver expressions, via monomorphization's own binding-type-text
+  machinery (`bindingTypeText`, `qualifyImportedCollectionTypeText`,
+  `unwrapImportedCollectionReceiverType`, `inferBindingTypeForMonomorph`,
+  `inferExprTypeTextForTemplatedVectorFallback`,
+  `inferDefinitionReturnBindingForTemplatedFallback`,
+  `getBuiltinCollectionName`). Two already-documented quirks a shared
+  shape must be able to represent even where a given stage doesn't fill
+  every field: (1) F3-C2's `wrappedReceiverTypeName` field asymmetry - it
+  updates `typeName`/`isBorrowedSoaReceiver` but leaves
+  `wrappedReceiverTypeName` stale, which matters because F6 (the
+  wrapper-method-path branch) reads `wrappedReceiverTypeName`
+  specifically; (2) two independently-documented override-priority gaps
+  (F3-C3b/F3-C3d) where a later assignment can silently overwrite an
+  already-computed `typeName` from F3-C1/C2 with no documented priority
+  rule. A third fact, not previously framed as a "gap" but directly
+  relevant here: **F3-C3a is not receiver-type inference at all** - when
+  the receiver is itself a `Call` that resolves to a struct definition, it
+  returns an already-fully-resolved `pathOut = resolved + "/" +
+  methodName` immediately, bypassing F3's own remaining cascade, F5, and
+  the entire F6-F16 family-dispatch cascade, with **no family
+  classification step at all**. See the irreconcilable-case finding
+  below.
+
+- **RT2** (`resolveMethodReceiverTypeFromLocalInfo`,
+  `IrLowererSetupTypeReceiverTargetHelpers.cpp:202-289`) infers
+  `typeNameOut`/`resolvedTypePathOut` from an already-resolved
+  `LocalInfo` struct (`isFileHandle`, `structTypeName`,
+  `errorHelperNamespacePath`, `errorTypeName`, `kind`
+  [`Array`/`Vector`/`Value`/`Buffer`/`Reference`/`Pointer`],
+  `isSoaVector`, `hasKeyValueKinds`, `referenceToArray/Vector/Buffer`,
+  `pointerToArray/Vector/Buffer`, `valueKind`) - i.e. its raw material is
+  *already-classified storage-kind metadata*, not an AST `Expr` or a type
+  text string. Its output bifurcates `typeNameOut` (a builtin family name:
+  `"array"`/`"soa"`/`"vector"`/`"map"`/`"Buffer"`/`"File"`) from
+  `resolvedTypePathOut` (a struct definition path) as two structurally
+  separate fields, set by disjoint branches - unlike F3, which keeps
+  everything in one `typeName` text and defers the builtin-vs-struct
+  distinction to a later resolution step. RT2 has no
+  `isBorrowedSoaReceiver`-equivalent field anywhere in its output.
+
+- **RT3/G7** (`resolveMethodReceiverTarget`,
+  `IrLowererSetupTypeReceiverTargetHelpers.cpp:527-776`) is the function
+  Row G's G7 calls; RT3a delegates `Name`-kind receivers to RT2 (via
+  `resolveMethodReceiverTypeFromNameExpr`/`resolveMethodReceiverTypeFromLocalInfo`)
+  or a struct-type-name-by-namespace-walk fallback
+  (`resolveStructTypePathFromName`); RT3b's `Call`-kind sub-cascade
+  independently re-derives family membership from `argsPackElementKind`
+  (RT3b-i, a **separate, args-pack-scoped kind enum**, not RT2's plain
+  `kind`), a `dereference(...)`-wrapped-receiver lambda (RT3b-ii, keyed on
+  either `argsPackElementKind` or plain `kind` depending on shape), a
+  bare-key-value-access probe (RT3b-iii), a general `inferExprKind` +
+  `resolveMethodReceiverTypeNameFromCallExpr` fallback (RT3b-iv),
+  String-means-character-access (RT3b-v), and a final
+  struct-type-path-from-call-expr fallback (RT3b-vi); RT3c handles every
+  other receiver kind via `typeNameForValueKind(inferExprKind(...))`
+  unconditionally. Confirmed by the second `ir_lowerer` Step 1b round: the
+  entire function, top to bottom, answers "what type does this receiver
+  have" with zero method-name gating anywhere - the same converse-question
+  shape as F3, just fed by `Expr`+`LocalInfo` instead of monomorphization's
+  own binding-type-text machinery. Like RT2, RT3/G7 has no
+  `isBorrowedSoaReceiver`-equivalent output field; unlike F3, it has no
+  second "wrapped" type-name text either - its wrapped-vs-unwrapped
+  handling (RT2j/RT2l/RT2m's `Reference`/`Pointer` `LocalInfo::Kind`
+  branches) works directly off `LocalInfo::Kind` rather than a parallel
+  type-name string, because `LocalInfo` already distinguishes
+  `Reference`/`Pointer` storage-kind before any type-name text exists.
+
+### First-cut `CanonicalReceiverType` field list
+
+See `include/primec/support/CanonicalReceiverTypeSketch.h` for the same
+fields as an (unwired, non-compiling-by-design) C++ struct. Summary:
+
+| field | purpose | filled by |
+|---|---|---|
+| `family` | the eventual `ReceiverElementFamily` verdict | NOT set directly by `resolveReceiverType` itself - see composition note below |
+| `collectionBaseName` | builtin family name text (`"vector"`/`"array"`/`"map"`/`"soa"`/`"Buffer"`/`"File"`/a primitive name) | RT2/RT3 natively (their own `typeNameOut`); monomorphization only after classifying its single `typeName` text |
+| `resolvedTypePath` | struct/definition path, when the receiver resolved to a struct type rather than a builtin family | RT2/RT3 natively (their own `resolvedTypePathOut`); monomorphization only after classifying `typeName` |
+| `isTemplateShaped` / `templateShapedBaseName` | the caller's own `splitTemplateTypeName`-equivalent parse result, matching `ReceiverElementFamilyJointInput`'s existing fields | both stages, via their own template-shape parse (not re-derived by this struct) |
+| `templateArgTexts` | parsed template-argument texts (`vector<T>` → `["T"]`, `map<K,V>` → `["K","V"]`) | **aspirational** - neither F3 nor RT2/RT3 currently retain individual parsed arg texts beyond an arg-count check (see sketch file comment); included because the task background names "template args" as part of the required union, not because current code fills it |
+| `isWrapped` / `wrappedBaseTypeName` | `Reference<T>`/`Pointer<T>` wrapping facts | F3 via its (asymmetric) `wrappedReceiverTypeName` text; RT2/RT3 via `LocalInfo::Kind`'s `Reference`/`Pointer` variants directly - two structurally different derivations of the same two output fields, not a shared code path |
+| `isBorrowed` | SOA/collection borrowed-vs-owned fact, feeding `_ref` method-name selection | F3 only (its `isBorrowedSoaReceiver`); RT2/RT3 never - `ir_lowerer`'s borrowed/owned renaming happens downstream, inside `IrLowererSetupTypeCollectionHelpers.cpp`'s registry-backed helper-name resolution, not as a receiver-type-inference output at all |
+| `isArgsPackElement` / `elemSlotCount` | args-pack storage-layout facts | **open question, not resolved this round** - see below |
+
+### Mapping each site onto the struct
+
+- **F3 → `CanonicalReceiverType`.** Fills `collectionBaseName` XOR
+  `resolvedTypePath` only after `classifyReceiverElementFamilyJoint` is
+  handed the raw `typeName` text it infers (F3 itself doesn't natively
+  distinguish "builtin family name" from "struct type name" the way RT2
+  does - see the composition note below). Fills `isWrapped`/
+  `wrappedBaseTypeName` from `wrappedReceiverTypeName`, faithfully
+  reproducing F3-C2's asymmetry (or documenting a deliberate fix, a Step 2
+  decision, not a Step 1c one) rather than silently smoothing it over.
+  Fills `isBorrowed` from `isBorrowedSoaReceiver` directly. Cannot fill
+  `templateArgTexts` beyond what `splitTemplateTypeName` already exposes
+  (a base name, not a parsed arg list) without new parsing work outside
+  this struct's scope. Does not fill `isArgsPackElement`/`elemSlotCount`
+  at all under the struct's current field definition, because F3 itself
+  never consults args-pack-ness (that's F2's job, run after and
+  independent of F3) - see the open question below. **F3-C3a cannot be
+  expressed as a `CanonicalReceiverType` at all** - see the irreconcilable
+  case below.
+
+- **RT2 → `CanonicalReceiverType`.** The most direct mapping found: RT2's
+  own `typeNameOut`/`resolvedTypePathOut` bifurcation maps onto
+  `collectionBaseName`/`resolvedTypePath` natively, with no intermediate
+  classification step needed (RT2 is itself already closer to producing a
+  family-shaped answer than F3 is - it just doesn't carry a family enum,
+  only a name string, because it predates this design). `isWrapped`/
+  `wrappedBaseTypeName` fill directly from `LocalInfo::Kind`'s
+  `Reference`/`Pointer` branches (RT2j/RT2l/RT2m) - no parallel text
+  needed, unlike F3. `isBorrowed` is never filled (see field-list note
+  above). `templateArgTexts` is never filled - `LocalInfo` doesn't carry
+  parsed template-argument texts at all in the characterized branches.
+  `isArgsPackElement`/`elemSlotCount` are never filled by RT2 itself
+  (RT2's input, `LocalInfo`, is the *plain*-local shape; the
+  args-pack-scoped equivalent is a distinct type consulted only by RT3b-i,
+  not by RT2).
+
+- **RT3/G7 → `CanonicalReceiverType`.** RT3a delegates straight to RT2's
+  mapping above for bound `Name` receivers. RT3b's `Call`-kind sub-cascade
+  is the one site among these three/four that *would* need to fill
+  `isArgsPackElement`/`elemSlotCount` if those fields live inside this
+  struct, since RT3b-i's entire classification is keyed on
+  `argsPackElementKind` rather than plain `LocalInfo::Kind` - this is the
+  concrete evidence behind the open question below, not a hypothetical.
+  RT3c's `typeNameForValueKind(inferExprKind(...))` fallback maps onto
+  `collectionBaseName` alone (a bare value-kind name, e.g. `"i32"`,
+  `"string"`), with no template-shape, wrapped, or args-pack facts
+  available at that fallback tier at all - all of those fields would stay
+  at their sketch-file defaults for that specific fallback path, which is
+  fine under the task's own "not every field must be filled" allowance,
+  but worth naming explicitly since it's the *narrowest*-filled path
+  found across all three/four sites.
+
+### Composition note: where the existing classifier plugs back in
+
+`classifyReceiverElementFamilyJoint` stays exactly as-is per the task's
+own instruction - it is not being widened. The clean seam found this
+round: monomorphization's `resolveReceiverType` would end its own
+cascade (structurally unchanged from F3's existing logic) by handing its
+inferred raw `typeName` text, together with the caller's own
+`splitTemplateTypeName` result and the method name, to
+`classifyReceiverElementFamilyJoint` exactly as the already-migrated Row A
+call sites do today - that call's `ReceiverElementFamilyResult` is what
+fills `CanonicalReceiverType::family`/`collectionBaseName` (the parts
+`classifyReceiverElementFamilyJoint` is already trusted to decide), with
+`resolveReceiverType` filling the rest (`resolvedTypePath`, `isWrapped`,
+`isBorrowed`, etc.) itself from information the classifier never sees.
+`ir_lowerer`'s `resolveReceiverType` would do the same, but starting from
+RT2/RT3's already-bifurcated `typeNameOut`/`resolvedTypePathOut` rather
+than a single text needing its own builtin-vs-struct split first. Neither
+stage's `resolveReceiverType` needs to duplicate
+`classifyReceiverElementFamilyJoint`'s own name-set logic; both call into
+it once, at the end of their own stage-specific inference.
+
+### Irreconcilable case found: F3-C3a cannot be expressed as `CanonicalReceiverType` without losing information
+
+Per this round's task instructions to document rather than paper over an
+irreconcilable case: monomorphization's **F3-C3a** (receiver is a `Call`
+that itself resolves to a struct definition) does not answer "what type
+does this receiver have" at all - it short-circuits directly to an
+already-fully-resolved method-definition *path* (`pathOut = resolved +
+"/" + methodName`), skipping the rest of F3, F5, and the entire F6-F16
+family-dispatch cascade. There is no `CanonicalReceiverType` this case
+could produce that a caller would then still need to run through
+`classifyReceiverElementFamilyJoint` and the family-dispatch machinery
+for - doing so would be pure wasted work at best, and at worst wrong
+(this case's own resolved path is not necessarily what family-based
+dispatch would independently reconstruct, since it comes from resolving
+the receiver *call itself*, not from classifying an element type text).
+
+Two ways to represent this were considered and both rejected:
+
+1. **A sentinel "already resolved, skip classification" variant added to
+   `CanonicalReceiverType`** (e.g. an optional `alreadyResolvedPath`
+   field short-circuiting everything else). Rejected: this smuggles a
+   *resolution*-shaped field into what the design's own stated goal
+   (background section, bullet 3) requires stay a pure inference/
+   classification concern - "resolution/dispatch logic... stays OUTSIDE
+   both of these," and F3-C3a's payload is resolution, not a type fact.
+2. **`resolveReceiverType` returning some kind of tagged union/`variant`
+   of `CanonicalReceiverType` or a resolved-path string.** Rejected for
+   the same reason at one remove: it would still mean the "pure
+   inference" function sometimes returns a resolution result, just wrapped
+   - callers would need to branch on which variant they got before ever
+   reaching the classifier, reproducing the exact class → resolution
+   fusion this whole document's Step 0 sweep flagged as disqualifying for
+   G1/G8/G4/G10 in `ir_lowerer`. Doing the same thing on the
+   monomorphization side under a different name would not be a genuine
+   fix.
+
+**Conclusion: F3-C3a should stay entirely outside `resolveReceiverType`
+and `CanonicalReceiverType`**, exactly where it already lives -
+monomorphization's own call-site code should keep performing this check
+as a pre-step *before* ever calling into the shared inference function
+(mirroring how F2's args-pack-map shape already runs as a wholly separate
+pre/post step around F3 today, per the Step 0 Rule Table's own note that
+F2 "can override an already-successfully-inferred `typeName`'s dispatch
+entirely"). This is not a gap in the design; it is evidence that
+monomorphization's existing cascade already has (at least) two resolution
+short-circuits (F2, F3-C3a) sitting *around* what is otherwise a
+classification problem, and a future Step 2 migration for this stage
+needs to keep both of them as call-site logic outside the shared
+inference/classification pair, not try to fold them in.
+
+### Open question, deliberately left open: do args-pack storage facts belong inside `CanonicalReceiverType` or in `resolveReceiverType`'s stage-specific input?
+
+Not resolved this round; flagged rather than guessed at, per the task's
+own instructions. The evidence pulls in different directions per stage:
+
+- **`ir_lowerer`'s RT3b-i** keys its *entire* `Call`-kind family
+  classification off a distinct `argsPackElementKind` (not the receiver's
+  own plain `LocalInfo::Kind`) - i.e. "is this receiver an args-pack
+  element, and what element kind does it have" is something RT3's own
+  inference needs to *consult* before it can decide a family at all. This
+  argues for `isArgsPackElement`/`elemSlotCount`-shaped facts living on
+  the *input* side of `resolveReceiverType`, alongside (or folded into)
+  whatever stage-specific context it already takes, not purely as an
+  output fact.
+- **Monomorphization's F3**, by contrast, never consults args-pack-ness
+  during type inference at all - the args-pack-map shape is handled
+  entirely by the sibling function F2 (`resolveIndexedArgsPackMapMethodTarget`),
+  which runs *after* F3 finishes and unconditionally discards F3's own
+  output when it matches. Nothing in F3's own characterized cascade reads
+  or produces an args-pack-element-kind-shaped fact at all - which argues
+  the opposite way: that this is a call-site-level pre/post step (like
+  F3-C3a above), not part of inference's output contract.
+
+A `resolveReceiverType` interface that is genuinely shared across both
+stages needs one answer here, and the two stages' own existing structure
+disagrees about which shape is natural. Rather than force a decision from
+characterization work alone, this is named as the single concrete
+open design question a future implementation round must resolve - most
+likely by re-examining whether `ir_lowerer`'s RT3b-i's args-pack-kind
+consultation is itself best modeled as part of that stage's own
+*stage-specific input* to `resolveReceiverType` (an `argsPackElementKind`
+the caller supplies alongside the receiver `Expr`, mirroring how
+monomorphization's F2/F3 relationship already keeps args-pack-ness
+outside inference proper) rather than adding `isArgsPackElement`/
+`elemSlotCount` output fields to `CanonicalReceiverType` at all - which
+would make the sketch file's current placeholder fields for these two
+facts non-final, pending that decision.
+
+### Supersedes/refines, does not contradict, the original Step 1b/Step 2 plan
+
+This section describes a new phase - tentatively **Step 1c** - that sits
+alongside, not in place of, the original Step 1b/Step 2 plan. The
+`(type, methodName, templateShape) -> family` classifier
+(`classifyReceiverElementFamilyJoint`) and its 8 already-landed migrations
+across semantics/monomorphization remain exactly as delivered - correct,
+narrow, and load-bearing production behavior - and are not touched or
+widened by anything in this section. Step 1c is additive scope for the
+inference-shaped branches Step 1b's own exhaustive sweeps found the
+classifier structurally cannot (and should not) absorb. See the updated
+"Plan" section above for where Step 1c sits in the document's own
+numbering.
 
 ## Risks
 
