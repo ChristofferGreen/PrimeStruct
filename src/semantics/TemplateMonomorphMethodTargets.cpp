@@ -29,6 +29,7 @@
 #include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"
 #include "TemplateMonomorphSourceDefinitionSetup.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
+#include "primec/support/CanonicalReceiverType.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
@@ -104,6 +105,203 @@ using semantics::normalizeBindingTypeName;
 using semantics::splitTemplateTypeName;
 using semantics::splitTopLevelTemplateArgs;
 
+
+namespace {
+
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): resolveReceiverType
+// for monomorphization's F3, the receiver-type-inference cascade that lives
+// inline inside resolveMethodCallTemplateTarget below (see the Step 0 Rule
+// Table's "F3 detail" sub-table, and this document's "Ready to implement"
+// checklist, which named this stage/function as the second
+// resolveReceiverType producer after ir_lowerer's RT2/RT3/G7).
+//
+// This round covers only F3-N1/N2 (Name-kind receiver) and F3-L/B/Fl/S
+// (primitive-literal-kind receivers) - the same "smallest first slice"
+// narrowing RT2 used when it started ir_lowerer-side, plus a newly-found,
+// stage-specific reason to stop there for now: F3-C1/C2/C3 (Call-kind
+// receivers) call inferBindingTypeForMonomorph (transitively
+// inferImplicitTemplateArgs), inferExprTypeTextForTemplatedVectorFallback,
+// and inferDefinitionReturnBindingForTemplatedFallback, all of which take a
+// non-const Context& and mutate ctx-scoped, test-visible counters as a side
+// effect of merely being called - specifically
+// Context::implicitTemplateArgInferenceFactHitsForTesting and
+// implicitTemplateArgFactsForTesting (TemplateMonomorphContext.h,
+// incremented/appended inside TemplateMonomorphImplicitTemplateInference.cpp's
+// inferImplicitTemplateArgs whenever a cached implicit-template-arg fact is
+// hit, independent of the collectImplicitTemplateArgFactsForTesting gate),
+// read back only by TemplateMonomorph.cpp for test-facing hit-count/fact
+// reporting. RT2/RT3b/RT3c's own underlying inference (LocalInfo/Expr-kind
+// based) is provably side-effect-free, which is what made calling it a
+// second time from a purely-observational diff-audit safe; F3's Call-kind
+// path is not side-effect-free in the same way, so invoking it a second
+// time here would corrupt those counters for any test that asserts on them -
+// a real violation of this round's "harness only observes, production stays
+// behaviorally unchanged" discipline, not a hypothetical one. Call-kind
+// receivers are therefore explicitly out of scope this round:
+// resolveReceiverType returns false for them without attempting any
+// inference (and without calling any of the functions above), and the
+// diff-audit call site below skips the comparison entirely whenever
+// receiver.kind == Expr::Kind::Call rather than exercising a nonexistent
+// path. A future round revisiting this should look at running the
+// side-effecting helpers against a throwaway deep copy of Context rather
+// than ctx itself before extending this function's coverage.
+// F3-C3a (the receiver-is-a-struct-constructor-call short-circuit) is
+// separately and permanently out of scope regardless, per the earlier
+// "Ready to implement" round's irreconcilable-case finding - it answers a
+// resolution question ("what method-definition path"), not an inference one
+// ("what type"), and was never returned by this cascade in the first place.
+bool resolveReceiverType(const Expr &receiver,
+                         const LocalTypeMap &locals,
+                         const Context &ctx,
+                         CanonicalReceiverType &out) {
+  out = CanonicalReceiverType{};
+  if (receiver.kind == Expr::Kind::Name) {
+    auto it = locals.find(receiver.name);
+    if (it == locals.end()) {
+      return false;
+    }
+    // Independent re-derivation of the same three lambdas
+    // resolveMethodCallTemplateTarget defines locally below
+    // (qualifyImportedCollectionTypeText/bindingTypeText/
+    // isBorrowedSoaReceiverType/unwrapImportedCollectionReceiverType) -
+    // deliberately not shared code, matching every prior resolveReceiverType
+    // producer's own "independent reimplementation" precedent so this
+    // diff-audit is a genuine cross-check, not a tautology.
+    std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
+        [&](std::string typeText) -> std::string {
+      typeText = normalizeBindingTypeName(typeText);
+      if (typeText.empty()) {
+        return typeText;
+      }
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
+        base = normalizeBindingTypeName(base);
+        if ((base == "Reference" || base == "Pointer") && !argText.empty()) {
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+            return typeText;
+          }
+          return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
+        }
+        if (const std::string *importAlias =
+                lookupScopedImportAliasForNamespace(base, receiver.namespacePrefix, ctx);
+            importAlias != nullptr) {
+          return *importAlias + "<" + argText + ">";
+        }
+        return typeText;
+      }
+      if (const std::string *importAlias =
+              lookupScopedImportAliasForNamespace(typeText, receiver.namespacePrefix, ctx);
+          importAlias != nullptr) {
+        return *importAlias;
+      }
+      return typeText;
+    };
+    auto bindingTypeText = [](const BindingInfo &binding) {
+      std::string typeText = binding.typeName;
+      if (!binding.typeTemplateArg.empty()) {
+        typeText += "<" + binding.typeTemplateArg + ">";
+      }
+      return typeText;
+    };
+    auto isBorrowedSoaReceiverType = [&](std::string typeText) {
+      typeText = normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
+        return false;
+      }
+      const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+      if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+        return false;
+      }
+      return isTemplateMonomorphSoaReceiverType(
+          normalizeCollectionReceiverTypeName(
+              unwrapCollectionReceiverEnvelope(argText)));
+    };
+    auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
+      return unwrapCollectionReceiverEnvelope(
+          qualifyImportedCollectionTypeText(bindingTypeText(binding)));
+    };
+
+    const std::string wrappedReceiverTypeName =
+        qualifyImportedCollectionTypeText(bindingTypeText(it->second));
+    out.isBorrowed = isBorrowedSoaReceiverType(bindingTypeText(it->second));
+    out.collectionBaseName = unwrapImportedCollectionReceiverType(it->second);
+    out.wrappedBaseTypeName = wrappedReceiverTypeName;
+    std::string wrapBase;
+    std::string wrapArg;
+    const std::string normalizedWrapped = normalizeBindingTypeName(wrappedReceiverTypeName);
+    if (splitTemplateTypeName(normalizedWrapped, wrapBase, wrapArg) && !wrapArg.empty()) {
+      const std::string normalizedWrapBase = normalizeCollectionReceiverTypeName(wrapBase);
+      out.isWrapped = (normalizedWrapBase == "Reference" || normalizedWrapBase == "Pointer");
+    }
+    return !out.collectionBaseName.empty();
+  }
+  if (receiver.kind == Expr::Kind::Literal) {
+    out.collectionBaseName = receiver.isUnsigned ? "u64" : (receiver.intWidth == 64 ? "i64" : "i32");
+    return true;
+  }
+  if (receiver.kind == Expr::Kind::BoolLiteral) {
+    out.collectionBaseName = "bool";
+    return true;
+  }
+  if (receiver.kind == Expr::Kind::FloatLiteral) {
+    out.collectionBaseName = receiver.floatWidth == 64 ? "f64" : "f32";
+    return true;
+  }
+  if (receiver.kind == Expr::Kind::StringLiteral) {
+    out.collectionBaseName = "string";
+    return true;
+  }
+  // Call-kind (and any other kind) is out of scope this round - see the
+  // long comment above.
+  return false;
+}
+
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): observational
+// diff-audit helper for F3's Name-kind and primitive-literal-kind receivers,
+// mirroring the RT2/RT3b/RT3c diff-audit pattern. Compares
+// resolveMethodCallTemplateTarget's own legacy typeName/wrappedReceiverTypeName/
+// isBorrowedSoaReceiver locals (captured right after F3's own cascade
+// finishes, before resolveIndexedArgsPackMapMethodTarget can discard them)
+// against resolveReceiverType's independent CanonicalReceiverType output.
+// No-ops unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set; never changes
+// any legacy variable or resolveMethodCallTemplateTarget's return value.
+// Skips the comparison entirely for Call-kind (and any other) receiver
+// kinds resolveReceiverType does not yet cover this round - see that
+// function's own comment for why.
+void auditReceiverTypeAgainstTemplateMonomorphExpr(const Expr &receiver,
+                                                    const LocalTypeMap &locals,
+                                                    const Context &ctx,
+                                                    const std::string &legacyTypeName,
+                                                    const std::string &legacyWrappedReceiverTypeName,
+                                                    bool legacyIsBorrowedSoaReceiver) {
+  if (!isReceiverTargetDiffAuditEnabled()) {
+    return;
+  }
+  if (receiver.kind != Expr::Kind::Name && receiver.kind != Expr::Kind::Literal &&
+      receiver.kind != Expr::Kind::BoolLiteral && receiver.kind != Expr::Kind::FloatLiteral &&
+      receiver.kind != Expr::Kind::StringLiteral) {
+    return;
+  }
+  CanonicalReceiverType canonical;
+  resolveReceiverType(receiver, locals, ctx, canonical);
+  if (canonical.collectionBaseName != legacyTypeName ||
+      canonical.wrappedBaseTypeName != legacyWrappedReceiverTypeName ||
+      canonical.isBorrowed != legacyIsBorrowedSoaReceiver) {
+    std::cerr << "[receiver-target-diff-audit] MISMATCH F3: legacy typeName=\"" << legacyTypeName
+               << "\" wrappedReceiverTypeName=\"" << legacyWrappedReceiverTypeName
+               << "\" isBorrowedSoaReceiver=" << legacyIsBorrowedSoaReceiver
+               << " resolveReceiverType collectionBaseName=\"" << canonical.collectionBaseName
+               << "\" wrappedBaseTypeName=\"" << canonical.wrappedBaseTypeName << "\" isBorrowed="
+               << canonical.isBorrowed << "\n";
+    assert(false && "resolveReceiverType diverged from legacy F3 (Name/literal-kind receivers)");
+  }
+}
+
+}  // namespace
 
 bool resolveMethodCallTemplateTarget(const Expr &expr,
                                      const LocalTypeMap &locals,
@@ -471,6 +669,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       }
     }
   }
+  // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): observational
+  // diff-audit only - zero effect unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT
+  // is set. resolveReceiverType is not yet the production path for this
+  // cascade; must run before resolveIndexedArgsPackMapMethodTarget can
+  // discard the very locals being compared.
+  auditReceiverTypeAgainstTemplateMonomorphExpr(receiver, locals, ctx, typeName,
+                                                wrappedReceiverTypeName, isBorrowedSoaReceiver);
   if (resolveIndexedArgsPackMapMethodTarget()) {
     return true;
   }

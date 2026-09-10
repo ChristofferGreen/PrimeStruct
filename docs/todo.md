@@ -1992,6 +1992,94 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     `IrLowererSetupTypeMethodCallResolution.cpp` and monomorphization's F3
     producer remain unmigrated/unimplemented; `resolveMethodReceiverTarget`
     itself has no un-migrated branch logic left.
+  - implementation_notes (2026-09-10, G7 re-confirmed as no new work; F3
+    harness round, NOT migrated): re-investigated G7
+    (`IrLowererSetupTypeMethodCallResolution.cpp:897-913`) fresh against
+    the just-completed RT3c migration rather than assuming last round's
+    scoping note still held. Confirmed by reading the call site directly:
+    G7 is a plain, single call to `resolveMethodReceiverTarget(*receiver,
+    ...)` with no cascade logic of its own beyond a failure-path
+    `errorOut` restore - and `resolveMethodReceiverTarget` is now, as of
+    the immediately-preceding round, a fully single-production-path thin
+    dispatcher onto the `resolveReceiverType`/`resolveReceiverTypeFrom-
+    CallExpr`/`resolveReceiverTypeFromFallbackExpr` family. G7 therefore
+    requires zero new implementation this round - it already sits
+    entirely on the new module, transitively, as a side effect of RT3c's
+    migration landing. This is a "doesn't fit cleanly" finding in the
+    sense the task's own step 7 anticipated (nothing left to build, not a
+    bad-fit rejection), so this round pivoted to monomorphization's F3
+    producer instead, per the task's own fallback instruction.
+
+    Implemented an independent `resolveReceiverType` for F3
+    (`TemplateMonomorphMethodTargets.cpp`, `primec` anonymous namespace,
+    just above `resolveMethodCallTemplateTarget`), covering only F3-N1/N2
+    (Name-kind receiver) and F3-L/B/Fl/S (primitive-literal-kind
+    receivers) this round - deliberately narrower than F3's full
+    Name/Literal/Call coverage. Reason, found by tracing the actual
+    dependency functions rather than assumed: F3-C1/C2/C3 (Call-kind
+    receivers) call `inferBindingTypeForMonomorph` (transitively
+    `inferImplicitTemplateArgs`), `inferExprTypeTextForTemplatedVector-
+    Fallback`, and `inferDefinitionReturnBindingForTemplatedFallback`, all
+    of which take a non-const `Context&` and mutate ctx-scoped,
+    test-visible counters as a side effect of merely being called -
+    `Context::implicitTemplateArgInferenceFactHitsForTesting` and
+    `implicitTemplateArgFactsForTesting` specifically (incremented/
+    appended inside `inferImplicitTemplateArgs` on every cached-fact hit,
+    independent of the `collectImplicitTemplateArgFactsForTesting` gate;
+    read back only by `TemplateMonomorph.cpp`'s own test-facing hit-
+    count/fact reporting). RT2/RT3b/RT3c's own underlying inference
+    (`LocalInfo`/`Expr`-kind based) is provably side-effect-free, which is
+    what made calling it a second time from a purely-observational
+    diff-audit safe in every prior round; F3's Call-kind path is not, so
+    invoking it a second time from an audit would corrupt those counters
+    for any test asserting on them - a real, newly-found violation of
+    this round's own "harness only observes, production stays
+    behaviorally unchanged" safety discipline, not a hypothetical one.
+    Call-kind receivers are out of scope this round for that reason;
+    F3-C3a (the receiver-is-a-struct-constructor-call short-circuit)
+    stays permanently out of scope regardless, per the design doc's
+    already-settled irreconcilable-case finding. No `CanonicalReceiverType`
+    struct changes were needed - the struct's existing fields
+    (`collectionBaseName`, `wrappedBaseTypeName`, `isBorrowed`,
+    `isWrapped`) already cover everything F3-N1/N2/L/B/Fl/S produce, per
+    last round's own "ready to implement" mapping.
+
+    Wired a direct (non-RAII) diff-audit call
+    (`auditReceiverTypeAgainstTemplateMonomorphExpr`), matching RT3c's own
+    "single exit point" pattern, gated on the existing
+    `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` env var, placed immediately
+    after F3's own cascade finishes inside `resolveMethodCallTemplateTarget`
+    (before `resolveIndexedArgsPackMapMethodTarget` can discard the
+    locals being compared) and skipping the comparison entirely for
+    Call-kind (and any other) receiver kinds `resolveReceiverType` does
+    not yet cover. No production call site migrated this round - F3's own
+    cascade inside `resolveMethodCallTemplateTarget` is byte-for-byte
+    unchanged.
+
+    Verification: fresh baseline via `git stash -u` back to the clean
+    `62958f772` tree, rebuilt all three suites (no warnings), ran each
+    once foreground (semantics 2767/1 failed, backend_ir 1646/46 failed,
+    compile_run 2679/5 failed - identical to every prior round). `git
+    stash pop` restored the harness, rebuilt clean (no warnings). Ran the
+    full battery twice more with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+    set: zero `receiver-target-diff-audit` mismatches in either run, same
+    exact counts both times, and failing-test-case *names* byte-identical
+    against baseline and against each other for all three suites. Ran the
+    full battery twice more again with the env var unset: same counts,
+    same byte-identical failing-name diffs against baseline and against
+    each other. Confirmed via `pgrep -fc
+    '^\./PrimeStruct_<suite>_tests$'` that no concurrent instance ran at
+    any point; `compile_run`'s full run consistently exceeds a single
+    ~590s foreground call and was let auto-background-and-notify per this
+    round's own safety discipline rather than cut short with an external
+    `timeout` wrapper (which was tried once, truncated the run early, and
+    was abandoned in favor of letting the suite finish on its own).
+    Full writeup: `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "Step 1c, F3 harness round" section. This task stays open - F3's
+    Call-kind receivers (F3-C1/C2/C3b/c/d) remain unharnessed pending a
+    safe way to avoid double-invoking their side-effecting dependencies
+    (e.g. running them against a throwaway deep copy of `Context`), and no
+    call site anywhere has been migrated onto the new module yet.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

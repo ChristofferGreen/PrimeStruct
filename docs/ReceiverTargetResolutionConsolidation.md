@@ -5569,3 +5569,189 @@ and monomorphization's F3 producer. See `docs/todo.md` for current
 per-item status. The `Name`-kind branch's `resolveStructTypePathFromName`
 fallback (see above) is a smaller, non-blocking observation for whoever
 picks up G7 or does a future pass over this file, not a scoped item.
+
+## Step 1c, F3 harness round: G7 re-confirmed as no new work; monomorphization's F3 producer implemented for Name/literal receivers (2026-09-10)
+
+### Re-checking G7 fresh: it already sits on the new module
+
+Before touching monomorphization, this round re-read Row G's G7
+(`IrLowererSetupTypeMethodCallResolution.cpp:897-913`) against the state
+`resolveMethodReceiverTarget` was left in by the immediately-preceding
+round, rather than trusting last round's own "why G7 was not started"
+note to still hold unchanged. It does not, in G7's favor: G7's own body is
+nothing more than
+
+```cpp
+if (!resolveMethodReceiverTarget(*receiver, localsIn, explicitMethodPath,
+                                 semanticAwareImportAliases, structNames,
+                                 inferExprKind, resolveExprPath, typeName,
+                                 resolvedTypePath, errorOut, semanticProgram,
+                                 semanticIndexPtr)) {
+  if (allowBuiltinFallback) { errorOut = priorError; }
+  return nullptr;
+}
+```
+
+a single call plus a failure-path `errorOut` restore - no cascade logic
+of G7's own to migrate. And `resolveMethodReceiverTarget` is now, as of
+this document's own immediately-preceding "RT3c real migration" section,
+a fully single-production-path thin dispatcher onto the
+`resolveReceiverType`/`resolveReceiverTypeFromCallExpr`/
+`resolveReceiverTypeFromFallbackExpr` family for all three of its
+branches. G7 therefore already sits entirely on the new module,
+transitively, purely as a side effect of RT3c's migration landing last
+round - there is no independent G7 cascade left to characterize or
+migrate. This supersedes every prior round's framing of G7 as "next in
+line" waiting for its own implementation round: it needed none. Per the
+task's own step 7 fallback ("if G7 turns out not to fit cleanly...
+instead start on monomorphization's F3 producer"), this counts as exactly
+that case - not a bad structural fit, but zero remaining work - and this
+round proceeded to F3.
+
+### F3 implemented for Name-kind and primitive-literal-kind receivers only
+
+Added an independent `resolveReceiverType` (anonymous namespace,
+`TemplateMonomorphMethodTargets.cpp`, immediately above
+`resolveMethodCallTemplateTarget`) reproducing F3-N1/N2 (`Name`-kind
+receiver, via a from-scratch reimplementation of
+`qualifyImportedCollectionTypeText`/`bindingTypeText`/
+`isBorrowedSoaReceiverType`/`unwrapImportedCollectionReceiverType`,
+deliberately not sharing code with the lambdas
+`resolveMethodCallTemplateTarget` defines locally, matching every prior
+`resolveReceiverType` producer's own independent-reimplementation
+precedent) and F3-L/B/Fl/S (the four primitive-literal receiver kinds).
+Fills `CanonicalReceiverType::collectionBaseName` from the unwrapped type
+text, `wrappedBaseTypeName` from the raw (possibly-still-wrapped)
+qualified type text - faithfully as a second, independent field, matching
+the design doc's own field-list note that F3's wrapped-type text is not
+redundant with `collectionBaseName` the way ir_lowerer's is - `isBorrowed`
+from the same borrowed-SOA check F3 itself runs, and derives `isWrapped`
+by checking whether `wrappedBaseTypeName`'s own base (post-normalization)
+is `Reference`/`Pointer`. No `CanonicalReceiverType` struct changes were
+needed; every field this slice fills already existed from the prior
+round's scoping work.
+
+### Why Call-kind receivers (F3-C1/C2/C3) are out of scope this round
+
+Traced concretely rather than assumed, because this is the first F3 slice
+and the first time this document's `resolveReceiverType` precedent meets
+a stage whose underlying inference is not obviously pure. F3-C1
+(`inferBindingTypeForMonomorph`), F3-C2's fallback
+(`inferExprTypeTextForTemplatedVectorFallback`), and F3-C3c's fallback
+(`inferDefinitionReturnBindingForTemplatedFallback`) all take a
+non-`const Context&` and, transitively (via
+`inferCallBindingTypeForMonomorph` → `inferImplicitTemplateArgs`), mutate
+two ctx-scoped fields on every cached-implicit-template-arg-fact hit:
+`Context::implicitTemplateArgInferenceFactHitsForTesting` (incremented
+unconditionally on a cache hit) and `implicitTemplateArgFactsForTesting`
+(appended to, gated on the separate
+`collectImplicitTemplateArgFactsForTesting` flag) - see
+`TemplateMonomorphContext.h` and their only readers,
+`TemplateMonomorph.cpp`'s own test-facing hit-count/fact-list reporting
+functions. These are real, test-visible side effects of *calling* the
+inference helpers at all, independent of whatever type answer they
+return.
+
+RT2/RT3b/RT3c's own underlying inference (plain `LocalInfo` field reads
+and `Expr::Kind` switches) has no such side channel, which is exactly
+what made re-invoking it a second time, from a purely-observational
+diff-audit, safe in every one of this document's prior harness rounds.
+Re-invoking F3's Call-kind inference a second time from an audit would
+not be safe in the same way: it would silently double-increment/double-
+append these counters for any call whose Call-kind receiver happens to
+hit the implicit-template-arg-fact cache, corrupting them for any test
+that asserts on the resulting hit count or fact list - a genuine
+violation of this round's own "harness only observes, production stays
+behaviorally unchanged" discipline, found by tracing the actual
+dependency functions rather than guessed at.
+
+Call-kind receivers are therefore explicitly out of scope this round:
+`resolveReceiverType` returns `false` for them without attempting any
+inference (and without calling any of the three side-effecting helpers
+above), and the diff-audit call site skips the comparison entirely
+whenever the receiver is `Call`-kind (or any kind besides the five
+covered) rather than exercising a path this function does not implement.
+F3-C3a (the receiver-is-a-struct-constructor-call short-circuit) stays
+permanently out of scope regardless, unaffected by this finding - that
+was already settled as an irreconcilable case in an earlier round.
+
+A future round wanting to cover F3-C1/C2/C3b/c/d should look at running
+the side-effecting helpers against a throwaway deep copy of `Context`
+(so any mutation lands on the copy, never on the real `ctx` the audit was
+handed) rather than `ctx` itself, before extending this function's
+coverage - not yet attempted, since `Context` is large enough
+(`sourceDefs`/`templateDefs`/etc.) that a deep copy per audited call site
+is a real performance question of its own, left open rather than
+guessed at.
+
+### Wiring: a direct audit call, not a scope-exit guard
+
+Mirrors RT3c's own "single exit point" pattern rather than RT3b's RAII
+guard: `resolveMethodCallTemplateTarget`'s F3 cascade has exactly one
+place execution reaches after finishing (immediately before
+`resolveIndexedArgsPackMapMethodTarget` is consulted, which can otherwise
+discard `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver`
+without ever using them), so a single direct call to
+`auditReceiverTypeAgainstTemplateMonomorphExpr` placed at that one point
+suffices - no early-return path in this function bypasses it before the
+locals it reads are fully set. Gated on the existing
+`isReceiverTargetDiffAuditEnabled()`/`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`
+check, same as every prior round's harness. `#include
+"primec/support/CanonicalReceiverType.h"` was added;
+`<cassert>`/`<iostream>`/`primec/support/ReceiverElementFamilyClassifier.h`
+were already included in this file (the latter is where
+`isReceiverTargetDiffAuditEnabled` itself is declared), so no other
+include changes were needed.
+
+### Verification
+
+Fresh baseline (`git stash -u` back to the clean `62958f772` tree,
+rebuild of `primec_frontend_lib` and all three suites, no warnings, all
+three suites run foreground):
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+Identical to every prior round of this effort. `git stash pop` restored
+the harness; rebuilt clean (no warnings/errors). Ran the full three-suite
+battery twice more with `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1` set:
+zero `receiver-target-diff-audit` mismatches in either run (this
+function's own assert would have aborted the process on any divergence),
+identical counts to baseline both times, and failing-test-case *names*
+diffed pairwise (baseline vs run1, baseline vs run2, run1 vs run2, for
+all three suites) - all nine comparisons byte-identical. Ran the full
+battery twice more again with the env var unset, with the same pairwise
+name-diff discipline - also byte-identical throughout, confirming the
+harness has zero effect on production behavior either way. Confirmed via
+`pgrep -fc '^\./PrimeStruct_<suite>_tests$'` (anchored full binary path)
+that no concurrent test-suite instance ran at any point.
+
+`compile_run`'s full suite consistently takes longer than a single
+foreground Bash call's ~590s budget in this environment. One attempt to
+force it under that budget with an external `timeout 580` wrapper
+produced a misleading partial result (doctest printed a summary showing
+1405 "skipped" cases after being killed mid-run, which is really
+"interrupted", not "skipped") - abandoned in favor of issuing the run
+without an external timeout cap and letting this harness's own
+auto-background-and-notify mechanism take over, per this round's safety
+discipline. Every `compile_run` number cited above and below reflects a
+run that was allowed to finish on its own.
+
+### What remains after this round
+
+Monomorphization's F3 now has a real (harnessed-only, not yet migrated)
+`resolveReceiverType` for its Name-kind and primitive-literal-kind
+receivers. Call-kind receivers (F3-C1/C2/C3b/c/d) remain unimplemented
+here, for the ctx-mutation reason documented above - a future round
+should resolve that before extending coverage, most likely via a
+throwaway `Context` copy. F3-C3a stays permanently outside
+`resolveReceiverType`/`CanonicalReceiverType` per the earlier
+irreconcilable-case finding, unaffected by this round. No call site
+anywhere (monomorphization or `ir_lowerer`) has been migrated onto the
+new module yet - this round, like every harness-only round before it,
+changes no production behavior. G7 needs no separate implementation
+round of its own; it is already fully covered by `resolveMethodReceiverTarget`'s
+existing migration.
