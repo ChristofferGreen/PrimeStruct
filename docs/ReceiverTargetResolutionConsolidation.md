@@ -5927,3 +5927,122 @@ counter-snapshot approach characterized above is a concrete, sized next
 step for a future round, not yet implemented. F3-C3a stays permanently
 outside `resolveReceiverType`/`CanonicalReceiverType`. No other call site
 in this document's scope changed this round.
+
+## Step 1c, F3 Call-kind harness round: `resolveReceiverTypeFromCallExprForTemplateMonomorph`, counter-restoration verified, zero-divergence achieved, NOT migrated (2026-09-11)
+
+### What changed
+
+Implemented the counter-snapshot approach characterized (but not
+attempted) in the round above. Two new functions were added to
+`TemplateMonomorphMethodTargets.cpp`, both file-local (anonymous
+namespace):
+
+- `resolveReceiverTypeFromCallExprForTemplateMonomorph` - a thin wrapper
+  that re-invokes the same three production inference helpers F3's own
+  inline Call-kind cascade already calls
+  (`inferBindingTypeForMonomorph`, `inferExprTypeTextForTemplatedVectorFallback`,
+  `inferDefinitionReturnBindingForTemplatedFallback`), producing a
+  `CanonicalReceiverType`. Deliberately not an independent
+  reimplementation - those helpers are already-delegated production
+  logic, not inline algorithm this file could faithfully re-derive from
+  scratch, matching the precedent set by `ir_lowerer`'s own
+  `resolveReceiverTypeFromCallExpr` (RT3b's producer). F3-C3a (the
+  struct-constructor-call short circuit) is a defensive no-op branch
+  here, not a live path: production's own inline cascade already returns
+  early via its own C3a check before the audit call site (below) is ever
+  reached.
+- `auditReceiverTypeAgainstTemplateMonomorphCallExpr` - gated on
+  `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`, wired into
+  `resolveMethodCallTemplateTarget` right after the Call-kind cascade
+  settles (mirroring the removed Name/literal harness's own "single exit
+  point" placement) and before `resolveIndexedArgsPackMapMethodTarget()`'s
+  own check. It snapshots `ctx.implicitTemplateArgInferenceFactHitsForTesting`
+  (scalar) and `ctx.implicitTemplateArgFactsForTesting.size()` (vector
+  length) immediately before calling the wrapper above, then restores
+  both immediately after - unconditionally, whether the audit path hit a
+  cache hit, a miss, or recursed - before comparing the audit's
+  `CanonicalReceiverType` against production's already-computed
+  `typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver`. A
+  mismatch (or a success/failure disagreement) trips an `assert` and logs
+  to `std::cerr`; not wired into any behavior change.
+
+### Verifying the snapshot/restore is actually correct (not just "looks right")
+
+Before trusting this, re-read every mutation site of the two
+`...ForTesting` fields across the whole codebase (not just this file):
+both fields are written in exactly three places, all in
+`TemplateMonomorphImplicitTemplateInference.cpp` -
+`ctx.implicitTemplateArgInferenceFactHitsForTesting` is only ever
+`++`-incremented (one site, on a cache hit), and
+`ctx.implicitTemplateArgFactsForTesting` is only ever `push_back`-ed to
+(two sites, both gated on `ctx.collectImplicitTemplateArgFactsForTesting`).
+Nothing anywhere erases, reorders, or otherwise mutates existing elements
+of the vector. That makes the restore approach correct on both counts: a
+plain scalar save/restore is sufficient for the hit counter, and
+`resize()`-ing the vector back down to its saved length is equivalent to
+a full restore precisely because every write is an append - no
+reordering or splicing exists that a `resize()` could get wrong. The
+third ctx-scoped write this file's audit touches indirectly
+(`ctx.implicitTemplateArgInferenceFacts`, the real non-"ForTesting"
+cache) is a plain `map[key] = value` assignment keyed and valued
+deterministically from the same inputs; a second write for the same
+receiver during the audit's second invocation writes the identical value
+back, so leaving it unrestored is correct (and restoring it would be
+actively wrong, capable of reverting a legitimate first population). The
+recursion guard (`ctx.returnInferenceStack`) is RAII-scoped
+(`InferenceScopeGuard`, `~InferenceScopeGuard() { stack.erase(fullPath); }`)
+and erases on every exit path including early returns, so it self-cleans
+with no snapshot needed.
+
+### Verifying counter-restoration empirically, not just by code inspection
+
+Static reasoning above is necessary but not sufficient by itself, so it
+was checked directly against running tests:
+
+- `tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp`
+  and `.../test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`
+  both assert on the exact contents of `implicitTemplateArgFactsForTesting`
+  (via `collectImplicitTemplateArgResolutionFactsForTesting`, exact
+  `targetPath`/`scopePath`/`callName`/`inferredArgsText` string matches)
+  and on `implicitTemplateArgInferenceFactHitsForTesting` (via
+  `collectImplicitTemplateArgFactConsumptionMetricsForTesting`,
+  `hitCount > 0u`). These are part of `PrimeStruct_semantics_tests`,
+  which was run under the full battery below in both configurations
+  (`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` set and unset) and produced
+  byte-identical pass/fail results test-by-test in both cases, including
+  a pre-existing, unrelated failure in the SOA-borrowed-receiver test
+  case in the same file reproducing at the identical assertion line with
+  the identical logged values in both configurations.
+- Fresh baseline (`git stash -u` back to clean `93ed1c94a`, rebuilt
+  release) vs. the harness applied, across all three suites
+  (`PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`,
+  `PrimeStruct_compile_run_tests`), run foreground:
+  - With `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`: zero `MISMATCH`/
+    assert output across all three suites; failing-test-*name* sets
+    byte-identical to baseline (semantics: 1/2767 failing, same case;
+    backend_ir: 46/1646 failing, same 46 cases; compile_run: 0/­all
+    passing).
+  - With the env var unset (default, harness compiled in but inert): two
+    full foreground reruns per suite, both byte-identical in failing
+    test *names* (not just counts) to the fresh baseline, confirming the
+    harness's mere presence changes nothing about default behavior.
+
+This is the actual property the whole exercise exists to guarantee - not
+"the audit's answer usually agrees with production" but "invoking the
+audit path a second time leaves `ctx`'s two non-idempotent test-visible
+counters exactly as production's own first invocation left them" - and
+it was verified directly via tests that assert on those counters' exact
+values/contents, not merely inferred from the classification-agreement
+result.
+
+### What remains after this round
+
+The Call-kind branch (F3-C1/C2/C3b/c/d) is now harnessed
+observationally but **still not migrated to production** - per the
+two-round discipline every other RT2/RT3b/RT3c/F3-Name-literal migration
+in this document followed, `resolveMethodCallTemplateTarget`'s own
+inline cascade remains the sole production path for Call-kind receivers;
+a future round can migrate it onto `resolveReceiverType` now that this
+round's zero-divergence and counter-restoration verification give it a
+safe foundation to build on. F3-C3a stays permanently outside
+`resolveReceiverType`/`CanonicalReceiverType`, unaffected by any of this.

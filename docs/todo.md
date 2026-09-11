@@ -2168,6 +2168,46 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     round. Not implemented this round - left as a characterized, sized
     opportunity rather than a rushed attempt, per this task's own explicit
     "skipping is a perfectly good outcome" allowance.
+  - implementation_notes (2026-09-11): implemented the counter-snapshot
+    approach the previous round characterized but did not attempt. Added
+    `resolveReceiverTypeFromCallExprForTemplateMonomorph` (a thin wrapper
+    re-invoking the same production helpers F3's inline Call-kind cascade
+    already uses - not a from-scratch reimplementation, matching
+    `ir_lowerer`'s `resolveReceiverTypeFromCallExpr` precedent) and
+    `auditReceiverTypeAgainstTemplateMonomorphCallExpr` (gated on
+    `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`, snapshots
+    `implicitTemplateArgInferenceFactHitsForTesting` and
+    `implicitTemplateArgFactsForTesting.size()` before the audit's second
+    invocation and restores both after, then compares against
+    production's answer) to `TemplateMonomorphMethodTargets.cpp`. Before
+    trusting the restore, re-verified across the whole codebase that both
+    `...ForTesting` fields are write-only in exactly three sites (one
+    `++`, two `push_back`s) with no erase/reorder anywhere, confirming
+    `resize()`-back-to-saved-length is a correct full restore for the
+    vector. Then verified the restore property empirically, not just by
+    inspection: existing tests
+    (`test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp`,
+    `.../targets_semantic_product_soa.cpp`) already assert on these
+    fields' exact contents/values and were run as part of the full
+    3-suite battery in both `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`
+    and unset configurations, producing byte-identical pass/fail results
+    test-by-test (including an unrelated pre-existing SOA-receiver
+    failure reproducing at the identical line/values in both
+    configurations). Fresh baseline (`git stash -u` to clean commit
+    `93ed1c94a`, rebuilt release) vs. harness-applied: zero `MISMATCH`/
+    assert output with the audit env var set, and two full foreground
+    reruns with it unset both byte-identical (by failing test *name*, not
+    just count) to baseline across all three suites
+    (`PrimeStruct_semantics_tests` 1/2767 failing same case,
+    `PrimeStruct_backend_ir_tests` 46/1646 failing same 46 cases,
+    `PrimeStruct_compile_run_tests` all passing). See
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "Step 1c, F3
+    Call-kind harness round" section for full detail. Per the two-round
+    discipline this document has followed throughout, the Call-kind
+    branch is harnessed observationally only this round - production's
+    inline cascade stays the sole live path; migrating it onto
+    `resolveReceiverType` is left for a future round now that this one's
+    verification gives it a safe foundation.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
