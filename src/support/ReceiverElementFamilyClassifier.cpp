@@ -1,8 +1,6 @@
 // collection-surface-audit: exempt
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 
-#include <cstdlib>
-
 namespace primec {
 
 bool isVectorLikeCollectionBaseName(std::string_view baseName) {
@@ -173,36 +171,6 @@ ReceiverElementFamilyResult classifyReceiverElementFamilyJoint(
   // R8/R9: caller resolves the struct-type path (or reports unresolved).
   result.family = ReceiverElementFamily::StructOrUnknown;
   return result;
-}
-
-bool isReceiverTargetDiffAuditEnabled() {
-  static const bool enabled =
-      std::getenv("PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT") != nullptr;
-  return enabled;
-}
-
-const char *describeReceiverElementFamily(ReceiverElementFamily family) {
-  switch (family) {
-    case ReceiverElementFamily::String:
-      return "String";
-    case ReceiverElementFamily::FileError:
-      return "FileError";
-    case ReceiverElementFamily::VectorLike:
-      return "VectorLike";
-    case ReceiverElementFamily::Soa:
-      return "Soa";
-    case ReceiverElementFamily::Buffer:
-      return "Buffer";
-    case ReceiverElementFamily::KeyValue:
-      return "KeyValue";
-    case ReceiverElementFamily::File:
-      return "File";
-    case ReceiverElementFamily::Primitive:
-      return "Primitive";
-    case ReceiverElementFamily::StructOrUnknown:
-      return "StructOrUnknown";
-  }
-  return "<unknown ReceiverElementFamily>";
 }
 
 } // namespace primec

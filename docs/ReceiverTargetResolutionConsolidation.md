@@ -6192,3 +6192,216 @@ a known open inference site but a final full-scope review pass to
 confirm no other receiver-type-inference mechanism was missed by the
 original characterization, before this sub-track of TODO-5294 could be
 considered fully closed.
+
+## Closing Summary: TODO-5294 review and closure (2026-09-11)
+
+This round performed the final-review pass the previous section called
+for: a fresh, adversarial re-read of this entire document front to back,
+cross-checking every "fully migrated" claim against current source
+(not doc prose), a repeat of the full 3-suite battery against the
+cumulative HEAD state, and a fresh search for any receiver-type-inference
+logic this multi-week effort might have missed. Conclusion: **both
+consolidation tracks are at real, defensible stopping points.** No new
+migration work was done this round; one small piece of genuinely dead
+code this review itself surfaced was removed (see below), matching the
+document's own established F14 precedent for "delete proven-dead code
+outright, do not just document it."
+
+### Track 1 final tally: `classifyReceiverElementFamilyJoint` (receiver-family classification)
+
+Migrated for real (verified this round via `grep` against current
+source - every call site below now calls
+`classifyReceiverElementFamilyJoint(...)`, and the old inline cascades it
+replaced are gone, not merely bypassed):
+
+- **2 semantics call sites**: `resolveArgsPackElementMethodTarget`
+  (`SemanticsValidatorMethodTargetArgsPackResolvers.cpp`) and
+  `resolveMethodTarget`'s inline indexed-args-pack-element cascade
+  (`SemanticsValidatorExprMethodTargetResolution.cpp`).
+- **5 monomorphization branches** (all in
+  `TemplateMonomorphMethodTargets.cpp`'s `resolveMethodCallTemplateTarget`):
+  F7 (File-family), F9 (primitive), F11 (FileError sub-case), F12
+  (generic-Soa receiver), F13/F13b/F13c (collection-family fallback).
+- **F14 deleted as proven-dead code** (not migrated - proven
+  unreachable, since F12's identical guard always fires first; re-derived
+  against post-migration code, not just the pre-migration proof it was
+  originally written against).
+
+Found-and-rejected (assessed individually against the classifier's
+`(type-text, methodName, templateShape) -> family` interface, every
+branch in monomorphization's Row F and `ir_lowerer`'s entire Row
+G/RT/CH cascade plus both receiver-target/collection-helper files):
+**28 branches rejected**, all falling into one of four wrong-shape
+categories (the taxonomy the second `ir_lowerer` Step 1b round
+established, re-confirmed rather than re-derived this round):
+
+1. **Receiver-type inference** (the converse question, "what type does
+   this receiver have" rather than "what family does an already-known
+   type/method pair belong to") - Row F's F3, and the entirety of
+   `ir_lowerer`'s `resolveMethodReceiverTarget`/RT2/RT3 and G9's
+   definition-return-type cascade. This category is exactly what Track 2
+   below exists to solve, under a deliberately different interface.
+2. **Resolved-path-string classification** (classifies an
+   already-resolved semantic-product or definition path string, not a
+   normalized binding type text) - G2, G3/G3a-e, G8's
+   `isVectorReceiverTarget`/`isKeyValueReceiverTarget` and
+   `isBuiltinCollectionTypeName`/`isExperimentalCollectionTypeName`, and
+   the `isExplicit*AliasPath`/`isAllowedResolved*DirectCallPath` family.
+3. **Method-name-only gates with no type-text input at all** - Row F's
+   F1 (literal receiver spelling, not a resolved type), F10, F15/F16;
+   `ir_lowerer`'s G1, G3c-iii, G6, and the `preferred*ErrorHelperTarget`
+   family.
+4. **Fused classification+resolution, or pure error-message selection,
+   not a standalone family verdict** - Row F's F2/F6/F8 (F8 delegates to
+   a differently-scoped classifier, `CollectionSpellingClassifier`, for
+   compat-spelling rather than family); `ir_lowerer`'s G1, G4, G8, G10.
+
+Found-and-fixed as a side effect of Track 1's work: **F14's 5 dead
+branches deleted outright** (`TemplateMonomorphMethodTargets.cpp`,
+2026-09-09), proven unreachable rather than merely unused, with
+byte-identical failing-test-name sets across 3 verification runs proving
+the deletion was a pure no-op on behavior.
+
+### Track 2 final tally: `resolveReceiverType`/`CanonicalReceiverType` (receiver-type inference)
+
+Every site Step 1c's 2026-09-10 scoping round named as needing this new
+module is now migrated for real (verified this round by `grep`-confirming
+`resolveMethodReceiverTypeFromLocalInfo`, the old production path, no
+longer exists anywhere - only in comments citing it by name for
+historical context):
+
+- **`ir_lowerer`**: `resolveMethodReceiverTarget` (RT2, RT3b's Call-kind
+  sub-cascade, RT3c's final fallback) - all three branches migrated,
+  `resolveMethodReceiverTarget` is now a thin dispatcher end-to-end over
+  `resolveReceiverType`/`resolveReceiverTypeFromCallExpr`/
+  `resolveReceiverTypeFromFallbackExpr`.
+- **monomorphization**: F3's entire cascade - Name-kind (F3-N1/N2),
+  primitive-literal-kind (F3-L/B/Fl/S), and Call-kind (F3-C1/C2/C3b/c/d) -
+  all migrated onto `resolveReceiverType`/
+  `resolveReceiverTypeFromCallExprForTemplateMonomorph`.
+- **F3-C3a** (the receiver-is-a-struct-constructor-call short circuit)
+  stays permanently outside this module's scope by design - it is a
+  resolution question ("what definition path"), not an inference one
+  ("what type"). Preserved exactly via a new
+  `structConstructorReceiverPathOut` out-parameter rather than a
+  duplicate re-resolution, specifically to avoid double-invoking two
+  non-idempotent `...ForTesting` counters a nested method-call receiver's
+  resolution can trigger - verified by name against the two counter-
+  asserting tests, not merely by matching aggregate pass/fail counts.
+
+This round's own fresh search (grepping for
+`inferReceiverType`/`resolveType`-shaped names and structurally similar
+patterns across `src/semantics/`, `src/ir_lowerer/`, and the rest of the
+tree, beyond the specific functions this effort already touched) found
+**no further receiver-type-inference site** duplicating what this module
+now centralizes. Track 2's implementation work is complete.
+
+### Found-and-fixed this round: two orphaned diff-audit helper functions deleted
+
+This round's own fresh review surfaced one piece of genuinely dead code
+the effort's prior rounds left behind: `isReceiverTargetDiffAuditEnabled()`
+and `describeReceiverElementFamily()`
+(`include/primec/support/ReceiverElementFamilyClassifier.h`,
+`src/support/ReceiverElementFamilyClassifier.cpp`) were declared and
+defined but had **zero callers anywhere** - every call site that ever
+used them was, by design, migrated to call
+`classifyReceiverElementFamilyJoint` for real, and each migration's own
+"Step 2" section already retired that call site's own harness wiring;
+the two shared helper functions themselves were simply never removed.
+Confirmed via exhaustive `grep` (including `tests/`) before deleting.
+Removed both, plus the now-unused `<cstdlib>` include their only caller
+(`std::getenv`) needed. Same class of finding as the F14 dead-code
+deletion earlier in this effort - proven dead, not merely unused in the
+common case - and verified the same way: full 3-suite battery run clean
+after the change, with the exact same failing-test-case counts and names
+as every prior round's recorded baseline (see Verification below).
+
+### Net lines of code
+
+Fresh `git diff --stat` from `039649aaa` (the commit immediately
+preceding this effort's first `TODO-5294 Step 0` commit,
+`1b4710d04`) to this round's HEAD, restricted to production code:
+
+| scope | insertions | deletions | net |
+|---|---|---|---|
+| `src/` (6 files) | 1259 | 495 | +764 |
+| `include/` (5 files) | 458 | 3 | +455 |
+| **production total** | **1717** | **498** | **+1219** |
+| `tests/` (2 files) | 219 | 14 | +205 |
+
+The whole effort is net code-*positive*, not negative - this is expected
+and consistent with the plan's own stated goal (a new, independently
+unit-tested shared module), not a discrepancy to explain away. The two
+new shared modules
+(`include/primec/support/CanonicalReceiverType.h`,
+`CanonicalReceiverTypeSketch.h`,
+`include/primec/support/ReceiverElementFamilyClassifier.h`/`.cpp`)
+account for roughly 560 lines of new, from-scratch, unit-tested
+infrastructure that did not exist before this effort, plus the bulk of
+the `include/` insertions above; the remaining growth is substantially
+expanded doc-comments at each migrated call site (documenting the exact
+behavioral equivalence proof for future readers, per this document's own
+"characterize, don't guess" discipline throughout).
+
+Within the migrated call sites specifically - the actual duplicate-logic
+removal this effort targeted - each individual migration round's own
+`git diff --stat` (recorded at the time, not reconstructed after the
+fact) reported a net *deletion* at that call site:
+
+| migration | net lines |
+|---|---|
+| `resolveArgsPackElementMethodTarget` (Track 1) | ~-90 |
+| `resolveMethodTarget` indexed-args-pack cascade (Track 1) | -35 |
+| F13/F13b/F13c collection-family slice (Track 1) | -49 |
+| F7 File-family slice (Track 1) | -39 |
+| F12 generic-Soa slice (Track 1) | -21 |
+| RT2 (Track 2, 5 files) | -150 |
+| RT3b Call-kind cascade (Track 2) | -287 |
+| F3 Name/literal receivers (Track 2) | -40 |
+| F3 Call-kind receivers (Track 2) | -166 |
+| **sum of the above** | **~-877** |
+
+(F9's and F11's own migration rounds, and RT3c's, reported their
+scaffolding as "removed entirely" without a quantified net-line count at
+the time, so this sum is a representative partial total drawn from the
+rounds that did record one, not an exhaustive accounting of every
+migration's own diff.) Read together, the two tables tell a consistent
+story: roughly 877 lines of duplicated inline classification/inference
+logic (plus the temporary diff-audit harnesses used to prove each
+migration safe) were deleted at the specific call sites this effort
+touched, while the project as a whole grew by about 1219 net lines
+because it also built - once - the shared, tested infrastructure that
+duplication is now routed through instead of being re-derived a third or
+fourth time at the next call site.
+
+### Final verification: full 3-suite battery against cumulative HEAD
+
+Ran the complete `PrimeStruct_semantics_tests`/
+`PrimeStruct_backend_ir_tests`/`PrimeStruct_compile_run_tests` battery,
+foreground, against this round's final state (both tracks' full history
+plus this round's own dead-code cleanup):
+
+| suite | test cases | failed | doc's recorded baseline |
+|---|---|---|---|
+| semantics | 2767 | 1 | 2767/1 |
+| backend_ir | 1646 | 46 | 1646/46 |
+| compile_run | 2679 | 5 | 2679/5 |
+
+All three counts match this document's own last-recorded baseline
+exactly - no drift across the cumulative effort. Semantics' single
+failure is the same already-known flake named throughout this document
+(`semantic product validates direct return method-like borrowed
+helper-return experimental soa reads`), confirmed by name in this
+round's own run, not merely by count.
+
+### Status: TODO-5294 closed
+
+Both consolidation tracks - `classifyReceiverElementFamilyJoint`
+(receiver-family classification) and `resolveReceiverType`/
+`CanonicalReceiverType` (receiver-type inference) - are migrated
+everywhere a genuine fit was found, with every remaining branch in both
+tracks' scope individually assessed and rejected for a specific,
+documented, non-`(type, methodName)`-shaped reason rather than left
+unexamined. This round's fresh, independent search for a missed
+receiver-type-inference site found none. TODO-5294 is marked closed in
+`docs/todo.md` (moved to `docs/todo_finished.md`) on this basis.

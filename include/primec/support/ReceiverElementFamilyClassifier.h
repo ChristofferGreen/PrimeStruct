@@ -202,23 +202,20 @@ ReceiverElementFamilyResult classifyReceiverElementFamilyJoint(
 //
 // See docs/ReceiverTargetResolutionConsolidation.md's Step 1b section for
 // the wiring detail and zero-divergence proof.
-
-// Env-gate for Step 1b's differential-audit harness
-// (docs/ReceiverTargetResolutionConsolidation.md): when
-// PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set (any value) in the
-// environment, a wired call site additionally computes this classifier's
-// verdict alongside its own existing inline answer and compares the two -
-// purely for observation/logging, never substituting for the inline
-// answer. Checked once and cached; unset by default, so default
-// production behavior at every call site is unaffected.
-bool isReceiverTargetDiffAuditEnabled();
-
-// Human-readable family name for the diff-audit harness's log/assert
-// messages. Deliberately NOT named "toString" - that name collides with
-// doctest's ADL-based stringification hook and breaks CHECK(... ==
-// ReceiverElementFamily::...) in any test file that has this header
-// visible (discovered the hard way while extending this module's own unit
-// tests).
-const char *describeReceiverElementFamily(ReceiverElementFamily family);
+//
+// TODO-5294 final-review note (2026-09-11): this header used to also
+// declare `isReceiverTargetDiffAuditEnabled()` (the Step 1b differential-
+// audit harness's env-gate,
+// `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`) and
+// `describeReceiverElementFamily()` (its log-message helper). Every call
+// site that ever used them has since been migrated to call
+// `classifyReceiverElementFamilyJoint` for real, and each migration's own
+// "Step 2" section in
+// docs/ReceiverTargetResolutionConsolidation.md explicitly retired that
+// call site's harness (diffing a classifier against itself is
+// meaningless post-migration) - but the two helper functions themselves
+// were left behind, unreferenced by any call site or test. Removed here
+// as proven-dead code, the same conclusion this document's F14 round
+// reached for a different orphaned branch.
 
 } // namespace primec
