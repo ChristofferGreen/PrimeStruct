@@ -2080,6 +2080,94 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     safe way to avoid double-invoking their side-effecting dependencies
     (e.g. running them against a throwaway deep copy of `Context`), and no
     call site anywhere has been migrated onto the new module yet.
+  - implementation_notes (2026-09-10/11, F3 Name/literal real migration):
+    migrated `resolveMethodCallTemplateTarget`'s F3 cascade onto
+    `resolveReceiverType` for Name-kind and primitive-literal-kind
+    receivers ONLY (F3-N1/N2, F3-L/B/Fl/S) - the harnessed slice from the
+    immediately-preceding round. `typeName`/`wrappedReceiverTypeName`/
+    `isBorrowedSoaReceiver` are now populated from
+    `CanonicalReceiverType::collectionBaseName`/`wrappedBaseTypeName`/
+    `isBorrowed` for those five receiver kinds; the old inline
+    re-derivation for just those kinds was deleted (the Call-kind
+    (F3-C1/C2/C3) branch's own inline cascade is completely untouched -
+    still not migrated, still blocked on the same ctx-mutation issue).
+    Also deleted `auditReceiverTypeAgainstTemplateMonomorphExpr` and its
+    call site (no longer needed now that `resolveReceiverType` is the
+    production path for the kinds it audited) and the now-unused
+    `<cassert>`/`<iostream>` includes that existed only to support it.
+    Net: this round is a straight code-size reduction, not a wash - the
+    ~15-line inline Name/literal branch was replaced with a ~10-line
+    translation shim, and the ~28-line audit function plus its ~7-line
+    call site were deleted outright, for a net removal of roughly 40 lines
+    of now-dead cascade/harness code from this file (resolveReceiverType
+    itself, already landed last round, is unchanged).
+
+    Verification: fresh baseline via `git stash -u` back to the clean
+    `79a6cc6a2` tree, rebuilt all three suites (no warnings), ran each
+    once foreground (semantics 2767/1 failed - 13343/2 assertions failed,
+    backend_ir 1646/46 failed - 16428/137 assertions failed, compile_run
+    2679/5 failed - 15278/8 assertions failed - identical to every prior
+    round). `git stash pop` restored the migration, rebuilt clean (no
+    warnings). Ran the full three-suite battery twice more (six suite runs
+    total beyond baseline): identical counts every time, and failing-
+    test-case *names* diffed pairwise (baseline vs run1, baseline vs run2,
+    run1 vs run2, per suite - 9 comparisons total) all byte-identical.
+    Confirmed via `pgrep -fc '^\./PrimeStruct_<suite>_tests$'` that no
+    concurrent test-suite instance ran at any point. `compile_run`'s full
+    suite exceeded a single ~590s foreground Bash call three times (once
+    per run); each time the call's own auto-background-and-notify
+    mechanism was allowed to finish the already-issued foreground/blocking
+    run rather than any `run_in_background:true` request or a polling
+    loop, per this effort's standing safety discipline.
+
+    Also did a (non-implementing) characterization pass on the F3
+    Call-kind side-effect blocker, per this round's optional step 8: the
+    non-const-`Context&` inference chain
+    (`inferBindingTypeForMonomorph`/`inferCallBindingTypeForMonomorph`/
+    `inferImplicitTemplateArgs`, `inferExprTypeTextForTemplatedVector-
+    Fallback`, `inferDefinitionReturnBindingForTemplatedFallback`) was
+    grepped end to end in
+    `TemplateMonomorphImplicitTemplateInference.cpp`,
+    `TemplateMonomorphBindingCallInference.cpp`, and
+    `TemplateMonomorphFallbackTypeInference.cpp` for every `ctx.<field>`
+    write. Result: exactly three mutation sites exist, not the "mutates
+    Context broadly" shape a full deep-copy fix would imply. Two
+    (`Context::implicitTemplateArgInferenceFactHitsForTesting`,
+    unconditionally incremented on every cached-fact hit, and
+    `implicitTemplateArgFactsForTesting`, appended to when the
+    `collectImplicitTemplateArgFactsForTesting` gate is on) are the
+    non-idempotent, test-visible counters already identified as the
+    blocker. The third
+    (`ctx.implicitTemplateArgInferenceFacts[key] = ImplicitTemplateArg-
+    InferenceFact{outArgs}`, the real inference-fact cache) is idempotent
+    on a same-key second call - it recomputes and reassigns the identical
+    value a pure, deterministic inference produces, so a second
+    (audit-only) call re-populating an already-cached key is harmless.
+    `inferDefinitionReturnBindingForTemplatedFallback`'s
+    `ctx.returnInferenceStack.insert(...)` recursion guard is likewise
+    safe to re-invoke: it is a scoped RAII guard
+    (`InferenceScopeGuard`/`~InferenceScopeGuard() { stack.erase(...); }`)
+    that always erases its own entry before the function returns, so a
+    second sequential call (production, then audit, never concurrently)
+    sees the stack exactly as the first call left it. No template-
+    instantiation or other `sourceDefs`/`outputDefs`/`specializationCache`
+    mutation was found anywhere in this inference chain - so the
+    documented "throwaway deep copy of Context" mitigation, while safe,
+    is broader (and costlier - `Context::sourceDefs`/`helperOverloads`/
+    etc. would all get copied) than the actual blocker requires. A
+    cheaper fix that only snapshots-and-restores the two non-idempotent
+    counter fields around the audit's second invocation (no `Context`
+    copy at all) would be sufficient, sized as its own follow-up round
+    rather than rushed into this one: it still needs the same harness
+    build-out (a from-scratch `resolveReceiverType` reimplementation of
+    F3-C1/C2/C3/C3b/c/d's cascade, including the recursive
+    `resolveMethodCallTemplateTarget`/`resolveCalleePath` resolution and
+    the `ctx.sourceDefs`-lookup struct/`return<T>`-transform paths) plus
+    the same fresh-baseline/byte-identical-name verification discipline
+    this and every prior round has used, none of which was attempted this
+    round. Not implemented this round - left as a characterized, sized
+    opportunity rather than a rushed attempt, per this task's own explicit
+    "skipping is a perfectly good outcome" allowance.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every

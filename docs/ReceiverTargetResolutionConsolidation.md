@@ -5755,3 +5755,175 @@ new module yet - this round, like every harness-only round before it,
 changes no production behavior. G7 needs no separate implementation
 round of its own; it is already fully covered by `resolveMethodReceiverTarget`'s
 existing migration.
+
+## Step 1c, F3 real migration (PARTIAL): Name/literal receivers migrated, Call-kind stays unmigrated and blocked (2026-09-10/11)
+
+### What changed
+
+`resolveMethodCallTemplateTarget`'s F3 cascade (`TemplateMonomorphMethodTargets.cpp`)
+now calls the harnessed `resolveReceiverType` directly for Name-kind and
+primitive-literal-kind receivers (F3-N1/N2, F3-L/B/Fl/S) instead of
+running its own inline re-derivation for those five kinds:
+
+```cpp
+if (receiver.kind == Expr::Kind::Name || receiver.kind == Expr::Kind::Literal ||
+    receiver.kind == Expr::Kind::BoolLiteral || receiver.kind == Expr::Kind::FloatLiteral ||
+    receiver.kind == Expr::Kind::StringLiteral) {
+  CanonicalReceiverType canonical;
+  resolveReceiverType(receiver, locals, ctx, canonical);
+  wrappedReceiverTypeName = canonical.wrappedBaseTypeName;
+  isBorrowedSoaReceiver = canonical.isBorrowed;
+  typeName = canonical.collectionBaseName;
+} else if (receiver.kind == Expr::Kind::Call) {
+  // ... completely untouched inline cascade (F3-C1/C2/C3/C3b/c/d) ...
+}
+```
+
+This is the same `CanonicalReceiverType` → legacy-local translation shape
+RT2/RT3b/RT3c's own real migrations used - `collectionBaseName` is the
+cascade's `typeName`, `wrappedBaseTypeName` is `wrappedReceiverTypeName`,
+`isBorrowed` is `isBorrowedSoaReceiver`; `isWrapped` has no legacy F3
+consumer (matching the prior round's own field-list note) and is simply
+not read here, same as every other real migration in this document. For
+the F3-N2 case (unbound `Name` receiver), `resolveReceiverType` returns
+`false` with `out` left at its default-constructed
+`CanonicalReceiverType{}` - all three translated fields come out empty/
+false, exactly matching the legacy branch's own behavior of leaving
+`typeName`/`wrappedReceiverTypeName`/`isBorrowedSoaReceiver` untouched
+when `locals.find(receiver.name)` misses.
+
+The Call-kind branch (F3-C1/C2/C3/C3b/c/d) is completely untouched -
+same inline `inferBindingTypeForMonomorph`/
+`inferExprTypeTextForTemplatedVectorFallback`/struct-and-`return<T>`-
+transform/`inferDefinitionReturnBindingForTemplatedFallback`/
+`getBuiltinCollectionName` cascade as before this round, still not
+calling `resolveReceiverType` at all, per the ctx-mutation blocker the
+harness round found.
+
+Deleted the now-dead harness scaffolding for the migrated kinds only:
+`auditReceiverTypeAgainstTemplateMonomorphExpr` (the diff-audit helper)
+and its call site inside `resolveMethodCallTemplateTarget`, plus the
+`<cassert>`/`<iostream>` includes that existed solely to support it (no
+other code in this file used `assert`/`std::cerr`/`std::cout` - grepped
+to confirm before removing). `resolveReceiverType` itself is unchanged
+from the harness round - it is now a production dependency instead of an
+audit-only one, but its body was already correct (that was the whole
+point of harnessing it first). Grepped the repo for
+`auditReceiverTypeAgainstTemplateMonomorphExpr` post-deletion: the only
+remaining references are in this document and `docs/todo.md`, confirming
+nothing else depended on it.
+
+Net line count: the ~15-line inline Name/literal branch shrank to a
+~10-line translation shim, and the ~28-line audit function plus its
+~7-line call site were deleted outright - roughly 40 lines of now-dead
+cascade/harness code removed from this file, with no new lines added
+beyond the shim itself.
+
+### Verification
+
+Fresh baseline (`git stash -u` back to the clean `79a6cc6a2` tree,
+rebuild of `primec_frontend_lib` and all three suites, no warnings, all
+three suites run foreground):
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+Identical to every prior round. `git stash pop` restored the migration;
+rebuilt clean (no warnings/errors, `resolveReceiverType` compiling as a
+real dependency of `resolveMethodCallTemplateTarget` now rather than an
+audit-only helper). Ran the full three-suite battery twice more (no env
+var involved this time - there is no more diff-audit to gate, the
+migration is unconditional): identical counts to baseline both times,
+and failing-test-case *names* diffed pairwise (baseline vs run1,
+baseline vs run2, run1 vs run2, for all three suites) - all nine
+comparisons byte-identical. Confirmed via `pgrep -fc
+'^\./PrimeStruct_<suite>_tests$'` (anchored full binary path) that no
+concurrent test-suite instance ran at any point. `compile_run`'s full
+suite again exceeded a single foreground Bash call's ~590s budget on all
+three runs (baseline, run1, run2); each was let finish via the harness's
+own auto-background-and-notify mechanism from an already-issued
+foreground/blocking call, never via a background-launched or polled
+process.
+
+### Call-kind side-effect blocker: characterized further, not fixed this round
+
+Per this round's own optional step, the F3-C1/C2/C3 ctx-mutation blocker
+the harness round found was traced to its actual mutation sites rather
+than left at the prior round's higher-level description. Grepped
+`TemplateMonomorphImplicitTemplateInference.cpp`,
+`TemplateMonomorphBindingCallInference.cpp`, and
+`TemplateMonomorphFallbackTypeInference.cpp` (the full transitive closure
+of `inferBindingTypeForMonomorph`/`inferCallBindingTypeForMonomorph`/
+`inferImplicitTemplateArgs`/`inferExprTypeTextForTemplatedVectorFallback`/
+`inferDefinitionReturnBindingForTemplatedFallback`) for every `ctx.<field>`
+write. Exactly three exist:
+
+1. `++ctx.implicitTemplateArgInferenceFactHitsForTesting` - unconditional,
+   on every cached-fact hit. **Non-idempotent**: a second (audit) call
+   hitting the same cache entry increments this a second time. This is
+   the counter the harness round's finding named.
+2. `ctx.implicitTemplateArgFactsForTesting.push_back(...)` - gated on
+   `ctx.collectImplicitTemplateArgFactsForTesting`. **Non-idempotent**
+   for the same reason, when that gate is on.
+3. `ctx.implicitTemplateArgInferenceFacts[key] = ImplicitTemplateArg-
+   InferenceFact{outArgs}` - the real (non-"ForTesting") inference-fact
+   cache. **Idempotent** on a same-key second call: `inferImplicitTemplateArgs`
+   is a pure function of its inputs, so re-deriving and reassigning the
+   same key produces the identical value; a second write is a no-op in
+   effect, not a corruption.
+
+A fourth site initially looked concerning -
+`inferDefinitionReturnBindingForTemplatedFallback`'s
+`ctx.returnInferenceStack.insert(def.fullPath)` recursion guard - but it
+is provably safe to re-invoke: it is wrapped in a scoped RAII guard
+(`InferenceScopeGuard`, `~InferenceScopeGuard() { stack.erase(fullPath); }`)
+that unconditionally erases its own entry before the function returns on
+every exit path, so a second sequential call (the audit call, strictly
+after the production call completes - never concurrent, never
+re-entrant) observes `returnInferenceStack` exactly as the production
+call left it. No template-instantiation call, and no
+`sourceDefs`/`outputDefs`/`specializationCache`/`helperOverloads` write
+of any kind, was found anywhere in this inference chain.
+
+**Conclusion: the blocker is narrower than "mutates Context broadly" -
+it is exactly the two `...ForTesting` counter fields, both of which are
+plain scalar/vector state with no relationship to the rest of `Context`.**
+A full `Context` deep copy (this document's own prior "future round"
+suggestion) would be sufficient but more than the blocker requires - a
+much cheaper fix is to snapshot both counter fields immediately before
+the audit's second invocation of the side-effecting helpers and restore
+them immediately after (`ctx.implicitTemplateArgInferenceFactHitsForTesting`
+reset to its saved value; `ctx.implicitTemplateArgFactsForTesting`
+`resize()`d back to its saved length) - no `Context` copy, no
+`sourceDefs`/`helperOverloads`/etc. duplication, and no risk to the
+(already-established-safe) cache and recursion-guard mutations, which
+are left to run and settle normally.
+
+This is a genuinely clean, low-risk approach and a future round could
+implement it - but doing so was **not attempted this round**, per this
+round's own explicit "skipping is a perfectly good outcome" allowance:
+harnessing F3-C1/C2/C3/C3b/c/d for real still requires writing a
+from-scratch `resolveReceiverType` reimplementation of that entire
+cascade (including its recursive `resolveMethodCallTemplateTarget`/
+`resolveCalleePath` resolution step and the `ctx.sourceDefs`-lookup
+struct-definition/`return<T>`-transform paths), wiring a new audit call
+site around the counter-snapshot, and running this document's full
+fresh-baseline/byte-identical-name-diff verification discipline again -
+real, separately-sized work better done as its own round than folded
+into this one alongside the Name/literal migration. F3-C3a remains
+permanently out of scope regardless, unaffected by any of this.
+
+### What remains after this round
+
+F3's Name-kind and primitive-literal-kind receivers (F3-N1/N2,
+F3-L/B/Fl/S) are now for real on `resolveReceiverType`, joining RT2 (ir_lowerer),
+RT3b/RT3c (via `resolveMethodReceiverTarget`), and G7 (transitively) as
+fully-migrated call sites. F3's Call-kind receivers (F3-C1/C2/C3b/c/d)
+remain on their original inline cascade, unharnessed and unmigrated - the
+counter-snapshot approach characterized above is a concrete, sized next
+step for a future round, not yet implemented. F3-C3a stays permanently
+outside `resolveReceiverType`/`CanonicalReceiverType`. No other call site
+in this document's scope changed this round.
