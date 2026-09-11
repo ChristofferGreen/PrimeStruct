@@ -119,9 +119,12 @@ namespace {
 // production path for F3-N1/N2 (Name-kind receiver) and F3-L/B/Fl/S
 // (primitive-literal-kind receivers) - resolveMethodCallTemplateTarget below
 // calls this directly for those receiver kinds instead of running its own
-// inline cascade. F3-C1/C2/C3 (Call-kind receivers) are NOT covered here and
-// stay on their own separate inline cascade below, for a stage-specific
-// reason: they call inferBindingTypeForMonomorph (transitively
+// inline cascade. F3-C1/C2/C3 (Call-kind receivers) are deliberately NOT
+// covered by this particular function - as of the "F3 Call-kind real
+// migration" round they are fully migrated too, just onto the sibling
+// producer `resolveReceiverTypeFromCallExprForTemplateMonomorph` below
+// rather than merged into this one, for a stage-specific reason: they call
+// inferBindingTypeForMonomorph (transitively
 // inferImplicitTemplateArgs), inferExprTypeTextForTemplatedVectorFallback,
 // and inferDefinitionReturnBindingForTemplatedFallback, all of which take a
 // non-const Context& and mutate ctx-scoped, test-visible counters as a side
@@ -136,16 +139,19 @@ namespace {
 // based) is provably side-effect-free, which is what made migrating those
 // kinds safe via the usual harness-then-migrate discipline; F3's Call-kind
 // path is not side-effect-free in the same way, so a second, purely-
-// observational invocation (the usual pre-migration harness step) would
-// corrupt those counters for any test that asserts on them - a real
-// violation of this document's "harness only observes, production stays
-// behaviorally unchanged" discipline, not a hypothetical one. Call-kind
-// receivers are therefore still explicitly out of scope here:
-// resolveReceiverType returns false for them without attempting any
-// inference (and without calling any of the functions above). A future
-// round revisiting this should look at running the side-effecting helpers
-// against a throwaway deep copy of Context rather than ctx itself before
-// extending this function's coverage.
+// observational invocation (the harness round's pre-migration step) would
+// have corrupted those counters for any test that asserts on them had it
+// been wired into production - which is exactly why that harness round
+// snapshot/restored around its own audit-only second invocation rather than
+// letting it run free. Now that the harness round proved zero-divergence
+// and safe counter-restoration, Call-kind receivers are migrated for real
+// via the single production invocation inside
+// resolveReceiverTypeFromCallExprForTemplateMonomorph below (invoked
+// exactly once per receiver, same as the old inline cascade it replaced -
+// no second/audit invocation remains). They are still not folded into
+// *this* function's own branches, since their underlying inference is
+// fundamentally different in kind (delegated production helpers, not
+// inline algorithm) from the independent reimplementations above.
 // F3-C3a (the receiver-is-a-struct-constructor-call short-circuit) is
 // separately and permanently out of scope regardless, per the earlier
 // "Ready to implement" round's irreconcilable-case finding - it answers a
@@ -262,47 +268,55 @@ bool resolveReceiverType(const Expr &receiver,
 }
 
 // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): F3 Call-kind
-// harness round. Covers F3-C1/C2/C3b/c/d only - F3-C3a (the
-// receiver-is-a-struct-constructor-call short circuit, which answers a
-// resolution question - "what definition path" - rather than an inference
-// one, "what type") stays permanently out of scope, matching every prior
-// round's finding. This is NOT an independent reimplementation the way
-// resolveReceiverType's Name/literal branches above are: F3-C1/C2/C3b/c/d's
-// underlying inference (inferBindingTypeForMonomorph/
-// inferExprTypeTextForTemplatedVectorFallback/
+// real migration. The SOLE production path for F3-C1/C2/C3b/c/d
+// (Call-kind receivers, minus F3-C3a - see below). This is NOT an
+// independent reimplementation the way resolveReceiverType's Name/literal
+// branches above are: F3-C1/C2/C3b/c/d's underlying inference
+// (inferBindingTypeForMonomorph/inferExprTypeTextForTemplatedVectorFallback/
 // inferDefinitionReturnBindingForTemplatedFallback) is already fully
 // delegated production logic, not inline algorithm this file could
 // faithfully re-derive from scratch - so this function calls those same
-// helpers directly, exactly as the inline cascade below does. Matches the
-// structural precedent of ir_lowerer's resolveReceiverTypeFromCallExpr
-// (RT3b's own Call-kind sub-cascade producer), which is itself a thin
-// wrapper over shared production helpers rather than a from-scratch
-// reimplementation, for the same reason.
+// helpers directly, exactly as the old inline cascade it replaced did.
+// Matches the structural precedent of ir_lowerer's
+// resolveReceiverTypeFromCallExpr (RT3b's own Call-kind sub-cascade
+// producer), which is itself a thin wrapper over shared production
+// helpers rather than a from-scratch reimplementation, for the same
+// reason.
 //
 // Takes `Context &ctx` (mutable, not const) because it genuinely invokes
-// the three side-effecting helpers named above - this function does not
-// try to avoid that, it is the same production computation. Safety for the
-// *second* (audit) invocation comes from the caller wrapping this call in a
-// snapshot/restore of the two non-idempotent `...ForTesting` counter
-// fields (see the long comment above `resolveReceiverType` and the
-// "Call-kind side-effect blocker" section of the design doc), not from
-// this function avoiding side effects itself.
+// the three side-effecting helpers named above exactly once per call -
+// this is the production computation itself, not a second/observational
+// invocation, so the two non-idempotent `...ForTesting` counter fields
+// (see the long comment above `resolveReceiverType`) end up mutated
+// exactly as the old inline cascade left them: once, by this one call.
+// The prior harness round's snapshot/restore machinery (which wrapped a
+// deliberate *second*, audit-only invocation) has been removed entirely
+// alongside the old inline cascade - there is only ever one invocation
+// now, so nothing needs restoring.
 //
 // Returns true iff it produced a non-empty collectionBaseName, matching
 // the outer cascade's own "typeName.empty() => failure" convention
 // (resolveMethodCallTemplateTarget's `if (typeName.empty()) return false;`
-// immediately after the receiver-kind dispatch). If F3-C3a would have
-// fired (receiver resolves to a struct-constructor call), this function
-// returns false without filling `out` - the audit call site never reaches
-// that case in practice, because production's own inline cascade already
-// returns early via its own C3a branch before ever reaching the "single
-// exit point" this audit is wired at (see resolveMethodCallTemplateTarget
-// below) - so this is a defensive no-op branch, not a live path.
-bool resolveReceiverTypeFromCallExprForTemplateMonomorph(const Expr &receiver,
-                                                          const LocalTypeMap &locals,
-                                                          Context &ctx,
-                                                          CanonicalReceiverType &out) {
+// immediately after the receiver-kind dispatch). F3-C3a (receiver resolves
+// to a struct-constructor call) is a resolution question ("what
+// definition path"), not an inference one ("what type"), and stays
+// permanently out of `CanonicalReceiverType`'s scope - this function
+// returns false without filling `out` in that case, exactly as before, but
+// additionally writes the already-resolved callee path into
+// `structConstructorReceiverPathOut` so the caller can run F3-C3a's own
+// separate short-circuit logic without re-resolving the callee path a
+// second time (which would re-invoke the side-effecting helpers above via
+// a nested `resolveMethodCallTemplateTarget` recursion and double their
+// counter effects). `structConstructorReceiverPathOut` stays empty for
+// every other outcome (success or ordinary failure).
+bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
+    const Expr &receiver,
+    const LocalTypeMap &locals,
+    Context &ctx,
+    CanonicalReceiverType &out,
+    std::string &structConstructorReceiverPathOut) {
   out = CanonicalReceiverType{};
+  structConstructorReceiverPathOut.clear();
   if (receiver.kind != Expr::Kind::Call) {
     return false;
   }
@@ -393,8 +407,11 @@ bool resolveReceiverTypeFromCallExprForTemplateMonomorph(const Expr &receiver,
     auto defIt = ctx.sourceDefs.find(resolved);
     if (defIt != ctx.sourceDefs.end()) {
       if (isStructDefinition(defIt->second)) {
-        // F3-C3a: out of scope, see comment above. Bail out without
-        // producing a type answer.
+        // F3-C3a: out of scope, see comment above. Hand the already-
+        // resolved callee path back to the caller so it can run its own
+        // separate short-circuit without re-resolving `resolved` (which
+        // would re-invoke the side-effecting helpers above a second time).
+        structConstructorReceiverPathOut = resolved;
         return false;
       }
       for (const auto &transform : defIt->second.transforms) {
@@ -435,85 +452,6 @@ bool resolveReceiverTypeFromCallExprForTemplateMonomorph(const Expr &receiver,
   return !out.collectionBaseName.empty();
 }
 
-// Step 1c: audit-only diff harness for F3's Call-kind receivers
-// (F3-C1/C2/C3b/c/d), gated behind PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT.
-// NOT wired into production - resolveMethodCallTemplateTarget's Call-kind
-// branch stays entirely on its own original inline cascade; this function
-// only observes, by re-deriving the same answer a second, independent way
-// and comparing.
-//
-// Safety: resolveReceiverTypeFromCallExprForTemplateMonomorph above
-// genuinely re-invokes inferBindingTypeForMonomorph/
-// inferExprTypeTextForTemplatedVectorFallback/
-// inferDefinitionReturnBindingForTemplatedFallback a second time (the
-// production inline cascade already invoked them once for the same
-// receiver). Per the design doc's "Call-kind side-effect blocker"
-// characterization, exactly two ctx-scoped fields are non-idempotent
-// across repeat invocations - implicitTemplateArgInferenceFactHitsForTesting
-// (incremented unconditionally on a cache hit) and
-// implicitTemplateArgFactsForTesting (appended to, gated on
-// collectImplicitTemplateArgFactsForTesting) - so this function snapshots
-// both immediately before calling the audit producer and restores them
-// immediately after, leaving ctx in exactly the state production's own
-// (first, real) invocation left it in, regardless of how many times the
-// audit path re-derives the answer. The third ctx-scoped write
-// (implicitTemplateArgInferenceFacts, the real non-"ForTesting" cache) is
-// idempotent on a same-key second write and is deliberately left to run
-// and settle normally - restoring it would be both unnecessary and wrong
-// (it could revert a legitimate first-population of the cache). The
-// recursion guard (returnInferenceStack) is RAII-scoped and self-cleaning
-// on every exit path, so it needs no snapshot/restore either - see the
-// design doc for the full trace.
-void auditReceiverTypeAgainstTemplateMonomorphCallExpr(const Expr &receiver,
-                                                        const LocalTypeMap &locals,
-                                                        const Context &ctx,
-                                                        const std::string &typeName,
-                                                        const std::string &wrappedReceiverTypeName,
-                                                        bool isBorrowedSoaReceiver) {
-  if (!isReceiverTargetDiffAuditEnabled() || receiver.kind != Expr::Kind::Call) {
-    return;
-  }
-  Context &mutableCtx = const_cast<Context &>(ctx);
-  const uint64_t savedHits = mutableCtx.implicitTemplateArgInferenceFactHitsForTesting;
-  const size_t savedFactsSize = mutableCtx.implicitTemplateArgFactsForTesting.size();
-
-  CanonicalReceiverType canonical;
-  const bool auditProducedType =
-      resolveReceiverTypeFromCallExprForTemplateMonomorph(receiver, locals, mutableCtx, canonical);
-
-  // Restore the two non-idempotent counters to exactly what they were
-  // before this audit-only second invocation, regardless of what happened
-  // during it (cache hits, misses, recursive nested calls - all of it
-  // lands on these same two fields, so restoring after the call covers
-  // every nested increment too).
-  mutableCtx.implicitTemplateArgInferenceFactHitsForTesting = savedHits;
-  mutableCtx.implicitTemplateArgFactsForTesting.resize(savedFactsSize);
-
-  if (!auditProducedType) {
-    // F3-C3a (or some other out-of-scope shape) - not comparable, skip.
-    return;
-  }
-  const bool productionProducedType = !typeName.empty();
-  assert(auditProducedType == productionProducedType &&
-         "receiver-target-diff-audit: F3 Call-kind success/failure mismatch");
-  if (!productionProducedType) {
-    return;
-  }
-  if (canonical.collectionBaseName != typeName ||
-      canonical.wrappedBaseTypeName != wrappedReceiverTypeName ||
-      canonical.isBorrowed != isBorrowedSoaReceiver) {
-    std::cerr << "receiver-target-diff-audit: F3 Call-kind mismatch: "
-              << "audit.collectionBaseName=" << canonical.collectionBaseName
-              << " production.typeName=" << typeName
-              << " audit.wrappedBaseTypeName=" << canonical.wrappedBaseTypeName
-              << " production.wrappedReceiverTypeName=" << wrappedReceiverTypeName
-              << " audit.isBorrowed=" << canonical.isBorrowed
-              << " production.isBorrowedSoaReceiver=" << isBorrowedSoaReceiver
-              << "\n";
-    assert(false && "receiver-target-diff-audit: F3 Call-kind mismatch");
-  }
-}
-
 }  // namespace
 
 bool resolveMethodCallTemplateTarget(const Expr &expr,
@@ -526,7 +464,6 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   const std::string rawMethodName = expr.name;
   std::string methodName = rawMethodName;
-  const Expr &receiverExpr = expr.args.front();
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
@@ -575,63 +512,6 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       return std::string("is_eof");
     }
     return std::string(methodName);
-  };
-  std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
-      [&](std::string typeText) -> std::string {
-    typeText = normalizeBindingTypeName(typeText);
-    if (typeText.empty()) {
-      return typeText;
-    }
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
-      base = normalizeBindingTypeName(base);
-      if ((base == "Reference" || base == "Pointer") && !argText.empty()) {
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
-          return typeText;
-        }
-        return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
-      }
-      if (const std::string *importAlias =
-              lookupScopedImportAliasForNamespace(base, receiverExpr.namespacePrefix, ctx);
-          importAlias != nullptr) {
-        return *importAlias + "<" + argText + ">";
-      }
-      return typeText;
-    }
-    if (const std::string *importAlias =
-            lookupScopedImportAliasForNamespace(typeText, receiverExpr.namespacePrefix, ctx);
-        importAlias != nullptr) {
-      return *importAlias;
-    }
-    return typeText;
-  };
-  auto bindingTypeText = [](const BindingInfo &binding) {
-    std::string typeText = binding.typeName;
-    if (!binding.typeTemplateArg.empty()) {
-      typeText += "<" + binding.typeTemplateArg + ">";
-    }
-    return typeText;
-  };
-  auto isBorrowedSoaReceiverType = [&](std::string typeText) {
-    typeText = normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
-    std::string base;
-    std::string argText;
-    if (!splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
-      return false;
-    }
-    const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
-    if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
-      return false;
-    }
-    return isTemplateMonomorphSoaReceiverType(
-        normalizeCollectionReceiverTypeName(
-            unwrapCollectionReceiverEnvelope(argText)));
-  };
-  auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
-    return unwrapCollectionReceiverEnvelope(
-        qualifyImportedCollectionTypeText(bindingTypeText(binding)));
   };
   auto selectStaticHelperOverloadPath = [&](const std::string &resolvedPath) -> std::string {
     auto familyIt = ctx.helperOverloads.find(resolvedPath);
@@ -811,87 +691,40 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       receiver.kind == Expr::Kind::StringLiteral) {
     // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): migrated onto
     // resolveReceiverType for Name-kind and primitive-literal-kind receivers
-    // (F3-N1/N2, F3-L/B/Fl/S). Call-kind stays on the inline cascade below -
-    // see resolveReceiverType's own comment for why it is out of scope.
+    // (F3-N1/N2, F3-L/B/Fl/S). Call-kind is migrated too, just onto the
+    // sibling producer below (see that branch's own comment for why).
     CanonicalReceiverType canonical;
     resolveReceiverType(receiver, locals, ctx, canonical);
     wrappedReceiverTypeName = canonical.wrappedBaseTypeName;
     isBorrowedSoaReceiver = canonical.isBorrowed;
     typeName = canonical.collectionBaseName;
   } else if (receiver.kind == Expr::Kind::Call) {
-    BindingInfo receiverInfo;
-    if (inferBindingTypeForMonomorph(receiver, {}, locals, hasMathImport(ctx), const_cast<Context &>(ctx), receiverInfo)) {
-      wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(receiverInfo));
-      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(receiverInfo));
-      typeName = unwrapImportedCollectionReceiverType(receiverInfo);
+    // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): migrated onto
+    // resolveReceiverTypeFromCallExprForTemplateMonomorph for Call-kind
+    // receivers (F3-C1/C2/C3b/c/d), replacing the old inline cascade. F3-C3a
+    // (the struct-constructor-call short circuit) is a resolution question,
+    // not an inference one, so it stays outside CanonicalReceiverType's
+    // scope and is handled here via the producer's
+    // structConstructorReceiverPathOut - the same "resolved" callee path
+    // the old inline cascade itself already special-cased, now handed back
+    // instead of re-resolved (re-resolving here would re-invoke the
+    // side-effecting inference helpers a second time and double their
+    // ...ForTesting counter effects).
+    CanonicalReceiverType canonical;
+    std::string structConstructorReceiverPath;
+    resolveReceiverTypeFromCallExprForTemplateMonomorph(
+        receiver, locals, const_cast<Context &>(ctx), canonical, structConstructorReceiverPath);
+    if (!structConstructorReceiverPath.empty()) {
+      // F3-C3a: bypass the rest of F3, F5, and the entire F6-F16 chain,
+      // exactly as the old inline cascade did.
+      pathOut = selectHelperOverloadPath(
+          expr, structConstructorReceiverPath + "/" + methodName, ctx);
+      return true;
     }
-    if (typeName.empty()) {
-      const std::string inferredTypeText = qualifyImportedCollectionTypeText(
-          inferExprTypeTextForTemplatedVectorFallback(
-              receiver, locals, receiver.namespacePrefix, ctx, hasMathImport(ctx)));
-      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(inferredTypeText);
-      typeName = unwrapCollectionReceiverEnvelope(inferredTypeText);
-    }
-    if (!receiver.isBinding) {
-      std::string resolved;
-      if (receiver.isMethodCall) {
-        if (!resolveMethodCallTemplateTarget(receiver, locals, ctx, resolved)) {
-          resolved.clear();
-        }
-      } else {
-        resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
-      }
-      auto defIt = ctx.sourceDefs.find(resolved);
-      if (defIt != ctx.sourceDefs.end()) {
-        if (isStructDefinition(defIt->second)) {
-          pathOut = selectHelperOverloadPath(expr, resolved + "/" + methodName, ctx);
-          return true;
-        }
-        for (const auto &transform : defIt->second.transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          const std::string &returnType = transform.templateArgs.front();
-          if (returnType == "auto") {
-            continue;
-          }
-          wrappedReceiverTypeName = qualifyImportedCollectionTypeText(returnType);
-          isBorrowedSoaReceiver = isBorrowedSoaReceiverType(returnType);
-          typeName = unwrapCollectionReceiverEnvelope(
-              qualifyImportedCollectionTypeText(returnType));
-          break;
-        }
-        if (typeName.empty()) {
-          BindingInfo inferredReturn;
-          if (inferDefinitionReturnBindingForTemplatedFallback(
-                  defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
-            wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(inferredReturn));
-            isBorrowedSoaReceiver =
-                isBorrowedSoaReceiverType(bindingTypeText(inferredReturn));
-            typeName = unwrapImportedCollectionReceiverType(inferredReturn);
-          }
-        }
-      } else {
-        std::string collection;
-        if (getBuiltinCollectionName(receiver, collection)) {
-          typeName = collection;
-        }
-      }
-    }
+    wrappedReceiverTypeName = canonical.wrappedBaseTypeName;
+    isBorrowedSoaReceiver = canonical.isBorrowed;
+    typeName = canonical.collectionBaseName;
   }
-  // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): F3 Call-kind
-  // observational diff-audit, gated on PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT.
-  // Placed here (mirroring the removed Name/literal harness's own "single
-  // exit point" placement) because every early-return branch inside the
-  // Call-kind cascade above (in particular F3-C3a, the struct-constructor
-  // short circuit) has already been passed by the time execution reaches
-  // this line, so typeName/wrappedReceiverTypeName/isBorrowedSoaReceiver
-  // are fully settled here and resolveIndexedArgsPackMapMethodTarget below
-  // has not yet had a chance to discard them. Not wired for Name/literal
-  // receivers - those are real production dependents of
-  // resolveReceiverType now and need no further audit.
-  auditReceiverTypeAgainstTemplateMonomorphCallExpr(
-      receiver, locals, ctx, typeName, wrappedReceiverTypeName, isBorrowedSoaReceiver);
   if (resolveIndexedArgsPackMapMethodTarget()) {
     return true;
   }

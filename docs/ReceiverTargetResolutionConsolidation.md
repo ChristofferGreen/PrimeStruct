@@ -6046,3 +6046,149 @@ a future round can migrate it onto `resolveReceiverType` now that this
 round's zero-divergence and counter-restoration verification give it a
 safe foundation to build on. F3-C3a stays permanently outside
 `resolveReceiverType`/`CanonicalReceiverType`, unaffected by any of this.
+
+## Step 1c, F3 Call-kind real migration: F3 now FULLY migrated end-to-end (2026-09-11)
+
+### What changed
+
+Migrated the last unmigrated slice of F3 - Call-kind receivers
+(F3-C1/C2/C3b/c/d) - onto `resolveReceiverTypeFromCallExprForTemplateMonomorph`
+(the previous round's harness producer, already proven zero-divergence and
+counter-restoration-safe). `resolveMethodCallTemplateTarget`'s own old
+inline Call-kind cascade is deleted, along with the now-pointless
+`auditReceiverTypeAgainstTemplateMonomorphCallExpr` (diffing a function
+against itself post-migration is meaningless, matching every prior
+migration's own retirement pattern in this document) and four lambdas in
+the outer function (`qualifyImportedCollectionTypeText`/`bindingTypeText`/
+`isBorrowedSoaReceiverType`/`unwrapImportedCollectionReceiverType`) that
+were only ever called by the deleted cascade and had no other caller. Net
+change in `TemplateMonomorphMethodTargets.cpp`: 344 lines removed, 178
+added (many of them expanded/updated comments), for a net -166 lines.
+
+### F3-C3a: preserved exactly, via one new out-parameter
+
+F3-C3a (the receiver-is-a-struct-constructor-call short circuit) is a
+resolution question ("what definition path"), not an inference one ("what
+type"), and per every prior round's finding it stays permanently outside
+`CanonicalReceiverType`'s scope. The harness-round producer already
+encoded this correctly for audit purposes - it returns `false` without
+filling `out` when C3a's shape is detected - but that was insufficient for
+a *production* call site: the caller needs to actually run C3a's own
+short-circuit (`pathOut = resolved + "/" + methodName; return true;`),
+which requires the already-resolved callee path (`resolved`), not just a
+bare `false`.
+
+The naive fix - have the call site independently re-resolve `resolved`
+itself to check for C3a before calling the producer - would have been
+wrong: resolving the callee path for a method-call receiver can
+recursively invoke `resolveMethodCallTemplateTarget`, which (after this
+same migration) now calls the side-effecting inference helpers
+(`inferBindingTypeForMonomorph`/`inferExprTypeTextForTemplatedVectorFallback`/
+`inferDefinitionReturnBindingForTemplatedFallback`) for its own Call-kind
+receiver. Resolving `resolved` twice - once in a pre-check, once again
+inside the producer - would have invoked those helpers twice for any
+nested method-call receiver, double-counting the two non-idempotent
+`...ForTesting` counters the previous harness round's whole
+snapshot/restore exercise existed to protect.
+
+The fix instead: `resolveReceiverTypeFromCallExprForTemplateMonomorph`
+gained a `std::string &structConstructorReceiverPathOut` out-parameter,
+cleared at entry and filled with `resolved` at the exact point the
+function used to just `return false` for the C3a shape. The call site
+now:
+
+```cpp
+CanonicalReceiverType canonical;
+std::string structConstructorReceiverPath;
+resolveReceiverTypeFromCallExprForTemplateMonomorph(
+    receiver, locals, const_cast<Context &>(ctx), canonical, structConstructorReceiverPath);
+if (!structConstructorReceiverPath.empty()) {
+  pathOut = selectHelperOverloadPath(
+      expr, structConstructorReceiverPath + "/" + methodName, ctx);
+  return true;
+}
+wrappedReceiverTypeName = canonical.wrappedBaseTypeName;
+isBorrowedSoaReceiver = canonical.isBorrowed;
+typeName = canonical.collectionBaseName;
+```
+
+This calls the helpers exactly once regardless of which path is taken -
+matching the old inline cascade's own invocation count exactly, and
+byte-identical to the old cascade's own C3a branch
+(`pathOut = selectHelperOverloadPath(expr, resolved + "/" + methodName, ctx); return true;`)
+when it fires.
+
+### Verification
+
+Fresh baseline: this round's starting commit (`73f141852`, the prior
+harness round's own commit) was already the clean checked-out state - no
+`git stash` round-trip was needed since no edits existed yet. Built
+release, ran the full 3-suite battery foreground (compile_run's run
+exceeded a single foreground call's ~590s budget in this environment, so
+it was launched detached-and-blocking-`wait`ed on its own PID within one
+logical foreground operation, per this document's established pattern for
+that suite):
+
+| suite | test cases | failed |
+|---|---|---|
+| semantics | 2767 | 1 |
+| backend_ir | 1646 | 46 |
+| compile_run | 2679 | 5 |
+
+Identical counts to every prior round's documented baseline. Migration
+applied, rebuilt clean (`-Wall -Wextra -Werror`, no warnings), ran the
+same battery **twice more** (foreground only, same per-suite
+methodology). All three runs' failing-test-case **names** (not just
+counts) were extracted via proper JUnit-XML parsing (`xml.etree.ElementTree`,
+not a hand-rolled regex - an earlier regex-based attempt this round
+produced spurious results on self-closing `<testcase .../>` tags and was
+discarded in favor of real XML parsing before trusting any comparison)
+and compared pairwise: baseline == run 1 == run 2, byte-for-byte, across
+all three suites (semantics: the same 1 case; backend_ir: the same 46
+cases; compile_run: the same 5 cases).
+
+The two counter-asserting tests were checked explicitly by name in all
+three result files, not inferred from the aggregate pass/fail counts:
+`test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`'s
+"implicit template-arg graph facts are consumed by inference cache"
+(asserts `hitCount > 0u`) and
+`test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp`'s
+"implicit template-arg graph facts publish inferred argument facts" and
+"...publish helper-routing scope" (both assert exact fact-vector
+contents) all showed PASS/PASS/PASS in baseline, run 1, and run 2 alike.
+This is the property this whole two-round exercise (harness, then real
+migration) existed to guarantee: with the audit's second invocation gone
+entirely, production's single invocation of the side-effecting helpers
+leaves the two `...ForTesting` counters in exactly the state they were
+always in - confirmed directly against the tests that assert on those
+counters' exact values, not merely inferred from equal failure counts.
+
+### F3 is now fully migrated - what remains for this whole module
+
+F3's entire receiver-type-inference cascade - F3-N1/N2 (Name-kind),
+F3-L/B/Fl/S (primitive-literal-kind), and now F3-C1/C2/C3b/c/d
+(Call-kind) - runs on `resolveReceiverType`/
+`resolveReceiverTypeFromCallExprForTemplateMonomorph` for real, mirroring
+`resolveMethodReceiverTarget`'s (RT2/RT3a/RT3b/RT3c/G7) completion in
+`ir_lowerer` two rounds ago. F3-C3a stays permanently outside
+`resolveReceiverType`/`CanonicalReceiverType`'s scope, by design, in both
+stages that have one (F3-C3a here; there is no `ir_lowerer` analogue,
+since `resolveMethodReceiverTarget` never had a resolution-not-inference
+carve-out of its own).
+
+This closes out every site the Step 1c Scoping round (2026-09-10)
+originally named as needing `CanonicalReceiverType`/`resolveReceiverType`:
+F3, RT2, and RT3/G7 are now **all** migrated. No further
+receiver-type-inference site (as opposed to receiver-*family*
+classification, `classifyReceiverElementFamilyJoint`'s separate and still
+partially open concern - Row F still has 12/17 branches unmigrated
+(F0-F6/F8, F10, F14-F16) plus F12's deferred real migration, tracked
+under TODO-5294's own ongoing Step 0/Step 2 work, not this "new module")
+is currently known to exist in any of the three stages this document
+covers. This new module's own implementation work - the
+inference/family-classification split characterized in the Step 1c
+Scoping round - is therefore essentially complete: what remains is not
+a known open inference site but a final full-scope review pass to
+confirm no other receiver-type-inference mechanism was missed by the
+original characterization, before this sub-track of TODO-5294 could be
+considered fully closed.

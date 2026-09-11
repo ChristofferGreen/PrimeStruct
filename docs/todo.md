@@ -2208,6 +2208,73 @@ Call-kind nested args-pack-of-map receiver to the affected resolvers)
     inline cascade stays the sole live path; migrating it onto
     `resolveReceiverType` is left for a future round now that this one's
     verification gives it a safe foundation.
+  - implementation_notes (2026-09-11, F3 Call-kind real migration -
+    F3 now FULLY migrated): migrated the last unmigrated F3 slice.
+    `resolveReceiverTypeFromCallExprForTemplateMonomorph` (the previous
+    round's harness producer) is now the sole production path for
+    Call-kind receivers (F3-C1/C2/C3b/c/d) -
+    `resolveMethodCallTemplateTarget`'s old inline Call-kind cascade is
+    deleted, along with the now-pointless
+    `auditReceiverTypeAgainstTemplateMonomorphCallExpr` audit function
+    (diffing a function against itself post-migration is meaningless,
+    matching every prior migration's own retirement pattern) and four
+    lambdas in the outer function (`qualifyImportedCollectionTypeText`/
+    `bindingTypeText`/`isBorrowedSoaReceiverType`/
+    `unwrapImportedCollectionReceiverType`) that were only ever called by
+    the deleted cascade. Net: -166 lines in
+    `TemplateMonomorphMethodTargets.cpp` (344 removed, 178 added,
+    including expanded comments). F3-C3a (the struct-constructor-call
+    short circuit) required one deliberate signature change to preserve
+    exactly: `resolveReceiverTypeFromCallExprForTemplateMonomorph` gained
+    a `structConstructorReceiverPathOut` out-parameter, filled with the
+    already-resolved callee path at the exact point the function used to
+    just return `false` and discard it. The call site checks that
+    parameter first and runs F3-C3a's own short-circuit (`pathOut =
+    resolved + "/" + methodName; return true;`, byte-identical to the old
+    cascade's own C3a branch) before ever looking at the function's
+    `CanonicalReceiverType` output. This was necessary, not cosmetic: F3-
+    C3a's own callee-path resolution can recursively invoke
+    `resolveMethodCallTemplateTarget` for a nested Call-kind receiver,
+    which itself now calls the side-effecting inference helpers
+    (`inferBindingTypeForMonomorph` et al.) - re-resolving that path a
+    second time at the call site (to detect C3a independently) would have
+    re-invoked those helpers and double-counted their `...ForTesting`
+    counters for nested method-call receivers, exactly the hazard the
+    prior harness round's snapshot/restore machinery existed to avoid.
+    Passing the already-resolved path back once, instead, keeps the
+    invocation count at exactly one per receiver - same as the old inline
+    cascade, and confirmed empirically (see below). Verification: fresh
+    baseline built directly from clean `73f141852` (this round's starting
+    commit; working tree was already clean there, so no `git stash`
+    round-trip was needed), full 3-suite battery run foreground
+    (semantics: 1/2767 failing, same case; backend_ir: 46/1646 failing,
+    same 46 cases; compile_run: 5/2679 failing, same 5 cases - matching
+    every prior round's documented baseline exactly). Migration applied,
+    rebuilt clean (no warnings, `-Werror` on), ran the same battery twice
+    more (foreground only): both reruns byte-identical to baseline in
+    failing-test-case **names** (not just counts, verified via proper
+    JUnit-XML parsing, not naive regex) across all three suites, all three
+    runs. The two counter-asserting tests
+    (`test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`'s
+    "implicit template-arg graph facts are consumed by inference cache",
+    which checks `hitCount > 0u`, plus
+    `test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp`'s
+    "implicit template-arg graph facts publish inferred argument facts"
+    and "...publish helper-routing scope") were checked explicitly by
+    name in all three XML result files: PASS/PASS/PASS in baseline, run
+    1, and run 2 alike - the counters land in the same state as
+    production's old single invocation, exactly as expected now that
+    there is only ever one invocation (no more audit second call) per
+    receiver. This completes F3's full migration: monomorphization's
+    entire receiver-type-inference cascade (F3-N1/N2, F3-L/B/Fl/S,
+    F3-C1/C2/C3b/c/d) now runs on `resolveReceiverType`/
+    `resolveReceiverTypeFromCallExprForTemplateMonomorph`, mirroring
+    `resolveMethodReceiverTarget`'s completion in `ir_lowerer` (RT2/RT3b/
+    RT3c/G7). F3-C3a stays permanently outside `CanonicalReceiverType`'s
+    scope, unaffected. See `docs/ReceiverTargetResolutionConsolidation.md`'s
+    new "Step 1c, F3 Call-kind real migration" section for full detail,
+    including a fresh accounting of what (if anything) remains across this
+    module's total scope.
   - acceptance: a rule table exists in
     `docs/ReceiverTargetResolutionConsolidation.md` enumerating, for each
     of the three stages' receiver-type-resolution implementations, every
