@@ -739,6 +739,29 @@ section and `docs/todo_finished.md`.
     `Kind::Call` check as an explicit same-function guard. Left open;
     neither of those two actions was attempted this round (both are
     behavior-affecting and need their own baseline/verify cycle).
+  - update (2026-09-14, Step 3): action (1) above is done - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "TODO-5293 Step
+    (3): branch 2 deletion, fully verified" section. A final
+    whole-repository producer search (widening past Step (2)'s already-
+    wide sweep) found zero producers of a bare capitalized `"At"`/
+    `"AtUnsafe"` `Expr::name` reaching semantics' `getBuiltinArrayAccessName`
+    - the only literal-spelling hits outside the target function itself
+    are the confirmed-live concatenated form and two ir_lowerer-stage
+    test fixtures that exercise ir_lowerer's own separate copy of the
+    function (which never had a bare-capitalized match arm to begin
+    with). Deleted the two dead match arms (`memberName == "At"` and
+    `memberName == "AtUnsafe"`) from `accessAliasFromMemberName`, leaving
+    every other spelling (`at`, `at_ref`, `at_unsafe`, `at_unsafe_ref`,
+    both concatenated forms) untouched. Verified with a fresh 3-suite
+    baseline (`git status` clean at `dc3cf898c`, no stash needed) plus
+    two full post-change reruns, all foreground: semantics/backend_ir/
+    compile_run counts (1/46/5 failures respectively) identical across
+    baseline and both reruns, and all nine pairwise failing-test-NAME
+    diffs (baseline-vs-run1, baseline-vs-run2, run1-vs-run2, per suite)
+    byte-identical/empty. Branch 2 of the 5 found in Step (1) is now
+    resolved. Branches 1, 3, 4, and 5 remain open and untouched, and the
+    shared-classifier design itself (Step (2)'s recommended action (2))
+    is still future work - not marking this task `[x]` yet.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai

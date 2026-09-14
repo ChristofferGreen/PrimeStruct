@@ -6969,3 +6969,116 @@ TODO-5293 stays open; this round did not attempt step 1 or step 2 above
 cycle, out of scope for an investigation-only round), but the path to
 closing it is now concrete rather than blocked on open reachability
 questions.
+
+## TODO-5293 Step (3): branch 2 deletion, fully verified (2026-09-14)
+
+This round attempted Step (2)'s recommended "step 1 of 2" - a standalone,
+fully-verified deletion of the bare-capitalized `"At"`/`"AtUnsafe"` branch
+from semantics' `accessAliasFromMemberName` (the lambda inside
+`getBuiltinArrayAccessName`, `SemanticsBuiltinPathHelpers.cpp:1186-1270`).
+Branches 1, 3, 4, and 5 were deliberately left untouched, exactly as
+characterized by the prior two rounds.
+
+**Final producer search, before touching any code.** Re-read
+`accessAliasFromMemberName`'s full body and every call site inside
+`getBuiltinArrayAccessName` (it is a local lambda used by all of that
+function's match paths, not a separate top-level function - there was
+never a case of it needing wholesale deletion, only trimming the two
+dead match arms within it). Widened the negative search one step further
+than the last round by grepping the *whole repository* (not just
+`src/semantics/`, `src/parser/`, stdlib source, and the registry as
+before) for the literal strings `"At"` and `"AtUnsafe"`:
+
+- Every non-test hit outside `SemanticsBuiltinPathHelpers.cpp` itself is
+  either the *concatenated* form via `collectionAliasLocal`/
+  `collectionWrapperAlias("vector", "At"/"AtUnsafe")` (the confirmed-live
+  form this round does not touch) or an unrelated `"vectorAt"`/
+  `"vectorAtUnsafe"` string-concatenation helper
+  (`SemanticsValidatorInferCollectionCompatibilityInternal.h:524,527`,
+  `TemplateMonomorphExpressionRewrite.cpp:982-983`) - none of these
+  construct a *bare* capitalized `"At"`/`"AtUnsafe"` `Expr::name`.
+- Two test files *do* construct `Expr` nodes with a literal bare
+  `.name = "At"` / `.name = "AtUnsafe"`
+  (`tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_buffer_store_direct_calls_helper_lowerer_shared.h:652,674`
+  and the `.cpp` file that consumes those fixtures). Traced these fully:
+  they are ir_lowerer-stage unit test fixtures, included only via
+  `test_ir_pipeline_validation_helpers.h`, and exercise ir_lowerer's own
+  *separate* copy of `getBuiltinArrayAccessName`
+  (`src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp:505-566`), not
+  semantics' copy. Read that ir_lowerer copy in full: its own
+  `matchLegacyAccessAlias` lambda already only matches the *concatenated*
+  form via `collectionWrapperAlias("vector", "At"/"AtUnsafe")` - it has no
+  bare-capitalized match arm either, and never did. So these fixtures are
+  (most likely) negative/fallthrough test cases for the ir_lowerer path,
+  not evidence of a live bare-capitalized producer anywhere, and they are
+  entirely outside this round's edit surface regardless.
+- Confirmed no semantics-stage unit test (`tests/unit/semantics/` or any
+  other suite) constructs or exercises a bare `"At"`/`"AtUnsafe"` against
+  semantics' `getBuiltinArrayAccessName` specifically - `grep` for
+  `getBuiltinArrayAccessName` across `tests/` turns up only
+  `ir_pipeline/validation` files (ir_lowerer/emitter-facing), never a
+  semantics-directory test.
+
+**Verdict: confirmed dead, no producer found anywhere in the repository**
+(parser, stdlib source, registry, codegen, or test fixtures) that
+constructs a bare capitalized `"At"`/`"AtUnsafe"` `Expr::name` reaching
+semantics' `getBuiltinArrayAccessName`. This is now the fourth
+independent sweep (introducing-commit analysis, two prior rounds' wide
+negative searches, and this round's final whole-repository literal-string
+sweep plus full trace of the only two `Expr`-construction sites that use
+the literal spelling) to find zero producers, so the deletion proceeded.
+
+**Change made.** Removed exactly two match arms from
+`accessAliasFromMemberName` - `memberName == "At"` from the `"at"`-alias
+branch and `memberName == "AtUnsafe"` from the `"at_unsafe"`-alias branch
+- leaving `"at"`, `"at_ref"`, `"at_unsafe"`, `"at_unsafe_ref"`, and both
+concatenated `collectionAliasLocal("vector", "At"/"AtUnsafe")` forms
+completely untouched. The lambda itself was not deleted (it still serves
+those live forms across all of `getBuiltinArrayAccessName`'s match
+paths); only the two dead literal comparisons were trimmed.
+
+**Verification: fresh 3-suite baseline, then two full post-change
+reruns, all foreground.** `git status` confirmed a clean tree already at
+`dc3cf898c` (no stash needed); rebuilt all three suite binaries from that
+commit (no-op rebuild - binaries were already current) and captured a
+fresh baseline:
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+These exactly match every prior round's documented baseline counts.
+Applied the deletion, rebuilt (only `SemanticsBuiltinPathHelpers.cpp`
+recompiled, as expected), and ran the full 3-suite battery twice more.
+Both post-change runs reproduced the identical counts above. Extracted
+the sorted, deduplicated failing-`TEST CASE`-name set for each of the
+three baseline runs and both post-change reruns (six name-set files
+total) and diffed every pairwise combination (baseline-vs-run1,
+baseline-vs-run2, run1-vs-run2) for all three suites - nine `diff`
+invocations, all with **empty output**. The `compile_run` suite's 5
+pre-existing failing names
+(`C++ emitter runs canonical map reference string access`, `map wildcard
+import rejects stdlib-owned surface in C++ emitter`, `runs collection
+literals with map at in C++ emitter`, `runs vm canonical map reference
+string access with imported canonical helpers`, `runs vm shared stdlib
+map conformance harness`) and the `backend_ir` suite's 46 and
+`semantics` suite's 1 (the same recurring
+`semantic product validates direct return method-like borrowed
+helper-return experimental soa reads` flake this document has referenced
+throughout) are all unrelated pre-existing issues, unaffected by this
+change in every rerun.
+
+**Conclusion.** Branch 2 of TODO-5293's five originally-found divergent
+branches is now resolved: the semantics-stage-only bare capitalized
+`"At"`/`"AtUnsafe"` spelling has been deleted, confirmed via
+byte-identical failing-test-name sets across three fresh runs (one
+baseline, two post-change) that the deletion was a pure behavioral no-op.
+Branches 1, 3, 4, and 5 remain open and untouched, exactly as
+characterized by Step (2) above - the harder shared-classifier design
+(Step (2)'s own step 2: encoding branches 3/4 as an ir_lowerer-only
+lookup-callback extension, branch 1's `Kind::Call` gate as an explicit
+same-function check, and branch 5's cross-check as a stage-supplied
+lookup-callback behavior) remains future work. TODO-5293 stays open in
+`docs/todo.md`.
