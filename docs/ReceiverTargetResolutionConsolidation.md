@@ -7082,3 +7082,221 @@ lookup-callback extension, branch 1's `Kind::Call` gate as an explicit
 same-function check, and branch 5's cross-check as a stage-supplied
 lookup-callback behavior) remains future work. TODO-5293 stays open in
 `docs/todo.md`.
+
+## TODO-5293 Step (4): shared classifier designed, implemented, and diff-audit-verified for the semantics stage (2026-09-14)
+
+This is the shared-classifier design/implementation/wiring round Step (2)'s
+"step 2" pointed at, following the `ReceiverElementFamilyClassifier`/
+`CanonicalReceiverType` extraction pattern from TODO-5294. New module:
+`include/primec/support/BuiltinArrayAccessNameClassifier.h` /
+`src/support/BuiltinArrayAccessNameClassifier.cpp`, with a new unit test
+file, `tests/unit/semantics/test_semantics_builtin_array_access_name_classifier.cpp`
+(33 test cases, 83 assertions, pinning the module's own behavior directly).
+
+### Design
+
+Two pure, 100%-shared-between-stages primitives, plus one stage-supplied
+callback and two per-stage composition functions:
+
+- `classifyAccessAliasToken(memberName, mode)` - the shared "strip a
+  `__t<hash>` template suffix, then a `__<n>` generated suffix, then
+  compare against a literal spelling set" pipeline both stages'
+  `accessAliasFromMemberName`/`matchAccessAlias`/`matchLegacyAccessAlias`
+  lambdas already use (verified byte-identical formulas). A fresh read of
+  ir_lowerer's real body this round found a subtlety the four prior audit
+  rounds' static analysis had not named explicitly: ir_lowerer's own two
+  lambdas are not interchangeable - `matchAccessAlias` (branch 3/4's
+  receiver-base shape) only ever compares against the *bare* spellings
+  (`"at"`/`"at_ref"`/`"at_unsafe"`/`"at_unsafe_ref"`), while its sibling
+  `matchLegacyAccessAlias` only ever compares against the *concatenated*
+  spellings (`"vectorAt"`/`"vectorAtUnsafe"`) - and semantics' single
+  `accessAliasFromMemberName` covers the union of both (verified by direct
+  enumeration, not assumption). `AccessAliasSpellingMode`
+  (`kBareOnly`/`kConcatenatedOnly`/`kFull`) makes this selectable per call
+  rather than forcing one literal set on every caller. This primitive
+  never recognizes the deleted bare capitalized `"At"`/`"AtUnsafe"`
+  spelling (branch 2, confirmed dead and deleted in Step (3)) in any mode.
+- `matchBuiltinArrayAccessAliasUnderPrefix(name, prefix, receiverBase,
+  mode, rejectOnRawResidualSlash)` - the shared "strip a root prefix,
+  optionally require a receiver-base disambiguation segment before an
+  embedded `/`, then classify" shape, generalizing semantics'
+  `matchStdlibLegacyAccessAlias`/inline `stdVectorRoot` handling and
+  ir_lowerer's `matchAccessAlias`/`matchLegacyAccessAlias` into one
+  function. `receiverBase` empty reproduces the "legacy", no-embedded-
+  receiver shape both stages otherwise use; non-empty reproduces branch
+  3's disambiguation check (`receiverPath == receiverBase ||
+  receiverPath.rfind(receiverBase + "__", 0) == 0`) exactly.
+  A second real subtlety surfaced while building this primitive and is
+  worth flagging as this round's own genuine new finding (see "New quirk
+  found this round" below): the `rejectOnRawResidualSlash` parameter,
+  needed because semantics' `stdVectorRoot` inline handling and its
+  `matchStdlibLegacyAccessAlias` helper are NOT actually the same shape
+  either, despite both being "receiverBase-empty" - they disagree on
+  whether a `/` occurring *after* a `__t<hash>` marker is stripped away
+  before classification is attempted.
+- `BuiltinArrayAccessKeyValueLookup` (branch 5): a stage-supplied callback
+  returning a tri-state outcome (`kNoMatch`/`kReject`/`kAccept(token)`)
+  rather than a plain bool or a plain resolved-name string, specifically
+  so each stage can carry its OWN real shape without the other stage's
+  shape leaking in: semantics' real adapter builds this from
+  `resolveKeyValueHelperMemberNameLocal` (cross-check included) then
+  classifies the resolved member name like every other branch, so it CAN
+  `kAccept("at"/"at_unsafe")`; a hypothetical ir_lowerer adapter would
+  build this from `resolvesKeyValueHelperSurfacePath` as an unconditional
+  `kReject` whenever it resolves - this round's fresh reading of
+  ir_lowerer's real body confirms it is used as a hard rejection, never an
+  acceptance, of any key-value-surface match (see "New quirk found this
+  round" below).
+- `classifyBuiltinArrayAccessNameForSemantics` / `...ForIrLowerer`: one
+  composition function per stage, each reproducing that stage's real
+  root-walking sequence (order, hard-stops, and - for ir_lowerer -
+  branches 3/4) from the two shared primitives above. Per the task's own
+  ask, there is no single joint "one function both stages call unmodified"
+  entry point - the two real bodies do not walk the same roots in the same
+  order with the same hard-stop shape (confirmed again this round while
+  transcribing both bodies statement-by-statement into these composition
+  functions), so a forced joint entry point would not be a faithful
+  reproduction of either. Branches 3 and 4 are realized entirely inside
+  `classifyBuiltinArrayAccessNameForIrLowerer` as ir_lowerer-specific calls
+  into the shared primitive with a non-empty `receiverBase` that
+  semantics' composition function never passes - the "ir_lowerer's own
+  call site keeps a small amount of wrapper logic around the shared call"
+  shape the task asked for, realized as a dedicated composition function
+  rather than literally a call-site wrapper, since ir_lowerer's own
+  production call site was not touched this round (see Scope below).
+
+Branch 1 (`Expr::Kind::Call` gate) is deliberately NOT encoded inside the
+module at all, per this round's judgment call: the module operates on
+caller-supplied strings, not `Expr`, so there is no `Kind` to gate on
+here regardless, and Step (2)'s own finding already established the gate
+is practically inert everywhere it matters (the `Expr::name`-population
+invariant). Reproducing a redundant gate inside string-typed primitives
+that never see `Expr::kind` would be either a no-op parameter threaded
+through for no behavioral effect, or a leaky abstraction requiring the
+module to accept an `Expr::Kind` it cannot otherwise use. ir_lowerer's
+real production function keeps its own explicit `Kind::Call` check ahead
+of everything this module reproduces, unmodified.
+
+### New quirk found this round (this exercise's own explicit invitation - see task step 3)
+
+Two real subtleties this round's statement-by-statement transcription
+surfaced that the four prior audit rounds' static, branch-level reading
+had not named explicitly (both resolved by design, not by declaring one
+stage's behavior a bug - see the design section above for how each is
+encoded):
+
+1. ir_lowerer's `matchAccessAlias` (bare spellings only) and
+   `matchLegacyAccessAlias` (concatenated spellings only) are genuinely
+   different literal-comparison subsets, not two call sites sharing one
+   comparison set with different prefixes - `AccessAliasSpellingMode`
+   exists specifically to carry this distinction.
+2. Semantics' own `matchStdlibLegacyAccessAlias` and its separate inline
+   `stdVectorRoot` handling - both "receiverBase-empty" branches - do NOT
+   behave identically on a contrived alias containing a `/` after a
+   `__t<hash>` marker (e.g. `"at__t9/foo"`): `matchStdlibLegacyAccessAlias`
+   rejects immediately based on the RAW alias's residual slash, before any
+   suffix stripping is attempted, while `stdVectorRoot` strips first (with
+   no explicit slash check at all) and would accept. This is almost
+   certainly unreachable in practice (a `__t<hash>` marker attaches to
+   monomorphized TYPE names, not to a bare method name like `"at"`), and
+   the fresh 3-suite diff-audit below found no real test input that
+   exercises it - but since the distinction was cheap to encode correctly
+   (`rejectOnRawResidualSlash`, defaulting to the common/legacy behavior
+   and set to `false` only for the one real `stdVectorRoot` call), it was
+   encoded rather than left as a documented gap. Pinned directly in the
+   new unit test file
+   (`matchBuiltinArrayAccessAliasUnderPrefix with rejectOnRawResidualSlash=false
+   strips before classifying`).
+
+No divergence was found between the two stages' real behavior beyond the
+five already-characterized branches from Steps (1)/(2)/(3) - both of the
+above are same-stage internal subtleties this round's design work had to
+get right to reproduce either stage faithfully, not new cross-stage
+divergences.
+
+### Wiring and verification: semantics stage only this round (per the task's own explicit permission to stop after one stage)
+
+Wired an observational diff-audit call into semantics' production
+`getBuiltinArrayAccessName` (`SemanticsBuiltinPathHelpers.cpp`), gated by
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`, mirroring the pattern used
+throughout TODO-5294. The existing function body was wrapped in a local
+`legacy` lambda (a pure refactor - every statement inside it is
+byte-identical to the pre-existing function body, unchanged); its bool
+result and `out` are then compared, only when the env var is set, against
+`classifyBuiltinArrayAccessNameForSemantics`'s independent answer computed
+from the same `expr`. A mismatch would `std::cerr`-log the specifics and
+`assert(false)`; production `result`/`out` are returned unchanged either
+way. ir_lowerer's production call site was NOT touched this round - no
+adapter wiring, no audit call - `classifyBuiltinArrayAccessNameForIrLowerer`
+exists and is pinned by direct unit tests only, per the task's explicit
+"if you get through design and ONE stage's harness cleanly... that's a
+legitimate stopping point" permission.
+
+**Fresh baseline** (`git status` clean before stashing; stashed to
+`4223a869f`, rebuilt - `PrimeStruct_semantics_tests`,
+`PrimeStruct_backend_ir_tests`, `PrimeStruct_compile_run_tests` - and ran
+all three foreground):
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2767 | 1 | 13343 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15278 | 8 |
+
+Identical to every prior round's recorded baseline. Extracted the sorted
+`TEST CASE:` name set for each suite (1/46/5 names respectively).
+
+**Audit-enabled run** (stash popped, rebuilt, `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`,
+all three suites foreground - `compile_run` alone runs long enough to
+cross the tool's single-call foreground window twice across this round's
+several runs; each time, resumed with a real blocking `wait`-on-PID loop
+in a fresh call rather than treating the auto-background as a stopping
+point): semantics grew to 2800 test cases / 13426 assertions (the 33 new
+`BuiltinArrayAccessNameClassifier`-module unit tests are additive, not a
+production-behavior change), still exactly 1 failed test case / 2 failed
+assertions - the same pre-existing
+`semantic product validates direct return method-like borrowed helper-
+return experimental soa reads` flake this document has referenced
+throughout. backend_ir (1646/46) and compile_run (2679/5) were
+byte-identical to baseline. **Zero
+`[receiver-target-diff-audit] MISMATCH` lines across all three suites**
+(`grep -c` on the audit-enabled logs: 0/0/0) and **no `assert(false)`
+abort** in any run - the shared classifier agrees with semantics'
+production `getBuiltinArrayAccessName` on every real `Expr` any of the
+three suites' actual test traffic drove through it, across 13426+16428+15278
+total assertions. The sorted failing-`TEST CASE`-name sets were also
+diffed directly against baseline for all three suites: identical.
+
+**Unchanged-default-behavior confirmation** (env var unset, two full
+foreground reruns of all three suites): both reruns reproduced the exact
+baseline counts (2800/1, 1646/46, 2679/5 - the 2800 reflecting the new,
+additive unit tests, same as the audit-enabled run) with **zero**
+production behavior change (the audit call short-circuits immediately via
+`isBuiltinArrayAccessNameDiffAuditEnabled()`'s cached `false` when unset).
+All nine pairwise failing-`TEST CASE`-name-set comparisons (baseline vs
+rerun1, baseline vs rerun2, rerun1 vs rerun2, times three suites) were
+diffed directly: every one empty/byte-identical.
+
+### Conclusion and remaining scope
+
+The shared classifier is designed, implemented, unit-tested (33 cases
+pinning both stages' real call patterns, including branch 2's absence and
+branches 3/4 correctly living outside the semantics composition function),
+and diff-audit-verified against real, full-3-suite test traffic for the
+semantics stage with zero divergence found. Per this round's own explicit
+permission to stop after one stage rather than rush both, ir_lowerer's
+production call site was NOT wired into a live diff-audit this round -
+`classifyBuiltinArrayAccessNameForIrLowerer` is implemented and pinned by
+direct unit tests (including the receiver-base/SoaColumn branches, the
+canonical-vector-helper-path exclusion, and the key-value-surface
+unconditional-rejection behavior this round's fresh reading confirmed),
+but has not yet been observed against real ir_lowerer test-suite traffic
+the way the semantics adapter has. TODO-5293 stays open in `docs/todo.md`;
+a future round's remaining work is (1) wire an equivalent diff-audit call
+into ir_lowerer's production `getBuiltinArrayAccessName`
+(`IrLowererBuiltinNameHelpers.cpp`) and repeat this round's verification
+protocol for that stage, then (2), only once both stages show zero
+divergence under live audit, consider real production migration of either
+or both call sites onto the shared classifier - itself a separate,
+carefully-verified future round per this whole effort's established
+discipline, not attempted here.

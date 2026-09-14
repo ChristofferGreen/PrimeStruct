@@ -762,6 +762,56 @@ section and `docs/todo_finished.md`.
     resolved. Branches 1, 3, 4, and 5 remain open and untouched, and the
     shared-classifier design itself (Step (2)'s recommended action (2))
     is still future work - not marking this task `[x]` yet.
+  - update (2026-09-14, Step 4): the shared-classifier design/
+    implementation/wiring round - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "TODO-5293 Step
+    (4)" section. New module `include/primec/support/BuiltinArrayAccessNameClassifier.h`/
+    `src/support/BuiltinArrayAccessNameClassifier.cpp`, following the
+    `ReceiverElementFamilyClassifier`/`CanonicalReceiverType` extraction
+    pattern: two shared pure primitives
+    (`classifyAccessAliasToken`/`matchBuiltinArrayAccessAliasUnderPrefix`),
+    a stage-supplied tri-state key-value-lookup callback for branch 5, and
+    one composition function per stage
+    (`classifyBuiltinArrayAccessNameForSemantics`/`...ForIrLowerer`) since
+    the two real bodies' root-walking order/hard-stops genuinely differ
+    (no single joint entry point both stages call unmodified). Branch 1's
+    `Kind::Call` gate is deliberately NOT encoded in the module (it
+    operates on strings, not `Expr`, and the gate is already known
+    practically inert); branches 3/4 live only inside the ir_lowerer
+    composition function via non-empty `receiverBase` arguments to the
+    shared prefix primitive that the semantics composition never passes.
+    New unit test file
+    `tests/unit/semantics/test_semantics_builtin_array_access_name_classifier.cpp`
+    (33 cases, 83 assertions) pins both stages' real call patterns,
+    including branch 2 staying dead and branch 3's confirmed real
+    divergence point (semantics false / ir_lowerer true on the identical
+    `Vector__t.../at` shape). This round's transcription work surfaced two
+    same-stage internal subtleties the prior three rounds' static analysis
+    had not named (ir_lowerer's `matchAccessAlias`/`matchLegacyAccessAlias`
+    compare against genuinely different literal-spelling subsets;
+    semantics' `matchStdlibLegacyAccessAlias` vs its own `stdVectorRoot`
+    handling disagree on a contrived `__t<hash>`-then-`/` alias) - both
+    resolved by design (an `AccessAliasSpellingMode` parameter and a
+    `rejectOnRawResidualSlash` parameter respectively), not by declaring
+    either stage's real behavior a bug. Wired an observational diff-audit
+    call (env-gated on `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`, matching
+    the TODO-5294 pattern) into semantics' production
+    `getBuiltinArrayAccessName` only, per this round's explicit permission
+    to fully harness one stage rather than rush both; ir_lowerer's
+    production call site was not touched. Verified with a fresh 3-suite
+    baseline (git-stash to `4223a869f`), an audit-enabled run of all three
+    suites (semantics grew to 2800 cases/13426 assertions from the 33 new
+    additive unit tests; all three suites' failure counts - 1/46/5 -
+    identical to baseline; **zero** `[receiver-target-diff-audit] MISMATCH`
+    lines and no assert-abort across 13426+16428+15278 total assertions of
+    real test traffic; failing-test-NAME sets identical to baseline for
+    all three suites), and two full foreground reruns with the env var
+    unset (all nine pairwise failing-test-NAME diffs byte-identical/empty,
+    confirming zero production behavior change by default). Still not
+    marking this task `[x]` - ir_lowerer's production call site still
+    needs its own equivalent diff-audit wiring and verification pass (a
+    future round), and actual production migration of either call site
+    onto the shared classifier is separate future work again after that.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai

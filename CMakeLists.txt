@@ -131,6 +131,7 @@ function(primestructEnableWarnings targetName)
 endfunction()
 
 set(PRIMESTRUCT_SUPPORT_SOURCES
+  src/support/BuiltinArrayAccessNameClassifier.cpp
   src/support/CollectionSpellingClassifier.cpp
   src/support/CompileArena.cpp
   src/support/Diagnostics.cpp
@@ -1260,6 +1261,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/result_helpers/test_semantics_result_helpers_gfx.cpp
     tests/unit/semantics/test_semantics_collection_spelling_classifier.cpp
     tests/unit/semantics/test_semantics_receiver_element_family_classifier.cpp
+    tests/unit/semantics/test_semantics_builtin_array_access_name_classifier.cpp
     tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp
   )
   target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
