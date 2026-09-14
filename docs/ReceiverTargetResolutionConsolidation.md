@@ -6405,3 +6405,281 @@ documented, non-`(type, methodName)`-shaped reason rather than left
 unexamined. This round's fresh, independent search for a missed
 receiver-type-inference site found none. TODO-5294 is marked closed in
 `docs/todo.md` (moved to `docs/todo_finished.md`) on this basis.
+
+## TODO-5293 Step (1): branch-by-branch audit of `getBuiltinArrayAccessName`'s two stage bodies (2026-09-14)
+
+This is the audit TODO-5293's own `implementation_notes` step (1) asks
+for, done fresh against the current code (not just TODO-5288's earlier
+summary) before any merge attempt. **No code changed this round** - the
+audit itself surfaced enough genuine ambiguity (more than the "one or
+two" branches the task's `stop_rule` names as the threshold) that a
+blind merge attempt is not warranted; this section documents the
+findings so a future round can make an informed call, per the
+`stop_rule`'s explicit permission to "stop and document the ambiguity
+rather than guessing at a merge."
+
+Bodies read fresh for this audit:
+`src/semantics/SemanticsBuiltinPathHelpers.cpp:1186-1270`
+(`primec::semantics::getBuiltinArrayAccessName`) and
+`src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp:505-631`
+(`primec::ir_lowerer::getBuiltinArrayAccessName`).
+
+### Branch 1: `Expr::Kind::Call` gate - ir_lowerer has it, semantics doesn't
+
+ir_lowerer's version opens with
+`if (expr.kind != Expr::Kind::Call || expr.name.empty()) return false;`.
+Semantics' version only checks `if (expr.name.empty()) return false;` -
+no `Kind::Call` requirement at all. Since `Expr::name` is populated on
+both `Name`-kind and `Call`-kind nodes, a bare identifier expression
+literally named `at` (or `vectorAt`, etc.) would be accepted by the
+semantics-stage function and rejected by the ir_lowerer-stage one.
+
+**Verdict: likely absorbed-by-caller-discipline, not independently
+confirmed.** Every one of the ~40 semantics-stage call sites greped
+this round either already gates on `Expr::Kind::Call` before calling
+(`target.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(...)`,
+the majority pattern) or calls it on an expression already known to be
+a call from surrounding control flow (e.g. arguments of a call). No
+call site was found that passes a bare `Name` node without a prior
+`Kind::Call` check. That is caller-side evidence, not a
+same-strength proof as the TODO-5286 "absorbed by earlier-stage
+rejection" precedent (which traced rejection inside an upstream
+*validation* stage); flagging this as needs a positive same-function
+`Kind::Call` guard if the function is ever made a shared classifier,
+rather than continuing to rely on ~40 independently-audited call
+sites to keep the invariant.
+
+### Branch 2: capitalized `At`/`AtUnsafe` spellings - semantics only, and split further into "reachable" vs "not found reachable"
+
+Semantics' `accessAliasFromMemberName` accepts, after stripping the
+`__t<hash>` template-specialization suffix and the `__<n>` generated
+suffix: `"at"`, `"at_ref"`, `"At"` (bare, capitalized), and
+`collectionAliasLocal("vector", "At")` (`"vectorAt"`, concatenated) for
+`at`; the `_unsafe` variants mirror this. ir_lowerer's
+`matchAccessAlias` only accepts lowercase `"at"`/`"at_ref"` and
+`"at_unsafe"`/`"at_unsafe_ref"`; its separate `matchLegacyAccessAlias`
+accepts only the concatenated `collectionWrapperAlias("vector", "At")`
+(`"vectorAt"`) form, not the bare `"At"` spelling.
+
+Two different things are bundled in this one branch pair, and they
+resolved differently under evidence:
+
+- **The concatenated `"vectorAt"`/`"vectorAtUnsafe"` spelling is NOT
+  actually divergent.** `collectionAliasLocal("vector", "At")` and
+  `collectionWrapperAlias("vector", "At")` are byte-identical formulas
+  (`std::string(collectionName) + std::string(suffix)`) defined
+  independently in each stage's file; both stages recognize this form.
+  This was almost mis-classified as a semantics-only branch from the
+  task's own prose ("accepts capitalized `At`/`AtUnsafe` member-name
+  spellings") without checking what the two token-building helpers
+  actually produce.
+- **The bare, un-concatenated `"At"`/`"AtUnsafe"` spelling (no
+  `"vector"`/`"map"` prefix folded in) really is semantics-only** - no
+  `matchLegacyAccessAlias`/`matchAccessAlias` branch in the ir_lowerer
+  body compares against a bare `"At"`. Traced this to the commit that
+  introduced it (`a19495f2b`, "Recognize access aliases in indexed
+  writes"): its own diff shows the ir_lowerer twin (added in the same
+  commit) *never* included the bare form even then - only
+  `"vectorAt"`/`"mapAt"` - while the semantics twin added `"At"`
+  alongside `"vectorAt"`/`"mapAt"` from the start. So this is not
+  recent drift; it was already asymmetric the day it was introduced.
+  Searched for any producer that emits a raw call/member name of
+  literally `"At"`/`"AtUnsafe"` (not `"vectorAt"`) across
+  `src/semantics/`, `src/ir_lowerer/`, the stdlib surface registry
+  (`StdlibSurfaceRegistry.cpp`), and every `.prim` file in the repo -
+  found none. No test (`grep -rn '\.At(\|\.AtUnsafe('` over `tests/`)
+  exercises the bare spelling either, in contrast to the same commit's
+  own test additions which use `"vectorAt"`/`"vectorAtUnsafe"` for
+  the ir_lowerer/emitter side. This is real evidence toward "latent,
+  probably-dead" but not proof of unreachability - it does not rule
+  out a synthesized call name built by string concatenation at some
+  site this grep sweep missed, or an interaction through
+  `resolveKeyValueHelperMemberNameLocal` (branch 4) returning a bare
+  `"At"`-shaped member name for some surface-registry entry not
+  checked directly.
+
+**Verdict: latent gap in ir_lowerer, but plausibly over dead
+semantics-stage code, not the "real divergence" framing in the task's
+`scope`.** Needs either a positive repro (a compiled program whose
+lowered/monomorphized form reaches `getBuiltinArrayAccessName` with a
+bare `"At"`/`"AtUnsafe"` name) or a deletion attempt with full 3-suite
+verification, before treating it as "must be preserved by a shared
+classifier."
+
+### Branch 3: vector-receiver-base disambiguation (`matchAccessAlias`'s `receiverBase`/`receiverBase + "__"` check) - ir_lowerer only
+
+ir_lowerer's `matchAccessAlias` handles a shape where the *receiver
+type* appears as a path segment between the collection-member root and
+the method name - e.g. `namespacePrefix = "/std/collections/vector/Vector__t12345678"`,
+`name = "at"` (see the `specializedVectorMethodAccessCall` test case,
+`tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp:1134-1142`).
+When the alias (post-prefix-strip) still contains a `/`, it requires
+the segment before that `/` to equal `receiverBase` (`"Vector"`) or
+start with `receiverBase + "__"` (a specialized/monomorphized receiver
+type name) before accepting - guarding against some *other* receiver
+type's member colliding by spelling under the same folder.
+
+Traced what semantics' twin does with the exact same `Expr` shape
+(namespacePrefix folded into `name` first, matching both stages'
+normalization convention): semantics' `stdVectorRoot` branch computes
+`alias = name.substr(stdVectorRoot.size())` (`"Vector__t12345678/at"`),
+then `stripTemplateSpecializationSuffix(alias)` finds `"__t"` *inside*
+`"Vector__t12345678"` and erases from there - which also erases
+everything after it, including the `/at` suffix - leaving
+`alias == "Vector"`. `accessAliasFromMemberName("Vector")` matches none
+of its literals and returns `false`, and the `stdVectorRoot` branch
+returns `false` immediately (no fallthrough to try other prefixes).
+**So semantics' function provably returns `false` on this exact
+`Expr` shape where ir_lowerer's returns `true`** - a real,
+demonstrable functional divergence, not merely a stylistic one.
+
+Whether this is a stage-specific-and-necessary difference (the
+receiver-typed-path shape simply never reaches
+`semantics::getBuiltinArrayAccessName` in practice) or a latent
+semantics-stage gap turns on where this `namespacePrefix`
+shape - collection-member-root + `/` + receiver-type-name (optionally
+`__t<hash>`-suffixed) + method name split across `namespacePrefix`/
+`name` - is actually constructed. Grepped every
+`.namespacePrefix = ...` assignment in `src/ir_lowerer/` and every
+`namespacePrefix`-embedding receiver-type construction near
+`src/ir_lowerer/IrLowererSetupTypeReceiverTargetHelpers.cpp` and
+`IrLowererSetupTypeMethodCallResolution.cpp` (the two files most
+likely to own receiver-type-into-path packaging) - found no literal
+construction site; the shape is not visibly synthesized inside
+`src/ir_lowerer/` itself, which suggests it originates further
+upstream (parser/AST construction for a qualified receiver-typed call,
+or a struct-type-path resolution helper not name-matched by this
+grep sweep) and may be equally reachable by both stages. This was not
+resolved with certainty this round.
+
+### Branch 4: internal-SOA-storage-column receivers (`SoaColumn`, `kInternalSoaStorageFolder`/`normalizeInternalSoaStorageBuiltinAlias`) - ir_lowerer only
+
+Same structural shape as Branch 3 (a `matchAccessAlias` call with
+`receiverBase = "SoaColumn"`), plus a second, distinct fallback: if the
+name starts with the internal-SOA-storage prefix but isn't matched by
+`matchAccessAlias`, it separately tries
+`normalizeInternalSoaStorageBuiltinAlias(scopedName)` and accepts if
+the result is `"at"`/`"at_unsafe"`. Semantics-stage has no
+`kInternalSoaStorageFolder`-prefix branch at all in
+`getBuiltinArrayAccessName` - names under that prefix simply fall
+through to the final bare-name check (`accessAliasFromMemberName(name)`
+on the full slashed path, which will fail since the literals compared
+have no `/`), so semantics returns `false` for any
+`kInternalSoaStorageFolder`-rooted access-call name.
+
+The internal SOA storage folder
+(`collection_paths::kInternalSoaStorageFolder`) is documented elsewhere
+in this file and in `IrLowererBuiltinNameHelpers.cpp`'s own comments as
+an ir_lowerer-internal rewrite target - the semantics stage validates
+source-level SOA vector usage against the *experimental SOA* surface
+(`isExperimentalSoaVectorHelperFamilyPath` et al., defined in this same
+`SemanticsBuiltinPathHelpers.cpp`), and the internal storage-column
+representation is synthesized during IR lowering itself as an
+implementation detail of columnar storage, not something semantics
+validation is defined over. This is the strongest "stage-specific-and-
+necessary, not a latent gap" case of the four SOA/receiver-base
+branches, but wasn't independently confirmed by tracing a construction
+site the way Branch 3 was attempted (same limitation: no literal
+`kInternalSoaStorageFolder`-prefixed `namespacePrefix`/`name`
+construction site was grepped and read end-to-end this round).
+
+### Branch 5 (found during this audit, not named in the task's own `scope`): the key-value-helper delegate itself is algorithmically different, not just differently-typed
+
+The task's `scope` already names this as a signature difference
+(string-returning `resolveKeyValueHelperMemberNameLocal` vs bool-only
+`resolvesKeyValueHelperSurfacePath`), but reading both bodies fresh
+this round found the two also disagree on *what counts as a match*,
+independent of the return-type difference:
+
+- Semantics'
+  `resolveKeyValueHelperMemberNameLocal` (`SemanticsBuiltinPathHelpers.cpp:187-215`)
+  additionally cross-checks the resolved path's owning surface metadata
+  id against the key-value metadata id
+  (`primec::findStdlibSurfaceMetadataByResolvedPath(rawPath)`, then
+  `pathMetadata->id != metadata->id` rejects) before accepting a member
+  name.
+- ir_lowerer's `resolvesKeyValueHelperSurfacePath`
+  (`IrLowererBuiltinNameHelpers.cpp:22-51`) has no such cross-check -
+  it accepts as soon as `resolveStdlibSurfaceMemberName(*metadata,
+  path)` (or the same call on a `/`-rooted variant) returns non-empty,
+  with no independent confirmation the path's *owning* surface really
+  is the key-value one.
+
+TODO-5288's own comment directly above this function
+(`IrLowererBuiltinNameHelpers.cpp:17-21`) already flags this exact gap
+("a different signature/metadata lookup ... tracked separately - see
+TODO-5293"), so this isn't a new finding, but it is worth restating
+plainly here: **a shared classifier cannot paper over this with a
+lookup-callback abstraction alone** - the callback shape needs to carry
+the semantics-stage cross-check as an explicit, optional behavior (or
+the ir_lowerer-stage call sites need to gain the cross-check outright,
+which is a behavior change requiring its own verification pass, not a
+pure refactor). This is exactly the "(a) build a stage-supplied lookup
+callback rich enough to cover both shapes" fork TODO-5288 already
+identified, and it remains unresolved.
+
+### Overall verdict for Step (1): more than "one or two" genuinely ambiguous branches - stop_rule applies
+
+Five branch-level differences were found with real evidence behind
+each (not just re-stating the task's own `scope` prose): the
+`Kind::Call` gate (branch 1, likely-but-not-provably absorbed),
+bare-`"At"`/`"AtUnsafe"` reachability (branch 2, likely-but-not-provably
+dead), the receiver-base disambiguation's origin (branch 3, genuinely
+unresolved - a real functional divergence exists, but whether inputs
+that trigger it reach the semantics stage is unknown), the SOA-column
+branch's stage-specificity (branch 4, plausible but not independently
+confirmed), and the key-value cross-check's semantic difference
+(branch 5, confirmed real, previously known, still unresolved). That
+is five items where the task's own framing called for verified
+stage-specific-vs-latent-gap determinations, of which only one
+(the `"vectorAt"`/`collectionAliasLocal`-vs-`collectionWrapperAlias`
+non-divergence inside branch 2) was resolved with full confidence this
+round.
+
+Per the `stop_rule` ("if more than one or two genuinely ambiguous
+... branches surface, stop and document the ambiguity rather than
+guessing at a merge"), this round stops here without attempting the
+shared-classifier design (`implementation_notes` step (2)) or the
+wiring (step (3)). TODO-5293 stays open in `docs/todo.md` with this
+section referenced.
+
+### On the "different questions, not one classifier" possibility (TODO-5293's own step 3 ask)
+
+Weighed explicitly, per the task's request, against the
+classifier-vs-inference lesson TODO-5294 closed on (`classifyReceiverElementFamilyJoint`
+answers "what element family is this receiver," a pure
+lexical/structural classification; `resolveReceiverType` answers "what
+concrete type does this receiver have," a genuine inference requiring
+context - forcing one function to answer both shapes is what TODO-5294
+explicitly rejected in favor of two separate modules).
+
+`getBuiltinArrayAccessName` does not obviously split along that same
+seam. Both stages are answering the identical question - "does this
+call-expression's *name* spell one of the array/vector/map bracket-index
+builtins (`at`/`at_unsafe`), and if so which" - over the same kind of
+input (a name/path string, optionally split across `namespacePrefix`
+and `name`), returning the same kind of answer (a normalized
+`"at"`/`"at_unsafe"` token). That is a classification question in the
+TODO-5294 sense, not an inference question requiring stage-specific
+context. What differs between the two stages is not the *shape* of the
+question but the *vocabulary* each stage's inputs are drawn from -
+which spellings/paths can appear in a pre-monomorphization semantics-
+validated AST vs. a post-lowering IR name - which is exactly the kind
+of difference a shared classifier taking a stage-supplied lookup
+callback (as `implementation_notes` step (2) already proposes) is
+designed to absorb, *provided* the vocabulary difference is fully
+enumerated first. So: **this looks like a genuine merge candidate in
+shape**, not a "different questions" case requiring permanent separate
+implementations - but per the branch audit above, the vocabulary is
+not yet fully enumerated (branches 1, 2, 3 and 4 all have open
+reachability questions), so attempting the callback design now would
+be encoding guesses about vocabulary as code. The recommended next
+step is a *reachability audit*, not a design pass: for each of
+branches 1-4, either find a real `.prim` source program (or a targeted
+unit-level `Expr` construction, mirroring the ir_lowerer tests already
+in `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`)
+that drives the specific input shape through
+`semantics::getBuiltinArrayAccessName`'s real call sites and observe
+whether it is ever reached, or confirm architecturally (by reading the
+receiver-type-into-`namespacePrefix` construction site once it is
+located) that the shape is IR-lowering-internal only.

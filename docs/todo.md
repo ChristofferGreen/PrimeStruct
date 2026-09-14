@@ -659,6 +659,52 @@ section and `docs/todo_finished.md`.
     (1) surfaces more than one or two genuinely ambiguous
     (stage-specific-or-latent-gap?) branches, stop and document the
     ambiguity rather than guessing at a merge.
+  - update (2026-09-14): Step (1)'s audit is done - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "TODO-5293 Step (1): branch-by-branch audit of
+    getBuiltinArrayAccessName's two stage bodies" section for the full
+    branch-by-branch evidence. Summary: 5 branch-level differences were
+    found (the task's own `scope` named 2 of them; 3 more turned up on a
+    fresh read) - (1) `Expr::Kind::Call` gate present only in
+    ir_lowerer (likely absorbed by ~40 call-site checks, not proven);
+    (2) capitalized `At`/`AtUnsafe` spellings - the `"vectorAt"`-style
+    concatenated form is NOT actually divergent (both stages' alias-
+    building helpers compute byte-identical tokens), but the bare
+    `"At"`/`"AtUnsafe"` spelling is semantics-only and traced to be
+    asymmetric since its introducing commit (`a19495f2b`), with no
+    producer of that literal spelling found anywhere in source or
+    `.prim` stdlib files (likely-dead, not proven dead); (3) the
+    vector-receiver-base disambiguation (`matchAccessAlias`'s
+    `receiverBase`/`receiverBase + "__"` check) is ir_lowerer-only and
+    was shown to cause a real, demonstrable functional divergence
+    (semantics' twin provably returns `false` on the exact `Expr` shape
+    ir_lowerer's returns `true` for), but where that shape is
+    constructed (and thus whether it can reach the semantics stage) was
+    not located this round; (4) the internal-SOA-storage-column
+    (`SoaColumn`) branch is plausibly ir_lowerer-internal-only
+    (columnar storage is synthesized during IR lowering, not validated
+    at the source level) but not independently confirmed; (5) the
+    key-value-helper delegate TODO-5288 already flagged
+    (`resolveKeyValueHelperMemberNameLocal` vs
+    `resolvesKeyValueHelperSurfacePath`) is confirmed to differ in more
+    than signature - semantics cross-checks the resolved path's surface
+    metadata id, ir_lowerer's shared bool-only helper does not - so a
+    shared classifier's lookup callback needs to carry that check
+    explicitly, not just adapt the return type. Also answered the
+    task's own step (3) question: `getBuiltinArrayAccessName`'s two
+    stages ARE asking the same classification-shaped question (unlike
+    the `classifyReceiverElementFamilyJoint`-vs-`resolveReceiverType`
+    split TODO-5294 closed on) - a shared classifier is the right shape
+    in principle - but the branch audit above leaves the *vocabulary*
+    (which spellings/paths are reachable per stage) underdetermined
+    for branches 1-4, so implementing the callback design now would
+    encode unverified guesses as code. No code changed this round;
+    left open per the `stop_rule` (5 ambiguous branches found, well
+    past the "one or two" threshold). Next round should do a
+    reachability audit (real `.prim` repros or targeted `Expr`-
+    construction unit tests, mirroring the existing ir_lowerer tests in
+    `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`)
+    for branches 1-4 before attempting the shared-classifier design.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai
