@@ -705,6 +705,40 @@ section and `docs/todo_finished.md`.
     construction unit tests, mirroring the existing ir_lowerer tests in
     `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`)
     for branches 1-4 before attempting the shared-classifier design.
+  - update (2026-09-14, Step 2): the requested reachability audit is
+    done - see `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "TODO-5293 Step (2): reachability audit for branches 1-4" section.
+    Still no code changed. Summary: branches 3 (vector-receiver-base) and
+    4 (`SoaColumn`) are now architecturally traced - the divergent
+    `namespacePrefix`-embeds-receiver-type shape each depends on is
+    constructed *only* inside ir_lowerer (`buildCallableDefinitionCallContext`
+    for branch 3, `IrLowererStructSlotLayoutHelpers.cpp`'s `SoaColumn`
+    struct-type synthesis for branch 4); no construction site exists in
+    the parser or semantics stage for either shape, so both look
+    genuinely ir_lowering-internal, not latent semantics gaps. Branch 2
+    (bare `At`/`AtUnsafe`) survived a materially wider negative search
+    (parser's reserved-name gate, stdlib `.prime` source, the surface
+    registry, and the reflection-codegen paths all checked, zero
+    producers found) - strengthened toward likely-dead but not proven.
+    Branch 1 (`Kind::Call` gate) is refined rather than resolved: found
+    one real semantics call site
+    (`resolveBuiltinKeyValueInsertReceiverBinding`,
+    `SemanticsValidate.cpp:614-681`) that does NOT gate on `Kind::Call`
+    at all (last round's "every site gates" claim was not literally
+    true), but traced that gap to be covered in practice by a different,
+    verified invariant - `Expr::name` is only ever populated on
+    `Call`/`Name`-kind nodes anywhere in the codebase, so the
+    non-`Call`, non-`Name` case this site is exposed to never actually
+    carries a non-empty name to misclassify. Net effect: the overall
+    picture is clearer now but still short of "prove it, merge it" - the
+    doc's updated verdict recommends two concrete next actions before
+    reattempting the shared-classifier design: (1) a standalone,
+    3-suite-verified attempt at deleting branch 2's dead bare-spelling
+    handling, then (2) the classifier design itself, encoding branches 3
+    and 4 as ir_lowerer-only lookup-callback extensions and branch 1's
+    `Kind::Call` check as an explicit same-function guard. Left open;
+    neither of those two actions was attempted this round (both are
+    behavior-affecting and need their own baseline/verify cycle).
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai

@@ -6683,3 +6683,289 @@ that drives the specific input shape through
 whether it is ever reached, or confirm architecturally (by reading the
 receiver-type-into-`namespacePrefix` construction site once it is
 located) that the shape is IR-lowering-internal only.
+
+## TODO-5293 Step (2): reachability audit for branches 1-4 (2026-09-14)
+
+This is the follow-up reachability round Step (1) recommended. **No code
+changed this round either** - the findings below sharpen the picture for
+each of the four open branches but stop short of a proof strong enough to
+either (a) delete the divergent branch as confirmed-dead or (b) declare it
+confirmed-necessary-and-therefore-permanently-divergent without further
+verification. Each branch is addressed in turn.
+
+### Branch 1: `Expr::Kind::Call` gate - refined, not resolved
+
+Re-swept every semantics-stage call site of `getBuiltinArrayAccessName`
+(94 occurrences across `src/semantics/*.cpp`, not ~40 as last round's
+narrower grep found - the larger count includes `using
+semantics::getBuiltinArrayAccessName;` declarations in every
+`TemplateMonomorph*.cpp` file, which are not call sites). Wrote a small
+script to check, for each real call site, whether a `Kind::Call` check
+appears in the several lines immediately above it - a cheap proxy for
+"is this call site itself gated," not a full control-flow proof.
+
+Most of the apparent "no gate nearby" hits were false positives from the
+narrow window (the real gate is further up the enclosing function, e.g.
+`SemanticsHelpersValidation.cpp:263`'s `getBuiltinArrayAccessName` call
+sits inside a block already wrapped in `if (expr.kind ==
+Expr::Kind::Call) { ... }` eleven lines up). But one genuine gap was
+found: `resolveBuiltinKeyValueInsertReceiverBinding`
+(`SemanticsValidate.cpp:614-681`) calls `getBuiltinArrayAccessName(expr,
+accessName)` at line 680 with **no `Kind::Call` check anywhere in the
+function** - only an early `if (expr.kind == Expr::Kind::Name) { ...
+return ...; }` at the top (line 619) rules out one specific other kind.
+This function is also recursive on nested receivers (`isFieldAccess`,
+`isSimpleCallName(expr, "location")` both recurse with
+`expr.args.front()` as the new `expr`), so by the time execution reaches
+line 680, `expr` could in principle be any of the four literal kinds
+(`Literal`, `BoolLiteral`, `FloatLiteral`, `StringLiteral`) if a chain of
+receivers bottoms out at one (e.g. a nonsensical-but-parseable receiver
+chain ending in a raw literal).
+
+This is a genuine, real counter-example to last round's "every semantics
+call site already gates on `Kind::Call`" claim - that claim was not
+actually true as literally stated. However, tracing further: `Expr::name`
+(checked by `getBuiltinArrayAccessName`'s own first line, `if
+(expr.name.empty()) return false;`) is populated by real parsing only for
+`Call`- and `Name`-kind nodes (`include/primec/ast/Ast.h:111-119` - the
+four literal kinds carry their value in `literalValue`/`floatValue`
+/`stringValue`/`boolValue`, not `name`). A grep across
+`src/parser/`, `src/semantics/`, and `src/ir_lowerer/` for any
+construction that sets `.name` on an `Expr` while leaving `.kind` at its
+default (`Literal`, the enum's first value) or explicitly at
+`BoolLiteral`/`FloatLiteral`/`StringLiteral` found none - every
+`.name = ...` assignment found either accompanies (or inherits from an
+expr that already carries) `Kind::Call` or `Kind::Name`. So in practice
+this specific call site is protected by a different, arguably stronger
+invariant than "caller discipline" - "no real `Expr` has a non-empty
+`name` unless it is `Call`- or `Name`-kind, and `Name`-kind is excluded
+one line above" - but this is still evidence, not a same-function proof,
+and it is a different invariant than the one last round's audit actually
+verified (which claimed literal caller-side `Kind::Call` checks, not this
+name-population invariant). **Verdict: refined but not resolved** - the
+"absorbed by caller discipline" framing was partly wrong (not every site
+gates), but the practical safety net is real and traced to a structural
+invariant on `Expr::name`, which is meaningfully stronger evidence than
+last round had. Still recommend a same-function `Kind::Call` guard if this
+function is ever made a shared classifier, both to make the invariant
+self-evident at the boundary and because the `Expr::name` invariant,
+while apparently exceptionless today, is not enforced by the type system
+and could silently break under a future refactor.
+
+### Branch 2: bare capitalized `At`/`AtUnsafe` - search widened, still no producer found
+
+Widened the search past last round's grep-for-literal-spelling sweep, per
+the task's specific angles:
+
+- **Is `At`/`AtUnsafe` valid user-writable surface syntax?** Checked the
+  parser's reserved-builtin-name gate
+  (`src/parser/ParserHelpers.cpp:140-188`, the function backing "is this
+  identifier a reserved/canonical builtin spelling") - it lists `"at"`
+  and `"at_unsafe"` (lowercase only) among ~40 other reserved names, never
+  `"At"`/`"AtUnsafe"`. This means a user-written method literally named
+  `At` is not reserved and would parse as an ordinary custom method name
+  on whatever struct defines it - which, for it to reach
+  `getBuiltinArrayAccessName`'s vector/map/key-value root branches at
+  all, would require that struct's resolved path to fall under
+  `std/collections/vector/`, `std/collections/`, or one of the
+  experimental collection roots - i.e. it would need to be the stdlib's
+  own `Vector`/`Map` type defining a method named `At`, not arbitrary
+  user code elsewhere.
+- **Does the stdlib itself define anything named bare `At`/`AtUnsafe`?**
+  Grepped `stdlib/std/collections/vector.prime` and `map.prime` (the
+  actual source of the `Vector`/`Map` types) for `\bAt\b`/`AtUnsafe` -
+  every hit is the concatenated `vectorAtUnsafe`/`mapAtUnsafe` spelling
+  (e.g. `vector.prime:301`, `map.prime:60,436,444`), never a bare `At`.
+- **Any registry-level alias?** Grepped
+  `src/support/StdlibSurfaceRegistry.cpp` for `"At"`/`"AtUnsafe"` as
+  registered member-name literals - no hits.
+- **Any code-generation/macro path?** No reflection/derive/macro-expansion
+  code in `src/semantics/SemanticsValidateReflectionGenerated*.cpp`
+  (the generated-helper family: clone/debug/compare/serialize) touches
+  vector/map access-alias names at all - those generate struct
+  clone/compare/serialize helpers, unrelated to collection indexing.
+
+Combined with last round's finding that the introducing commit
+(`a19495f2b`) added the semantics-only bare form asymmetrically from day
+one, this is now a materially more thorough negative search across every
+angle the task asked for (user syntax, stdlib source, registry, codegen)
+and still finds zero producers. **Verdict: strengthened toward
+likely-dead**, though still not a formal proof (the search cannot rule
+out a producer this sweep's patterns didn't match, e.g. a name built by
+runtime string concatenation inside the compiler rather than a spelled
+literal - but no such concatenation producing exactly `"At"`/`"AtUnsafe"`
+un-prefixed was found either, and the two-instruction alias-building
+helpers in both stages were read in full last round with no such
+concatenation present). This is now strong enough evidence that a
+deletion attempt (removing the bare-`"At"`/`"AtUnsafe"` branch from
+semantics' `accessAliasFromMemberName`, with a fresh 3-suite baseline
+before and after) would be a reasonable next step for a future round -
+but that is still a behavior-changing edit requiring the full
+verification discipline this round did not budget for, so it was not
+attempted here.
+
+### Branch 3: vector-receiver-base disambiguation - now architecturally traced to ir_lowerer-only construction
+
+This is the branch with the clearest new result. Traced where the
+`namespacePrefix`-embeds-receiver-type shape
+(`namespacePrefix = ".../vector/Vector__t<hash>"`, `name = "at"`) that
+`matchAccessAlias`'s `receiverBase` check depends on is actually
+constructed, by elimination across the whole pipeline:
+
+1. **Not from source-level method-call syntax.** Grepped every `.prime`
+   file (stdlib and tests, 80 files total) for `.at(`/`.At(` as written
+   method-call syntax - zero hits anywhere. Confirmed why: bracket-index
+   sugar (`v[i]`) is the *only* source-level producer of `at`/`at_unsafe`
+   calls (`src/parser/ParserExpr.cpp:771-780`), and it desugars to
+   `call.name = "at"` (bare) with `call.namespacePrefix = namespacePrefix`
+   - the *enclosing lexical scope's* namespace prefix (whatever
+   definition the `[...]` expression sits inside), not anything derived
+   from the receiver's type. The receiver itself becomes `call.args[0]`,
+   a completely separate mechanism from the namespace-prefix-based
+   disambiguation `matchAccessAlias` performs.
+2. **Not constructed anywhere in `src/parser/`.** Every `namespacePrefix`
+   parameter threaded through the parser (`ParserExpr.cpp` and siblings)
+   is the ambient enclosing-definition prefix passed down recursively
+   while parsing a body - never built from a resolved receiver type.
+3. **Not constructed anywhere in `src/semantics/`.** Grepped every
+   `.namespacePrefix = ...` assignment in `src/semantics/` combined with
+   any adjacent `.name = ...` write that could produce this specific
+   split; the only sites that set an `Expr.name` to a definition's
+   `fullPath` (`SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp:119`,
+   `SemanticsValidateTransformsEnums.cpp:309,326`,
+   `SemanticsValidatorPassesExecutions.cpp:78`,
+   `TypeResolutionGraph.cpp:788`) are for reflection-helper cloning, enum
+   constructors, and execution targets - none touch
+   `Vector`/`Map`-specialized definitions. Monomorphization
+   (`TemplateMonomorphTemplateSpecialization.cpp:268-271`) does set a
+   *`Definition`'s* `namespacePrefix` to the specialized
+   `.../Vector__t<hash>` path, but that mutates `Definition` objects, not
+   `Expr` call nodes passed to `getBuiltinArrayAccessName` - semantics has
+   no equivalent of ir_lowerer's `buildCallableDefinitionCallContext`
+   (below) that turns a `Definition` into a scoped `Expr` for classifier
+   purposes.
+4. **Found the actual construction site: ir_lowerer-only, and it is
+   IR-lowering-internal.** `buildCallableDefinitionCallContext`
+   (`src/ir_lowerer/IrLowererStatementCallHelpers.cpp:49-62`) builds,
+   for every `Definition` being lowered (including the compiler-generated
+   specialized `Vector__t<hash>::at` method itself), a `callExpr` with
+   `callExpr.kind = Expr::Kind::Call`, `callExpr.name = def.fullPath`
+   (e.g. `".../vector/Vector__t12345678/at"`, already slash-joined) and
+   `callExpr.namespacePrefix = def.namespacePrefix`
+   (`".../vector/Vector__t12345678"`). After `resolveScopedExprName`
+   folds these (it short-circuits to `expr.name` unchanged whenever
+   `expr.name` already contains `/`, so the split-vs-fused representation
+   is equivalent once resolved), this reproduces exactly the shape the
+   `specializedVectorMethodAccessCall` unit test hand-constructs. This
+   function is invoked only from `IrLowererLower.cpp:355` and
+   `IrLowererLowerStatementsCalls.h:106`, both squarely inside
+   ir_lowerer's own definition-lowering loop, which runs after semantics
+   has finished validating and monomorphizing the program.
+
+**Verdict: this branch is now confirmed IR-lowering-internal with real
+architectural evidence, not just plausibility.** No construction site
+exists anywhere in the parser or semantics stage that builds this
+specific `namespacePrefix`-embeds-specialized-receiver-type shape; the
+one and only place it is built is ir_lowerer's own
+`buildCallableDefinitionCallContext`, used for the ir_lowerer-internal
+purpose of setting up a callable definition's own lowering context. This
+does not amount to a mathematical proof of unreachability (a future or
+overlooked semantics code path could theoretically construct an
+equivalent shape by some other means not name-matched by this sweep), but
+it is now the strongest-evidenced of the four branches - the
+`matchAccessAlias` `receiverBase` check genuinely looks like it exists
+to disambiguate receiver-typed paths that only ir_lowerer itself
+manufactures, not something a shared classifier's lookup callback needs
+to reproduce for the semantics stage.
+
+### Branch 4: internal-SOA-storage-column (`SoaColumn`) - same pattern as branch 3, same conclusion
+
+Confirmed semantics is not blind to `kInternalSoaStorageFolder`/
+`SoaColumn` as a *concept* - it appears in seven semantics files
+(`SemanticsBuiltinPathHelpers.cpp`,
+`SemanticsValidateExperimentalSoaFieldViewRewrites.cpp`,
+`SemanticsValidateSoaBindingExtraction.cpp`,
+`SemanticsValidatorExprArgumentValidationCollections.cpp`,
+`SemanticsValidatorStatementBindings.cpp`,
+`TemplateMonomorphExperimentalCollectionReceiverResolution.cpp`,
+`SemanticsValidateReflectionGeneratedHelpersValidate.cpp`), which
+validate `SoaColumn`-typed struct fields/bindings and recognize a family
+of dedicated SOA helper-path names under that folder - but every one of
+those names is a distinct helper (`soaFieldViewRead`, `soaFieldViewRef`,
+`soaColumnFieldViewUnsafe`, `soaColumnSlotUnsafe`, `soaColumnField`,
+`soaColumnRef`), never `at`/`at_unsafe`. Semantics validates the
+*source-level* experimental SOA surface through these dedicated
+`isExperimentalSoa*HelperPath` functions (a parallel, separate mechanism
+from `getBuiltinArrayAccessName` entirely), not through the
+`SoaColumn`-receiver-base `at`/`at_unsafe` path `matchAccessAlias`
+handles.
+
+Traced where the `SoaColumn` *struct type itself* (the `receiverBase` the
+branch compares against) is constructed: exclusively in
+`src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp:39-106`, which
+builds the internal columnar-storage struct type path
+(`kInternalSoaStorageFolder/SoaColumn`) as part of lowering `Vector<T>`
+for struct-typed `T` into a struct-of-arrays representation - an
+ir_lowerer-only optimization/representation detail. No construction of a
+`SoaColumn`-named struct type was found anywhere in `src/semantics/`; all
+semantics-side `kInternalSoaStorageFolder`/`kSoaColumnTypeName` uses are
+pattern *checks* (validating that a field's declared type matches this
+internal shape, to reject or specially handle it), never a *construction*
+of a new `SoaColumn`-typed access-call `Expr`.
+
+**Verdict: same conclusion as branch 3, same strength of evidence.** The
+`SoaColumn`-receiver `at`/`at_unsafe` shape (both `matchAccessAlias`'s
+main check and the `normalizeInternalSoaStorageBuiltinAlias` fallback) is
+constructed only where the `SoaColumn` struct type itself is
+synthesized - ir_lowerer's own columnar-storage lowering - and semantics'
+awareness of `SoaColumn` is limited to recognizing and validating it as a
+type, via entirely separate dedicated helper functions, never routing
+through `getBuiltinArrayAccessName`.
+
+### Updated overall verdict after Step (2)
+
+Two of the four branches (3 and 4) now have real architectural tracing
+showing their divergent shape is constructed nowhere semantics can reach
+it - meaningfully stronger than last round's "plausible but not
+independently confirmed." Branch 2 gained a materially wider negative
+search (user syntax, stdlib source, registry, codegen paths) with the
+same zero-producers result, strengthening its "likely dead" verdict
+without fully proving it. Branch 1 is more nuanced than last round
+believed: the "every call site already gates on `Kind::Call`" claim was
+found to be literally false (one real counter-example,
+`resolveBuiltinKeyValueInsertReceiverBinding`), but that gap is covered
+in practice by a different, traced invariant (`Expr::name` is only ever
+populated on `Call`/`Name`-kind nodes across the whole codebase).
+
+This clarifies the picture but still stops short of "safe to merge now":
+branches 3 and 4's conclusions rest on an exhaustive-but-not-exhaustive
+grep sweep (absence of a construction site is strong negative evidence,
+not a proof - a future or overlooked code path could still build an
+equivalent shape), branch 2's deletion is a real behavior change that
+needs its own 3-suite-verified attempt before being trusted, and branch
+1's invariant, while apparently exceptionless, is not type-system
+enforced. Per the task's own framing, this is close to (not yet at) "safe
+to merge as one shared classifier": the recommended next step is no
+longer more reachability tracing but two small, independently-verifiable
+actions, each with its own fresh 3-suite baseline:
+
+1. Attempt the branch-2 deletion (remove bare `"At"`/`"AtUnsafe"` from
+   semantics' `accessAliasFromMemberName`) as a standalone, fully-verified
+   change - if the 3-suite battery is unchanged, branch 2 stops being a
+   divergence to reconcile at all.
+2. Then design the shared classifier per `implementation_notes` step (2),
+   encoding branches 3 and 4 as an ir_lowerer-only lookup-callback
+   extension (not something the semantics-stage callback needs to
+   answer), and branch 1's `Kind::Call` gate as an explicit same-function
+   check in the shared classifier regardless of caller discipline
+   (cheap, and removes the now-identified single real gap at
+   `resolveBuiltinKeyValueInsertReceiverBinding` for free once that call
+   site is routed through the shared classifier). Branch 5's cross-check
+   still needs to be carried as an explicit, stage-supplied lookup-callback
+   behavior, as previously noted.
+
+TODO-5293 stays open; this round did not attempt step 1 or step 2 above
+(both are behavior-affecting changes requiring their own baseline/verify
+cycle, out of scope for an investigation-only round), but the path to
+closing it is now concrete rather than blocked on open reachability
+questions.
