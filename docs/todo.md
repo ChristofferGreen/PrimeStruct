@@ -812,6 +812,37 @@ section and `docs/todo_finished.md`.
     needs its own equivalent diff-audit wiring and verification pass (a
     future round), and actual production migration of either call site
     onto the shared classifier is separate future work again after that.
+  - update (2026-09-15, Step 5): ir_lowerer's stage is now harnessed the
+    same way semantics' was in Step (4) - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "TODO-5293 Step
+    (5)" section. Wired the same `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`-
+    gated observational diff-audit into ir_lowerer's production
+    `getBuiltinArrayAccessName` (`IrLowererBuiltinNameHelpers.cpp`),
+    comparing it against `classifyBuiltinArrayAccessNameForIrLowerer`. Fresh
+    3-suite baseline (`git stash -u` to `705cc32e0`, rebuilt including
+    `primec`/`primevm` since `compile_run` shells out to them), audit-enabled
+    reruns of all three suites: **zero** `[receiver-target-diff-audit]
+    MISMATCH` lines and no assert-abort across all real test traffic;
+    failing-test-NAME sets identical to baseline for all three suites
+    (semantics 1/13426, backend_ir 46/16428, compile_run 5 unique names).
+    No new quirk needed a design change this round - ir_lowerer's real body
+    matched `classifyBuiltinArrayAccessNameForIrLowerer` on every input any
+    of the three suites' real traffic drove through it. Two full foreground
+    reruns with the env var unset reproduced baseline's failing-test-NAME
+    sets exactly both times. One test-execution wrinkle surfaced and was
+    run to ground rather than left ambiguous: `compile_run`'s total
+    assertion count (though never its failing-test-NAME set or count)
+    flickered between 15294 and 15278 across otherwise byte-identical runs;
+    reproducing the SAME flicker on the untouched, stashed `705cc32e0`
+    binary (both with the env var set and unset) proved this is pre-existing
+    test-suite flakiness unconnected to this round's code or the diff-audit
+    harness, not a regression - documented in the design doc rather than
+    chased further. Both stages (semantics since Step 4, ir_lowerer as of
+    this round) are now proven zero-divergence against real dynamic test
+    traffic - production migration of either or both call sites onto the
+    shared classifier is the clear next step for a future round, but was
+    not attempted this round (harness-only, per this effort's one-round-
+    per-risky-step discipline). Still not marking this task `[x]`.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai

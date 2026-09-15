@@ -4,8 +4,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <cstdlib>
+#include <iostream>
 #include <string_view>
 
+#include "primec/support/BuiltinArrayAccessNameClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
@@ -502,7 +506,83 @@ bool getBuiltinGpuName(const Expr &expr, std::string &out) {
   return false;
 }
 
+namespace {
+
+// TODO-5293 Step (5) (docs/ReceiverTargetResolutionConsolidation.md):
+// observational diff-audit harness for the ir_lowerer stage, mirroring the
+// semantics-stage harness wired in Step (4)
+// (SemanticsBuiltinPathHelpers.cpp) and, ahead of that, the pattern
+// TODO-5294 used throughout for CanonicalReceiverType/
+// ReceiverElementFamilyClassifier. Zero effect unless
+// PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set - getBuiltinArrayAccessName
+// below still computes its own answer entirely independently; this only
+// observes and reports a mismatch.
+bool isBuiltinArrayAccessNameDiffAuditEnabled() {
+  static const bool enabled =
+      std::getenv("PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT") != nullptr;
+  return enabled;
+}
+
+// Reproduces ir_lowerer's real branch-5 shape
+// (resolvesKeyValueHelperSurfacePath as an unconditional rejection, never
+// an acceptance - see the header's design notes) as a
+// BuiltinArrayAccessKeyValueLookup callback.
+primec::BuiltinArrayAccessAliasResult irLowererKeyValueLookupForAudit(std::string_view scopedName) {
+  if (resolvesKeyValueHelperSurfacePath(scopedName)) {
+    return primec::BuiltinArrayAccessAliasResult{primec::BuiltinArrayAccessAliasOutcome::kReject, {}};
+  }
+  return {};
+}
+
+void auditGetBuiltinArrayAccessNameAgainstClassifier(const Expr &expr, bool legacyResult,
+                                                      const std::string &legacyOut) {
+  if (!isBuiltinArrayAccessNameDiffAuditEnabled()) {
+    return;
+  }
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return;
+  }
+  std::string scopedName = resolveScopedExprName(expr);
+  if (!scopedName.empty() && scopedName[0] == '/') {
+    scopedName.erase(0, 1);
+  }
+  std::string rawName = expr.name;
+  if (!rawName.empty() && rawName[0] == '/') {
+    rawName.erase(0, 1);
+  }
+  auto unrootedStdlibVectorHelperPathForAudit = [](std::string_view helperName) {
+    std::string path = stdlibSurfaceCanonicalHelperPath(
+        StdlibSurfaceId::CollectionsManifestSurface0, helperName);
+    if (!path.empty() && path.front() == '/') {
+      path.erase(path.begin());
+    }
+    return path;
+  };
+  auto resolveInternalSoaStorageFallbackAliasForAudit =
+      [](const std::string &name) -> std::optional<std::string> {
+    return normalizeInternalSoaStorageBuiltinAlias(name);
+  };
+  std::string classifierOut;
+  const bool classifierResult = primec::classifyBuiltinArrayAccessNameForIrLowerer(
+      scopedName, rawName, stdCollectionsRoot() + "/", collectionMemberRoot("vector"),
+      experimentalCollectionMemberRoot("vector"),
+      collection_paths::modulePrefixBare(collection_paths::kVectorFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
+      unrootedStdlibVectorHelperPathForAudit("at"), unrootedStdlibVectorHelperPathForAudit("at_unsafe"),
+      irLowererKeyValueLookupForAudit, resolveInternalSoaStorageFallbackAliasForAudit, classifierOut);
+  if (classifierResult != legacyResult || (classifierResult && classifierOut != legacyOut)) {
+    std::cerr << "[receiver-target-diff-audit] MISMATCH ir_lowerer::getBuiltinArrayAccessName: legacy result="
+               << legacyResult << " out=\"" << legacyOut << "\" classifier result=" << classifierResult
+               << " out=\"" << classifierOut << "\" expr.name=\"" << expr.name << "\" scopedName=\""
+               << scopedName << "\"\n";
+    assert(false && "BuiltinArrayAccessNameClassifier diverged from ir_lowerer::getBuiltinArrayAccessName");
+  }
+}
+
+}  // namespace
+
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
+  auto legacy = [&]() -> bool {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
@@ -628,6 +708,13 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return true;
   }
   return false;
+  };
+  const bool result = legacy();
+  // TODO-5293 Step (5): observational diff-audit only - see
+  // auditGetBuiltinArrayAccessNameAgainstClassifier above. No effect on
+  // `result`/`out` unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set.
+  auditGetBuiltinArrayAccessNameAgainstClassifier(expr, result, out);
+  return result;
 }
 
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {

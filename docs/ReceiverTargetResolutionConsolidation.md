@@ -7300,3 +7300,133 @@ divergence under live audit, consider real production migration of either
 or both call sites onto the shared classifier - itself a separate,
 carefully-verified future round per this whole effort's established
 discipline, not attempted here.
+
+## TODO-5293 Step (5): ir_lowerer stage harnessed the same way, zero divergence found (2026-09-15)
+
+This is the "wire ir_lowerer's stage into the same observational diff-audit
+Step (4) gave semantics" round Step (4)'s own "Conclusion and remaining
+scope" pointed at.
+
+### Wiring
+
+Mirrors Step (4)'s pattern exactly, in
+`IrLowererBuiltinNameHelpers.cpp` instead of
+`SemanticsBuiltinPathHelpers.cpp`: `getBuiltinArrayAccessName`'s existing
+body was wrapped, unmodified statement-for-statement, in a local `legacy`
+lambda; its bool result and `out` are compared - only when
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` is set - against
+`classifyBuiltinArrayAccessNameForIrLowerer`'s independently-computed
+answer for the same `Expr`, built from:
+
+- `scopedName`/`rawName` normalized exactly as the production function
+  normalizes them (`resolveScopedExprName`, leading-`/` stripped; for
+  `rawName`, `expr.name` with leading-`/` stripped);
+- the five prefix arguments (`stdCollectionsRoot() + "/"`,
+  `collectionMemberRoot("vector")`, `experimentalCollectionMemberRoot("vector")`,
+  `collection_paths::modulePrefixBare(collection_paths::kVectorFolder)`,
+  `collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder)`)
+  and the two canonical-vector-helper-path exclusion strings
+  (`unrootedStdlibVectorHelperPath("at"/"at_unsafe")`), all computed with
+  the same helper functions the production function itself calls;
+- a `BuiltinArrayAccessKeyValueLookup` adapter reproducing ir_lowerer's real
+  branch-5 shape (`resolvesKeyValueHelperSurfacePath` as an unconditional
+  `kReject`, matching the module header's documented design, never
+  `kAccept`);
+- a `resolveInternalSoaStorageFallbackAlias` adapter that is exactly
+  `normalizeInternalSoaStorageBuiltinAlias`, reproducing branch 4's SOA-
+  column fallback.
+
+A mismatch `std::cerr`-logs the specifics and `assert(false)`s, matching
+Step (4)'s pattern; production `result`/`out` are returned unchanged either
+way. No production logic changed - the diff against `705cc32e0` is purely
+additive (new includes, a new anonymous-namespace audit block, and the
+existing function body re-indented one level inside a `legacy` lambda with
+zero statements altered).
+
+### Verification protocol
+
+**Fresh baseline**: `git status` clean at `705cc32e0`; `git stash -u` (no-op,
+tree was already clean before this round's edit); rebuilt
+`PrimeStruct_semantics_tests`, `PrimeStruct_backend_ir_tests`,
+`PrimeStruct_compile_run_tests`, and (new for this round, since
+`compile_run` shells out to them and a stale `primec`/`primevm` silently
+turns most of that suite's cases into spurious "command not found"
+failures - the pitfall this round tripped over first before catching it)
+`primec`/`primevm`; ran all three foreground, `compile_run` from inside
+`build-release` (its fixtures invoke `./primec` relative to cwd).
+
+| suite | test cases | failed | assertions | failed |
+|---|---|---|---|---|
+| semantics | 2800 | 1 | 13426 | 2 |
+| backend_ir | 1646 | 46 | 16428 | 137 |
+| compile_run | 2679 | 5 | 15294 | 8 |
+
+Identical to Step (4)'s recorded baseline (semantics' count already
+reflects Step (4)'s 33 additive unit tests, baked into `705cc32e0`).
+Extracted the sorted failing-`TEST CASE`-name sets for all three suites (1
+semantics-flake name / 46 backend_ir names / 4 unique compile_run names,
+the same known set Step (4) recorded).
+
+**Audit-enabled run** (working tree restored to this round's change,
+rebuilt including `primec`/`primevm`,
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT=1`, all three suites foreground -
+`compile_run` alone crosses the tool's single-call foreground window on
+every run this round, each time resumed with a real blocking `wait`-on-PID
+loop in a fresh call): semantics unchanged (2800/1, 13426/2, as expected -
+this round touched no semantics code) with **zero** `MISMATCH` lines;
+backend_ir byte-identical to baseline (1646/46, 16428/137), **zero**
+`MISMATCH` lines; compile_run's failing-test-case set and count identical
+to baseline (2679/5, 4 unique names, 8 failed assertions), **zero**
+`MISMATCH` lines (assertion-count wrinkle discussed below). No
+`assert(false)` abort in any run. The shared classifier agrees with
+ir_lowerer's production `getBuiltinArrayAccessName` on every real `Expr`
+any of the three suites' actual test traffic drove through it. Sorted
+failing-`TEST CASE`-name sets diffed directly against baseline for all
+three suites: identical.
+
+**Unchanged-default-behavior confirmation** (env var unset, two full
+foreground reruns of all three suites): both reruns reproduced baseline's
+semantics (2800/1) and backend_ir (1646/46) counts exactly, and
+compile_run's failing-test-NAME set and count (5 failed, same 4 unique
+names) exactly both times. All pairwise failing-`TEST CASE`-name-set
+comparisons (baseline vs rerun1, baseline vs rerun2, rerun1 vs rerun2, per
+suite) were diffed directly: every one empty/byte-identical.
+
+### The compile_run assertion-count wrinkle - run to ground, not a regression
+
+`compile_run`'s total assertion count (never its failing-test-NAME set or
+count - only the PASSING-assertion tally, invisible in doctest's default
+output) flickered between 15294 and 15278 across several otherwise
+byte-identical runs of this round's changed binary, unset-vs-set env var
+included. Rather than accept this as "probably fine" or chase it as a
+suspected regression indefinitely, it was run to ground directly: the
+*unmodified*, re-stashed `705cc32e0` binary was run twice more, once with
+`PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT` unset (15294) and once with it SET
+(15278, despite `705cc32e0`'s code never reading that env var at all -
+conclusive proof the flicker has nothing to do with the audit harness or
+this round's code). Full-log diffs (`diff` of complete stdout, with the
+per-run scratch-session hash normalized) between a 15294 run and a 15278
+run are **byte-identical apart from the single summary line itself** - not
+one failing-test message, error string, or `TEST CASE:` line differs.
+Conclusion: this is pre-existing, environment-driven nondeterminism in
+`compile_run`'s PASSING-check count (most plausibly an address-layout- or
+hash-order-dependent loop bound in one fixture, unrelated to compiler
+correctness), already present in `705cc32e0` before this round's change,
+not a regression this round introduced. The task's actual acceptance bar -
+byte-identical failing-test-case NAMES - held across every single run,
+including both baseline re-checks and every audit/rerun combination.
+
+### Conclusion
+
+Both stages are now harnessed the same way and both show zero divergence
+against real, full-3-suite dynamic test traffic: semantics since Step (4),
+ir_lowerer as of this round. Per the task's own scoping, no production
+migration was attempted this round - `getBuiltinArrayAccessName` at both
+call sites still computes its own answer entirely independently; the
+shared classifier is observed, not yet load-bearing, at either site. A
+future round's remaining work is real production migration of one or both
+call sites onto `classifyBuiltinArrayAccessNameFor{Semantics,IrLowerer}` -
+now safe to consider, since both compositions have been proven
+byte-for-byte equivalent to their respective stage's real production
+behavior under live test traffic, not merely under direct unit tests.
+TODO-5293 stays open in `docs/todo.md` pending that migration.
