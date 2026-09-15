@@ -117,11 +117,6 @@ std::string experimentalCollectionMemberRootLocal(
                       : collection_paths::modulePrefixBare(folder);
 }
 
-std::string collectionAliasLocal(std::string_view collectionName,
-                                 std::string_view suffix) {
-  return std::string(collectionName) + std::string(suffix);
-}
-
 std::string collectionNamespaceLocal(std::string_view collectionName) {
   std::string namespacePath = collectionMemberRootLocal(collectionName);
   if (!namespacePath.empty() && namespacePath.back() == '/') {
@@ -1190,24 +1185,15 @@ std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath) {
 
 namespace {
 
-// TODO-5293 Step (4) (docs/ReceiverTargetResolutionConsolidation.md):
-// observational diff-audit harness for the new
-// primec::BuiltinArrayAccessNameClassifier module - zero effect unless
-// PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set, mirroring the pattern
-// TODO-5294 used throughout for CanonicalReceiverType/
-// ReceiverElementFamilyClassifier. Not yet the production path -
-// getBuiltinArrayAccessName below still computes its own answer entirely
-// independently; this only observes and reports a mismatch.
-bool isBuiltinArrayAccessNameDiffAuditEnabled() {
-  static const bool enabled =
-      std::getenv("PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT") != nullptr;
-  return enabled;
-}
-
-// Reproduces semantics' real branch-5 shape (resolveKeyValueHelperMemberNameLocal,
-// including its surface-metadata-id cross-check, then classified like every
-// other branch) as a BuiltinArrayAccessKeyValueLookup callback.
-primec::BuiltinArrayAccessAliasResult semanticsKeyValueLookupForAudit(std::string_view name) {
+// TODO-5293 Step (6) (docs/ReceiverTargetResolutionConsolidation.md):
+// production key-value-helper lookup callback for the shared
+// primec::BuiltinArrayAccessNameClassifier composition below. Reproduces
+// semantics' real branch-5 shape (resolveKeyValueHelperMemberNameLocal,
+// including its surface-metadata-id cross-check, then classified like
+// every other branch) - previously used only by the now-retired
+// diff-audit harness (TODO-5293 Step (4)), now the real production
+// delegate.
+primec::BuiltinArrayAccessAliasResult semanticsKeyValueLookup(std::string_view name) {
   std::string keyValueHelperName;
   if (!resolveKeyValueHelperMemberNameLocal(std::string(name), keyValueHelperName)) {
     return {};
@@ -1220,13 +1206,19 @@ primec::BuiltinArrayAccessAliasResult semanticsKeyValueLookupForAudit(std::strin
   return primec::BuiltinArrayAccessAliasResult{primec::BuiltinArrayAccessAliasOutcome::kReject, {}};
 }
 
-void auditGetBuiltinArrayAccessNameAgainstClassifier(const Expr &expr, bool legacyResult,
-                                                      const std::string &legacyOut) {
-  if (!isBuiltinArrayAccessNameDiffAuditEnabled()) {
-    return;
-  }
+}  // namespace
+
+// TODO-5293 Step (6): migrated onto the shared
+// primec::BuiltinArrayAccessNameClassifier module (classifyBuiltinArray-
+// AccessNameForSemantics) after 6 rounds of characterization, unit-testing,
+// and dynamic zero-divergence proof against real 3-suite test traffic via
+// the (now-retired) PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT harness (Step
+// (4)). This function's own inline logic previously duplicated the
+// classifier's `classifyBuiltinArrayAccessNameForSemantics` composition
+// bit-for-bit; the two are no longer separately maintained.
+bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
-    return;
+    return false;
   }
   std::string name = expr.name;
   if (!expr.namespacePrefix.empty() && name.find('/') == std::string::npos) {
@@ -1243,114 +1235,10 @@ void auditGetBuiltinArrayAccessNameAgainstClassifier(const Expr &expr, bool lega
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(0, 1);
   }
-  std::string classifierOut;
-  const bool classifierResult = primec::classifyBuiltinArrayAccessNameForSemantics(
+  return primec::classifyBuiltinArrayAccessNameForSemantics(
       name, rawName, "std/collections/", experimentalCollectionMemberRootLocal("vector"),
       experimentalCollectionMemberRootLocal("map"), collectionMemberRootLocal("vector"),
-      semanticsKeyValueLookupForAudit, classifierOut);
-  if (classifierResult != legacyResult || (classifierResult && classifierOut != legacyOut)) {
-    std::cerr << "[receiver-target-diff-audit] MISMATCH getBuiltinArrayAccessName: legacy result="
-               << legacyResult << " out=\"" << legacyOut << "\" classifier result=" << classifierResult
-               << " out=\"" << classifierOut << "\" expr.name=\"" << expr.name << "\" namespacePrefix=\""
-               << expr.namespacePrefix << "\"\n";
-    assert(false && "BuiltinArrayAccessNameClassifier diverged from semantics::getBuiltinArrayAccessName");
-  }
-}
-
-}  // namespace
-
-bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
-  auto legacy = [&]() -> bool {
-    if (expr.name.empty()) {
-      return false;
-    }
-    const std::string rawExprName = expr.name;
-    auto stripTemplateSpecializationSuffix = [](std::string value) {
-      const size_t suffix = value.find("__t");
-      if (suffix != std::string::npos) {
-        value.erase(suffix);
-      }
-      return value;
-    };
-    auto stripGeneratedSuffix = [](std::string value) {
-      const size_t suffix = value.find("__");
-      if (suffix != std::string::npos) {
-        value.erase(suffix);
-      }
-      return value;
-    };
-    auto accessAliasFromMemberName = [&](std::string memberName) -> bool {
-      memberName = stripGeneratedSuffix(stripTemplateSpecializationSuffix(std::move(memberName)));
-      if (memberName == "at" || memberName == "at_ref" ||
-          memberName == collectionAliasLocal("vector", "At")) {
-        out = "at";
-        return true;
-      }
-      if (memberName == "at_unsafe" || memberName == "at_unsafe_ref" ||
-          memberName == collectionAliasLocal("vector", "AtUnsafe")) {
-        out = "at_unsafe";
-        return true;
-      }
-      return false;
-    };
-    std::string name = expr.name;
-    if (!expr.namespacePrefix.empty() && name.find('/') == std::string::npos) {
-      std::string prefix = expr.namespacePrefix;
-      if (!prefix.empty() && prefix.front() == '/') {
-        prefix.erase(prefix.begin());
-      }
-      name = prefix.empty() ? name : prefix + "/" + name;
-    }
-    if (!name.empty() && name[0] == '/') {
-      name.erase(0, 1);
-    }
-    auto matchStdlibLegacyAccessAlias = [&](std::string_view prefix) -> bool {
-      if (name.rfind(prefix, 0) != 0) {
-        return false;
-      }
-      const std::string memberName = name.substr(prefix.size());
-      return memberName.find('/') == std::string::npos &&
-             accessAliasFromMemberName(memberName);
-    };
-    if (matchStdlibLegacyAccessAlias("std/collections/") ||
-        matchStdlibLegacyAccessAlias(experimentalCollectionMemberRootLocal("vector")) ||
-        matchStdlibLegacyAccessAlias(experimentalCollectionMemberRootLocal("map"))) {
-      return true;
-    }
-    const std::string stdVectorRoot = collectionMemberRootLocal("vector");
-    if (name.rfind(stdVectorRoot, 0) == 0) {
-      std::string alias = stripTemplateSpecializationSuffix(name.substr(stdVectorRoot.size()));
-      if (accessAliasFromMemberName(alias)) {
-        return true;
-      }
-      return false;
-    }
-    if (name.rfind("array/", 0) == 0) {
-      return false;
-    }
-    std::string keyValueHelperName;
-    if (resolveKeyValueHelperMemberNameLocal(name, keyValueHelperName)) {
-      if (accessAliasFromMemberName(keyValueHelperName)) {
-        return true;
-      }
-      return false;
-    }
-    if (name.find('/') != std::string::npos) {
-      std::string rawName = rawExprName;
-      if (!rawName.empty() && rawName[0] == '/') {
-        rawName.erase(0, 1);
-      }
-      return rawName.find('/') == std::string::npos &&
-             accessAliasFromMemberName(rawName);
-    }
-    return accessAliasFromMemberName(name);
-  };
-  const bool result = legacy();
-  // TODO-5293 Step (4): observational diff-audit only - see
-  // auditGetBuiltinArrayAccessNameAgainstClassifier above. No effect on
-  // `result`/`out` unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set.
-  auditGetBuiltinArrayAccessNameAgainstClassifier(expr, result, out);
-  return result;
+      semanticsKeyValueLookup, out);
 }
 
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut) {

@@ -7430,3 +7430,95 @@ now safe to consider, since both compositions have been proven
 byte-for-byte equivalent to their respective stage's real production
 behavior under live test traffic, not merely under direct unit tests.
 TODO-5293 stays open in `docs/todo.md` pending that migration.
+
+## Closing Summary: TODO-5293 review and closure (2026-09-15)
+
+This round did the migration Step (5)'s "remaining scope" called for -
+for both stages, not just one - closing out the task.
+
+### What was migrated
+
+**Semantics first** (Step (6), this round), matching the effort's own
+established "semantics as reference behavior" ordering: production
+`semantics::getBuiltinArrayAccessName` (`SemanticsBuiltinPathHelpers.cpp`)
+now calls `primec::classifyBuiltinArrayAccessNameForSemantics` directly.
+Deleted: the old inline `legacy` lambda (the `accessAliasFromMemberName`/
+`matchStdlibLegacyAccessAlias`/`stdVectorRoot` cascade Step (1)-(4)
+characterized), the Step (4) diff-audit harness
+(`isBuiltinArrayAccessNameDiffAuditEnabled`,
+`auditGetBuiltinArrayAccessNameAgainstClassifier`,
+`semanticsKeyValueLookupForAudit` - the last renamed to
+`semanticsKeyValueLookup` and kept as the real production key-value-lookup
+callback rather than deleted, since its logic is still needed), and the
+now-dead `collectionAliasLocal` helper (its only caller was the deleted
+`legacy` lambda; confirmed zero other callers repo-wide before removal).
+
+**Then ir_lowerer** (Step (7), same round): production
+`ir_lowerer::getBuiltinArrayAccessName` (`IrLowererBuiltinNameHelpers.cpp`)
+now calls `primec::classifyBuiltinArrayAccessNameForIrLowerer` directly,
+with the `Expr::Kind::Call` gate (branch 1) kept at this call site rather
+than pulled into the shared module, exactly as the module header's design
+notes specify. Deleted: the old inline `legacy` lambda (the
+`matchAccessAlias`/`matchLegacyAccessAlias` cascade, including branches
+3/4's receiver-base/SOA-column disambiguation), and the Step (5)
+diff-audit harness (`isBuiltinArrayAccessNameDiffAuditEnabled`,
+`auditGetBuiltinArrayAccessNameAgainstClassifier`,
+`irLowererKeyValueLookupForAudit` - renamed to `irLowererKeyValueLookup`
+and kept as the real production delegate, same pattern as semantics).
+`collectionWrapperAlias` and `stripGeneratedSuffix`, both still used
+elsewhere in the same file for unrelated purposes, were left untouched
+(confirmed live, not dead, before leaving them).
+
+Both migrations followed the same two-round discipline as every prior
+migration in this document (RT2/RT3b/RT3c/F3, TODO-5294's Track 1/2 call
+sites): harness-and-verify first (Steps (4)/(5), prior rounds), migrate
+second (Steps (6)/(7), this round) - never both in the harness's own
+round.
+
+### Net lines of code
+
+Fresh `git diff --stat` for this round's change, from `cebc2314a` (the
+commit immediately preceding this round) to the migration commit:
+
+| file | insertions | deletions | net |
+|---|---|---|---|
+| `include/primec/support/BuiltinArrayAccessNameClassifier.h` (doc-comment only) | 13 | 7 | +6 |
+| `src/semantics/SemanticsBuiltinPathHelpers.cpp` | 23 | 135 | -112 |
+| `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp` | 29 | 177 | -148 |
+| **total** | **65** | **319** | **-254** |
+
+Net -254 lines this round, on top of the shared module itself (introduced
+net-positive in Step (4), per this document's TODO-5294 precedent that a
+new shared module is expected to be code-*positive* on first introduction
+even though the call sites it eventually replaces are code-negative). No
+test files changed this round - the existing 33-case/83-assertion unit
+test file from Step (4) already pins the shared module's own behavior
+directly; the 3-suite battery pins the migrated call sites' real,
+end-to-end behavior.
+
+### Full divergence-audit history across all 7 rounds
+
+| step | date | what happened |
+|---|---|---|
+| Step (1) | 2026-09-14 | Fresh branch-by-branch audit of both stages' `getBuiltinArrayAccessName` bodies; 5 branch-level divergences found (`Kind::Call` gate, bare `At`/`AtUnsafe` spelling, vector-receiver-base disambiguation, `SoaColumn` internal-SOA-storage branch, key-value-helper delegate shape). No code changed. |
+| Step (2) | 2026-09-14 | Reachability audit for branches 1-4: branches 3/4 traced to be constructed only inside `ir_lowerer`'s own lowering machinery (no semantics-reachable construction site); branch 2 strengthened toward likely-dead via a materially wider negative search; branch 1 refined (one real non-gated call site found, but shown covered by the `Expr::name` population invariant). No code changed. |
+| Step (3) | 2026-09-14 | Branch 2 (bare `At`/`AtUnsafe`) deleted as confirmed dead code after a final whole-repository producer search found zero producers. Fresh baseline + two full reruns, byte-identical failing-test-NAME sets across all nine pairwise diffs. |
+| Step (4) | 2026-09-14 | Shared `primec::BuiltinArrayAccessNameClassifier` module designed and implemented (`classifyAccessAliasToken`/`matchBuiltinArrayAccessAliasUnderPrefix` primitives, per-stage composition functions). New 33-case/83-assertion unit test file. Wired as an observational, env-gated diff-audit harness into semantics' production call site only. Fresh baseline, audit-enabled run (zero `MISMATCH` across 13426+16428+15278 assertions of real traffic), two unset-env-var reruns - all byte-identical. Not yet migrated. |
+| Step (5) | 2026-09-15 | Same diff-audit harness pattern wired into ir_lowerer's production call site. Fresh baseline (including rebuilt `primec`/`primevm`, per that round's stale-binary lesson), audit-enabled run (zero `MISMATCH`), two unset-env-var reruns - all byte-identical. Also ran the pre-existing `705cc32e0` binary to ground a `compile_run` total-assertion-count flicker (15294 vs 15278) and confirmed it pre-dates this whole effort and is unrelated to the audit harness or any of this document's changes (failing-test-*NAME* sets and counts were unaffected throughout). Not yet migrated. |
+| Step (6) | 2026-09-15 | **Semantics migrated for real.** Fresh baseline at clean `cebc2314a` (git-stash), rebuilt `primec`/`primevm`/all three test binaries, ran the pre-migration baseline (1/2800 semantics, 46/1646 backend_ir, 5/2679 compile_run - matching every prior round's recorded numbers). Migrated, rebuilt, ran the battery twice more: all nine pairwise failing-test-NAME diffs byte-identical/empty. Diff-audit harness and old inline logic deleted. |
+| Step (7) | 2026-09-15 | **ir_lowerer migrated for real**, same round. Used Step (6)'s post-migration runs as the fresh "semantics-migrated" starting-point baseline (byte-identical rebuild/run of the same state). Migrated, rebuilt, ran the battery twice more: all name-level diffs against that baseline, and between the two post-ir_lowerer-migration reruns, byte-identical/empty. Diff-audit harness and old inline logic deleted. |
+
+Across all 7 rounds, the shared classifier was never found to diverge from
+either stage's real production behavior on any input either suite's real
+test traffic (semantics, backend_ir, or compile_run) ever drove through
+it - the zero-divergence property proven observationally in Steps (4)/(5)
+is exactly what Steps (6)/(7) then relied on to migrate with confidence,
+rather than re-deriving the safety case from scratch at migration time.
+
+### Status: TODO-5293 closed
+
+Both stages' `getBuiltinArrayAccessName` now call the shared
+`primec::BuiltinArrayAccessNameClassifier` module as their sole production
+implementation; the two independent, hand-maintained inline copies this
+task set out to merge no longer exist. TODO-5293 is marked closed in
+`docs/todo.md` (moved to `docs/todo_finished.md`) on this basis.

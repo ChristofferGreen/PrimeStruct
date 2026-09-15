@@ -27,13 +27,19 @@ namespace primec {
 // hard-stop shape, a single joint "one function both stages call
 // unmodified" entry point would not be a faithful reproduction of either.
 //
-// SCOPE, READ BEFORE WIRING THIS INTO A PRODUCTION CALL SITE: as of this
-// round, this module is NOT wired into either stage's production
-// `getBuiltinArrayAccessName` - only into an observational diff-audit
-// harness (gated by `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`, mirroring the
-// pattern TODO-5294 used throughout) at the semantics-stage call site. See
-// the design doc for which stage(s) were actually harnessed this round,
-// with real test-suite traffic, and the zero-divergence proof.
+// SCOPE: as of TODO-5293 Step (7), BOTH stages' production
+// `getBuiltinArrayAccessName` call this module directly - semantics'
+// (`SemanticsBuiltinPathHelpers.cpp`, Step (6)) calls
+// `classifyBuiltinArrayAccessNameForSemantics`, and ir_lowerer's
+// (`IrLowererBuiltinNameHelpers.cpp`, Step (7)) calls
+// `classifyBuiltinArrayAccessNameForIrLowerer` (with `Expr::Kind::Call`
+// gating kept at ir_lowerer's own call site, per branch 1's design note
+// below). Each stage's old inline logic and its observational diff-audit
+// harness (gated by `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`, mirroring
+// the pattern TODO-5294 used throughout - Step (4) for semantics, Step (5)
+// for ir_lowerer) are both deleted at each site; see the design doc for
+// the full zero-divergence proof each stage's harness round produced
+// before its migration.
 //
 // How the five previously-characterized branches map onto this design:
 //

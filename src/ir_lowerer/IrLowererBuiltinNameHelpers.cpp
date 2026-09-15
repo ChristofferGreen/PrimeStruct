@@ -508,131 +508,38 @@ bool getBuiltinGpuName(const Expr &expr, std::string &out) {
 
 namespace {
 
-// TODO-5293 Step (5) (docs/ReceiverTargetResolutionConsolidation.md):
-// observational diff-audit harness for the ir_lowerer stage, mirroring the
-// semantics-stage harness wired in Step (4)
-// (SemanticsBuiltinPathHelpers.cpp) and, ahead of that, the pattern
-// TODO-5294 used throughout for CanonicalReceiverType/
-// ReceiverElementFamilyClassifier. Zero effect unless
-// PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set - getBuiltinArrayAccessName
-// below still computes its own answer entirely independently; this only
-// observes and reports a mismatch.
-bool isBuiltinArrayAccessNameDiffAuditEnabled() {
-  static const bool enabled =
-      std::getenv("PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT") != nullptr;
-  return enabled;
-}
-
-// Reproduces ir_lowerer's real branch-5 shape
-// (resolvesKeyValueHelperSurfacePath as an unconditional rejection, never
-// an acceptance - see the header's design notes) as a
-// BuiltinArrayAccessKeyValueLookup callback.
-primec::BuiltinArrayAccessAliasResult irLowererKeyValueLookupForAudit(std::string_view scopedName) {
+// TODO-5293 Step (7) (docs/ReceiverTargetResolutionConsolidation.md):
+// production key-value-helper lookup callback for the shared
+// primec::BuiltinArrayAccessNameClassifier composition below. Reproduces
+// ir_lowerer's real branch-5 shape (resolvesKeyValueHelperSurfacePath as an
+// unconditional rejection, never an acceptance - see the header's design
+// notes) - previously used only by the now-retired diff-audit harness
+// (TODO-5293 Step (5)), now the real production delegate.
+primec::BuiltinArrayAccessAliasResult irLowererKeyValueLookup(std::string_view scopedName) {
   if (resolvesKeyValueHelperSurfacePath(scopedName)) {
     return primec::BuiltinArrayAccessAliasResult{primec::BuiltinArrayAccessAliasOutcome::kReject, {}};
   }
   return {};
 }
 
-void auditGetBuiltinArrayAccessNameAgainstClassifier(const Expr &expr, bool legacyResult,
-                                                      const std::string &legacyOut) {
-  if (!isBuiltinArrayAccessNameDiffAuditEnabled()) {
-    return;
-  }
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return;
-  }
-  std::string scopedName = resolveScopedExprName(expr);
-  if (!scopedName.empty() && scopedName[0] == '/') {
-    scopedName.erase(0, 1);
-  }
-  std::string rawName = expr.name;
-  if (!rawName.empty() && rawName[0] == '/') {
-    rawName.erase(0, 1);
-  }
-  auto unrootedStdlibVectorHelperPathForAudit = [](std::string_view helperName) {
-    std::string path = stdlibSurfaceCanonicalHelperPath(
-        StdlibSurfaceId::CollectionsManifestSurface0, helperName);
-    if (!path.empty() && path.front() == '/') {
-      path.erase(path.begin());
-    }
-    return path;
-  };
-  auto resolveInternalSoaStorageFallbackAliasForAudit =
-      [](const std::string &name) -> std::optional<std::string> {
-    return normalizeInternalSoaStorageBuiltinAlias(name);
-  };
-  std::string classifierOut;
-  const bool classifierResult = primec::classifyBuiltinArrayAccessNameForIrLowerer(
-      scopedName, rawName, stdCollectionsRoot() + "/", collectionMemberRoot("vector"),
-      experimentalCollectionMemberRoot("vector"),
-      collection_paths::modulePrefixBare(collection_paths::kVectorFolder),
-      collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
-      unrootedStdlibVectorHelperPathForAudit("at"), unrootedStdlibVectorHelperPathForAudit("at_unsafe"),
-      irLowererKeyValueLookupForAudit, resolveInternalSoaStorageFallbackAliasForAudit, classifierOut);
-  if (classifierResult != legacyResult || (classifierResult && classifierOut != legacyOut)) {
-    std::cerr << "[receiver-target-diff-audit] MISMATCH ir_lowerer::getBuiltinArrayAccessName: legacy result="
-               << legacyResult << " out=\"" << legacyOut << "\" classifier result=" << classifierResult
-               << " out=\"" << classifierOut << "\" expr.name=\"" << expr.name << "\" scopedName=\""
-               << scopedName << "\"\n";
-    assert(false && "BuiltinArrayAccessNameClassifier diverged from ir_lowerer::getBuiltinArrayAccessName");
-  }
-}
-
 }  // namespace
 
+// TODO-5293 Step (7): migrated onto the shared
+// primec::BuiltinArrayAccessNameClassifier module
+// (classifyBuiltinArrayAccessNameForIrLowerer) after 7 rounds of
+// characterization, unit-testing, and dynamic zero-divergence proof
+// against real 3-suite test traffic via the (now-retired)
+// PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT harness (Step (5)). This
+// function's own inline logic previously duplicated the classifier's
+// `classifyBuiltinArrayAccessNameForIrLowerer` composition bit-for-bit
+// (branches 3/4's receiver-base/SOA-column disambiguation included); the
+// two are no longer separately maintained. Branch 1's `Expr::Kind::Call`
+// gate is deliberately kept here rather than inside the shared module (see
+// the header's design notes - the module operates on strings, not `Expr`).
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
-  auto legacy = [&]() -> bool {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  auto matchAccessAlias = [&](const std::string &normalizedName,
-                              const std::string &prefix,
-                              const std::string &receiverBase) {
-    if (normalizedName.rfind(prefix, 0) != 0) {
-      return false;
-    }
-    std::string alias = normalizedName.substr(prefix.size());
-    const size_t slash = alias.find('/');
-    if (slash != std::string::npos) {
-      const std::string receiverPath = alias.substr(0, slash);
-      if (receiverPath != receiverBase &&
-          receiverPath.rfind(receiverBase + "__", 0) != 0) {
-        return false;
-      }
-      alias = alias.substr(slash + 1);
-    }
-    alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == "at" || alias == "at_ref") {
-      out = "at";
-      return true;
-    }
-    if (alias == "at_unsafe" || alias == "at_unsafe_ref") {
-      out = "at_unsafe";
-      return true;
-    }
-    return false;
-  };
-  auto matchLegacyAccessAlias = [&](const std::string &normalizedName,
-                                    const std::string &prefix) {
-    if (normalizedName.rfind(prefix, 0) != 0) {
-      return false;
-    }
-    std::string alias = normalizedName.substr(prefix.size());
-    if (alias.find('/') != std::string::npos) {
-      return false;
-    }
-    alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == collectionWrapperAlias("vector", "At")) {
-      out = "at";
-      return true;
-    }
-    if (alias == collectionWrapperAlias("vector", "AtUnsafe")) {
-      out = "at_unsafe";
-      return true;
-    }
-    return false;
-  };
   std::string scopedName = resolveScopedExprName(expr);
   if (!scopedName.empty() && scopedName[0] == '/') {
     scopedName.erase(0, 1);
@@ -641,7 +548,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(0, 1);
   }
-  const std::string scopedNameWithoutSuffix = stripGeneratedSuffix(scopedName);
   auto unrootedStdlibVectorHelperPath = [](std::string_view helperName) {
     std::string path = stdlibSurfaceCanonicalHelperPath(
         StdlibSurfaceId::CollectionsManifestSurface0, helperName);
@@ -650,71 +556,17 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return path;
   };
-  if (scopedNameWithoutSuffix == unrootedStdlibVectorHelperPath("at") ||
-      scopedNameWithoutSuffix == unrootedStdlibVectorHelperPath("at_unsafe")) {
-    return false;
-  }
-  if (matchAccessAlias(scopedName, collectionMemberRoot("vector"), "Vector")) {
-    return true;
-  }
-  if (matchLegacyAccessAlias(scopedName, stdCollectionsRoot() + "/")) {
-    return true;
-  }
-  if (scopedName.rfind(collectionMemberRoot("vector"), 0) == 0) {
-    return false;
-  }
-  if (matchAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"), "Vector")) {
-    return true;
-  }
-  if (matchLegacyAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"))) {
-    return true;
-  }
-  if (scopedName.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
-    return false;
-  }
-  if (matchLegacyAccessAlias(scopedName, collection_paths::modulePrefixBare(collection_paths::kVectorFolder))) {
-    return true;
-  }
-  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kVectorFolder), 0) == 0) {
-    return false;
-  }
-  if (matchAccessAlias(scopedName, collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), "SoaColumn")) {
-    return true;
-  }
-  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), 0) == 0) {
-    std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
-      return true;
-    }
-    return false;
-  }
-  if (scopedName.rfind("array/", 0) == 0) {
-    return false;
-  }
-  const std::string builtinVectorPrefix = std::string("vector") + "/";
-  if (scopedName.rfind(builtinVectorPrefix, 0) == 0) {
-    return false;
-  }
-  if (resolvesKeyValueHelperSurfacePath(scopedName)) {
-    return false;
-  }
-  rawName = stripGeneratedSuffix(std::move(rawName));
-  if (rawName.find('/') != std::string::npos) {
-    return false;
-  }
-  if (rawName == "at" || rawName == "at_unsafe") {
-    out = rawName;
-    return true;
-  }
-  return false;
+  auto resolveInternalSoaStorageFallbackAlias =
+      [](const std::string &name) -> std::optional<std::string> {
+    return normalizeInternalSoaStorageBuiltinAlias(name);
   };
-  const bool result = legacy();
-  // TODO-5293 Step (5): observational diff-audit only - see
-  // auditGetBuiltinArrayAccessNameAgainstClassifier above. No effect on
-  // `result`/`out` unless PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT is set.
-  auditGetBuiltinArrayAccessNameAgainstClassifier(expr, result, out);
-  return result;
+  return primec::classifyBuiltinArrayAccessNameForIrLowerer(
+      scopedName, rawName, stdCollectionsRoot() + "/", collectionMemberRoot("vector"),
+      experimentalCollectionMemberRoot("vector"),
+      collection_paths::modulePrefixBare(collection_paths::kVectorFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
+      unrootedStdlibVectorHelperPath("at"), unrootedStdlibVectorHelperPath("at_unsafe"),
+      irLowererKeyValueLookup, resolveInternalSoaStorageFallbackAlias, out);
 }
 
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {

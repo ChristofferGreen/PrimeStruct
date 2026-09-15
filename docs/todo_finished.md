@@ -46924,3 +46924,281 @@ real answer.
     Summary section for the authoritative final state, evidence, and
     numbers. No follow-up TODO filed - this round's fresh gap search
     found nothing genuinely open in either track's scope.
+
+- [x] TODO-5293: Merge the semantics-stage and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a shared classifier
+  - owner: ai
+  - created_at: 2026-09-06
+  - finished_at: 2026-09-15
+  - phase: Receiver-target resolution consolidation
+  - parallel_track: receiver-target-resolution
+  - depends_on: (none)
+  - scope: found while resolving TODO-5288. `getBuiltinArrayAccessName`
+    is implemented twice, once per stage -
+    `SemanticsBuiltinPathHelpers.cpp:1186` (semantics-stage) and
+    `IrLowererBuiltinNameHelpers.cpp:500-...` (ir_lowerer-stage) - and the
+    two bodies have genuinely diverged in structure, not just spelling:
+    the semantics-stage version accepts capitalized `At`/`AtUnsafe`
+    member-name spellings and a `stripTemplateSpecializationSuffix` pass
+    (via `accessAliasFromMemberName`) and delegates key-value detection to
+    `resolveKeyValueHelperMemberNameLocal` (which returns the resolved
+    member-name string, not just a bool); the ir_lowerer-stage version has
+    no capitalized-spelling handling, instead handles internal-SOA-storage
+    column receivers (`SoaColumn`, the
+    `kInternalSoaStorageFolder`/`normalizeInternalSoaStorageBuiltinAlias`
+    branch) and vector-receiver-base disambiguation
+    (`matchAccessAlias`'s `receiverBase`/`receiverBase + "__"` check) that
+    the semantics stage has no equivalent for, and calls the bool-only
+    `resolvesKeyValueHelperSurfacePath` (now the single shared
+    implementation TODO-5288 left behind for this stage) instead. TODO-5288
+    audited both bodies line-by-line and concluded a behavior-preserving
+    merge in one pass would require either (a) building a stage-supplied
+    lookup callback rich enough to cover both the "returns a resolved
+    member-name string with a resolved-path metadata id cross-check"
+    semantics-stage shape and the "bool-only, no cross-check" ir_lowerer
+    shape, or (b) proving the ir_lowerer-stage SOA/receiver-base branches
+    and the semantics-stage capitalized-spelling/suffix-stripping branches
+    are each dead weight in the other stage - neither of which TODO-5288's
+    stop_rule (extreme caution in this exact neighborhood, given this
+    session's 46-test and 67-test near-regressions from narrower changes)
+    permitted attempting blind.
+  - implementation_notes: follow the `ReceiverElementFamilyClassifier`
+    extraction pattern (`include/primec/support/ReceiverElementFamilyClassifier.h`
+    / `src/support/ReceiverElementFamilyClassifier.cpp`) - a shared
+    name-set/logic module the call sites are NOT wired into until its
+    behavior is verified against each stage's real quirks. Concretely:
+    (1) enumerate every branch each stage's `getBuiltinArrayAccessName`
+    has that the other lacks (the capitalized-alias/suffix-stripping pair
+    above vs. the SOA-column/receiver-base pair above) and confirm for
+    each whether it is stage-specific-and-necessary or a latent gap in the
+    other stage (TODO-5286's "absorbed by earlier-stage rejection"
+    precedent may apply to some of these - verify, don't assume); (2) only
+    once that audit is complete, design a single function taking a
+    stage-supplied lookup callback (mirroring
+    `ReceiverElementFamilyPredicates`) that reproduces both today's
+    behaviors bit-for-bit; (3) wire it into both stages only after a
+    fresh, name-level-diffed 3-suite baseline shows zero change.
+  - acceptance: a single shared `getBuiltinArrayAccessName`-equivalent
+    classifier is used by both stages (each supplying its own lookup
+    callback), OR the specific branches that make a full merge unsafe are
+    named and left as documented, provably-necessary duplication; full
+    3-suite battery unchanged either way.
+  - stop_rule: same as TODO-5288's - this is the exact neighborhood that
+    produced 46-test and 67-test near-regressions from narrower changes
+    already this session (TODO-4753's notes). Require a fresh,
+    name-level-diffed 3-suite baseline immediately before AND after any
+    change; if the branch-by-branch audit in implementation_notes step
+    (1) surfaces more than one or two genuinely ambiguous
+    (stage-specific-or-latent-gap?) branches, stop and document the
+    ambiguity rather than guessing at a merge.
+  - update (2026-09-14): Step (1)'s audit is done - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "TODO-5293 Step (1): branch-by-branch audit of
+    getBuiltinArrayAccessName's two stage bodies" section for the full
+    branch-by-branch evidence. Summary: 5 branch-level differences were
+    found (the task's own `scope` named 2 of them; 3 more turned up on a
+    fresh read) - (1) `Expr::Kind::Call` gate present only in
+    ir_lowerer (likely absorbed by ~40 call-site checks, not proven);
+    (2) capitalized `At`/`AtUnsafe` spellings - the `"vectorAt"`-style
+    concatenated form is NOT actually divergent (both stages' alias-
+    building helpers compute byte-identical tokens), but the bare
+    `"At"`/`"AtUnsafe"` spelling is semantics-only and traced to be
+    asymmetric since its introducing commit (`a19495f2b`), with no
+    producer of that literal spelling found anywhere in source or
+    `.prim` stdlib files (likely-dead, not proven dead); (3) the
+    vector-receiver-base disambiguation (`matchAccessAlias`'s
+    `receiverBase`/`receiverBase + "__"` check) is ir_lowerer-only and
+    was shown to cause a real, demonstrable functional divergence
+    (semantics' twin provably returns `false` on the exact `Expr` shape
+    ir_lowerer's returns `true` for), but where that shape is
+    constructed (and thus whether it can reach the semantics stage) was
+    not located this round; (4) the internal-SOA-storage-column
+    (`SoaColumn`) branch is plausibly ir_lowerer-internal-only
+    (columnar storage is synthesized during IR lowering, not validated
+    at the source level) but not independently confirmed; (5) the
+    key-value-helper delegate TODO-5288 already flagged
+    (`resolveKeyValueHelperMemberNameLocal` vs
+    `resolvesKeyValueHelperSurfacePath`) is confirmed to differ in more
+    than signature - semantics cross-checks the resolved path's surface
+    metadata id, ir_lowerer's shared bool-only helper does not - so a
+    shared classifier's lookup callback needs to carry that check
+    explicitly, not just adapt the return type. Also answered the
+    task's own step (3) question: `getBuiltinArrayAccessName`'s two
+    stages ARE asking the same classification-shaped question (unlike
+    the `classifyReceiverElementFamilyJoint`-vs-`resolveReceiverType`
+    split TODO-5294 closed on) - a shared classifier is the right shape
+    in principle - but the branch audit above leaves the *vocabulary*
+    (which spellings/paths are reachable per stage) underdetermined
+    for branches 1-4, so implementing the callback design now would
+    encode unverified guesses as code. No code changed this round;
+    left open per the `stop_rule` (5 ambiguous branches found, well
+    past the "one or two" threshold). Next round should do a
+    reachability audit (real `.prim` repros or targeted `Expr`-
+    construction unit tests, mirroring the existing ir_lowerer tests in
+    `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`)
+    for branches 1-4 before attempting the shared-classifier design.
+  - update (2026-09-14, Step 2): the requested reachability audit is
+    done - see `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "TODO-5293 Step (2): reachability audit for branches 1-4" section.
+    Still no code changed. Summary: branches 3 (vector-receiver-base) and
+    4 (`SoaColumn`) are now architecturally traced - the divergent
+    `namespacePrefix`-embeds-receiver-type shape each depends on is
+    constructed *only* inside ir_lowerer (`buildCallableDefinitionCallContext`
+    for branch 3, `IrLowererStructSlotLayoutHelpers.cpp`'s `SoaColumn`
+    struct-type synthesis for branch 4); no construction site exists in
+    the parser or semantics stage for either shape, so both look
+    genuinely ir_lowering-internal, not latent semantics gaps. Branch 2
+    (bare `At`/`AtUnsafe`) survived a materially wider negative search
+    (parser's reserved-name gate, stdlib `.prime` source, the surface
+    registry, and the reflection-codegen paths all checked, zero
+    producers found) - strengthened toward likely-dead but not proven.
+    Branch 1 (`Kind::Call` gate) is refined rather than resolved: found
+    one real semantics call site
+    (`resolveBuiltinKeyValueInsertReceiverBinding`,
+    `SemanticsValidate.cpp:614-681`) that does NOT gate on `Kind::Call`
+    at all (last round's "every site gates" claim was not literally
+    true), but traced that gap to be covered in practice by a different,
+    verified invariant - `Expr::name` is only ever populated on
+    `Call`/`Name`-kind nodes anywhere in the codebase, so the
+    non-`Call`, non-`Name` case this site is exposed to never actually
+    carries a non-empty name to misclassify. Net effect: the overall
+    picture is clearer now but still short of "prove it, merge it" - the
+    doc's updated verdict recommends two concrete next actions before
+    reattempting the shared-classifier design: (1) a standalone,
+    3-suite-verified attempt at deleting branch 2's dead bare-spelling
+    handling, then (2) the classifier design itself, encoding branches 3
+    and 4 as ir_lowerer-only lookup-callback extensions and branch 1's
+    `Kind::Call` check as an explicit same-function guard. Left open;
+    neither of those two actions was attempted this round (both are
+    behavior-affecting and need their own baseline/verify cycle).
+  - update (2026-09-14, Step 3): action (1) above is done - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "TODO-5293 Step
+    (3): branch 2 deletion, fully verified" section. A final
+    whole-repository producer search (widening past Step (2)'s already-
+    wide sweep) found zero producers of a bare capitalized `"At"`/
+    `"AtUnsafe"` `Expr::name` reaching semantics' `getBuiltinArrayAccessName`
+    - the only literal-spelling hits outside the target function itself
+    are the confirmed-live concatenated form and two ir_lowerer-stage
+    test fixtures that exercise ir_lowerer's own separate copy of the
+    function (which never had a bare-capitalized match arm to begin
+    with). Deleted the two dead match arms (`memberName == "At"` and
+    `memberName == "AtUnsafe"`) from `accessAliasFromMemberName`, leaving
+    every other spelling (`at`, `at_ref`, `at_unsafe`, `at_unsafe_ref`,
+    both concatenated forms) untouched. Verified with a fresh 3-suite
+    baseline (`git status` clean at `dc3cf898c`, no stash needed) plus
+    two full post-change reruns, all foreground: semantics/backend_ir/
+    compile_run counts (1/46/5 failures respectively) identical across
+    baseline and both reruns, and all nine pairwise failing-test-NAME
+    diffs (baseline-vs-run1, baseline-vs-run2, run1-vs-run2, per suite)
+    byte-identical/empty. Branch 2 of the 5 found in Step (1) is now
+    resolved. Branches 1, 3, 4, and 5 remain open and untouched, and the
+    shared-classifier design itself (Step (2)'s recommended action (2))
+    is still future work - not marking this task `[x]` yet.
+  - update (2026-09-14, Step 4): the shared-classifier design/
+    implementation/wiring round - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "TODO-5293 Step
+    (4)" section. New module `include/primec/support/BuiltinArrayAccessNameClassifier.h`/
+    `src/support/BuiltinArrayAccessNameClassifier.cpp`, following the
+    `ReceiverElementFamilyClassifier`/`CanonicalReceiverType` extraction
+    pattern: two shared pure primitives
+    (`classifyAccessAliasToken`/`matchBuiltinArrayAccessAliasUnderPrefix`),
+    a stage-supplied tri-state key-value-lookup callback for branch 5, and
+    one composition function per stage
+    (`classifyBuiltinArrayAccessNameForSemantics`/`...ForIrLowerer`) since
+    the two real bodies' root-walking order/hard-stops genuinely differ
+    (no single joint entry point both stages call unmodified). Branch 1's
+    `Kind::Call` gate is deliberately NOT encoded in the module (it
+    operates on strings, not `Expr`, and the gate is already known
+    practically inert); branches 3/4 live only inside the ir_lowerer
+    composition function via non-empty `receiverBase` arguments to the
+    shared prefix primitive that the semantics composition never passes.
+    New unit test file
+    `tests/unit/semantics/test_semantics_builtin_array_access_name_classifier.cpp`
+    (33 cases, 83 assertions) pins both stages' real call patterns,
+    including branch 2 staying dead and branch 3's confirmed real
+    divergence point (semantics false / ir_lowerer true on the identical
+    `Vector__t.../at` shape). This round's transcription work surfaced two
+    same-stage internal subtleties the prior three rounds' static analysis
+    had not named (ir_lowerer's `matchAccessAlias`/`matchLegacyAccessAlias`
+    compare against genuinely different literal-spelling subsets;
+    semantics' `matchStdlibLegacyAccessAlias` vs its own `stdVectorRoot`
+    handling disagree on a contrived `__t<hash>`-then-`/` alias) - both
+    resolved by design (an `AccessAliasSpellingMode` parameter and a
+    `rejectOnRawResidualSlash` parameter respectively), not by declaring
+    either stage's real behavior a bug. Wired an observational diff-audit
+    call (env-gated on `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`, matching
+    the TODO-5294 pattern) into semantics' production
+    `getBuiltinArrayAccessName` only, per this round's explicit permission
+    to fully harness one stage rather than rush both; ir_lowerer's
+    production call site was not touched. Verified with a fresh 3-suite
+    baseline (git-stash to `4223a869f`), an audit-enabled run of all three
+    suites (semantics grew to 2800 cases/13426 assertions from the 33 new
+    additive unit tests; all three suites' failure counts - 1/46/5 -
+    identical to baseline; **zero** `[receiver-target-diff-audit] MISMATCH`
+    lines and no assert-abort across 13426+16428+15278 total assertions of
+    real test traffic; failing-test-NAME sets identical to baseline for
+    all three suites), and two full foreground reruns with the env var
+    unset (all nine pairwise failing-test-NAME diffs byte-identical/empty,
+    confirming zero production behavior change by default). Still not
+    marking this task `[x]` - ir_lowerer's production call site still
+    needs its own equivalent diff-audit wiring and verification pass (a
+    future round), and actual production migration of either call site
+    onto the shared classifier is separate future work again after that.
+  - update (2026-09-15, Step 5): ir_lowerer's stage is now harnessed the
+    same way semantics' was in Step (4) - see
+    `docs/ReceiverTargetResolutionConsolidation.md`'s new "TODO-5293 Step
+    (5)" section. Wired the same `PRIMESTRUCT_RECEIVER_TARGET_DIFF_AUDIT`-
+    gated observational diff-audit into ir_lowerer's production
+    `getBuiltinArrayAccessName` (`IrLowererBuiltinNameHelpers.cpp`),
+    comparing it against `classifyBuiltinArrayAccessNameForIrLowerer`. Fresh
+    3-suite baseline (`git stash -u` to `705cc32e0`, rebuilt including
+    `primec`/`primevm` since `compile_run` shells out to them), audit-enabled
+    reruns of all three suites: **zero** `[receiver-target-diff-audit]
+    MISMATCH` lines and no assert-abort across all real test traffic;
+    failing-test-NAME sets identical to baseline for all three suites
+    (semantics 1/13426, backend_ir 46/16428, compile_run 5 unique names).
+    No new quirk needed a design change this round - ir_lowerer's real body
+    matched `classifyBuiltinArrayAccessNameForIrLowerer` on every input any
+    of the three suites' real traffic drove through it. Two full foreground
+    reruns with the env var unset reproduced baseline's failing-test-NAME
+    sets exactly both times. One test-execution wrinkle surfaced and was
+    run to ground rather than left ambiguous: `compile_run`'s total
+    assertion count (though never its failing-test-NAME set or count)
+    flickered between 15294 and 15278 across otherwise byte-identical runs;
+    reproducing the SAME flicker on the untouched, stashed `705cc32e0`
+    binary (both with the env var set and unset) proved this is pre-existing
+    test-suite flakiness unconnected to this round's code or the diff-audit
+    harness, not a regression - documented in the design doc rather than
+    chased further. Both stages (semantics since Step 4, ir_lowerer as of
+    this round) are now proven zero-divergence against real dynamic test
+    traffic - production migration of either or both call sites onto the
+    shared classifier is the clear next step for a future round, but was
+    not attempted this round (harness-only, per this effort's one-round-
+    per-risky-step discipline). Still not marking this task `[x]`.
+  - update (2026-09-15, Step 6/7, CLOSING): both stages migrated for real
+    this round - see `docs/ReceiverTargetResolutionConsolidation.md`'s new
+    "Closing Summary: TODO-5293 review and closure" section for the full
+    detail. Step (6): semantics' production `getBuiltinArrayAccessName`
+    (`SemanticsBuiltinPathHelpers.cpp`) now calls
+    `classifyBuiltinArrayAccessNameForSemantics` directly; old inline
+    logic and the Step (4) diff-audit harness deleted (net -112 lines).
+    Fresh baseline at clean `cebc2314a` (git-stash), rebuilt
+    `primec`/`primevm`/all three test binaries, ran the pre-migration
+    baseline (1/2800 semantics, 46/1646 backend_ir, 5/2679 compile_run -
+    matching every prior round's recorded numbers), migrated, rebuilt, ran
+    the battery twice more: all nine pairwise failing-test-NAME diffs
+    byte-identical/empty. Step (7), same round: ir_lowerer's production
+    `getBuiltinArrayAccessName` (`IrLowererBuiltinNameHelpers.cpp`) now
+    calls `classifyBuiltinArrayAccessNameForIrLowerer` directly (with the
+    `Expr::Kind::Call` gate kept at the call site, per the module's own
+    design notes); old inline logic and the Step (5) diff-audit harness
+    deleted (net -148 lines). Used Step (6)'s post-migration runs as the
+    fresh "semantics-migrated" starting-point baseline for this step,
+    migrated, rebuilt, ran the battery twice more: all name-level diffs
+    against that baseline, and between the two post-ir_lowerer-migration
+    reruns, byte-identical/empty. Grepped the whole repository after each
+    deletion to confirm no remaining references to the deleted
+    audit/lambda symbols. Net -254 lines this round across both stages
+    (65 insertions/319 deletions). Both stages' `getBuiltinArrayAccessName`
+    now share one production implementation; the two independent,
+    hand-maintained inline copies this task set out to merge no longer
+    exist. Task closed.
