@@ -268,6 +268,8 @@ build and layout solidify.
 ## Git commit guidelines
 - Push directly to `master` (`git push origin HEAD:master` or equivalent);
   do not open a feature-branch PR for routine work unless explicitly asked.
+- Push immediately after every commit - do not batch up multiple local
+  commits before pushing.
 - Use a clear, imperative subject line in present tense.
 - The `commit-msg` hook reads `.githooks/commit-msg`, strips comment lines and trailing whitespace, and then validates the message.
 - Avoid literal `\n` sequences in commit messages; use real newlines (multiple `-m` or an editor).
