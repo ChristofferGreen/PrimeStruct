@@ -17,8 +17,29 @@
             generatedSuffix != std::string::npos) {
           inlineDispatchRawPath.erase(generatedSuffix);
         }
+        // The AST's own call name (inlineDispatchExpr.name) is already
+        // resolved by semantics to whichever definition actually applies -
+        // including a same-path user override such as "/soa/count" that
+        // shadows the canonical "/std/collections/soa/count" helper. The
+        // findSemanticProduct*CallTarget lookups below instead report a
+        // "surface match" fact that can name the canonical stdlib path even
+        // when the AST already resolved to a distinct user definition, so
+        // any canonical fast path here must yield when a real definition
+        // exists at the AST's own (non-canonical) call name/path.
+        auto hasNonCanonicalSoaDefinition = [&](const std::string &canonicalPath) {
+          auto isRealNonCanonical = [&](const std::string &path) {
+            if (path.empty() || path == canonicalPath) {
+              return false;
+            }
+            auto defIt = defMap.find(path);
+            return defIt != defMap.end() && defIt->second != nullptr;
+          };
+          return isRealNonCanonical(inlineDispatchExpr.name) ||
+                 isRealNonCanonical(inlineDispatchRawPath);
+        };
         if (!inlineDispatchExpr.isMethodCall &&
             inlineDispatchExpr.args.size() == 1 &&
+            !hasNonCanonicalSoaDefinition("/std/collections/soa/count") &&
             (inlineDispatchRawPath == "/std/collections/soa/count" ||
              findSemanticProductDirectCallTarget(
                  semanticProgram, inlineDispatchExpr) ==
@@ -41,6 +62,7 @@
               return localIt != localsIn.end() &&
                      localIt->second.isSoaVector;
             }() &&
+            !hasNonCanonicalSoaDefinition("/std/collections/soa/count") &&
             (inlineDispatchRawPath == "count" ||
              inlineDispatchRawPath == "/std/collections/soa/count" ||
              findSemanticProductMethodCallTarget(
@@ -57,6 +79,8 @@
         }
         if (!inlineDispatchExpr.isMethodCall &&
             inlineDispatchExpr.args.size() == 2 &&
+            !hasNonCanonicalSoaDefinition("/std/collections/soa/get") &&
+            !hasNonCanonicalSoaDefinition("/std/collections/soa/ref") &&
             (inlineDispatchRawPath == "/std/collections/soa/get" ||
              inlineDispatchRawPath == "/std/collections/soa/ref" ||
              findSemanticProductDirectCallTarget(

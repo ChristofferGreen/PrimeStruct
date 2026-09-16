@@ -944,12 +944,11 @@ main() {
   const std::string srcPath =
       writeTemp("vm_experimental_soa_method_shadow_global_helper_return.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  // TODO-4756: .count()/.get()/.ref() method-call sugar no longer routes
-  // through user /soa/count, /soa/get, /soa/ref shadow definitions (falls
-  // through to the real builtins instead: count=1, get(0).x=7, ref(0).x=7),
-  // while .push()/.reserve() still correctly invoke their shadows.
-  // Pinned to the verified current (asymmetric) result: 1+7+7+31+37=83.
-  CHECK(runCommand(runCmd) == 83);
+  // TODO-4756: .count()/.get()/.ref() method-call sugar now correctly
+  // routes through user /soa/count, /soa/get, /soa/ref shadow definitions,
+  // matching .push()/.reserve(): count=11, get(0).x=23, ref(0).x=29,
+  // push(value)=31, reserve(37)=37. 11+23+29+31+37=131.
+  CHECK(runCommand(runCmd) == 131);
 }
 
 TEST_CASE("runs vm method-like helper-return soa method shadows compatibility") {
@@ -1010,7 +1009,7 @@ main() {
       writeTemp("vm_experimental_soa_method_shadow_method_like_helper_return.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   // TODO-4756: see the sibling "global helper-return" case above.
-  CHECK(runCommand(runCmd) == 83);
+  CHECK(runCommand(runCmd) == 131);
 }
 
 TEST_CASE("runs vm vector-target old-explicit soa mutator shadows") {
@@ -1211,11 +1210,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_nested_struct_body_soa_method_shadows.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  // TODO-4756: .count()/.get()/.ref() method-call sugar no longer invokes
-  // user-defined /soa/count, /soa/get, /soa/ref shadows (falls through to
-  // the real builtins: 1+7+7 instead of 13+23+29); .push()/.reserve() still
-  // correctly invoke their shadows (31+37). Sum: 1+7+7+31+37+1 = 84.
-  CHECK(runCommand(runCmd) == 84);
+  // TODO-4756: .count()/.get()/.ref() method-call sugar now correctly
+  // invokes user-defined /soa/count, /soa/get, /soa/ref shadows (13+23+29),
+  // matching .push()/.reserve() (31+37). Sum: 13+23+29+31+37+1 = 134.
+  CHECK(runCommand(runCmd) == 134);
 }
 
 TEST_CASE("runs vm explicit method-like helper-return experimental soa to_aos shadow") {

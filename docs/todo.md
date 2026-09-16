@@ -1941,120 +1941,44 @@ section and `docs/todo_finished.md`.
     scope is exactly the literal-duplicated spellings found by this
     audit sweep, not a broader cleanup pass.
 
-- [ ] TODO-4756: Investigate soa /ref_ref, /to_aos, /get slash-method-form call resolution gaps found across imports/vm.collections sweeps
+- [ ] TODO-5295: Fix `/std/collections/soa/ref_ref<T>(...)` same-path user shadow rejected with "template arguments required" instead of being invoked
   - owner: ai
-  - created_at: 2026-07-29
+  - created_at: 2026-09-16
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-vm-collections
   - depends_on: (none)
-  - scope: a catch-all for several distinct "unknown method: /std/...soa/X"
-    / "unknown call target: ..." rejections found while sweeping
-    `primestruct.compile.run.vm.collections`, all involving fully-
-    qualified slash-form soa method calls
-    (`/std/collections/soa/ref_ref<T>(...)`, bare-root `/to_aos(...)`,
-    `values.to_aos()` with no import at all) that used to resolve
-    (however they resolved before - possibly also to a rejection, just a
-    different one) and now hit a generic "unknown method"/"unknown call
-    target" instead. Re-pinned each occurrence to its exact verified
-    current message as found; this TODO exists to track actually
-    resolving whether these are all one shared root cause (a spelling/
-    routing table missing the `ref_ref`/`to_aos` entries specifically)
-    or several unrelated small gaps - not fully investigated this
-    session due to time, unlike the more thoroughly-traced TODO-4749
-    through TODO-4755 above.
-  - implementation_notes: start from the exact repro in "vm public soa
-    read helpers route through wrapper paths"
-    (`test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`)
-    - `/std/collections/soa/get<Particle>(...)`, `get_ref`, `ref`, and
-    `count`/`count_ref` all resolve fine in the same source, only
-    `ref_ref` doesn't - compare its stdlib registration/routing against
-    the working siblings.
-  - acceptance: not yet scoped - first pass should be determining whether
-    this is one bug or several, then split into properly-scoped TODOs.
-  - stop_rule: do not batch-fix by guessing a shared cause - verify each
-    call form's actual current behavior individually first, the same way
-    the rest of this session's TODOs did.
-  - progress_2026-08-04: the `to_aos_ref` sub-cluster (all pins in
-    `test_compile_run_vm_outputs.cpp`/`test_compile_run_vm_core_gfx_helpers.cpp`/
-    map conformance helpers referencing blank-`Result.why()`) turned out
-    to be TODO-4757's root cause, not a separate soa routing gap - fixed
-    there. A genuinely distinct, still-open sub-cluster remains: a
-    same-path user shadow (`/soa/count`, `/soa/get`, `/soa/ref`,
-    `/soa/ref_ref`) is silently NOT invoked via the direct-call form on
-    an owned (non-borrowed) `SoaVector<T>` helper-return receiver - the
-    real stdlib builtin runs instead, with no diagnostic (wrong VALUE,
-    not a compile error) - while `/soa/push`/`/soa/reserve` shadows ARE
-    correctly invoked in the identical source shape. Repro: see
-    "runs vm global helper-return soa method shadows compatibility" in
-    `test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`
-    (pinned to the verified-buggy sum 83, not the fully-correct 1+23+29+31+37=121).
-    Traced significantly further than prior sessions - **ruled out**, with
-    receipts, several plausible root-cause locations so a future session
-    doesn't re-walk them: (1) NOT a semantic-validation routing bug -
-    `--dump-stage ast-semantic` shows the AST already correctly rewrites
-    ALL FIVE calls (`count`/`get`/`ref`/`push`/`reserve`) to their
-    `/soa/xxx` same-path shadow target before IR lowering ever runs, so
-    the shadow *is* found and selected at the semantic layer for all
-    five, not just push/reserve. (2) NOT `preferredSoaHelperTargetForCollectionType`
-    (`SemanticsValidatorBuildInitializerInference.cpp`) - confirmed via
-    a temporary debug print that this correctly computes samePath
-    ("/soa/count") as the preferred target when called, but "get"/"ref"
-    never even reach this function at all (only "count"/"push"/"reserve"
-    do), and "count" reaching the right answer here doesn't fix the
-    observed runtime behavior - so this function is not on the path that
-    matters. (3) NOT the generic IR-lowering call resolver
-    (`resolveDefinitionCall` in `IrLowererCallResolution.cpp`) - a
-    temporary debug print gated on `callExpr.name` starting with
-    "/soa/" never fired for this repro at all, meaning direct calls to
-    `/soa/count` etc. never reach this function - something else
-    resolves them first. (4) NOT `isUnqualifiedCollectionBuiltinName`
-    (`IrLowererCountAccessClassifiers.cpp`) - it requires an exact
-    `expr.name == "count"` (no slash), so `/soa/count` structurally
-    can't match it. The actual interception point is still unfound -
-    likely a `count`/`get`/`ref`/`ref_ref`-specific (but not
-    `push`/`reserve`-specific) IR-lowering code path somewhere in the
-    large `IrLowererCountAccessHelpers.cpp` (2000+ lines,
-    `soa_paths::legacySoaFolder()`-prefixed checks throughout) or
-    `IrLowererInlineNativeCallDispatch.cpp`/`IrLowererNativeTailDispatch.cpp`
-    that re-derives the target from receiver type/leaf-name instead of
-    trusting the already-correctly-rewritten `/soa/xxx` call name -
-    needs a gdb breakpoint on the VM's actual `Call` instruction dispatch
-    (or on whichever function ultimately populates `IrFunction`'s callee
-    index for this call site) with a reverse hypothesis: find what's
-    different about push/reserve's IR-lowering code path vs
-    count/get/ref/ref_ref's, since both start from an identical AST.
-  - cross_reference_2026-08-06: found a concrete, more basic instance of
-    this same map/vector asymmetry while investigating TODO-4809's sub-
-    bug (1) - `SemanticsValidatorExprCollectionCountCapacity.cpp` has a
-    `context.tryRewriteBareVectorHelperCall` hook (see
-    `tryRewriteBareNamedVectorHelperCall` around line 392) that eagerly
-    rewrites a bare `count(v)`/`capacity(v)` call's `expr.name` to its
-    resolved path (e.g. `/vector/capacity`) when `v` is a vector and a
-    same-path shadow/override exists - this is what lets downstream
-    passes (including the `--collect-diagnostics` scanner in
-    `SemanticsValidatorPassesDiagnostics.cpp`) see the real target.
-    There is no equivalent `tryRewriteBareMapHelperCall` counterpart for
-    map receivers anywhere in this file or its callers - bare
-    `count(m)` for a map `m` is intentionally left unrewritten and
-    resolved generically later (this is fine and correct for the
-    *unshadowed* case - plain `count(m)` on an unshadowed map still
-    works, verified with a minimal repro), but it means a map-side
-    same-path shadow (`/map/count`) can never be distinguished from the
-    generic builtin at the point something needs to know "is this call
-    already resolved to a concrete/overridden target." This is a
-    plausible, narrower interception point than the soa-specific
-    `ref_ref` gap investigated above (4 ruled-out hypotheses, none of
-    which examined this vector-only rewrite hook) - worth checking
-    first in a future pass before continuing the IR-lowering-side
-    search: does adding a map-side counterpart to
-    `tryRewriteBareVectorHelperCall` (rewriting bare `count(m)` to
-    `/map/count` when a same-path shadow exists, mirroring the vector
-    case) fix both this TODO's `ref_ref`/`get` shadow gap and TODO-4809's
-    sub-bug (1) diagnostic-collection drop at once? Not attempted this
-    session - the vector-side rewrite hook's exact preconditions/
-    guardrails (why it only fires for shadow cases, not the general
-    case) need to be understood first to avoid changing plain
-    `count(m)`'s already-correct unshadowed behavior.
+  - scope: split out of TODO-4756 (closed) once that TODO's count/get/ref
+    same-path-shadow-bypass sub-cluster was fixed and this sub-cluster was
+    confirmed to be a genuinely distinct, unrelated bug. Repro: "vm runs
+    builtin helper-return soa ref_ref same-path helper" in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_experimental_runs_borrowed.cpp`
+    - a user-defined `/soa/ref_ref([soa<Particle>] values, [vector<i32>] index)`
+    same-path shadow is rejected with `Semantic error: template arguments
+    required for /std/collections/soa/ref_ref` (exit 2) instead of being
+    invoked, for all three call forms in the repro (bare
+    `ref_ref(values, idx)`, method-sugar `values.ref_ref(idx)`, and
+    `ref_ref(cloneValues(), idx)`). Currently pinned to the verified
+    current (buggy) exit code 2 with a matching stderr substring check.
+  - implementation_notes: unlike TODO-4756's count/get/ref cluster (an
+    IR-lowering-stage wrong-VALUE bug with no diagnostic), this is a
+    semantic-validation-stage REJECTION - the error site is wherever
+    `/std/collections/soa/ref_ref` gets template-argument-arity-checked
+    against a same-path shadow target; compare against
+    `/std/collections/soa/count`/`get`/`ref`'s (correctly non-erroring)
+    same-path shadow resolution in semantics to find what's different
+    about `ref_ref` specifically (it may be the only one of this family
+    that's itself declared with template arguments in the canonical
+    stdlib, and the user shadow's non-templated signature isn't being
+    reconciled correctly).
+  - acceptance: the repro's three call forms compile and run, invoking the
+    user's `/soa/ref_ref` shadow (each returning 17i32 per the repro) -
+    expected sum 17+17+17=51 - instead of rejecting with the template-
+    arguments error; the stderr CHECK in the repro test is removed/
+    replaced with the correct runtime assertion.
+  - stop_rule: do not assume this shares a root cause with TODO-4756's
+    now-fixed count/get/ref cluster - they were confirmed to be separate
+    bugs (different failure mode: compile-time rejection vs. silent wrong
+    value) via this session's investigation; verify independently.
 
 - [ ] TODO-4800: Fix `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` variadic-pack elements failing to lower on vm with "missing lowered definition: /array/at"
   - owner: ai
