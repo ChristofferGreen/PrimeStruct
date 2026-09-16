@@ -774,9 +774,9 @@ TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while 
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCapacityError) == Result::NotHandled);
+            bareCapacityError) == Result::Emitted);
   CHECK(bareCapacityError == "stale");
-  CHECK(instructions.empty());
+  CHECK(!instructions.empty());
 }
 
 TEST_SUITE_END();

@@ -940,9 +940,9 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
-  CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
+  CHECK(isVectorCapacityCall(capacityCall, locals));
   capacityCall.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
+  CHECK(isVectorCapacityCall(capacityCall, locals));
   capacityCall.namespacePrefix.clear();
   capacityCall.name = "/std/collections/vector/capacity";
   CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
@@ -1059,9 +1059,9 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
-  CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
+  CHECK(classifiers.isVectorCapacityCall(capacityCall, locals));
   capacityCall.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
+  CHECK(classifiers.isVectorCapacityCall(capacityCall, locals));
   capacityCall.namespacePrefix.clear();
   capacityCall.name = "/vector/capacity";
   CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));

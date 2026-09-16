@@ -1283,7 +1283,14 @@ bool isVectorCapacityCall(const Expr &expr,
   const bool isBareVectorCapacityCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
       scopedExprPath == "capacity";
-  if (isBareVectorCapacityCall &&
+  // A plain local-variable target (target.kind == Name) is handled below by
+  // looking the local up directly and checking its LocalInfo::Kind - that is
+  // the common, straightforward case (e.g. `capacity(values)`) and must not
+  // be excluded here. This early-out only guards the remaining, more exotic
+  // target shapes (e.g. a soa-to-aos-wrapped temporary), where
+  // isVectorCountTarget's generic "is this vector-like" answer is too broad
+  // for a capacity query specifically.
+  if (isBareVectorCapacityCall && target.kind != Expr::Kind::Name &&
       isVectorCountTarget(target, localsIn)) {
     return false;
   }
@@ -1315,7 +1322,9 @@ bool isVectorCapacityCall(const Expr &expr,
   };
 
   if (target.kind == Expr::Kind::Name) {
-    return false;
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() && !it->second.isArgsPack &&
+           isSupportedVectorTarget(it->second, false);
   }
   if (target.kind == Expr::Kind::Call) {
     if (hasPublishedSemanticCountTargetFact(target, semanticIndex) &&

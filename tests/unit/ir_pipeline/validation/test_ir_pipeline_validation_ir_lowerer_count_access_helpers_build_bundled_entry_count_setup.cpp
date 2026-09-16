@@ -638,7 +638,7 @@ TEST_CASE("ir lowerer count access helpers reject removed /array/capacity alias"
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
-  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   capacityCall.name = "/std/collections/vector/capacity";
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
@@ -712,7 +712,7 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
-  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
   capacityCall.name = "/std/collections/vector/capacity";
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
@@ -721,13 +721,13 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   refVecName.name = "refVec";
   capacityCall.name = "capacity";
   capacityCall.args = {refVecName};
-  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr ptrVecName;
   ptrVecName.kind = primec::Expr::Kind::Name;
   ptrVecName.name = "ptrVec";
   capacityCall.args = {ptrVecName};
-  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr vectorArgsName;
   vectorArgsName.kind = primec::Expr::Kind::Name;

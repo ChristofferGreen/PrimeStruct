@@ -1,9 +1,12 @@
 #include "IrLowererLowerStatementsCallsStep.h"
 
+#include <cstdint>
+#include <limits>
 #include <string_view>
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererFlowHelpers.h"
+#include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -43,6 +46,80 @@ std::string_view vectorMutationPayloadName(std::string_view helperName) {
     return "index";
   }
   return "value";
+}
+
+// Constant-folds a reserve() capacity argument expression made up of integer
+// literals combined with the "plus"/"minus"/"negate" builtin operators, so
+// that out-of-range capacities can be rejected at lowering time instead of
+// only at runtime. Anything else (a non-constant argument, a mix of signed
+// and unsigned operands, unsigned negate) is left unfoldable and falls
+// through to the existing runtime checks unchanged.
+struct FoldedReserveCapacity {
+  bool foldable = false;
+  bool overflowed = false;
+  bool isUnsigned = false;
+  int64_t signedValue = 0;
+  uint64_t unsignedValue = 0;
+};
+
+FoldedReserveCapacity foldReserveCapacityExpr(const Expr &expr) {
+  FoldedReserveCapacity result;
+  if (expr.kind == Expr::Kind::Literal) {
+    result.foldable = true;
+    result.isUnsigned = expr.isUnsigned;
+    if (expr.isUnsigned) {
+      result.unsignedValue = expr.literalValue;
+    } else if (expr.intWidth == 64) {
+      result.signedValue = static_cast<int64_t>(expr.literalValue);
+    } else {
+      result.signedValue = static_cast<int32_t>(expr.literalValue);
+    }
+    return result;
+  }
+  std::string builtin;
+  if (expr.kind != Expr::Kind::Call || !getBuiltinOperatorName(expr, builtin)) {
+    return result;
+  }
+  if (builtin == "negate" && expr.args.size() == 1) {
+    const FoldedReserveCapacity operand = foldReserveCapacityExpr(expr.args.front());
+    if (!operand.foldable || operand.isUnsigned) {
+      return result;
+    }
+    result.foldable = true;
+    if (operand.signedValue == std::numeric_limits<int64_t>::min()) {
+      result.overflowed = true;
+      return result;
+    }
+    result.signedValue = -operand.signedValue;
+    return result;
+  }
+  if ((builtin == "plus" || builtin == "minus") && expr.args.size() == 2) {
+    const FoldedReserveCapacity lhs = foldReserveCapacityExpr(expr.args[0]);
+    const FoldedReserveCapacity rhs = foldReserveCapacityExpr(expr.args[1]);
+    if (!lhs.foldable || !rhs.foldable || lhs.isUnsigned != rhs.isUnsigned) {
+      return result;
+    }
+    result.foldable = true;
+    result.isUnsigned = lhs.isUnsigned;
+    if (lhs.isUnsigned) {
+      if (builtin == "plus") {
+        result.unsignedValue = lhs.unsignedValue + rhs.unsignedValue;
+        result.overflowed = result.unsignedValue < lhs.unsignedValue;
+      } else if (rhs.unsignedValue > lhs.unsignedValue) {
+        result.overflowed = true;
+      } else {
+        result.unsignedValue = lhs.unsignedValue - rhs.unsignedValue;
+      }
+      return result;
+    }
+    if (builtin == "plus") {
+      result.overflowed = __builtin_add_overflow(lhs.signedValue, rhs.signedValue, &result.signedValue);
+    } else {
+      result.overflowed = __builtin_sub_overflow(lhs.signedValue, rhs.signedValue, &result.signedValue);
+    }
+    return result;
+  }
+  return result;
 }
 
 std::string resolveDirectHelperPath(const Expr &callExpr) {
@@ -265,6 +342,25 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     return VectorMutationStatementEmitResult::NotMatched;
   }
   const LocalInfo::ValueKind payloadKind = input.inferExprKind(*payloadArg, localsIn);
+  if (helperName == "reserve") {
+    const FoldedReserveCapacity folded = foldReserveCapacityExpr(*payloadArg);
+    if (folded.foldable) {
+      if (folded.overflowed) {
+        errorOut = "vector reserve literal expression overflow";
+        return VectorMutationStatementEmitResult::Error;
+      }
+      if (!folded.isUnsigned && folded.signedValue < 0) {
+        errorOut = "vector reserve expects non-negative capacity";
+        return VectorMutationStatementEmitResult::Error;
+      }
+      const uint64_t magnitude =
+          folded.isUnsigned ? folded.unsignedValue : static_cast<uint64_t>(folded.signedValue);
+      if (magnitude > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
+        errorOut = vectorReserveExceedsLocalCapacityLimitMessage();
+        return VectorMutationStatementEmitResult::Error;
+      }
+    }
+  }
   if (isVectorIndexedRemovalHelperName(helperName)) {
     if (stmt.isMethodCall && payloadKind != LocalInfo::ValueKind::Int32) {
       errorOut = helperName + " requires integer index";

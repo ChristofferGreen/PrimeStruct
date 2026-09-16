@@ -48906,3 +48906,171 @@ real answer.
        593/591/2, both pre-existing map-conformance failures, zero
        vector-related failures.
 
+
+- [x] TODO-4755: Fix vector reserve() - no longer actually grows capacity, and its compile-time local-dynamic-limit validation no longer triggers
+  - owner: ai
+  - created_at: 2026-07-29
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found via the ~10-case "vector reserve ... local dynamic
+    limit"/"folded ..." cluster in
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`.
+    Minimal repro on `--emit=vm`:
+    ```
+    import /std/collections/*
+    [effects(heap_alloc, io_out), return<int>]
+    main() {
+      [vector<i32> mut] values{vector<i32>(1i32)}
+      reserve(values, 300i32)
+      print_line(capacity(values))
+      return(0i32)
+    }
+    ```
+    prints `1` (unchanged) instead of `300` - `reserve()` (both the bare
+    call form and the fully-qualified
+    `/std/collections/vector/reserve(...)` form) no longer actually grows
+    the vector's capacity at all, for any positive value tested (5, 300,
+    1025). By contrast, `push()`-triggered internal growth (via the same
+    `vectorReserveInternal<T>` stdlib helper in
+    `stdlib/std/collections/vector.prime`) does work, and basic mutable
+    struct field writes work fine in isolation (verified with a minimal
+    unrelated struct) and even through one level of nested nested-call
+    mutable-parameter passing - so this isn't a general "field mutation
+    doesn't persist" regression, it's specific to something in
+    `reserve()`'s call path or `vectorReserveInternal`'s growth branch
+    not actually executing/persisting for a direct `reserve()` call.
+    Separately, and likely a second symptom of the same missing
+    compile-time optimization: `reserve()` used to have a dedicated
+    lowering-time pass that literal-folded constant capacity arguments
+    and rejected anything beyond a 1024 "local dynamic limit" (or
+    negative, or overflowing) at COMPILE time with specific diagnostics
+    ("vector reserve exceeds local capacity limit (1024)", "vector
+    reserve expects non-negative capacity", "vector reserve literal
+    expression overflow") - none of that triggers anymore. Values that
+    fold to a genuinely negative number now still get caught, but only
+    later, at RUNTIME, via `vectorReserveInternal`'s own `if(capacity <
+    0) { panic(capacity) }` check (same message text, different
+    exit/timing: runtime panic exit 3 instead of compile-time reject
+    exit 2). Values beyond 1024 (with no overflow) now just silently
+    succeed as no-ops (no growth, no error). Large i64/u64 arguments
+    that overflow/wrap when narrowed to the `i32 capacity` parameter
+    (`vectorReserveInternal<T>` takes `[i32] capacity`) now produce
+    "array index out of bounds" instead of a proper overflow diagnostic
+    - suggesting the arg is silently truncated/misinterpreted rather
+    than type-checked or range-checked.
+  - implementation_notes: two separate things to investigate: (1) why
+    `vectorReserveInternal`'s growth branch
+    (`if(capacity > values.field_capacity()) { ... values.fieldCapacity =
+    capacity }`) doesn't observably grow capacity when reached via
+    `reserve()` specifically, given the exact same helper IS reached (and
+    works) via `push()`'s internal auto-grow call - diff the two call
+    sites' IR/lowering to see what differs; (2) the compile-time literal-
+    folding "local dynamic limit" validation pass for `reserve()` calls -
+    find where it used to hook in (likely alongside the still-working
+    "collection literal exceeds local capacity limit (1024)" check for
+    vector *literals*, which is unaffected) and check whether `reserve()`
+    calls are still being routed through it at all.
+  - acceptance: the minimal repro above prints `300`; all ~10 re-pinned
+    "vector reserve ... limit" test cases in
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp` revert
+    to their original compile-time-rejection expectations once both (1)
+    and (2) are fixed.
+  - stop_rule: don't assume fixing the compile-time limit-checking pass
+    (2) also fixes the runtime growth bug (1), or vice versa - they were
+    shown to be independently reproducible (runtime growth is broken
+    even via the fully-qualified call form, which bypasses whatever
+    routing might affect the bare-call literal-folding pass) and must be
+    verified fixed separately.
+  - investigated_2026-08-05: reproduced the minimal repro standalone
+    (confirmed prints `1`, not `300`). For (2): confirmed
+    `vectorReserveExceedsLocalCapacityLimitMessage()`
+    (`IrLowererHelpers.cpp:152`) is defined but has zero call sites
+    anywhere else in `src/` - the compile-time literal-folding/limit-
+    check pass for `reserve()` really has been fully removed/orphaned,
+    not just misrouted; whoever restores it needs to build it fresh, not
+    just find a broken call site. For (1): ruled out call-routing as the
+    cause - called `/std/collections/vector/vectorReserveInternal<i32>`
+    directly (bypassing the `reserve()`/`vectorReserve<T>` wrapper chain
+    entirely) and capacity still didn't grow, confirming the bug is
+    inside `vectorReserveInternal`'s own execution/mutation, not in how
+    calls reach it. Built several isolated analogs to bisect which
+    structural element breaks the mutation (all standalone, unrelated to
+    stdlib): a plain 2-field mut struct with sequential field writes
+    inside an if-block works; adding an intervening function call and a
+    nested if/local-var (mirroring vectorReserveInternal's
+    `allocCount`/zero-check shape) still works; making the struct and
+    the intervening call templated (`Box<T>`/`sideEffectFn<T>`) still
+    works - so no single one of "two sequential field writes",
+    "intervening call", "nested if + local var", or "templated struct
+    receiver" in isolation reproduces the bug. Attempted a live trace by
+    temporarily adding `print_line` debug statements directly inside
+    `vectorReserveInternal` in `stdlib/std/collections/vector.prime`
+    (reverted before finishing this session - confirmed via `git status`/
+    `git diff --stat` that the file is clean) but got contradictory
+    results (no output at all for the original bare-`reserve()` repro,
+    despite `vectorCheckShape` and other calls upstream clearly running;
+    a VM-lowering error for the direct-`vectorReserveInternal` repro
+    claiming `print_line` isn't supported "in expressions" for a
+    plain statement position) that weren't resolved before time ran out
+    on this pass. The remaining gap is real Pointer<uninitialized<T>>
+    reallocation plus multiple chained helper calls
+    (`vectorAllocStorage`/`vectorMovePrefixToBuffer`/`vectorFreeStorage`)
+    between the two field writes - none of the isolated analogs combined
+    ALL of those together, so the next session should build one that
+    does (real pointer field type, real multi-call sequence) rather than
+    continuing to add debug prints to the stdlib source, which produced
+    confusing/inconsistent results this pass. Not fixed or re-pinned.
+  - finished_at: 2026-09-16
+  - resolution_2026-09-16: root-caused both sub-bugs. (1) runtime
+    growth: `reserve()`'s own growth logic (the shared
+    `emitReallocDataToCapacity` path in
+    `IrLowererLowerStatementsCallsStep.cpp`) was never broken - it
+    correctly wrote the new capacity into field slot 2. The bug was in
+    `capacity()`'s own query lowering: `isVectorCapacityCall`
+    (`IrLowererCountAccessHelpers.cpp`) unconditionally returned
+    `false` for a bare local-variable target
+    (`target.kind == Expr::Kind::Name`), and a separate `isBareVectorCapacityCall &&
+    isVectorCountTarget(...)` early-out rejected the same common case
+    too - so `capacity(values)` always fell through to a different,
+    unrelated fallback that read field slot 1 (`fieldCount`) instead
+    of slot 2 (`fieldCapacity`). Confirmed by tracing generated C++ for
+    both the `reserve()` repro and a working `push()` repro side by
+    side: `push()`'s final `capacity(values)` print was reading the
+    *count* field too, and only happened to print the right number
+    because count and capacity were coincidentally equal after growth.
+    Fixed by making the `target.kind == Expr::Kind::Name` branch look
+    the local up and classify it via the same
+    `isSupportedVectorTarget` check already used elsewhere in the
+    function, and by scoping the old `isBareVectorCapacityCall &&
+    isVectorCountTarget` rejection to non-`Name` targets only (it was
+    still needed to keep a `capacity(to_aos(soaValues))` SOA-wrapped
+    temporary correctly rejected). (2) compile-time limit validation:
+    rebuilt it from scratch as the investigation note anticipated -
+    added a small constant-folding evaluator
+    (`foldReserveCapacityExpr` in `IrLowererLowerStatementsCallsStep.cpp`)
+    that recognizes integer literals combined with `plus`/`minus`/
+    `negate`, with signed/unsigned overflow detection, and wired it
+    into the `reserve` fast-path branch ahead of the existing Int32
+    payload-kind gate (so it also fires for i64/u64 literal
+    expressions, not just i32). A folded negative capacity now
+    rejects at compile time with "vector reserve expects non-negative
+    capacity"; a folded arithmetic overflow rejects with "vector
+    reserve literal expression overflow"; a folded capacity above
+    1024 rejects with `vectorReserveExceedsLocalCapacityLimitMessage()`
+    (now finally has a call site) - all exit code 2, matching the
+    repo's lowering-time-reject convention. Updated all 7 TODO-4755-
+    pinned test cases in
+    `test_compile_run_vm_collections_vector_limits_pop_shadow.cpp`
+    back to their original compile-time-rejection expectations and
+    added one new test for the >1024 literal-reserve compile-time
+    rejection (previously untested). Also updated 4 unit tests in
+    `tests/unit/ir_pipeline/validation/` that had pinned assertions
+    on the old (buggy) `isVectorCapacityCall`/`tryEmitNativeCallTailDispatch`
+    behavior for bare-local capacity-call targets. Full 3-suite
+    battery: `PrimeStruct_backend_ir_tests` 46/1653 failures (exact
+    same failure set as the pre-change baseline, confirmed via diff),
+    `PrimeStruct_semantics_tests` 1/2800 failure (the pre-existing
+    TODO-5050 case), `PrimeStruct_compile_run_tests` 6/2680 failures
+    (within the documented 5-8 pre-existing map-conformance/gfx-helper
+    cross-test-pollution baseline). Zero net-new failures.

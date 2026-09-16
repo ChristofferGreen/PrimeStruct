@@ -430,10 +430,26 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_vector_reserve_past_former_limit.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  // TODO-4755: reserve() no longer actually grows capacity at all (a
-  // genuine runtime regression, not test staleness) - pinned to the
-  // verified current (buggy) result until fixed.
-  CHECK(runCommand(runCmd) == 0);
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("rejects vm vector reserve literal above local dynamic limit at lowering") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 1025i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_reserve_literal_local_limit_overflow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_literal_limit_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector literal above local dynamic limit") {
@@ -480,10 +496,7 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_negative_literal_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: negative capacity is still caught, but only at runtime (via
-  // the stdlib's own panic) rather than at compile time now - same
-  // message, different exit code/timing.
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
 }
 
@@ -502,8 +515,7 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_negative_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: see the negative-literal case above (runtime panic now).
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
 }
 
@@ -522,11 +534,8 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_signed_overflow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: an i64 argument overflowing/wrapping when narrowed to
-  // reserve()'s i32 capacity parameter now surfaces as a generic runtime
-  // "array index out of bounds" instead of a dedicated overflow diagnostic.
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector reserve folded negate negative at lowering") {
@@ -544,8 +553,7 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_negate_negative_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: see the negative-literal case above (runtime panic now).
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
 }
 
@@ -564,9 +572,8 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_negate_overflow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: see the signed-overflow case above.
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector reserve folded unsigned wraparound at lowering") {
@@ -584,9 +591,8 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_unsigned_wrap_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4755: see the signed-overflow case above.
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
 }
 
 TEST_SUITE_END();
