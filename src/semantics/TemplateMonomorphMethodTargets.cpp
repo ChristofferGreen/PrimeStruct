@@ -29,9 +29,13 @@
 #include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"
 #include "TemplateMonomorphSourceDefinitionSetup.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
+#include "primec/support/CanonicalReceiverType.h"
 #include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
+#include <cassert>
+#include <iostream>
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
@@ -102,74 +106,220 @@ using semantics::splitTemplateTypeName;
 using semantics::splitTopLevelTemplateArgs;
 
 
-bool resolveMethodCallTemplateTarget(const Expr &expr,
-                                     const LocalTypeMap &locals,
-                                     const Context &ctx,
-                                     std::string &pathOut) {
-  pathOut.clear();
-  if (!expr.isMethodCall || expr.args.empty() || expr.name.empty()) {
+namespace {
+
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): resolveReceiverType
+// for monomorphization's F3, the receiver-type-inference cascade that lives
+// inline inside resolveMethodCallTemplateTarget below (see the Step 0 Rule
+// Table's "F3 detail" sub-table, and this document's "Ready to implement"
+// checklist, which named this stage/function as the second
+// resolveReceiverType producer after ir_lowerer's RT2/RT3/G7).
+//
+// As of the "F3 Name/literal real migration" round, this is the SOLE
+// production path for F3-N1/N2 (Name-kind receiver) and F3-L/B/Fl/S
+// (primitive-literal-kind receivers) - resolveMethodCallTemplateTarget below
+// calls this directly for those receiver kinds instead of running its own
+// inline cascade. F3-C1/C2/C3 (Call-kind receivers) are deliberately NOT
+// covered by this particular function - as of the "F3 Call-kind real
+// migration" round they are fully migrated too, just onto the sibling
+// producer `resolveReceiverTypeFromCallExprForTemplateMonomorph` below
+// rather than merged into this one, for a stage-specific reason: they call
+// inferBindingTypeForMonomorph (transitively
+// inferImplicitTemplateArgs), inferExprTypeTextForTemplatedVectorFallback,
+// and inferDefinitionReturnBindingForTemplatedFallback, all of which take a
+// non-const Context& and mutate ctx-scoped, test-visible counters as a side
+// effect of merely being called - specifically
+// Context::implicitTemplateArgInferenceFactHitsForTesting and
+// implicitTemplateArgFactsForTesting (TemplateMonomorphContext.h,
+// incremented/appended inside TemplateMonomorphImplicitTemplateInference.cpp's
+// inferImplicitTemplateArgs whenever a cached implicit-template-arg fact is
+// hit, independent of the collectImplicitTemplateArgFactsForTesting gate),
+// read back only by TemplateMonomorph.cpp for test-facing hit-count/fact
+// reporting. RT2/RT3b/RT3c's own underlying inference (LocalInfo/Expr-kind
+// based) is provably side-effect-free, which is what made migrating those
+// kinds safe via the usual harness-then-migrate discipline; F3's Call-kind
+// path is not side-effect-free in the same way, so a second, purely-
+// observational invocation (the harness round's pre-migration step) would
+// have corrupted those counters for any test that asserts on them had it
+// been wired into production - which is exactly why that harness round
+// snapshot/restored around its own audit-only second invocation rather than
+// letting it run free. Now that the harness round proved zero-divergence
+// and safe counter-restoration, Call-kind receivers are migrated for real
+// via the single production invocation inside
+// resolveReceiverTypeFromCallExprForTemplateMonomorph below (invoked
+// exactly once per receiver, same as the old inline cascade it replaced -
+// no second/audit invocation remains). They are still not folded into
+// *this* function's own branches, since their underlying inference is
+// fundamentally different in kind (delegated production helpers, not
+// inline algorithm) from the independent reimplementations above.
+// F3-C3a (the receiver-is-a-struct-constructor-call short-circuit) is
+// separately and permanently out of scope regardless, per the earlier
+// "Ready to implement" round's irreconcilable-case finding - it answers a
+// resolution question ("what method-definition path"), not an inference one
+// ("what type"), and was never returned by this cascade in the first place.
+bool resolveReceiverType(const Expr &receiver,
+                         const LocalTypeMap &locals,
+                         const Context &ctx,
+                         CanonicalReceiverType &out) {
+  out = CanonicalReceiverType{};
+  if (receiver.kind == Expr::Kind::Name) {
+    auto it = locals.find(receiver.name);
+    if (it == locals.end()) {
+      return false;
+    }
+    // Independent re-derivation of the same three lambdas
+    // resolveMethodCallTemplateTarget defines locally below
+    // (qualifyImportedCollectionTypeText/bindingTypeText/
+    // isBorrowedSoaReceiverType/unwrapImportedCollectionReceiverType) -
+    // deliberately not shared code, matching every prior resolveReceiverType
+    // producer's own "independent reimplementation" precedent so this
+    // diff-audit is a genuine cross-check, not a tautology.
+    std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
+        [&](std::string typeText) -> std::string {
+      typeText = normalizeBindingTypeName(typeText);
+      if (typeText.empty()) {
+        return typeText;
+      }
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
+        base = normalizeBindingTypeName(base);
+        if ((base == "Reference" || base == "Pointer") && !argText.empty()) {
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+            return typeText;
+          }
+          return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
+        }
+        if (const std::string *importAlias =
+                lookupScopedImportAliasForNamespace(base, receiver.namespacePrefix, ctx);
+            importAlias != nullptr) {
+          return *importAlias + "<" + argText + ">";
+        }
+        return typeText;
+      }
+      if (const std::string *importAlias =
+              lookupScopedImportAliasForNamespace(typeText, receiver.namespacePrefix, ctx);
+          importAlias != nullptr) {
+        return *importAlias;
+      }
+      return typeText;
+    };
+    auto bindingTypeText = [](const BindingInfo &binding) {
+      std::string typeText = binding.typeName;
+      if (!binding.typeTemplateArg.empty()) {
+        typeText += "<" + binding.typeTemplateArg + ">";
+      }
+      return typeText;
+    };
+    auto isBorrowedSoaReceiverType = [&](std::string typeText) {
+      typeText = normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
+        return false;
+      }
+      const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+      if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+        return false;
+      }
+      return isTemplateMonomorphSoaReceiverType(
+          normalizeCollectionReceiverTypeName(
+              unwrapCollectionReceiverEnvelope(argText)));
+    };
+    auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
+      return unwrapCollectionReceiverEnvelope(
+          qualifyImportedCollectionTypeText(bindingTypeText(binding)));
+    };
+
+    const std::string wrappedReceiverTypeName =
+        qualifyImportedCollectionTypeText(bindingTypeText(it->second));
+    out.isBorrowed = isBorrowedSoaReceiverType(bindingTypeText(it->second));
+    out.collectionBaseName = unwrapImportedCollectionReceiverType(it->second);
+    out.wrappedBaseTypeName = wrappedReceiverTypeName;
+    std::string wrapBase;
+    std::string wrapArg;
+    const std::string normalizedWrapped = normalizeBindingTypeName(wrappedReceiverTypeName);
+    if (splitTemplateTypeName(normalizedWrapped, wrapBase, wrapArg) && !wrapArg.empty()) {
+      const std::string normalizedWrapBase = normalizeCollectionReceiverTypeName(wrapBase);
+      out.isWrapped = (normalizedWrapBase == "Reference" || normalizedWrapBase == "Pointer");
+    }
+    return !out.collectionBaseName.empty();
+  }
+  if (receiver.kind == Expr::Kind::Literal) {
+    out.collectionBaseName = receiver.isUnsigned ? "u64" : (receiver.intWidth == 64 ? "i64" : "i32");
+    return true;
+  }
+  if (receiver.kind == Expr::Kind::BoolLiteral) {
+    out.collectionBaseName = "bool";
+    return true;
+  }
+  if (receiver.kind == Expr::Kind::FloatLiteral) {
+    out.collectionBaseName = receiver.floatWidth == 64 ? "f64" : "f32";
+    return true;
+  }
+  if (receiver.kind == Expr::Kind::StringLiteral) {
+    out.collectionBaseName = "string";
+    return true;
+  }
+  // Call-kind (and any other kind) is out of scope this round - see the
+  // long comment above.
+  return false;
+}
+
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): F3 Call-kind
+// real migration. The SOLE production path for F3-C1/C2/C3b/c/d
+// (Call-kind receivers, minus F3-C3a - see below). This is NOT an
+// independent reimplementation the way resolveReceiverType's Name/literal
+// branches above are: F3-C1/C2/C3b/c/d's underlying inference
+// (inferBindingTypeForMonomorph/inferExprTypeTextForTemplatedVectorFallback/
+// inferDefinitionReturnBindingForTemplatedFallback) is already fully
+// delegated production logic, not inline algorithm this file could
+// faithfully re-derive from scratch - so this function calls those same
+// helpers directly, exactly as the old inline cascade it replaced did.
+// Matches the structural precedent of ir_lowerer's
+// resolveReceiverTypeFromCallExpr (RT3b's own Call-kind sub-cascade
+// producer), which is itself a thin wrapper over shared production
+// helpers rather than a from-scratch reimplementation, for the same
+// reason.
+//
+// Takes `Context &ctx` (mutable, not const) because it genuinely invokes
+// the three side-effecting helpers named above exactly once per call -
+// this is the production computation itself, not a second/observational
+// invocation, so the two non-idempotent `...ForTesting` counter fields
+// (see the long comment above `resolveReceiverType`) end up mutated
+// exactly as the old inline cascade left them: once, by this one call.
+// The prior harness round's snapshot/restore machinery (which wrapped a
+// deliberate *second*, audit-only invocation) has been removed entirely
+// alongside the old inline cascade - there is only ever one invocation
+// now, so nothing needs restoring.
+//
+// Returns true iff it produced a non-empty collectionBaseName, matching
+// the outer cascade's own "typeName.empty() => failure" convention
+// (resolveMethodCallTemplateTarget's `if (typeName.empty()) return false;`
+// immediately after the receiver-kind dispatch). F3-C3a (receiver resolves
+// to a struct-constructor call) is a resolution question ("what
+// definition path"), not an inference one ("what type"), and stays
+// permanently out of `CanonicalReceiverType`'s scope - this function
+// returns false without filling `out` in that case, exactly as before, but
+// additionally writes the already-resolved callee path into
+// `structConstructorReceiverPathOut` so the caller can run F3-C3a's own
+// separate short-circuit logic without re-resolving the callee path a
+// second time (which would re-invoke the side-effecting helpers above via
+// a nested `resolveMethodCallTemplateTarget` recursion and double their
+// counter effects). `structConstructorReceiverPathOut` stays empty for
+// every other outcome (success or ordinary failure).
+bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
+    const Expr &receiver,
+    const LocalTypeMap &locals,
+    Context &ctx,
+    CanonicalReceiverType &out,
+    std::string &structConstructorReceiverPathOut) {
+  out = CanonicalReceiverType{};
+  structConstructorReceiverPathOut.clear();
+  if (receiver.kind != Expr::Kind::Call) {
     return false;
   }
-  const std::string rawMethodName = expr.name;
-  std::string methodName = rawMethodName;
-  const Expr &receiverExpr = expr.args.front();
-  if (!methodName.empty() && methodName.front() == '/') {
-    methodName.erase(methodName.begin());
-  }
-  auto normalizeCollectionMethodName = [](const std::string &receiverTypeName,
-                                          std::string candidate) -> std::string {
-    if (receiverTypeName == "array" || receiverTypeName == "vector" ||
-        isTemplateMonomorphSoaReceiverType(receiverTypeName)) {
-      const std::string vectorPrefix = std::string("vector") + "/";
-      const std::string arrayPrefix = "array/";
-      if (candidate.rfind(vectorPrefix, 0) == 0) {
-        return candidate.substr(vectorPrefix.size());
-      }
-      if (candidate.rfind(arrayPrefix, 0) == 0) {
-        return candidate.substr(arrayPrefix.size());
-      }
-      if (isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
-        return std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(candidate));
-      }
-      std::string helperName;
-      if (stripTemplateMonomorphSoaHelperPrefix(candidate, helperName, false)) {
-        return helperName;
-      }
-    }
-    if (receiverTypeName == "map") {
-      return metadataBackedKeyValueHelperMethodName(candidate);
-    }
-    return candidate;
-  };
-  auto isFileMethodName = [](std::string_view methodName) {
-    return methodName == "write" || methodName == "writeLine" ||
-           methodName == "write_line" || methodName == "writeByte" ||
-           methodName == "write_byte" || methodName == "readByte" ||
-           methodName == "read_byte" || methodName == "writeBytes" ||
-           methodName == "write_bytes" || methodName == "flush" ||
-           methodName == "close";
-  };
-  auto normalizeFileMethodName = [](std::string_view methodName) {
-    if (methodName == "readByte") {
-      return std::string("read_byte");
-    }
-    if (methodName == "writeLine") {
-      return std::string("write_line");
-    }
-    if (methodName == "writeByte") {
-      return std::string("write_byte");
-    }
-    if (methodName == "writeBytes") {
-      return std::string("write_bytes");
-    }
-    return std::string(methodName);
-  };
-  auto normalizeFileErrorMethodName = [](std::string_view methodName) {
-    if (methodName == "isEof") {
-      return std::string("is_eof");
-    }
-    return std::string(methodName);
-  };
   std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
       [&](std::string typeText) -> std::string {
     typeText = normalizeBindingTypeName(typeText);
@@ -188,14 +338,14 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
       }
       if (const std::string *importAlias =
-              lookupScopedImportAliasForNamespace(base, receiverExpr.namespacePrefix, ctx);
+              lookupScopedImportAliasForNamespace(base, receiver.namespacePrefix, ctx);
           importAlias != nullptr) {
         return *importAlias + "<" + argText + ">";
       }
       return typeText;
     }
     if (const std::string *importAlias =
-            lookupScopedImportAliasForNamespace(typeText, receiverExpr.namespacePrefix, ctx);
+            lookupScopedImportAliasForNamespace(typeText, receiver.namespacePrefix, ctx);
         importAlias != nullptr) {
       return *importAlias;
     }
@@ -226,6 +376,142 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
     return unwrapCollectionReceiverEnvelope(
         qualifyImportedCollectionTypeText(bindingTypeText(binding)));
+  };
+
+  std::string wrappedReceiverTypeName;
+  bool isBorrowedSoaReceiver = false;
+  std::string typeName;
+
+  BindingInfo receiverInfo;
+  if (inferBindingTypeForMonomorph(receiver, {}, locals, hasMathImport(ctx), ctx, receiverInfo)) {
+    wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(receiverInfo));
+    isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(receiverInfo));
+    typeName = unwrapImportedCollectionReceiverType(receiverInfo);
+  }
+  if (typeName.empty()) {
+    const std::string inferredTypeText = qualifyImportedCollectionTypeText(
+        inferExprTypeTextForTemplatedVectorFallback(
+            receiver, locals, receiver.namespacePrefix, ctx, hasMathImport(ctx)));
+    isBorrowedSoaReceiver = isBorrowedSoaReceiverType(inferredTypeText);
+    typeName = unwrapCollectionReceiverEnvelope(inferredTypeText);
+  }
+  if (!receiver.isBinding) {
+    std::string resolved;
+    if (receiver.isMethodCall) {
+      if (!resolveMethodCallTemplateTarget(receiver, locals, ctx, resolved)) {
+        resolved.clear();
+      }
+    } else {
+      resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
+    }
+    auto defIt = ctx.sourceDefs.find(resolved);
+    if (defIt != ctx.sourceDefs.end()) {
+      if (isStructDefinition(defIt->second)) {
+        // F3-C3a: out of scope, see comment above. Hand the already-
+        // resolved callee path back to the caller so it can run its own
+        // separate short-circuit without re-resolving `resolved` (which
+        // would re-invoke the side-effecting helpers above a second time).
+        structConstructorReceiverPathOut = resolved;
+        return false;
+      }
+      for (const auto &transform : defIt->second.transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        const std::string &returnType = transform.templateArgs.front();
+        if (returnType == "auto") {
+          continue;
+        }
+        wrappedReceiverTypeName = qualifyImportedCollectionTypeText(returnType);
+        isBorrowedSoaReceiver = isBorrowedSoaReceiverType(returnType);
+        typeName = unwrapCollectionReceiverEnvelope(
+            qualifyImportedCollectionTypeText(returnType));
+        break;
+      }
+      if (typeName.empty()) {
+        BindingInfo inferredReturn;
+        if (inferDefinitionReturnBindingForTemplatedFallback(
+                defIt->second, hasMathImport(ctx), ctx, inferredReturn)) {
+          wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(inferredReturn));
+          isBorrowedSoaReceiver =
+              isBorrowedSoaReceiverType(bindingTypeText(inferredReturn));
+          typeName = unwrapImportedCollectionReceiverType(inferredReturn);
+        }
+      }
+    } else {
+      std::string collection;
+      if (getBuiltinCollectionName(receiver, collection)) {
+        typeName = collection;
+      }
+    }
+  }
+
+  out.wrappedBaseTypeName = wrappedReceiverTypeName;
+  out.isBorrowed = isBorrowedSoaReceiver;
+  out.collectionBaseName = typeName;
+  return !out.collectionBaseName.empty();
+}
+
+}  // namespace
+
+bool resolveMethodCallTemplateTarget(const Expr &expr,
+                                     const LocalTypeMap &locals,
+                                     const Context &ctx,
+                                     std::string &pathOut) {
+  pathOut.clear();
+  if (!expr.isMethodCall || expr.args.empty() || expr.name.empty()) {
+    return false;
+  }
+  const std::string rawMethodName = expr.name;
+  std::string methodName = rawMethodName;
+  if (!methodName.empty() && methodName.front() == '/') {
+    methodName.erase(methodName.begin());
+  }
+  auto normalizeCollectionMethodName = [](const std::string &receiverTypeName,
+                                          std::string candidate) -> std::string {
+    if (receiverTypeName == "array" || receiverTypeName == "vector" ||
+        isTemplateMonomorphSoaReceiverType(receiverTypeName)) {
+      const std::string vectorPrefix = std::string("vector") + "/";
+      const std::string arrayPrefix = "array/";
+      if (candidate.rfind(vectorPrefix, 0) == 0) {
+        return candidate.substr(vectorPrefix.size());
+      }
+      if (candidate.rfind(arrayPrefix, 0) == 0) {
+        return candidate.substr(arrayPrefix.size());
+      }
+      if (isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
+        return std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(candidate));
+      }
+      std::string helperName;
+      if (stripTemplateMonomorphSoaHelperPrefix(candidate, helperName, false)) {
+        return helperName;
+      }
+    }
+    if (receiverTypeName == "map") {
+      return metadataBackedKeyValueHelperMethodName(candidate);
+    }
+    return candidate;
+  };
+  auto normalizeFileMethodName = [](std::string_view methodName) {
+    if (methodName == "readByte") {
+      return std::string("read_byte");
+    }
+    if (methodName == "writeLine") {
+      return std::string("write_line");
+    }
+    if (methodName == "writeByte") {
+      return std::string("write_byte");
+    }
+    if (methodName == "writeBytes") {
+      return std::string("write_bytes");
+    }
+    return std::string(methodName);
+  };
+  auto normalizeFileErrorMethodName = [](std::string_view methodName) {
+    if (methodName == "isEof") {
+      return std::string("is_eof");
+    }
+    return std::string(methodName);
   };
   auto selectStaticHelperOverloadPath = [&](const std::string &resolvedPath) -> std::string {
     auto familyIt = ctx.helperOverloads.find(resolvedPath);
@@ -400,81 +686,44 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
   }
   std::string typeName;
-  if (receiver.kind == Expr::Kind::Name) {
-    auto it = locals.find(receiver.name);
-    if (it != locals.end()) {
-      wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(it->second));
-      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(it->second));
-      typeName = unwrapImportedCollectionReceiverType(it->second);
-    }
-  } else if (receiver.kind == Expr::Kind::Literal) {
-    typeName = receiver.isUnsigned ? "u64" : (receiver.intWidth == 64 ? "i64" : "i32");
-  } else if (receiver.kind == Expr::Kind::BoolLiteral) {
-    typeName = "bool";
-  } else if (receiver.kind == Expr::Kind::FloatLiteral) {
-    typeName = receiver.floatWidth == 64 ? "f64" : "f32";
-  } else if (receiver.kind == Expr::Kind::StringLiteral) {
-    typeName = "string";
+  if (receiver.kind == Expr::Kind::Name || receiver.kind == Expr::Kind::Literal ||
+      receiver.kind == Expr::Kind::BoolLiteral || receiver.kind == Expr::Kind::FloatLiteral ||
+      receiver.kind == Expr::Kind::StringLiteral) {
+    // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): migrated onto
+    // resolveReceiverType for Name-kind and primitive-literal-kind receivers
+    // (F3-N1/N2, F3-L/B/Fl/S). Call-kind is migrated too, just onto the
+    // sibling producer below (see that branch's own comment for why).
+    CanonicalReceiverType canonical;
+    resolveReceiverType(receiver, locals, ctx, canonical);
+    wrappedReceiverTypeName = canonical.wrappedBaseTypeName;
+    isBorrowedSoaReceiver = canonical.isBorrowed;
+    typeName = canonical.collectionBaseName;
   } else if (receiver.kind == Expr::Kind::Call) {
-    BindingInfo receiverInfo;
-    if (inferBindingTypeForMonomorph(receiver, {}, locals, hasMathImport(ctx), const_cast<Context &>(ctx), receiverInfo)) {
-      wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(receiverInfo));
-      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(receiverInfo));
-      typeName = unwrapImportedCollectionReceiverType(receiverInfo);
+    // Step 1c (docs/ReceiverTargetResolutionConsolidation.md): migrated onto
+    // resolveReceiverTypeFromCallExprForTemplateMonomorph for Call-kind
+    // receivers (F3-C1/C2/C3b/c/d), replacing the old inline cascade. F3-C3a
+    // (the struct-constructor-call short circuit) is a resolution question,
+    // not an inference one, so it stays outside CanonicalReceiverType's
+    // scope and is handled here via the producer's
+    // structConstructorReceiverPathOut - the same "resolved" callee path
+    // the old inline cascade itself already special-cased, now handed back
+    // instead of re-resolved (re-resolving here would re-invoke the
+    // side-effecting inference helpers a second time and double their
+    // ...ForTesting counter effects).
+    CanonicalReceiverType canonical;
+    std::string structConstructorReceiverPath;
+    resolveReceiverTypeFromCallExprForTemplateMonomorph(
+        receiver, locals, const_cast<Context &>(ctx), canonical, structConstructorReceiverPath);
+    if (!structConstructorReceiverPath.empty()) {
+      // F3-C3a: bypass the rest of F3, F5, and the entire F6-F16 chain,
+      // exactly as the old inline cascade did.
+      pathOut = selectHelperOverloadPath(
+          expr, structConstructorReceiverPath + "/" + methodName, ctx);
+      return true;
     }
-    if (typeName.empty()) {
-      const std::string inferredTypeText = qualifyImportedCollectionTypeText(
-          inferExprTypeTextForTemplatedVectorFallback(
-              receiver, locals, receiver.namespacePrefix, ctx, hasMathImport(ctx)));
-      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(inferredTypeText);
-      typeName = unwrapCollectionReceiverEnvelope(inferredTypeText);
-    }
-    if (!receiver.isBinding) {
-      std::string resolved;
-      if (receiver.isMethodCall) {
-        if (!resolveMethodCallTemplateTarget(receiver, locals, ctx, resolved)) {
-          resolved.clear();
-        }
-      } else {
-        resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
-      }
-      auto defIt = ctx.sourceDefs.find(resolved);
-      if (defIt != ctx.sourceDefs.end()) {
-        if (isStructDefinition(defIt->second)) {
-          pathOut = selectHelperOverloadPath(expr, resolved + "/" + methodName, ctx);
-          return true;
-        }
-        for (const auto &transform : defIt->second.transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          const std::string &returnType = transform.templateArgs.front();
-          if (returnType == "auto") {
-            continue;
-          }
-          wrappedReceiverTypeName = qualifyImportedCollectionTypeText(returnType);
-          isBorrowedSoaReceiver = isBorrowedSoaReceiverType(returnType);
-          typeName = unwrapCollectionReceiverEnvelope(
-              qualifyImportedCollectionTypeText(returnType));
-          break;
-        }
-        if (typeName.empty()) {
-          BindingInfo inferredReturn;
-          if (inferDefinitionReturnBindingForTemplatedFallback(
-                  defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
-            wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(inferredReturn));
-            isBorrowedSoaReceiver =
-                isBorrowedSoaReceiverType(bindingTypeText(inferredReturn));
-            typeName = unwrapImportedCollectionReceiverType(inferredReturn);
-          }
-        }
-      } else {
-        std::string collection;
-        if (getBuiltinCollectionName(receiver, collection)) {
-          typeName = collection;
-        }
-      }
-    }
+    wrappedReceiverTypeName = canonical.wrappedBaseTypeName;
+    isBorrowedSoaReceiver = canonical.isBorrowed;
+    typeName = canonical.collectionBaseName;
   }
   if (resolveIndexedArgsPackMapMethodTarget()) {
     return true;
@@ -538,17 +787,84 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return slash == std::string::npos ? normalizedTypeName
                                       : normalizedTypeName.substr(slash + 1);
   }();
-  if ((typeName == "File" || normalizedReceiverLeafName == "File") &&
-      isFileMethodName(normalizedMethodName)) {
-    pathOut = preferredFileMethodTarget(normalizedMethodName);
-    return true;
+  // TODO-5294 Step 2, monomorphization stage: F7's File-family slice (per
+  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now
+  // delegates its family classification to the shared classifier instead of
+  // the inline (typeName == "File" || normalizedReceiverLeafName == "File")
+  // && isFileMethodName(normalizedMethodName) gate, per the Step 1b
+  // diff-audit harness this call site carried (proven zero-divergence,
+  // 2026-09-09 - the classifier's File family check already uses
+  // isFileHandleMethodName, the identical 11-name set as this file's own
+  // isFileMethodName lambda, verified name-for-name). Only the
+  // *classification* moved here - normalizedReceiverLeafName and
+  // normalizedMethodName still feed preferredFileMethodTarget exactly as
+  // before, so the resulting path construction is byte-identical to what F7
+  // always produced. By this point typeName has already gone through
+  // normalizeCollectionReceiverTypeName above (same as the F9/F11/F13
+  // slices' own note), so there is no template text left to parse - this
+  // feeds the classifier's isTemplateShaped/templateShapedBaseName inputs
+  // the already-known leaf name directly, the same "hand over the
+  // pre-parsed base" approach F9/F11/F13 all used.
+  {
+    ReceiverElementFamilyJointInput jointInput;
+    jointInput.unwrappedElementType = normalizedReceiverLeafName;
+    jointInput.rawElementBaseType = normalizedReceiverLeafName;
+    jointInput.isTemplateShaped = true;
+    jointInput.templateShapedBaseName = normalizedReceiverLeafName;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    // Soa/KeyValue predicates are unreachable here for a "File" leaf: the
+    // classifier's template-shape block checks VectorLike, then Soa, then
+    // Buffer, then KeyValue, then File in that fixed order - none of the
+    // earlier checks can match the literal base "File", so a null
+    // (never-matches) predicate cannot change this outcome.
+    ReceiverElementFamilyPredicates predicates{};
+    const ReceiverElementFamily family =
+        classifyReceiverElementFamilyJoint(jointInput, predicates).family;
+    if (family == ReceiverElementFamily::File) {
+      pathOut = preferredFileMethodTarget(normalizedMethodName);
+      return true;
+    }
   }
   if (isExplicitRemovedCollectionMethodAlias(typeName, rawMethodName)) {
     return false;
   }
-  if (isPrimitiveBindingTypeName(typeName)) {
-    pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
-    return true;
+  // TODO-5294 Step 2, monomorphization stage: F9's primitive slice (per
+  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now
+  // delegates its family classification to the shared classifier instead of
+  // the inline isPrimitiveBindingTypeName(typeName) gate, per the Step 1b
+  // diff-audit harness this call site carried (proven zero-divergence,
+  // 2026-09-09, including the String+Primitive-verdict equivalence claim
+  // verified against the corpus, not just asserted). Only the
+  // *classification* moved here - normalizeBindingTypeName(typeName) below
+  // still runs on the original typeName text (not on any classifier-derived
+  // value), so the resulting "/<baseType>/<method>" path construction is
+  // byte-identical to what F9 always produced.
+  {
+    ReceiverElementFamilyJointInput jointInput;
+    // F9 has no wrapped/unwrapped asymmetry to reproduce (typeName has
+    // already gone through normalizeCollectionReceiverTypeName above, and F9
+    // itself never re-derives a separate raw/wrapped variant), so both
+    // classifier inputs are the same text.
+    jointInput.unwrappedElementType = typeName;
+    jointInput.rawElementBaseType = typeName;
+    jointInput.isTemplateShaped = false;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    // Soa/KeyValue predicates are unreachable here: isTemplateShaped is
+    // false, so the classifier's template-shape-gated block (the only place
+    // either predicate is consulted) never runs.
+    ReceiverElementFamilyPredicates predicates{};
+    const ReceiverElementFamily family =
+        classifyReceiverElementFamilyJoint(jointInput, predicates).family;
+    // Per the harness's proven finding: both Primitive and String verdicts
+    // dispatch as primitive here, matching production's
+    // isPrimitiveBindingTypeName folding "string" into the same bucket as
+    // i32/bool/etc (both go through the identical "/<typeName>/<method>"
+    // path formula).
+    if (family == ReceiverElementFamily::Primitive ||
+        family == ReceiverElementFamily::String) {
+      pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
+      return true;
+    }
   }
   if (normalizedReceiverLeafName == "args") {
     const std::string argsPackMethodName =
@@ -562,11 +878,48 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   const std::string fileErrorMethodName =
       normalizeFileErrorMethodName(normalizedMethodName);
-  if (normalizedReceiverLeafName == "FileError" &&
-      (fileErrorMethodName == "why" || fileErrorMethodName == "is_eof" ||
-       fileErrorMethodName == "status" || fileErrorMethodName == "result")) {
-    pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + fileErrorMethodName);
-    return true;
+  // TODO-5294 Step 2, monomorphization stage: F11's FileError sub-case (per
+  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now
+  // delegates its family/method-name-gate decision to the shared classifier
+  // instead of its own inline 4-name check, per the Step 1b diff-audit
+  // harness this call site carried (proven zero-divergence, 2026-09-09).
+  // Only the *classification* moved here - the resolved-path construction,
+  // isBuiltinOut default, and return-value behavior below are byte-identical
+  // to what F11 always did. Scoped deliberately narrow, matching the
+  // harness's own scope: NOT F1's separate literal-Name-spelled-"FileError"
+  // receiver shape a few dozen lines above (a different guard entirely, not
+  // a type classification at all), and NOT the ImageError/ContainerError/
+  // GfxError sub-cases immediately below (same shape, but the classifier has
+  // no family for those - left as inline checks, unmigrated).
+  {
+    ReceiverElementFamilyJointInput jointInput;
+    // Production's guard compares the leaf-extracted type name (post
+    // slash-split), not the raw typeName text, so that is what is fed to the
+    // classifier here too - there is no separate wrapped/unwrapped text at
+    // this point in this function (typeName has already gone through
+    // normalizeCollectionReceiverTypeName above), so both classifier inputs
+    // are the same leaf text.
+    jointInput.unwrappedElementType = normalizedReceiverLeafName;
+    jointInput.rawElementBaseType = normalizedReceiverLeafName;
+    jointInput.isTemplateShaped = false;
+    // Production compares fileErrorMethodName (already normalized via
+    // normalizeFileErrorMethodName's isEof->is_eof mapping), so that
+    // already-normalized value - not the raw normalizedMethodName - is what
+    // the classifier's own method-name gate sees, mirroring how the
+    // already-migrated semantics-stage call sites pass their own
+    // already-normalized method name in.
+    jointInput.normalizedMethodName = fileErrorMethodName;
+    // Soa/KeyValue predicates are unreachable here: the classifier's
+    // FileError check (R2) runs before either, so a null (never-matches)
+    // predicate cannot change this outcome for a "FileError" leaf.
+    ReceiverElementFamilyPredicates predicates{};
+    const ReceiverElementFamily family =
+        classifyReceiverElementFamilyJoint(jointInput, predicates).family;
+    if (normalizedReceiverLeafName == "FileError" &&
+        family == ReceiverElementFamily::FileError) {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + fileErrorMethodName);
+      return true;
+    }
   }
   if (normalizedReceiverLeafName == "ImageError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
@@ -601,7 +954,53 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = selectStaticHelperOverloadPath("/std/gfx/GfxError/" + normalizedMethodName);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  // TODO-5294 Step 2, monomorphization stage: F12's generic-SOA-receiver
+  // method-name-paired dispatch (count/count_ref, toAos/toAosRef, get/get_ref,
+  // push/reserve, ref/ref_ref) now delegates its family classification to the
+  // shared classifier instead of the inline
+  // isTemplateMonomorphSoaReceiverType(normalizedTypeName) gate, per the Step
+  // 1b diff-audit harness this call site carried (proven zero-divergence,
+  // 2026-09-09). Unlike F9/F11's families, Soa family membership itself
+  // carries no method-name gating in the classifier (confirmed by direct
+  // reading of classifyReceiverElementFamilyJoint: the Soa check inside the
+  // template-shape block returns unconditionally once the predicate matches,
+  // no isBufferAccessorMethodName/isFileHandleMethodName-equivalent gate the
+  // way Buffer/File have) - so one classification call, made once before all
+  // five branches (which share the identical family gate), covers all of F12
+  // rather than needing a separate call per method-name pair. By this point
+  // typeName has already gone through normalizeCollectionReceiverTypeName
+  // above (same as the F9/F11/F13 slices' own note), so there is no template
+  // text left to parse - this feeds the classifier's isTemplateShaped/
+  // templateShapedBaseName inputs the already-known base name directly
+  // (isTemplateShaped=true, templateShapedBaseName=normalizedTypeName), the
+  // same "hand over the pre-parsed base" approach F13/F13b/F13c's slice used,
+  // including its identical isInternalSoaCollectionTypeName predicate wrapper
+  // (a bare `== templateMonomorphSoaReceiverTypeName()` string comparison via
+  // isTemplateMonomorphSoaReceiverType, not a real struct-metadata lookup for
+  // this stage). Only the *classification* moved here - the five branches'
+  // downstream helper-name/path-construction/return behavior below is
+  // byte-identical to what F12 always produced.
+  const bool isGenericSoaReceiver = [&] {
+    ReceiverElementFamilyJointInput jointInput;
+    jointInput.unwrappedElementType = normalizedTypeName;
+    jointInput.rawElementBaseType = normalizedTypeName;
+    jointInput.isTemplateShaped = true;
+    jointInput.templateShapedBaseName = normalizedTypeName;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    ReceiverElementFamilyPredicates predicates{};
+    predicates.isInternalSoaCollectionTypeName =
+        [](std::string_view candidate) {
+          return isTemplateMonomorphSoaReceiverType(std::string(candidate));
+        };
+    // KeyValue predicate is unreachable here: the classifier's template-
+    // shape block checks VectorLike then Soa before KeyValue, and
+    // isTemplateMonomorphSoaReceiverType is a fixed-string match that, when
+    // true, already committed to Soa above KeyValue's own check - a null
+    // (never-matches) KeyValue predicate cannot change this outcome.
+    return classifyReceiverElementFamilyJoint(jointInput, predicates).family ==
+           ReceiverElementFamily::Soa;
+  }();
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
@@ -610,7 +1009,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         expr, preferredSamePathSoaCountMethodTarget(helperName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == templateMonomorphSoaToAosHelperName() ||
        normalizedMethodName == templateMonomorphSoaToAosHelperName(true))) {
     const std::string helperName =
@@ -620,7 +1019,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         expr, preferredSamePathSoaToAosMethodTarget(helperName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
@@ -629,13 +1028,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         expr, preferredSamePathSoaGetMethodTarget(helperName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
     pathOut = selectHelperOverloadPath(
         expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);
     return true;
   }
-  if (isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  if (isGenericSoaReceiver &&
       (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
@@ -645,9 +1044,49 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+  // TODO-5294 Step 2, monomorphization stage: F13/F13b/F13c's collection-
+  // family membership test (per
+  // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now
+  // delegates its family classification to the shared classifier instead of
+  // the inline literal-set check ("array"/"vector"/"map" OR'd with
+  // isTemplateMonomorphSoaReceiverType(typeName)), per the Step 1b diff-audit
+  // harness this call site carried (proven zero-divergence, 2026-09-09). By
+  // this point in the cascade typeName has already gone through
+  // normalizeCollectionReceiverTypeName above (same as the F9/F11 slices'
+  // own note), so it is already reduced to a bare base name with no
+  // generic-argument text left to parse; there is nothing for the
+  // classifier's own splitTemplateTypeName-shaped isTemplateShaped/
+  // templateShapedBaseName inputs to derive from, so this call feeds them
+  // the same already-known base name directly (isTemplateShaped=true,
+  // templateShapedBaseName=typeName), the same "we already have the parsed
+  // base, so hand it over pre-parsed" approach the F9 slice used for its own
+  // isTemplateShaped=false case. The classifier's KeyValue predicate is
+  // supplied as a literal `== "map"` match, deliberately mirroring this
+  // exact production guard's own literal check (not any real struct-
+  // metadata-backed key-value surface predicate). Only the *classification*
+  // moved here - the downstream dispatch/import-alias-substitution/string-
+  // fallback/rejection behavior below is byte-identical to what F13/F13b/F13c
+  // always did.
+  const ReceiverElementFamily collectionFamilyVerdict = [&] {
+    ReceiverElementFamilyJointInput jointInput;
+    jointInput.unwrappedElementType = typeName;
+    jointInput.rawElementBaseType = typeName;
+    jointInput.isTemplateShaped = true;
+    jointInput.templateShapedBaseName = typeName;
+    jointInput.normalizedMethodName = normalizedMethodName;
+    ReceiverElementFamilyPredicates predicates{};
+    predicates.isInternalSoaCollectionTypeName =
+        [](std::string_view candidate) {
+          return isTemplateMonomorphSoaReceiverType(std::string(candidate));
+        };
+    predicates.isKeyValueSurfaceTypeName =
+        [](std::string_view candidate) { return candidate == "map"; };
+    return classifyReceiverElementFamilyJoint(jointInput, predicates).family;
+  }();
   const bool isCollectionFamilyReceiver =
-      typeName == "array" || typeName == "vector" || typeName == "map" ||
-      isTemplateMonomorphSoaReceiverType(typeName);
+      collectionFamilyVerdict == ReceiverElementFamily::VectorLike ||
+      collectionFamilyVerdict == ReceiverElementFamily::Soa ||
+      collectionFamilyVerdict == ReceiverElementFamily::KeyValue;
   if (ctx.sourceDefs.count(resolvedType) == 0 && !isCollectionFamilyReceiver) {
     if (const std::string *importAlias =
             lookupScopedImportAliasForNamespace(normalizedTypeName, receiver.namespacePrefix, ctx);
@@ -668,40 +1107,27 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   }
-  const bool isConcreteExperimentalSoaReceiver =
-      isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
-      isExperimentalSoaVectorSpecializedTypePath(resolvedType);
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaCountMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaGetMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaRefMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (isConcreteExperimentalSoaReceiver &&
-      (normalizedMethodName == templateMonomorphSoaToAosHelperName() ||
-       normalizedMethodName == templateMonomorphSoaToAosHelperName(true))) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaToAosMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
+  // TODO-5294: F14 (the isConcreteExperimentalSoaReceiver dispatch that used
+  // to live here - isTemplateMonomorphSoaReceiverType(normalizedTypeName) &&
+  // isExperimentalSoaVectorSpecializedTypePath(resolvedType), gating the same
+  // six method-name pairs as F12 above: count/count_ref, get/get_ref,
+  // push/reserve, ref/ref_ref, toAos/toAosRef) was deleted as proven-
+  // unreachable dead code (see
+  // docs/ReceiverTargetResolutionConsolidation.md, Step 0's "F12/F14 dead
+  // code" finding, re-confirmed against this file's current (post-F12-
+  // migration) code before deletion). F12's isGenericSoaReceiver gate a few
+  // dozen lines above is exactly
+  // isTemplateMonomorphSoaReceiverType(normalizedTypeName) (confirmed by
+  // direct classifier trace: that fixed internal SOA name matches neither
+  // "string" nor "FileError" nor vector/array, so the classifier's
+  // isInternalSoaCollectionTypeName predicate is the first and only thing
+  // that can match it, unconditionally landing on Soa) - both normalizedType-
+  // Name and normalizedMethodName are unchanged between the two call sites,
+  // so whenever F14's first conjunct held, F12's gate already held too, and
+  // for any of the six shared method-name pairs F12 had already returned
+  // long before reaching here. F14's second conjunct
+  // (isExperimentalSoaVectorSpecializedTypePath(resolvedType)) could
+  // therefore never matter: it only narrows an already-unreachable branch.
   const std::string samePathMethodTarget = resolvedType + "/" + normalizedMethodName;
   const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
   if (!receiverHelperLeaf.empty()) {

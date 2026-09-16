@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/CanonicalReceiverType.h"
 
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSharedTypes.h"
@@ -48,9 +49,44 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const IsMethodCallClassifierFn &isEntryArgsName,
                                    const Expr *&receiverOut,
                                    std::string &errorOut);
-bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
-                                            std::string &typeNameOut,
-                                            std::string &resolvedTypePathOut);
+// Step 1c/Step 2 (docs/ReceiverTargetResolutionConsolidation.md): the
+// consolidated LocalInfo->type-family cascade for RT2 in the design doc's
+// Step 0 Rule Table - the sole production implementation of this cascade
+// (the old resolveMethodReceiverTypeFromLocalInfo, with its separate
+// (typeNameOut, resolvedTypePathOut) output-parameter shape, has been
+// removed; its fields now live as CanonicalReceiverType's
+// collectionBaseName/resolvedTypePath). See CanonicalReceiverType.h for why
+// `family`/template-shape/`isBorrowed` are never filled by this function.
+bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out);
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): the RT3b
+// (Call-kind receiver) sibling of resolveReceiverType above. Now the sole
+// production implementation of RT3b's Call-kind classification -
+// resolveMethodReceiverTarget's own Call-kind branch below calls this
+// function directly and copies its CanonicalReceiverType output into its
+// legacy (typeNameOut, resolvedTypePathOut) out-parameters. A prior round
+// proved zero-divergence against the old inline cascade this replaced via
+// an observational diff-audit harness, since removed. Always returns true,
+// matching RT3b's own "never fails" behavior for Call-kind receivers.
+bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
+                                     const LocalMap &localsIn,
+                                     const InferReceiverExprKindFn &inferExprKind,
+                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     const std::unordered_set<std::string> &structNames,
+                                     const SemanticProgram *semanticProgram,
+                                     const SemanticProductIndex *semanticIndex,
+                                     CanonicalReceiverType &out);
+// Step 1c (docs/ReceiverTargetResolutionConsolidation.md): resolveReceiverType
+// for RT3c, the final fallback of resolveMethodReceiverTarget below (neither
+// Name- nor Call-kind receiver). Independently reimplements RT3c's one-line
+// body (typeNameForValueKind(inferExprKind(receiverExpr, localsIn))), writing
+// only CanonicalReceiverType::collectionBaseName - RT3c's own narrowest-filled
+// shape (see the Step 1c Scoping round's RT3/G7 note). Always returns true,
+// matching RT3c's own "never fails" behavior.
+bool resolveReceiverTypeFromFallbackExpr(const Expr &receiverExpr,
+                                         const LocalMap &localsIn,
+                                         const InferReceiverExprKindFn &inferExprKind,
+                                         CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
                                                       const ResolveReceiverExprPathFn &resolveExprPath = {});

@@ -70,6 +70,40 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
+Note (2026-09-11): TODO-5294 (receiver-target resolution consolidation)
+has resolved - see `docs/todo_finished.md`. Both consolidation tracks
+this task scoped - `classifyReceiverElementFamilyJoint` (receiver-family
+classification: 2 semantics call sites + 5 monomorphization branches
+migrated, F14 deleted as dead code, every other branch in
+monomorphization's Row F and `ir_lowerer`'s full Row G/RT/CH cascade
+individually assessed and rejected for a documented reason) and
+`resolveReceiverType`/`CanonicalReceiverType` (receiver-type inference:
+`ir_lowerer`'s RT2/RT3b/RT3c and monomorphization's entire F3 cascade
+migrated end-to-end) - are migrated everywhere a genuine fit was found,
+per `docs/ReceiverTargetResolutionConsolidation.md`'s Closing Summary
+section. **The revisit list below is now actionable** - a real,
+authoritative classifier and receiver-type-inference module exist for
+any of these to build on, where before they were explicitly deferred
+because the area was fragile:
+
+- TODO-5286 (closed latent-only: `unwrapCollectionReceiverEnvelope`'s
+  missing `args<T>` case) - revisit: this fix should be trivial once a
+  single authoritative receiver-family classifier exists, since it
+  collapses the current need for a per-site latent-bug judgment call.
+- TODO-5292 (closed latent-only: the same discriminator gap for
+  Call-kind receivers) - revisit: same reasoning as TODO-5286: a shared
+  classifier removes the "is this reachable today" judgment call this
+  closure had to make.
+- TODO-5293 (open follow-up: merge `getBuiltinArrayAccessName`'s two
+  stage implementations, found genuinely divergent) - revisit: Step 0's
+  rule table (see the doc's new "Row category D") should make the
+  divergent-vs-latent-gap branches provable instead of judgment calls,
+  which is exactly what TODO-5293's own stop_rule is waiting on.
+- TODO-5292's own deferred part (b) (the `CollectionPairTypeInfo`/
+  `ArrayVectorAccessTargetInfo` struct merge, 70+ call sites) - revisit:
+  explicitly deferred pending this consolidation; do not attempt before
+  Step 2 reaches `ir_lowerer`.
+
 Note (2026-09-02): The full method-target-collection-resolvers-retirement
 track (TODO-5280 through TODO-5284) has resolved - see
 `docs/todo_finished.md`. `MethodTargetCollectionResolvers` no longer
@@ -510,12 +544,6 @@ Note (2026-09-03): TODO-4724 has since closed - see
 90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
 91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
 92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
-93. TODO-5286: unwrapCollectionReceiverEnvelope has no args<T> case, unlike Reference<T>/Pointer<T>
-94. TODO-5287: Unify gating and emission receiver-type-info structs in the array/vector/pack indexed-access cascade
-95. TODO-5288: Consolidate the semantics-stage and ir_lowerer-stage builtin-array-access/key-value-helper-name classifiers
-96. TODO-5289: Name and document the args-pack-element storage-layout invariants LocalInfo carries implicitly
-97. TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
-98. TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
 
 Note (2026-08-28): item 77 (TODO-5256) has resolved - see
 `docs/todo_finished.md`.
@@ -527,290 +555,50 @@ Note (2026-09-02): items 88-92 (TODO-5280 through TODO-5284) have
 resolved - see `docs/todo_finished.md`.
 Note (2026-08-30): item 75 (TODO-4743) has resolved - see
 `docs/todo_finished.md`.
+Note (2026-09-06): item 93 (TODO-5286) has resolved (closed as
+latent-only debt) - see `docs/todo_finished.md`.
+Note (2026-09-06): item 94 (TODO-5287) has resolved (audited and
+documented; follow-up filed as TODO-5292, which has itself since
+resolved 2026-09-07 as latent-only debt - see `docs/todo_finished.md`).
+Note (2026-09-06): item 95 (TODO-5288) has resolved (ir_lowerer-stage
+duplication merged to one implementation; cross-stage
+getBuiltinArrayAccessName merge deferred as item 100/TODO-5293) - see
+`docs/todo_finished.md`.
+Note (2026-09-07): item 96 (TODO-5289) has resolved (named/documented
+the two args-pack-element storage-layout predicates and switched their
+fix sites over) - see `docs/todo_finished.md`.
+Note (2026-09-07): item 97 (TODO-5290) has resolved (reindented
+IrLowererLowerStatementsExpr.h to match true brace nesting via a
+custom bracket-depth-tracking script, plus 9 `// end if (...)` banner
+comments; whitespace/comment-only, full 3-suite battery byte-identical)
+- see `docs/todo_finished.md`.
+Note (2026-09-07): item 98 (TODO-5291) has resolved - TODO-5289's own
+new test file already contained the exact direct unit tests this task
+asked for (isMapArgsPackElement map-vs-Entry discrimination,
+isSingleSlotPointerStyleKeyValueStorage for elemSlotCount 1/2/3);
+added doc comments pinning the historical bug and verified via a
+scratch worktree at pre-fix commit e4cd1c8 that both predicates did
+not exist there and that commit's literal `elemSlotCount > 0` formula
+misclassifies elemSlotCount==1 - see `docs/todo_finished.md`.
+Note (2026-09-07): item 99 (TODO-5292) has resolved (closed as
+latent-only debt - no reachable surface syntax found that presents a
+Call-kind nested args-pack-of-map receiver to the affected resolvers)
+- see `docs/todo_finished.md`.
+Note (2026-09-15): item 100 (TODO-5293) has resolved - both stages'
+`getBuiltinArrayAccessName` migrated onto the shared
+`primec::BuiltinArrayAccessNameClassifier` module as their sole
+production implementation - see
+`docs/ReceiverTargetResolutionConsolidation.md`'s Closing Summary section
+and `docs/todo_finished.md`.
+Note (2026-09-11): item 101 (TODO-5294) has resolved - both
+consolidation tracks (`classifyReceiverElementFamilyJoint` and
+`resolveReceiverType`/`CanonicalReceiverType`) migrated everywhere a
+genuine fit was found, cumulative 3-suite battery clean against this
+project's recorded baseline - see
+`docs/ReceiverTargetResolutionConsolidation.md`'s Closing Summary
+section and `docs/todo_finished.md`.
 
 ### Task Blocks
-
-- [ ] TODO-5286: unwrapCollectionReceiverEnvelope has no args<T> case, unlike Reference<T>/Pointer<T>
-  - owner: ai
-  - created_at: 2026-09-04
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: found while tracing TODO-4760 for
-    `docs/ReceiverTargetResolutionConsolidation.md`'s Step 0.
-    `unwrapCollectionReceiverEnvelope`
-    (`src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp:259-316`)
-    unwraps a `Reference<T>`/`Pointer<T>` envelope down to `T`'s own
-    family when `T` is a recognized collection receiver type
-    (`array`/`vector`/soa/`map`/`string`, per `isCollectionReceiverTypeName`),
-    but has no equivalent case for `args<T>` - an `args<map<i32, i32>>`
-    binding unwraps to the literal, unrecognized base name `"args"`
-    instead of recursing into `T`. This silently defeats every
-    `typeName == "map"` (or vector/soa/string)-gated branch in
-    `resolveMethodCallTemplateTarget`
-    (`TemplateMonomorphMethodTargets.cpp`) for any args-pack-of-collection
-    receiver reaching that code path. A minimal fix (treat `"args"`
-    identically to `"Reference"`/`"Pointer"` at both the leading check
-    (line ~261) and the loop's base check (line ~290)) was written, built,
-    and confirmed NOT to change TODO-4760's own repro's compile output or
-    `--dump-stage semantic-product` resolution - that bug is decided by
-    the semantics stage before monomorphization runs, so this is a real
-    but independent defect, not TODO-4760's cause. Reverted (not
-    committed) pending its own verification per this task's acceptance
-    criteria; not yet known whether any current call site actually
-    reaches `resolveMethodCallTemplateTarget` with an `args<collection>`
-    receiver on a live code path (if none do today, this is latent debt;
-    if one does, it is a live bug independent of TODO-4760).
-  - implementation_notes: minimal fix is adding `normalizedType == "args"`
-    to the leading two-arg-form check and `base != "args"` to the loop's
-    base-check condition in `unwrapCollectionReceiverEnvelope`, mirroring
-    the existing `Reference`/`Pointer` handling exactly (same function,
-    same file). Before landing, find at least one live call site/repro
-    where an `args<T>` (T = vector/array/soa/map/string) receiver reaches
-    `resolveMethodCallTemplateTarget` and observably changes behavior -
-    the TODO-4760 repro does not exercise this path, so a different
-    repro is needed to prove the fix does anything. Verify against the
-    full 3-suite battery (`PrimeStruct_semantics_tests`,
-    `PrimeStruct_backend_ir_tests`, `PrimeStruct_compile_run_tests`)
-    before committing - this exact file/neighborhood already produced a
-    67-test regression from a narrower change this session (see
-    TODO-4753's notes).
-  - acceptance:
-    - a repro demonstrating `args<T>` (T a recognized collection family)
-      reaching `resolveMethodCallTemplateTarget` with wrong behavior
-      today, fixed by this change
-    - full 3-suite battery unchanged except the fix's own intended delta
-  - stop_rule: land the fix with a pinning test once a live-impact repro
-    is found, or close as latent-only debt (no reachable call site) if a
-    thorough search finds none within one focused session.
-
-- [ ] TODO-5287: Unify gating and emission receiver-type-info structs in the array/vector/pack indexed-access cascade
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: found while fixing TODO-4760(a). The expression-emission
-    cascade's gating check in `IrLowererLowerStatementsExpr.h`
-    (`isKeyValueAccessTarget`) calls `resolveCollectionPairTypeInfo`,
-    which returns the leaner `CollectionPairTypeInfo`
-    (`IrLowererCallHelperTypes.h:67-73` -
-    `isKeyValueTarget`/`keyValueKeyKind`/`keyValueValueKind`/
-    `isWrappedKeyValueTarget`/`structTypeName`) - not enough fields to
-    distinguish a genuine map receiver from an args-pack-of-maps
-    element. A few calls later, the emission code in
-    `IrLowererIndexedAccessEmit.cpp` calls
-    `resolveArrayVectorAccessTargetInfo`, which returns the richer
-    `ArrayVectorAccessTargetInfo` (`IrLowererCallHelperTypes.h:75+` -
-    adds `isArgsPackTarget`/`elemKind`/`isVectorTarget`/`isSoaVector`)
-    which CAN make that distinction. The two calls read overlapping but
-    different-fidelity views of the same receiver expression at two
-    points in one dispatch path - when they disagree about what the
-    receiver is, gating can send a request down the wrong branch before
-    emission ever gets a chance to notice. TODO-4760(a)'s actual bug was
-    exactly this: gating's leaner struct couldn't tell map-pack-element
-    from entry-pack-element, so it deferred both to the wrong path.
-  - implementation_notes: audit every gating check upstream in this
-    cascade that calls `resolveCollectionPairTypeInfo` (or otherwise
-    inspects a receiver via a leaner struct) while a corresponding
-    emission call downstream in the same code path uses
-    `resolveArrayVectorAccessTargetInfo` or another richer resolver on
-    the same receiver expression. For each pair found, either (a) have
-    gating call the richer resolver directly (paying its cost once,
-    reusing the result for emission too, if plumbing allows), or (b) if
-    a leaner/cheaper check is intentional for gating, add an explicit
-    comment at both call sites cross-referencing the other and stating
-    which fields the lean struct is known NOT to distinguish, so a
-    future reader doesn't assume parity. Given `CollectionPairTypeInfo`
-    and `ArrayVectorAccessTargetInfo` are computed from overlapping
-    inputs, check whether `CollectionPairTypeInfo` could simply become a
-    view/subset of `ArrayVectorAccessTargetInfo` instead of two
-    independently-computed structs.
-  - acceptance: every gating/emission struct-fidelity mismatch in this
-    cascade is either resolved (gating upgraded to the richer struct) or
-    explicitly documented as intentional with the specific field gap
-    named; full 3-suite battery unchanged.
-  - stop_rule: this is an audit-and-document task first, a refactor
-    second - if unifying the structs at scale looks likely to touch the
-    70+ call sites this area already has a documented history of
-    breaking (see TODO-4760's own notes), stop after documenting the
-    gaps found and file any concrete unification as its own follow-up
-    TODO rather than attempting it in the same pass.
-
-- [ ] TODO-5288: Consolidate the semantics-stage and ir_lowerer-stage builtin-array-access/key-value-helper-name classifiers
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: TODO-4760(a)'s first landed fix (commit `5468344`) was adding
-    a slash-guard to ir_lowerer's `resolvesKeyValueHelperSurfacePath`
-    (`IrLowererBuiltinNameHelpers.cpp:35-49`) to match the guard its
-    semantics-stage twin, `resolveKeyValueHelperMemberNameLocal`
-    (`SemanticsBuiltinPathHelpers.cpp:187-215`), already had. These two
-    functions - and their siblings `getBuiltinArrayAccessName`
-    (`SemanticsBuiltinPathHelpers.cpp:1186` vs
-    `IrLowererBuiltinNameHelpers.cpp:485-608`) - are independently
-    written, semantically-equivalent-in-intent implementations that
-    silently drifted apart (one had the slash-guard, the other didn't;
-    finding this took a full investigation round). There is also a
-    THIRD, textually-identical-but-independent copy of
-    `resolvesKeyValueHelperSurfacePath` in `IrLowererHelpers.cpp:76-90`
-    (separate anonymous-namespace symbol, not the same function as the
-    one in `IrLowererBuiltinNameHelpers.cpp` despite matching source) -
-    meaning the same guard now needs to be checked/applied in three
-    places, not two, and the fix that landed this session only touched
-    one of them.
-  - implementation_notes: this is precisely the class of duplication
-    `docs/CompatPathResolutionConsolidation.md` was written to solve for
-    "spelling disposition" - the analogous move here is extracting a
-    single shared classifier (name-set + guard logic) that both stages
-    call, rather than maintaining parallel copies. Start by confirming
-    whether `IrLowererHelpers.cpp:76-90`'s copy needs the same
-    slash-guard TODO-4760 added to `IrLowererBuiltinNameHelpers.cpp`'s
-    copy (check its call sites for the same bare-name-over-match
-    exposure); a passing test suite today doesn't prove it's safe, only
-    that no currently-tested call site hits it. Then evaluate whether
-    `getBuiltinArrayAccessName`'s two independent implementations can be
-    merged behind one shared function taking a stage-appropriate
-    lookup callback, following this document's classifier-extraction
-    pattern (see `ReceiverElementFamilyClassifier` for a prior,
-    similarly-scoped but not-yet-wired-in extraction).
-  - acceptance: at most one implementation of each of
-    `resolvesKeyValueHelperSurfacePath`-equivalent and
-    `getBuiltinArrayAccessName` logic remains (shared between stages, or
-    the duplication is proven necessary and documented why); full
-    3-suite battery unchanged.
-  - stop_rule: given this exact neighborhood's demonstrated fragility
-    (46-test and 67-test near-regressions already logged against
-    changes here this session and TODO-4753's), require a fresh,
-    name-level-diffed 3-suite baseline immediately before AND after any
-    change, never trust an assumed baseline from an earlier session.
-
-- [ ] TODO-5289: Name and document the args-pack-element storage-layout invariants LocalInfo carries implicitly
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: TODO-4760(a)'s fix depended on two facts that exist nowhere
-    in the codebase except as tribal knowledge now recorded in a code
-    comment and this session's `docs/todo_finished.md` entry: (1) a
-    `LocalInfo` for an `args<map<K,V>>` pack element has an EMPTY
-    `structTypeName`, while one for `args<Entry<K,V>>` (the map
-    constructor's own internal pack) has a POPULATED
-    `Entry__t...`-rooted `structTypeName` - despite both being
-    key-value-shaped args-pack elements per `hasKeyValueKinds`; (2) a
-    key-value args-pack element with `elemSlotCount == 1` is stored as a
-    single heap pointer (same convention as `map<K,V>` bindings
-    elsewhere), while `elemSlotCount > 1` means an inline multi-slot
-    struct needing an address-only copy. Neither invariant is asserted,
-    named, or discoverable without tracing - the only way this session
-    found them was via `getenv`-gated fprintf tracing against a live
-    compile.
-  - implementation_notes: add two small, named, unit-testable predicates
-    to `IrLowererSharedTypes.h` (alongside the existing
-    `hasKeyValueKinds`) - e.g.
-    `bool isMapArgsPackElement(const LocalInfo&)` (wraps the
-    `hasKeyValueKinds(...) && structTypeName.empty()` check) and
-    `bool isSingleSlotPointerStyleKeyValueStorage(const LocalInfo&)` or
-    similar for the `elemSlotCount` convention - each with a doc comment
-    stating the invariant plainly (what produces an empty vs populated
-    `structTypeName`; where the `elemSlotCount == 1` pointer convention
-    is also relied on elsewhere, e.g.
-    `IrLowererLowerStatementsBindings.h`'s `hasKeyValueKinds` branch).
-    Replace the ad-hoc inline checks this session's fix added in
-    `IrLowererLowerStatementsExpr.h` and `IrLowererIndexedAccessEmit.cpp`
-    with calls to these named predicates. Search for other places in
-    `ir_lowerer` that inspect `structTypeName` emptiness or
-    `elemSlotCount` thresholds ad hoc and may be relying on the same
-    invariants without naming them.
-  - acceptance: the two invariants have named, documented,
-    unit-testable predicates; this session's fix sites use them instead
-    of inline checks; full 3-suite battery unchanged.
-  - stop_rule: pure naming/documentation extraction, zero behavior
-    change - if any call site's behavior would change by switching to
-    the named predicate, treat that as a real divergence to investigate
-    separately rather than forcing the extraction through.
-
-- [ ] TODO-5290: Reformat IrLowererLowerStatementsExpr.h and add a true-brace-nesting comment banner
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Maintainability / tech debt
-  - parallel_track: receiver-target-resolution
-  - depends_on: (none)
-  - scope: `IrLowererLowerStatementsExpr.h` is an implementation-in-header
-    file `#include`d inside function bodies at multiple points across
-    the codebase (not a normal header). Its indentation mixes tabs and
-    spaces inconsistently and does NOT reliably reflect true C++ brace
-    nesting - confirmed twice this session via `awk`-based brace-depth
-    counting after visual indentation gave a wrong read of which `if`
-    block a given line actually lived inside, costing at least one full
-    investigation round during TODO-4760(a)'s fix.
-  - implementation_notes: run this file (and its sibling
-    implementation-in-header files, if any share the same authoring
-    history) through the project's existing `clang-format` config to
-    normalize indentation to match real brace nesting; if the file's
-    unusual `#include`-inside-a-function-body structure makes a
-    project-wide `clang-format` config unsuitable as-is, a
-    file-scoped `.clang-format` override or a one-off manual
-    reformatting pass is acceptable. Where reformatting alone isn't
-    enough to make nesting legible (e.g. very long cascades), add
-    brief `// end if (<condition>)`-style banner comments at the closing
-    braces of the longest/most easily-confused blocks, verified against
-    `awk`-counted brace depth, not by eye.
-  - acceptance: reading the file's indentation alone (no `awk` needed)
-    correctly identifies which conditional block any given line is
-    nested inside; no behavior change (whitespace/comment-only diff);
-    full 3-suite battery unchanged (compiles identically).
-  - stop_rule: whitespace/comment-only change - if `clang-format`
-    wants to make any non-whitespace change here, stop and use a
-    narrower/manual pass instead rather than risk a behavior change
-    hiding inside a "just formatting" commit.
-
-- [ ] TODO-5291: Add direct unit tests pinning the map-vs-entry args-pack-element receiver discriminator
-  - owner: ai
-  - created_at: 2026-09-06
-  - phase: Receiver-target resolution consolidation
-  - parallel_track: receiver-target-resolution
-  - depends_on: TODO-5289 (names the predicates this task should test
-    directly; can proceed against the inline checks if TODO-5289 hasn't
-    landed yet, then be updated to call the named predicates once it
-    has)
-  - scope: TODO-4760(a) had no unit-level regression net at the exact
-    seam it broke - `resolveArrayVectorAccessTargetInfo`'s
-    map-vs-entry-args-pack-element discrimination, and
-    `emitArrayVectorIndexedAccess`'s `elemSlotCount`-based
-    load-vs-copy decision. Every verification pass this session had to
-    run the full, slow 3-suite battery (`PrimeStruct_compile_run_tests`
-    alone takes minutes) to learn whether a change broke this area,
-    which is exactly why two earlier fix attempts this session looked
-    like false alarms (a 46-test "regression" and a 26-second "hang")
-    before being properly re-diagnosed - a fast, targeted unit test at
-    this seam would have given a much quicker, clearer signal each
-    round.
-  - implementation_notes: add unit tests (likely alongside
-    `tests/unit/semantics/test_semantics_receiver_element_family_classifier.cpp`'s
-    sibling location for `ir_lowerer`, or a new
-    `tests/unit/ir_pipeline/...` file) that directly construct a
-    `LocalInfo` for (a) an `args<map<K,V>>` pack element (empty
-    `structTypeName`, `hasKeyValueKinds` true, `isArgsPack` true) and
-    (b) an `args<Entry<K,V>>` pack element (populated `structTypeName`,
-    same other flags), then assert
-    `resolveArrayVectorAccessTargetInfo`/the relevant discriminator
-    correctly distinguishes them, and that `emitArrayVectorIndexedAccess`
-    picks load-vs-copy correctly for `elemSlotCount` values of 1, 2, and
-    higher. These should run in milliseconds, unlike the full
-    compile/run suite.
-  - acceptance: new unit tests exist, pass, and independently verified
-    to fail against the pre-fix code (checked out at the commit before
-    TODO-4760(a)'s fix) to confirm they actually pin the behavior fixed
-    this session, not just restate it.
-  - stop_rule: unit-test-only addition; if writing these tests reveals
-    the discriminator logic can't be exercised without the full
-    `ir_lowerer` pipeline machinery (no seam narrow enough for a fast
-    unit test), stop and note that as a finding rather than building an
-    increasingly elaborate test harness to force it.
 
 - [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
   - owner: ai

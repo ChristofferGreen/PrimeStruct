@@ -4,11 +4,14 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsValidatorMethodTargetResolutionDetail.h"
 #include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cstdint>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -1893,49 +1896,89 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           if (!normalizedElemBaseType.empty() && normalizedElemBaseType.front() == '/') {
             normalizedElemBaseType.erase(normalizedElemBaseType.begin());
           }
-          if (normalizedElemType == "string" || normalizedElemBaseType == "string") {
-            return setCollectionMethodTarget("/string/" + normalizedMethodName);
-          }
+
+          // Step 2 of docs/ReceiverTargetResolutionConsolidation.md
+          // (second migration): this block's own inline classification
+          // cascade (a near-duplicate of resolveArgsPackElementMethodTarget's
+          // R1-R9, Step 1b slice 2's own harnessed call site) has been
+          // replaced by a single call into the shared classifier, proven
+          // byte-faithful by that slice's diff-audit harness. Two
+          // site-specific input conventions (documented on
+          // classifyReceiverElementFamilyJoint's own header, "slice 2"):
+          // this call site's element text is already Reference/Pointer-
+          // unwrapped before either classifier input is computed, so both
+          // `unwrappedElementType` and `rawElementBaseType` below use the
+          // exact same normalizedElemType/normalizedElemBaseType text (no
+          // wrapped/unwrapped asymmetry, unlike
+          // resolveArgsPackElementMethodTarget's R7); and this block's own
+          // FileError check historically sits after the template-shape
+          // block, which is provably equivalent to the classifier's fixed
+          // FileError-before-template ordering since a template-shaped
+          // base name can never equal the bare literal "FileError". Only
+          // the *downstream* action per family below is unchanged from the
+          // pre-migration inline cascade.
           std::string elemBase;
           std::string elemArgText;
-          if (splitTemplateTypeName(normalizedElemType, elemBase, elemArgText)) {
+          const bool isTemplateShaped2 =
+              splitTemplateTypeName(normalizedElemType, elemBase, elemArgText);
+          if (isTemplateShaped2) {
             elemBase = normalizeBindingTypeName(elemBase);
-            if (elemBase == "vector" || elemBase == "array" ||
-                isInternalSoaCollectionTypeName(elemBase)) {
-              return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
-            }
-            if (elemBase == "Buffer" &&
-                (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
-                 normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
-                 normalizedMethodName == "load" || normalizedMethodName == "store")) {
+          }
+          primec::ReceiverElementFamilyJointInput jointInput2;
+          jointInput2.unwrappedElementType = normalizedElemType;
+          jointInput2.rawElementBaseType = normalizedElemBaseType;
+          jointInput2.isTemplateShaped = isTemplateShaped2;
+          jointInput2.templateShapedBaseName = elemBase;
+          jointInput2.normalizedMethodName = normalizedMethodName;
+          primec::ReceiverElementFamilyPredicates predicates2{
+              [](std::string_view name) {
+                return isInternalSoaCollectionTypeName(name);
+              },
+              [](std::string_view name) {
+                return isKeyValueSurfaceTypeName(std::string(name));
+              },
+          };
+          const primec::ReceiverElementFamilyResult classified2 =
+              primec::classifyReceiverElementFamilyJoint(jointInput2, predicates2);
+
+          switch (classified2.family) {
+            case primec::ReceiverElementFamily::String:
+              return setCollectionMethodTarget("/string/" + normalizedMethodName);
+            case primec::ReceiverElementFamily::VectorLike:
+            case primec::ReceiverElementFamily::Soa:
+              // classified2.collectionBaseName is the already-normalized
+              // elemBase the pre-migration cascade used here.
+              return setCollectionMethodTarget("/" + classified2.collectionBaseName + "/" +
+                                                normalizedMethodName);
+            case primec::ReceiverElementFamily::Buffer:
               return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
-            }
-            if (isKeyValueSurfaceTypeName(elemBase)) {
+            case primec::ReceiverElementFamily::KeyValue:
               if (setIndexedArgsPackKeyValueMethodTarget(
                       receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
-            normalizedMethodName, params, locals,
-            resolvedOut, isBuiltinOut)) {
+                      normalizedMethodName, params, locals,
+                      resolvedOut, isBuiltinOut)) {
                 return true;
               }
               return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
-            }
-            if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
+            case primec::ReceiverElementFamily::File:
               resolvedOut = preferredFileHelperTarget(normalizedMethodName,
                                                      currentValidationState_.context.definitionPath);
               isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
               return true;
-            }
-          }
-          if (normalizedElemType == "FileError" &&
-              (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
-               normalizedMethodName == "status" || normalizedMethodName == "result")) {
-            resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
-            isBuiltinOut = resolvedOut == "/file_error/why";
-            return !resolvedOut.empty();
-          }
-          if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
-            resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
-            return true;
+            case primec::ReceiverElementFamily::FileError:
+              resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+              isBuiltinOut = resolvedOut == "/file_error/why";
+              return !resolvedOut.empty();
+            case primec::ReceiverElementFamily::Primitive:
+              // No wrapped/unwrapped asymmetry at this call site (see the
+              // header comment above) - normalizedElemBaseType is safe to
+              // use directly here, unlike resolveArgsPackElementMethodTarget's
+              // R7, which must keep its own separately-tracked raw text.
+              resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
+              return true;
+            case primec::ReceiverElementFamily::StructOrUnknown:
+            default:
+              break;
           }
           std::string resolvedElemType = resolveStructTypePath(normalizedElemType, receiver.namespacePrefix);
           if (resolvedElemType.empty()) {
@@ -1945,6 +1988,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             resolvedOut = resolvedElemType + "/" + normalizedMethodName;
             return true;
           }
+          // No return here: production falls through to further,
+          // unrelated fallback resolution below (resolveStringTarget,
+          // resolveKeyValueValueType, ...) when the struct-type-path
+          // fallback itself fails - this cascade does not "commit" to
+          // StructOrUnknown as ITS OWN final answer in that case (unlike
+          // resolveArgsPackElementMethodTarget's R9, which does return
+          // false as this function's own terminal verdict).
         }
         if (this->resolveStringTarget(accessReceiver, params, locals, resolveArgsPackAccessTarget)) {
           resolvedOut = "/i32/" + normalizedMethodName;

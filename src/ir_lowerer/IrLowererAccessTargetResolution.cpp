@@ -688,6 +688,15 @@ CollectionPairTypeInfo resolveCollectionPairTypeInfo(
     if (!localInfo.isArgsPack) {
       return false;
     }
+    // TODO-5287 (see docs/todo_finished.md): isDirectKeyValue is true for both
+    // a genuine `args<map<K,V>>` pack element and the stdlib map
+    // constructor's own internal `args<Entry<K,V>>` pack element - this does
+    // not consult localInfo.structTypeName the way
+    // IrLowererLowerStatementsExpr.h's `isKeyValueAccessReceiverArgsPackOfMap`
+    // does (empty structTypeName => genuine map element, populated
+    // Entry__t... path => constructor's internal pack). See that call site's
+    // comment and TODO-5292 for the concrete unification/fix this gap
+    // motivates.
     const bool isDirectKeyValue =
         localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
         hasInferredTypedKeyValue(localInfo);
@@ -1035,6 +1044,14 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
           dereferenced && localInfo.argsPackElementKind == LocalInfo::Kind::Vector;
       return true;
     }
+    // TODO-5287 (see docs/todo_finished.md): this branch fires identically
+    // for a genuine `args<map<K,V>>` pack element and the stdlib map
+    // constructor's own internal `args<Entry<K,V>>` pack element - like
+    // resolveCollectionPairTypeInfo's populateFromArgsPackElement above (same
+    // gap, see its comment), it does not consult localInfo.structTypeName
+    // the way IrLowererLowerStatementsExpr.h's
+    // `isKeyValueAccessReceiverArgsPackOfMap` does for a Name-kind receiver.
+    // See TODO-5292 for the concrete unification/fix this gap motivates.
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
         hasInferredTypedKeyValue(localInfo)) {
       info.isArrayOrVectorTarget = true;
