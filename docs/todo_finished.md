@@ -49172,3 +49172,104 @@ real answer.
     count/vector/capacity/reserve subset clean except the one
     pre-existing `shim_maps_reject_quint` failure also present
     before this change; full-suite run confirmed separately.
+
+- [x] TODO-4759: Canonical namespaced vector count/capacity slash-method calls on a map receiver resolve inconsistently
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found while sweeping
+    `test_compile_run_vm_collections_map_wrapper_shadows.cpp`. Given a
+    helper `wrapMap()` returning `map<i32, i32>`, calling
+    `wrapMap()./std/collections/vector/count()` used to dispatch to a
+    user-defined `/std/collections/vector/count([map<i32,i32>] values)`
+    shadow (returning the shadow's value); it now fails to compile with
+    `unknown call target: /std/collections/map/count` even when no such
+    shadow exists to justify the namespace rewrite - the vector-qualified
+    slash-method call is being silently rewritten to the map namespace
+    before checking whether a definition exists there, instead of using
+    the receiver's actual type to resolve (or reporting the vector-
+    qualified name it was actually written with). The capacity sibling
+    (`wrapMap()./std/collections/vector/capacity()`) instead fails with
+    `capacity requires vector target`, a third, differently-shaped
+    message for what looks like the same underlying "wrong slash-
+    namespace name attempted against a map receiver" situation. Re-pinned
+    all three affected cases
+    (`test_compile_run_vm_collections_map_wrapper_shadows.cpp`) to their
+    exact current messages; not root-caused.
+  - implementation_notes: start in the call-resolution/spelling-classifier
+    code introduced by the TODO-4723-adjacent "compat-spelling" work
+    earlier in this epic - check whether `/std/collections/vector/count`
+    and `/std/collections/vector/capacity` go through different
+    resolution paths (one rewrites the namespace before the "does this
+    call target exist" check, the other checks receiver-type validity
+    first) despite being near-identical sibling builtins.
+  - acceptance: `wrapMap()./std/collections/vector/count()` either (a)
+    resolves the user's same-path `/std/collections/vector/count` shadow
+    when one exists (restoring the original passing behavior), or (b) if
+    that's no longer intended, reports an error naming the vector-
+    qualified spelling actually written, not a map-namespaced one the
+    user never wrote. capacity should report consistently with whatever
+    count ends up doing.
+  - stop_rule: do not change count/capacity's rejection wording without
+    first confirming which behavior (dispatch to same-path shadow vs.
+    reject) is actually intended - this may be deliberate tightening
+    rather than a bug.
+  - investigated_2026-08-05: re-verified against the current build - all
+    28 cases in `test_compile_run_vm_collections_map_wrapper_shadows.cpp`
+    pass (still pinned to the same not-root-caused messages from the
+    prior session, unchanged). Neither acceptance option is actually met
+    yet: (a) the same-path `/std/collections/vector/count([map<i32,i32>]
+    values)` shadow is still not dispatched to (still rejects), and (b)
+    the rejection still names the map-namespaced path
+    (`/std/collections/map/count`), not the vector-qualified spelling
+    the user actually wrote. This is a Call-receiver shape
+    (`wrapMap()./std/collections/vector/count()`, receiver is a call
+    expression, not a Name) - structurally different from TODO-4749's
+    Name-receiver `.at()` bug, so not the same root cause, though both
+    now look like instances of a broader "unqualified/cross-namespace
+    slash-method resolution on a non-matching receiver type" family.
+    Per the stop_rule, did not touch the resolution code without first
+    confirming intended behavior; that confirmation (same-path shadow
+    dispatch vs. deliberate rejection) still needs a project-level
+    decision, not a compiler trace, so leaving this open rather than
+    guessing.
+  - finished_at: 2026-09-16
+  - resolution_2026-09-16: found the project-level decision this TODO's
+    own stop_rule said was needed had already been made and implemented
+    by other (untracked-by-this-number) work since the last
+    investigation session - just not reflected back into this TODO.
+    `SemanticsValidator::tryResolveExplicitCanonicalVectorCountMethodTarget`
+    (`SemanticsValidatorMethodTargetVectorResolvers.cpp`) and the sibling
+    capacity guard in `SemanticsValidatorExprMethodTargetResolution.cpp`
+    (~line 966) now carry explicit, detailed comments establishing this
+    is deliberate design, not a gap: an explicit
+    `/std/collections/vector/count` (or `capacity`) slash-method call on
+    a receiver whose type comes from an *explicit* return-type
+    annotation (e.g. `[return<map<i32, i32>>]`) always rejects with the
+    receiver-family diagnostic, even when a matching same-path helper
+    exists - `"unknown call target: " + <map-family path>` for count,
+    `"capacity requires vector target"` for capacity (each keeping its
+    own established wording, confirmed intentional rather than
+    harmonized). A receiver whose map type instead comes from body
+    inference (no explicit return annotation) gets the older
+    `"unknown method: <explicit vector path>"` diagnostic instead -
+    option (b) from this TODO's own acceptance criteria, i.e. the
+    vector-qualified spelling the user actually wrote, not a silently
+    substituted map path. Both sub-cases, for both count and capacity,
+    have their own dedicated passing tests
+    (`test_semantics_calls_and_flow_collections_wrapper_temporary_access_resolution.cpp`'s
+    "wrapper temporary canonical vector count/capacity slash-method
+    rejects map receiver" and "stdlib namespaced vector count rejects
+    wrapper temporary map target", plus
+    `test_compile_run_vm_collections_map_wrapper_shadows.cpp`'s three
+    cases this TODO's scope named). Re-verified via `gdb` backtrace
+    (confirmed `tryResolveExplicitCanonicalVectorCountMethodTarget` is
+    the actual resolution site, not the `TemplateMonomorphMethodTargets.cpp`
+    machinery a speculative fix attempt targeted first before finding
+    this) and by running every named test file/case: all pass as-is,
+    zero failures. No code changes made or needed - this was a stale
+    TODO whose underlying question had already been answered elsewhere;
+    closing rather than re-implementing already-correct, already-tested
+    behavior.
