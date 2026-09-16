@@ -5,6 +5,7 @@
             inferExprKind,
             comparisonKind,
             emitCompareToZero,
+            [&]() { return allocTempLocal(); },
             function.instructions,
             error);
         if (comparisonResult == ir_lowerer::OperatorComparisonEmitResult::Error) {

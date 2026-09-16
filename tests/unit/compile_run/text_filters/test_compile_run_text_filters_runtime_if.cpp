@@ -84,34 +84,31 @@ main() {
   const std::string exePath = (testScratchPath("") / "primec_text_filters_string_compare_exe").string();
   const std::string nativePath =
       (testScratchPath("") / "primec_text_filters_string_compare_native").string();
-  const std::string vmErrPath =
-      (testScratchPath("") / "primec_text_filters_string_compare_vm_err.txt").string();
-  const std::string nativeErrPath =
-      (testScratchPath("") / "primec_text_filters_string_compare_native_err.txt").string();
 
-  // TODO-4813: --emit=exe used to successfully compile equal(...) on utf8
-  // string literals (running to exit 1, the boolean-true convention); it
-  // now fails to compile at all with "EXE IR lowering error: native backend
-  // does not support string comparisons" - the exe pipeline appears to now
-  // route through the same native-backend lowering used by --emit=native,
-  // which never supported string comparisons. Re-pinned to the verified
-  // current rejection.
+  // TODO-4813: equal()/not_equal() on two strings now lowers to a real
+  // byte-by-byte comparison (shared across every backend, since it's the
+  // same AST-to-IR lowering stage all of them go through), so this compiles
+  // and runs to exit 1 (the boolean-true convention) again on exe, vm, and
+  // native - restoring the pre-regression behavior this test's own name
+  // describes, verified end to end rather than just "compiles".
   const std::string exeErrPath = (testScratchPath("") / "primec_text_filters_string_compare_exe_err.txt").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " +
                                  quoteShellArg(exeErrPath);
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(exeErrPath).find("native backend does not support string comparisons") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(exeErrPath).empty());
+  CHECK(runCommand(quoteShellArg(exePath)) == 1);
 
-  const std::string runVmCmd =
-      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);
-  CHECK(runCommand(runVmCmd) == 2);
-  CHECK(readFile(vmErrPath).find("vm backend does not support string comparisons") != std::string::npos);
+  const std::string runVmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 1);
 
+  const std::string nativeErrPath =
+      (testScratchPath("") / "primec_text_filters_string_compare_native_err.txt").string();
   const std::string compileNativeCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main 2> " +
       quoteShellArg(nativeErrPath);
-  CHECK(runCommand(compileNativeCmd) == 2);
-  CHECK(readFile(nativeErrPath).find("native backend does not support string comparisons") != std::string::npos);
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(readFile(nativeErrPath).empty());
+  CHECK(runCommand(quoteShellArg(nativePath)) == 1);
 }
 
 TEST_CASE("rejects mixed int/float arithmetic") {

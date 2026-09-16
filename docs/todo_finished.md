@@ -48454,3 +48454,172 @@ real answer.
     hanging. Closing as resolved (via TODO-5220's fix, independently
     reconfirmed this session).
 
+- [x] TODO-4813: --emit=exe regressed - no longer compiles utf8 string equality comparisons
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found via `test_compile_run_text_filters_runtime_if.cpp`'s
+    "string comparison" test. Minimal repro:
+    ```
+    [return<bool>]
+    main() {
+      return(equal("alpha"utf8, "alpha"utf8))
+    }
+    ```
+    `./primec --emit=exe repro.prime -o out --entry /main` used to
+    compile successfully (the resulting binary exits 1, the boolean-true
+    convention); it now fails to compile at all with `EXE IR lowering
+    error: native backend does not support string comparisons` (exit 2).
+    `--emit=vm` still works correctly and reports the analogous "vm
+    backend does not support string comparisons" only when the VM itself
+    is asked to run a string comparison directly (which is expected/
+    unchanged) - `--emit=exe` is the one that broke, apparently by now
+    routing through the same native-backend lowering path used by
+    `--emit=native` (which never supported string comparisons), where it
+    previously used a different, string-comparison-capable exe lowering
+    path. Re-pinned to the verified current rejection.
+  - implementation_notes: diff the `--emit=exe` IR lowering path against
+    whatever it used before this regression - look for a recent change
+    that merged/aliased the exe backend's validation target with the
+    native backend's (see `resolveIrBackendEmitKind`/`IrBackends.h` and
+    the "EXE IR lowering error" message's emission site) instead of
+    keeping them on separate capability sets.
+  - acceptance: the minimal repro above compiles successfully with
+    `--emit=exe` again, and the resulting binary's runtime behavior
+    (exit 1 for equal strings) is independently verified, not just
+    "compiles"; the re-pinned "string comparison" test case is flipped
+    back to its original expectation once fixed.
+  - stop_rule: do not just special-case string comparisons in the exe
+    lowering path if the underlying cause is a broader accidental
+    exe/native path merge - other exe-only capabilities may have
+    regressed the same way and should be checked once the root cause is
+    found.
+  - investigated_2026-08-06: the "exe/native path merge" hypothesis does
+    NOT hold - verified all four backends against the identical minimal
+    repro: `--emit=vm` rejects with "vm backend does not support string
+    comparisons", `--emit=native` and `--emit=exe` both reject with
+    "native backend does not support string comparisons", and
+    `--emit=cpp` ALSO rejects with the identical "native backend does
+    not support string comparisons" message (same wording, same
+    "C++ IR lowering error: " prefix pattern). All four backends' AST-
+    to-IR lowering routes through the same shared
+    `emitComparisonOperatorExpr` in
+    `IrLowererOperatorComparisonHelpers.cpp`, which unconditionally
+    rejects `equal(...)` whenever either operand's inferred
+    `LocalInfo::ValueKind` is `String`, regardless of which backend
+    requested the lowering - there is no per-backend capability flag or
+    branch here at all, so this cannot be an "exe accidentally merged
+    onto native" routing bug specifically - cpp (which was never
+    supposed to share exe/native's limitations, per this TODO's own
+    framing) is equally affected right now. `git log` on
+    `IrLowererOperatorComparisonHelpers.cpp` and `IrBackends.cpp` (the
+    file containing `ExeIrBackend`, confirmed via code reading to
+    already route its final `emit()` step through the string-capable
+    `IrToCppEmitter`, same as the cpp backend - the failure happens
+    earlier, at the shared AST-to-IR lowering stage before any backend-
+    specific emit code runs) shows no recent related commits in this
+    session's history, so if `--emit=exe` genuinely once supported this,
+    the regression predates this epic's tracked changes and isn't
+    something a git-blame/bisect within this repo's visible history can
+    recover. Re-scoping: this is not a routing/merge bug to fix by
+    re-splitting exe from native - it is a missing FEATURE (string
+    equality lowering) in the shared operator-comparison IR lowering
+    used by all four backends alike. Implementing it properly means
+    teaching `emitComparisonOperatorExpr` (or a per-backend override
+    upstream of it) to lower `equal(string, string)` to an actual
+    runtime string-comparison call for the backends whose runtime models
+    support it (cpp/exe definitely can, since they emit real C++ and can
+    use `std::string::operator==`; vm/native's stack-machine IR would
+    need a new opcode or runtime-call convention) - a nontrivial,
+    multi-backend feature addition, not a small bug fix. Not attempted
+    this session given the scope; leaving open for a session with room
+    to design the cross-backend string-comparison lowering strategy
+    properly rather than a quick special-case patch.
+  - finished_at: 2026-09-16
+  - resolution_2026-09-16 (CLOSING - implemented real string equality
+    lowering, the missing feature the 2026-08-06 investigation scoped
+    this to): `equal(strA, strB)`/`not_equal(strA, strB)` now lower to a
+    real byte-by-byte comparison in the shared `emitComparisonOperatorExpr`
+    (`IrLowererOperatorComparisonHelpers.cpp`), reused by every backend
+    (vm/native/exe/cpp) since they all route through the same AST-to-IR
+    lowering stage. Design: evaluate each string operand exactly once into
+    a fresh local (`allocTempLocal`, newly threaded into this function's
+    signature - the one interface change needed), bind each to a synthetic
+    `Name` expr in an augmented `LocalMap` (`stringSource =
+    RuntimeIndex`, the same representation a `[string]` function parameter
+    already uses - confirmed by reading `inferCallParameterLocalInfo`),
+    then re-emit `count(...)`/`at(...)` calls against those synthetic
+    names through the existing `emitExpr` callback - this reuses
+    count()/at()'s already-correct handling of every string
+    representation (literal, parameter, runtime-computed) instead of
+    re-deriving it, exactly mirroring what the stdlib `/string/equal`
+    helper (`stdlib/std/collections/equality.prime`) already does for the
+    method-call form (`a.equal(b)`, confirmed working before this fix) -
+    but as a core, always-available capability needing no import, matching
+    every other builtin comparison. A hand-rolled length-check-then-loop
+    (jump/label bookkeeping following this same file's existing "and"/"or"
+    short-circuit pattern) leaves the boolean result in a temp local;
+    `not_equal` negates it via the already-passed `emitCompareToZero`
+    callback (the same mechanism `not` uses). Ordering comparisons
+    (`less_than`/`greater_than`/etc.) and mixed string/non-string operands
+    remain rejected - no stdlib string-ordering helper exists, and this
+    stays narrowly scoped to the capability that regressed.
+    Verification: the original minimal repro
+    (`equal("alpha"utf8, "alpha"utf8)`) now compiles and runs to exit 1 (the
+    boolean-true convention) on `--emit=vm`/`--emit=exe`/`--emit=native`/
+    `--emit=cpp`, confirmed via the real `primec` CLI on all four, plus
+    hand-tested variants (false case, `not_equal`, differing lengths, empty
+    strings, runtime `[string]` variables, `and`-combined chained
+    comparisons) - all correct. `--emit=wasm`/`--emit=glsl` were not
+    extended: independently confirmed `count()`/`at()` on a plain runtime
+    `[string]` local is already broken for `--emit=wasm` even on
+    completely unrelated pre-existing code (unaffected by this change) -
+    a separate, wider wasm string-builtin gap, out of this task's scope.
+    The pinned regression test this task's own scope section names
+    (`test_compile_run_text_filters_runtime_if.cpp`'s "equal() compares two
+    utf8 string literals") is flipped back to asserting success + verified
+    runtime exit code on exe/vm/native, per this task's acceptance bar.
+    Four other tests that pinned the old rejection message as their actual
+    subject under test were updated to keep testing what they were built
+    for without relying on the now-fixed case:
+    `test_ir_pipeline_conversions_core.h`'s "ir lowerer rejects string
+    comparisons" narrowed to ordering comparisons (renamed accordingly)
+    plus two new passing cases added (byte-by-byte equal/not_equal
+    correctness, unequal-length operands);
+    `test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp`'s
+    structured-lowering-payload probe switched from `equal` to `less_than`
+    (still genuinely rejected, so the structured-payload format it tests
+    is unaffected); and
+    `test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_function_table_diagnostics.cpp`'s
+    "rejects string operands" test narrowed to `less_than` (renamed) plus
+    two new cases added (mixed string/numeric operands still rejected; a
+    byte-by-byte lowering structural check). Every other test asserting on
+    the old message
+    (`test_compile_run_native_backend_argv.cpp`'s entry-arg-string case,
+    `test_compile_run_emitters_matrix_quaternion_support.cpp`'s C++-emitter
+    case using `less_than` alongside `equal`,
+    `test_semantics_calls_and_flow_comparisons_literals.cpp`'s pure
+    semantics-level cases) was confirmed still correct as-is, either
+    because it never exercised the now-fixed path or because a
+    still-rejected `less_than` in the same expression keeps the overall
+    rejection intact. Full-suite regression check:
+    `PrimeStruct_backend_ir_tests` 1653/1607/46 (same 46 pre-existing
+    failures the TODO-4901/TODO-4747 closures already characterized, +4
+    net new passing cases: 3 new comparison-helper unit tests plus the
+    2 rewritten ir_pipeline_conversions_core.h cases minus the 1 renamed
+    case they replaced). Full `PrimeStruct_compile_run_tests` run directly
+    (not via `ctest`): 2409/6 failed - the same 6 pre-existing
+    cross-test-pollution/unrelated-subsystem failures characterized during
+    this session's TODO-4901 closure (map-reference/gfx-helper issues, none
+    touching string equality), confirmed by name-for-name comparison, zero
+    new failures. `primestruct.compile.run.text_filters` (417 cases) and
+    `primestruct.compile.run.emitters.cpp` (528 cases, 1 pre-existing
+    unrelated failure) both clean otherwise. Updated
+    `docs/PrimeStruct.md`'s two VM/native backend-capability descriptions
+    to reflect the new, narrower-than-full capability (equal/not_equal on
+    strings supported; ordering comparisons and mixed operands still
+    rejected) instead of the blanket "string comparisons are rejected"
+    they previously stated.
+

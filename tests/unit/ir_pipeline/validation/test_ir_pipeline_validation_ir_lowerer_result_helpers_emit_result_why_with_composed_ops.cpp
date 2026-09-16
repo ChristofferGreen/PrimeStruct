@@ -784,6 +784,7 @@ TEST_CASE("ir lowerer comparison helpers treat builtin comparisons as bool condi
       [&](ValueKind kind, bool equals) {
         return primec::ir_lowerer::emitCompareToZero(instructions, kind, equals, error);
       },
+      []() { return 0; },
       instructions,
       error);
 

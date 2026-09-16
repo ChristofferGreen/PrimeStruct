@@ -238,11 +238,15 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer rejects string comparisons") {
+TEST_CASE("ir lowerer rejects ordered string comparisons") {
+  // equal()/not_equal() on two strings is now lowered (see the "ir lowers
+  // string equal/not_equal by byte comparison" case below) - only ordering
+  // comparisons still have no string lowering (no stdlib string-ordering
+  // helper exists to route through).
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(equal("a"utf8, "b"utf8))
+  return(less_than("a"utf8, "b"utf8))
 }
 )";
   primec::Program program;
@@ -255,6 +259,56 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("native backend does not support string comparisons") != std::string::npos);
+}
+
+TEST_CASE("ir lowers string equal/not_equal by byte comparison") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(and(equal("alpha"utf8, "alpha"utf8), not_equal("alpha"utf8, "beta"utf8)))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
+}
+
+TEST_CASE("ir lowers string equal for unequal-length operands") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal("alpha"utf8, "alph"utf8))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 1;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 0);
 }
 
 TEST_CASE("ir lowers value block initializers") {

@@ -28,10 +28,15 @@ main() {
 }
 
 TEST_CASE("primec emit-diagnostics reports structured lowering payload") {
+  // equal()/not_equal() on two strings now lowers successfully (see
+  // TODO-4813's resolution) - less_than() still has no string-ordering
+  // lowering, so it stays a genuine lowering-error repro for this test's
+  // real purpose (structured lowering-payload format), not the equal()
+  // capability gap this file originally probed.
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(equal("alpha"utf8, "alpha"utf8))
+  return(less_than("alpha"utf8, "beta"utf8))
 }
 )";
   const std::string srcPath = writeTemp("primec_emit_diagnostics_lowering.prime", source);

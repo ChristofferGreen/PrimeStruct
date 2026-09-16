@@ -853,6 +853,7 @@ TEST_CASE("ir lowerer comparison helper emits integer less-than opcode") {
         return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      []() { return 0; },
       instructions,
       error);
 
@@ -898,6 +899,7 @@ TEST_CASE("ir lowerer comparison helper lowers logical and short-circuit") {
         instructions.push_back({equals ? primec::IrOpcode::CmpEqI32 : primec::IrOpcode::CmpNeI32, 0});
         return true;
       },
+      []() { return 0; },
       instructions,
       error);
 
@@ -912,7 +914,11 @@ TEST_CASE("ir lowerer comparison helper lowers logical and short-circuit") {
   CHECK(instructions[8].imm == 0);
 }
 
-TEST_CASE("ir lowerer comparison helper rejects string operands") {
+TEST_CASE("ir lowerer comparison helper rejects ordered string comparisons") {
+  // equal()/not_equal() on two strings is handled (see
+  // "ir lowerer comparison helper lowers string equality byte-by-byte"
+  // below) - only ordering comparisons (no stdlib string ordering helper
+  // exists) still hit this rejection.
   primec::Expr left;
   left.kind = primec::Expr::Kind::StringLiteral;
   left.stringValue = "\"a\"";
@@ -921,7 +927,7 @@ TEST_CASE("ir lowerer comparison helper rejects string operands") {
   right.stringValue = "\"b\"";
   primec::Expr expr;
   expr.kind = primec::Expr::Kind::Call;
-  expr.name = "equal";
+  expr.name = "less_than";
   expr.args = {left, right};
 
   std::vector<primec::IrInstruction> instructions;
@@ -940,12 +946,102 @@ TEST_CASE("ir lowerer comparison helper rejects string operands") {
         return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      []() { return 0; },
       instructions,
       error);
 
   CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::Error);
   CHECK(error == "native backend does not support string comparisons");
   CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer comparison helper rejects mixed string/numeric equal operands") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::StringLiteral;
+  left.stringValue = "\"a\"";
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Literal;
+  right.literalValue = 1;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "equal";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitComparisonOperatorExpr(
+      expr,
+      {},
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI64, 0});
+        return true;
+      },
+      [](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        return arg.kind == primec::Expr::Kind::StringLiteral ? primec::ir_lowerer::LocalInfo::ValueKind::String
+                                                              : primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      []() { return 0; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::Error);
+  CHECK(error == "native backend does not support string comparisons");
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer comparison helper lowers string equality byte-by-byte") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Name;
+  left.name = "a";
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Name;
+  right.name = "b";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "equal";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 100;
+  int emitCount = 0;
+  auto result = primec::ir_lowerer::emitComparisonOperatorExpr(
+      expr,
+      {},
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitCount;
+        instructions.push_back({primec::IrOpcode::PushI64, 0});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::String;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::Handled);
+  CHECK(error.empty());
+  // self, other, count(self), count(other), and the byte-compare's
+  // not_equal(at(self,i), at(other,i)) (one call - the mock emitExpr
+  // doesn't itself recurse into that node's own args, matching how emitExpr
+  // is only invoked once per top-level synthetic sub-expression here) each
+  // go through the real emitExpr callback (5 total).
+  CHECK(emitCount == 5);
+  CHECK_FALSE(instructions.empty());
+  // Ends by leaving the boolean result on the stack via a LoadLocal of the
+  // result local this helper allocates last in its four-temp-local sequence
+  // (self=100, other=101, limit=102, result=103, index=104).
+  CHECK(instructions.back().op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions.back().imm == 103);
 }
 
 TEST_CASE("ir lowerer comparison helper ignores non comparison calls") {
@@ -966,6 +1062,7 @@ TEST_CASE("ir lowerer comparison helper ignores non comparison calls") {
         return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      []() { return 0; },
       instructions,
       error);
 

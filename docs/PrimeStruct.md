@@ -2762,7 +2762,10 @@ module {
   bindings for print/map contexts; string returns are supported for literal-backed values, while string arrays and
   string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
 - **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++
-  emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string
+  emitter); `equal`/`not_equal` on two strings lower to a real byte-by-byte comparison (reusing the same count()/at()
+  builtins as the stdlib `/string/equal` helper), but ordered string comparisons (`less_than`, `greater_than`,
+  `less_equal`, `greater_equal`) are still rejected, as is any comparison mixing a string operand with a non-string
+  one; string literals are otherwise limited to print/count/index/map contexts; string
   array returns and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and
   arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)`
   requires a string literal or literal-backed binding; `Result.ok(value)` plus `Result.map(...)`,
@@ -3353,7 +3356,9 @@ here.
   IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean
   combinators accept `bool` inputs only. Control-flow conditions (`if`/`while`/`for`) require `bool` results; use
   comparisons or `bool{value}` when needed. The current IR/native subset accepts integer/bool/float operands for
-  comparisons; string comparisons still require the C++ emitter.
+  comparisons, plus `equal`/`not_equal` on two string operands (lowered to a byte-by-byte comparison shared across
+  every backend); ordered string comparisons (`less_than`, `greater_than`, `less_equal`, `greater_equal`) still
+  require the C++ emitter.
 - **`/std/math/clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports
   integer clamps (`i32`, `i64`, `u64`) and float clamps (`f32`, `f64`) and follows the usual integer promotion rules
   (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are
