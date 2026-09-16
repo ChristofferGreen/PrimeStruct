@@ -1659,6 +1659,119 @@ section and `docs/todo_finished.md`.
     session should investigate this together with TODO-4752's native
     truncation finding, since both point at the same native-backend
     string/struct-return-ABI code path.
+  - progress_2026-09-16: root cause now precisely identified via direct
+    x86_64 disassembly of the emitted native binary plus `setarch -R`
+    (ASLR-off) confirmation - not via ASan/UBSan (moot for this bug: the
+    native backend hand-emits raw machine code via `src/native_emitter/`,
+    never invoking a real C/C++ compiler on generated source, so compiler-
+    instrumentation sanitizers cannot attach to it at all; disassembly +
+    `setarch -R`/gdb's own implicit ASLR-disable serve the same
+    "reproduce with the UB source pinned down" role the stop_rule wanted).
+    Confirmed the non-determinism is 100% ASLR-driven: `setarch -R
+    ./primec_gfx_experimental_window_constructor_native` (and separately,
+    running under `gdb`, which disables ASLR by default) both make the
+    exit code a stable 255 on every run; only real (non-ASLR-disabled)
+    runs vary (252-254 observed). Exact mechanism, traced instruction by
+    instruction: `main`'s `[Window] window{Window(...)?}?` calls
+    `/std/gfx/experimental/windowCreate(...)` (return type
+    `Result<Window, GfxError>`, constructed via `Result.ok(...)`), and
+    `Window` is a 3-field struct (`token`/`width`/`height`, 3 i32 slots)
+    - not a single-scalar payload. The "try" lowering in
+    `IrLowererLowerEmitExprTryHelpers.cpp` has two totally different
+    lowering strategies for a `Result<V, E>` operand: (1)
+    `tryEmitStdlibResultSumTry` - correct, indirection-based (uses
+    `AddressOfLocal`/tag-compare/`LoadIndirect`, no arithmetic on the
+    pointer itself) - tried first; (2) a fallback "packed result" path
+    (`resultLocal` assumed to be a single i64 with the error tag packed
+    into the high 32 bits, extracted via `PushI64 4294967296; DivI64` -
+    see `emitResultWhyErrorLocalFromResult` in
+    `IrLowererResultWhyHelpers.cpp` and `emitOnErrorReturn` in
+    `IrLowererLowerEmitExprTryHelpers.cpp`) - used when (1) doesn't
+    match. Added temporary debug prints (all reverted via `git checkout
+    --` before finishing) at each decision point and confirmed: (1) never
+    matches for this repro because
+    `sumHelpers.resolveSumDefinitionForTypeText("Result<Window,
+    GfxError>", ...)` returns `<null>` - no monomorphized/registered
+    "Result" sum-type `Definition` for this struct-valued-Ok
+    instantiation is reachable via `defMap` for this compile, even though
+    `windowCreate`'s own declared `[return<Result<Window, GfxError>>]`
+    transform is read correctly (confirmed via debug print: transform
+    text is exactly `Result<Window, GfxError>`) and a brute-force scan of
+    every `defMap` entry for anything matching
+    `isStdlibResultSumDefinition` also finds nothing. So (2) runs instead
+    on a `resultLocal` that's actually the RAW ADDRESS of the local
+    3-slot `Window`-shaped memory block (confirmed via disassembly: two
+    branches compute `rbp - constant_offset` and store that pointer into
+    the slot the "packed" logic then treats as a tag<<32|payload scalar)
+    - dividing a real ASLR-randomized stack address by 2^32 (to "extract
+    the high 32 bits") yields an address-dependent value that ultimately
+    becomes both the truncated "gf" `why()` output and, via
+    `emitOnErrorReturn`'s `ReturnI64`/`exit_group(rdi=rax)` path, the
+    process exit code itself. A second, compounding bug: the "packed
+    result" fallback's own gate,
+    `isSupportedPackedResultValueInfo`/`resolvePackedResultStructPayloadInfo`
+    in `IrLowererPackedResultHelpers.cpp`, incorrectly reports ANY struct
+    type as "supported" as long as its slot layout resolves at all -
+    `resolvePackedResultStructPayloadInfo` sets `out.supported = true`
+    unconditionally once `resolveStructSlotLayout` succeeds, then `return
+    true;` (still "supported") even when `layout.fields.size() != 1`
+    (i.e. NOT actually packable into one slot) without ever setting
+    `isPackedSingleSlot`, and `isSupportedPackedResultValueInfo`'s
+    struct-type branch never checks `isPackedSingleSlot` before returning
+    the resolve call's plain success bool. So the multi-field/non-packed
+    case is silently accepted as if it fit the packed scheme, instead of
+    triggering the `error = unsupportedPackedResultValueKindError("try")`
+    path that already exists for genuinely unsupported cases one level up
+    in `IrLowererLowerEmitExprTryHelpers.cpp`. Attempted the obvious
+    narrow fix - require `isPackedSingleSlot` in
+    `isSupportedPackedResultValueInfo`'s struct branch - and confirmed it
+    DOES make native's compile deterministically fail with a clean `IR
+    backends only support try with supported payload values` diagnostic
+    (converting silent UB into a loud, deterministic rejection, matching
+    this TODO's "determinism first" acceptance bar) - **but reverted it**
+    because `IrLowererLowerEmitExprTryHelpers.cpp` and
+    `IrLowererPackedResultHelpers.cpp` are genuinely backend-agnostic
+    shared code with no native/vm/exe distinction anywhere in this file
+    (confirmed by grep - no `isNative`/`targetKind`/equivalent flag
+    exists in `ir_lowerer`), so the same fix ALSO makes `--emit=vm` and
+    `--emit=exe` reject this exact program at compile time - regressing
+    both of this test's OTHER two backends, which currently compile and
+    run it fine (`exeExit`/`vmExit` both `== 4 || == 1`, asserted and
+    passing today) specifically because their own `AddressOfLocal`/
+    pointer representations are small deterministic values (a vm local
+    index, not a real ASLR-randomized memory address), so the same
+    "divide a struct pointer by 2^32" bug happens to degrade gracefully
+    for them instead of exploding into real non-determinism. Confirmed
+    this regression empirically (`--emit=vm`/`--emit=exe` both started
+    erroring identically to native once the gate was tightened) before
+    reverting - do not re-attempt this exact fix without either (a)
+    plumbing a backend-target flag through `ir_lowerer` (an architectural
+    change well beyond this TODO's scope) or (b) fixing the deeper root
+    cause below instead. Real, properly-scoped fix for a future session:
+    find why `resolveSumDefinitionForTypeText`/the monomorphizer doesn't
+    materialize a `Result<Window, GfxError>` (struct-valued-Ok) sum
+    `Definition` reachable via `defMap` for `windowCreate`'s declared
+    return type in this compile - start by checking whether a
+    SCALAR-valued `Result<T, GfxError>` (e.g. `createWindow`'s own
+    `Result<i32, GfxError>` inner `?`, in the same source, same
+    `GfxError` error type) DOES resolve via the same
+    `resolveSumDefinitionForTypeText` call (candidate files:
+    `TemplateMonomorph*.cpp`, or wherever `Result<...>` sum
+    specializations get registered into `defMap` in semantics/
+    monomorphization) - if scalar-Ok Results monomorphize/register fine
+    but struct-Ok ones don't, that's the actual, narrow, single-root-cause
+    bug; fixing it would let the already-correct, already-safe
+    `tryEmitStdlibResultSumTry` indirection-based path handle `Window`
+    (and presumably the sibling `Device`/`Swapchain`/`Mesh`/`Pipeline`/
+    `Frame`/`Material` struct-valued gfx `Result`s, several of which
+    likely share this exact bug - not individually re-verified this
+    session per this TODO's own stop_rule, left for that future session
+    to check one at a time) naturally, without ever reaching the
+    ASLR-dependent packed-scalar fallback at all - at which point the
+    `isSupportedPackedResultValueInfo` tightening above (still needed as
+    defense-in-depth for whatever residual case truly can't be packed)
+    would no longer risk regressing vm/exe, since this repro would no
+    longer take that path to begin with.
 
 - [ ] TODO-4812: Modern soa<T>/SoaVector<T> public-surface method-sugar and canonicalization gaps found sweeping text_filters dumps
   - owner: ai
