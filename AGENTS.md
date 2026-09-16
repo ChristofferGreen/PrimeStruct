@@ -266,6 +266,8 @@ build and layout solidify.
 - Do not claim a bug is fixed unless you can no longer reproduce it after the change.
 
 ## Git commit guidelines
+- Push directly to `master` (`git push origin HEAD:master` or equivalent);
+  do not open a feature-branch PR for routine work unless explicitly asked.
 - Use a clear, imperative subject line in present tense.
 - The `commit-msg` hook reads `.githooks/commit-msg`, strips comment lines and trailing whitespace, and then validates the message.
 - Avoid literal `\n` sequences in commit messages; use real newlines (multiple `-m` or an editor).
