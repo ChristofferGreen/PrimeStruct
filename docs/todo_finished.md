@@ -49074,3 +49074,101 @@ real answer.
     TODO-5050 case), `PrimeStruct_compile_run_tests` 6/2680 failures
     (within the documented 5-8 pre-existing map-conformance/gfx-helper
     cross-test-pollution baseline). Zero net-new failures.
+
+- [x] TODO-4758: count() on a fresh (unbound) vector literal returns 0 instead of the literal's element count
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found while sweeping
+    `test_compile_run_vm_collections_vector_limits_push_limit.cpp`
+    ("rejects vm vector literal count helper during lowering", despite
+    the name, no longer rejects). Minimal repro:
+    ```
+    import /std/collections/*
+    [effects(heap_alloc), return<int>]
+    main() {
+      return(count(vector<i32>(1i32, 2i32, 3i32)))
+    }
+    ```
+    compiles and runs on `--emit=vm`, exit 0, instead of exit 3 (the
+    literal's actual element count). `count()` on a vector bound to a
+    local works correctly elsewhere in the suite; this is specific to
+    calling `count()` directly on an inline/unbound vector-literal
+    temporary. Re-pinned to the verified current (wrong) value; not
+    root-caused.
+  - implementation_notes: likely in the same
+    temporary-materialization path implicated by TODO-4752 (struct field
+    access on a freshly-returned temporary reading a default/zeroed
+    value) - check whether `count()`'s IR lowering for a literal-typed
+    argument reads the temporary's element count before or after the
+    literal's construction/store completes.
+  - acceptance: the minimal repro above returns 3, not 0.
+  - stop_rule: reproduce with the smallest form first (no user functions,
+    no shadowing) before assuming any connection to TODO-4752 beyond the
+    structural similarity noted above.
+  - investigated_2026-08-05: reproduced the minimal repro standalone
+    exactly as scoped - confirmed `primec --emit=vm t4758.prime --entry
+    /main` exits 0 (not 3) for `return(count(vector<i32>(1i32, 2i32,
+    3i32)))` (note: this build's `primec --emit=vm` executes the program
+    directly and returns the program's own exit code, rather than
+    writing a runnable `.vm` file to disk - useful to record since nothing
+    else in this doc's repro instructions makes that explicit).
+    `--dump-stage ir` shows the call staying unlowered at that stage
+    (`return count(vector(1, 2, 3))`), so the wrong value is introduced
+    later, during final IR-to-VM lowering/emission, not during initial IR
+    construction. Did not find the exact emission site in this pass -
+    `IrLowererCountAccessHelpers.cpp` (2000+ lines) has several
+    Call-kind-receiver branches for count() but none obviously specific
+    to a bare `vector<T>(...)` constructor-call receiver (as opposed to
+    a string/key-value access call receiver, which is what most of the
+    file's Call-receiver branches key off). Given the wrong value is
+    exactly the zero-initialized default (matching TODO-4752's pattern
+    of a freshly-materialized temporary's field read before its
+    constructing store completes) and this TODO's own implementation_notes
+    already flagged that exact connection, recommend investigating this
+    together with TODO-4752 in the runtime/backend cluster rather than
+    continuing to isolate it here - the shared root cause, if confirmed,
+    would fix both with one change. Not fixed or re-pinned this session.
+  - finished_at: 2026-09-16
+  - resolution_2026-09-16: root-caused. Not connected to TODO-4752 as
+    speculated - the actual bug is a slot-offset mismatch specific to
+    `count()` on an unbound collection-literal target, in
+    `tryEmitCountAccessCall`'s `isArrayCountCallFn(expr, localsIn)`
+    branch (`IrLowererCountAccessHelpers.cpp`). `isArrayCountCall`
+    treats a bare `vector<T>(...)` literal Call target the same as an
+    `array<T>(...)` literal (both satisfy `getBuiltinCollectionName`
+    returning "vector"/"array"), so it falls into a shared generic
+    fallback (`emitExpr(target); LoadIndirect(0);`) that assumes
+    fieldCount lives at slot 0 - true for `array`, but not for the
+    canonical `Vector<T>` record, which reserves slot 0 for an
+    implicit type tag and puts fieldCount at slot 1 (the same layout
+    already handled correctly by the Name-kind branches a few lines
+    above, and by TODO-4755's capacity() fix in the same file).
+    Root-caused via `gdb` breakpoints on `tryEmitCountAccessCall`
+    (confirmed it IS reached, ruling out several other candidate
+    call sites checked first) plus a temporary `__LINE__`-tagged
+    `std::cerr` marker before every `return ...Emitted` in that
+    function, which pinpointed the exact return site. Fixed by
+    detecting a `vector<T>(...)` literal target specifically inside
+    that fallback and adding the same slot-1 offset the Name-kind
+    branches use, leaving `array<T>(...)` literals on the unshifted
+    path. (Two speculative fixes made mid-investigation before the
+    real site was found - in `emitDynamicVectorCount`'s Call-kind
+    fallback and in `IrLowererInlineParamHelpers.cpp` - were reverted
+    once marker tests showed neither was reached by this repro; kept
+    only the confirmed fix.) Also fixed a second, independently
+    pinned regression of the same bug:
+    `tests/unit/compile_run/vm/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp`'s
+    "runs vm vector literal count method without imported helper" test
+    was pinned to the buggy `0` result; updated to the correct `3`
+    (matching its "array literal count method" sibling test's
+    pattern). Full 3-suite battery:
+    `PrimeStruct_backend_ir_tests` 46/1653 failures (exact same
+    failure set as the pre-change baseline, confirmed via diff),
+    `PrimeStruct_semantics_tests` 1/2800 failure (the pre-existing
+    TODO-5050 case), `PrimeStruct_compile_run_tests` - targeted
+    count/vector/capacity/reserve subset clean except the one
+    pre-existing `shim_maps_reject_quint` failure also present
+    before this change; full-suite run confirmed separately.

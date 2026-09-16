@@ -2026,8 +2026,22 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       emitInstruction(IrOpcode::PushArgc, 0);
       return CountAccessCallEmitResult::Emitted;
     }
+    // A fresh (unbound) vector<T>(...) literal target shares this generic
+    // fallback with array literals, but the canonical vector record has an
+    // implicit type-tag slot before fieldCount (see the Name-kind branches
+    // above), so it needs the same slot-1 offset those branches apply -
+    // without it this reads the always-zero tag slot instead of the count.
+    std::string targetCollectionName;
+    const bool isVectorLiteralCountTarget =
+        expr.args.front().kind == Expr::Kind::Call &&
+        getBuiltinCollectionName(expr.args.front(), targetCollectionName) &&
+        targetCollectionName == "vector";
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
+    }
+    if (isVectorLiteralCountTarget) {
+      emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+      emitInstruction(IrOpcode::AddI64, 0);
     }
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
