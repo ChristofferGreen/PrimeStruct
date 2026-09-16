@@ -265,7 +265,22 @@ bool usesInlineBufferResultErrorDiscriminator(const ResultExprInfo &resultInfo) 
          (resultInfo.valueCollectionKind == LocalInfo::Kind::Array ||
           resultInfo.valueCollectionKind == LocalInfo::Kind::Vector ||
           resultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown ||
-          resultInfo.valueCollectionKind == LocalInfo::Kind::Buffer);
+          resultInfo.valueCollectionKind == LocalInfo::Kind::Buffer ||
+          // A struct-valued Ok result (e.g. Result<Window, GfxError>) is
+          // represented the same way array/vector/map/buffer Ok results
+          // are: Result.ok(structValue) emits the struct's own address
+          // (or, for a single-slot-packable struct, its packed scalar
+          // field - see tryEmitResultOkCall in
+          // IrLowererPackedResultHelpers.cpp), never a
+          // tag<<32|payload-packed i64. Treating it as a plain packed
+          // scalar and dividing resultLocal by 2^32 (the non-inline-
+          // buffer branch below) operates on a raw pointer as if it were
+          // an integer, which is not just wrong but non-deterministic
+          // for the native backend (the pointer is ASLR-randomized).
+          // The same "low 32 bits zero => packed error code, else a real
+          // address/scalar => not an error" check already used for
+          // array/vector/map/buffer applies identically here.
+          !resultInfo.valueStructType.empty());
 }
 
 bool populateMetadataBindingInfo(const Expr &bindingExpr,

@@ -49448,3 +49448,250 @@ real answer.
     TODO's own acceptance criteria ("first pass should be determining
     whether this is one bug or several, then split into properly-scoped
     TODOs").
+
+- [x] TODO-4762: Native binary exit code is non-deterministic for the experimental gfx window constructor smoke test
+  - owner: ai
+  - created_at: 2026-07-30
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-smoke
+  - depends_on: (none)
+  - scope: SEVERITY: higher than typical message-drift findings in this
+    epic - likely real memory-safety undefined behavior, not just a
+    wrong-but-stable value. Found while sweeping
+    `primestruct.compile.run.smoke`
+    (`test_compile_run_smoke_core_gfx_entrypoints.cpp`, "experimental gfx
+    window constructor entry point runs across backends"). The test
+    compiles the source with `--emit=native` and runs the resulting
+    binary repeatedly with NO changes between runs; observed exit codes
+    across 5 consecutive invocations of the *same compiled binary*:
+    253, 253, 254, 252, 254 - never the expected `1`, and not even
+    consistent with itself. stdout is stable across runs ("gf", a
+    2-character truncated fragment of what should presumably be a longer
+    gfx-error message - likely the SAME native `print_line` truncation
+    bug already noted as a native-specific curiosity under TODO-4752,
+    though there it truncated to 1 char and here to 2, so the exact
+    truncation length may itself be non-deterministic/UB-dependent
+    rather than a fixed off-by-N). The source constructs a `Window` in a
+    context with no real display/GPU backend available (this sandbox is
+    headless), goes through `on_error<GfxError, /log_gfx_error>`, and
+    apparently falls off the end of the handler path without a
+    well-defined exit code - consistent with reading an uninitialized
+    stack/register value as the process exit status. Given the exit code
+    cannot be safely pinned to any fixed value without making the test
+    flake, the CHECK was relaxed to just invoke the binary without
+    asserting its exit code, with this TODO capturing the underlying bug
+    so it isn't silently lost.
+  - implementation_notes: start in the x86_64 native backend's
+    entry/return-value handling for the `on_error<...>` handler path
+    specifically (`NativeEmitter*.cpp`, the epilogue/exit-code-setting
+    logic) - check whether the handler's implicit fallthrough (no
+    explicit `return` reached in `log_gfx_error`, which is `[effects(io_err)]`
+    with no `return<...>` at all) leaves whatever value happened to be in
+    the return-value register/exit-syscall argument, instead of a
+    well-defined default (e.g. 0, or propagating the original error).
+    Also check the print truncation - likely a related but separate bug
+    in the same code path (string length/pointer passed to the print
+    syscall wrapper reads a garbage byte count).
+  - acceptance: the native binary produces the SAME exit code on every
+    run of the same compiled artifact (determinism is the first bar to
+    clear, even before verifying it's the *correct* value); ideally
+    exit 1, matching the vm/exe backends' behavior for the analogous
+    "no display available" path once TODO-4757/native-why gaps are also
+    addressed.
+  - stop_rule: do not attempt a fix without first getting a debug build
+    with ASan/UBSan running this exact repro, given "non-deterministic
+    exit code from unchanged input" is a classic uninitialized-memory
+    signature - guessing at the fix without a sanitizer confirming the
+    read is very likely to produce a change that "looks fixed" (stable
+    exit code) while leaving the actual UB in place.
+  - cross_reference_2026-08-05: re-verified the relaxed test still
+    passes and the truncated "gf" stdout is unchanged, confirming the
+    bug is still present and matches TODO-4752's still-open native
+    print_line truncation finding (there: any function-returned
+    `string` printed via native truncates - here: 2 chars instead of
+    1, consistent with this TODO's own note that the truncation length
+    itself may be UB-dependent). Did not attempt a fix - this TODO's
+    own stop_rule requires an ASan/UBSan build first, which was not set
+    up this session (would need a separate sanitizer CMake
+    configuration, out of scope for this pass's time budget). A future
+    session should investigate this together with TODO-4752's native
+    truncation finding, since both point at the same native-backend
+    string/struct-return-ABI code path.
+  - progress_2026-09-16: root cause now precisely identified via direct
+    x86_64 disassembly of the emitted native binary plus `setarch -R`
+    (ASLR-off) confirmation - not via ASan/UBSan (moot for this bug: the
+    native backend hand-emits raw machine code via `src/native_emitter/`,
+    never invoking a real C/C++ compiler on generated source, so compiler-
+    instrumentation sanitizers cannot attach to it at all; disassembly +
+    `setarch -R`/gdb's own implicit ASLR-disable serve the same
+    "reproduce with the UB source pinned down" role the stop_rule wanted).
+    Confirmed the non-determinism is 100% ASLR-driven: `setarch -R
+    ./primec_gfx_experimental_window_constructor_native` (and separately,
+    running under `gdb`, which disables ASLR by default) both make the
+    exit code a stable 255 on every run; only real (non-ASLR-disabled)
+    runs vary (252-254 observed). Exact mechanism, traced instruction by
+    instruction: `main`'s `[Window] window{Window(...)?}?` calls
+    `/std/gfx/experimental/windowCreate(...)` (return type
+    `Result<Window, GfxError>`, constructed via `Result.ok(...)`), and
+    `Window` is a 3-field struct (`token`/`width`/`height`, 3 i32 slots)
+    - not a single-scalar payload. The "try" lowering in
+    `IrLowererLowerEmitExprTryHelpers.cpp` has two totally different
+    lowering strategies for a `Result<V, E>` operand: (1)
+    `tryEmitStdlibResultSumTry` - correct, indirection-based (uses
+    `AddressOfLocal`/tag-compare/`LoadIndirect`, no arithmetic on the
+    pointer itself) - tried first; (2) a fallback "packed result" path
+    (`resultLocal` assumed to be a single i64 with the error tag packed
+    into the high 32 bits, extracted via `PushI64 4294967296; DivI64` -
+    see `emitResultWhyErrorLocalFromResult` in
+    `IrLowererResultWhyHelpers.cpp` and `emitOnErrorReturn` in
+    `IrLowererLowerEmitExprTryHelpers.cpp`) - used when (1) doesn't
+    match. Added temporary debug prints (all reverted via `git checkout
+    --` before finishing) at each decision point and confirmed: (1) never
+    matches for this repro because
+    `sumHelpers.resolveSumDefinitionForTypeText("Result<Window,
+    GfxError>", ...)` returns `<null>` - no monomorphized/registered
+    "Result" sum-type `Definition` for this struct-valued-Ok
+    instantiation is reachable via `defMap` for this compile, even though
+    `windowCreate`'s own declared `[return<Result<Window, GfxError>>]`
+    transform is read correctly (confirmed via debug print: transform
+    text is exactly `Result<Window, GfxError>`) and a brute-force scan of
+    every `defMap` entry for anything matching
+    `isStdlibResultSumDefinition` also finds nothing. So (2) runs instead
+    on a `resultLocal` that's actually the RAW ADDRESS of the local
+    3-slot `Window`-shaped memory block (confirmed via disassembly: two
+    branches compute `rbp - constant_offset` and store that pointer into
+    the slot the "packed" logic then treats as a tag<<32|payload scalar)
+    - dividing a real ASLR-randomized stack address by 2^32 (to "extract
+    the high 32 bits") yields an address-dependent value that ultimately
+    becomes both the truncated "gf" `why()` output and, via
+    `emitOnErrorReturn`'s `ReturnI64`/`exit_group(rdi=rax)` path, the
+    process exit code itself. A second, compounding bug: the "packed
+    result" fallback's own gate,
+    `isSupportedPackedResultValueInfo`/`resolvePackedResultStructPayloadInfo`
+    in `IrLowererPackedResultHelpers.cpp`, incorrectly reports ANY struct
+    type as "supported" as long as its slot layout resolves at all -
+    `resolvePackedResultStructPayloadInfo` sets `out.supported = true`
+    unconditionally once `resolveStructSlotLayout` succeeds, then `return
+    true;` (still "supported") even when `layout.fields.size() != 1`
+    (i.e. NOT actually packable into one slot) without ever setting
+    `isPackedSingleSlot`, and `isSupportedPackedResultValueInfo`'s
+    struct-type branch never checks `isPackedSingleSlot` before returning
+    the resolve call's plain success bool. So the multi-field/non-packed
+    case is silently accepted as if it fit the packed scheme, instead of
+    triggering the `error = unsupportedPackedResultValueKindError("try")`
+    path that already exists for genuinely unsupported cases one level up
+    in `IrLowererLowerEmitExprTryHelpers.cpp`. Attempted the obvious
+    narrow fix - require `isPackedSingleSlot` in
+    `isSupportedPackedResultValueInfo`'s struct branch - and confirmed it
+    DOES make native's compile deterministically fail with a clean `IR
+    backends only support try with supported payload values` diagnostic
+    (converting silent UB into a loud, deterministic rejection, matching
+    this TODO's "determinism first" acceptance bar) - **but reverted it**
+    because `IrLowererLowerEmitExprTryHelpers.cpp` and
+    `IrLowererPackedResultHelpers.cpp` are genuinely backend-agnostic
+    shared code with no native/vm/exe distinction anywhere in this file
+    (confirmed by grep - no `isNative`/`targetKind`/equivalent flag
+    exists in `ir_lowerer`), so the same fix ALSO makes `--emit=vm` and
+    `--emit=exe` reject this exact program at compile time - regressing
+    both of this test's OTHER two backends, which currently compile and
+    run it fine (`exeExit`/`vmExit` both `== 4 || == 1`, asserted and
+    passing today) specifically because their own `AddressOfLocal`/
+    pointer representations are small deterministic values (a vm local
+    index, not a real ASLR-randomized memory address), so the same
+    "divide a struct pointer by 2^32" bug happens to degrade gracefully
+    for them instead of exploding into real non-determinism. Confirmed
+    this regression empirically (`--emit=vm`/`--emit=exe` both started
+    erroring identically to native once the gate was tightened) before
+    reverting - do not re-attempt this exact fix without either (a)
+    plumbing a backend-target flag through `ir_lowerer` (an architectural
+    change well beyond this TODO's scope) or (b) fixing the deeper root
+    cause below instead. Real, properly-scoped fix for a future session:
+    find why `resolveSumDefinitionForTypeText`/the monomorphizer doesn't
+    materialize a `Result<Window, GfxError>` (struct-valued-Ok) sum
+    `Definition` reachable via `defMap` for `windowCreate`'s declared
+    return type in this compile - start by checking whether a
+    SCALAR-valued `Result<T, GfxError>` (e.g. `createWindow`'s own
+    `Result<i32, GfxError>` inner `?`, in the same source, same
+    `GfxError` error type) DOES resolve via the same
+    `resolveSumDefinitionForTypeText` call (candidate files:
+    `TemplateMonomorph*.cpp`, or wherever `Result<...>` sum
+    specializations get registered into `defMap` in semantics/
+    monomorphization) - if scalar-Ok Results monomorphize/register fine
+    but struct-Ok ones don't, that's the actual, narrow, single-root-cause
+    bug; fixing it would let the already-correct, already-safe
+    `tryEmitStdlibResultSumTry` indirection-based path handle `Window`
+    (and presumably the sibling `Device`/`Swapchain`/`Mesh`/`Pipeline`/
+    `Frame`/`Material` struct-valued gfx `Result`s, several of which
+    likely share this exact bug - not individually re-verified this
+    session per this TODO's own stop_rule, left for that future session
+    to check one at a time) naturally, without ever reaching the
+    ASLR-dependent packed-scalar fallback at all - at which point the
+    `isSupportedPackedResultValueInfo` tightening above (still needed as
+    defense-in-depth for whatever residual case truly can't be packed)
+    would no longer risk regressing vm/exe, since this repro would no
+    longer take that path to begin with.
+  - resolution_2026-09-16: fixed. Building on the same-day root-cause
+    investigation above (which found the exact mechanism but reverted two
+    unsafe fix attempts), traced the remaining question - why the
+    correct, indirection-based `tryEmitStdlibResultSumTry` path never
+    engages for `Result<Window, GfxError>` - and found it was chasing the
+    wrong mechanism entirely: "Result" is not a real parsed stdlib
+    `Definition` anywhere in this codebase (confirmed: no `Result(`
+    declaration exists in any `.prime` stdlib source, and a `defMap` dump
+    for this exact compile has no "Result"-named entry at all), so
+    `tryEmitStdlibResultSumTry`'s `resolveStdlibResultSumDefinitionForOperand`
+    can never match it - that whole path is for genuine user-declared
+    `[sum]` types, not the built-in `Result<T,E>` convention. The actual
+    working mechanism (confirmed by reading `tryEmitResultOkCall` in
+    `IrLowererPackedResultHelpers.cpp`) is: `Result.ok(structValue)` for
+    a struct that does NOT fit a single packed slot (Window: 3 fields)
+    just emits the struct's own address as the i64 return value, with NO
+    packing/tagging applied at all - while the sibling `on_error`/`try`-
+    failure path (`emitOnErrorReturn`) packs `errorCode * 2^32` when an
+    error actually occurs. So the two arms of `Result<Window, GfxError>`
+    are physically distinguishable without any explicit tag: an Ok
+    result is a real pointer (whose low 32 bits are essentially always
+    non-zero for any real stack/heap address), while an Error result is
+    an exact multiple of 2^32 (low 32 bits always zero). This is *exactly*
+    what `usesInlineBufferResultErrorDiscriminator`'s existing "inline
+    buffer" logic in `IrLowererResultMetadataHelpers.cpp` already checks
+    for array/vector/map/buffer Ok-values (which use this identical
+    representation) - it was just never extended to cover struct-valued
+    Ok results. Fix: added `!resultInfo.valueStructType.empty()` to
+    `usesInlineBufferResultErrorDiscriminator`'s condition (one clause,
+    `IrLowererResultMetadataHelpers.cpp`), routing Window (and any other
+    struct-valued Result) through the same safe, pointer-agnostic
+    "low 32 bits zero => packed error, else a real value => not an
+    error" check instead of the naive `resultLocal / 2^32` division that
+    corrupted an ASLR-randomized address into the process exit code.
+    Confirmed via the VM that window construction actually succeeds in
+    this environment (`--emit=vm` returns 4, the "all four checks
+    passed" value) - the native bug wasn't just non-deterministic, it was
+    also *wrong*: the corrupted division spuriously looked like a
+    non-zero "error", incorrectly invoking the `on_error` handler (hence
+    the deterministic-content-but-garbage-length "gf" truncated print
+    every run) and returning garbage as the process exit code. After the
+    fix, `--emit=native` deterministically returns 4 (verified across 6+
+    repeated runs of the same compiled binary, and via `--emit=exe`)
+    matching `--emit=vm`/`--emit=exe` exactly, and the previously-always-
+    printed "gf" no longer prints (the handler correctly no longer
+    fires). This is a full correctness fix, not just a determinism
+    patch, and unlike the two reverted fix attempts, it changes nothing
+    about which cases are accepted/rejected at compile time - it only
+    changes how the safe-and-already-in-place "inline buffer" extraction
+    scheme is dispatched to - so it does not touch or affect vm/exe's
+    existing (already-correct) behavior at all, confirmed via a full
+    3-suite regression run before and after: backend_ir_tests 46/1653
+    failures (unchanged baseline), semantics_tests 1/2800 failure
+    (unchanged baseline, pre-existing TODO-5050 case), compile_run_tests
+    6/2680 failures (unchanged baseline, pre-existing map-conformance/
+    gfx-helper cross-test-pollution cluster), plus a full run of every
+    `*gfx*`-tagged test case (25/25 passing, including the sibling
+    Device/resource-wrapper/render-pass/pipeline constructors that also
+    return struct-valued gfx `Result`s and were already passing - none
+    regressed). Updated "experimental gfx window constructor entry point
+    runs across backends" in
+    `test_compile_run_smoke_core_gfx_entrypoints.cpp` from an unchecked
+    `runCommand(nativePath);` (relaxed specifically because of this bug)
+    to `CHECK(runCommand(nativePath) == 4)`, matching the now-correct,
+    now-deterministic, vm/exe-matching behavior.

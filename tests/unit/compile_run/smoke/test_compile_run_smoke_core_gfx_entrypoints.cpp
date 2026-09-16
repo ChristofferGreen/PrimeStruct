@@ -65,13 +65,13 @@ main() {
   CHECK((exeExit == 4 || exeExit == 1));
   CHECK((vmExit == 4 || vmExit == 1));
   CHECK(runCommand(compileNativeCmd) == 0);
-  // TODO-4762: the compiled native binary's exit code is non-deterministic
-  // across runs (observed 252-255 across repeated invocations of the same
-  // binary, no source changes) - likely real memory-safety UB in the
-  // native backend's error/window path, not a message-drift issue. Not
-  // asserting an exact value here since any fixed value would make this
-  // test flake; the fact that it's non-deterministic AT ALL is the bug.
-  runCommand(nativePath);
+  // TODO-4762 (fixed): native's exit code used to be non-deterministic
+  // (observed 252-255 across repeated invocations of the same binary, no
+  // source changes) - the struct-valued Ok Result (Result<Window,
+  // GfxError>) was treated as a packed scalar and its raw (ASLR-
+  // randomized) address divided by 2^32, which also spuriously triggered
+  // the on_error handler. Now deterministically 4, matching vm/exe.
+  CHECK(runCommand(nativePath) == 4);
 }
 
 TEST_CASE("experimental gfx device constructor entry point runs across backends") {
