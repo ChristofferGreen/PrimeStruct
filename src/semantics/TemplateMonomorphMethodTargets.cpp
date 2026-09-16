@@ -157,6 +157,30 @@ namespace {
 // "Ready to implement" round's irreconcilable-case finding - it answers a
 // resolution question ("what method-definition path"), not an inference one
 // ("what type"), and was never returned by this cascade in the first place.
+// TODO-4753: a bare collection-family base name ("vector"/"map") must never
+// go through import-alias substitution when qualifying a receiver's OWN type
+// text for method-target path construction. The module path ("/std/
+// collections/vector") and the constructor-family path ("/std/collections/
+// vector/vector", since the vector<T>(...) constructor overload family's
+// own leaf name happens to collide with its module's name) are both
+// legitimately registered under the alias key "vector" - `stdlibSurface
+// ImportAliasPriority` deliberately ranks the constructor family above the
+// helper/module one as the intended winner for that shared key in most
+// contexts (confirmed load-bearing: an earlier attempt to change that
+// priority broke 67 unrelated tests). But here the alias is being used to
+// qualify a *receiver's own type name*, not to resolve a *call target* -
+// picking the constructor's path corrupts every method-path this feeds into
+// (e.g. "/std/collections/vector/vector/remove_at" instead of "/std/
+// collections/vector/remove_at"), which happens to stay harmless for
+// builtin-dispatched methods (push/pop/count/...) but breaks any method
+// that needs a real specialized function definition (remove_at/remove_swap)
+// since no definition exists at the doubled path. Skip the alias lookup for
+// exactly this bare-name case instead of touching the shared alias-priority
+// machinery.
+bool isCollectionModuleAliasCollisionName(std::string_view name) {
+  return name == "vector" || name == "map";
+}
+
 bool resolveReceiverType(const Expr &receiver,
                          const LocalTypeMap &locals,
                          const Context &ctx,
@@ -191,17 +215,21 @@ bool resolveReceiverType(const Expr &receiver,
           }
           return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
         }
-        if (const std::string *importAlias =
-                lookupScopedImportAliasForNamespace(base, receiver.namespacePrefix, ctx);
-            importAlias != nullptr) {
-          return *importAlias + "<" + argText + ">";
+        if (!isCollectionModuleAliasCollisionName(base)) {
+          if (const std::string *importAlias =
+                  lookupScopedImportAliasForNamespace(base, receiver.namespacePrefix, ctx);
+              importAlias != nullptr) {
+            return *importAlias + "<" + argText + ">";
+          }
         }
         return typeText;
       }
-      if (const std::string *importAlias =
-              lookupScopedImportAliasForNamespace(typeText, receiver.namespacePrefix, ctx);
-          importAlias != nullptr) {
-        return *importAlias;
+      if (!isCollectionModuleAliasCollisionName(typeText)) {
+        if (const std::string *importAlias =
+                lookupScopedImportAliasForNamespace(typeText, receiver.namespacePrefix, ctx);
+            importAlias != nullptr) {
+          return *importAlias;
+        }
       }
       return typeText;
     };
@@ -337,17 +365,21 @@ bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
         }
         return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
       }
-      if (const std::string *importAlias =
-              lookupScopedImportAliasForNamespace(base, receiver.namespacePrefix, ctx);
-          importAlias != nullptr) {
-        return *importAlias + "<" + argText + ">";
+      if (!isCollectionModuleAliasCollisionName(base)) {
+        if (const std::string *importAlias =
+                lookupScopedImportAliasForNamespace(base, receiver.namespacePrefix, ctx);
+            importAlias != nullptr) {
+          return *importAlias + "<" + argText + ">";
+        }
       }
       return typeText;
     }
-    if (const std::string *importAlias =
-            lookupScopedImportAliasForNamespace(typeText, receiver.namespacePrefix, ctx);
-        importAlias != nullptr) {
-      return *importAlias;
+    if (!isCollectionModuleAliasCollisionName(typeText)) {
+      if (const std::string *importAlias =
+              lookupScopedImportAliasForNamespace(typeText, receiver.namespacePrefix, ctx);
+          importAlias != nullptr) {
+        return *importAlias;
+      }
     }
     return typeText;
   };

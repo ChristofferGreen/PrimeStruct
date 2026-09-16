@@ -381,30 +381,11 @@ inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
   // wording used to be distinct for mutator-triggered bounds checks).
   const std::string expectedError = "array index out of bounds\n";
 
-  // .remove_at(idx)/.remove_swap(idx) method-call sugar on a vector fails
-  // to compile on both vm and exe (the bare-call form works fine on both) -
-  // a genuine, separate gap; see TODO-4749's sibling investigation.
-  const bool methodMutatorMode = mode == "remove_at_method" || mode == "remove_swap_method";
-  if (methodMutatorMode) {
-    const std::string helperName = mode == "remove_at_method" ? "remove_at" : "remove_swap";
-    if (emitMode == "vm") {
-      const std::string runCmd =
-          "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
-      CHECK(runCommand(runCmd) == 2);
-      CHECK(readFile(errPath).find("missing semantic-product method-call target: " + helperName) !=
-            std::string::npos);
-      return;
-    }
-    const std::string discardExePath =
-        (testScratchPath("") / ("primec_vector_index_runtime_" + mode + "_" + emitMode + "_discard_exe"))
-            .string();
-    const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
-                                   quoteShellArg(discardExePath) + " --entry /main 2> " + quoteShellArg(errPath);
-    CHECK(runCommand(compileCmd) == 2);
-    CHECK(readFile(errPath).find("missing semantic-product method-call target: " + helperName) !=
-          std::string::npos);
-    return;
-  }
+  // TODO-4753: .remove_at(idx)/.remove_swap(idx) method-call sugar on a
+  // vector now lowers correctly (like the bare-call form always did), so
+  // remove_at_method/remove_swap_method fall through to the same
+  // out-of-bounds contract check as every other mode below instead of a
+  // special-cased "fails to compile" branch.
 
   if (emitMode == "vm") {
     const std::string runCmd =

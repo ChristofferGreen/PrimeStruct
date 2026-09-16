@@ -13,7 +13,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
-TEST_CASE("retired variadic borrowed vector pack statement mutators no longer run as native vector") {
+TEST_CASE("ir lowerer materializes variadic borrowed vector pack statement mutators") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -81,9 +81,18 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("missing semantic-product method-call target: remove_at") !=
-        std::string::npos);
+  // TODO-4753: .remove_at(...)/.remove_swap(...) method-call sugar (like
+  // .push/.pop/.reserve/.clear above them) now lowers correctly - this used
+  // to pin a real gap (method-call sugar never resolved a monomorphized
+  // definition for these two names specifically) as "expected" until fixed.
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 25);
 }
 
 TEST_CASE("retired variadic borrowed soa count template compatibility rejects before lowering") {

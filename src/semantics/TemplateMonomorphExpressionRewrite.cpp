@@ -1672,6 +1672,27 @@ bool rewriteExpr(Expr &expr,
                ctx.sourceDefs.count(path) == 0 &&
                ctx.helperOverloads.count(path) == 0) {
       helperName = expr.name;
+    } else if (expr.isMethodCall &&
+               (expr.name == "remove_at" || expr.name == "remove_swap") &&
+               ctx.sourceDefs.count(path) == 0 &&
+               ctx.helperOverloads.count(path) == 0) {
+      // TODO-4753: every branch above this one is explicitly gated on
+      // `!expr.isMethodCall` - none of them ever ran for method-call-sugar
+      // (`values.remove_at(idx)`/`values.remove_swap(idx)`), so this whole
+      // function always fell straight through to the unconditional
+      // `return path;` below for these two method calls, leaving `path`
+      // (e.g. "/vector/remove_at", the raw, not-yet-canonicalized shape
+      // `resolveMethodCallTemplateTarget` builds for a collection-family
+      // receiver) unresolved to its real definition path
+      // ("/std/collections/vector/remove_at"). Narrowly scoped to these two
+      // names specifically (not a general "handle any method call" branch):
+      // every other recognized helper name here (count/push/pop/reserve/...)
+      // already has its own established method-call resolution path
+      // elsewhere in the pipeline that this function is deliberately not
+      // supposed to interfere with - widening this to all method calls
+      // regressed several diagnostic-pinning tests that require those paths
+      // to keep rejecting specific visibility-gated shapes.
+      helperName = expr.name;
     } else {
       return path;
     }

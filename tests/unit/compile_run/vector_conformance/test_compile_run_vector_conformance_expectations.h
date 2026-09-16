@@ -561,19 +561,32 @@ inline void expectCanonicalVectorMutatorNumericRejects(const std::string &emitMo
       "vector_remove_at_bool_call_reject_" + emitMode,
       emitMode,
       2);
-  expectCanonicalVectorMutatorBoolReject(emitMode,
-                                         "vector_remove_at_bool_method_reject",
-                                         "values.remove_at(true)",
-                                         "remove_at requires integer index");
+  // TODO-4753: .remove_at(...)/.remove_swap(...) method-call sugar now
+  // resolves through the same real function-call path the bare-call form
+  // (checked immediately above) already used - which, like any other
+  // function call in this language, coerces a bool argument to its `[i32]`
+  // parameter (confirmed general behavior, not specific to these two
+  // helpers) rather than rejecting it. The dedicated "requires integer
+  // index" diagnostic these two cases used to pin only ever fired from a
+  // special-cased vector-mutation-statement fallback that exclusively
+  // handled the method-call-sugar form while it had no other working
+  // resolution path; now that method-call sugar resolves the same way the
+  // bare-call form always did, both forms behave identically here too.
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorMutatorBoolRejectSource("values.remove_at(true)"),
+      "vector_remove_at_bool_method_reject_" + emitMode,
+      emitMode,
+      2);
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorMutatorBoolRejectSource("/std/collections/vector/remove_swap(values, true)"),
       "vector_remove_swap_bool_call_reject_" + emitMode,
       emitMode,
       2);
-  expectCanonicalVectorMutatorBoolReject(emitMode,
-                                         "vector_remove_swap_bool_method_reject",
-                                         "values.remove_swap(true)",
-                                         "remove_swap requires integer index");
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorMutatorBoolRejectSource("values.remove_swap(true)"),
+      "vector_remove_swap_bool_method_reject_" + emitMode,
+      emitMode,
+      2);
 }
 
 inline void expectCanonicalVectorReserveReceiverRejects(const std::string &emitMode) {

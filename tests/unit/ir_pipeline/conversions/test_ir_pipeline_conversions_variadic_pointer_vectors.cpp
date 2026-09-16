@@ -226,7 +226,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects variadic pointer vector packs with indexed dereference statement mutators") {
+TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -293,7 +293,13 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("missing semantic-product method-call target: remove_at") != std::string::npos);
+  // TODO-4753: .remove_at(...)/.remove_swap(...) method-call sugar (like
+  // .push/.pop/.reserve/.clear above them) now lowers correctly - this used
+  // to pin a real gap (method-call sugar never resolved a monomorphized
+  // definition for these two names specifically) as "expected" until fixed.
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  checkMaterializedIndirectVectorPack(module, true);
 }
 

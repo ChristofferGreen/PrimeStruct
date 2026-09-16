@@ -263,7 +263,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("rejects vm vector mutator method calls during lowering") {
+TEST_CASE("runs vm vector mutator method calls during lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -280,11 +280,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_mutator_methods.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_mutator_methods_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("missing semantic-product method-call target: remove_at") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  // TODO-4753: .remove_at(...)/.remove_swap(...) method-call sugar now
+  // lowers correctly alongside the other mutator methods here (pop/
+  // reserve/push/clear, which already worked) - values ends up cleared,
+  // so count() is 0.
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("canonical vector discard helpers with owned elements in vm backend") {
