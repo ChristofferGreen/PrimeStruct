@@ -4,6 +4,7 @@
 #include <limits>
 #include <sstream>
 #include <unordered_set>
+#include <vector>
 
 namespace primec {
 namespace {
@@ -503,6 +504,58 @@ bool validateFunction(const IrModule &module,
   return true;
 }
 
+// GLSL/shader targets fundamentally forbid recursive function calls (direct
+// or mutual) - unlike the VM/native/C++/wasm backends, there is no call-stack
+// mechanism to bound recursion depth. Detects a cycle in the Call/CallVoid
+// graph iteratively (no native recursion, consistent with this codebase's
+// stack-overflow-safety convention for compiler-internal graph walks).
+bool findGlslRecursionCycle(const IrModule &module, std::string &error) {
+  std::vector<std::vector<size_t>> calleesOf(module.functions.size());
+  for (size_t caller = 0; caller < module.functions.size(); ++caller) {
+    for (const IrInstruction &inst : module.functions[caller].instructions) {
+      if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+          inst.imm < module.functions.size()) {
+        calleesOf[caller].push_back(static_cast<size_t>(inst.imm));
+      }
+    }
+  }
+
+  enum class VisitState : uint8_t { Unvisited, OnStack, Done };
+  std::vector<VisitState> state(module.functions.size(), VisitState::Unvisited);
+  for (size_t start = 0; start < module.functions.size(); ++start) {
+    if (state[start] != VisitState::Unvisited) {
+      continue;
+    }
+    std::vector<std::pair<size_t, size_t>> frames;
+    frames.push_back({start, 0});
+    state[start] = VisitState::OnStack;
+    while (!frames.empty()) {
+      const size_t node = frames.back().first;
+      size_t &nextEdge = frames.back().second;
+      if (nextEdge < calleesOf[node].size()) {
+        const size_t callee = calleesOf[node][nextEdge];
+        ++nextEdge;
+        if (state[callee] == VisitState::OnStack) {
+          failFunction(node,
+                       module.functions[node].name,
+                       "glsl target does not support recursive function calls (calls " +
+                           module.functions[callee].name + ")",
+                       error);
+          return true;
+        }
+        if (state[callee] == VisitState::Unvisited) {
+          state[callee] = VisitState::OnStack;
+          frames.push_back({callee, 0});
+        }
+      } else {
+        state[node] = VisitState::Done;
+        frames.pop_back();
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool validateIrModule(const IrModule &module, IrValidationTarget target, std::string &error) {
@@ -529,6 +582,10 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
     if (!validateFunction(module, functionIndex, function, target, error)) {
       return false;
     }
+  }
+
+  if (isGlslTarget(target) && findGlslRecursionCycle(module, error)) {
+    return false;
   }
 
   return true;

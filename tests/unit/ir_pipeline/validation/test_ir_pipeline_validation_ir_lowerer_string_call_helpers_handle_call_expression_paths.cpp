@@ -296,6 +296,112 @@ TEST_CASE("ir call semantics matrix accepts recursive call opcodes with tail met
   CHECK(error.empty());
 }
 
+TEST_CASE("ir validator rejects self-recursive call opcodes for glsl target") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction factFn;
+  factFn.name = "/fact";
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 7});
+  factFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  factFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(factFn));
+
+  // Same module is accepted on backends with a real call stack...
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  CHECK(error.empty());
+
+  // ...but shader targets have no call stack and forbid recursion outright.
+  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Glsl, error));
+  CHECK(error.find("glsl target does not support recursive function calls") != std::string::npos);
+  CHECK(error.find("/fact") != std::string::npos);
+}
+
+TEST_CASE("ir validator rejects mutually-recursive call opcodes for glsl target") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 10});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  // /isEven(n) calls /isOdd(n - 1); /isOdd(n) calls /isEven(n - 1) - a cycle
+  // that only exists across two distinct functions, not a direct self-call.
+  primec::IrFunction isEvenFn;
+  isEvenFn.name = "/isEven";
+  isEvenFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  isEvenFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  isEvenFn.instructions.push_back({primec::IrOpcode::Call, 2});
+  isEvenFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction isOddFn;
+  isOddFn.name = "/isOdd";
+  isOddFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  isOddFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  isOddFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  isOddFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(isEvenFn));
+  module.functions.push_back(std::move(isOddFn));
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  CHECK(error.empty());
+
+  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Glsl, error));
+  CHECK(error.find("glsl target does not support recursive function calls") != std::string::npos);
+}
+
+TEST_CASE("ir validator accepts a non-recursive shared call target for glsl") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  // /square is called from 2 sites but never recurses - legal GLSL.
+  primec::IrFunction squareFn;
+  squareFn.name = "/square";
+  squareFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  squareFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  squareFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(squareFn));
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Glsl, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir call semantics matrix rejects non-direct call targets for vm and native") {
   primec::IrModule module;
   module.entryIndex = 0;
