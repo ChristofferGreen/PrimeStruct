@@ -48293,3 +48293,164 @@ real answer.
     been reported, including this closing one) rather than leaving it open
     indefinitely waiting on ARM64 hardware access that may never come.
 
+- [x] TODO-4901: primec --emit=wasm hangs indefinitely (infinite loop) compiling quaternion arithmetic helpers
+  - owner: ai
+  - created_at: 2026-08-08
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-smoke
+  - depends_on: (none)
+  - scope: discovered incidentally while trying to verify TODO-4761's fix
+    by running the full `PrimeStruct_compile_run_tests` binary directly -
+    the run never terminated. Traced to a single test case,
+    `"primec emits wasm bytecode for quaternion arithmetic helpers with
+    tolerance"`, which invokes `./primec --emit=wasm` on
+    `compile_emit_wasm_quaternion_arithmetic_helpers.prime`; that child
+    process pegs a CPU core at ~100% indefinitely (observed running 2+
+    minutes with no sign of terminating before being killed). Confirmed
+    present in the pre-TODO-4763-fix binary too (i.e. NOT a regression
+    introduced this session) - this is a previously-undiscovered,
+    pre-existing infinite loop, likely dating back to whenever wasm
+    quaternion-helper emission was last touched. This is why the
+    monolithic test binary must currently be run via `ctest` with
+    per-test timeouts (`ctest -R PrimeStruct_primestruct_compile_run`)
+    rather than invoked directly, to avoid the whole suite hanging
+    forever on this one case.
+  - implementation_notes: not yet investigated. Start by reproducing
+    directly: `./primec --emit=wasm <the .prime source> -o /tmp/out.wasm
+    --entry /main` (extract the source from the test file/helper it's
+    built from) and attach a debugger or add iteration-count instrumentation
+    to the wasm emitter's quaternion/arithmetic-helper lowering path to
+    find the non-terminating loop. Given the test name references
+    "tolerance" (likely a floating-point comparison helper), suspect a
+    loop bound computed from a float value that never reaches its
+    terminating condition, or infinite recursion in constant-folding/
+    monomorphization for a quaternion helper.
+  - acceptance: `./primec --emit=wasm` on the repro source terminates
+    (successfully or with a normal error) in a bounded, reasonable time,
+    and the full `PrimeStruct_compile_run_tests` binary can be run
+    directly to completion again without hanging.
+  - stop_rule: confirm whether this is specific to the "quaternion
+    arithmetic helpers with tolerance" test's exact source shape, or a
+    more general wasm-backend infinite-loop class, before assuming a fix
+    for one case covers the whole bug.
+  - investigated_2026-08-08: it's NOT wasm-specific, and it's not
+    literally infinite - it's exponential. Confirmed via a minimal
+    repro with a plain `[f32] totalError{abs(a - b) + abs(a - b) + ...}`
+    chain (no Quat/math types needed at all) on BOTH `--emit=vm` and
+    `--emit=wasm`: n=8 terms ~2.4s, n=10 ~2.6s, n=12 ~3.2s, n=14 ~6.2s,
+    n=16 times out (>15s) - a clean doubling-ish pattern per couple of
+    added terms, i.e. O(2^depth) in the depth of a left-associated `+`
+    chain, not O(1) per term. The quaternion test just happens to build
+    a 20-term chain, which lands deep enough in the exponential curve to
+    look like a hang. Confirmed with `--dump-stage ast` (near-instant)
+    vs `--dump-stage ast-semantic` (exponentially slow) that the blowup
+    is entirely within semantic validation, before IR lowering.
+    Root-caused via `gdb -p <pid> -batch -ex bt` on a hung process:
+    the recursion is inside `rewriteExpr` in
+    `src/semantics/TemplateMonomorphExpressionRewrite.h`. Around
+    (as of this investigation) line 2091: for ANY non-method,
+    non-binding call expression, an unconditional block calls
+    `mutableCollectionHelperReceiverExpr(expr)`, which - despite its
+    name - does NOT check that `expr` is actually a genuine collection
+    helper call; it just returns `&expr.args.front()` for any call with
+    args (see the lambda's own body: no callee-path/name check at all).
+    For a left-associated `+`/`plus(...)` chain, `args.front()` is the
+    entire left subtree built so far. The block then unconditionally
+    recurses with a full `rewriteExpr(*receiverExpr, ...)` call on that
+    subtree - and the SAME subtree is *also* visited again immediately
+    afterward via the function's normal generic per-argument loop
+    (`for (auto &arg : expr.args) { rewriteExpr(arg, ...) }`, further
+    down in the same function). That's two full recursive rewrite passes
+    over the left subtree at every nesting level, i.e. `T(depth) =
+    2*T(depth-1) + O(1)`, exactly the observed O(2^depth) blowup - the
+    other three call sites of `mutableCollectionHelperReceiverExpr` in
+    the same file are all correctly gated behind an actual
+    collection-helper-path check first and don't have this problem.
+    **Prototyped and reverted**: removed the redundant early
+    `rewriteExpr(*receiverExpr, ...)` call (keeping the two
+    `rewriteNestedExperimentalKeyValueConstructorValue`/
+    `rewriteNestedExperimentalVectorConstructorValue` pre-processing
+    calls, which are plain linear tree walks, not recursive rewriteExpr
+    calls, and are not the source of the blowup). This fixed the
+    performance bug completely (verified n=20/30/50-term chains all
+    ~2.2s flat, vs. timing out before) but broke a substantial number of
+    genuinely collection/vector-related tests when run via the full
+    `ctest -R "PrimeStruct_"` suite: `PrimeStruct_vector_surface_traces`,
+    multiple `..._semantics_calls_flow_collections_*` shards, multiple
+    `..._compile_run_vm_collections_collections_newly_exposed_2026_07_16_*`
+    shards, `..._compile_run_imports_operations_and_collections_*`
+    shards, plus a couple of unrelated-looking `..._semantics_executions_*`
+    and `..._ir_pipeline_validation_cases_*` shards - roughly 25-30
+    failing test cases total. This means the early, seemingly-redundant
+    rewrite genuinely IS load-bearing for real collection-receiver cases
+    (e.g. a receiver that's itself a constructor call needing rewriting
+    to a form that `resolveCalleePath`/the key-value-entry-constructor
+    checks further down the SAME function - which run BETWEEN this block
+    and the later generic args loop - depend on already being rewritten)
+    - it's not simply dead/duplicate work in the general case, only for
+    non-collection calls like plain arithmetic. Reverted cleanly (`git
+    diff` confirms `TemplateMonomorphExpressionRewrite.h` is clean).
+    **Root cause fully understood, safe fix not found**: a correct fix
+    needs `mutableCollectionHelperReceiverExpr`'s call at this specific
+    site to be gated on `expr` actually being a genuine collection-helper
+    call (mirroring how the other 3 call sites in the same file already
+    gate their own use of the same lambda) rather than firing for every
+    non-method call unconditionally - but doing that requires knowing
+    what "genuine collection helper call" check those other 3 sites use
+    and confirming it's cheap enough / available early enough at this
+    point in the function to not just reintroduce a different form of
+    the same problem. Not fixed this session. In the meantime, this is a
+    real but narrow practical limitation: any hand-written expression
+    with a long (as a rule of thumb, roughly 16+) left-associated chain
+    of binary arithmetic/comparison operators will make compilation
+    unacceptably slow. `docs/todo.md`'s own advice for future sessions:
+    look at what distinguishes the other 3 gated call sites' conditions
+    (`!experimentalKeyValuePath.empty() && ctx.sourceDefs.count(...) > 0
+    && resolves...Receiver(...)`-shaped checks) from this one, and thread
+    an equivalent cheap check into this site instead of removing the
+    early rewrite outright.
+  - finished_at: 2026-09-16
+  - resolution_2026-09-16 (CLOSING - fixed as a side effect of TODO-5220,
+    verified fresh in this session): TODO-5220 (see `docs/todo_finished.md`)
+    landed the exact fix this task's own `investigated_2026-08-08` note
+    called for - gating the unconditional 4th call site of
+    `mutableCollectionHelperReceiverExpr` in
+    `TemplateMonomorphExpressionRewrite.h`'s `rewriteExpr` behind a real
+    collection-helper-path check (a name-based discriminator plus a
+    read-only subtree scan, not the reverted type-inference guards),
+    eliminating the O(2^depth) blowup while keeping the ~25-30
+    collection-receiver tests that depended on the early rewrite passing.
+    That task was filed and closed as a general test-runtime fix without
+    ever being cross-referenced back to close this one - re-verified
+    directly this session rather than trusting the cross-reference alone:
+    (1) the original wasm quaternion-helpers repro
+    (`compile_emit_wasm_quaternion_arithmetic_helpers.prime`, extracted
+    verbatim from `test_compile_run_smoke_core_wasm_core.cpp`) now compiles
+    via `./primec --emit=wasm --wasm-profile wasi` in ~1.1s with a clean
+    diagnostic ("native backend only supports arithmetic/comparison/...";
+    the quaternion helpers route through struct-typed math calls the wasm
+    backend's real-call-eligibility work doesn't cover, an unrelated,
+    separately-tracked capability gap, not a hang) instead of never
+    terminating; same result under `--wasm-profile browser` and plain
+    `--emit=vm`. (2) the minimal 24-term `abs(a-b)+abs(a-b)+...` chain from
+    the investigation note (no Quat/math types) now compiles in ~0.06s
+    (was timing out past 15s at n=16). (3) `PrimeStruct_compile_run_tests`
+    run directly (not via `ctest`, matching exactly how this bug was
+    originally discovered) completes to its final summary line in well
+    under 900s - confirmed via a background `timeout 900` run that
+    finished on its own (2409 cases, 2403 passed). The 6 failures in that
+    direct run are unrelated to this task and to TODO-5220: re-running two
+    of them in isolation showed one (`vm uses canonical stdlib Buffer
+    helper methods`, SIGTERM in the full run) passes cleanly alone -
+    consistent with this codebase's known cross-test-case-pollution class
+    when running the monolithic binary directly outside `ctest` sharding
+    (see TODO-4712) - and the other (`C++ emitter runs canonical map
+    reference string access`) fails the same way in isolation too, but in
+    a completely unrelated area (C++ emitter map-reference codegen, not
+    wasm/quaternion/exponential-blowup) with no connection to this task's
+    scope; left untouched rather than scope-creeping into fixing it here.
+    Both of this task's acceptance criteria are met: the repro terminates
+    in bounded time, and the full binary runs to completion without
+    hanging. Closing as resolved (via TODO-5220's fix, independently
+    reconfirmed this session).
+
