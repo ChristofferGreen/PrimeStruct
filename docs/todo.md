@@ -658,6 +658,97 @@ section and `docs/todo_finished.md`.
     auto/storage return-type layers to type pair-shaped constructor calls
     without pair overloads (failing-case list preserved in the goal memory
     notes).
+    ROUND 4 (2026-09-17): Re-confirmed round 3's landed state is unchanged
+    (the 8 pair forwards + the existence-gated monomorph rewrite in
+    TemplateMonomorphExpressionRewrite.cpp are still exactly as round 3
+    left them), then made a real attempt at the specific remaining gap
+    round 3 pointed at ("teach ... the auto/storage return-type layers to
+    type pair-shaped constructor calls without pair overloads"), scoped
+    to implicit (no explicit `<K, V>`) pair calls, e.g. `[auto] m{map(1i32,
+    4i32, 2i32, 8i32)}`. Traced the actual failure to TWO stacked gaps,
+    not one:
+    (a) `inferImplicitTemplateArgs` (TemplateMonomorphImplicitTemplateInference.cpp)
+    never infers K/V for the variadic entries constructor's
+    `[args<Entry<K, V>>] entries` parameter when the packed call-site
+    arguments are raw key/value values rather than `entry(...)` calls: its
+    "packed args" branch only fires when the pack element type is a bare
+    implicit name, and its "wrapped template args" branch only fires when
+    the parameter's own template-arg text is directly a comma list of bare
+    implicit names - `Entry<K, V>` is neither (it is a single compound
+    element type), so the whole parameter is silently skipped and K/V stay
+    unresolved. Implemented and verified a targeted fix: a new
+    `inferFromEntryPairPackedArgs` branch that detects a 2-argument wrapper
+    args-pack parameter, pairs up the packed call arguments positionally
+    (even index -> first inner name, odd index -> second), and is guarded
+    to bail out (leaving prior behavior untouched) whenever any packed
+    argument is itself an `entry(...)`-shaped call, so it cannot hijack the
+    already-working entries-pack-call surface
+    (`deriveKeyValueTypesFromEntryPackCall` et al. in
+    SemanticsValidatorCollectionHelperRewrites.cpp own that shape).
+    (b) Even with (a) fixed, the pair-to-entry rewrite block in
+    TemplateMonomorphExpressionRewrite.cpp's rewriteExpr only engages when
+    `expr.templateArgs.size() == 2` is already true *before* implicit
+    inference runs later in the same function - so an implicit-arg pair
+    call never reaches the rewrite at all, ladder or no ladder. Added a
+    speculative early call to `inferImplicitTemplateArgs` right before that
+    gate, purely to populate `expr.templateArgs` early enough to unlock it
+    (a no-op on failure). With (a)+(b) together and the ladder deleted, the
+    `[auto] m{map(1i32, 4i32, 2i32, 8i32)}` repro advanced from
+    "argument count mismatch" -> "VM lowering error: variadic parameter
+    type mismatch" -> "VM lowering error: missing semantic-product
+    local-auto fact: /main -> local m", i.e. TemplateMonomorph's own
+    layers (a)+(b) now correctly retype the call and rewrite it to
+    entries, confirmed via `--dump-stage semantic-product` showing the
+    rewritten `entry(...)` calls with the right specialization. The
+    remaining, still-unfixed failure is in a THIRD, earlier, and separate
+    layer: SemanticsValidator's own pre-monomorphization call resolution
+    (`SemanticsValidator::resolveCalleePath` in
+    SemanticsValidatorBuildCallResolution.cpp, an ~800-line function
+    independent of TemplateMonomorph's `selectHelperOverloadPath`) is what
+    `inferDirectMapConstructorBinding`
+    (SemanticsValidatorBuildInitializerInference.cpp) calls to resolve the
+    callee before it can record the "auto" local's binding type as a
+    semantic-product fact for IR lowering to consume later. That resolver
+    has no arity-fallback-to-variadic logic analogous to
+    `selectHelperOverloadPath`'s (lines ~876-899 there), so once the pair
+    overloads are gone, a 4-raw-arg `map(...)` call resolves to nothing
+    usable at that stage, `inferDirectMapConstructorBinding` returns
+    false, no local-auto fact is ever recorded, and IR lowering hard-fails
+    downstream. Giving this resolver the same arity-fallback treatment is
+    a materially larger, separate piece of work (own ~800-line function,
+    arbitrates every map-family call shape in the codebase, not just
+    pair-constructor calls) that was out of safely-completable scope for
+    this round.
+    Also worth flagging as a landmine for the next attempt: naively
+    populating `expr.templateArgs` earlier (fix (b) above) to unlock the
+    existing pair-to-entry rewrite gate also makes the rewrite's
+    argument-type-mismatch diagnostic loop (lines ~2403-2424 there) run
+    for implicit-arg pair calls that never reached it before - today that
+    loop's *effect* stays inert while the ladder exists only because
+    `hasMatchingPairArityOverload` still blocks the actual pair->entry
+    conversion, but the loop itself now executes earlier for a whole class
+    of call sites it previously never saw, which is exactly the kind of
+    "provably inert" invariant rounds 1-3 were careful to preserve and
+    would need its own before/after diagnostic-suite diff before landing,
+    independent of the resolver work in (c). Given fix (a)+(b) alone does
+    not clear acceptance and risks this diagnostic-timing side effect,
+    and the real blocker (SemanticsValidator's own resolver, point (c))
+    is out of scope for this round, reverted both TemplateMonomorph
+    changes and the map.prime pair-ladder deletion back to the exact
+    round-3-landed state (`git checkout` on all three touched files,
+    rebuilt primec, and spot-re-ran the `[auto] m{map(1i32, 4i32, 2i32,
+    8i32)}` repro to confirm it still passes as it did before this round's
+    experiment). Concrete next step for round 5: before touching
+    TemplateMonomorph again, first give
+    `SemanticsValidator::resolveCalleePath`/`inferDirectMapConstructorBinding`
+    an arity-fallback-to-variadic path mirroring
+    `selectHelperOverloadPath`'s, verified in isolation against a
+    dedicated fast unit test at that seam (per the pattern
+    TODO-5294/ReceiverTargetResolutionConsolidation.md's closing summary
+    recommends) rather than only via the slow 3-suite battery; only once
+    that resolver correctly recognizes pair-shaped calls should fixes
+    (a)+(b) from this round be reapplied and the ladder deletion attempted
+    again.
   - acceptance:
     - map.prime exposes exactly two map constructors: zero-arg and the
       variadic entries form
