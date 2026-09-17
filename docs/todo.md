@@ -888,6 +888,161 @@ section and `docs/todo_finished.md`.
     reattempted with that specific scenario added to the fast/targeted
     seam-level test this round used, *before* re-running the full slow
     suites again.
+    ROUND 6 (2026-09-17): Re-derived fixes (a)+(b)+(c) from round 5's
+    description exactly as written and re-deleted the pair ladder (same
+    three touched files plus map.prime); this reconstruction round-tripped
+    correctly and reproduced round 5's exact reported state (target repro,
+    1/2/3/8-pair variants, explicit/implicit template args, invalid-pair
+    diagnostics all passing on both VM and exe). Root-caused round 5's
+    crash per this round's mandate, with a key correction to round 5's own
+    framing: **the crash is not what round 5's next-step note assumed.**
+    Round 5 hypothesized an argument-validation call/recursion loop inside
+    `SemanticsValidatorExprArgumentValidation.cpp`'s
+    `validateArgumentTypeAgainstParam`/`inferCollectionBindingType`.
+    Instrumenting that function directly (a call counter, verified via a
+    `--emit=vm` run under `ulimit -v` so the crash reproduces in under two
+    seconds) showed it is called only ~220-240 times total for the crashing
+    program before the crash - an entirely ordinary number for a program
+    this size, not a runaway loop. The real crash is one stack frame away
+    from where round 5 was looking, and at a completely different
+    *pipeline stage*: a `gdb -batch -ex "bt"` backtrace on the core dump
+    (`ulimit -c unlimited`) shows the abort is inside
+    `primec::vm_detail::allocateVmHeapSlots`, called from
+    `executeVmKernel`/`executeVmModule`/`VmIrBackend::emit` - i.e. the
+    crash happens while the VM backend is *running* the already-compiled
+    program, not while the compiler is validating/lowering it. This is why
+    round 5's `--emit=exe` probing didn't catch it as a hang/loop at
+    compile time: `--emit=exe` only *builds* an executable and does not
+    run it, so a runtime infinite loop in the compiled program is
+    invisible unless the resulting binary is actually executed (or
+    `--emit=vm`, which both lowers *and immediately runs* the program, is
+    used instead) - round 5's own repro-probing session apparently never
+    executed the `--emit=exe` artifact it built for this exact scenario.
+    Minimal, fast, reliable repro (crashes in ~1-2s under a 2GB
+    `ulimit -v`, no need for the full suites): compile+run with
+    `--emit=vm` a program with
+    `scoreValues([Map<string, i32>] values) { ... }` and
+    `main() { return(scoreValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))) }`
+    - this is verbatim the existing
+    `makeCanonicalMapNamespaceExperimentalParameterConformanceSource()`
+    fixture in
+    `tests/unit/compile_run/map_conformance/test_compile_run_map_conformance_sources.h`,
+    exercised by the compile_run test case "runs vm canonical namespaced
+    map constructors through explicit experimental map parameters" (and
+    two sibling cases, "rejects vm experimental map variadic constructor
+    type mismatch" and "runs vm experimental map method parameters", also
+    newly failed under fix (c) in this round's targeted-subset run -
+    confirmed absent at the round-5-landed baseline via the same `git
+    stash` A/B method, isolated to a targeted
+    `--test-suite=primestruct.compile.run.native_backend.collections,...vm.collections,...vm.maps,...math_conformance`
+    subset (654 cases) run before and after fix (c), rather than the full
+    2680-case suite, given wall-clock constraints this round - see the
+    scope note on suite-timing below). This program is exactly round 5's
+    already-known crash shape (a pair-shaped `map(...)` call passed to a
+    `[Map<K, V>]`-typed *parameter*), just confirmed via a much cheaper,
+    faster, and more precise reproduction path than round 5 used.
+    Traced the mechanism one level further: with fix (c) reporting the
+    argument's inferred binding type as `typeName="Map"` (matching the
+    existing "Map" convention several *other* producers in
+    `SemanticsValidatorBuildInitializerInference.cpp` already use for a
+    different purpose - the internal
+    `isExperimentalCollectionBackingTypeName("map", "Map", ...)` family
+    check), `validateArgumentTypeAgainstParam` sees the argument's
+    inferred text ("Map<string, i32>") and the parameter's declared text
+    ("Map<string, i32>", from the bare `[Map<K, V>]` spelling) as
+    literally identical, so it raises no semantic-level diagnostic at all
+    and the call is accepted. Tried changing fix (c) to instead emit
+    `typeName="MapValue"` (matching the map constructors' actual
+    stdlib-declared `return<MapValue<K, V>>` spelling in
+    `stdlib/std/collections/map.prime`, rather than the shorter "Map"
+    alias) - this **does eliminate the crash**: the same program now fails
+    cleanly at `--emit=vm` with exit code 2 and
+    `VM lowering error: struct parameter type mismatch: expected /std/collections/map/MapValue__t<hash>, got <unknown>`
+    instead of aborting. This confirms the crash's true trigger: once
+    semantic validation accepts the call (via the "Map"/"Map" text match),
+    the argument's *specialized* struct type never actually gets threaded
+    through to IR lowering for this parameter-typed case (`got <unknown>`)
+    - the compiled program ends up reading the argument through an
+    uninitialized/wrong-layout binding, corrupting whatever field the
+    lowered map-constructor loop uses as its trip count, so the loop
+    never terminates and keeps heap-allocating (vector pushes inside
+    `mapInsertEntry`) until `allocateVmHeapSlots` throws `std::bad_alloc`.
+    However, the "MapValue" text change is not a clean fix on its own: it
+    reintroduces a *different* regression - "stdlib map constructors
+    reject inferred canonical map struct field mismatch" in
+    `test_semantics_calls_and_flow_collections_experimental_map_auto_inference.cpp`
+    (the same struct-field test round 5/this round's fix (c) with "Map"
+    was making pass) now fails with `unknown struct type for layout:
+    MapValue` - i.e. "MapValue" is not a generally-safe substitute for
+    "Map" either; several *other* existing producers in the same file
+    (struct-layout resolution, the `normalizedBindingType == "Map"` check
+    at line ~1019, etc.) specifically expect "Map", not "MapValue". So the
+    two-way tension is: this fallback needs to answer "Map" for every
+    consumer *except* `validateArgumentTypeAgainstParam`'s
+    parameter-argument comparison, where it needs to answer something
+    that does NOT textually collide with a bare `[Map<K, V>]`-typed
+    parameter declaration. A caller-scoped fix (leave fix (c) emitting
+    "Map" as before, and instead special-case
+    `inferCollectionBindingType`'s lambda in
+    `SemanticsValidatorExprArgumentValidation.cpp` to re-derive/override
+    to a non-colliding spelling only when validating a call argument
+    specifically) was identified as the right shape of fix but not
+    completed/verified this round - ran out of safely-completable budget
+    after the wall-clock cost of standing up and running even the
+    targeted 654-case compile_run subset (the full 2680-case suite proved
+    infeasible to run twice - A/B baseline and post-fix - within this
+    round's realistic turn budget; a `--test-suite=...` filtered subset
+    covering `native_backend.collections`, `vm.collections`, `vm.maps`,
+    and `math_conformance` was used instead as a faster, still-relevant
+    proxy - future rounds should keep using this subset for fast
+    iteration and only run the full suite once as a final confirmation,
+    and should budget real wall-clock time generously, as even the
+    filtered subset took several minutes per run in this environment).
+    Given fix (c) as landed by round 5's description (emitting "Map")
+    reproducibly crashes with unbounded memory growth on valid-looking
+    source (confirmed via gdb backtrace, not guesswork), and the
+    known-working mitigation is unverified/incomplete, reverted all
+    changes back to the exact round-5-landed state (`git checkout` on all
+    touched files, confirmed `git status`/`git diff` empty against the
+    round-5 commit, rebuilt primec, reconfirmed the round-5 target repro
+    still passes) rather than landing a partial fix, per this round's
+    explicit instructions.
+    Concrete next step for round 7: implement the caller-scoped mitigation
+    identified above - in
+    `SemanticsValidatorExprArgumentValidation.cpp`'s
+    `inferCollectionBindingType` lambda (inside
+    `validateArgumentTypeAgainstParam`), after calling
+    `inferBindingTypeFromInitializer` and getting back a "Map"-typed
+    binding for an entry-pack-shaped call argument (detect this shape the
+    same way fix (c) does, via
+    `deriveKeyValueTypesFromEntryPackCall`), override the local `baseOut`
+    used for *this comparison only* to a spelling that cannot collide with
+    a bare `[Map<K, V>]` parameter declaration (e.g. "MapValue", or
+    something more deliberately distinct) before it flows into the
+    expected-vs-actual text comparison, while leaving fix (c) itself
+    (and every other caller of `inferBindingTypeFromInitializer`) emitting
+    "Map" unchanged. Verify against a fast repro set that must include, at
+    minimum: (1) round 5's original target repro
+    (`[auto] m{map(1i32, 4i32, 2i32, 8i32)}`), (2) the Holder
+    struct-field-mismatch test above (must stay passing/rejecting exactly
+    as it does at the round-5-landed baseline), and (3) this round's new
+    `scoreValues([Map<string, i32>] values)` parameter-passing crash repro
+    (must compile-reject with the exact diagnostic text
+    `argument type mismatch for /scoreValues parameter values`, exit code
+    2, no crash) - all three simultaneously, via direct `primec
+    --emit=vm`/`--emit=exe` (and actually *running* the `--emit=exe`
+    artifact, not just building it) invocations, before touching the full
+    suites. Only once all three hold should the targeted
+    `--test-suite=...collections,...vm.maps,...math_conformance` subset
+    (already measured this round: round-5-landed baseline is 651/654
+    passing, 3 pre-existing failures - two unrelated shim/wrapper VM
+    tests plus one already-known map/vector cross-suite conformance-harness
+    flake, none map-pair-ladder-related) be re-run for a full A/B compare,
+    and only after that subset is clean should the full 2680-case
+    `PrimeStruct_compile_run_tests` suite be attempted (budget real wall
+    time for this - it is CPU-bound compiling C++ per native-backend test
+    case and took several minutes even for the ~650-case subset in this
+    environment).
   - acceptance:
     - map.prime exposes exactly two map constructors: zero-arg and the
       variadic entries form
