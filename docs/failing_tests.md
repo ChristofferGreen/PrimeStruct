@@ -655,13 +655,52 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-06T14:05:00Z`
+- Last updated: `2026-09-18T19:43:55Z`
 - Build type: `Release`
 - Build dir: `build-release`
-- Command: `ctest --test-dir build-release -I 1745,1745 --output-on-failure` (targeted
-  re-run; see note above on why a `--parallel 8` full-suite regen was not adopted)
-- Result: `ctest` passed - 0 failing CTest cases known.
-- Failing CTest cases: none currently tracked.
+- Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
+- Result: `ctest` failed with status `8`.
+- Failing CTest cases:
+  - `45`: `PrimeStruct_primestruct_ir_pipeline_conversions_core_11_20`
+  - `64`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
+  - `82`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80`
+  - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
+  - `84`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`
+  - `85`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_101_110`
+  - `99`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250`
+  - `100`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_251_260`
+  - `108`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340`
+  - `110`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_351_360`
+  - `113`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_381_390`
+  - `115`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410`
+  - `116`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_411_420`
+  - `118`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_431_440`
+  - `135`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_601_610`
+  - `138`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_631_640`
+  - `144`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_691_700`
+  - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
+  - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
+  - `149`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_741_750`
+  - `150`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_751_760`
+  - `151`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770`
+  - `154`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_791_800`
+  - `158`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840`
+  - `195`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_1201_1210`
+  - `640`: `PrimeStruct_primestruct_semantics_type_resolution_graph_type_resolution_graph_151_160`
+  - `984`: `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`
+  - `1002`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`
+  - `1022`: `PrimeStruct_primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_383_392`
+  - `1146`: `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+  - `1509`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_1_2`
+  - `1510`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_3_4`
+  - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
+  - `1895`: `PrimeStruct_primestruct_stdlib_map_ownership`
+  - `1932`: `PrimeStruct_vector_surface_traces`
+  - `1938`: `PrimeStruct_map_backing_traces`
+  - `1942`: `PrimeStruct_map_surface_strict_audit`
+  - `1944`: `PrimeStruct_soa_surface_trace_zero_audit`
+  - `1946`: `PrimeStruct_collection_audit_exemption_count_ratchet`
+  - `1947`: `PrimeStruct_collection_audit_exemption_count_ratchet_self_test`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
