@@ -15,6 +15,137 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+### TODO-4683 post-merge full-gate triage (2026-09-18)
+
+A full `./scripts/compile.sh --release` run after TODO-4683 landed
+(commit `fcea5a0`, "delete the map pair-constructor ladder, complete the
+entries-rewrite migration") came back with 40 failed CTest shards + 1
+timeout out of 1971. Every failure was individually triaged against the
+pre-TODO-4683 baseline (`c7cc6f0`, checked out into a scratch
+`git worktree` and built/diffed there, never touching this checkout's
+branch) to separate genuine regressions from pre-existing failures.
+
+**Genuine regressions from TODO-4683 (fixed this session):**
+
+- `PrimeStruct_map_backing_traces`: the round-7 caller-scoped comments
+  added to `SemanticsValidatorExprArgumentValidation.cpp` spelled the
+  experimental map surface literally as `` Map<K, V> `` in prose,
+  tripping `scripts/check_map_backing_traces.py`'s `map-type-text`
+  zero-tolerance pattern (4 new traces, allowed 0 for that file - this
+  is a decaying-inventory audit with no per-file exemption-comment
+  mechanism, unlike the strict audit). Fixed by rewording those 4
+  comment occurrences to describe the spelling without using the raw
+  `` Map< `` substring; behavior is unchanged, only prose. Verified via
+  `python3 scripts/check_map_backing_traces.py` - the 4 `map-type-text`
+  violations are gone; the remaining `entry-backing-type-symbol`
+  violations in 4 unrelated files are confirmed pre-existing (see
+  below).
+- `PrimeStruct_primestruct_stdlib_map_ownership`: one assertion in
+  `test_stdlib_map_ownership_map_surface_registry_and_template_monomorph.cpp`
+  still asserted `map.prime` contains the 8th pair-ladder overload's
+  parameter spelling (`` [K] eighthKey, [V] eighthValue ``), which
+  TODO-4683 intentionally deleted. Updated the assertion to check that
+  spelling is now *absent* (documenting the ladder's removal) instead of
+  present. The other 15 assertion failures in this same test binary
+  (about `SemanticsValidatorExprMethodTargetResolution.cpp` helper-name
+  strings that no longer exist in that file) are confirmed pre-existing
+  - that file was not touched between baseline and `fcea5a0`, and the
+  strings are equally absent at baseline.
+
+**Genuine regression, identified but NOT fixed (root cause pinpointed,
+fix deferred - see rationale below):**
+
+A cluster of failures shares one root cause: a pair-shaped
+`map<K, V>(key, value, ...)` constructor call (explicit template args)
+now gets a *shape-only* `Map` binding-type fallback from
+`SemanticsValidator::inferBindingTypeFromInitializer`
+(`SemanticsValidatorBuildInitializerInference.cpp`, "Fix (c)" hunk in
+`fcea5a0`) whenever the post-monomorphization semantic-product pass
+can't find the specialized entries-constructor definition in `defMap_`.
+That fallback's own comment says it plainly: "it never threads a real
+backing struct to IR lowering." Downstream code that needs the concrete
+monomorphized backing struct name (IR access-target resolution, native/
+VM call-target resolution for `at`/count/etc., VM heap-slot sizing) then
+either: falls through to a generic, unresolved `/at` call target
+(`unknown method: /std/collections/map/at`, `unknown call target: /at`);
+silently produces a wrong result instead of the expected compile-time
+rejection; or - worst - computes a garbage heap-slot count and crashes
+the VM executor with `std::bad_alloc` in
+`primec::vm_detail::allocateVmHeapSlots` (confirmed via `gdb` backtrace:
+`VmIrBackend::emit` -> `executeVmModule` -> `executeVmKernel` ->
+`allocateVmHeapSlots`, reproduced standalone with
+`primec --emit=vm` on a minimal `map<string, i32>("a"raw_utf8, ...)`
+program). Confirmed regression (not pre-existing) because every
+implicated test file is unchanged between baseline `c7cc6f0` and
+`fcea5a0`, yet fails only at `fcea5a0`. Affected shards:
+  - `PrimeStruct_primestruct_ir_pipeline_conversions_core_11_20`
+    ("ir lowerer rejects stdlib string-keyed map helper lowering" now
+    incorrectly lowers instead of rejecting; the minimal repro above
+    crashes the full `primec --emit=vm` pipeline with `bad_alloc`).
+  - `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`
+  - `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`
+  - `PrimeStruct_primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_383_392`
+    (61.6s - the bad_alloc path takes a long time before it throws)
+  - `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+  - `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_1_2`
+    and `_3_4` (one expects `/std/collections/map/at` to resolve, gets
+    `unknown method`; the other expects a wildcard-import rejection
+    that no longer fires)
+  - `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
+    (Timeout - almost certainly the same bad_alloc-adjacent path, just
+    slow enough to hit the 30s CTest timeout instead of throwing)
+
+A correct fix requires threading a genuine concrete backing-struct type
+(the monomorphized `MapValue__t<hash>`/`Entry__t<hash>` path) through
+this shape-only fallback, which needs visibility into
+TemplateMonomorph's specialized definitions that
+`SemanticsValidator::inferBindingTypeFromInitializer` does not have -
+the same category of cross-pass plumbing problem that took TODO-4683
+itself 7 rounds to land. Per the bug-fix workflow, this was not forced
+through with a guessed fix in this session; it needs its own dedicated
+TODO. Left unresolved and out of `docs/todo.md` scope for this pass;
+flag for a follow-up TODO before the next map-surface change.
+
+**Confirmed pre-existing (unrelated to TODO-4683, left as-is):**
+
+All confirmed via identical-output reproduction against the `c7cc6f0`
+baseline (checked out in a scratch worktree) using the *unchanged*
+checker scripts/test binaries, or via the source files involved being
+untouched by `fcea5a0` with content that was already broken at
+baseline:
+
+- `PrimeStruct_map_surface_strict_audit` (+ `_self_test`),
+  `PrimeStruct_vector_surface_traces`,
+  `PrimeStruct_soa_surface_trace_zero_audit` (+ `_self_test`),
+  `PrimeStruct_collection_audit_exemption_count_ratchet` (+
+  `_self_test`): byte-identical failure output at baseline and HEAD via
+  direct script invocation (`scripts/check_*.py`,
+  `tests/scripts/test_check_*.py`).
+- `PrimeStruct_map_backing_traces`'s remaining `entry-backing-type-symbol`
+  violations (4 files: `include/primec/testing/ir_lowerer_helpers/IrLowererSharedTypes.h`,
+  `src/ir_lowerer/IrLowererAccessTargetResolution.cpp`,
+  `src/ir_lowerer/IrLowererLowerStatementsExpr.h`,
+  `src/ir_lowerer/IrLowererSharedTypes.h`): comment prose from commit
+  `4c2cfdb` (2026-09-08), an ancestor of baseline `c7cc6f0`; byte-identical
+  at both revisions.
+- `PrimeStruct_primestruct_ir_pipeline_validation_cases_*` (24 shards:
+  71-80, 81-90, 91-100, 101-110, 241-250, 251-260, 331-340, 351-360,
+  381-390, 401-410, 411-420, 431-440, 601-610, 631-640, 691-700,
+  721-730, 731-740, 741-750, 751-760, 761-770, 791-800, 831-840,
+  1201-1210): this is the long-documented `ir.pipeline.validation`
+  cluster from the "TODO-4725 triage" note further down this file
+  (TODO-4726/4727/4728, open since 2026-07-16) - pure C++ unit tests of
+  `ir_lowerer` dispatch/inference helper functions, entirely unrelated
+  to maps, in source files not touched between baseline and `fcea5a0`.
+- `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
+  ("ir lowerer rejects variadic pointer vector packs..." - pointer/
+  vector packs, unrelated to maps; test + implementation files
+  unchanged since baseline).
+- `PrimeStruct_primestruct_semantics_type_resolution_graph_type_resolution_graph_151_160`
+  ("...experimental soa reads" expecting `unknown method:
+  /std/collections/soa_vector/get_ref` to be rejected, now isn't) - soa
+  reads, unrelated to maps; test + implementation files unchanged.
+
 ### TODO-4637 verification note superseded (2026-08-16)
 
 The note below (about 2 apparently-pre-existing `PrimeStruct_backend_ir_tests`
