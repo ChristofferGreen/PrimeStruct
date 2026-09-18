@@ -268,6 +268,27 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         return false;
       }
     }
+    // TODO-5300 round 4: once TODO-4683's pair-to-entries rewrite has
+    // renamed `target.name` to its fully-qualified monomorph-specialized
+    // path (e.g. `/std/collections/map/map__ov1__ta<hash>`), none of the
+    // short-alias-spelling checks above recognize it any more. Rather than
+    // widen those literal-text checks (which round 3 found regresses the
+    // experimental-map receiver family elsewhere), recognize the rewritten
+    // shape directly here: a call whose args are *all* `entry(key, value)`
+    // helper calls can only be this rewritten map(...) constructor, so
+    // reuse the already-proven `deriveKeyValueTypesFromEntryPackCall`
+    // (also used for the binding-initializer case in
+    // TODO-4683 rounds 5-7) instead of duplicating that shape logic.
+    if (target.kind == Expr::Kind::Call && !target.isMethodCall) {
+      std::string entryPackKeyType;
+      std::string entryPackValueType;
+      if (deriveKeyValueTypesFromEntryPackCall(target, entryPackKeyType,
+                                               entryPackValueType)) {
+        keyTypeOut = entryPackKeyType;
+        valueTypeOut = entryPackValueType;
+        return true;
+      }
+    }
     BindingInfo binding;
     if (target.kind == Expr::Kind::Call &&
         target.isFieldAccess &&

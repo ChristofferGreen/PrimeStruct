@@ -2210,6 +2210,118 @@ crashes) - see `docs/todo_finished.md`.
     form for a string-typed `Entry`, and how `entries.count()` /
     `at(entries, index)` get lowered for a struct args-pack element whose
     layout differs from an all-integer `Entry<i32,i32>` (which works fine).
+  - round_4_note: (2026-09-18) Landed one small, verified, regression-free
+    piece of repro A's fix and left everything else exactly where round 3
+    left it (repro A still fails, repro B untouched). Per round 3's own
+    "precise next step" guidance, did **not** widen `isRootKeyValueAliasPath`
+    (`SemanticsValidatorExprCollectionAccessValidation.cpp`) or
+    `isLocalRootKeyValueAliasReceiverCall`
+    (`SemanticsValidatorExprCollectionAccess.cpp`) - those stayed byte-
+    identical to `6cb1a4d`. Instead, added one new early branch to
+    `resolveMapTarget`
+    (`SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`) that calls
+    the already-existing, already-proven
+    `SemanticsValidator::deriveKeyValueTypesFromEntryPackCall` (the same
+    helper TODO-4683 rounds 5-7 use for the binding-initializer case) on the
+    receiver directly: since a monomorph-rewritten `map(...)` constructor
+    call's args are now literally `entry(key, value)` helper calls, this
+    shape alone is enough to recognize it and recover key/value types,
+    without touching any of the ~9 literal-text "is this a map constructor
+    path" checks TODO-5300 has been chasing. Verified via direct rebuild
+    (`cmake --build build-release --target primec`) and the exact repro A
+    command from this task block: the semantics-layer `unknown method:
+    /std/collections/map/at` diagnostic is gone (matches round 3's own
+    measured advancement), and it now fails one layer deeper in
+    `ir_lowerer` with the identical `VM lowering error: ... call=/at,
+    name=at, args=2, method=true` round 3 already documented - so repro A
+    is still not passing.
+    **Traced the `ir_lowerer` gap further than round 3 did, with targeted
+    (and removed) `fprintf` instrumentation, not guesswork:** confirmed
+    `emitMaterializedCollectionReceiverExpr`
+    (`IrLowererLowerEmitExprCollectionHelpers.cpp`) *does* now correctly
+    materialize the receiver - `ir_lowerer::resolveCollectionPairTypeInfo`
+    on the original (pre-materialization) receiver expr successfully
+    consults `findSemanticProductCollectionSpecialization` (its
+    `semanticNodeId` is non-zero at that point, so round 3's "semanticNodeId
+    == 0" bail was not actually the blocker for repro A specifically - it
+    may still matter for other shapes) and returns the correct key/value
+    kinds and the correct specialized struct path
+    (`/std/collections/map/MapValue__ta<hash>`, which does match
+    `keyValueStorageStructRootPath() + "__"`, so `materializedInfo
+    .structTypeName` gets set correctly too). The rewritten expr is a
+    *method* call (`expr.isMethodCall == true`, confirmed by instrumenting
+    the exact error site) by the time it re-enters `emitExpr` - some earlier
+    semantics-layer bare-to-method canonicalization already converts
+    `at(receiver, key)` into method-call form before `ir_lowerer` ever sees
+    it. But the entire non-method dispatch block in
+    `IrLowererLowerStatementsExpr.h` that knows how to route a *canonical*
+    key-value access call (the `isExplicitCanonicalKeyValueAccess` block,
+    `resolveCollectionPairTypeInfo`-based) is gated behind `if
+    (!expr.isMethodCall)` at the very top of that file, so it never runs for
+    our rewritten receiver at all. The method-call sibling path
+    (`if (expr.isMethodCall) { ... resolveMethodCallDefinition(expr,
+    localsIn); ... }`) is reached instead, but `resolveMethodCallDefinition`
+    returns `nullptr` for our materialized `__collection_receiver_N` local
+    even though its `LocalInfo.structTypeName` is now correctly the
+    specialized `MapValue__ta<hash>` path - confirmed via instrumentation
+    immediately after that call. **Round 5's next step for repro A**: fix
+    (or extend) `resolveMethodCallDefinition` so a method call whose
+    receiver local has `structTypeName` matching the key-value storage
+    struct root (`keyValueStorageStructRootPath()`) resolves to the
+    corresponding specialized `/std/collections/map/<helperName>__ta<hash>`
+    (or generic `/std/collections/map/<helperName>` with the struct's own
+    K/V types applied) helper Definition, the same way the non-method
+    `isExplicitCanonicalKeyValueAccess` path already does via
+    `resolveCollectionPairTypeInfo`; alternatively, materialize a *bare*
+    (non-method) rewritten expr instead of preserving `isMethodCall` from
+    the original `callExpr`, so it re-enters the already-working
+    non-method dispatch block instead. Did not attempt either fix this
+    round (out of round budget) - do not guess at `resolveMethodCallDefinition`'s
+    fix without first instrumenting it directly, since the map-vs-vector
+    method dispatch code paths in this file are extensive and easy to
+    regress.
+    **Repro B**: spent remaining round budget on a `--dump-stage ir` diff
+    between a working `Entry<i32,i32>` map constructor and a crashing
+    `Entry<string,i32>` one, plus a `gdb` breakpoint session on
+    `allocateVmHeapSlots`. The `--dump-stage ir` dump only shows the
+    generic (pre-monomorphization, pre-VM-lowering) template IR - both the
+    i32 and string cases produce byte-identical generic IR text for
+    `map<K,V>`'s constructor loop (`let valueCount = entries.count(); call
+    for(...)`), so this dump stage does not expose the divergence; the real
+    difference must be introduced during monomorphization/VM lowering, not
+    visible at this dump stage. `gdb` on the release `primec` binary has no
+    debug symbols (release build strips frame info/locals), so a real
+    repro-B session needs either a `build-debug` binary specifically for
+    this repro (do not run a debug *build* of the whole project as a
+    default action - build only the narrow `primec` target in a debug
+    config for this one investigation) or heavier VM-side `fprintf`
+    instrumentation in `src/runtime/VmHeapHelpers.cpp`/`VmExecution.cpp`
+    around the loop that calls `allocateVmHeapSlots`. One relevant fact
+    worth recording for round 5: per this project's own VM/native string
+    representation rule (`AGENTS.md`, "VM/native strings" bullet), a
+    string field is a single string-table-index slot, not a variable-size
+    payload - so `Entry<string, i32>`'s struct slot layout should be a
+    fixed 2 slots, exactly like `Entry<i32, i32>`, which weakens the
+    "struct layout size differs" hypothesis and strengthens round 3's
+    already-stated "trip-count/loop-bound computation" hypothesis instead
+    (something about how the literal string argument gets bound/passed
+    into the `entry(...)` pack element, not the element's own storage
+    size). Did not reproduce, patch, or revert anything for repro B this
+    round - it remains completely untouched, exactly as round 3 left it.
+    **Regression check**: rebuilt `PrimeStruct_compile_run_tests` and ran
+    `--test-suite="*collection*"` (595 cases) with only this round's one
+    `resolveMapTarget` change applied: 592 passed, 3 failed - the *exact*
+    3 pre-existing failures round 3's own note names (`runs vm canonical
+    map reference string access with imported canonical helpers`, `runs vm
+    bare vector capacity after pop through imported stdlib helper`, `runs
+    vm shared stdlib map conformance harness` = repro B). Round 3's 2 new
+    regressions (`runs vm experimental map helper receivers`, `runs vm
+    experimental map method receivers`) are **not** in this list - they
+    pass, confirming this round's narrower fix does not reproduce round
+    3's regression. This one change is being kept (it is real, verified,
+    regression-free progress, even though it alone does not close repro A
+    or any CTest shard) per this task's own round-4 instructions; see the
+    matching "Round 4" note in `docs/failing_tests.md` for the full trail.
 
 - [ ] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
   - owner: ai
