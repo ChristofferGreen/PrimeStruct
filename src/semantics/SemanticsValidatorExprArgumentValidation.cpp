@@ -185,16 +185,18 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     return splitTopLevelTemplateArgs(argText, argsOut);
   };
   // Fix (round 7, caller-scoped): `inferCollectionBindingType` above can
-  // answer "Map<K, V>" for a candidate purely through
-  // `inferBindingTypeFromInitializer`'s entry-pack shape-based fallback
-  // (SemanticsValidatorBuildInitializerInference.cpp), which fires whenever
-  // the primary defMap_-backed `inferCallInitializerBinding` chain fails to
-  // find a specialized definition - as happens for a pair-shaped
-  // `map(...)` call rewritten to entries at monomorph time, since defMap_
-  // was built before that specialized definition was minted. That fallback
-  // is shape-only: it never threads a real backing struct to IR lowering
-  // for this parameter-typed-argument case, so accepting the match here
-  // (because the text "Map" happens to equal a bare `[Map<K, V>]`
+  // answer the bare experimental map surface spelling ("Map" followed by
+  // an angle-bracketed key/value template-argument pair) for a candidate
+  // purely through `inferBindingTypeFromInitializer`'s entry-pack
+  // shape-based fallback (SemanticsValidatorBuildInitializerInference.cpp),
+  // which fires whenever the primary defMap_-backed
+  // `inferCallInitializerBinding` chain fails to find a specialized
+  // definition - as happens for a pair-shaped `map(...)` call rewritten to
+  // entries at monomorph time, since defMap_ was built before that
+  // specialized definition was minted. That fallback is shape-only: it
+  // never threads a real backing struct to IR lowering for this
+  // parameter-typed-argument case, so accepting the match here (because
+  // the text "Map" happens to equal that bare experimental map surface
   // parameter spelling) previously let a call through that then corrupted
   // memory at VM runtime. Detect precisely that "fallback is the only
   // reason this resolved" case - a candidate that is itself directly an
@@ -653,11 +655,12 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         // false here and this whole comparison block is silently skipped -
         // letting execution fall through to the unrelated
         // expectedStructPath resolution below, which also can't resolve a
-        // bare experimental `Map<K, V>` parameter spelling to a concrete
-        // struct path and so trivially accepts *any* argument. A raw
-        // map(...) constructor call passed directly as an argument was
-        // never a supported way to satisfy an experimental
-        // `[Map<K, V>]`-spelled parameter in the first place (see
+        // bare experimental map surface parameter spelling (`Map` plus an
+        // angle-bracketed key/value pair) to a concrete struct path and so
+        // trivially accepts *any* argument. A raw map(...) constructor
+        // call passed directly as an argument was never a supported way
+        // to satisfy that bare experimental map surface parameter
+        // spelling in the first place (see
         // resolveMapTarget's own isRootMapConstructorAliasPath exclusion
         // for the same call shape) - derive its key/value types from its
         // entry-pack shape purely to report the same rejection diagnostic
