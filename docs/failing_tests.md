@@ -1189,7 +1189,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-18T20:46:31Z`
+- Last updated: `2026-09-18T21:43:09Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -1235,7 +1235,6 @@ All other test assertion failures have been fixed in this session:
   - `1944`: `PrimeStruct_soa_surface_trace_zero_audit`
   - `1946`: `PrimeStruct_collection_audit_exemption_count_ratchet`
   - `1947`: `PrimeStruct_collection_audit_exemption_count_ratchet_self_test`
-  - `1953`: `PrimeStruct_semantic_memory_trend`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
