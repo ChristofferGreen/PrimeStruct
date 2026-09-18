@@ -286,6 +286,141 @@ ever had temporary `fprintf` instrumentation, no logic change), rebuilt
 section already described before this round. Tracked as **TODO-5300**
 in `docs/todo.md` with the concrete next steps below as its scope.
 
+**Round 3 (2026-09-18): fixed the receiver-recognition family for real,
+advanced repro A further, found a third independently-duplicated layer in
+`ir_lowerer`, caused 2 new regressions, reverted everything.**
+
+Confirmed both repros narrowly with the exact commands round 2 used
+(`ulimit -v 2000000`, `--emit=vm`/`--emit=exe`), matching round 2's
+description exactly.
+
+**Repro B's crash mechanism: round 2's "duplicate monomorphization"
+hypothesis is REFUTED**, confirmed via `--dump-stage semantic-product` on
+repro B in isolation: the `values` local's `binding_facts` entry and the
+`map<string, i32>(...)` constructor's own `collection_specializations`
+entry both resolve to the *identical* struct path
+(`/std/collections/map/MapValue__tfdeafc00765fc492`, one hash, not two).
+IR lowering is not treating two independently-monomorphized struct layouts
+as distinct - there is only one. The real cause is still unconfirmed but
+is narrowed further below.
+
+**Receiver-recognition family: found and fixed the shared root cause.**
+Added `isKeyValueConstructorFamilyPath` (`StdlibCollectionSurfaceHelpers.h`)
+as the single canonical "is this path (short alias, canonical, or
+monomorph-rewritten) the map(...) constructor" predicate, built on top of
+the already-existing, registry-backed `isResolvedCanonicalKeyValueConstructorPath`
+(which the round-2 write-up had not noticed already solves the
+"recognize the rewritten spelling" half of the problem, just under a name
+nothing else was calling). Routed through it:
+- The 6 helpers round 2 named (`isRootMapConstructorAliasPath`,
+  `isRootMapConstructorExpr`, `isRootMapConstructorReceiverExpr`,
+  `isPublishedMapConstructorReceiverExpr`, and the
+  `isPublishedKeyValueConstructorReceiver` lambda in
+  `tryRewriteCanonicalExperimentalKeyValueHelperCall`).
+- Three more not previously named: a local `isRootKeyValueAliasPath`
+  lambda in `SemanticsValidatorExprCollectionAccessValidation.cpp` (two
+  call sites), a local `isLocalRootKeyValueAliasReceiverCall` lambda in
+  `SemanticsValidatorExprCollectionAccess.cpp`, and `resolveMapTarget`'s
+  own early bail-out gate (`SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`) -
+  found by gdb-breaking on `SemanticsValidator::failExprDiagnostic` and
+  walking the backtrace for repro A's exact "unknown method" diagnostic,
+  which led straight to `validateExprLateFallbackBuiltins` ->
+  `resolveMapTarget`, not any of round 2's originally-named six.
+- Also added a shape-based fallback to `resolveMapTarget`: once the
+  receiver is recognized as a rewritten map constructor call, its own
+  `templateArgs` are empty (the monomorph specialization hash carries K/V
+  instead) and its `args` are now `entry(key, value)` calls rather than
+  raw literal pairs, so the two existing templateArgs-reading branches
+  there both still failed. The new fallback infers key/value type text
+  from the *first* `entry(...)` argument's own two sub-expressions via
+  `inferQueryExprTypeText`, mirroring what
+  `deriveKeyValueTypesFromEntryPackCall` already does for the
+  binding-initializer case (TODO-4683 rounds 5-7).
+
+**This measurably advanced repro A**: the original "unknown method:
+/std/collections/map/at" is gone, confirming the semantics-layer fix is
+real and correctly targeted. It does not fully fix repro A, though -
+it now fails one layer further in, inside `ir_lowerer`:
+`VM lowering error: ... call=/at, name=at, args=2, method=true`.
+
+**Found a third, independent layer: `ir_lowerer` re-derives the same
+"is this receiver a map constructor" answer on its own, and gets it wrong
+for the same rewritten spelling.** Traced (via targeted `fprintf`
+instrumentation, not guesswork) through
+`IrLowererLowerStatementsExpr.h`'s `isExplicitCanonicalKeyValueAccess`
+branch into `ir_lowerer::resolveCollectionPairTypeInfo`
+(`IrLowererAccessTargetResolution.cpp`). Two findings:
+1. By the time this code runs, the receiver has already been rewritten
+   from the original `map<K, V>(...)` `Call` expr into a synthesized
+   `Name` reference to a materialized temporary
+   (`__collection_receiver_N`, via `emitMaterializedCollectionReceiverExpr`
+   in `IrLowererLowerEmitExprCollectionHelpers.cpp`) with a fresh
+   `semanticNodeId == 0`. `resolveSemanticCollectionPairTypeInfo` bails
+   immediately on `semanticNodeId == 0` (its very first guard), so it
+   never consults `findSemanticProductCollectionSpecialization` - even
+   though that fact (confirmed present and correct in the semantic
+   product: `family="map"`, `key_type_text`/`value_type_text` populated,
+   `struct_path` matching) exists for the *original* call, just not for
+   the synthesized temporary that replaces it.
+2. The synthesized local's own `LocalInfo.keyValueKeyKind`/
+   `keyValueValueKind` (which `populateFromDirectLocal` would otherwise
+   use) also come back `Unknown`, because
+   `emitMaterializedCollectionReceiverExpr` derives them from
+   `collectionArgs`, which in turn comes from
+   `ir_lowerer::inferDeclaredReturnCollection` (when the direct
+   definition resolves) or from a second `resolveCollectionPairTypeInfo`
+   call on the *original* receiver (when it doesn't) - and neither path
+   was traced to a successful resolution for this receiver shape in the
+   time available this round.
+
+This confirms `docs/ReceiverTargetResolutionConsolidation.md`'s own
+prediction in its Risks section ("If Step 0 uncovers a third layer of the
+same shape, that is a signal to stop and reassess"): `ir_lowerer` is
+independently re-deriving the same "is this a map constructor receiver"
+classification a third time, with its own gaps, on top of the
+`SemanticsValidator`/`TemplateMonomorph` duplication TODO-5300 already
+covers. A full fix needs `ir_lowerer` in scope too, not just semantics.
+
+**Regression found**: rebuilt with all of this round's semantics-layer
+changes and ran `PrimeStruct_compile_run_tests --test-suite="*collection*"`
+(from `build-release/` so the compile-run cases can shell out to
+`./primec`) - 5 failures. Diffed each individually against a clean
+`daf8b3b` rebuild (`git stash` / `git stash drop`, not a scratch worktree
+this time - same-repo rebuild, since round 2's worktree approach wasn't
+needed for a same-branch A/B): 3 of the 5 (`runs vm bare vector capacity
+after pop through imported stdlib helper`, `runs vm shared stdlib map
+conformance harness` [this is repro B's own crash, already known],
+`runs vm canonical map reference string access with imported canonical
+helpers`) already fail identically on baseline - pre-existing, not caused
+by this round. **2 are new regressions**: `runs vm experimental map
+helper receivers` and `runs vm experimental map method receivers`
+(`test_compile_run_vm_collections_wrapper_temporaries_reject_count_map_experimental_runs_wrapped.cpp`),
+both pass cleanly on baseline and both fail with this round's patch
+applied. Root cause not isolated further (ran out of round budget), but
+the prime suspect is the two newly-found call sites
+(`isRootKeyValueAliasPath` in `SemanticsValidatorExprCollectionAccessValidation.cpp`,
+`isLocalRootKeyValueAliasReceiverCall` in
+`SemanticsValidatorExprCollectionAccess.cpp`) - both of those two test
+names say "experimental map", i.e. the *retired* `experimental_map`
+compat spelling family that `isKeyValueConstructorFamilyPath` was never
+meant to also match, and those two call sites' *original* narrow
+short-alias-only check may have been relying on staying narrow specifically
+to keep the canonical and experimental map families apart at exactly
+those two sites (unlike the other 7 call sites, where widening it was
+safe and load-bearing).
+
+**Given**: (1) repro A is still not fully fixed (the `ir_lowerer` layer
+above is a distinct, un-started piece of work); (2) repro B is completely
+untouched by this round; and (3) the receiver-recognition fix that *was*
+real progress also introduced 2 confirmed new regressions elsewhere - per
+the bug-fix workflow, this was not forced through as a partial/guessed
+landing. Reverted all of this round's source changes (`git stash` then
+`git stash drop`), rebuilt, and confirmed the tree is byte-identical to
+`daf8b3b` again (`git status --short` clean, `git log -1` shows `daf8b3b`).
+Nothing beyond this documentation note and the matching round-3 note in
+`docs/todo.md`'s TODO-5300 entry landed. The 7 shards + 1 timeout remain
+exactly as before this round.
+
 **Confirmed pre-existing (unrelated to TODO-4683, left as-is):**
 
 All confirmed via identical-output reproduction against the `c7cc6f0`

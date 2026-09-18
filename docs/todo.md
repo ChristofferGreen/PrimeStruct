@@ -2126,6 +2126,90 @@ crashes) - see `docs/todo_finished.md`.
     zero new failures; if a partial fix only clears some of the checks
     above, split the remainder into a new `TODO-53xx` sub-task with its own
     scope/acceptance/stop_rule rather than leaving this one half-done
+  - round_3_note: (2026-09-18) See the "Round 3" entry in
+    `docs/failing_tests.md` for the full trail. Summary: confirmed both
+    repros narrowly, refuted round 2's "duplicate monomorphization"
+    hypothesis for repro B via `--dump-stage semantic-product` (both the
+    `values` binding and the `map<...>(...)` constructor's return type
+    resolve to the *same* `/std/collections/map/MapValue__t<hash>` struct
+    path - not two different hashes). Added a shared canonical predicate
+    `isKeyValueConstructorFamilyPath` (`StdlibCollectionSurfaceHelpers.h`)
+    and routed the 6 originally-named helpers plus 3 more
+    previously-unlisted duplicates found this round (`isRootKeyValueAliasPath`
+    in `SemanticsValidatorExprCollectionAccessValidation.cpp`,
+    `isLocalRootKeyValueAliasReceiverCall` in
+    `SemanticsValidatorExprCollectionAccess.cpp`, plus `resolveMapTarget`'s
+    own early bail-out gate in
+    `SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`) through
+    it, and added a shape-based key/value-type fallback to `resolveMapTarget`
+    for a rewritten receiver whose args are now `entry(...)` calls rather
+    than raw literal pairs. This measurably advanced repro A (from
+    "unknown method: /std/collections/map/at" past `resolveMapTarget`
+    entirely) but repro A still does not pass: it now fails one layer
+    deeper, inside `ir_lowerer` itself - `resolveCollectionPairTypeInfo`
+    (`IrLowererAccessTargetResolution.cpp`) and
+    `emitMaterializedCollectionReceiverExpr`'s `collectionArgs` derivation
+    (`IrLowererLowerEmitExprCollectionHelpers.cpp`, via
+    `inferDeclaredReturnCollection`) independently fail to recover the
+    key/value types for the same rewritten receiver, confirming
+    `docs/ReceiverTargetResolutionConsolidation.md`'s prediction that
+    `ir_lowerer` is a *third*, independently-duplicated layer of this same
+    receiver-classification problem - fixing the semantics/monomorphization
+    layer alone cannot fully close repro A. Worse: rebuilding and running
+    `PrimeStruct_compile_run_tests --test-suite="*collection*"` surfaced 2
+    genuine **new** regressions from the semantics-layer changes alone
+    (`runs vm experimental map helper receivers` and `runs vm experimental
+    map method receivers` in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_map_experimental_runs_wrapped.cpp`,
+    confirmed pass-on-baseline/fail-with-patch via a clean rebuild), almost
+    certainly from over-widening `isRootKeyValueAliasPath`/
+    `isLocalRootKeyValueAliasReceiverCall` to also match spellings those two
+    call sites specifically relied on staying narrow (to distinguish the
+    canonical map family from the *experimental* map spelling family, which
+    this round's predicate does not keep separate). Repro B was not
+    addressed at all this round (still crashes identically; the semantics
+    fix is orthogonal to its `ir_lowerer`-side cause). Per the no-partial-fix
+    discipline, all source changes from this round were reverted
+    (`git stash drop` back to a verified-clean `daf8b3b`); nothing beyond
+    this doc note landed. Precise next step for round 4: (1) do NOT re-widen
+    `isRootKeyValueAliasPath`/`isLocalRootKeyValueAliasReceiverCall`
+    without first adding a regression test pinning the two experimental-map
+    receiver cases this round broke, or better, keep those two call sites'
+    original narrow short-spelling check untouched and instead fix repro A
+    at the point it actually still fails now (the semantics-layer receiver
+    fixes from this round can be re-applied together with an `ir_lowerer`-side
+    fix); (2) the real remaining gap for repro A is in `ir_lowerer`:
+    extend `inferDeclaredReturnCollection` (or add a shape-based fallback
+    parallel to this round's `resolveMapTarget` one) so a monomorph-rewritten
+    map constructor receiver's `collectionArgs`/key-value kinds can be
+    recovered from its `entry(...)`-shaped args or from
+    `findSemanticProductCollectionSpecialization` (confirmed present and
+    correct in the semantic product for this exact call, but
+    `resolveCollectionPairTypeInfo` only consults it when
+    `target.semanticNodeId != 0`, and the receiver has already been
+    rewritten into a fresh, semanticNodeId-0 `Name` node
+    (`__collection_receiver_N`) by the time this check runs - trace why
+    `emitMaterializedCollectionReceiverExpr` doesn't thread the original
+    call's semantic node id or its already-known collection_specialization
+    fact onto the materialized local/rewritten expr); (3) repro B's
+    `std::bad_alloc` (confirmed independent of repro A's fix path - not
+    caused by any duplicate-monomorphization or explicit-vs-auto-typing
+    difference; reproduces identically for *any* string-typed map key or
+    value, with as few as one entry, regardless of typing style; does NOT
+    reproduce for `vector<string>` alone or a bare `Entry<string,i32>`
+    construction) still needs its own dedicated `--dump-stage ir`/gdb
+    session focused on the variadic `args<Entry<K,V>>` pack's `count()`/
+    `at()` runtime lowering specifically for a struct element containing a
+    string field - confirmed via a 5000-iteration gdb loop that
+    `allocateVmHeapSlots` is called repeatedly with a *constant* `slotCount
+    = 0x400` (not a single huge corrupted value), meaning this is a
+    non-terminating (or extremely long) loop doing fixed-size allocations
+    each pass rather than one garbage-sized allocation - look at
+    `map<K,V>`'s `for(index(0), less_than(index, valueCount), increment(index),
+    do() { mapInsertEntry(out, at(entries, index)) })` loop body's lowered
+    form for a string-typed `Entry`, and how `entries.count()` /
+    `at(entries, index)` get lowered for a struct args-pack element whose
+    layout differs from an all-integer `Entry<i32,i32>` (which works fine).
 
 - [ ] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
   - owner: ai
