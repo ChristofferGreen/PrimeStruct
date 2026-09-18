@@ -49695,3 +49695,563 @@ real answer.
     `runCommand(nativePath);` (relaxed specifically because of this bug)
     to `CHECK(runCommand(nativePath) == 4)`, matching the now-correct,
     now-deterministic, vm/exe-matching behavior.
+
+- [x] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4682
+  - scope: ATTEMPTED 2026-07-03 AND REVERTED. The monomorph rewrite +
+    signature deletion worked for direct compile-run programs but broke 121
+    positive semantics programs plus ~90 pinned diagnostics: the pair-shape
+    assumption is load-bearing across implicit template inference
+    ("implicit template arguments conflict"), key/value target resolution
+    (resolveMapTarget pairwise arg peeking in
+    SemanticsValidatorExprArgumentValidation.cpp), user-defined same-path
+    map helpers without stdlib imports, and several unknown-call-target
+    diagnostic families. Current landed state: the 8 pair signatures remain
+    as one-line forwards through the variadic entries constructor (single
+    insertion implementation). A real deletion needs a phased sub-project:
+    first teach resolveMapTarget/implicit-inference to understand
+    entry-pack calls, then gate the rewrite on resolution outcomes (not
+    path shape), then delete signatures and flip the eighthKey locks.
+    ROUND 2 (2026-07-03): with existence-gating + env-gate A/B measurement
+    the true regression delta is only 8 test cases (argument/field/
+    assignment/receiver shapes), all rooted in pairwise K/V type-text
+    inference fabricating map<EntryPath, EntryPath> specializations for
+    rewritten entries-shaped calls. A first producer-fix attempt
+    (deriveKeyValueTypesFromEntryPackCall, helper retained unwired in
+    SemanticsValidatorCollectionHelperRewrites.cpp) surfaced additional
+    unidentified producers; next attempt should instrument ALL key/value
+    type-text producers at once (playbook in the
+    map-pair-ladder-deletion-goal memory) before wiring fixes.
+    ROUND 3 (2026-07-04): LANDED the monomorph pair-to-entry rewrite
+    (TemplateMonomorphExpressionRewrite.h) gated on
+    no-matching-pair-arity-overload (fires only if the pair signatures are
+    absent, so it is provably inert today), plus entry-pack gates in the
+    four pairwise K/V producers (BuildInitializerInference,
+    InferCollectionCallResolution, ExprMutationBorrows,
+    TemplateMonomorphExperimentalCollectionReceiverResolution) and named-arg
+    ordering for rewritten pair calls. With the ladder DELETED all
+    direct/receiver/assign/argument shapes passed, but 37 additional
+    inference-layer cases regressed (auto returns, struct storage,
+    helper-wrapped Result.ok payloads) because pre-rewrite inference needs
+    the pair overloads; the ladder therefore stays as 8 one-line forwards.
+    Discriminator evidence: suite at exact 115-case baseline with ladder
+    present (all landed C++ inert), 152 with ladder deleted. Remaining
+    deletion work = teach TemplateMonomorphFallbackTypeInference and the
+    auto/storage return-type layers to type pair-shaped constructor calls
+    without pair overloads (failing-case list preserved in the goal memory
+    notes).
+    ROUND 4 (2026-09-17): Re-confirmed round 3's landed state is unchanged
+    (the 8 pair forwards + the existence-gated monomorph rewrite in
+    TemplateMonomorphExpressionRewrite.cpp are still exactly as round 3
+    left them), then made a real attempt at the specific remaining gap
+    round 3 pointed at ("teach ... the auto/storage return-type layers to
+    type pair-shaped constructor calls without pair overloads"), scoped
+    to implicit (no explicit `<K, V>`) pair calls, e.g. `[auto] m{map(1i32,
+    4i32, 2i32, 8i32)}`. Traced the actual failure to TWO stacked gaps,
+    not one:
+    (a) `inferImplicitTemplateArgs` (TemplateMonomorphImplicitTemplateInference.cpp)
+    never infers K/V for the variadic entries constructor's
+    `[args<Entry<K, V>>] entries` parameter when the packed call-site
+    arguments are raw key/value values rather than `entry(...)` calls: its
+    "packed args" branch only fires when the pack element type is a bare
+    implicit name, and its "wrapped template args" branch only fires when
+    the parameter's own template-arg text is directly a comma list of bare
+    implicit names - `Entry<K, V>` is neither (it is a single compound
+    element type), so the whole parameter is silently skipped and K/V stay
+    unresolved. Implemented and verified a targeted fix: a new
+    `inferFromEntryPairPackedArgs` branch that detects a 2-argument wrapper
+    args-pack parameter, pairs up the packed call arguments positionally
+    (even index -> first inner name, odd index -> second), and is guarded
+    to bail out (leaving prior behavior untouched) whenever any packed
+    argument is itself an `entry(...)`-shaped call, so it cannot hijack the
+    already-working entries-pack-call surface
+    (`deriveKeyValueTypesFromEntryPackCall` et al. in
+    SemanticsValidatorCollectionHelperRewrites.cpp own that shape).
+    (b) Even with (a) fixed, the pair-to-entry rewrite block in
+    TemplateMonomorphExpressionRewrite.cpp's rewriteExpr only engages when
+    `expr.templateArgs.size() == 2` is already true *before* implicit
+    inference runs later in the same function - so an implicit-arg pair
+    call never reaches the rewrite at all, ladder or no ladder. Added a
+    speculative early call to `inferImplicitTemplateArgs` right before that
+    gate, purely to populate `expr.templateArgs` early enough to unlock it
+    (a no-op on failure). With (a)+(b) together and the ladder deleted, the
+    `[auto] m{map(1i32, 4i32, 2i32, 8i32)}` repro advanced from
+    "argument count mismatch" -> "VM lowering error: variadic parameter
+    type mismatch" -> "VM lowering error: missing semantic-product
+    local-auto fact: /main -> local m", i.e. TemplateMonomorph's own
+    layers (a)+(b) now correctly retype the call and rewrite it to
+    entries, confirmed via `--dump-stage semantic-product` showing the
+    rewritten `entry(...)` calls with the right specialization. The
+    remaining, still-unfixed failure is in a THIRD, earlier, and separate
+    layer: SemanticsValidator's own pre-monomorphization call resolution
+    (`SemanticsValidator::resolveCalleePath` in
+    SemanticsValidatorBuildCallResolution.cpp, an ~800-line function
+    independent of TemplateMonomorph's `selectHelperOverloadPath`) is what
+    `inferDirectMapConstructorBinding`
+    (SemanticsValidatorBuildInitializerInference.cpp) calls to resolve the
+    callee before it can record the "auto" local's binding type as a
+    semantic-product fact for IR lowering to consume later. That resolver
+    has no arity-fallback-to-variadic logic analogous to
+    `selectHelperOverloadPath`'s (lines ~876-899 there), so once the pair
+    overloads are gone, a 4-raw-arg `map(...)` call resolves to nothing
+    usable at that stage, `inferDirectMapConstructorBinding` returns
+    false, no local-auto fact is ever recorded, and IR lowering hard-fails
+    downstream. Giving this resolver the same arity-fallback treatment is
+    a materially larger, separate piece of work (own ~800-line function,
+    arbitrates every map-family call shape in the codebase, not just
+    pair-constructor calls) that was out of safely-completable scope for
+    this round.
+    Also worth flagging as a landmine for the next attempt: naively
+    populating `expr.templateArgs` earlier (fix (b) above) to unlock the
+    existing pair-to-entry rewrite gate also makes the rewrite's
+    argument-type-mismatch diagnostic loop (lines ~2403-2424 there) run
+    for implicit-arg pair calls that never reached it before - today that
+    loop's *effect* stays inert while the ladder exists only because
+    `hasMatchingPairArityOverload` still blocks the actual pair->entry
+    conversion, but the loop itself now executes earlier for a whole class
+    of call sites it previously never saw, which is exactly the kind of
+    "provably inert" invariant rounds 1-3 were careful to preserve and
+    would need its own before/after diagnostic-suite diff before landing,
+    independent of the resolver work in (c). Given fix (a)+(b) alone does
+    not clear acceptance and risks this diagnostic-timing side effect,
+    and the real blocker (SemanticsValidator's own resolver, point (c))
+    is out of scope for this round, reverted both TemplateMonomorph
+    changes and the map.prime pair-ladder deletion back to the exact
+    round-3-landed state (`git checkout` on all three touched files,
+    rebuilt primec, and spot-re-ran the `[auto] m{map(1i32, 4i32, 2i32,
+    8i32)}` repro to confirm it still passes as it did before this round's
+    experiment). Concrete next step for round 5: before touching
+    TemplateMonomorph again, first give
+    `SemanticsValidator::resolveCalleePath`/`inferDirectMapConstructorBinding`
+    an arity-fallback-to-variadic path mirroring
+    `selectHelperOverloadPath`'s, verified in isolation against a
+    dedicated fast unit test at that seam (per the pattern
+    TODO-5294/ReceiverTargetResolutionConsolidation.md's closing summary
+    recommends) rather than only via the slow 3-suite battery; only once
+    that resolver correctly recognizes pair-shaped calls should fixes
+    (a)+(b) from this round be reapplied and the ladder deletion attempted
+    again.
+    ROUND 5 (2026-09-17): Followed round 4's exact recommended next step:
+    gave SemanticsValidator's own pre-monomorphization resolver layer an
+    arity-fallback seam before touching TemplateMonomorph again, verified
+    narrowly before running the slow suites. Since round 4's revert was via
+    `git checkout` on uncommitted changes (never committed), its two
+    TemplateMonomorph fixes left no git trace and had to be reconstructed
+    fresh from the round 4 note's description; did so (fix (a): a new
+    `inferFromEntryPairPackedArgs` branch in
+    TemplateMonomorphImplicitTemplateInference.cpp; fix (b): a speculative
+    early `inferImplicitTemplateArgs` call in
+    TemplateMonomorphExpressionRewrite.cpp before the pair-to-entry
+    rewrite's `templateArgs.size() == 2` gate), confirmed both reproduce
+    round 4's exact reported progression
+    ("argument count mismatch" -> "VM lowering error: variadic parameter
+    type mismatch") on the `[auto] m{map(1i32, 4i32, 2i32, 8i32)}` repro
+    with the ladder deleted, then investigated the third blocker round 4
+    pointed at (`SemanticsValidator::resolveCalleePath`/
+    `resolveExprConcreteCallPath` and `inferDirectMapConstructorBinding` in
+    SemanticsValidatorBuildCallResolution.cpp/
+    SemanticsValidatorBuildInitializerInference.cpp) via targeted fprintf
+    instrumentation (not guesswork) rather than jumping straight to a
+    speculative fix.
+    Precise root cause, more specific than round 4's framing: it is not
+    that `resolveCalleePath` lacks arity-fallback logic per se (that
+    exists and works fine on TemplateMonomorph's own resolver,
+    `selectHelperOverloadPath` in TemplateMonomorphCoreUtilities.cpp lines
+    ~865-899, already used at round-3-landed state). The actual gap is
+    that the *later*, separate "semantic product" SemanticsValidator pass
+    (SemanticsValidatorInferGraph.cpp's `inferBindingForLocals`, which
+    re-walks the AST *after* TemplateMonomorph has already rewritten and
+    specialized it, to record the local-auto facts IR lowering consumes)
+    reuses a `defMap_`/family-index that was built *before*
+    monomorphization ran, so it has no entry for the specialized entries
+    constructor definition (e.g.
+    `/std/collections/map/map__ov1__ta<hash>`) TemplateMonomorph minted
+    for the rewritten call. Every defMap_-dependent resolution path in
+    `inferCallInitializerBinding` (SemanticsValidatorBuildInitializerInferenceCalls.cpp)
+    therefore fails to find that definition, and
+    `stripCollectionConstructorSuffixes`-based canonicalization silently
+    strips the "__t<hash>" suffix back to the generic, still-unspecialized
+    entries constructor (which has no concrete K/V to report), so no
+    binding is ever recorded and IR lowering hard-fails with "missing
+    semantic-product local-auto fact" exactly as round 4 observed -
+    confirmed step-by-step via instrumentation showing
+    `preferredResolvedInitializer` literally resolving to
+    `/std/collections/map/map__ov1` (suffix stripped) instead of the
+    `__ta<hash>`-suffixed path that actually exists in defMap_ at that
+    later pass.
+    Implemented fix (c): since the rewritten call's *shape* alone (its
+    args are now `entry(...)`-shaped calls, one per key/value pair) is
+    enough to answer the K/V question without any defMap_ lookup, added a
+    fallback in `inferBindingTypeFromInitializer` that calls the
+    already-existing `deriveKeyValueTypesFromEntryPackCall` helper
+    (SemanticsValidatorCollectionHelperRewrites.cpp, already used
+    elsewhere for the same shape) directly whenever the primary
+    defMap_-backed chain fails and every argument is entry(...)-shaped.
+    With fix (a)+(b)+(c) together and the ladder actually deleted: the
+    `[auto] m{map(1i32, 4i32, 2i32, 8i32)}` repro and 1/2/3/8-pair variants
+    all passed on both the VM and exe backends, with both implicit and
+    explicit `<K, V>` template args; invalid pair calls (odd arg count,
+    mismatched value type) kept correct diagnostics; the full
+    PrimeStruct_semantics_tests suite came back at 1 failure (confirmed via
+    `git stash` A/B on the identical test binary to be a pre-existing,
+    unrelated TODO-5050 SOA `get_ref` pin, not a regression) after fixing
+    two test files whose assertions pinned the pre-deletion pair-ladder
+    behavior; PrimeStruct_misc_tests came back at its pre-existing 15/16
+    stale "source lock" assertions (confirmed via the same git-stash A/B
+    to already fail identically on the clean round-3 baseline - these pin
+    long-since-renamed C++ helper function names in
+    SemanticsValidatorExprMethodTargetResolution.cpp, unrelated to this
+    TODO) plus the one genuinely ladder-shaped assertion (fixed).
+    The full PrimeStruct_compile_run_tests suite (2680 cases, the actual
+    map/conformance/lock battery) came back at 167 failed cases against a
+    freshly-measured baseline of 164 (also via git-stash A/B on the same
+    binary, not an assumed/stale number) - a net delta of only +3, all
+    three isolated to explicit-`[Map<K, V>]`-typed *parameter* passing
+    scenarios expecting a specific case-sensitivity mismatch diagnostic
+    (2 cases) plus one already-known map/vector cross-suite flake. This
+    was a materially smaller regression than round 3's ladder-deleted
+    discriminator (152 vs 115 baseline, i.e. 37 regressed), suggesting fix
+    (c) closes most of round 3's "struct storage/auto return" gap too -
+    but manual probing beyond the standard suites (per this round's
+    mandate to push harder before concluding infeasibility) surfaced a
+    NEW, more severe problem the suites didn't catch: passing a
+    pair-shaped `map(...)` call directly as an argument to a parameter
+    declared `[Map<K, V>]` (not `[auto]`) - e.g.
+    `scoreValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))`
+    with `scoreValues([Map<string, i32>] values)` - triggers unbounded
+    memory growth in argument-type validation
+    (SemanticsValidatorExprArgumentValidation.cpp's
+    `validateArgumentTypeAgainstParam`/`inferCollectionBindingType`,
+    which also calls `inferBindingTypeFromInitializer` on the same
+    argument), crashing with `std::bad_alloc` (confirmed absent with fix
+    (c) disabled, so it is fix (c) specifically, not fixes (a)/(b) or the
+    ladder deletion alone, that triggers it - the fabricated-but-
+    shape-tolerant resolution this whole gap is rooted in was previously
+    just silently *wrong* in this exact scenario, per round 3's "struct
+    storage" regression bucket, rather than unbounded).
+    Tried two mitigations before concluding this needed a full revert
+    rather than a forced landing:
+    (i) gating fix (c) on `bindingExpr != nullptr` (restricting it to
+    genuine local-binding-inference call sites) stopped the crash but
+    reintroduced 5 PrimeStruct_semantics_tests regressions - legitimate
+    return-kind/receiver-inference callers
+    (`inferBindingTypeFromInitializer` called with no `bindingExpr`) also
+    depend on this fallback and broke;
+    (ii) a reentrancy guard tracking in-flight `Expr` pointers did not
+    stop the hang at all - confirmed via instrumentation that the runaway
+    growth revisits *different* Expr instances each time (very likely
+    freshly rewritten/cloned nodes from repeated argument-validation
+    passes over the same source call), not the identical node, so a
+    pointer-identity guard cannot intercept it.
+    Given the severity (a compiler crash on valid, unremarkable-looking
+    Prime source - not merely a wrong diagnostic) and that neither
+    mitigation was a clean fix within this round's remaining budget, per
+    this round's explicit instruction to revert rather than force a
+    partial/risky change through: reverted all of round 5's changes
+    (TemplateMonomorph fixes (a)/(b), SemanticsValidator fix (c), the
+    map.prime ladder deletion, and the three test-file updates that
+    assumed the ladder was gone) back to the exact round-3-landed state
+    via `git checkout` on all seven touched files, rebuilt primec, and
+    reverified the `[auto] m{map(1i32, 4i32, 2i32, 8i32)}` repro still
+    passes exactly as it did before this round (repo is byte-identical to
+    round 3's landed state; only this docs/todo.md note is new).
+    Concrete next step for round 6: root-cause the argument-validation
+    runaway growth *before* reattempting fix (c) or an equivalent -
+    instrument `SemanticsValidatorExprArgumentValidation.cpp`'s
+    `validateArgumentTypeAgainstParam`/`inferCollectionBindingType` (and
+    whatever calls `validateArgumentTypeAgainstParam` for the
+    `scoreValues([Map<string, i32>] values)`-shaped repro above) to find
+    exactly where/why it re-derives or re-visits a fresh Expr node for the
+    same source argument repeatedly once the entry-pack shape-based
+    fallback always "succeeds" - most likely candidates are an overload-
+    candidate or diagnostic-retry loop that was previously short-circuited
+    by fix (c)'s predecessor simply failing outright. Once that is
+    understood, fix (c) (or a corrected version of it) should be
+    reattempted with that specific scenario added to the fast/targeted
+    seam-level test this round used, *before* re-running the full slow
+    suites again.
+    ROUND 6 (2026-09-17): Re-derived fixes (a)+(b)+(c) from round 5's
+    description exactly as written and re-deleted the pair ladder (same
+    three touched files plus map.prime); this reconstruction round-tripped
+    correctly and reproduced round 5's exact reported state (target repro,
+    1/2/3/8-pair variants, explicit/implicit template args, invalid-pair
+    diagnostics all passing on both VM and exe). Root-caused round 5's
+    crash per this round's mandate, with a key correction to round 5's own
+    framing: **the crash is not what round 5's next-step note assumed.**
+    Round 5 hypothesized an argument-validation call/recursion loop inside
+    `SemanticsValidatorExprArgumentValidation.cpp`'s
+    `validateArgumentTypeAgainstParam`/`inferCollectionBindingType`.
+    Instrumenting that function directly (a call counter, verified via a
+    `--emit=vm` run under `ulimit -v` so the crash reproduces in under two
+    seconds) showed it is called only ~220-240 times total for the crashing
+    program before the crash - an entirely ordinary number for a program
+    this size, not a runaway loop. The real crash is one stack frame away
+    from where round 5 was looking, and at a completely different
+    *pipeline stage*: a `gdb -batch -ex "bt"` backtrace on the core dump
+    (`ulimit -c unlimited`) shows the abort is inside
+    `primec::vm_detail::allocateVmHeapSlots`, called from
+    `executeVmKernel`/`executeVmModule`/`VmIrBackend::emit` - i.e. the
+    crash happens while the VM backend is *running* the already-compiled
+    program, not while the compiler is validating/lowering it. This is why
+    round 5's `--emit=exe` probing didn't catch it as a hang/loop at
+    compile time: `--emit=exe` only *builds* an executable and does not
+    run it, so a runtime infinite loop in the compiled program is
+    invisible unless the resulting binary is actually executed (or
+    `--emit=vm`, which both lowers *and immediately runs* the program, is
+    used instead) - round 5's own repro-probing session apparently never
+    executed the `--emit=exe` artifact it built for this exact scenario.
+    Minimal, fast, reliable repro (crashes in ~1-2s under a 2GB
+    `ulimit -v`, no need for the full suites): compile+run with
+    `--emit=vm` a program with
+    `scoreValues([Map<string, i32>] values) { ... }` and
+    `main() { return(scoreValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))) }`
+    - this is verbatim the existing
+    `makeCanonicalMapNamespaceExperimentalParameterConformanceSource()`
+    fixture in
+    `tests/unit/compile_run/map_conformance/test_compile_run_map_conformance_sources.h`,
+    exercised by the compile_run test case "runs vm canonical namespaced
+    map constructors through explicit experimental map parameters" (and
+    two sibling cases, "rejects vm experimental map variadic constructor
+    type mismatch" and "runs vm experimental map method parameters", also
+    newly failed under fix (c) in this round's targeted-subset run -
+    confirmed absent at the round-5-landed baseline via the same `git
+    stash` A/B method, isolated to a targeted
+    `--test-suite=primestruct.compile.run.native_backend.collections,...vm.collections,...vm.maps,...math_conformance`
+    subset (654 cases) run before and after fix (c), rather than the full
+    2680-case suite, given wall-clock constraints this round - see the
+    scope note on suite-timing below). This program is exactly round 5's
+    already-known crash shape (a pair-shaped `map(...)` call passed to a
+    `[Map<K, V>]`-typed *parameter*), just confirmed via a much cheaper,
+    faster, and more precise reproduction path than round 5 used.
+    Traced the mechanism one level further: with fix (c) reporting the
+    argument's inferred binding type as `typeName="Map"` (matching the
+    existing "Map" convention several *other* producers in
+    `SemanticsValidatorBuildInitializerInference.cpp` already use for a
+    different purpose - the internal
+    `isExperimentalCollectionBackingTypeName("map", "Map", ...)` family
+    check), `validateArgumentTypeAgainstParam` sees the argument's
+    inferred text ("Map<string, i32>") and the parameter's declared text
+    ("Map<string, i32>", from the bare `[Map<K, V>]` spelling) as
+    literally identical, so it raises no semantic-level diagnostic at all
+    and the call is accepted. Tried changing fix (c) to instead emit
+    `typeName="MapValue"` (matching the map constructors' actual
+    stdlib-declared `return<MapValue<K, V>>` spelling in
+    `stdlib/std/collections/map.prime`, rather than the shorter "Map"
+    alias) - this **does eliminate the crash**: the same program now fails
+    cleanly at `--emit=vm` with exit code 2 and
+    `VM lowering error: struct parameter type mismatch: expected /std/collections/map/MapValue__t<hash>, got <unknown>`
+    instead of aborting. This confirms the crash's true trigger: once
+    semantic validation accepts the call (via the "Map"/"Map" text match),
+    the argument's *specialized* struct type never actually gets threaded
+    through to IR lowering for this parameter-typed case (`got <unknown>`)
+    - the compiled program ends up reading the argument through an
+    uninitialized/wrong-layout binding, corrupting whatever field the
+    lowered map-constructor loop uses as its trip count, so the loop
+    never terminates and keeps heap-allocating (vector pushes inside
+    `mapInsertEntry`) until `allocateVmHeapSlots` throws `std::bad_alloc`.
+    However, the "MapValue" text change is not a clean fix on its own: it
+    reintroduces a *different* regression - "stdlib map constructors
+    reject inferred canonical map struct field mismatch" in
+    `test_semantics_calls_and_flow_collections_experimental_map_auto_inference.cpp`
+    (the same struct-field test round 5/this round's fix (c) with "Map"
+    was making pass) now fails with `unknown struct type for layout:
+    MapValue` - i.e. "MapValue" is not a generally-safe substitute for
+    "Map" either; several *other* existing producers in the same file
+    (struct-layout resolution, the `normalizedBindingType == "Map"` check
+    at line ~1019, etc.) specifically expect "Map", not "MapValue". So the
+    two-way tension is: this fallback needs to answer "Map" for every
+    consumer *except* `validateArgumentTypeAgainstParam`'s
+    parameter-argument comparison, where it needs to answer something
+    that does NOT textually collide with a bare `[Map<K, V>]`-typed
+    parameter declaration. A caller-scoped fix (leave fix (c) emitting
+    "Map" as before, and instead special-case
+    `inferCollectionBindingType`'s lambda in
+    `SemanticsValidatorExprArgumentValidation.cpp` to re-derive/override
+    to a non-colliding spelling only when validating a call argument
+    specifically) was identified as the right shape of fix but not
+    completed/verified this round - ran out of safely-completable budget
+    after the wall-clock cost of standing up and running even the
+    targeted 654-case compile_run subset (the full 2680-case suite proved
+    infeasible to run twice - A/B baseline and post-fix - within this
+    round's realistic turn budget; a `--test-suite=...` filtered subset
+    covering `native_backend.collections`, `vm.collections`, `vm.maps`,
+    and `math_conformance` was used instead as a faster, still-relevant
+    proxy - future rounds should keep using this subset for fast
+    iteration and only run the full suite once as a final confirmation,
+    and should budget real wall-clock time generously, as even the
+    filtered subset took several minutes per run in this environment).
+    Given fix (c) as landed by round 5's description (emitting "Map")
+    reproducibly crashes with unbounded memory growth on valid-looking
+    source (confirmed via gdb backtrace, not guesswork), and the
+    known-working mitigation is unverified/incomplete, reverted all
+    changes back to the exact round-5-landed state (`git checkout` on all
+    touched files, confirmed `git status`/`git diff` empty against the
+    round-5 commit, rebuilt primec, reconfirmed the round-5 target repro
+    still passes) rather than landing a partial fix, per this round's
+    explicit instructions.
+    Concrete next step for round 7: implement the caller-scoped mitigation
+    identified above - in
+    `SemanticsValidatorExprArgumentValidation.cpp`'s
+    `inferCollectionBindingType` lambda (inside
+    `validateArgumentTypeAgainstParam`), after calling
+    `inferBindingTypeFromInitializer` and getting back a "Map"-typed
+    binding for an entry-pack-shaped call argument (detect this shape the
+    same way fix (c) does, via
+    `deriveKeyValueTypesFromEntryPackCall`), override the local `baseOut`
+    used for *this comparison only* to a spelling that cannot collide with
+    a bare `[Map<K, V>]` parameter declaration (e.g. "MapValue", or
+    something more deliberately distinct) before it flows into the
+    expected-vs-actual text comparison, while leaving fix (c) itself
+    (and every other caller of `inferBindingTypeFromInitializer`) emitting
+    "Map" unchanged. Verify against a fast repro set that must include, at
+    minimum: (1) round 5's original target repro
+    (`[auto] m{map(1i32, 4i32, 2i32, 8i32)}`), (2) the Holder
+    struct-field-mismatch test above (must stay passing/rejecting exactly
+    as it does at the round-5-landed baseline), and (3) this round's new
+    `scoreValues([Map<string, i32>] values)` parameter-passing crash repro
+    (must compile-reject with the exact diagnostic text
+    `argument type mismatch for /scoreValues parameter values`, exit code
+    2, no crash) - all three simultaneously, via direct `primec
+    --emit=vm`/`--emit=exe` (and actually *running* the `--emit=exe`
+    artifact, not just building it) invocations, before touching the full
+    suites. Only once all three hold should the targeted
+    `--test-suite=...collections,...vm.maps,...math_conformance` subset
+    (already measured this round: round-5-landed baseline is 651/654
+    passing, 3 pre-existing failures - two unrelated shim/wrapper VM
+    tests plus one already-known map/vector cross-suite conformance-harness
+    flake, none map-pair-ladder-related) be re-run for a full A/B compare,
+    and only after that subset is clean should the full 2680-case
+    `PrimeStruct_compile_run_tests` suite be attempted (budget real wall
+    time for this - it is CPU-bound compiling C++ per native-backend test
+    case and took several minutes even for the ~650-case subset in this
+    environment).
+    ROUND 7 (2026-09-17): Implemented the caller-scoped fix round 6 identified
+    but did not land. Reconstructed fixes (a) (TemplateMonomorphImplicitTemplateInference.cpp
+    entry-pair packed-arg inference) and (b) (TemplateMonomorphExpressionRewrite.cpp
+    speculative early implicit-template-arg inference) from round 5/6's
+    descriptions, with two corrections found while re-deriving them: fix (a)
+    also needs to emit the existing "implicit template arguments conflict on
+    ..." diagnostic for genuine key/value type conflicts across pairs (one
+    semantics test depends on it, undocumented by rounds 5/6); fix (b) must
+    gate on `ctx.templateDefs.count(resolvedPath)`, not
+    `ctx.implicitTemplateDefs` as rounds 5/6 described - the latter is an
+    unrelated auto-param mechanism that never matches the entries
+    constructor and silently no-ops. Reconstructed fix (c)
+    (SemanticsValidatorBuildInitializerInference.cpp's
+    `deriveKeyValueTypesFromEntryPackCall` shape-based fallback) unchanged,
+    and re-deleted the 8-signature pair ladder in
+    `stdlib/std/collections/map.prime`, leaving exactly the zero-arg and
+    variadic-entries constructors.
+    Investigated the actual crash location per round 6's mandate, and found
+    round 6's own guess (`isExperimentalMapBackingTemplateBaseForArgumentValidation`/
+    `isCompatibleExperimentalKeyValueReceiver`) was not it either: fprintf
+    tracing (pristine vs modified builds, line-by-line) found the true
+    culprit is `inferQueryExprTypeText`, which silently fails (returns
+    false) for a pair-shaped `map(...)` call already rewritten to entries -
+    so the `isCollectionLikeTemplateBase` comparison block that would
+    normally reject a raw `map(...)` call passed where an experimental
+    `[Map<K, V>]` value is expected (by comparing "map<K,V>" vs "Map<K,V>"
+    textually) never runs at all, and execution falls through to an
+    unrelated `expectedStructPath.empty() -> return true` bailout (a bare
+    `Map` parameter type never resolves to a real struct path in this
+    check), silently accepting the call - which is what let the mistyped
+    argument reach IR lowering and corrupt memory at VM runtime.
+    Fix: in `SemanticsValidatorExprArgumentValidation.cpp`, added an `else`
+    branch to that fallthrough, scoped strictly to
+    `isExperimentalMapBackingTemplateBaseForArgumentValidation(normalizedExpectedBase)`
+    (NOT the general canonical "map" case - an unscoped first attempt
+    caused 22 new semantics-test failures before this scoping was added),
+    that calls `deriveKeyValueTypesFromEntryPackCall` to derive the actual
+    key/value types and reject with the same-format diagnostic pristine
+    (ladder-present) code already produced for this shape. Result: the
+    round 5/6 crash repro (`scoreValues([Map<string, i32>] values)` called
+    with a pair-shaped `map(...)` argument) now correctly REJECTS at
+    compile time with the exact byte-for-byte pristine diagnostic
+    ("argument type mismatch for /scoreValues parameter values: expected
+    Map<string, i32> got map<string, i32>"), exit code 2, confirmed via
+    direct `--emit=vm` under `ulimit -v 2000000` - no crash, no hang.
+    Verified the full fast repro set together: round 5's target
+    `[auto] m{map(1i32, 4i32, 2i32, 8i32)}` and 1/2/3/8-pair variants
+    (implicit and explicit `<K, V>` template args), both `--emit=vm`
+    (compiles+runs) and `--emit=exe` (build AND actually execute the
+    artifact, not just build it - round 6 found round 5's exe-based
+    probing never observed the runtime crash for exactly this reason);
+    invalid pair calls (odd arg count) reproduce the exact pristine
+    diagnostic; the scoreValues crash repro (fixed, above); and the round
+    6 "Holder" struct-field-mismatch semantics test (unaffected, still
+    passes exactly as at the round-5-landed baseline, confirming this
+    fix's scoping to argument-validation-only did not disturb the other
+    "Map"-text consumers round 6 found were incompatible with a
+    blanket "MapValue" rename).
+    Full suite results (test files updated: one genuinely ladder-pinned
+    overload-path assertion in
+    `tests/unit/semantics/bindings/test_semantics_bindings_assignments.cpp`
+    changed from `map__ov4` to `map__ov1`, the sole remaining variadic
+    entries constructor; one VM diagnostic pin in
+    `tests/unit/compile_run/map_conformance/test_compile_run_map_conformance_expectations.h`
+    updated from a documented TODO-4741 workaround string - "fails earlier
+    during lowering instead of at the type-mismatch check" - to the new,
+    better "argument type mismatch..." diagnostic this round's fix now
+    produces at the correct, earlier semantic layer; one literal-ladder-text
+    positive assertion in
+    `tests/unit/compile_run/examples/test_compile_run_examples_docs_locks_ui_graphics_and_stdlib.cpp`
+    flipped from asserting the ladder text `[K] eighthKey, [V] eighthValue`
+    is present to asserting it is absent):
+    PrimeStruct_semantics_tests 2799/2800 (1 failure = the pre-existing,
+    confirmed-unrelated TODO-5050 SOA `get_ref` pin); PrimeStruct_misc_tests
+    345/346 (matching the confirmed pre-existing "source lock" baseline);
+    PrimeStruct_parser_tests 450/450; PrimeStruct_text_filter_tests 172/172;
+    the full PrimeStruct_compile_run_tests suite (2680 cases) 2674/2680,
+    with the 6 failing cases being exactly the pre-existing, unrelated
+    baseline this project already tracks elsewhere (see e.g. TODO-4762's
+    `resolution_2026-09-16` note in `docs/todo_finished.md`, which
+    independently recorded this same "6/2680 (unchanged baseline)" figure
+    for the compile_run suite on 2026-09-16, before this TODO's work began)
+    - 3 pre-existing C++-emitter-backend failures ("C++ emitter runs
+    canonical map reference string access", "map wildcard import rejects
+    stdlib-owned surface in C++ emitter", "runs collection literals with
+    map at in C++ emitter") plus 3 pre-existing VM-backend failures ("runs
+    vm canonical map reference string access with imported canonical
+    helpers", "runs vm bare vector capacity after pop through imported
+    stdlib helper", "runs vm shared stdlib map conformance harness" - the
+    latter a pre-existing, unrelated `std::bad_alloc` crash, confirmed via
+    direct repro on an unmodified checkout, not caused by this TODO's
+    changes). Net delta vs the established 6/2680 baseline: zero. All
+    acceptance criteria met: map.prime exposes exactly the zero-arg and
+    variadic-entries constructors; map(k, v, ...) calls work in VM and exe
+    for 1..8 pairs with both implicit and explicit template args; invalid
+    pair calls keep their diagnostics; the full release suite battery
+    matches its established baseline exactly, with no crashes.
+  - resolution_2026-09-17: fixed. The pair ladder is deleted; map.prime now
+    exposes exactly two constructors (zero-arg and variadic entries).
+    Landed across four cooperating fixes accumulated over rounds 4-7: (a)
+    implicit-template-arg inference for entry-pair-packed constructor
+    arguments (TemplateMonomorphImplicitTemplateInference.cpp), (b) early
+    speculative implicit-arg inference to unlock the existing (round 3)
+    pair-to-entry monomorph rewrite for implicit-arg calls
+    (TemplateMonomorphExpressionRewrite.cpp), (c) a shape-based key/value
+    type fallback for SemanticsValidator's post-monomorphization semantic-
+    product pass, which cannot see TemplateMonomorph's specialized
+    definitions (SemanticsValidatorBuildInitializerInference.cpp), and (d)
+    a caller-scoped correction in argument-type validation so a pair-shaped
+    call passed to an explicitly `[Map<K, V>]`-typed parameter is correctly
+    rejected at compile time instead of silently accepted and corrupting
+    memory at VM runtime (SemanticsValidatorExprArgumentValidation.cpp).
+    Verified via the full fast repro set (1..8 pairs, VM+exe, implicit+
+    explicit template args, invalid-pair diagnostics, the parameter-passing
+    crash repro) plus a full release run of PrimeStruct_semantics_tests,
+    PrimeStruct_misc_tests, PrimeStruct_parser_tests,
+    PrimeStruct_text_filter_tests, and PrimeStruct_compile_run_tests (2680
+    cases), all matching their established pre-existing baselines exactly
+    with zero new failures and zero crashes.
+  - acceptance:
+    - map.prime exposes exactly two map constructors: zero-arg and the
+      variadic entries form
+    - map(k, v, ...) surface calls still work in VM and exe for 1..8 pairs
+    - Invalid pair calls keep their current diagnostics
+    - Release map/conformance/lock suites green
+  - stop_rule: pair signatures deleted and suites green

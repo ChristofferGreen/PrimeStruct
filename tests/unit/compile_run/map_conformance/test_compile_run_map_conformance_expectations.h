@@ -258,12 +258,17 @@ inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::st
   }
 
   if (emitMode == "vm") {
-    // TODO-4741: experimental Map<K,V> variadic constructors are unimplemented;
-    // this now fails earlier during lowering instead of at the type-mismatch check.
+    // TODO-4683: with the pair constructor ladder deleted and entry-pack
+    // implicit-template-arg inference (TemplateMonomorphImplicitTemplateInference.cpp)
+    // now understanding this call shape, the key/value type mismatch inside
+    // the explicit entry(...) pack is caught directly at the semantic
+    // layer (argument-type validation on the entry(...) constructor call
+    // itself), rather than falling through to the old, less precise VM
+    // lowering-stage diagnostic this test previously pinned.
     expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorMismatchSource(),
                                       "experimental_map_variadic_ctor_mismatch",
                                       emitMode,
-                                      "vm backend only supports indexing into string literals or string bindings");
+                                      "argument type mismatch");
     return;
   }
 

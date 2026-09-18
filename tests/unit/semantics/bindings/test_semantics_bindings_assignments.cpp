@@ -35,7 +35,11 @@ main() {
   CHECK(mainDef->statements[1].isBraceConstructor);
   CHECK(mainDef->statements[1].name == "vector");
   CHECK_FALSE(mainDef->statements[2].isBraceConstructor);
-  CHECK(mainDef->statements[2].name == "/std/collections/map/map__ov4__ta77c4e1cde0d2ba9");
+  // TODO-4683: the pair constructor ladder was deleted and calls are
+  // rewritten to the single variadic entries constructor (map__ov1) at
+  // monomorph time, so this pair-shaped call now resolves there instead of
+  // a dedicated pair overload (map__ov4, which no longer exists).
+  CHECK(mainDef->statements[2].name == "/std/collections/map/map__ov1__ta77c4e1cde0d2ba9");
 }
 
 TEST_CASE("collection literals reject labeled entries") {

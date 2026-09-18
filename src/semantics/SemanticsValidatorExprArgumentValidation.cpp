@@ -184,6 +184,37 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     baseOut = normalizeBindingTypeName(baseOut);
     return splitTopLevelTemplateArgs(argText, argsOut);
   };
+  // Fix (round 7, caller-scoped): `inferCollectionBindingType` above can
+  // answer "Map<K, V>" for a candidate purely through
+  // `inferBindingTypeFromInitializer`'s entry-pack shape-based fallback
+  // (SemanticsValidatorBuildInitializerInference.cpp), which fires whenever
+  // the primary defMap_-backed `inferCallInitializerBinding` chain fails to
+  // find a specialized definition - as happens for a pair-shaped
+  // `map(...)` call rewritten to entries at monomorph time, since defMap_
+  // was built before that specialized definition was minted. That fallback
+  // is shape-only: it never threads a real backing struct to IR lowering
+  // for this parameter-typed-argument case, so accepting the match here
+  // (because the text "Map" happens to equal a bare `[Map<K, V>]`
+  // parameter spelling) previously let a call through that then corrupted
+  // memory at VM runtime. Detect precisely that "fallback is the only
+  // reason this resolved" case - a candidate that is itself directly an
+  // entry-pack-shaped call (so the shape fallback applies) and for which
+  // the primary `inferCallInitializerBinding` chain does NOT independently
+  // resolve it (so a real, already-working candidate, such as a genuine
+  // variadic `map<K, V>(entry(...), ...)` call passed directly, is left
+  // untouched) - and refuse to treat it as a compatible experimental
+  // key/value receiver, so the call is correctly rejected with the normal
+  // argument-type-mismatch diagnostic instead of being silently accepted.
+  auto isEntryPackShapeFallbackOnlyBinding = [&](const Expr &candidate) -> bool {
+    std::string entryPackKeyType;
+    std::string entryPackValueType;
+    const bool isEntryPackShaped =
+        deriveKeyValueTypesFromEntryPackCall(candidate, entryPackKeyType, entryPackValueType);
+    BindingInfo primaryBinding;
+    const bool primaryResolved =
+        isEntryPackShaped && inferCallInitializerBinding(candidate, params, locals, primaryBinding);
+    return isEntryPackShaped && !primaryResolved;
+  };
   auto maybePreferExplicitCanonicalKeyValueKeyDiagnostic =
       [&](const std::vector<std::string> &expectedTemplateArgs) -> bool {
     std::string canonicalKeyValueAccessHelperName;
@@ -612,6 +643,36 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                   ": expected " + expectedTypeText + " got " +
                   normalizeBindingTypeName(actualTypeText));
         }
+      } else if (expectedTemplateArgs.size() == 2 &&
+                 isExperimentalMapBackingTemplateBaseForArgumentValidation(
+                     normalizedExpectedBase)) {
+        // Round 7 fix: inferQueryExprTypeText does not recognize a
+        // pair-shaped map(...) call rewritten to entries at monomorph time
+        // (TemplateMonomorphExpressionRewrite.cpp's pair-to-entry rewrite,
+        // used once the pair constructor ladder is deleted), so it returns
+        // false here and this whole comparison block is silently skipped -
+        // letting execution fall through to the unrelated
+        // expectedStructPath resolution below, which also can't resolve a
+        // bare experimental `Map<K, V>` parameter spelling to a concrete
+        // struct path and so trivially accepts *any* argument. A raw
+        // map(...) constructor call passed directly as an argument was
+        // never a supported way to satisfy an experimental
+        // `[Map<K, V>]`-spelled parameter in the first place (see
+        // resolveMapTarget's own isRootMapConstructorAliasPath exclusion
+        // for the same call shape) - derive its key/value types from its
+        // entry-pack shape purely to report the same rejection diagnostic
+        // this scenario already produced before the pair ladder was
+        // deleted (when the call resolved directly to a pair overload
+        // whose return type text didn't match the bare `Map` spelling).
+        std::string entryPackKeyType;
+        std::string entryPackValueType;
+        if (deriveKeyValueTypesFromEntryPackCall(arg, entryPackKeyType, entryPackValueType)) {
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got map<" + entryPackKeyType + ", " +
+                  entryPackValueType + ">");
+        }
       }
     }
   }
@@ -735,6 +796,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         (isKeyValueCollectionTypeName(normalizeBindingTypeName(actualKeyValueBase)) ||
          isExperimentalMapBackingTemplateBaseForArgumentValidation(
              actualKeyValueBase)) &&
+        !isEntryPackShapeFallbackOnlyBinding(arg) &&
         normalizeBindingTypeName(expectedKeyValueKeyType) ==
             normalizeBindingTypeName(actualKeyValueTemplateArgs[0]) &&
         normalizeBindingTypeName(expectedKeyValueValueType) ==

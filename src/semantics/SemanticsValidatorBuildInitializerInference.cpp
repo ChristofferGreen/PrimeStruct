@@ -1337,6 +1337,25 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   if (inferBuiltinPointerBinding(initializer, params, locals, bindingOut)) {
     return preserveBindingQualifiers();
   }
+  // Fix (c): the primary defMap_-backed inferCallInitializerBinding chain
+  // above fails for a rewritten entries-pack call whose specialized
+  // definition (e.g. .../map__ov1__ta<hash>) was minted by TemplateMonomorph
+  // *after* defMap_ was built, so it never finds an entry for it and
+  // suffix-stripping canonicalization falls back to the generic,
+  // unspecialized entries constructor (no concrete K/V to report). The
+  // rewritten call's *shape* alone - its args are each `entry(...)`-shaped,
+  // one per key/value pair - is enough to answer the K/V question without
+  // any defMap_ lookup, so fall back to deriving it directly from that
+  // shape here.
+  {
+    std::string entryPackKeyType;
+    std::string entryPackValueType;
+    if (deriveKeyValueTypesFromEntryPackCall(initializer, entryPackKeyType, entryPackValueType)) {
+      bindingOut.typeName = "Map";
+      bindingOut.typeTemplateArg = entryPackKeyType + ", " + entryPackValueType;
+      return preserveBindingQualifiers();
+    }
+  }
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);
   if (kind == ReturnKind::Unknown || kind == ReturnKind::Void) {
     return false;

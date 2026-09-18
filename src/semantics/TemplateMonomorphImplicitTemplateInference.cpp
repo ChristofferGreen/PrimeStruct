@@ -1120,6 +1120,95 @@ bool inferImplicitTemplateArgs(const Definition &def,
       continue;
     }
     const size_t callParamIndex = i - paramIndexOffset;
+    // Entry-pair packed-arg inference: an `[args<Entry<K, V>>] entries`-shaped
+    // parameter whose call-site packed arguments are raw key/value values
+    // (not `entry(...)`-shaped calls) never matches the bare-implicit-name
+    // "packed args" branch below (its wrapper element type is the compound
+    // `Entry<K, V>`, not a bare implicit name) nor the "wrapped template
+    // args" branch (the parameter's own template-arg text is a single
+    // compound element type, not a comma list of bare implicit names). Infer
+    // K/V positionally from the packed arguments here instead, bailing out
+    // whenever any packed argument is itself `entry(...)`-shaped so this
+    // cannot hijack the already-working entries-pack-call surface owned by
+    // `deriveKeyValueTypesFromEntryPackCall` et al.
+    if (callParamIndex == packedParamIndex && isArgsPackBinding(paramInfo)) {
+      std::string wrapperBase;
+      std::string wrapperArgs;
+      if (splitTemplateTypeName(paramInfo.typeTemplateArg, wrapperBase, wrapperArgs) &&
+          normalizeBindingTypeName(wrapperBase) == "Entry") {
+        std::vector<std::string> entryTemplateArgNames;
+        if (splitTopLevelTemplateArgs(wrapperArgs, entryTemplateArgNames) &&
+            entryTemplateArgNames.size() == 2) {
+          std::string entryKeyParamName = trimWhitespace(entryTemplateArgNames[0]);
+          std::string entryValueParamName = trimWhitespace(entryTemplateArgNames[1]);
+          if (!entryKeyParamName.empty() && !entryValueParamName.empty() &&
+              implicitSet.count(entryKeyParamName) > 0 &&
+              implicitSet.count(entryValueParamName) > 0 &&
+              !packedArgs.empty() && packedArgs.size() % 2 == 0) {
+            bool anyPackedArgIsEntryShaped = false;
+            for (const Expr *packedArgExpr : packedArgs) {
+              if (packedArgExpr != nullptr && packedArgExpr->kind == Expr::Kind::Call &&
+                  !packedArgExpr->isMethodCall &&
+                  (packedArgExpr->name == "entry" ||
+                   (packedArgExpr->name.size() > 6 &&
+                    packedArgExpr->name.compare(packedArgExpr->name.size() - 6, 6, "/entry") == 0))) {
+                anyPackedArgIsEntryShaped = true;
+                break;
+              }
+            }
+            if (!anyPackedArgIsEntryShaped) {
+              bool derivedEntryPairTypes = true;
+              std::string derivedKeyType;
+              std::string derivedValueType;
+              for (size_t packedIndex = 0; packedIndex < packedArgs.size(); ++packedIndex) {
+                const Expr *packedArgExpr = packedArgs[packedIndex];
+                if (packedArgExpr == nullptr) {
+                  derivedEntryPairTypes = false;
+                  break;
+                }
+                BindingInfo packedArgInfo;
+                if (!inferBindingTypeForMonomorph(*packedArgExpr, params, locals, allowMathBare, ctx,
+                                                   packedArgInfo)) {
+                  derivedEntryPairTypes = false;
+                  break;
+                }
+                const std::string packedArgTypeText = bindingTypeToString(packedArgInfo);
+                if (packedArgTypeText.empty()) {
+                  derivedEntryPairTypes = false;
+                  break;
+                }
+                if ((packedIndex % 2) == 0) {
+                  if (derivedKeyType.empty()) {
+                    derivedKeyType = packedArgTypeText;
+                  } else if (derivedKeyType != packedArgTypeText) {
+                    // A genuine key-type conflict across pairs (not merely
+                    // "couldn't infer a type at all") - report it the same
+                    // way the rest of this function reports any other
+                    // implicit-template-argument conflict, rather than
+                    // silently falling through to a generic "argument
+                    // count mismatch"/"require values" diagnostic below.
+                    error = "implicit template arguments conflict on " + def.fullPath;
+                    return false;
+                  }
+                } else {
+                  if (derivedValueType.empty()) {
+                    derivedValueType = packedArgTypeText;
+                  } else if (derivedValueType != packedArgTypeText) {
+                    error = "implicit template arguments conflict on " + def.fullPath;
+                    return false;
+                  }
+                }
+              }
+              if (derivedEntryPairTypes && !derivedKeyType.empty() && !derivedValueType.empty()) {
+                inferred[entryKeyParamName] = derivedKeyType;
+                inferred[entryValueParamName] = derivedValueType;
+                continue;
+              }
+            }
+          }
+        }
+      }
+    }
     const bool inferFromPackedArgs = callParamIndex == packedParamIndex && isArgsPackBinding(paramInfo) &&
                                      implicitSet.count(paramInfo.typeTemplateArg) > 0;
     const bool inferFromTypePackArgs =

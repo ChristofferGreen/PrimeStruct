@@ -2314,6 +2314,41 @@ bool rewriteExpr(Expr &expr,
         isTemplateMonomorphMapConstructorCallPath(resolvedPath) &&
         std::all_of(expr.args.begin(), expr.args.end(),
                     isKeyValueEntryConstructorArg);
+    // Speculative early implicit-template-arg inference: the pair-to-entry
+    // rewrite gate below only engages when `expr.templateArgs.size() == 2`
+    // is already true, so an implicit-arg pair call (no explicit `<K, V>`)
+    // never reaches the rewrite at all. Populate expr.templateArgs early
+    // here, purely to unlock that gate; this is a no-op on failure and does
+    // not surface any error from this call.
+    if (!expr.isMethodCall && expr.templateArgs.empty() && !expr.args.empty() &&
+        !usesKeyValueEntryConstructorArgs &&
+        isTemplateMonomorphMapConstructorCallPath(resolvedPath)) {
+      const auto speculativeDefIt = ctx.sourceDefs.find(resolvedPath);
+      // Note: unlike the analogous call site below (which gates on
+      // ctx.implicitTemplateDefs, a set of *auto-param-driven* templates
+      // with no template-arg list at all), the map<K, V> entries
+      // constructor has an explicit <K, V> template-arg list - it is the
+      // *call site* that omits it, not the definition. Gate on it simply
+      // being a template def instead.
+      if (speculativeDefIt != ctx.sourceDefs.end() &&
+          ctx.templateDefs.count(resolvedPath) > 0) {
+        std::vector<std::string> speculativeInferredArgs;
+        std::string speculativeError;
+        if (inferImplicitTemplateArgs(speculativeDefIt->second,
+                                      expr,
+                                      locals,
+                                      params,
+                                      mapping,
+                                      allowedParams,
+                                      namespacePrefix,
+                                      ctx,
+                                      allowMathBare,
+                                      speculativeInferredArgs,
+                                      speculativeError)) {
+          expr.templateArgs = std::move(speculativeInferredArgs);
+        }
+      }
+    }
     if (!expr.isMethodCall &&
         expr.templateArgs.size() == 2 &&
         !expr.args.empty() &&

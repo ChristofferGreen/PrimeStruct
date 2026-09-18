@@ -678,7 +678,11 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("[args<Entry<K, V>>] entries") != std::string::npos);
   CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") ==
         std::string::npos);
-  CHECK(mapStdlib.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
+  // TODO-4683: the 8-signature pair constructor ladder (map(k, v, ...) up
+  // to eight pairs) was deleted; surface calls now rewrite to the single
+  // variadic entries constructor (map<K, V>([args<Entry<K, V>>] entries))
+  // at monomorph time instead.
+  CHECK(mapStdlib.find("[K] eighthKey, [V] eighthValue") == std::string::npos);
   CHECK(mapStdlib.find("/std/collections/mapSingle") == std::string::npos);
   CHECK(mapStdlib.find("/std/collections/mapPair") == std::string::npos);
   CHECK(mapStdlib.find("mapCount<K, V>") != std::string::npos);
