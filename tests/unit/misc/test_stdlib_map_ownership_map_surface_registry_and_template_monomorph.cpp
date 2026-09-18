@@ -23,7 +23,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation map surfa
         std::string::npos);
   CHECK(s.mapSource.find("[args<Entry<K, V>>] entries") != std::string::npos);
   CHECK(s.mapSource.find("entries[index]") == std::string::npos);
-  CHECK(s.mapSource.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
+  // TODO-4683 deleted the eight one-line pair-forward overloads of
+  // map(k, v, ...) (`map<K, V>([K] firstKey, [V] firstValue, ...)` through
+  // the eighth pair), leaving exactly the zero-arg and variadic-entries
+  // constructors; assert that ladder stays gone rather than reappearing.
+  CHECK(s.mapSource.find("[K] eighthKey, [V] eighthValue") == std::string::npos);
   // TODO-4688: "collections.map_helpers" is generically derived (file stem +
   // surface suffix) rather than a hardcoded literal in the registry source,
   // so assert the canonical registry produces it at runtime instead of
