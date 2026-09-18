@@ -70,6 +70,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
+- TODO-5300: Fix post-TODO-4683 map-constructor-receiver recognition
+  gap causing an `unknown method`/`std::bad_alloc` regression cluster
+  (7 CTest shards + 1 timeout). See the full task block below (search
+  `TODO-5300`) and the "Round 2" write-up in `docs/failing_tests.md`'s
+  "TODO-4683 post-merge full-gate triage" section for the detailed
+  root-cause trail before starting.
+
 Note (2026-09-11): TODO-5294 (receiver-target resolution consolidation)
 has resolved - see `docs/todo_finished.md`. Both consolidation tracks
 this task scoped - `classifyReceiverElementFamilyJoint` (receiver-family
@@ -1984,6 +1991,141 @@ crashes) - see `docs/todo_finished.md`.
     `targetInfo`/`isMethodCall` gates are ever reached, so fixing those
     gates (as both this and the 2026-08-06 attempt did) treats a symptom
     one layer too late.
+
+- [ ] TODO-5300: Fix map-constructor-receiver recognition gap left by TODO-4683's pair-ladder deletion (unknown-method diagnostics + `std::bad_alloc` crash cluster)
+  - owner: ai
+  - created_at: 2026-09-18
+  - phase: Collection dispatch retirement (TODO-4683 post-merge cleanup)
+  - parallel_track: map-surface
+  - depends_on: (none; TODO-4683 already landed at commit `fcea5a0`)
+  - scope: TODO-4683 deleted `stdlib/std/collections/map.prime`'s 8-signature
+    pair-constructor ladder and left a monomorph-time rewrite that turns a
+    pair-shaped `map<K, V>(a, b, c, d, ...)` call into a call to the
+    variadic entries constructor (each arg becomes an `entry(...)` call).
+    That rewrite (`TemplateMonomorphExpressionRewrite.cpp`, landed round 3,
+    still load-bearing - do not touch its own logic without re-reading
+    TODO-4683's round 3/5/7 notes in `docs/todo_finished.md` first) also
+    re-resolves the call's own `expr.name` to a fully-qualified,
+    monomorph-specialized path (confirmed via instrumentation:
+    `/std/collections/map/map__ov1__ta<hash>`, a 16-hex-char suffix) via
+    `preferCanonicalStdlibCollectionHelperPath`. At least five independent
+    helper functions across `SemanticsValidator` and `TemplateMonomorph`
+    answer "is this receiver/argument Expr literally a `map(...)`
+    constructor call" via a literal-text check against the *pre-rewrite*
+    short `"map"`/`"map__"` spelling, and all but one of them (see the
+    "Round 2" note in `docs/failing_tests.md` for the one that already
+    works, `isPublishedMapConstructorExpr`, and why) give a false negative
+    once the receiver has been rewritten this way:
+    - `isRootMapConstructorAliasPath`
+      (`src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h`)
+    - `isRootMapConstructorExpr`
+      (`src/semantics/SemanticsValidatorExprPreDispatchDirectCalls.cpp`)
+    - `isResolvedKeyValueConstructorPath` /
+      `isResolvedPublishedKeyValueConstructorPath`
+      (`src/semantics/StdlibCollectionSurfaceHelpers.h`) - opposite failure
+      mode: these strip the monomorph suffix back down to the literal
+      canonical `/std/collections/map/map` path and then deliberately
+      **exclude** exactly that path, so they also give a false negative for
+      a rewritten receiver, just via over-matching the exclusion rather
+      than under-matching a prefix.
+    - `isRootMapConstructorReceiverExpr` / `isPublishedMapConstructorReceiverExpr`
+      (`src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.cpp`) -
+      TemplateMonomorph's own copies of the first and third checks above.
+    Symptom: a pair-shaped `map<K, V>(...)` constructor call used directly
+    as a receiver/argument (not stored in an `auto`-typed local first,
+    which already works via TODO-4683 round 5-7's `deriveKeyValueTypesFromEntryPackCall`
+    fallback in `inferBindingTypeFromInitializer`) either gets a false
+    "unknown method"/"unknown call target" diagnostic, or gets accepted but
+    never canonicalized to its real callee path, and either lowers
+    incorrectly (native/C++ backends: silently accepts what should be
+    rejected, or vice versa) or crashes the VM backend with `std::bad_alloc`
+    inside `primec::vm_detail::allocateVmHeapSlots` (confirmed via gdb: the
+    VM executes a lowered map-constructor loop with a corrupted trip
+    count/heap-slot computation). Affects exactly these 7 CTest shards + 1
+    timeout (unchanged since the original triage):
+    `primestruct_ir_pipeline_conversions_core_11_20`,
+    `primestruct_compile_run_vm_collections_alias_and_basics_21_30`,
+    `primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`,
+    `primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_383_392`,
+    `primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`,
+    `primestruct_compile_run_imports_operations_and_collections_1_2`,
+    `primestruct_compile_run_imports_operations_and_collections_3_4`,
+    `primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
+    (Timeout - same bug, just slow instead of throwing).
+  - implementation_notes: two independent fast repros to iterate against
+    (both under `ulimit -v 2000000`, no full suites needed while iterating -
+    each fails/crashes in 1-2s):
+    - Repro A (direct-inline receiver; source: "runs collection literals
+      with map at in C++ emitter" in
+      `tests/unit/compile_run/imports/test_compile_run_imports_operations.cpp`):
+      `primec --emit=vm` on `import /std/collections/*` +
+      `main() { return(plus(at_unsafe(array<i32>{1i32, 2i32, 3i32}, 1i32), at(map<i32, i32>(1i32, 10i32, 2i32, 20i32), 2i32))) }`.
+      Pristine/expected: exit code 22. Currently: `unknown method:
+      /std/collections/map/at`. A round-2 (2026-09-18) partial fix (see
+      below) got this specific diagnostic to go away but only advanced it
+      to a *different* failure (`VM lowering error: ... call=/at, name=at,
+      ..., method=true` - the bare `at(...)` call gets accepted but never
+      rewritten to its canonical `/std/collections/map/at` callee, because
+      of a *sixth* copy of the same "is this receiver a map constructor
+      call" check: `isPublishedKeyValueConstructorReceiver`, a local lambda
+      inside `tryRewriteCanonicalExperimentalKeyValueHelperCall`
+      (`src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp`),
+      which also uses the `isResolvedKeyValueConstructorPath` exclusion
+      pattern on the receiver's raw `.name` and bails at its
+      `isBareKeyValueAccessHelperName(helperName) && !isPublishedKeyValueConstructorReceiver(receiverExpr)`
+      gate).
+    - Repro B (explicit-typed local; source: "ir lowerer rejects stdlib
+      string-keyed map helper lowering" in
+      `tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_core.h`,
+      the exact repro the original triage's gdb backtrace was built from):
+      `primec --emit=vm` on `import /std/collections/*` +
+      `main() { [/std/collections/map/MapValue<string, i32> mut] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)} return(plus(/std/collections/map/count<string, i32>(values), /std/collections/map/mapAt<string, i32>(values, "b"raw_utf8))) }`.
+      Pristine/expected: rejected at IR lowering with "native backend only
+      supports arithmetic/comparison" (native/C++ path) or a working VM
+      run (VM path). Currently: `--emit=exe` wrongly *succeeds* building
+      (should reject); `--emit=vm` crashes with `std::bad_alloc` in
+      ~1-2s. This repro's real receiver (`values`, a Name expr with an
+      explicit `MapValue<string, i32>` binding, resolved via
+      `resolveBindingTarget`) does **not** go through any of the five
+      "map constructor receiver" checks above at all - round 2's two live
+      patches (to `resolveMapTarget` and `isRootKeyValueAliasExpr`) made
+      zero difference to this repro, confirming its root cause is a
+      *different*, not-yet-found bug, most likely at the IR-lowering layer
+      itself (not semantic validation, which already accepts this program
+      in every state tried so far). Leading unconfirmed hypothesis: the
+      local's declared type `MapValue<string, i32>` and the entries
+      constructor's own specialized return type get monomorphized to
+      struct layouts independently (each via its own `__ta<hash>` suffix),
+      and if IR lowering treats these as two different concrete struct
+      types instead of the same layout, the store into the explicitly-typed
+      local could read/write through the wrong layout, corrupting whatever
+      field the lowered map-constructor loop uses as its trip count. This
+      needs a targeted `--dump-stage ir`/gdb session focused on repro B in
+      isolation (independent of fixing repro A) to confirm or refute before
+      attempting a fix.
+  - acceptance:
+    - Repro A compiles and runs to exit code 22 on `--emit=vm`, with no
+      new diagnostic-text regressions (verify against the fast repro sets
+      TODO-4683 rounds 5-7 already established: `[auto] m{map(1i32, 4i32,
+      2i32, 8i32)}` 1..8-pair variants on both VM/exe, implicit/explicit
+      template args, invalid-pair diagnostics, and the round-7
+      `scoreValues([Map<string, i32>] values)` parameter-passing crash
+      repro must all keep behaving exactly as TODO-4683 round 7 left them)
+    - Repro B rejects cleanly at semantic/IR-lowering time on the native/
+      C++ path (no more silent wrong-accept) and either lowers/runs
+      correctly on the VM path or rejects cleanly there too - no
+      `std::bad_alloc`, no crash, under both plain execution and
+      `ulimit -v 2000000`
+    - All 7 listed CTest shards + 1 timeout pass individually
+      (`ctest --test-dir build-release -R <shard-name> --output-on-failure`)
+    - A full `./scripts/compile.sh --release` run shows zero new failures
+      anywhere else versus the established baseline this section's
+      "Confirmed pre-existing" list documents
+  - stop_rule: all 7 shards + the timeout pass individually and the full
+    release gate matches its established pre-existing-only baseline with
+    zero new failures; if a partial fix only clears some of the checks
+    above, split the remainder into a new `TODO-53xx` sub-task with its own
+    scope/acceptance/stop_rule rather than leaving this one half-done
 
 - [ ] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
   - owner: ai

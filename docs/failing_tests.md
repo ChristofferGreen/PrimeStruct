@@ -106,6 +106,186 @@ through with a guessed fix in this session; it needs its own dedicated
 TODO. Left unresolved and out of `docs/todo.md` scope for this pass;
 flag for a follow-up TODO before the next map-surface change.
 
+**Round 2 (2026-09-18): root-caused further, still not clearable in one
+session; tracked as TODO-5300 in `docs/todo.md`.**
+
+Reproduced the crash narrowly and fast (`ulimit -v 2000000`, no full
+suites needed) with two distinct minimal repros pulled directly from
+the affected test sources:
+- Repro A (direct-inline receiver, from
+  `test_compile_run_imports_operations.cpp`'s "runs collection literals
+  with map at in C++ emitter"): `primec --emit=vm` on
+  `import /std/collections/*` + `main() { return(plus(at_unsafe(array<i32>{1i32,2i32,3i32}, 1i32), at(map<i32, i32>(1i32, 10i32, 2i32, 20i32), 2i32))) }`
+  fails semantic validation with `unknown method: /std/collections/map/at`
+  (pristine/expected: exit code 22).
+- Repro B (explicit-typed local, from
+  `test_ir_pipeline_conversions_core.h`'s "ir lowerer rejects stdlib
+  string-keyed map helper lowering", the exact repro the prior round's
+  gdb backtrace was built from): `primec --emit=vm` on
+  `import /std/collections/*` + `main() { [/std/collections/map/MapValue<string, i32> mut] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)} return(plus(/std/collections/map/count<string, i32>(values), /std/collections/map/mapAt<string, i32>(values, "b"raw_utf8))) }`
+  crashes with `std::bad_alloc` in ~1-2s (confirmed via `--emit=exe`
+  too: it *builds* successfully - wrongly, since it should be rejected
+  with "native backend only supports arithmetic/comparison" per the
+  pinned test - then the built exe presumably has the same runtime
+  corruption, matching round 6/7's established mechanism).
+
+**What was found (via targeted `fprintf` instrumentation and gdb, not
+guesswork, per the bug-fix workflow):**
+
+The prior round's framing ("fix (c)'s shape-only `Map` text never
+threads a real backing struct to IR lowering") is accurate but
+incomplete. Investigating repro A found a *second*, independent defect
+class: past the point fix (c) patches
+(`SemanticsValidatorBuildInitializerInference.cpp`), there is a wide
+family of small helper functions across `SemanticsValidator` (mostly
+`SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`,
+`SemanticsValidatorExprCollectionAccessValidation.cpp`,
+`SemanticsValidatorExprPreDispatchDirectCalls.cpp`,
+`SemanticsValidatorCollectionHelperRewrites.cpp`) and in
+`TemplateMonomorph` itself
+(`TemplateMonomorphExperimentalCollectionReceiverResolution.cpp`,
+`TemplateMonomorphExpressionRewrite.cpp`) whose single job is "does
+this receiver/argument `Expr` denote a freshly-constructed map value
+(i.e. is it literally a `map(...)` constructor call)". Confirmed at
+least these five independent implementations of that same question, by
+name:
+  - `isRootMapConstructorAliasPath`
+    (`SemanticsValidatorInferCollectionCompatibilityInternal.h`) -
+    checks `path == "/map" || path.rfind("/map__", 0) == 0` against the
+    call's *resolved* or *explicit* path.
+  - `isRootMapConstructorExpr`
+    (`SemanticsValidatorExprPreDispatchDirectCalls.cpp`) - same
+    `"map"`/`"map__"` prefix check, against the *whole* normalized
+    `expr.name`.
+  - `isPublishedMapConstructorExpr` (same file) - same idea but checks
+    only the *last path segment* against `"map"`/`"map__"`.
+  - `isResolvedKeyValueConstructorPath` /
+    `isResolvedPublishedKeyValueConstructorPath`
+    (`StdlibCollectionSurfaceHelpers.h`) - strip
+    monomorphization/overload suffixes, then explicitly **exclude** the
+    case where the stripped path is exactly the canonical
+    `/std/collections/map/map` constructor path itself.
+  - `isRootMapConstructorReceiverExpr` /
+    `isPublishedMapConstructorReceiverExpr`
+    (`TemplateMonomorphExperimentalCollectionReceiverResolution.cpp`) -
+    TemplateMonomorph's own copies of the first and fourth checks above.
+
+All five were written and correct for the **pre-TODO-4683 world**,
+where a pair-shaped `map<K, V>(a, b, c, d)` call resolves directly to
+one of the 8 ladder overloads and both `expr.name` and
+`resolveCalleePath(expr)` stay literally `"map"`/`"/map"` (or a short
+`"map__ovN"` family member) all the way through validation, so a
+literal-text prefix/suffix check on the *whole* name reliably answers
+"is this receiver a map constructor call". TODO-4683 changed that
+invariant: `TemplateMonomorphExpressionRewrite.cpp`'s pair-to-entry
+rewrite (the one landed in round 3, still present and load-bearing)
+does two things to the call's own `Expr` node that none of the five
+checks above account for: (a) it rewrites `expr.args` into
+`entry(...)`-shaped pairs (already handled correctly elsewhere via
+`deriveKeyValueTypesFromEntryPackCall`), and, separately and not
+previously called out, (b) a few lines later it re-resolves
+`expr.name` to a **fully-qualified, monomorph-specialized path**
+(confirmed via instrumentation: `/std/collections/map/map__ov1__ta<hash>`,
+16 hex chars) via `preferCanonicalStdlibCollectionHelperPath` +
+`expr.name = preferredCollectionHelperPath`. Once that has happened,
+none of the five checks above match any more:
+  - The two whole-name-prefix checks (`isRootMapConstructorAliasPath`,
+    `isRootMapConstructorExpr`, `isRootMapConstructorReceiverExpr`) see
+    `/std/collections/map/map__ov1__ta<hash>`, which does not equal
+    `"/map"` and does not start with `"/map__"` (it starts with
+    `"/std/..."`) - false negative.
+  - The last-segment check (`isPublishedMapConstructorExpr`) actually
+    still works correctly, since the *last* path segment
+    (`map__ov1__ta<hash>`) does start with `"map__"` - this one needs
+    no fix.
+  - The suffix-stripping checks (`isResolvedKeyValueConstructorPath`
+    family) strip the `__ov1__ta<hash>` suffix back down to
+    `/std/collections/map/map`, which is exactly the literal path they
+    deliberately **exclude** - false negative, but for the opposite
+    reason (over-matching the exclusion, not under-matching the
+    prefix).
+
+Patched two of these live and reverted (see below) to measure real
+effect: added a `deriveKeyValueTypesFromEntryPackCall`-based shape
+fallback to `resolveMapTarget` (`SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`,
+inserted in the two places the existing `isRootMapConstructorAliasPath`-
+gated branches already fail closed: once when
+`resolveCallCollectionTypePath` matches the alias but
+`resolveCallCollectionTemplateArgs` can't recover the pair-arg shape
+any more, once when `resolveCallCollectionTypePath` doesn't match the
+alias at all), and extended the local `isRootKeyValueAliasExpr` lambda
+in `SemanticsValidatorExprCollectionAccessValidation.cpp` with the same
+shape fallback. Verified narrowly: **repro A's semantic-validation
+`unknown method` error goes away** (confirmed via direct rebuild +
+`--emit=vm`) - `resolveMapTarget` now correctly recognizes the
+rewritten receiver in both these code paths, and the earlier "unknown
+method: /std/collections/map/at" repro-A diagnostic disappears.
+
+However, this did **not** fully fix repro A: it advances to a *new*,
+later-stage failure -
+`VM lowering error: vm backend only supports arithmetic/... calls in
+expressions (call=/at, name=at, args=2, method=true)`. Traced this
+(via `fprintf` instrumentation across
+`SemanticsValidatorCollectionHelperRewrites.cpp`'s
+`tryRewriteBareKeyValueHelperCall`,
+`tryRewriteCanonicalExperimentalKeyValueHelperCall`, and
+`SemanticsValidatorExprPreDispatchDirectCalls.cpp`) to at least a third
+distinct choke point: `isPublishedKeyValueConstructorReceiver`, a local
+lambda inside `tryRewriteCanonicalExperimentalKeyValueHelperCall`, uses
+`isResolvedKeyValueConstructorPath` on the receiver's raw `.name`
+(the fourth bullet above) and hits the same exclusion false-negative,
+causing that rewrite to bail out (`return false` at the
+`isBareKeyValueAccessHelperName(helperName) &&
+!isPublishedKeyValueConstructorReceiver(receiverExpr)` gate) before
+`at(...)` ever gets canonicalized to `/std/collections/map/at`. Did
+**not** find or fix the actual root cause of repro B (the explicit-
+typed-local crash, which is the shape the earlier gdb backtrace and
+`allocateVmHeapSlots` finding came from) in this round - ran the same
+partial fix against repro B and it still crashes with `std::bad_alloc`
+identically, confirming repro B's failure is not primarily about the
+`isRootKeyValueAliasExpr`/`resolveMapTarget` gap fixed above (that gap
+is specific to a receiver expression that is *itself* directly a
+`map(...)` call in a bare-builtin-access position; repro B's crashing
+call is `mapAt<string, i32>(values, ...)` against a *named local*
+`values` whose binding is resolved via `resolveBindingTarget`, a
+completely different code path that was not reached by either of this
+round's two patches). Repro B's real failure is most likely at the IR-
+lowering layer proper (not semantic validation, which already accepts
+the program in both the buggy and any partially-patched state) -
+consistent with round 6's finding that the crash is inside
+`primec::vm_detail::allocateVmHeapSlots`, i.e. the VM already treats the
+program as valid and is executing a lowered map-constructor loop with a
+corrupted trip count/heap-slot computation. The most likely mechanism,
+not yet confirmed via instrumentation: the local's *declared* type
+`MapValue<string, i32>` and the entries-constructor call's *own*
+specialized return type get monomorphized to the struct layout
+independently (each via its own `__ta<hash>` suffix), and if IR
+lowering treats these as two different concrete struct types instead of
+recognizing they denote the same layout, the store into the
+explicitly-typed local could read/write through the wrong layout. This
+is a hypothesis, not a confirmed finding - it needs its own targeted
+`--dump-stage ir`/gdb session in the next round, focused specifically on
+repro B in isolation (it does not require reproducing repro A's
+`isRootKeyValueAliasExpr` gap at all).
+
+Given: (1) the two live patches only get repro A to a *different*
+failure, not a pass; (2) repro B (the crash the original triage
+prioritized, and the shape most of the 7 affected shards actually use)
+remains completely unaddressed by either patch; and (3) each of the
+five duplicate "is this a map constructor receiver" checks found this
+round would need its own targeted fix-and-verify cycle to know whether
+fixing it helps, hurts, or is irrelevant - per the bug-fix workflow,
+this was not forced through as a partial/guessed landing. Reverted both
+live patches (`git checkout --` on the three touched files,
+`SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`,
+`SemanticsValidatorExprCollectionAccessValidation.cpp`, and
+`SemanticsValidatorCollectionHelperRewrites.cpp` - the last one only
+ever had temporary `fprintf` instrumentation, no logic change), rebuilt
+`primec`, and confirmed the tree is byte-identical to committed HEAD
+(`75a5954`) again; the 7 shards + 1 timeout remain exactly as this
+section already described before this round. Tracked as **TODO-5300**
+in `docs/todo.md` with the concrete next steps below as its scope.
+
 **Confirmed pre-existing (unrelated to TODO-4683, left as-is):**
 
 All confirmed via identical-output reproduction against the `c7cc6f0`
@@ -786,7 +966,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-18T20:11:23Z`
+- Last updated: `2026-09-18T20:46:31Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -832,6 +1012,7 @@ All other test assertion failures have been fixed in this session:
   - `1944`: `PrimeStruct_soa_surface_trace_zero_audit`
   - `1946`: `PrimeStruct_collection_audit_exemption_count_ratchet`
   - `1947`: `PrimeStruct_collection_audit_exemption_count_ratchet_self_test`
+  - `1953`: `PrimeStruct_semantic_memory_trend`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
