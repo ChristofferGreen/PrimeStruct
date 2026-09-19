@@ -125,9 +125,9 @@ struct CanonicalReceiverType {
   // output at all - ir_lowerer's borrowed/owned _ref method-name
   // selection for SOA/key-value happens downstream of receiver-type
   // inference entirely, inside IrLowererSetupTypeCollectionHelpers.cpp's
-  // registry-backed helper-name resolution (e.g. CH-V6's
-  // soaVectorCount/soaVectorCountRef remap, and the working half of the
-  // vector/key-value alias-name asymmetry documented in Row G continued
+  // registry-backed helper-name resolution (e.g. CH-V6's soa-vector
+  // count/count-ref remap, and the working half of the
+  // vector / key-value alias-name asymmetry documented in Row G continued
   // (II)) rather than as a fact resolveMethodReceiverTarget itself
   // produces. This is a legitimate "some stages fill this, some don't"
   // case per the task's own allowance, not a reconciliation problem - but

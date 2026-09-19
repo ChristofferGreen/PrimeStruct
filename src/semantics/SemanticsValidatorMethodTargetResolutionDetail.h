@@ -1,5 +1,5 @@
 // Shared, internal-use-only free-function helpers used by several of the
-// SemanticsValidator method-target resolver families (vector/array/soa,
+// SemanticsValidator method-target resolver families (vector / array / soa,
 // string, key-value, args-pack, struct/sum - see TODO-5270..5274 in
 // docs/todo.md). These were originally private to one translation unit
 // (an anonymous namespace in SemanticsValidatorExprMethodTargetResolution.cpp)

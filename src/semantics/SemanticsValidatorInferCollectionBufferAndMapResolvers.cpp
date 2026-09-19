@@ -270,7 +270,8 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     // TODO-5300 round 4: once TODO-4683's pair-to-entries rewrite has
     // renamed `target.name` to its fully-qualified monomorph-specialized
-    // path (e.g. `/std/collections/map/map__ov1__ta<hash>`), none of the
+    // path (e.g. the stdlib map module's `map__ov1__ta<hash>` overload
+    // leaf), none of the
     // short-alias-spelling checks above recognize it any more. Rather than
     // widen those literal-text checks (which round 3 found regresses the
     // experimental-map receiver family elsewhere), recognize the rewritten

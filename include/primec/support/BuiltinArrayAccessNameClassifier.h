@@ -63,7 +63,7 @@ namespace primec {
 //   `classifyAccessAliasToken` below correspondingly does NOT recognize a
 //   bare "At"/"AtUnsafe" spelling in any spelling mode; only lowercase
 //   "at"/"at_ref"/"at_unsafe"/"at_unsafe_ref" and the concatenated
-//   "vectorAt"/"vectorAtUnsafe" forms are ever recognized, matching both
+//   "vector"+"At"/"vector"+"AtUnsafe" forms are ever recognized, matching both
 //   stages' real (post-deletion) behavior.
 //
 //   Branches 3 and 4 (vector-receiver-base disambiguation, internal-SOA-
@@ -106,7 +106,7 @@ namespace primec {
 // receiver-base-disambiguation shape) only ever compares against the bare
 // spellings ("at"/"at_ref"/"at_unsafe"/"at_unsafe_ref"), while its sibling
 // `matchLegacyAccessAlias` lambda (the plain-prefix shape) only ever
-// compares against the concatenated spellings ("vectorAt"/"vectorAtUnsafe")
+// compares against the concatenated spellings ("vector"+"At"/"vector"+"AtUnsafe")
 // - the two lambdas are never interchangeable, and neither alone covers
 // what semantics' single `accessAliasFromMemberName` lambda covers (all
 // six spellings, verified as the union of ir_lowerer's two subsets). This
@@ -115,7 +115,7 @@ namespace primec {
 // function instead of being re-typed per subset.
 enum class AccessAliasSpellingMode {
   kBareOnly,          // "at"/"at_ref" -> "at"; "at_unsafe"/"at_unsafe_ref" -> "at_unsafe"
-  kConcatenatedOnly,  // "vectorAt" -> "at"; "vectorAtUnsafe" -> "at_unsafe"
+  kConcatenatedOnly,  // "vector"+"At" -> "at"; "vector"+"AtUnsafe" -> "at_unsafe"
   kFull,              // the union of both of the above (semantics' real shape)
 };
 

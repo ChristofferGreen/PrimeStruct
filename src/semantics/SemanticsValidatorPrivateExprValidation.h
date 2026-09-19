@@ -452,7 +452,7 @@
   // lambda `setCollectionMethodTarget`, seam (2)'s hub-lambda precursor -
   // see this task's own implementation_notes) - the "explicit removed/
   // compat collection helper path vs. canonical stdlib path" resolution
-  // hub, called from every branch that resolves a vector/soa/array/
+  // hub, called from every branch that resolves a vector / soa / array /
   // string/key-value method-call target to a concrete path.
   bool resolveExplicitOrCanonicalCollectionMethodTarget(
       const std::string &path,
@@ -466,10 +466,10 @@
   // TODO-4724 seam (3): extracted from resolveMethodTarget's body - the
   // "explicit vector-namespaced helper path vs. receiver family"
   // classification cluster. These 6 mutually-calling helpers classify a
-  // receiver's collection family (vector/soa/array/string/map) and check
+  // receiver's collection family (vector / soa / array / string / map) and check
   // whether an explicitly-spelled vector-compat helper path's own
   // parameter type is compatible with a given receiver - used throughout
-  // resolveMethodTarget wherever an explicit `/std/collections/vector/...`
+  // resolveMethodTarget wherever an explicit `/std/collections/vector` helper
   // (or soa-surface) spelling needs validating against the actual
   // receiver shape.
   std::string classifyVectorCompatHelperParamFamily(const BindingInfo &binding) const;

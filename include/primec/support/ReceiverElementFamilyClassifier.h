@@ -20,7 +20,7 @@ namespace primec {
 //     method name on a FileError-typed element it falls through to the
 //     struct-type-path fallback instead, so "family" alone is not what that
 //     call site branches on - (type, methodName) jointly is.
-//   - the vector/array/soa/Buffer/key-value/File checks there only run when
+//   - the vector / array / soa / Buffer / key-value / File checks there only run when
 //     the element type text is template-shaped (`X<...>`, per that stage's
 //     own splitTemplateTypeName); a bare non-template "Buffer" or "File"
 //     element type skips them entirely and falls through to the struct
@@ -28,7 +28,7 @@ namespace primec {
 // Those quirks (real or latent bugs - undetermined) belong in the Step 0
 // rule table before any call site is migrated onto this classifier's
 // verdict; see the design doc's Open Questions section. Until then, treat
-// this module as a verified, reusable *name-set library* (the vector/array
+// this module as a verified, reusable *name-set library* (the vector / array
 // base names, Buffer/File method-name sets, and primitive-name set that
 // resolveArgsPackElementMethodTarget, resolveMethodCallTemplateTarget, and
 // the ir_lowerer receiver-target helpers each currently re-type from

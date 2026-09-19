@@ -159,19 +159,20 @@ namespace {
 // ("what type"), and was never returned by this cascade in the first place.
 // TODO-4753: a bare collection-family base name ("vector"/"map") must never
 // go through import-alias substitution when qualifying a receiver's OWN type
-// text for method-target path construction. The module path ("/std/
-// collections/vector") and the constructor-family path ("/std/collections/
-// vector/vector", since the vector<T>(...) constructor overload family's
-// own leaf name happens to collide with its module's name) are both
-// legitimately registered under the alias key "vector" - `stdlibSurface
-// ImportAliasPriority` deliberately ranks the constructor family above the
-// helper/module one as the intended winner for that shared key in most
-// contexts (confirmed load-bearing: an earlier attempt to change that
-// priority broke 67 unrelated tests). But here the alias is being used to
-// qualify a *receiver's own type name*, not to resolve a *call target* -
-// picking the constructor's path corrupts every method-path this feeds into
-// (e.g. "/std/collections/vector/vector/remove_at" instead of "/std/
-// collections/vector/remove_at"), which happens to stay harmless for
+// text for method-target path construction. The module path (the stdlib
+// collections vector module itself) and the constructor-family path (that
+// same module path with one more "vector" leaf segment appended, since the
+// vector<T>(...) constructor overload family's own leaf name happens to
+// collide with its module's name) are both legitimately registered under
+// the alias key "vector" - `stdlibSurfaceImportAliasPriority` deliberately
+// ranks the constructor family above the helper/module one as the intended
+// winner for that shared key in most contexts (confirmed load-bearing: an
+// earlier attempt to change that priority broke 67 unrelated tests). But
+// here the alias is being used to qualify a *receiver's own type name*, not
+// to resolve a *call target* - picking the constructor's path corrupts
+// every method-path this feeds into (e.g. a `remove_at` path built with the
+// extra, colliding leaf segment doubled in instead of the correct
+// single-leaf module path), which happens to stay harmless for
 // builtin-dispatched methods (push/pop/count/...) but breaks any method
 // that needs a real specialized function definition (remove_at/remove_swap)
 // since no definition exists at the doubled path. Skip the alias lookup for
@@ -1151,7 +1152,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   // dozen lines above is exactly
   // isTemplateMonomorphSoaReceiverType(normalizedTypeName) (confirmed by
   // direct classifier trace: that fixed internal SOA name matches neither
-  // "string" nor "FileError" nor vector/array, so the classifier's
+  // "string" nor "FileError" nor vector / array, so the classifier's
   // isInternalSoaCollectionTypeName predicate is the first and only thing
   // that can match it, unconditionally landing on Soa) - both normalizedType-
   // Name and normalizedMethodName are unchanged between the two call sites,
