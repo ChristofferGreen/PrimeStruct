@@ -617,7 +617,14 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_vector_capacity_after_pop.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  // vectorPop (stdlib/std/collections/vector.prime) only ever decrements
+  // fieldCount (count); it never shrinks the underlying allocation, so
+  // capacity stays at whatever the 3-element literal constructor
+  // allocated (3) after popping one element. This matches the sibling
+  // "native bare vector capacity after pop through imported stdlib
+  // helper" test (test_compile_run_native_backend_collections_shims_vectors.cpp),
+  // which already asserts 3 for the identical scenario.
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("runs vm bare vector mutators without imported helpers") {
