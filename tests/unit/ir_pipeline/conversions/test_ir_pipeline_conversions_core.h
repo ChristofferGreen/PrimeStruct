@@ -447,7 +447,23 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer rejects stdlib string-keyed map helper lowering") {
+TEST_CASE("ir lowerer supports stdlib string-keyed map helper lowering") {
+  // TODO-5300 round 6: this used to assert a native-backend rejection.
+  // That rejection was itself a symptom of a real compiler bug (a struct
+  // args-pack element such as args<Entry<K,V>> passed directly as a
+  // struct-typed call argument re-emitted its bounds check via
+  // emitArrayVectorIndexedAccess with instructionCount/patchInstructionImm
+  // stubbed out as no-ops, so its JumpIfZero bounds-check placeholders
+  // stayed permanently unpatched at imm=0 and jumped to instruction 0 on
+  // the in-bounds path - an infinite loop that showed up as a VM
+  // std::bad_alloc crash and, on the native/C++ path, was never reached
+  // because IR lowering itself never terminated either). Now that
+  // IrLowererInlineParamHelpers.cpp wires the real callbacks through, this
+  // shape lowers and runs correctly on both backends - see the "Struct
+  // helper notes"/"VM/native strings" sections of AGENTS.md for why a
+  // string-keyed Entry<K,V> gets the same fixed slot layout as an
+  // all-integer one, which is exactly what let this fix land without any
+  // string-specific special-casing.
   const std::string source = R"(
 import /std/collections/*
 
@@ -466,9 +482,14 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
-  CHECK_FALSE(lowered);
-  CHECK(error.find("native backend only supports arithmetic/comparison") !=
-        std::string::npos);
+  REQUIRE(lowered);
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 4);
 }
 
 TEST_CASE("ir lowerer supports math-qualified min/max") {
