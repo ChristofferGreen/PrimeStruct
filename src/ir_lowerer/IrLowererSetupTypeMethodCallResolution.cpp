@@ -489,14 +489,26 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                              callExpr.args.size())) {
         return canonicalDef;
       }
-      // TODO-5300: the receiver may be a monomorph-rewritten map(...)
-      // constructor call whose specialized MapValue<K,V> struct was
-      // minted for this K/V pair, but the free-standing `at`/`mapAt`
-      // helper template family never got a matching specialization
-      // (nothing else triggers it). The struct's own nested member
-      // method (e.g. `MapValue__ta<hash>/mapAt`) IS always specialized
-      // alongside the struct itself, so fall back to it directly.
-      if (!pairInfo.structTypeName.empty()) {
+      // TODO-5300: a monomorph-rewritten key/value constructor call
+      // used directly as a receiver gets materialized into a synthetic
+      // "__collection_receiver_" temporary (see
+      // emitMaterializedCollectionReceiverExpr) bound to the specialized
+      // backing struct minted for this K/V pair, but the free-standing
+      // helper template family for this operation never gets a matching
+      // specialization (nothing else triggers it). The struct's own
+      // nested member for this operation IS always specialized
+      // alongside the struct itself, so fall back to it directly. Scope
+      // this strictly to that synthetic receiver shape - an ordinary
+      // named local of key/value type intentionally has no such
+      // fallback (some call shapes on it are deliberately rejected by
+      // specific backends).
+      constexpr std::string_view materializedCollectionReceiverPrefix =
+          "__collection_receiver_";
+      const Expr &receiverExprForFallback = callExpr.args.front();
+      const bool receiverIsMaterializedCollectionTemp =
+          receiverExprForFallback.kind == Expr::Kind::Name &&
+          receiverExprForFallback.name.rfind(materializedCollectionReceiverPrefix, 0) == 0;
+      if (receiverIsMaterializedCollectionTemp && !pairInfo.structTypeName.empty()) {
         std::string memberMethodName = "map";
         bool capitalizeNext = true;
         for (char nameChar : keyValueHelperName) {
