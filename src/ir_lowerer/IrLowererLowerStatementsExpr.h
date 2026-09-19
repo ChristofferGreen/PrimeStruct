@@ -573,7 +573,7 @@
           // keyValueKeyKind/keyValueValueKind but an EMPTY structTypeName,
           // unlike `args<Entry<K, V>>` (the map constructor's own internal
           // pack), whose structTypeName is always populated with a concrete
-          // Entry__t... path. See docs/ReceiverTargetResolutionConsolidation.md.
+          // monomorphized entry-struct path. See docs/ReceiverTargetResolutionConsolidation.md.
           // TODO-5287 (see docs/todo_finished.md): this structTypeName-
           // emptiness check only covers a bare `Name`-kind receiver (a
           // direct args-pack-of-map local). The emission-side twin of this

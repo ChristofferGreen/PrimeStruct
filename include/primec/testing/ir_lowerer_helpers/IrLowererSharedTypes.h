@@ -58,7 +58,7 @@ inline bool hasWrappedKeyValueKinds(const LocalInfo &info, LocalInfo::Kind kind)
 // for `args<Entry<K, V>>` (the stdlib map constructor's own internal args
 // pack, used to build the map's storage) - it is *also* key-value-shaped per
 // `hasKeyValueKinds`, but its `structTypeName` is always populated with a
-// concrete `Entry__t...`-rooted path. `hasKeyValueKinds` alone cannot tell
+// concrete monomorphized entry-struct-rooted path. `hasKeyValueKinds` alone cannot tell
 // these two args-pack-element shapes apart; this predicate names the
 // distinguishing signal (empty vs. populated `structTypeName`) so call sites
 // that need to single out the bare `args<map<K,V>>` case don't have to

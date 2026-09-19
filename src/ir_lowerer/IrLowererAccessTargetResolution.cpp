@@ -694,7 +694,7 @@ CollectionPairTypeInfo resolveCollectionPairTypeInfo(
     // not consult localInfo.structTypeName the way
     // IrLowererLowerStatementsExpr.h's `isKeyValueAccessReceiverArgsPackOfMap`
     // does (empty structTypeName => genuine map element, populated
-    // Entry__t... path => constructor's internal pack). See that call site's
+    // monomorphized entry-struct path => constructor's internal pack). See that call site's
     // comment and TODO-5292 for the concrete unification/fix this gap
     // motivates.
     const bool isDirectKeyValue =
