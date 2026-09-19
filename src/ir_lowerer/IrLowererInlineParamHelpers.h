@@ -28,6 +28,9 @@ using EmitInlineParameterStructCopySlotsFn = std::function<bool(int32_t, int32_t
 using AllocInlineParameterTempLocalFn = std::function<int32_t()>;
 using EmitInlineParameterInstructionFn = std::function<void(IrOpcode, uint64_t)>;
 using TrackInlineParameterFileHandleFn = std::function<void(int32_t)>;
+using InlineParameterInstructionCountFn = std::function<size_t()>;
+using PatchInlineParameterInstructionImmFn = std::function<void(size_t, uint64_t)>;
+using EmitInlineParameterArrayIndexOutOfBoundsFn = std::function<void()>;
 
 bool emitInlineDefinitionCallParameters(
     const std::vector<Expr> &callParams,
@@ -119,6 +122,17 @@ bool emitInlineDefinitionCallParameters(
     const EmitInlineParameterInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {},
+    // TODO-5300 round 6: a struct args-pack element (e.g. args<Entry<K,V>>)
+    // passed directly as a struct-typed call argument re-emits its bounds
+    // check via emitArrayVectorIndexedAccess, which needs a real
+    // instructionCount/patchInstructionImm pair to backpatch its
+    // JumpIfZero placeholders to the correct forward target. Callers that
+    // have direct access to the target IrFunction's instructions (the
+    // production ir_lowerer pipeline) must bind these to it; a caller that
+    // leaves them unbound keeps the previous (pre-fix) no-op behavior.
+    const InlineParameterInstructionCountFn &instructionCount = {},
+    const PatchInlineParameterInstructionImmFn &patchInstructionImm = {},
+    const EmitInlineParameterArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds = {});
 
 } // namespace primec::ir_lowerer

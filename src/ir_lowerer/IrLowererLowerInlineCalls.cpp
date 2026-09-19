@@ -746,7 +746,10 @@ bool emitInlineDefinitionCallImpl(
               infoOut.structTypeName = inferStructExprPath(*targetExpr, localsForInference);
               infoError.clear();
               return true;
-            })) {
+            },
+            [&]() { return function.instructions.size(); },
+            [&](size_t index, uint64_t target) { function.instructions[index].imm = target; },
+            emitArrayIndexOutOfBounds)) {
       if (std::string_view(error) == VariadicArgsReferenceForwardingDiagnosticMessage) {
         const Expr *diagnosticAnchor = &callExpr;
         for (const Expr *packedArg : packedArgs) {

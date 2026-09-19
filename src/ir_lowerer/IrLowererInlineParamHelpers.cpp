@@ -643,7 +643,10 @@ bool emitInlineDefinitionCallParameters(
     const EmitInlineParameterInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo,
+    const InlineParameterInstructionCountFn &instructionCount,
+    const PatchInlineParameterInstructionImmFn &patchInstructionImm,
+    const EmitInlineParameterArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds) {
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
@@ -952,10 +955,32 @@ bool emitInlineDefinitionCallParameters(
                   [&](const Expr &valueExpr, const LocalMap &valueLocals) {
                     return emitExpr(valueExpr, valueLocals);
                   },
-                  []() {},
-                  []() { return 0; },
+                  // TODO-5300 round 6: these three callbacks used to be
+                  // hardcoded no-ops (emitArrayIndexOutOfBounds doing
+                  // nothing, instructionCount always returning 0, and
+                  // patchInstructionImm discarding every patch). That left
+                  // emitArrayVectorIndexedAccess's bounds-check JumpIfZero
+                  // placeholders permanently at imm=0, so an in-bounds
+                  // access (the normal case) jumped to instruction 0 and
+                  // restarted the whole function forever - the root cause
+                  // of the std::bad_alloc crash on a struct args-pack
+                  // element (e.g. args<Entry<K,V>>) passed directly as a
+                  // struct-typed call argument. Forward the real callbacks
+                  // when the caller bound them (the production ir_lowerer
+                  // pipeline always does); fall back to the previous no-op
+                  // behavior only if a caller left them unbound.
+                  [&]() {
+                    if (emitArrayIndexOutOfBounds) {
+                      emitArrayIndexOutOfBounds();
+                    }
+                  },
+                  [&]() -> size_t { return instructionCount ? instructionCount() : 0; },
                   emitInstruction,
-                  [](size_t, uint64_t) {},
+                  [&](size_t index, uint64_t target) {
+                    if (patchInstructionImm) {
+                      patchInstructionImm(index, target);
+                    }
+                  },
                   error)) {
             return false;
           }
