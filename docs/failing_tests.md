@@ -17,6 +17,18 @@ recorded here manually before starting new implementation work.
 
 ### Pre-existing-failure cleanup round (2026-09-19)
 
+**Final verification:** a full `./scripts/compile.sh --release` gate run
+after all fixes below landed came back at 27/1897 failed (99% passed,
+down from the pre-round 36/1897) - exactly the untouched 24-shard
+`ir_pipeline_validation_cases_*`/`ir_pipeline_conversions_variadic_pointer_vectors`
+cluster (TODO-4726/4727/4728, deliberately out of scope this round) plus
+the 3 shards TODO-5301 now tracks. None of the shards fixed this round
+reappeared; zero new failures anywhere.
+`compile_run_examples_spinning_cube_argument_validation_51_55` did not
+appear in this run either, consistent with its already-documented
+flake-under-heavy-concurrent-load status (TODO-4711) rather than a real
+failure.
+
 Targeted the ~12 smaller/more-tractable pre-existing-failure clusters
 listed in the "Confirmed pre-existing" section below (deliberately
 excluding the large `ir_pipeline_validation_cases_*`/
@@ -1475,7 +1487,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-19T06:55:27Z`
+- Last updated: `2026-09-19T07:40:59Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -1505,18 +1517,9 @@ All other test assertion failures have been fixed in this session:
   - `154`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_791_800`
   - `158`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840`
   - `195`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_1201_1210`
-  - `640`: `PrimeStruct_primestruct_semantics_type_resolution_graph_type_resolution_graph_151_160`
   - `984`: `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`
-  - `1002`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`
   - `1146`: `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
   - `1510`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_3_4`
-  - `1895`: `PrimeStruct_primestruct_stdlib_map_ownership`
-  - `1932`: `PrimeStruct_vector_surface_traces`
-  - `1938`: `PrimeStruct_map_backing_traces`
-  - `1942`: `PrimeStruct_map_surface_strict_audit`
-  - `1944`: `PrimeStruct_soa_surface_trace_zero_audit`
-  - `1946`: `PrimeStruct_collection_audit_exemption_count_ratchet`
-  - `1947`: `PrimeStruct_collection_audit_exemption_count_ratchet_self_test`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
