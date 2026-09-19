@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
+#include <cctype>
 #include <functional>
 #include <string_view>
 #include <utility>
@@ -473,20 +474,47 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       const LocalInfo &info = localIt->second;
       return hasKeyValueKinds(info);
     };
+    const CollectionPairTypeInfo pairInfo =
+        resolveCollectionPairTypeInfo(callExpr.args.front(),
+                                      localsIn,
+                                      {},
+                                      semanticProgram,
+                                      semanticIndexPtr);
     if (!keyValueHelperName.empty() &&
-        (receiverHasKeyValueLocalInfo() ||
-         resolveCollectionPairTypeInfo(callExpr.args.front(),
-                                    localsIn,
-                                    {},
-                                    semanticProgram,
-                                    semanticIndexPtr)
-             .isKeyValueTarget)) {
+        (receiverHasKeyValueLocalInfo() || pairInfo.isKeyValueTarget)) {
       const std::string canonicalKeyValueHelper =
           canonicalKeyValueHelperPath(keyValueHelperName);
       if (const Definition *canonicalDef =
               resolveDefinitionFamilyByArity(canonicalKeyValueHelper,
                                              callExpr.args.size())) {
         return canonicalDef;
+      }
+      // TODO-5300: the receiver may be a monomorph-rewritten map(...)
+      // constructor call whose specialized MapValue<K,V> struct was
+      // minted for this K/V pair, but the free-standing `at`/`mapAt`
+      // helper template family never got a matching specialization
+      // (nothing else triggers it). The struct's own nested member
+      // method (e.g. `MapValue__ta<hash>/mapAt`) IS always specialized
+      // alongside the struct itself, so fall back to it directly.
+      if (!pairInfo.structTypeName.empty()) {
+        std::string memberMethodName = "map";
+        bool capitalizeNext = true;
+        for (char nameChar : keyValueHelperName) {
+          if (nameChar == '_') {
+            capitalizeNext = true;
+            continue;
+          }
+          memberMethodName +=
+              capitalizeNext ? static_cast<char>(std::toupper(nameChar)) : nameChar;
+          capitalizeNext = false;
+        }
+        const std::string memberMethodPath =
+            pairInfo.structTypeName + "/" + memberMethodName;
+        auto memberDefIt = defMap.find(memberMethodPath);
+        if (memberDefIt != defMap.end() && memberDefIt->second != nullptr &&
+            memberDefIt->second->parameters.size() + 1 == callExpr.args.size()) {
+          return memberDefIt->second;
+        }
       }
     }
   }
