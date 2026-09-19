@@ -473,7 +473,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation map surfa
         std::string::npos);
   CHECK(s.methodTargetResolutionSource.find("auto resolveKeyValueTarget") !=
         std::string::npos);
-  CHECK(s.methodTargetResolutionSource.find("auto resolveExperimentalKeyValueTarget") !=
+  CHECK(s.methodTargetResolutionSource.find("resolveExperimentalKeyValueTarget") !=
         std::string::npos);
   CHECK(s.methodTargetResolutionSource.find("setIndexedArgsPackMapMethodTarget") ==
         std::string::npos);

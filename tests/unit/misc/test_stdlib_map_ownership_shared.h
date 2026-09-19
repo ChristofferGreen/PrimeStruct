@@ -249,9 +249,34 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   const std::string builtinPathHelpersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsBuiltinPathHelpers.cpp");
+  // TODO-4724/TODO-5294 (both closed) decomposed the old monolithic
+  // resolveMethodTarget body out of this file into several focused seam
+  // files. Concatenate those seams here too so this source-stability check
+  // still sees the real, current implementation text instead of only the
+  // (now much smaller) file the helpers used to all live in.
   const std::string methodTargetResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
-               "SemanticsValidatorExprMethodTargetResolution.cpp");
+               "SemanticsValidatorExprMethodTargetResolution.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorMethodTargetKeyValueResolvers.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorMethodTargetResolutionDetail.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorMethodTargetResolutionDetail.h") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorMethodTargetStringResolver.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorMethodTargetArgsPackResolvers.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorMethodTargetStructSumResolvers.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorMethodTargetVectorResolvers.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionDispatchSetup.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprMethodResolution.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferCollections.cpp");
   const std::string receiverPathsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprReceiverPaths.cpp");
