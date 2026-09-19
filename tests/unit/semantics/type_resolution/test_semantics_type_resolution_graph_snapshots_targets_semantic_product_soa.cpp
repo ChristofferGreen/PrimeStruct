@@ -1235,16 +1235,15 @@ main() {
       semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
                          &semanticProgram);
   INFO(error);
-  // TODO-5050: an explicit rooted-path direct call
-  // (/std/collections/soa/get_ref(...)) to a function the user declares
-  // directly at that canonical path breaks specifically when its receiver
-  // is a borrowed helper-return expression - the equivalent bare unrooted
-  // direct call (get_ref(...)) to the same declared function, and the
-  // method-call form (.get_ref(...)), both resolve correctly on the same
-  // receiver, so this is not a general borrowed-helper-return problem but
-  // one specific to the explicit rooted-path direct-call spelling.
-  CHECK_FALSE(valid);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") != std::string::npos);
+  // TODO-5050 shape (c) (the "explicit rooted-path direct call to a
+  // user-declared function breaks specifically on a borrowed
+  // helper-return receiver" bug this test originally pinned) was root-
+  // caused and fixed by TODO-5285 (see docs/todo_finished.md): the
+  // explicit rooted-path direct call now resolves correctly on a
+  // borrowed helper-return receiver, matching the bare unrooted direct-
+  // call and method-call forms' already-working behavior on the same
+  // receiver.
+  CHECK(valid);
 }
 
 TEST_CASE("semantic product keeps helper-return SoaVector mutator initializer facts on wrappers compatibility") {
