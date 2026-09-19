@@ -228,6 +228,108 @@ alone; safely resolving them needs the Step 0 rule table the doc scopes
 next, not a guessed extraction - see the doc's Step 1a section for detail.
 No behavior changed; this is additive-only (new module + tests, unwired).
 
+- [ ] TODO-5301: Fix remaining map-surface receiver-routing/lowering gaps (3 CTest shards)
+  - owner: ai
+  - created_at: 2026-09-19
+  - parallel_track: map-surface-routing
+  - depends_on: (none; TODO-5300 is closed - this is a fresh, separate
+    investigation on repro shapes TODO-5300 did not fix)
+  - scope: 3 confirmed-pre-existing CTest shards, split into 2
+    independent sub-items (do not assume they share a root cause -
+    confirmed this round that they hit different code paths):
+    (a) `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`
+    ("runs vm canonical map reference string access with imported
+    canonical helpers") and
+    `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+    ("C++ emitter runs canonical map reference string access", despite
+    its name this one also runs `--emit=vm`): both are the identical
+    repro (`ref[1i32].count()` on a `[Reference</std/collections/map<i32,
+    string>>]` local), just declared in two different test files. Fails
+    with `VM lowering error: vm backend only supports arithmetic/
+    comparison/... calls in expressions (call=/at, name=at, args=2,
+    method=true)` - the bracket-index `[1i32]` access on the map
+    reference never lowers to a resolvable `/at` call. Minimal repro:
+    ```
+    import /std/collections/*
+    [return<int>]
+    /string/count([string] values) { return(91i32) }
+    [effects(heap_alloc), return<int>]
+    main() {
+      [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+      [Reference</std/collections/map<i32, string>>] ref{location(values)}
+      return(ref[1i32].count())
+    }
+    ```
+    run with `./primec --emit=vm <file> --entry /main` (expected: 91,
+    actual: VM lowering error, `runCommand` returns 2). The receiver
+    (`ref`) is a genuine named `Reference<map<K,V>>` local, not a
+    `TemplateMonomorphExpressionRewrite.cpp`-materialized
+    `__collection_receiver_N` temporary, so TODO-5300 round 5's fix to
+    `resolveMethodCallDefinitionFromExpr`
+    (`IrLowererSetupTypeMethodCallResolution.cpp`) - narrowly gated on
+    that exact synthetic-temp name prefix - does not apply here. Round 5
+    explicitly noted a broader `structTypeName`-only gate was tried and
+    reverted for breaking 2 other shapes; this needs fresh, narrow
+    investigation into what the correct discriminating condition is for
+    a genuine named-local map-reference receiver, not a reuse of that
+    same broad gate.
+    (b) `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_3_4`
+    ("map wildcard import rejects stdlib-owned surface in C++ emitter"):
+    a *different* repro - `mapNew`/`mapInsert`/`mapCount`/`mapAtUnsafe`
+    (all `[public]` in `stdlib/std/collections/map.prime`, confirmed
+    this round) called by their fully-qualified names on a named,
+    explicitly-typed `[MapValue<string, i32> mut] values` local, under
+    `--emit=exe` (native backend). Test expects compile to fail (exit 2)
+    with "native backend only supports arithmetic/comparison..." naming
+    `call=/std/collections/map/at`; actual behavior is silent success
+    (exit 0). Confirmed round 6 (2026-09-19, see
+    `docs/failing_tests.md`) this reproduces byte-identically on the
+    pre-TODO-4683 `c7cc6f0` baseline too - a genuinely old, unrelated
+    bug. Since the called helpers are legitimately public, this is not
+    an import-visibility bug; the gap is specifically that the native
+    backend's IR lowering accepts (or silently mis-lowers) a call shape
+    it does not actually support, instead of rejecting it the way the
+    sibling VM backend's "vm backend only supports arithmetic/..." guard
+    does. Needs tracing what native-backend lowering path this call
+    shape takes and why the equivalent VM-side rejection guard has no
+    native-backend counterpart here.
+  - implementation_notes: start with (a) - it has a clean minimal repro
+    and a known-working reference implementation to compare against
+    (`emitMaterializedCollectionReceiverExpr`/
+    `resolveMethodCallDefinitionFromExpr` in
+    `IrLowererSetupTypeMethodCallResolution.cpp`, and
+    `resolveCollectionPairTypeInfo`/
+    `findSemanticProductCollectionSpecialization` in
+    `IrLowererAccessTargetResolution.cpp` - see TODO-5300 round 4's
+    trail in `docs/todo_finished.md` for how the synthetic-temp case was
+    traced). Use a debug build (`./scripts/compile.sh`, no `--release`)
+    with targeted `fprintf`/gdb instrumentation on the bracket-index
+    lowering path for a `Reference<map<K,V>>`-typed named local, removed
+    before landing. For (b), trace native-backend IR lowering
+    (`src/emitter/` and/or the native codegen path) for the same
+    `/std/collections/map/at`-shaped call the VM backend already knows
+    to reject, and find why there is no equivalent native-side guard.
+  - acceptance: (a) both shards compile and run to the expected exit
+    code (91), verified via
+    `PrimeStruct_compile_run_tests --test-suite="primestruct.compile.run.vm.collections,primestruct.compile.run.emitters.cpp"`
+    plus the full `primestruct.compile.run.*` regression sweep clean.
+    (b) the shard compiles to exit 2 with the expected diagnostic text,
+    verified via
+    `PrimeStruct_compile_run_tests --test-suite="primestruct.compile.run.imports"`
+    plus the same full regression sweep. Each sub-item may land as its
+    own separate commit/session; do not block one on the other.
+  - stop_rule: do not reuse or widen TODO-5300 round 5's
+    `receiverIsMaterializedCollectionTemp`/`__collection_receiver_`
+    gate without fresh verification against
+    `--test-suite="*collection*"` (595 cases) and
+    `--test-suite="*experimental_map*,*experimental map*"` - round 3
+    found widening a sibling check this way silently regressed 2
+    unrelated "experimental map" shapes. If root-causing either
+    sub-item reveals it needs general collection-method-routing changes
+    (not scoped to the one receiver shape above), stop and re-scope
+    rather than risk a regression in the vector/map paths TODO-5282/
+    TODO-5300 already stabilized.
+
 ### Immediate Next 10
 
 Note (2026-09-16): TODO-4747 (replace universal call-inlining with real
