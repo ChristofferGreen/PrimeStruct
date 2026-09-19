@@ -1189,7 +1189,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-18T21:43:09Z`
+- Last updated: `2026-09-19T05:50:47Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -1225,7 +1225,6 @@ All other test assertion failures have been fixed in this session:
   - `1002`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`
   - `1022`: `PrimeStruct_primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_383_392`
   - `1146`: `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
-  - `1509`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_1_2`
   - `1510`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_3_4`
   - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
   - `1895`: `PrimeStruct_primestruct_stdlib_map_ownership`

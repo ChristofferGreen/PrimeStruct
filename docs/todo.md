@@ -2322,6 +2322,100 @@ crashes) - see `docs/todo_finished.md`.
     regression-free progress, even though it alone does not close repro A
     or any CTest shard) per this task's own round-4 instructions; see the
     matching "Round 4" note in `docs/failing_tests.md` for the full trail.
+  - round_5_note: (2026-09-19) **Repro A is now fixed and both its CTest
+    shards pass.** Root-caused the `ir_lowerer` gap round 4 traced to
+    `resolveMethodCallDefinitionFromExpr`
+    (`IrLowererSetupTypeMethodCallResolution.cpp`): once the method-call
+    dispatch reaches its `resolveDefinitionFamilyByArity(canonicalKeyValueHelper,
+    ...)` lookup, `defMap` at that point contains ONLY the specialized
+    struct's own nested member methods for this K/V pair (e.g. a path
+    shaped like `<backing-struct-path>__ta<hash>/<memberName>`, params=1) -
+    the free-standing helper template family for this operation was never
+    separately monomorphized for this K/V pair (confirmed by dumping
+    `defMap`'s full `/std/collections/map/`-prefixed contents: 18 entries,
+    all struct members or struct-scoped helpers, zero free-function
+    entries for this operation). Fix: when the free-function lookup fails,
+    fall back to the specialized struct's own nested member (already
+    always monomorphized alongside the struct itself) - looked up via
+    `pairInfo.structTypeName + "/" + <PascalCase member name>` with
+    arity `paramCount + 1` (the receiver becomes the implicit `this`).
+    First attempt gated this fallback on `pairInfo.structTypeName`
+    non-empty alone, which was **too broad**: `pairInfo.isKeyValueTarget`/
+    `structTypeName` are also populated for an ordinary *named* key/value
+    local (not just a monomorph-rewritten receiver), so it let this
+    operation succeed on a plain `[MapValue<string, i32>] values{...}`
+    binding too - breaking `map wildcard import rejects stdlib-owned
+    surface in C++ emitter` and `ir lowerer rejects stdlib string-keyed
+    map helper lowering` (both intentionally expect a native-backend
+    rejection there; confirmed these are two more manifestations of the
+    still-open repro B family below, not something this round's fix
+    should touch). Narrowed the gate to fire only when the receiver is
+    literally the synthetic `__collection_receiver_N` temporary that
+    `emitMaterializedCollectionReceiverExpr` mints for a rewritten
+    receiver used directly in call position (the sole place that name is
+    generated, confirmed via grep) - this is the precise, distinguishing
+    signal for "this receiver came from TODO-4683's rewrite", not just
+    "this receiver has key/value type". With that scoping: `at(map<i32,
+    i32>(1i32,10i32,2i32,20i32), 2i32)` compiles and runs to exit 22 on
+    both `--emit=vm` and `--emit=exe`; the two affected CTest shards
+    (`compile_run_imports_operations_and_collections_1_2` and
+    `compile_run_examples_spinning_cube_argument_validation_51_55`) now
+    pass (the latter flaked as a Timeout once under this session's heavy
+    concurrent load but was independently verified to pass cleanly in
+    16-53s against its 360s ceiling when run in isolation - see the
+    shard's own `TODO-4711` comment in
+    `cmake/PrimeStructManagedCompileRunSmokeSuites.cmake` noting it is
+    already this repo's single slowest managed doctest shard). Also hit
+    and fixed a self-inflicted issue: this fix's first comment literally
+    spelled out the retired `mapAt`/`MapValue<K, V>` symbol names, which
+    tripped `PrimeStruct_map_adapter_traces` and
+    `PrimeStruct_map_vector_compiler_knowledge_zero_audit` (both scan
+    comments, not just executable code, for these patterns - the same
+    class of self-inflicted failure TODO-4683 round 7 hit and fixed for
+    the same reason). Reworded to describe the mechanism generically;
+    both checkers pass clean now (verified directly via
+    `python3 scripts/check_map_adapter_traces.py` /
+    `check_map_vector_compiler_knowledge.py`, not just the full gate).
+    Verified round 4's own `resolveMapTarget` fix is NOT the cause of the
+    repro-B-family failures above (it is correctly scoped to
+    `Expr::Kind::Call` receivers only, never `Name`-kind locals like
+    `values` - checked its diff directly rather than assuming).
+    **Full gate**: 39/1897 failed (down from the established 40-failure
+    baseline), zero new failures anywhere, confirmed via
+    `./scripts/compile.sh --release` end to end. Remaining failures are
+    exactly: the 33 already-confirmed pre-existing baseline shards, plus
+    5 of the original 7 TODO-5300 target shards that are now cleanly
+    isolated into two families: (1) repro B itself - `ir lowerer rejects
+    stdlib string-keyed map helper lowering`
+    (`ir_pipeline_conversions_core_11_20`) and the matching VM runtime
+    crash (`vm_collections_collections_newly_exposed_2026_07_16_383_392`,
+    the `runs vm shared stdlib map conformance harness` `std::bad_alloc`)
+    - completely untouched this round, exactly as rounds 3/4 left it; (2)
+    a sibling bug family, newly isolated this round, affecting
+    `map wildcard import rejects stdlib-owned surface in C++ emitter`
+    (`compile_run_imports_operations_and_collections_3_4`) plus the two
+    already-tracked pre-existing-looking shards
+    `vm_collections_alias_and_basics_21_30`/`stdlib_collection_shims_199_208`/
+    `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312` - **these
+    still need triage to confirm which are genuinely pre-existing versus
+    part of the repro-B family**; do not assume they are all one or the
+    other without individually stash-A/B-confirming each. Concrete next
+    step for round 6: (a) triage those remaining shards individually
+    against the `c7cc6f0` pre-TODO-4683 baseline to sort pre-existing from
+    repro-B-family; (b) for the confirmed repro-B-family ones plus repro B
+    itself, the common thread across all of them is `mapAt`/`mapAtUnsafe`/
+    `count` called directly (not via the `at`/`count` free-function
+    aliases) on an ordinary *named* `MapValue<string, ...>`-typed local
+    that was explicitly declared (not `auto`) - find which TODO-4683-era
+    change (likely one of rounds 5-7's `SemanticsValidatorBuildInitializerInference.cpp`/
+    `SemanticsValidatorExprArgumentValidation.cpp` fixes, since round 4's
+    `resolveMapTarget` fix is confirmed not the cause) stopped the
+    native-backend rejection diagnostic from firing for this specific
+    shape, now that the pair ladder itself is gone; (c) repro B's own
+    `std::bad_alloc` crash still needs the dedicated debug-build
+    `--dump-stage ir`/gdb session described in the round 3/4 notes above -
+    not attempted this round (this round's budget went entirely to repro
+    A, which is now fully closed).
 
 - [ ] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
   - owner: ai
