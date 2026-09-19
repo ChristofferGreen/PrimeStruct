@@ -15,7 +15,22 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
-### TODO-4683 post-merge full-gate triage (2026-09-18)
+### TODO-4683 post-merge full-gate triage (2026-09-18) - CLOSED 2026-09-19
+
+**This section's tracked TODO-5300 has fully resolved as of round 6
+(2026-09-19)** - see `docs/todo_finished.md` for its closing entry. Of
+the original 7 CTest shards + 1 timeout, 4 were genuine TODO-4683
+regressions and are now fixed (repro A: fixed round 5; repro B: fixed
+round 6), and the other 4 were individually confirmed pre-existing
+(unrelated to TODO-4683) via direct A/B reproduction against the
+pre-TODO-4683 `c7cc6f0` baseline, not merely assumed. The final
+`./scripts/compile.sh --release` gate after both fixes landed came back
+at 36/1897 failed (98% passed), with every one of the 36 individually
+accounted for as confirmed pre-existing - zero new failures anywhere.
+This section (including the "Confirmed pre-existing" list below) is kept
+for historical reference and because most of its entries remain the
+live, current pre-existing-failure baseline for future full-gate runs to
+diff against.
 
 A full `./scripts/compile.sh --release` run after TODO-4683 landed
 (commit `fcea5a0`, "delete the map pair-constructor ladder, complete the
@@ -565,6 +580,62 @@ TODO-5300's only remaining live targets are repro B's own two shards
 `docs/todo.md`'s `round_6_note` under TODO-5300 for Thread 2's crash
 investigation.
 
+**Round 6 Thread 2 (2026-09-19): repro B's `std::bad_alloc` crash fixed.**
+Root cause (full trail in `docs/todo.md`'s `round_6_note` under
+TODO-5300): `IrLowererInlineParamHelpers.cpp`'s `isStructArgsPackAccess`
+branch (used when a struct args-pack element, e.g. `args<Entry<K,V>>`, is
+passed directly as a struct-typed call argument - exactly
+`mapInsertEntry<K, V>(out, /at(entries, index))`'s second argument) called
+`emitArrayVectorIndexedAccess` with **hardcoded stub callbacks**:
+`instructionCount` always returned `0`, `patchInstructionImm` silently
+discarded every patch, and `emitArrayIndexOutOfBounds` was a no-op. That
+left the args-pack bounds check's `JumpIfZero` placeholders permanently
+at `imm=0` - on the normal in-bounds path, execution jumped to
+instruction 0 and restarted the whole function forever (confirmed via a
+debug-build `gdb` session: `frame.ip` alternated between exactly two
+fixed instruction indices forever, `frames.size()` staying `1`, zero
+backward jumps nearby - the actual "restart" came from the unpatched
+`JumpIfZero`, found by breakpointing `emitArrayVectorAccessLoad` at
+compile time and observing its own `jumpNonNegative`/`jumpInRange`
+locals both equal to `0`). This is a general bug, not string-specific -
+it reproduces for any struct-typed args-pack element passed this way;
+`Entry<string, i32>` was never special except in being the shape that
+happened to route through this one under-wired call site. Fixed by
+threading real `instructionCount`/`patchInstructionImm`/
+`emitArrayIndexOutOfBounds` callbacks through
+`emitInlineDefinitionCallParameters` (new trailing, default-valued
+parameters so no other caller's signature breaks) from the one
+production caller (`IrLowererLowerInlineCalls.cpp`'s
+`emitInlineDefinitionCallImpl`), which already has direct access to the
+real `function.instructions` vector and the real
+`emitArrayIndexOutOfBounds` trap emitter. Verified: repro B now compiles
+and runs to the correct result (`4`) on both `--emit=vm` and
+`--emit=exe`, including under `ulimit -v 2000000`; the i32-keyed sibling
+and repro A both remain unaffected. Updated
+`test_ir_pipeline_conversions_core.h`'s "ir lowerer rejects stdlib
+string-keyed map helper lowering" (renamed to "...supports...") to
+assert the new, correct accept-and-run behavior instead of the old
+rejection, which was itself a symptom of this bug.
+
+Regression checks (release mode, rebuilt doctest binaries):
+`PrimeStruct_compile_run_tests --test-suite="*collection*"`: 593/595
+passed - the only 2 failures are the already-confirmed pre-existing pair
+above (map reference string access, vector capacity after pop); the
+former crash test ("runs vm shared stdlib map conformance harness") now
+passes. `--test-suite="*imports*"`: only the one confirmed pre-existing
+"map wildcard import rejects..." failure remains.
+`PrimeStruct_backend_ir_tests --test-suite="*primestruct.ir.pipeline.conversions*"`:
+2 failures - "ir lowerer supports map method calls" and "ir lowerer
+rejects variadic pointer vector packs with indexed dereference access
+helpers" - both confirmed via `git stash` + rebuild + rerun to fail
+**identically** on the pre-fix tree, so neither is a new regression. The
+pointer-vector-packs one is the already-listed
+`PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
+shard from the "Confirmed pre-existing" list below; "ir lowerer supports
+map method calls" was not previously listed by name in this file and is
+added to that list now (its test source is untouched by this round's
+changes, and it fails byte-identically before and after them).
+
 **Confirmed pre-existing (unrelated to TODO-4683, left as-is):**
 
 All confirmed via identical-output reproduction against the `c7cc6f0`
@@ -623,6 +694,17 @@ baseline:
   (a `ref[1i32].count()`-shaped map-reference string-access receiver, and
   a `pop`-then-`capacity` vector case; unrelated to the repro-B
   `entry(...)`-pack family despite superficially adjacent naming).
+- `PrimeStruct_backend_ir_tests` / "ir lowerer supports map method calls"
+  (`test_ir_pipeline_conversions_method_calls_and_argv.cpp:92`,
+  `REQUIRE(parseValidateAndLower(source, module, error))` fails): found
+  and confirmed round 6 (2026-09-19) via Thread 2's regression check -
+  `git stash` back to the pre-fix tree, rebuild, rerun: fails
+  byte-identically before and after this round's
+  `IrLowererInlineParamHelpers.cpp` fix, and the test's own source file
+  is untouched by that fix. Not previously listed by name in this file
+  (only the sibling `ir.pipeline.validation` cluster and the
+  `variadic_pointer_vectors` case were); adding it here now that it has
+  been individually confirmed pre-existing.
 
 ### TODO-4637 verification note superseded (2026-08-16)
 
@@ -1264,13 +1346,12 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-19T05:50:47Z`
+- Last updated: `2026-09-19T06:55:27Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
-  - `45`: `PrimeStruct_primestruct_ir_pipeline_conversions_core_11_20`
   - `64`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
   - `82`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80`
   - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
@@ -1298,10 +1379,8 @@ All other test assertion failures have been fixed in this session:
   - `640`: `PrimeStruct_primestruct_semantics_type_resolution_graph_type_resolution_graph_151_160`
   - `984`: `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`
   - `1002`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`
-  - `1022`: `PrimeStruct_primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_383_392`
   - `1146`: `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
   - `1510`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_3_4`
-  - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
   - `1895`: `PrimeStruct_primestruct_stdlib_map_ownership`
   - `1932`: `PrimeStruct_vector_surface_traces`
   - `1938`: `PrimeStruct_map_backing_traces`

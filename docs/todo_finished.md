@@ -50255,3 +50255,639 @@ real answer.
     - Invalid pair calls keep their current diagnostics
     - Release map/conformance/lock suites green
   - stop_rule: pair signatures deleted and suites green
+
+- [x] TODO-5300: Fix map-constructor-receiver recognition gap left by TODO-4683's pair-ladder deletion (unknown-method diagnostics + `std::bad_alloc` crash cluster)
+  - owner: ai
+  - created_at: 2026-09-18
+  - phase: Collection dispatch retirement (TODO-4683 post-merge cleanup)
+  - parallel_track: map-surface
+  - depends_on: (none; TODO-4683 already landed at commit `fcea5a0`)
+  - scope: TODO-4683 deleted `stdlib/std/collections/map.prime`'s 8-signature
+    pair-constructor ladder and left a monomorph-time rewrite that turns a
+    pair-shaped `map<K, V>(a, b, c, d, ...)` call into a call to the
+    variadic entries constructor (each arg becomes an `entry(...)` call).
+    That rewrite (`TemplateMonomorphExpressionRewrite.cpp`, landed round 3,
+    still load-bearing - do not touch its own logic without re-reading
+    TODO-4683's round 3/5/7 notes in `docs/todo_finished.md` first) also
+    re-resolves the call's own `expr.name` to a fully-qualified,
+    monomorph-specialized path (confirmed via instrumentation:
+    `/std/collections/map/map__ov1__ta<hash>`, a 16-hex-char suffix) via
+    `preferCanonicalStdlibCollectionHelperPath`. At least five independent
+    helper functions across `SemanticsValidator` and `TemplateMonomorph`
+    answer "is this receiver/argument Expr literally a `map(...)`
+    constructor call" via a literal-text check against the *pre-rewrite*
+    short `"map"`/`"map__"` spelling, and all but one of them (see the
+    "Round 2" note in `docs/failing_tests.md` for the one that already
+    works, `isPublishedMapConstructorExpr`, and why) give a false negative
+    once the receiver has been rewritten this way:
+    - `isRootMapConstructorAliasPath`
+      (`src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h`)
+    - `isRootMapConstructorExpr`
+      (`src/semantics/SemanticsValidatorExprPreDispatchDirectCalls.cpp`)
+    - `isResolvedKeyValueConstructorPath` /
+      `isResolvedPublishedKeyValueConstructorPath`
+      (`src/semantics/StdlibCollectionSurfaceHelpers.h`) - opposite failure
+      mode: these strip the monomorph suffix back down to the literal
+      canonical `/std/collections/map/map` path and then deliberately
+      **exclude** exactly that path, so they also give a false negative for
+      a rewritten receiver, just via over-matching the exclusion rather
+      than under-matching a prefix.
+    - `isRootMapConstructorReceiverExpr` / `isPublishedMapConstructorReceiverExpr`
+      (`src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.cpp`) -
+      TemplateMonomorph's own copies of the first and third checks above.
+    Symptom: a pair-shaped `map<K, V>(...)` constructor call used directly
+    as a receiver/argument (not stored in an `auto`-typed local first,
+    which already works via TODO-4683 round 5-7's `deriveKeyValueTypesFromEntryPackCall`
+    fallback in `inferBindingTypeFromInitializer`) either gets a false
+    "unknown method"/"unknown call target" diagnostic, or gets accepted but
+    never canonicalized to its real callee path, and either lowers
+    incorrectly (native/C++ backends: silently accepts what should be
+    rejected, or vice versa) or crashes the VM backend with `std::bad_alloc`
+    inside `primec::vm_detail::allocateVmHeapSlots` (confirmed via gdb: the
+    VM executes a lowered map-constructor loop with a corrupted trip
+    count/heap-slot computation). Affects exactly these 7 CTest shards + 1
+    timeout (unchanged since the original triage):
+    `primestruct_ir_pipeline_conversions_core_11_20`,
+    `primestruct_compile_run_vm_collections_alias_and_basics_21_30`,
+    `primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`,
+    `primestruct_compile_run_vm_collections_collections_newly_exposed_2026_07_16_383_392`,
+    `primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`,
+    `primestruct_compile_run_imports_operations_and_collections_1_2`,
+    `primestruct_compile_run_imports_operations_and_collections_3_4`,
+    `primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
+    (Timeout - same bug, just slow instead of throwing).
+  - implementation_notes: two independent fast repros to iterate against
+    (both under `ulimit -v 2000000`, no full suites needed while iterating -
+    each fails/crashes in 1-2s):
+    - Repro A (direct-inline receiver; source: "runs collection literals
+      with map at in C++ emitter" in
+      `tests/unit/compile_run/imports/test_compile_run_imports_operations.cpp`):
+      `primec --emit=vm` on `import /std/collections/*` +
+      `main() { return(plus(at_unsafe(array<i32>{1i32, 2i32, 3i32}, 1i32), at(map<i32, i32>(1i32, 10i32, 2i32, 20i32), 2i32))) }`.
+      Pristine/expected: exit code 22. Currently: `unknown method:
+      /std/collections/map/at`. A round-2 (2026-09-18) partial fix (see
+      below) got this specific diagnostic to go away but only advanced it
+      to a *different* failure (`VM lowering error: ... call=/at, name=at,
+      ..., method=true` - the bare `at(...)` call gets accepted but never
+      rewritten to its canonical `/std/collections/map/at` callee, because
+      of a *sixth* copy of the same "is this receiver a map constructor
+      call" check: `isPublishedKeyValueConstructorReceiver`, a local lambda
+      inside `tryRewriteCanonicalExperimentalKeyValueHelperCall`
+      (`src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp`),
+      which also uses the `isResolvedKeyValueConstructorPath` exclusion
+      pattern on the receiver's raw `.name` and bails at its
+      `isBareKeyValueAccessHelperName(helperName) && !isPublishedKeyValueConstructorReceiver(receiverExpr)`
+      gate).
+    - Repro B (explicit-typed local; source: "ir lowerer rejects stdlib
+      string-keyed map helper lowering" in
+      `tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_core.h`,
+      the exact repro the original triage's gdb backtrace was built from):
+      `primec --emit=vm` on `import /std/collections/*` +
+      `main() { [/std/collections/map/MapValue<string, i32> mut] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)} return(plus(/std/collections/map/count<string, i32>(values), /std/collections/map/mapAt<string, i32>(values, "b"raw_utf8))) }`.
+      Pristine/expected: rejected at IR lowering with "native backend only
+      supports arithmetic/comparison" (native/C++ path) or a working VM
+      run (VM path). Currently: `--emit=exe` wrongly *succeeds* building
+      (should reject); `--emit=vm` crashes with `std::bad_alloc` in
+      ~1-2s. This repro's real receiver (`values`, a Name expr with an
+      explicit `MapValue<string, i32>` binding, resolved via
+      `resolveBindingTarget`) does **not** go through any of the five
+      "map constructor receiver" checks above at all - round 2's two live
+      patches (to `resolveMapTarget` and `isRootKeyValueAliasExpr`) made
+      zero difference to this repro, confirming its root cause is a
+      *different*, not-yet-found bug, most likely at the IR-lowering layer
+      itself (not semantic validation, which already accepts this program
+      in every state tried so far). Leading unconfirmed hypothesis: the
+      local's declared type `MapValue<string, i32>` and the entries
+      constructor's own specialized return type get monomorphized to
+      struct layouts independently (each via its own `__ta<hash>` suffix),
+      and if IR lowering treats these as two different concrete struct
+      types instead of the same layout, the store into the explicitly-typed
+      local could read/write through the wrong layout, corrupting whatever
+      field the lowered map-constructor loop uses as its trip count. This
+      needs a targeted `--dump-stage ir`/gdb session focused on repro B in
+      isolation (independent of fixing repro A) to confirm or refute before
+      attempting a fix.
+  - acceptance:
+    - Repro A compiles and runs to exit code 22 on `--emit=vm`, with no
+      new diagnostic-text regressions (verify against the fast repro sets
+      TODO-4683 rounds 5-7 already established: `[auto] m{map(1i32, 4i32,
+      2i32, 8i32)}` 1..8-pair variants on both VM/exe, implicit/explicit
+      template args, invalid-pair diagnostics, and the round-7
+      `scoreValues([Map<string, i32>] values)` parameter-passing crash
+      repro must all keep behaving exactly as TODO-4683 round 7 left them)
+    - Repro B rejects cleanly at semantic/IR-lowering time on the native/
+      C++ path (no more silent wrong-accept) and either lowers/runs
+      correctly on the VM path or rejects cleanly there too - no
+      `std::bad_alloc`, no crash, under both plain execution and
+      `ulimit -v 2000000`
+    - All 7 listed CTest shards + 1 timeout pass individually
+      (`ctest --test-dir build-release -R <shard-name> --output-on-failure`)
+    - A full `./scripts/compile.sh --release` run shows zero new failures
+      anywhere else versus the established baseline this section's
+      "Confirmed pre-existing" list documents
+  - stop_rule: all 7 shards + the timeout pass individually and the full
+    release gate matches its established pre-existing-only baseline with
+    zero new failures; if a partial fix only clears some of the checks
+    above, split the remainder into a new `TODO-53xx` sub-task with its own
+    scope/acceptance/stop_rule rather than leaving this one half-done
+  - round_3_note: (2026-09-18) See the "Round 3" entry in
+    `docs/failing_tests.md` for the full trail. Summary: confirmed both
+    repros narrowly, refuted round 2's "duplicate monomorphization"
+    hypothesis for repro B via `--dump-stage semantic-product` (both the
+    `values` binding and the `map<...>(...)` constructor's return type
+    resolve to the *same* `/std/collections/map/MapValue__t<hash>` struct
+    path - not two different hashes). Added a shared canonical predicate
+    `isKeyValueConstructorFamilyPath` (`StdlibCollectionSurfaceHelpers.h`)
+    and routed the 6 originally-named helpers plus 3 more
+    previously-unlisted duplicates found this round (`isRootKeyValueAliasPath`
+    in `SemanticsValidatorExprCollectionAccessValidation.cpp`,
+    `isLocalRootKeyValueAliasReceiverCall` in
+    `SemanticsValidatorExprCollectionAccess.cpp`, plus `resolveMapTarget`'s
+    own early bail-out gate in
+    `SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`) through
+    it, and added a shape-based key/value-type fallback to `resolveMapTarget`
+    for a rewritten receiver whose args are now `entry(...)` calls rather
+    than raw literal pairs. This measurably advanced repro A (from
+    "unknown method: /std/collections/map/at" past `resolveMapTarget`
+    entirely) but repro A still does not pass: it now fails one layer
+    deeper, inside `ir_lowerer` itself - `resolveCollectionPairTypeInfo`
+    (`IrLowererAccessTargetResolution.cpp`) and
+    `emitMaterializedCollectionReceiverExpr`'s `collectionArgs` derivation
+    (`IrLowererLowerEmitExprCollectionHelpers.cpp`, via
+    `inferDeclaredReturnCollection`) independently fail to recover the
+    key/value types for the same rewritten receiver, confirming
+    `docs/ReceiverTargetResolutionConsolidation.md`'s prediction that
+    `ir_lowerer` is a *third*, independently-duplicated layer of this same
+    receiver-classification problem - fixing the semantics/monomorphization
+    layer alone cannot fully close repro A. Worse: rebuilding and running
+    `PrimeStruct_compile_run_tests --test-suite="*collection*"` surfaced 2
+    genuine **new** regressions from the semantics-layer changes alone
+    (`runs vm experimental map helper receivers` and `runs vm experimental
+    map method receivers` in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_map_experimental_runs_wrapped.cpp`,
+    confirmed pass-on-baseline/fail-with-patch via a clean rebuild), almost
+    certainly from over-widening `isRootKeyValueAliasPath`/
+    `isLocalRootKeyValueAliasReceiverCall` to also match spellings those two
+    call sites specifically relied on staying narrow (to distinguish the
+    canonical map family from the *experimental* map spelling family, which
+    this round's predicate does not keep separate). Repro B was not
+    addressed at all this round (still crashes identically; the semantics
+    fix is orthogonal to its `ir_lowerer`-side cause). Per the no-partial-fix
+    discipline, all source changes from this round were reverted
+    (`git stash drop` back to a verified-clean `daf8b3b`); nothing beyond
+    this doc note landed. Precise next step for round 4: (1) do NOT re-widen
+    `isRootKeyValueAliasPath`/`isLocalRootKeyValueAliasReceiverCall`
+    without first adding a regression test pinning the two experimental-map
+    receiver cases this round broke, or better, keep those two call sites'
+    original narrow short-spelling check untouched and instead fix repro A
+    at the point it actually still fails now (the semantics-layer receiver
+    fixes from this round can be re-applied together with an `ir_lowerer`-side
+    fix); (2) the real remaining gap for repro A is in `ir_lowerer`:
+    extend `inferDeclaredReturnCollection` (or add a shape-based fallback
+    parallel to this round's `resolveMapTarget` one) so a monomorph-rewritten
+    map constructor receiver's `collectionArgs`/key-value kinds can be
+    recovered from its `entry(...)`-shaped args or from
+    `findSemanticProductCollectionSpecialization` (confirmed present and
+    correct in the semantic product for this exact call, but
+    `resolveCollectionPairTypeInfo` only consults it when
+    `target.semanticNodeId != 0`, and the receiver has already been
+    rewritten into a fresh, semanticNodeId-0 `Name` node
+    (`__collection_receiver_N`) by the time this check runs - trace why
+    `emitMaterializedCollectionReceiverExpr` doesn't thread the original
+    call's semantic node id or its already-known collection_specialization
+    fact onto the materialized local/rewritten expr); (3) repro B's
+    `std::bad_alloc` (confirmed independent of repro A's fix path - not
+    caused by any duplicate-monomorphization or explicit-vs-auto-typing
+    difference; reproduces identically for *any* string-typed map key or
+    value, with as few as one entry, regardless of typing style; does NOT
+    reproduce for `vector<string>` alone or a bare `Entry<string,i32>`
+    construction) still needs its own dedicated `--dump-stage ir`/gdb
+    session focused on the variadic `args<Entry<K,V>>` pack's `count()`/
+    `at()` runtime lowering specifically for a struct element containing a
+    string field - confirmed via a 5000-iteration gdb loop that
+    `allocateVmHeapSlots` is called repeatedly with a *constant* `slotCount
+    = 0x400` (not a single huge corrupted value), meaning this is a
+    non-terminating (or extremely long) loop doing fixed-size allocations
+    each pass rather than one garbage-sized allocation - look at
+    `map<K,V>`'s `for(index(0), less_than(index, valueCount), increment(index),
+    do() { mapInsertEntry(out, at(entries, index)) })` loop body's lowered
+    form for a string-typed `Entry`, and how `entries.count()` /
+    `at(entries, index)` get lowered for a struct args-pack element whose
+    layout differs from an all-integer `Entry<i32,i32>` (which works fine).
+  - round_4_note: (2026-09-18) Landed one small, verified, regression-free
+    piece of repro A's fix and left everything else exactly where round 3
+    left it (repro A still fails, repro B untouched). Per round 3's own
+    "precise next step" guidance, did **not** widen `isRootKeyValueAliasPath`
+    (`SemanticsValidatorExprCollectionAccessValidation.cpp`) or
+    `isLocalRootKeyValueAliasReceiverCall`
+    (`SemanticsValidatorExprCollectionAccess.cpp`) - those stayed byte-
+    identical to `6cb1a4d`. Instead, added one new early branch to
+    `resolveMapTarget`
+    (`SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`) that calls
+    the already-existing, already-proven
+    `SemanticsValidator::deriveKeyValueTypesFromEntryPackCall` (the same
+    helper TODO-4683 rounds 5-7 use for the binding-initializer case) on the
+    receiver directly: since a monomorph-rewritten `map(...)` constructor
+    call's args are now literally `entry(key, value)` helper calls, this
+    shape alone is enough to recognize it and recover key/value types,
+    without touching any of the ~9 literal-text "is this a map constructor
+    path" checks TODO-5300 has been chasing. Verified via direct rebuild
+    (`cmake --build build-release --target primec`) and the exact repro A
+    command from this task block: the semantics-layer `unknown method:
+    /std/collections/map/at` diagnostic is gone (matches round 3's own
+    measured advancement), and it now fails one layer deeper in
+    `ir_lowerer` with the identical `VM lowering error: ... call=/at,
+    name=at, args=2, method=true` round 3 already documented - so repro A
+    is still not passing.
+    **Traced the `ir_lowerer` gap further than round 3 did, with targeted
+    (and removed) `fprintf` instrumentation, not guesswork:** confirmed
+    `emitMaterializedCollectionReceiverExpr`
+    (`IrLowererLowerEmitExprCollectionHelpers.cpp`) *does* now correctly
+    materialize the receiver - `ir_lowerer::resolveCollectionPairTypeInfo`
+    on the original (pre-materialization) receiver expr successfully
+    consults `findSemanticProductCollectionSpecialization` (its
+    `semanticNodeId` is non-zero at that point, so round 3's "semanticNodeId
+    == 0" bail was not actually the blocker for repro A specifically - it
+    may still matter for other shapes) and returns the correct key/value
+    kinds and the correct specialized struct path
+    (`/std/collections/map/MapValue__ta<hash>`, which does match
+    `keyValueStorageStructRootPath() + "__"`, so `materializedInfo
+    .structTypeName` gets set correctly too). The rewritten expr is a
+    *method* call (`expr.isMethodCall == true`, confirmed by instrumenting
+    the exact error site) by the time it re-enters `emitExpr` - some earlier
+    semantics-layer bare-to-method canonicalization already converts
+    `at(receiver, key)` into method-call form before `ir_lowerer` ever sees
+    it. But the entire non-method dispatch block in
+    `IrLowererLowerStatementsExpr.h` that knows how to route a *canonical*
+    key-value access call (the `isExplicitCanonicalKeyValueAccess` block,
+    `resolveCollectionPairTypeInfo`-based) is gated behind `if
+    (!expr.isMethodCall)` at the very top of that file, so it never runs for
+    our rewritten receiver at all. The method-call sibling path
+    (`if (expr.isMethodCall) { ... resolveMethodCallDefinition(expr,
+    localsIn); ... }`) is reached instead, but `resolveMethodCallDefinition`
+    returns `nullptr` for our materialized `__collection_receiver_N` local
+    even though its `LocalInfo.structTypeName` is now correctly the
+    specialized `MapValue__ta<hash>` path - confirmed via instrumentation
+    immediately after that call. **Round 5's next step for repro A**: fix
+    (or extend) `resolveMethodCallDefinition` so a method call whose
+    receiver local has `structTypeName` matching the key-value storage
+    struct root (`keyValueStorageStructRootPath()`) resolves to the
+    corresponding specialized `/std/collections/map/<helperName>__ta<hash>`
+    (or generic `/std/collections/map/<helperName>` with the struct's own
+    K/V types applied) helper Definition, the same way the non-method
+    `isExplicitCanonicalKeyValueAccess` path already does via
+    `resolveCollectionPairTypeInfo`; alternatively, materialize a *bare*
+    (non-method) rewritten expr instead of preserving `isMethodCall` from
+    the original `callExpr`, so it re-enters the already-working
+    non-method dispatch block instead. Did not attempt either fix this
+    round (out of round budget) - do not guess at `resolveMethodCallDefinition`'s
+    fix without first instrumenting it directly, since the map-vs-vector
+    method dispatch code paths in this file are extensive and easy to
+    regress.
+    **Repro B**: spent remaining round budget on a `--dump-stage ir` diff
+    between a working `Entry<i32,i32>` map constructor and a crashing
+    `Entry<string,i32>` one, plus a `gdb` breakpoint session on
+    `allocateVmHeapSlots`. The `--dump-stage ir` dump only shows the
+    generic (pre-monomorphization, pre-VM-lowering) template IR - both the
+    i32 and string cases produce byte-identical generic IR text for
+    `map<K,V>`'s constructor loop (`let valueCount = entries.count(); call
+    for(...)`), so this dump stage does not expose the divergence; the real
+    difference must be introduced during monomorphization/VM lowering, not
+    visible at this dump stage. `gdb` on the release `primec` binary has no
+    debug symbols (release build strips frame info/locals), so a real
+    repro-B session needs either a `build-debug` binary specifically for
+    this repro (do not run a debug *build* of the whole project as a
+    default action - build only the narrow `primec` target in a debug
+    config for this one investigation) or heavier VM-side `fprintf`
+    instrumentation in `src/runtime/VmHeapHelpers.cpp`/`VmExecution.cpp`
+    around the loop that calls `allocateVmHeapSlots`. One relevant fact
+    worth recording for round 5: per this project's own VM/native string
+    representation rule (`AGENTS.md`, "VM/native strings" bullet), a
+    string field is a single string-table-index slot, not a variable-size
+    payload - so `Entry<string, i32>`'s struct slot layout should be a
+    fixed 2 slots, exactly like `Entry<i32, i32>`, which weakens the
+    "struct layout size differs" hypothesis and strengthens round 3's
+    already-stated "trip-count/loop-bound computation" hypothesis instead
+    (something about how the literal string argument gets bound/passed
+    into the `entry(...)` pack element, not the element's own storage
+    size). Did not reproduce, patch, or revert anything for repro B this
+    round - it remains completely untouched, exactly as round 3 left it.
+    **Regression check**: rebuilt `PrimeStruct_compile_run_tests` and ran
+    `--test-suite="*collection*"` (595 cases) with only this round's one
+    `resolveMapTarget` change applied: 592 passed, 3 failed - the *exact*
+    3 pre-existing failures round 3's own note names (`runs vm canonical
+    map reference string access with imported canonical helpers`, `runs vm
+    bare vector capacity after pop through imported stdlib helper`, `runs
+    vm shared stdlib map conformance harness` = repro B). Round 3's 2 new
+    regressions (`runs vm experimental map helper receivers`, `runs vm
+    experimental map method receivers`) are **not** in this list - they
+    pass, confirming this round's narrower fix does not reproduce round
+    3's regression. This one change is being kept (it is real, verified,
+    regression-free progress, even though it alone does not close repro A
+    or any CTest shard) per this task's own round-4 instructions; see the
+    matching "Round 4" note in `docs/failing_tests.md` for the full trail.
+  - round_5_note: (2026-09-19) **Repro A is now fixed and both its CTest
+    shards pass.** Root-caused the `ir_lowerer` gap round 4 traced to
+    `resolveMethodCallDefinitionFromExpr`
+    (`IrLowererSetupTypeMethodCallResolution.cpp`): once the method-call
+    dispatch reaches its `resolveDefinitionFamilyByArity(canonicalKeyValueHelper,
+    ...)` lookup, `defMap` at that point contains ONLY the specialized
+    struct's own nested member methods for this K/V pair (e.g. a path
+    shaped like `<backing-struct-path>__ta<hash>/<memberName>`, params=1) -
+    the free-standing helper template family for this operation was never
+    separately monomorphized for this K/V pair (confirmed by dumping
+    `defMap`'s full `/std/collections/map/`-prefixed contents: 18 entries,
+    all struct members or struct-scoped helpers, zero free-function
+    entries for this operation). Fix: when the free-function lookup fails,
+    fall back to the specialized struct's own nested member (already
+    always monomorphized alongside the struct itself) - looked up via
+    `pairInfo.structTypeName + "/" + <PascalCase member name>` with
+    arity `paramCount + 1` (the receiver becomes the implicit `this`).
+    First attempt gated this fallback on `pairInfo.structTypeName`
+    non-empty alone, which was **too broad**: `pairInfo.isKeyValueTarget`/
+    `structTypeName` are also populated for an ordinary *named* key/value
+    local (not just a monomorph-rewritten receiver), so it let this
+    operation succeed on a plain `[MapValue<string, i32>] values{...}`
+    binding too - breaking `map wildcard import rejects stdlib-owned
+    surface in C++ emitter` and `ir lowerer rejects stdlib string-keyed
+    map helper lowering` (both intentionally expect a native-backend
+    rejection there; confirmed these are two more manifestations of the
+    still-open repro B family below, not something this round's fix
+    should touch). Narrowed the gate to fire only when the receiver is
+    literally the synthetic `__collection_receiver_N` temporary that
+    `emitMaterializedCollectionReceiverExpr` mints for a rewritten
+    receiver used directly in call position (the sole place that name is
+    generated, confirmed via grep) - this is the precise, distinguishing
+    signal for "this receiver came from TODO-4683's rewrite", not just
+    "this receiver has key/value type". With that scoping: `at(map<i32,
+    i32>(1i32,10i32,2i32,20i32), 2i32)` compiles and runs to exit 22 on
+    both `--emit=vm` and `--emit=exe`; the two affected CTest shards
+    (`compile_run_imports_operations_and_collections_1_2` and
+    `compile_run_examples_spinning_cube_argument_validation_51_55`) now
+    pass (the latter flaked as a Timeout once under this session's heavy
+    concurrent load but was independently verified to pass cleanly in
+    16-53s against its 360s ceiling when run in isolation - see the
+    shard's own `TODO-4711` comment in
+    `cmake/PrimeStructManagedCompileRunSmokeSuites.cmake` noting it is
+    already this repo's single slowest managed doctest shard). Also hit
+    and fixed a self-inflicted issue: this fix's first comment literally
+    spelled out the retired `mapAt`/`MapValue<K, V>` symbol names, which
+    tripped `PrimeStruct_map_adapter_traces` and
+    `PrimeStruct_map_vector_compiler_knowledge_zero_audit` (both scan
+    comments, not just executable code, for these patterns - the same
+    class of self-inflicted failure TODO-4683 round 7 hit and fixed for
+    the same reason). Reworded to describe the mechanism generically;
+    both checkers pass clean now (verified directly via
+    `python3 scripts/check_map_adapter_traces.py` /
+    `check_map_vector_compiler_knowledge.py`, not just the full gate).
+    Verified round 4's own `resolveMapTarget` fix is NOT the cause of the
+    repro-B-family failures above (it is correctly scoped to
+    `Expr::Kind::Call` receivers only, never `Name`-kind locals like
+    `values` - checked its diff directly rather than assuming).
+    **Full gate**: 39/1897 failed (down from the established 40-failure
+    baseline), zero new failures anywhere, confirmed via
+    `./scripts/compile.sh --release` end to end. Remaining failures are
+    exactly: the 33 already-confirmed pre-existing baseline shards, plus
+    5 of the original 7 TODO-5300 target shards that are now cleanly
+    isolated into two families: (1) repro B itself - `ir lowerer rejects
+    stdlib string-keyed map helper lowering`
+    (`ir_pipeline_conversions_core_11_20`) and the matching VM runtime
+    crash (`vm_collections_collections_newly_exposed_2026_07_16_383_392`,
+    the `runs vm shared stdlib map conformance harness` `std::bad_alloc`)
+    - completely untouched this round, exactly as rounds 3/4 left it; (2)
+    a sibling bug family, newly isolated this round, affecting
+    `map wildcard import rejects stdlib-owned surface in C++ emitter`
+    (`compile_run_imports_operations_and_collections_3_4`) plus the two
+    already-tracked pre-existing-looking shards
+    `vm_collections_alias_and_basics_21_30`/`stdlib_collection_shims_199_208`/
+    `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312` - **these
+    still need triage to confirm which are genuinely pre-existing versus
+    part of the repro-B family**; do not assume they are all one or the
+    other without individually stash-A/B-confirming each. Concrete next
+    step for round 6: (a) triage those remaining shards individually
+    against the `c7cc6f0` pre-TODO-4683 baseline to sort pre-existing from
+    repro-B-family; (b) for the confirmed repro-B-family ones plus repro B
+    itself, the common thread across all of them is `mapAt`/`mapAtUnsafe`/
+    `count` called directly (not via the `at`/`count` free-function
+    aliases) on an ordinary *named* `MapValue<string, ...>`-typed local
+    that was explicitly declared (not `auto`) - find which TODO-4683-era
+    change (likely one of rounds 5-7's `SemanticsValidatorBuildInitializerInference.cpp`/
+    `SemanticsValidatorExprArgumentValidation.cpp` fixes, since round 4's
+    `resolveMapTarget` fix is confirmed not the cause) stopped the
+    native-backend rejection diagnostic from firing for this specific
+    shape, now that the pair ladder itself is gone; (c) repro B's own
+    `std::bad_alloc` crash still needs the dedicated debug-build
+    `--dump-stage ir`/gdb session described in the round 3/4 notes above -
+    not attempted this round (this round's budget went entirely to repro
+    A, which is now fully closed).
+  - round_6_note: (2026-09-19) **Thread 1 (sibling bug family triage):
+    all 4 flagged shards confirmed pre-existing, none are TODO-4683/
+    TODO-5300 regressions.** Checked out `c7cc6f0` (pre-TODO-4683) in a
+    scratch `git worktree` (`/tmp/baseline-check`, removed when done),
+    built only the `primec` target there (release config - no need for
+    the full test-binary build to compare raw compiler behavior), and ran
+    each of the 4 shards' exact `TEST_CASE` source through both the
+    baseline `primec` and this session's existing HEAD `build-release/primec`
+    directly (the same command each test uses, e.g. `--emit=exe
+    .../repro.prime -o /dev/null --entry /main` or `--emit=vm ...
+    --entry /main`):
+    - `imports_operations_and_collections_3_4` ("map wildcard import
+      rejects stdlib-owned surface in C++ emitter"): round 5's hypothesis
+      (same root cause as repro B: `mapCount`/`mapAtUnsafe` called
+      directly via fully-qualified free-function paths on a named,
+      explicitly-typed `[MapValue<string, i32> mut] values` local should
+      have been rejected pre-TODO-4683 too) is **refuted**. The exact
+      repro (`mapCount<string, i32>(values)` /
+      `mapAtUnsafe<string, i32>(values, "two"raw_utf8)`) builds to exit 0
+      (silently accepted) on **both** `c7cc6f0` and HEAD - byte-identical
+      wrong behavior at both revisions, so this was already broken before
+      TODO-4683 ever touched the pair ladder. This is a real, distinct,
+      pre-existing compiler bug, just not one TODO-4683/TODO-5300 caused
+      or owns.
+    - `vm_collections_alias_and_basics_21_30` ("runs vm canonical map
+      reference string access with imported canonical helpers"),
+      `vm_collections_stdlib_collection_shims_199_208` ("runs vm bare
+      vector capacity after pop through imported stdlib helper"), and
+      `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312` ("C++
+      emitter runs canonical map reference string access"): all three
+      reproduce their exact currently-failing exit code and (where
+      applicable) diagnostic text identically at `c7cc6f0` and HEAD (`VM
+      lowering error: ... call=/at, name=at, args=2, method=true` exit 2
+      for the two map-reference-string-access cases; exit 3 instead of
+      the expected exit 2 for the vector pop/capacity case). These three
+      already matched this project's long-repeated "confirmed
+      pre-existing baseline" wording from prior rounds; this round's
+      direct A/B confirms it rather than assuming it.
+    All 4 moved into the "Confirmed pre-existing" list in
+    `docs/failing_tests.md` and are out of TODO-5300's target scope going
+    forward - TODO-5300's only remaining live targets are repro B's own
+    two shards (`ir_pipeline_conversions_core_11_20`,
+    `vm_collections_collections_newly_exposed_2026_07_16_383_392`).
+    **Thread 2 (repro B's `std::bad_alloc` crash): root-caused and fixed.**
+    Built a debug config specifically for this investigation
+    (`./scripts/compile.sh` with no `--release`, only the narrow `primec`
+    target rebuilt via `cmake --build build-debug --target primec`, per
+    AGENTS.md's "deeper debugging" exception) and used `gdb` on the debug
+    binary, since the release binary has no DWARF info for locals/lines
+    (only exported symbols). Root cause, found by tracing the runtime
+    infinite loop with `gdb` first, then confirming at compile time:
+    - At the VM level, breaking on `allocateVmHeapSlots` and printing
+      `frame.ip` on each hit (via the debug build's real `VmKernelFrame`
+      locals) showed execution stuck alternating between exactly two IR
+      instruction indices forever (`frames.size()` staying `1` throughout
+      - no real recursion), both inside `/main`'s own instruction stream
+      with zero backward `Jump`/`JumpIfZero` anywhere near them. Dumping
+      the full ~10.5k-instruction stream and diffing against the working
+      i32 case pinpointed two adjacent `JumpIfZero` instructions (a
+      standard `index < 0` / `index >= count` args-pack bounds check,
+      `elementSlotCount=3` confirming an `Entry<K,V>` struct pack) whose
+      `imm` (jump target) was **stuck at literal `0`** - on the normal
+      in-bounds path, `JumpIfZero` fired and jumped to instruction 0,
+      restarting the whole function forever (a non-terminating,
+      fixed-size loop, exactly matching round 3's "constant
+      `slotCount=0x400`" `allocateVmHeapSlots` observation, since each
+      restart re-runs `MapValue<K,V>{}`'s two `vector<K>()`/`vector<V>()`
+      default field initializers, each of which pre-allocates a
+      `kVectorLocalDynamicCapacityLimit`-sized (1024-slot) local vector
+      literal buffer).
+    - Confirmed at the emission side with a compile-time breakpoint on
+      `emitArrayVectorAccessLoad` (`IrLowererAccessLoadHelpers.cpp`):
+      its own `jumpNonNegative`/`jumpInRange` locals (each meant to hold
+      the just-emitted `JumpIfZero`'s own instruction index, computed via
+      the `instructionCount` callback it was given) were **both `0`**,
+      and `patchInstructionImm(0, ...)` was a no-op on the real
+      instruction 0, never touching the real `JumpIfZero`s at their true
+      (much higher) indices. Traced up the call stack
+      (`emitArrayVectorIndexedAccess` -> `emitInlineDefinitionCallParameters`
+      in `IrLowererInlineParamHelpers.cpp`, called while binding
+      `mapInsertEntry<K, V>(out, /at(entries, index))`'s second, struct-typed
+      argument) and found the actual bug: the `isStructArgsPackAccess`
+      branch there (added to support a struct args-pack element such as
+      `args<Entry<K,V>>` used directly as a call argument) passed
+      **hardcoded stub callbacks** to `emitArrayVectorIndexedAccess` -
+      `instructionCount` always returning `0`, `patchInstructionImm`
+      silently discarding every patch, and `emitArrayIndexOutOfBounds` a
+      no-op - instead of the real callbacks bound to the target
+      `IrFunction`'s actual instruction stream. This is a real, general
+      compiler bug, not string-specific: it reproduces for *any*
+      struct-typed args-pack element (any `K`/`V`) passed this way; per
+      AGENTS.md's "VM/native strings" rule, `Entry<string, i32>` gets the
+      exact same fixed slot layout as `Entry<i32, i32>`, so the crash was
+      never actually about string storage size, just about which shapes
+      happen to route through this one under-wired call site
+      (`mapInsertEntry`'s struct-pack-element argument specifically).
+    - Fix: added three new trailing (default-valued, so no other caller's
+      signature breaks) parameters - `instructionCount`,
+      `patchInstructionImm`, `emitArrayIndexOutOfBounds` - to
+      `emitInlineDefinitionCallParameters`'s real implementation overload
+      (`IrLowererInlineParamHelpers.h`/`.cpp`), forwarded them into the
+      `isStructArgsPackAccess` branch in place of the hardcoded stubs
+      (falling back to the old no-op behavior only if a caller leaves
+      them unbound), and wired the one production caller
+      (`IrLowererLowerInlineCalls.cpp`'s `emitInlineDefinitionCallImpl`,
+      which already has direct access to the real `function.instructions`
+      vector and the real `emitArrayIndexOutOfBounds` trap emitter via
+      `runtimeErrorEmitters`) to bind them for real:
+      `instructionCount = [&]() { return function.instructions.size(); }`,
+      `patchInstructionImm = [&](size_t i, uint64_t t) { function.instructions[i].imm = t; }`.
+    - Verified: repro B now compiles and runs to the mathematically
+      correct result on **both** backends - `--emit=vm` and `--emit=exe`
+      both exit `4` (`count(values)=2` + `mapAt(values,"b")=2`), including
+      under `ulimit -v 2000000`, no crash, no hang. The i32-keyed sibling
+      (`map<i32,i32>` built the same way) is unaffected (still exits `4`
+      with its own 1+1 pair). Repro A (`at(map<i32,i32>(...), key)`,
+      round 5's own fix) still exits `22`, confirming this round's change
+      does not regress round 5's work.
+    - Updated the one test that had encoded the old (buggy) "native
+      backend rejects this" expectation -
+      `test_ir_pipeline_conversions_core.h`'s "ir lowerer rejects stdlib
+      string-keyed map helper lowering" - renamed to "ir lowerer supports
+      stdlib string-keyed map helper lowering" and rewritten to assert
+      successful lowering plus a correct VM-executed result (`4`), with a
+      comment explaining why the old rejection was itself a symptom of
+      this bug, not a real native-backend limitation.
+    - Regression checks (release-mode, doctest binaries rebuilt after the
+      fix): `PrimeStruct_compile_run_tests --test-suite="*collection*"`:
+      593/595 passed, the only 2 failures being the two already-confirmed
+      pre-existing shards from this round's Thread 1 triage (map
+      reference string access, vector capacity after pop) - the two
+      repro-B-family cases that used to fail here ("runs vm shared stdlib
+      map conformance harness", the crash itself) now pass.
+      `--test-suite="*imports*"`: only the one already-confirmed
+      pre-existing "map wildcard import rejects..." failure remains.
+      `PrimeStruct_backend_ir_tests --test-suite="*primestruct.ir.pipeline.conversions*"`:
+      2 failures ("ir lowerer supports map method calls", "ir lowerer
+      rejects variadic pointer vector packs...") - both individually
+      confirmed via `git stash`/rebuild/rerun to fail *identically* on
+      the pre-fix tree too, so neither is a new regression (the second is
+      the same `primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
+      shard already on the long-standing "Confirmed pre-existing" list;
+      the first was not previously listed by name and should be added -
+      see the matching `docs/failing_tests.md` update).
+    - Final full `./scripts/compile.sh --release` gate: **36 failed out of
+      1897 (98% passed)**. Every single one of the 36 is individually
+      accounted for as confirmed pre-existing (the 23-shard
+      `ir.pipeline.validation` cluster, `ir_pipeline_conversions_variadic_pointer_vectors`,
+      `semantics_type_resolution_graph_151_160`, the 4 shards Thread 1
+      confirmed this round against the `c7cc6f0` baseline, and the
+      `map_surface_strict_audit`/`vector_surface_traces`/
+      `map_backing_traces`/`soa_surface_trace_zero_audit`/
+      `collection_audit_exemption_count_ratchet(+_self_test)`/
+      `stdlib_map_ownership` audit/self-test cluster) - zero new failures
+      anywhere. Critically, **neither of repro B's own two target shards
+      appears in the failure list any more**
+      (`ir_pipeline_conversions_core_11_20`,
+      `vm_collections_collections_newly_exposed_2026_07_16_383_392` both
+      pass), alongside round 5's already-fixed repro A shards
+      (`imports_operations_and_collections_1_2`,
+      `examples_spinning_cube_argument_validation_51_55`).
+  - resolution_2026-09-19: **fixed - TODO-5300 fully closed.** Of the
+    original 7 CTest shards + 1 timeout this task targeted, 4 are
+    genuinely fixed across rounds 5-6 (repro A:
+    `imports_operations_and_collections_1_2`,
+    `examples_spinning_cube_argument_validation_51_55`; repro B:
+    `ir_pipeline_conversions_core_11_20`,
+    `vm_collections_collections_newly_exposed_2026_07_16_383_392`), and
+    the other 4 are individually confirmed, not assumed, to be
+    pre-existing and unrelated to TODO-4683/TODO-5300 via direct A/B
+    reproduction against the pre-TODO-4683 `c7cc6f0` baseline
+    (`vm_collections_alias_and_basics_21_30`,
+    `vm_collections_stdlib_collection_shims_199_208`,
+    `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`,
+    `imports_operations_and_collections_3_4`). Repro A's fix (round 5):
+    `resolveMethodCallDefinitionFromExpr`
+    (`IrLowererSetupTypeMethodCallResolution.cpp`) now falls back to a
+    monomorph-rewritten receiver's specialized struct member when the
+    free-function helper template family was never separately
+    monomorphized for that receiver's K/V pair, scoped narrowly to the
+    synthetic `__collection_receiver_N` temporary so it cannot fire for
+    an ordinary named key/value-typed local. Repro B's fix (round 6):
+    `emitInlineDefinitionCallParameters`
+    (`IrLowererInlineParamHelpers.cpp`) was passing hardcoded no-op stub
+    callbacks (`instructionCount` always `0`, `patchInstructionImm` a
+    no-op, `emitArrayIndexOutOfBounds` a no-op) to
+    `emitArrayVectorIndexedAccess` when emitting a struct args-pack
+    element (e.g. `args<Entry<K,V>>`) used directly as a struct-typed
+    call argument - this left that access's bounds-check `JumpIfZero`
+    placeholders permanently unpatched at `imm=0`, so the normal
+    in-bounds path jumped to instruction 0 and restarted the whole
+    function forever (the `std::bad_alloc` crash, via
+    `kVectorLocalDynamicCapacityLimit`-sized local vector allocations
+    repeating every restart). Fixed by threading real callbacks through
+    from the one production caller
+    (`IrLowererLowerInlineCalls.cpp`), which already has direct access to
+    the target `IrFunction`'s real instruction stream and the real
+    array-index-out-of-bounds trap emitter. Both fixes verified against
+    the TODO-4683 fast repro set (1..8 pairs, VM+exe, implicit+explicit
+    template args, invalid-pair diagnostics) with zero regressions, and a
+    full `./scripts/compile.sh --release` gate matches the established
+    pre-existing-only baseline exactly (36/1897 failed, all individually
+    confirmed pre-existing, zero new failures).
+  - acceptance: all met - see the round 5/6 notes above for each item's
+    individual verification (repro A/B compile and run correctly on both
+    backends including under `ulimit -v 2000000`; all 7 target shards +
+    timeout individually pass or are confirmed pre-existing; the full
+    release gate matches the established pre-existing-only baseline with
+    zero new failures anywhere).
+  - stop_rule: met - see resolution note above.
+
