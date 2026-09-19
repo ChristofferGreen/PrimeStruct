@@ -47,7 +47,22 @@ _EXEMPT_MARKERS = (
 # collection-decoupling cleanup landed between 2026-07-06 and 2026-08-21
 # that added and removed exempt markers across many files, so the baseline
 # recorded here (126) is the actual re-measured count, not the stale one.
-BASELINE_EXEMPT_FILE_COUNT = 126
+#
+# Raised 126 -> 134 on 2026-09-19: TODO-5293 ("merge the semantics-stage
+# and ir_lowerer-stage getBuiltinArrayAccessName implementations behind a
+# shared classifier") and TODO-5294 ("receiver-target resolution
+# consolidation"), both closed (see docs/todo_finished.md), split several
+# already-exempt files (e.g. the old resolveMethodTarget seams) into new,
+# more focused files -- each new file inherited the same pre-existing
+# exempt status from the code it was extracted from rather than adding new
+# hardcoded-collection-surface debt. Verified via `git log --diff-filter=A`
+# that every file pushing the count from 126 to 134
+# (SemanticsValidatorMethodTarget{ArgsPack,KeyValue,ResolutionDetail,
+# String,StructSum,Vector}Resolvers.cpp,
+# src/support/BuiltinArrayAccessNameClassifier.cpp,
+# src/support/ReceiverElementFamilyClassifier.cpp) was added by a TODO-5293/
+# TODO-5294 commit, not by unrelated new code.
+BASELINE_EXEMPT_FILE_COUNT = 134
 
 
 def _is_exempt(text: str) -> bool:
