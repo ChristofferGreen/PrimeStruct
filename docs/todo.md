@@ -2416,6 +2416,52 @@ crashes) - see `docs/todo_finished.md`.
     `--dump-stage ir`/gdb session described in the round 3/4 notes above -
     not attempted this round (this round's budget went entirely to repro
     A, which is now fully closed).
+  - round_6_note: (2026-09-19) **Thread 1 (sibling bug family triage):
+    all 4 flagged shards confirmed pre-existing, none are TODO-4683/
+    TODO-5300 regressions.** Checked out `c7cc6f0` (pre-TODO-4683) in a
+    scratch `git worktree` (`/tmp/baseline-check`, removed when done),
+    built only the `primec` target there (release config - no need for
+    the full test-binary build to compare raw compiler behavior), and ran
+    each of the 4 shards' exact `TEST_CASE` source through both the
+    baseline `primec` and this session's existing HEAD `build-release/primec`
+    directly (the same command each test uses, e.g. `--emit=exe
+    .../repro.prime -o /dev/null --entry /main` or `--emit=vm ...
+    --entry /main`):
+    - `imports_operations_and_collections_3_4` ("map wildcard import
+      rejects stdlib-owned surface in C++ emitter"): round 5's hypothesis
+      (same root cause as repro B: `mapCount`/`mapAtUnsafe` called
+      directly via fully-qualified free-function paths on a named,
+      explicitly-typed `[MapValue<string, i32> mut] values` local should
+      have been rejected pre-TODO-4683 too) is **refuted**. The exact
+      repro (`mapCount<string, i32>(values)` /
+      `mapAtUnsafe<string, i32>(values, "two"raw_utf8)`) builds to exit 0
+      (silently accepted) on **both** `c7cc6f0` and HEAD - byte-identical
+      wrong behavior at both revisions, so this was already broken before
+      TODO-4683 ever touched the pair ladder. This is a real, distinct,
+      pre-existing compiler bug, just not one TODO-4683/TODO-5300 caused
+      or owns.
+    - `vm_collections_alias_and_basics_21_30` ("runs vm canonical map
+      reference string access with imported canonical helpers"),
+      `vm_collections_stdlib_collection_shims_199_208` ("runs vm bare
+      vector capacity after pop through imported stdlib helper"), and
+      `emitters_cpp_emitters_newly_exposed_2026_07_16_303_312` ("C++
+      emitter runs canonical map reference string access"): all three
+      reproduce their exact currently-failing exit code and (where
+      applicable) diagnostic text identically at `c7cc6f0` and HEAD (`VM
+      lowering error: ... call=/at, name=at, args=2, method=true` exit 2
+      for the two map-reference-string-access cases; exit 3 instead of
+      the expected exit 2 for the vector pop/capacity case). These three
+      already matched this project's long-repeated "confirmed
+      pre-existing baseline" wording from prior rounds; this round's
+      direct A/B confirms it rather than assuming it.
+    All 4 moved into the "Confirmed pre-existing" list in
+    `docs/failing_tests.md` and are out of TODO-5300's target scope going
+    forward - TODO-5300's only remaining live targets are repro B's own
+    two shards (`ir_pipeline_conversions_core_11_20`,
+    `vm_collections_collections_newly_exposed_2026_07_16_383_392`).
+    **Thread 2 (repro B's `std::bad_alloc` crash)**: see the dedicated
+    round_6_note continuation below (Thread 2 investigation), added once
+    the debug-build gdb session completes.
 
 - [ ] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
   - owner: ai

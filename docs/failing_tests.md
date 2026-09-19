@@ -509,6 +509,62 @@ progress even though it alone does not close repro A or flip any CTest
 shard to passing. The 7 shards + 1 timeout remain failing exactly as
 before this round; TODO-5300 stays open for round 5.
 
+**Round 5 (2026-09-19): repro A fully fixed.** Root-caused and fixed the
+`ir_lowerer` gap round 4 traced to `resolveMethodCallDefinitionFromExpr`
+(`IrLowererSetupTypeMethodCallResolution.cpp`) - the free-function helper
+template family was never separately monomorphized for a rewritten
+receiver's K/V pair, so the method-call dispatch's
+`resolveDefinitionFamilyByArity` lookup found only the specialized
+struct's own nested members. Fixed by falling back to the specialized
+struct's own nested member when the free-function lookup fails, gated
+narrowly on the receiver being literally the synthetic
+`__collection_receiver_N` temporary `emitMaterializedCollectionReceiverExpr`
+mints (not any named key/value-typed local - an earlier, broader gate on
+`structTypeName` alone was tried and reverted for breaking two more
+repro-B-family shapes). Both repro A CTest shards now pass
+(`compile_run_imports_operations_and_collections_1_2`,
+`compile_run_examples_spinning_cube_argument_validation_51_55`). Full
+gate: 39/1897 failed (down from 40), zero new regressions - see
+`docs/todo.md`'s `round_5_note` under TODO-5300 for the full trail.
+Remaining failures: the confirmed-pre-existing baseline below, plus
+repro B's own two shards, plus (at the time) 3 more shards whose
+pre-existing-vs-regression status still needed individual triage - see
+round 6 below for that triage's result.
+
+**Round 6 (2026-09-19): Thread 1 triage - all 4 flagged shards confirmed
+pre-existing, not TODO-4683/TODO-5300 regressions.** Round 5 flagged 4
+CTest shards needing individual `c7cc6f0`-baseline confirmation:
+`imports_operations_and_collections_3_4` ("map wildcard import rejects
+stdlib-owned surface in C++ emitter"), `vm_collections_alias_and_basics_21_30`
+("runs vm canonical map reference string access with imported canonical
+helpers"), `stdlib_collection_shims_199_208` ("runs vm bare vector
+capacity after pop through imported stdlib helper"), and
+`emitters_cpp_emitters_newly_exposed_2026_07_16_303_312` ("C++ emitter
+runs canonical map reference string access"). Checked out `c7cc6f0` in a
+scratch worktree (`/tmp/baseline-check`, removed after use), built only
+the `primec` target (release config, no full test-binary build needed),
+and ran each test's exact source through `primec` directly on both the
+baseline binary and this session's existing HEAD `build-release/primec`:
+all four produced byte-identical exit codes and (where applicable)
+byte-identical diagnostic text at baseline and HEAD -
+`imports_operations_and_collections_3_4`'s repro (`mapCount<string,
+i32>(values)` / `mapAtUnsafe<string, i32>(values, ...)` called directly,
+via fully-qualified free-function paths, on a named, explicitly-typed
+`[MapValue<string, i32> mut] values` local) builds and exits 0 on
+**both** revisions where the test expects an exit-2 native-backend
+rejection - so it was already silently accepted before TODO-4683 ever
+touched this codebase, refuting round 5's hypothesis that this is part
+of the repro-B regression family. The other three reproduce their exact
+currently-failing shapes (`VM lowering error: ... call=/at, name=at,
+args=2, method=true`, exit 2/2/3 respectively) identically on both
+revisions too. **All 4 are hereby reclassified as confirmed pre-existing
+and moved out of TODO-5300's target scope** (added to the list below).
+TODO-5300's only remaining live targets are repro B's own two shards
+(`ir_pipeline_conversions_core_11_20`,
+`vm_collections_collections_newly_exposed_2026_07_16_383_392`) - see
+`docs/todo.md`'s `round_6_note` under TODO-5300 for Thread 2's crash
+investigation.
+
 **Confirmed pre-existing (unrelated to TODO-4683, left as-is):**
 
 All confirmed via identical-output reproduction against the `c7cc6f0`
@@ -548,6 +604,25 @@ baseline:
   ("...experimental soa reads" expecting `unknown method:
   /std/collections/soa_vector/get_ref` to be rejected, now isn't) - soa
   reads, unrelated to maps; test + implementation files unchanged.
+- `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_3_4`
+  ("map wildcard import rejects stdlib-owned surface in C++ emitter" -
+  direct fully-qualified `mapCount<K,V>`/`mapAtUnsafe<K,V>` calls on a
+  named, explicitly-typed `MapValue<string, i32>` local are silently
+  accepted (exit 0) instead of rejected; confirmed round 6 (2026-09-19):
+  byte-identical exit 0 at both `c7cc6f0` baseline and HEAD).
+- `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`
+  ("runs vm canonical map reference string access with imported canonical
+  helpers") and
+  `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`
+  ("runs vm bare vector capacity after pop through imported stdlib
+  helper") and
+  `PrimeStruct_primestruct_compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`
+  ("C++ emitter runs canonical map reference string access"): confirmed
+  round 6 (2026-09-19) - each reproduces its exact currently-failing exit
+  code/diagnostic text identically at both `c7cc6f0` baseline and HEAD
+  (a `ref[1i32].count()`-shaped map-reference string-access receiver, and
+  a `pop`-then-`capacity` vector case; unrelated to the repro-B
+  `entry(...)`-pack family despite superficially adjacent naming).
 
 ### TODO-4637 verification note superseded (2026-08-16)
 
