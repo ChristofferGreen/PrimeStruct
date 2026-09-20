@@ -1678,11 +1678,22 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (getBuiltinArrayAccessName(expr, accessName) &&
         (accessName == "at" || accessName == "at_unsafe") &&
         isSemanticOrLegacyVectorTarget(expr.args.front())) {
-      if (const Definition *overrideCallee = resolveMethodCallDefinitionFn(expr, localsIn);
-          overrideCallee != nullptr && !overrideCallee->statements.empty()) {
+      const Definition *overrideCallee = resolveMethodCallDefinitionFn(expr, localsIn);
+      if (overrideCallee != nullptr && !overrideCallee->statements.empty()) {
         return emitCanonicalInlineDefinitionCall(expr, *overrideCallee)
                    ? InlineCallDispatchResult::Emitted
                    : InlineCallDispatchResult::Error;
+      }
+      if (overrideCallee == nullptr) {
+        // A genuine vector-target `at`/`at_unsafe` method call that fails to
+        // resolve to any definition is a real "unknown method" diagnostic,
+        // not a signal to keep deferring - only a resolved-but-empty
+        // (canonical builtin passthrough) definition should defer to the
+        // builtin array-access path below (see "ir lowerer inline dispatch
+        // defers vector-returning temporary access methods" and "keep
+        // vector at methods on builtin path", which pin the two cases
+        // apart).
+        return InlineCallDispatchResult::Error;
       }
       return InlineCallDispatchResult::NotHandled;
     }
