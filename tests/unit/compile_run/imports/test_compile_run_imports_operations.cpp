@@ -122,7 +122,20 @@ main() {
   CHECK(runCommand(compileCmd) == 22);
 }
 
-TEST_CASE("map wildcard import rejects stdlib-owned surface in C++ emitter") {
+TEST_CASE("map wildcard import runs explicit stdlib-owned surface in C++ emitter") {
+  // NOTE (TODO-5301, resolved): this test previously asserted that the
+  // native (--emit=exe) backend *rejected* this call shape (fully-qualified
+  // mapNew/mapInsert/mapCount/mapAtUnsafe calls on a named MapValue<K,V>
+  // local) the same way it rejects other unsupported map builtin call
+  // shapes. Investigation confirmed the called helpers are all legitimately
+  // [public] in stdlib/std/collections/map.prime, so the wildcard import is
+  // correct to make them callable, and - unlike the genuinely-unsupported
+  // shapes the sibling "rejects ..." tests in this file cover - the native
+  // backend actually lowers and runs this shape correctly today, producing
+  // the same result (2 + 8 = 10) as the VM backend. The old "reject"
+  // expectation was stale, not a live architectural decision, so this test
+  // now asserts the real (successful, matching) behavior instead of a
+  // fabricated rejection.
   const std::string source = R"(
 import /std/collections/map/*
 
@@ -136,14 +149,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exact_map_import_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "compile_exact_map_import_exe.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "compile_exact_map_import_exe_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison") != std::string::npos);
-  CHECK(readFile(errPath).find("call=/std/collections/map/at") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+
+  const std::string vmCompileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(vmCompileCmd) == 10);
 }
 
 TEST_CASE("concise vector binding example runs in C++ emitter") {

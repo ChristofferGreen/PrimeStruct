@@ -1365,6 +1365,59 @@
                 },
                 error);
             }
+            // TODO-5301: a genuine named-local `Reference<map<K,V>>`
+            // receiver's bracket-index access (`ref[key]`) is desugared by
+            // SemanticsValidatorExprDirectCollectionFallbacks.cpp's generic
+            // resolveMethodTarget fallback into this same isMethodCall
+            // "at"/"at_unsafe" shape, but - unlike the array/vector case
+            // above - no monomorphized `/std/collections/map/at` Definition
+            // ever gets materialized into defMap for it (nothing else
+            // triggers that specialization), so the defMap-based method
+            // lookup this whole isMethodCall branch otherwise relies on can
+            // never resolve it. The `!expr.isMethodCall` bare key-value
+            // access path below already has a defMap-free native emission
+            // for exactly this call shape (ir_lowerer::emitKeyValueLookupAccess);
+            // mirror it here, narrowly scoped to a receiver that
+            // resolveKeyValueAccessReceiverInfo actually recognizes as a
+            // key-value target, so this does not change resolution for any
+            // other method-call "at"/"at_unsafe" shape (e.g. a real
+            // user-defined method named "at").
+            const auto methodCallKeyValueTargetInfo =
+            statementsExprHelpers.resolveKeyValueAccessReceiverInfo(
+              expr, expr.args.front(), localsIn);
+            if (methodCallKeyValueTargetInfo.isKeyValueTarget) {
+              if (expr.args.front().kind == Expr::Kind::Call &&
+                !inferStructExprPath(expr, localsIn).empty()) {
+                error = "struct parameter type mismatch";
+                return false;
+              }
+              return ir_lowerer::emitKeyValueLookupAccess(
+                vectorAccessName,
+                methodCallKeyValueTargetInfo.keyValueKeyKind,
+                methodCallKeyValueTargetInfo.structTypeName,
+                expr.args.front(),
+                expr.args[1],
+                localsIn,
+                [&]() { return allocTempLocal(); },
+                [&](const Expr &nestedExpr,
+                  const ir_lowerer::LocalMap &nestedLocals) {
+                  return emitExpr(nestedExpr, nestedLocals);
+                },
+                resolveStringTableTarget,
+                [&](const Expr &nestedExpr,
+                  const ir_lowerer::LocalMap &nestedLocals) {
+                  return inferExprKind(nestedExpr, nestedLocals);
+                },
+                [&]() { emitMapKeyNotFound(); },
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) {
+                  function.instructions.push_back({op, imm});
+                },
+                [&](size_t indexToPatch, uint64_t target) {
+                  function.instructions[indexToPatch].imm = target;
+                },
+                error);
+            }
           }
         }  // end if (expr.isMethodCall && expr.args.size() == 2)
         if (!expr.isMethodCall && expr.args.size() == 2) {
