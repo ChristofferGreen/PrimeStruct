@@ -914,48 +914,18 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       lookupReturnInfo ? lookupReturnInfo : noopLookupReturnInfo;
   const InferExprKindWithLocalsFn &inferExprKindFn =
       inferExprKind ? inferExprKind : noopInferExprKind;
-  auto isIndexedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
-    std::string accessName;
-    if (receiverExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(receiverExpr, accessName) ||
-        receiverExpr.args.size() != 2 || receiverExpr.args.front().kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto it = localsIn.find(receiverExpr.args.front().name);
-    return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
-           (it->second.argsPackElementKind == LocalInfo::Kind::Value ||
-            it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
-            it->second.argsPackElementKind == LocalInfo::Kind::Pointer);
-  };
-  auto isIndexedBorrowedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
-    if (!(receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
-          receiverExpr.args.size() == 1)) {
-      return false;
-    }
-    std::string accessName;
-    const Expr &targetExpr = receiverExpr.args.front();
-    if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
-        targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto it = localsIn.find(targetExpr.args.front().name);
-    return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
-           it->second.argsPackElementKind == LocalInfo::Kind::Reference;
-  };
-  auto isIndexedPointerArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
-    if (!(receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
-          receiverExpr.args.size() == 1)) {
-      return false;
-    }
-    std::string accessName;
-    const Expr &targetExpr = receiverExpr.args.front();
-    if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
-        targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto it = localsIn.find(targetExpr.args.front().name);
-    return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
-           it->second.argsPackElementKind == LocalInfo::Kind::Pointer;
-  };
+  // Note: this function previously special-cased a method call (write,
+  // write_line, write_byte, read_byte, write_bytes, flush, close) whose
+  // receiver was an indexed args-pack file-handle access (`at(values,
+  // index)`, or `dereference(at(values, index))` for a borrowed/pointer
+  // element), unconditionally reporting Result<Void, FileError> for it -
+  // regardless of what resolveMethodCall/resolveDefinitionCall/
+  // lookupReturnInfo actually say about that call. That let an
+  // unresolvable receiver/method combination (the exact ones this file's
+  // "resolve indexed [borrowed] args-pack file handle method results"
+  // tests exercise) silently report a Result answer instead of deferring
+  // (false) to the caller. Removed; this shape now falls through to the
+  // rest of the resolution below like any other call.
 
   auto lookupLocal = [&](const std::string &name) -> LocalResultInfo {
     LocalResultInfo local;
@@ -1050,36 +1020,6 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
     return false;
   };
-  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
-      isIndexedArgsPackFileHandleReceiver(expr.args.front())) {
-    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-        expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-      out.isResult = true;
-      out.hasValue = false;
-      out.errorType = "FileError";
-      return true;
-    }
-  }
-  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
-      isIndexedBorrowedArgsPackFileHandleReceiver(expr.args.front())) {
-    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-        expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-      out.isResult = true;
-      out.hasValue = false;
-      out.errorType = "FileError";
-      return true;
-    }
-  }
-  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
-      isIndexedPointerArgsPackFileHandleReceiver(expr.args.front())) {
-    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-        expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-      out.isResult = true;
-      out.hasValue = false;
-      out.errorType = "FileError";
-      return true;
-    }
-  }
   std::string accessName;
   if (getResultArgsPackAccessName(expr, accessName) && expr.args.size() == 2 &&
       expr.args.front().kind == Expr::Kind::Name) {
