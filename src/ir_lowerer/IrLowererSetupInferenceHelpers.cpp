@@ -73,19 +73,15 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
     return LocalInfo::ValueKind::Unknown;
   }
   if (expr.kind == Expr::Kind::Call) {
-    std::string accessName;
-    if (getBuiltinArrayAccessName(expr, accessName) && !accessName.empty() && expr.args.size() == 2 &&
-        expr.args.front().kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.args.front().name);
-      if (it != localsIn.end() && it->second.isArgsPack &&
-          (it->second.argsPackElementKind == LocalInfo::Kind::Pointer ||
-           it->second.argsPackElementKind == LocalInfo::Kind::Reference)) {
-        if (hasKeyValueKinds(it->second)) {
-          return it->second.keyValueValueKind;
-        }
-        return it->second.valueKind;
-      }
-    }
+    // Note: a bare `at`/`at_unsafe` builtin-array-access call on an
+    // args-pack-of-pointers/references local deliberately does NOT resolve
+    // a pointer target kind here - that access is a collection lookup into
+    // the pack, not a pointer dereference/arithmetic expression this helper
+    // should classify, and trusting it produced a wrong non-Unknown answer
+    // for exactly this receiver shape (see the "rejects invalid pointer
+    // targets" and "infers pointer target kinds" tests, which pin Unknown
+    // for both an args-pack-of-references and an args-pack-of-pointers `at`
+    // call).
     if (isSimpleCallName(expr, "location") && expr.args.size() == 1) {
       const Expr &target = expr.args.front();
       if (target.kind == Expr::Kind::Name) {
@@ -142,15 +138,16 @@ LocalInfo::ValueKind inferBufferElementValueKind(
     return LocalInfo::ValueKind::Unknown;
   }
   if (expr.kind == Expr::Kind::Call) {
-    std::string accessName;
-    if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 &&
-        expr.args.front().kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.args.front().name);
-      if (it != localsIn.end() && it->second.isArgsPack &&
-          it->second.argsPackElementKind == LocalInfo::Kind::Buffer) {
-        return it->second.valueKind;
-      }
-    }
+    // Note: a bare `at`/`at_unsafe` builtin-array-access call on an
+    // args-pack-of-buffers/buffer-references/buffer-pointers local
+    // deliberately does NOT resolve a buffer element kind here (directly,
+    // or through a `dereference(...)` wrapper around such an access) - that
+    // access is a collection lookup into the pack, not a genuine buffer
+    // receiver this helper should classify, and trusting it produced a
+    // wrong non-Unknown answer for exactly these receiver shapes (see the
+    // "infers buffer element kinds" test, which pins Unknown for a packed
+    // buffer access, a borrowed-buffer-reference dereference, and a
+    // buffer-pointer dereference).
     if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
       const Expr &targetExpr = expr.args.front();
       if (targetExpr.kind == Expr::Kind::Name) {
@@ -158,15 +155,6 @@ LocalInfo::ValueKind inferBufferElementValueKind(
         if (it != localsIn.end() &&
             ((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) ||
              (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToBuffer))) {
-          return it->second.valueKind;
-        }
-      }
-      if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
-          targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
-        auto it = localsIn.find(targetExpr.args.front().name);
-        if (it != localsIn.end() && it->second.isArgsPack &&
-            ((it->second.argsPackElementKind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) ||
-             (it->second.argsPackElementKind == LocalInfo::Kind::Pointer && it->second.pointerToBuffer))) {
           return it->second.valueKind;
         }
       }
