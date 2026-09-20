@@ -1066,6 +1066,16 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       continue;
     }
     const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
+    // An access call (`at`/`at_unsafe`) that only resolves to the removed
+    // `/array/at(_unsafe)` compatibility shim must defer rather than trust
+    // that shim's pinned (generic, receiver-independent) return kind - the
+    // shim doesn't reflect the real receiver's element type. `count`/
+    // `capacity` are unaffected: their removed-shim return kind (always
+    // Int32) is receiver-independent and safe to trust here.
+    if (callee != nullptr && isAccessCall &&
+        isExplicitRemovedVectorMethodAliasPath(callee->fullPath)) {
+      continue;
+    }
     if (callee == nullptr || !isAllowedResolvedVectorDirectCallPath(scopedCallPath, callee->fullPath) ||
         !isAllowedResolvedMapDirectCallPath(scopedCallPath, callee->fullPath)) {
       continue;

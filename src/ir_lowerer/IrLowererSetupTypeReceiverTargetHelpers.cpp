@@ -155,8 +155,6 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
     errorOut = "method call missing receiver";
     return false;
   }
-  std::string accessName;
-  const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
       isUnqualifiedCollectionBuiltinName(callExpr, "count") ||
       isUnqualifiedCollectionBuiltinName(callExpr, "capacity");
@@ -178,6 +176,14 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   const bool isBuiltinKeyValueContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
+  // Note: a bare `at`/`at_unsafe` builtin access call deliberately does NOT
+  // contribute to `allowBuiltinFallback` here, even though
+  // `getBuiltinArrayAccessName` would recognize it - an access call against
+  // an entry-args receiver (e.g. `argv.at(1)`) must surface as an explicit
+  // "unknown method target" diagnostic below, not silently defer the way a
+  // count/capacity/mutator probe does (see the sibling "allows count/
+  // capacity receiver probing" vs. "rejects access receiver fallback
+  // probing" test cases, which pin exactly this split).
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitKeyValueMethodAlias &&
       !isExplicitKeyValueContainsOrTryAtMethod &&
@@ -185,7 +191,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinKeyValueContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
-       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
+       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)));
   const Expr &receiver = callExpr.args.front();
   if (isEntryArgsName && isEntryArgsName(receiver, localsIn)) {
     if (allowBuiltinFallback) {
