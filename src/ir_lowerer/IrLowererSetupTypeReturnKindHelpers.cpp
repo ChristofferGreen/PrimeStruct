@@ -967,6 +967,21 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         return index > 0 && index < callExpr.args.size() &&
                isKnownCollectionAccessReceiverExpr(callExpr.args[index]);
       });
+  if (probePositionalReorderedAccessReceiver && !hasAlternativeCollectionReceiver) {
+    // A reordered-positional-args access call whose first argument isn't a
+    // recognized collection receiver, and where none of the other
+    // positional candidates are recognized as one either, is genuinely
+    // ambiguous - there is no structural/semantic signal for which
+    // argument is the real receiver. Bail out here, before ever calling
+    // resolveMethodCallDefinition on any candidate: guessing a receiver
+    // index and asking for its method definition risks silently resolving
+    // (or swallowing a real "unknown method" diagnostic for) a call this
+    // helper cannot actually classify (see the "defers reordered
+    // positional/named/labeled bare access calls" and "defers positional
+    // bare access calls" tests, which pin `resolveCalls == 0` for exactly
+    // this shape).
+    return false;
+  }
   const bool preferDeclaredAccessReturnKind =
       isAccessCall && isExplicitKeyValueHelperFallbackPath(callExpr);
   if (preferDeclaredAccessReturnKind) {
@@ -1065,17 +1080,23 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     if (!resolveMethodCallDefinition) {
       continue;
     }
-    const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
-    // An access call (`at`/`at_unsafe`) that only resolves to the removed
-    // `/array/at(_unsafe)` compatibility shim must defer rather than trust
-    // that shim's pinned (generic, receiver-independent) return kind - the
-    // shim doesn't reflect the real receiver's element type. `count`/
-    // `capacity` are unaffected: their removed-shim return kind (always
-    // Int32) is receiver-independent and safe to trust here.
-    if (callee != nullptr && isAccessCall &&
-        isExplicitRemovedVectorMethodAliasPath(callee->fullPath)) {
+    // A bare (non-method-call) `at`/`at_ref`/`at_unsafe`/`at_unsafe_ref`
+    // access call never trusts a resolved method definition here at all,
+    // regardless of its path - unlike `count`/`capacity` (and unlike a
+    // canonical soa `get`/`ref` call, which keeps resolving normally
+    // below), an `at`-family access call's return kind is entirely
+    // receiver-dependent, and this generic helper's synthesized
+    // method-call probe (`buildMethodExprForReceiverIndex`) has no
+    // reliable way to confirm it found the real receiver (see the
+    // "defers bare/reordered/positional/named/labeled bare access calls"
+    // tests, which pin this for every receiver-index candidate, resolved
+    // or not).
+    if (isAccessCall && isCollectionAccessCall &&
+        (accessName == "at" || accessName == "at_ref" || accessName == "at_unsafe" ||
+         accessName == "at_unsafe_ref")) {
       continue;
     }
+    const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
     if (callee == nullptr || !isAllowedResolvedVectorDirectCallPath(scopedCallPath, callee->fullPath) ||
         !isAllowedResolvedMapDirectCallPath(scopedCallPath, callee->fullPath)) {
       continue;
