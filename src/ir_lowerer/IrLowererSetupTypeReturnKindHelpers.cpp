@@ -787,6 +787,55 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   auto isKnownKeyValueReceiverExpr = [&](const Expr &candidate) -> bool {
     return keyValueTargetInfoFor(candidate).isKeyValueTarget;
   };
+  // A candidate that `isKnownCollectionAccessReceiverExpr` only accepts
+  // because the *graph-fact* `inferExprKind` callback reports it as a
+  // `String` - not because of a `StringLiteral`, a key-value/array-vector
+  // classification, or semantic-product info - is a weaker signal than
+  // those other sources: it can legitimately disagree with (and override)
+  // stale locals info, but it should not by itself foreclose checking
+  // whether another positional argument is a better receiver candidate.
+  auto isGraphFactOnlyCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    if (keyValueTargetInfoFor(candidate).isKeyValueTarget) {
+      return false;
+    }
+    if (arrayVectorTargetInfoFor(candidate).isArrayOrVectorTarget) {
+      return false;
+    }
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return false;
+    }
+    return inferExprKind &&
+           inferExprKind(candidate, localsIn) == LocalInfo::ValueKind::String;
+  };
+  // A positional argument that is a known local but whose kind/valueKind
+  // carries no classification at all (not a scalar valueKind, not a
+  // key-value/array-vector/soa target, not covered by semantic info) is
+  // genuinely ambiguous - it could just as well be an unclassified
+  // collection receiver (e.g. a map local) as anything else.
+  auto isUnclassifiedLocalNameExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    if (keyValueTargetInfoFor(candidate).isKeyValueTarget) {
+      return false;
+    }
+    if (arrayVectorTargetInfoFor(candidate).isArrayOrVectorTarget) {
+      return false;
+    }
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return false;
+    }
+    auto it = localsIn.find(candidate.name);
+    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+           it->second.valueKind == LocalInfo::ValueKind::Unknown;
+  };
   auto hasNonKeyValueReceiverSemanticFact = [&](const Expr &candidate) {
     SemanticReturnKindTargetInfo semanticInfo;
     if (!resolveSemanticReturnKindTargetInfo(
@@ -955,7 +1004,12 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
        (callExpr.args.front().kind == Expr::Kind::Name &&
         ((isKnownLocalName(callExpr.args.front()) &&
           !isKnownCollectionAccessReceiverExpr(callExpr.args.front())) ||
-         hasNonCollectionAccessReceiverSemanticFact(callExpr.args.front()))));
+         hasNonCollectionAccessReceiverSemanticFact(callExpr.args.front()) ||
+         (isGraphFactOnlyCollectionAccessReceiverExpr(callExpr.args.front()) &&
+          std::any_of(callExpr.args.begin() + 1, callExpr.args.end(),
+                      [&](const Expr &candidate) {
+                        return isUnclassifiedLocalNameExpr(candidate);
+                      })))));
   if (probePositionalReorderedAccessReceiver) {
     for (size_t i = 1; i < callExpr.args.size(); ++i) {
       appendReceiverIndex(i);
