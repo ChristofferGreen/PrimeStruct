@@ -307,26 +307,189 @@ ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
     const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind,
     const InferSetupInferenceValueKindFn &inferExprKind) {
   kindOut = LocalInfo::ValueKind::Unknown;
-  (void)expr;
-  (void)localsIn;
-  (void)isEntryArgsName;
-  (void)resolveCallCollectionAccessValueKind;
-  (void)inferExprKind;
+  const IsSetupInferenceEntryArgsNameFn noopIsEntryArgsName =
+      [](const Expr &, const LocalMap &) { return false; };
+  const IsSetupInferenceEntryArgsNameFn &isEntryArgsNameFn =
+      isEntryArgsName ? isEntryArgsName : noopIsEntryArgsName;
+  const auto inferExprKindOrUnknown = [&](const Expr &candidate) {
+    return inferExprKind ? inferExprKind(candidate, localsIn) : LocalInfo::ValueKind::Unknown;
+  };
+  auto isGraphOrFallbackStringReceiver = [&](const Expr &candidate, const LocalInfo *info) {
+    const LocalInfo::ValueKind inferredKind = inferExprKindOrUnknown(candidate);
+    if (inferredKind == LocalInfo::ValueKind::String) {
+      return true;
+    }
+    if (inferredKind != LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
+    return info != nullptr && info->kind == LocalInfo::Kind::Value &&
+           info->valueKind == LocalInfo::ValueKind::String;
+  };
 
-  // This helper's former receiver-classification loop returned Resolved for
-  // many builtin-array-access-shaped calls: a bare StringLiteral or
-  // graph-fact string receiver, an entry-args receiver, a key-value local, a
-  // resolveCallCollectionAccessValueKind callback match, a map/array/vector
-  // constructor call, or a plain array/vector local - even for shapes that
-  // are not actually classifiable in isolation here (e.g. a genuinely
-  // well-formed named-arg-reordered vector `at()` call). None of those
-  // receiver shapes should be trusted as an already-resolved element kind by
-  // this particular helper; every exercised shape in this file's test
-  // cluster (see the many "..._rejects_...", "..._ignores_...", and
-  // "..._defers_..." test cases) expects NotMatched here, deferring to the
-  // caller's other, more precise fallback/classification stages instead of
-  // this helper silently guessing and potentially masking a real diagnostic.
-  return ArrayKeyValueAccessElementKindResolution::NotMatched;
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(expr, accessName)) {
+    return ArrayKeyValueAccessElementKindResolution::NotMatched;
+  }
+  if (expr.args.size() != 2) {
+    return ArrayKeyValueAccessElementKindResolution::Resolved;
+  }
+
+  auto hasNamedArgs = [&]() {
+    for (const auto &argName : expr.argNames) {
+      if (argName.has_value()) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto isKnownCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    if (isGraphOrFallbackStringReceiver(candidate, nullptr)) {
+      return true;
+    }
+    auto it = localsIn.find(candidate.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || hasKeyValueKinds(info) ||
+           (info.kind == LocalInfo::Kind::Reference &&
+            (info.referenceToArray || info.referenceToVector || hasKeyValueKinds(info))) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
+           info.isSoaVector ||
+           isGraphOrFallbackStringReceiver(candidate, &info);
+  };
+
+  std::vector<size_t> receiverIndices;
+  auto appendReceiverIndex = [&](size_t index) {
+    if (index >= expr.args.size()) {
+      return;
+    }
+    for (size_t existing : receiverIndices) {
+      if (existing == index) {
+        return;
+      }
+    }
+    receiverIndices.push_back(index);
+  };
+  const bool hasNamedArgsValue = hasNamedArgs();
+  if (hasNamedArgsValue) {
+    bool hasValuesNamedReceiver = false;
+    for (size_t i = 0; i < expr.args.size(); ++i) {
+      if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+        appendReceiverIndex(i);
+        hasValuesNamedReceiver = true;
+      }
+    }
+    if (!hasValuesNamedReceiver) {
+      appendReceiverIndex(0);
+      for (size_t i = 1; i < expr.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+  } else {
+    appendReceiverIndex(0);
+  }
+  const bool probePositionalReorderedReceiver =
+      !hasNamedArgsValue && expr.args.size() > 1 &&
+      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+       expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
+       (expr.args.front().kind == Expr::Kind::Name &&
+        !isKnownCollectionAccessReceiverExpr(expr.args.front())));
+  if (probePositionalReorderedReceiver) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      appendReceiverIndex(i);
+    }
+  }
+  const bool hasAlternativeCollectionReceiver =
+      probePositionalReorderedReceiver &&
+      std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+        return index > 0 && index < expr.args.size() && isKnownCollectionAccessReceiverExpr(expr.args[index]);
+      });
+
+  for (size_t receiverIndex : receiverIndices) {
+    if (receiverIndex >= expr.args.size()) {
+      continue;
+    }
+    if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
+      continue;
+    }
+    const Expr &target = expr.args[receiverIndex];
+    if (target.kind == Expr::Kind::StringLiteral) {
+      kindOut = LocalInfo::ValueKind::Int32;
+      return ArrayKeyValueAccessElementKindResolution::Resolved;
+    }
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      const LocalInfo *info = it != localsIn.end() ? &it->second : nullptr;
+      if (isGraphOrFallbackStringReceiver(target, info)) {
+        kindOut = LocalInfo::ValueKind::Int32;
+        return ArrayKeyValueAccessElementKindResolution::Resolved;
+      }
+    }
+    if (isEntryArgsNameFn(target, localsIn)) {
+      return ArrayKeyValueAccessElementKindResolution::Resolved;
+    }
+
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end() &&
+          ((it->second.kind == LocalInfo::Kind::Value) ||
+           (it->second.kind == LocalInfo::Kind::Reference) ||
+           (it->second.kind == LocalInfo::Kind::Pointer)) &&
+          hasKeyValueKinds(it->second) &&
+          it->second.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+        kindOut = it->second.keyValueValueKind;
+        return ArrayKeyValueAccessElementKindResolution::Resolved;
+      }
+    } else if (target.kind == Expr::Kind::Call) {
+      LocalInfo::ValueKind callValueKind = LocalInfo::ValueKind::Unknown;
+      if (resolveCallCollectionAccessValueKind &&
+          resolveCallCollectionAccessValueKind(target, localsIn, callValueKind)) {
+        kindOut = callValueKind;
+        return ArrayKeyValueAccessElementKindResolution::Resolved;
+      }
+      std::string collection;
+      if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
+        const LocalInfo::ValueKind valueKind = valueKindFromTypeName(target.templateArgs[1]);
+        if (valueKind != LocalInfo::ValueKind::Unknown) {
+          kindOut = valueKind;
+          return ArrayKeyValueAccessElementKindResolution::Resolved;
+        }
+      }
+    }
+
+    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+        if (it != localsIn.end()) {
+          if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
+            elementKind = it->second.valueKind;
+          } else if (it->second.kind == LocalInfo::Kind::Reference &&
+                     (it->second.referenceToArray || it->second.referenceToVector)) {
+            elementKind = it->second.valueKind;
+          } else if (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToArray) {
+            elementKind = it->second.valueKind;
+          } else if (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector) {
+            elementKind = it->second.valueKind;
+          }
+        }
+    } else if (target.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+          target.templateArgs.size() == 1) {
+        elementKind = valueKindFromTypeName(target.templateArgs.front());
+      }
+    }
+    if (elementKind != LocalInfo::ValueKind::Unknown) {
+      kindOut = elementKind;
+      return ArrayKeyValueAccessElementKindResolution::Resolved;
+    }
+  }
+  return ArrayKeyValueAccessElementKindResolution::Resolved;
 }
 
 LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
