@@ -857,6 +857,16 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const bool isBuiltinKeyValueContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
+  // Note: a bare `at`/`at_unsafe` builtin access call deliberately does NOT
+  // contribute to `allowBuiltinFallback` on its own - `isBuiltinBareVectorAccessMethod`
+  // above already excludes the one case (a genuine vector-target receiver)
+  // where this method resolves through the builtin path instead of a real
+  // definition lookup. For every other receiver shape (e.g. a bare array,
+  // or an entry-args receiver), an access call must surface its real
+  // "unknown method" diagnostic rather than silently falling back and
+  // discarding it (mirrors the same split in resolveMethodCallReceiverExpr;
+  // see the "keeps builtin array count fallback and rejects bare vector
+  // method fallback" test, which pins exactly this).
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitKeyValueMethodAlias &&
       !isExplicitKeyValueContainsOrTryAtMethod &&
@@ -865,7 +875,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinKeyValueContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
-       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
+       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)));
 
   const std::string priorError = errorOut;
   const Expr *receiver = nullptr;
