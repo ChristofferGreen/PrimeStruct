@@ -264,10 +264,12 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
   if (isSimpleCallName(expr, "dereference") || isSimpleCallName(expr, "location")) {
     return false;
   }
-  std::string accessName;
-  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
-    return false;
-  }
+  // Note: a builtin array/vector access call (e.g. `at(value, index)`) is
+  // NOT excluded here - unlike `dereference`/`location`, it produces a
+  // fresh by-value element copy, not a borrow into the receiver, so its
+  // struct copy source must still be disarmed like any other temporary
+  // (see the "classify borrowed struct copy sources" test, which pins this
+  // for a non-method-call `at` access).
   return true;
 }
 
