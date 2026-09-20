@@ -959,6 +959,18 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         arrayVectorTargetInfo.isVectorTarget &&
         !arrayVectorTargetInfo.isSoaVector &&
         !arrayVectorTargetInfo.isKeyValueTarget) {
+      // A record-boxed receiver (a struct `Value` local, not a raw
+      // primitive `Kind::Vector` local) can never be lowered through the
+      // primitive builtin array-access pattern below - that pattern reads
+      // `ptrLocal`/`indexLocal` off a raw vector-pointer local, which a
+      // struct value simply does not have. Defer unconditionally so the
+      // real method-call/inlining path handles it, regardless of whether
+      // semantic product information is available to name an explicit
+      // override target (see TODO-4628's resolution note on the
+      // wrong-element-value bug this exact mix-up produced previously).
+      if (arrayVectorTargetInfo.isStructBoxedRecordTarget) {
+        return NativeCallTailDispatchResult::NotHandled;
+      }
       const std::string methodResolvedPath =
           findSemanticProductMethodCallTarget(semanticProgram, expr);
       if (!methodResolvedPath.empty() &&

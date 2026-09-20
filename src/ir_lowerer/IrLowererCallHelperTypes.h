@@ -83,6 +83,15 @@ struct ArrayVectorAccessTargetInfo {
   LocalInfo::Kind argsPackElementKind = LocalInfo::Kind::Value;
   int32_t elemSlotCount = 0;
   std::string structTypeName;
+  // Set only when the receiver local is a record-boxed struct value (a
+  // `Kind::Value` local whose `structTypeName` is the canonical Vector
+  // backing-record path), as opposed to a raw primitive `Kind::Vector`
+  // local. A record-boxed receiver's `at`/`at_unsafe` method call must
+  // never be lowered as the primitive builtin array-access pattern (that
+  // pattern assumes a raw vector pointer/index local, not a struct value)
+  // - see TODO-4628's resolution note on the wrong-element-value bug this
+  // exact mix-up produced previously.
+  bool isStructBoxedRecordTarget = false;
 };
 
 using ResolveCallCollectionPairTypeInfoFn = std::function<bool(const Expr &, CollectionPairTypeInfo &)>;

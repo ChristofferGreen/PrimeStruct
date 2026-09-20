@@ -1188,6 +1188,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = true;
       info.isSoaVector = false;
+      info.isStructBoxedRecordTarget = true;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = elementSlotCountForLocal(it->second);
