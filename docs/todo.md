@@ -70,6 +70,90 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
+- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (20 shards)
+  - owner: ai
+  - created_at: 2026-09-20
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: none (TODO-4726/4727/4728 closed; this is a distinct,
+    newly-triaged finding in the same test-file cluster - see
+    `docs/failing_tests.md`'s "ir_pipeline_validation_cases regression
+    triage (2026-09-20)" entry for the full investigation and the 4
+    already-fixed shards this depends on nothing from)
+  - scope: the 19 still-failing
+    `PrimeStruct_primestruct_ir_pipeline_validation_cases_*` shards
+    (81-90, 91-100, 101-110, 241-250, 251-260, 331-340, 351-360,
+    381-390, 401-410, 411-420, 431-440, 601-610, 631-640, 691-700,
+    721-730, 731-740, 741-750, 791-800, 1201-1210) plus
+    `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`.
+    Do NOT touch `spinning_cube_argument_validation_51_55` - that is a
+    documented load-dependent flake (TODO-4711), unrelated to this
+    cluster.
+  - implementation_notes: this round found and fixed 4 of the original
+    24 shards (71-80, 751-760, 761-770, 831-840) via a shared theme -
+    an `at`/`at_unsafe` access call being wrongly allowed through an
+    `allowBuiltinFallback`-style condition or a struct-boxed-receiver
+    gap meant only for count/capacity probes or raw primitive vector
+    locals. Several remaining shards look like the same theme (worth
+    checking first, in this order, before assuming each is independent):
+    - `..._791_800` ("defers reordered positional bare access calls" /
+      "defers reordered bare access graph facts" /
+      "defers positional bare access calls" / "defers reordered named
+      bare access calls" / "defers labeled named bare access calls",
+      all in
+      `test_ir_pipeline_validation_ir_lowerer_setup_type_helper_rejects_canonical_map_access_fallback_to_compatibility_de.cpp`):
+      needs `resolveCountMethodCallReturnKind`'s `resolveCalls == 0`
+      expectation - the receiver-index candidate loop must short-circuit
+      *before* ever calling `resolveMethodCallDefinition` for a
+      reordered-positional-args access call, a materially different
+      code shape from the removed-alias-path check this round's
+      TODO-4726-cluster fix added (see `docs/failing_tests.md` for the
+      exact assertions).
+    - `..._721_730`, `..._731_740`, `..._741_750`
+      (`resolveArrayKeyValueAccessElementKind`,
+      `inferPointerTargetValueKind`,
+      `inferBufferElementValueKind`) and `..._601_610`
+      (`shouldDisarmStructCopySourceExpr`), `..._631_640`
+      (`resolveResultExprInfoFromLocals`), `..._691_700`
+      (`inferPointerTargetValueKind` again): all show the same
+      "expected NotHandled/Unknown/false, got handled/resolved/true"
+      shape as the 4 fixed this round - check each for a similar
+      missing struct-boxed-receiver or removed-alias guard before
+      assuming a new root cause.
+    - `..._81_90`, `..._91_100`, `..._101_110`
+      (`tryEmitInlineCallWithCountFallbacks`,
+      `tryEmitInlineCallDispatchWithLocals`, `tryEmitNativeCallTailDispatch`):
+      same "buffer and native tail wrappers" family as the already-fixed
+      `..._71_80`; check whether the `isStructBoxedRecordTarget` guard
+      needs to be threaded into these inline-call-dispatch siblings too
+      (they call into overlapping but not identical code paths from
+      `IrLowererInlineNativeCallDispatch.cpp`).
+    - `..._241_250`, `..._251_260` (count-access classifiers/emit
+      helpers), `..._331_340` (buffer builtin calls), `..._351_360`,
+      `..._381_390`, `..._401_410`, `..._411_420`, `..._431_440`
+      (inference call-return/expr-kind dispatch setups), and
+      `..._1201_1210` (`inferStructExprPath`): not yet individually
+      root-caused this round: reproduce each narrowly first
+      (`ctest --test-dir build-release -R <shard> --output-on-failure`
+      or the matching standalone doctest `--test-case`), per the
+      Bug-fix workflow.
+    - `ir_pipeline_conversions_variadic_pointer_vectors`: a distinct
+      file/theme (variadic pointer-vector packs), not yet investigated
+      this round - do not assume it shares the access-call fallback
+      theme above without checking.
+  - acceptance: each targeted shard passes individually via
+    `ctest --test-dir build-release -R <shard-name>`, and a full
+    `./scripts/compile.sh --release` gate shows zero new failures
+    anywhere (only shards in this list's scope should flip).
+  - stop_rule: land and verify each fix separately (one logical change
+    per commit, per AGENTS.md); do not force a guessed fix onto a
+    shard whose exact failing mechanism hasn't been traced (gdb
+    breakpoint-sweep or targeted instrumentation, per this project's
+    established methodology) - a shard left unfixed with an honest
+    per-shard note is a legitimate stopping point, matching this
+    cluster's own multi-round history (TODO-4726/4727/4728,
+    TODO-5300/5301).
+
 Note (2026-09-19): TODO-5300 (post-TODO-4683 map-constructor-receiver
 recognition gap causing an `unknown method`/`std::bad_alloc` regression
 cluster) has resolved - see `docs/todo_finished.md`. Of the original 7

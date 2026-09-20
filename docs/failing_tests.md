@@ -15,6 +15,78 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+### ir_pipeline_validation_cases regression triage (2026-09-20)
+
+**Not a regression of TODO-4726/4727/4728's original findings** (those
+three were verified fully resolved on 2026-08-22, "100% passed, 0
+failed out of 1898"). This round reproduced the current 24-shard
+`ir_pipeline_validation_cases_*`/`ir_pipeline_conversions_variadic_pointer_vectors`
+cluster narrowly (direct `ctest -R` reruns plus standalone doctest-case
+reruns) and found **different symptoms** from TODO-4726/4727/4728's
+documented ones (those were namespaced/rooted builtin-helper matching
+gaps and soa canonical-path routing; the current failures are all
+`at`/`at_unsafe` access-call receiver-classification/fallback gaps in
+unrelated call-helper, receiver-target, and return-kind functions).
+`git log -L`/root-commit checks on every touched function found no
+commit in this checkout's visible history (2026-09-01 onward) changed
+any of the fixed code paths - the buggy shape has been present for the
+entire visible history, so this is long-standing debt this exact area's
+own extensive `docs/ReceiverTargetResolutionConsolidation.md` effort
+had not yet reached, not a fresh break from a specific commit.
+
+**4 of the 24 shards fixed and verified this round** (full release
+gate: 21/1897 failed, down from 25, zero new failures anywhere; each
+fix also re-verified individually via `ctest --test-dir build-release
+-R <shard>`):
+
+- `PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80`: a
+  record-boxed `Vector<T>` struct receiver (a `Kind::Value` local whose
+  `structTypeName` is the canonical Vector backing-record path, not a
+  raw primitive `Kind::Vector` local) fell through to the primitive
+  builtin array-access emission path for its `at()`/`at_unsafe()`
+  method call whenever no semantic-product override path was found -
+  that path assumes a raw vector pointer/index local, so it silently
+  produces wrong element-access codegen for a struct-boxed receiver
+  (the same class of bug TODO-4628 previously fixed for this exact
+  mix-up, per its resolution note). Added an explicit
+  `isStructBoxedRecordTarget` flag to `ArrayVectorAccessTargetInfo`,
+  set only by that one receiver-classification branch, and made
+  `tryEmitNativeCallTailDispatch`'s method-call `at`/`at_unsafe` guard
+  defer unconditionally when it is set. Commit `c235815`.
+- `PrimeStruct_primestruct_ir_pipeline_validation_cases_751_760` and
+  `..._761_770`: two related `allowBuiltinFallback` gaps let a bare
+  `at()`/`at_unsafe()` access call silently swallow its real
+  "unknown method" diagnostic and fall back the same way a
+  count/capacity probe legitimately does - once in
+  `resolveMethodCallReceiverExpr` (entry-args receiver, e.g.
+  `argv.at(1)`), once in `resolveMethodCallDefinitionFromExpr` (any
+  non-vector-target receiver, e.g. a bare array). Both now exclude
+  `isBuiltinAccessCall` from their fallback condition, matching the
+  sibling count/capacity-only test cases already pinned in the same
+  files. Commits `b113637`, `ad1bb4a`.
+- `PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840`:
+  `resolveCountMethodCallReturnKind` trusted a resolved definition
+  under the removed `/array/at(_unsafe)` compatibility shim as if its
+  pinned return kind reflected the real receiver, even though that
+  shim's kind is generic/receiver-independent (unlike `/array/count`,
+  whose `Int32` return kind is always safe to trust and is deliberately
+  left untouched). Now defers when the resolved definition's path is
+  an explicit removed-vector-method-alias path and the call is an
+  access call. Commit `b113637`.
+
+**Remaining 20 shards (19 unique `ir_pipeline_validation_cases_*` files
++ `ir_pipeline_conversions_variadic_pointer_vectors`, plus the
+separately-tracked `spinning_cube_argument_validation_51_55` load-flake,
+TODO-4711, not a real failure): filed as TODO-5302** (see
+`docs/todo.md`) with per-shard investigation notes - several appear to
+share the same "at/at_unsafe access call wrongly allowed through a
+fallback/positional-reorder path meant for count/capacity" theme (e.g.
+`..._791_800`'s "defers reordered positional bare access calls" needs a
+`resolveCalls == 0` short-circuit *before* attempting method-definition
+resolution at all, a materially different code shape from the 4 fixes
+above), but each still needs its own targeted root-cause per this
+project's "do not force through a guessed fix" bug-fix-workflow rule.
+
 ### Pre-existing-failure cleanup round (2026-09-19)
 
 **Final verification:** a full `./scripts/compile.sh --release` gate run
@@ -1487,14 +1559,13 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-20T07:24:41Z`
+- Last updated: `2026-09-20T08:16:03Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
   - `64`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
-  - `82`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80`
   - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
   - `84`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`
   - `85`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_101_110`
@@ -1512,10 +1583,7 @@ All other test assertion failures have been fixed in this session:
   - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
   - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
   - `149`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_741_750`
-  - `150`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_751_760`
-  - `151`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770`
   - `154`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_791_800`
-  - `158`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840`
   - `195`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_1201_1210`
   - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
 <!-- compile.sh:failing-tests:end -->
