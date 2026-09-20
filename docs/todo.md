@@ -70,7 +70,7 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (20 shards)
+- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (18 shards)
   - owner: ai
   - created_at: 2026-09-20
   - phase: Hidden test failure remediation
@@ -78,73 +78,148 @@ This file is the live open-work queue for PrimeStruct.
   - depends_on: none (TODO-4726/4727/4728 closed; this is a distinct,
     newly-triaged finding in the same test-file cluster - see
     `docs/failing_tests.md`'s "ir_pipeline_validation_cases regression
-    triage (2026-09-20)" entry for the full investigation and the 4
-    already-fixed shards this depends on nothing from)
-  - scope: the 19 still-failing
+    triage (2026-09-20)" and "TODO-5302 round 2 (2026-09-20)" entries for
+    the full investigation)
+  - scope: the 17 still-failing
     `PrimeStruct_primestruct_ir_pipeline_validation_cases_*` shards
     (81-90, 91-100, 101-110, 241-250, 251-260, 331-340, 351-360,
-    381-390, 401-410, 411-420, 431-440, 601-610, 631-640, 691-700,
-    721-730, 731-740, 741-750, 791-800, 1201-1210) plus
+    381-390, 401-410, 411-420, 431-440, 691-700, 721-730, 731-740,
+    741-750, 791-800, 1201-1210) plus
     `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`.
-    Do NOT touch `spinning_cube_argument_validation_51_55` - that is a
-    documented load-dependent flake (TODO-4711), unrelated to this
-    cluster.
-  - implementation_notes: this round found and fixed 4 of the original
-    24 shards (71-80, 751-760, 761-770, 831-840) via a shared theme -
-    an `at`/`at_unsafe` access call being wrongly allowed through an
-    `allowBuiltinFallback`-style condition or a struct-boxed-receiver
-    gap meant only for count/capacity probes or raw primitive vector
-    locals. Several remaining shards look like the same theme (worth
-    checking first, in this order, before assuming each is independent):
-    - `..._791_800` ("defers reordered positional bare access calls" /
-      "defers reordered bare access graph facts" /
-      "defers positional bare access calls" / "defers reordered named
-      bare access calls" / "defers labeled named bare access calls",
-      all in
+    `601-610` and `631-640` are now closed (round 2, see below); do not
+    reopen them without a fresh repro. Do NOT touch
+    `spinning_cube_argument_validation_51_55` - that is a documented
+    load-dependent flake (TODO-4711), unrelated to this cluster.
+  - implementation_notes: round 1 found and fixed 4 of the original 24
+    shards (71-80, 751-760, 761-770, 831-840) via a shared theme - an
+    `at`/`at_unsafe` access call being wrongly allowed through an
+    `allowBuiltinFallback`-style condition or a struct-boxed-receiver gap
+    meant only for count/capacity probes or raw primitive vector locals.
+    Round 2 (2026-09-20) closed 2 more (601-610, 631-640) and made
+    791-800 nearly closed (1 assertion left), but also found - the hard
+    way, via a full release-gate run, not the narrow unit-shard reruns
+    alone - that the "same theme, just exclude the fallback" pattern
+    from round 1 does NOT generalize safely to every function in this
+    area. Read this before touching any of the remaining shards below:
+    - **Confirmed-safe fixes this round** (commits `aef440d`, `17cfc3b`,
+      `6e31c1e`, `2323111` - kept, zero regressions in two full release
+      gates): `shouldDisarmStructCopySourceExpr` (closed 601-610),
+      `resolveResultExprInfoFromLocals`'s indexed-file-handle-access
+      special case (closed 631-640), `inferPointerTargetValueKind`/
+      `inferBufferElementValueKind`'s args-pack access branches (part of
+      691-700/721-730, safe but didn't close a shard alone), and
+      `resolveCountMethodCallReturnKind`'s reordered-positional
+      short-circuit plus its narrowed (at/at_ref/at_unsafe/at_unsafe_ref
+      only, NOT soa get/ref) resolveMethodCallDefinition distrust
+      (brought 791-800 from ~40 failing assertions to 1).
+    - **Confirmed-UNSAFE, reverted in commit `8e610a7`**: (a) excluding
+      `isBuiltinAccessMethod` from `isBuiltinCountLikeMethod` in
+      `tryEmitInlineCallWithCountFallbacksImpl`
+      (`IrLowererInlineNativeCallDispatch.cpp`) - this function's builtin
+      array-access fallback is genuinely load-bearing for real programs
+      (canonical map reference string access, count-of-access), not just
+      a swallowed diagnostic; excluding it produced
+      `VM lowering error: inline dispatch failed without diagnostic: at`
+      and `unknown call target: /std/collections/map/at` for real
+      compiled programs
+      (`compile_run_vm_core_core_newly_exposed_2026_07_16_114_123`,
+      `compile_run_vm_collections_alias_and_basics_21_30`,
+      `compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`,
+      `..._353_362`, all passed their *unit* tests already and only broke
+      in the full gate). (b) the analogous "return Error for an
+      unresolved genuine vector at()" change in
+      `tryEmitInlineCallDispatchWithLocals` (same file) - same failure
+      shape. (c) gutting `resolveArrayKeyValueAccessElementKind` to
+      always return `NotMatched` (every *unit* test for it wanted this,
+      with zero counterexamples found in the unit suite) - broke a real
+      `count(access(...))` materialization path and tripped
+      `PrimeStruct_map_surface_strict_audit` via an incidental
+      comment-text match. **Lesson for whoever picks this up next: for
+      any remaining shard in this cluster, after a unit-shard fix looks
+      right, run at minimum the relevant `compile_run_vm_*`/
+      `compile_run_emitters_*` suites (or, budget permitting, the full
+      gate) before treating it as done - this cluster's helpers are
+      shared by real compiled-program paths, and the unit tests alone do
+      not cover that surface.**
+    - `..._791_800` (same file as before,
       `test_ir_pipeline_validation_ir_lowerer_setup_type_helper_rejects_canonical_map_access_fallback_to_compatibility_de.cpp`):
-      needs `resolveCountMethodCallReturnKind`'s `resolveCalls == 0`
-      expectation - the receiver-index candidate loop must short-circuit
-      *before* ever calling `resolveMethodCallDefinition` for a
-      reordered-positional-args access call, a materially different
-      code shape from the removed-alias-path check this round's
-      TODO-4726-cluster fix added (see `docs/failing_tests.md` for the
-      exact assertions).
-    - `..._721_730`, `..._731_740`, `..._741_750`
-      (`resolveArrayKeyValueAccessElementKind`,
-      `inferPointerTargetValueKind`,
-      `inferBufferElementValueKind`) and `..._601_610`
-      (`shouldDisarmStructCopySourceExpr`), `..._631_640`
-      (`resolveResultExprInfoFromLocals`), `..._691_700`
-      (`inferPointerTargetValueKind` again): all show the same
-      "expected NotHandled/Unknown/false, got handled/resolved/true"
-      shape as the 4 fixed this round - check each for a similar
-      missing struct-boxed-receiver or removed-alias guard before
-      assuming a new root cause.
+      one assertion left in "defers reordered bare access graph facts"
+      (2nd subtest, ~line 334). A reordered bare `at_unsafe(key, items)`
+      call where `key` is inferred as a `String` via the passed-in
+      "graph facts" `inferExprKind` callback gets treated as if `key`
+      itself were the string-index receiver (via
+      `isStringAccessReceiverExpr`), instead of recognizing this as a
+      genuinely ambiguous reordered-receiver case (the real receiver is
+      `items`, at index 1) and deferring. The fix likely needs
+      `isKnownCollectionAccessReceiverExpr`'s String-via-`inferExprKind`
+      trust to also check whether another positional argument is a
+      better/more-local-backed receiver candidate before accepting a
+      graph-fact string match as final - but this touches a
+      widely-shared classifier lambda inside
+      `resolveCountMethodCallReturnKind`, so any change needs the same
+      "verify against compile_run/emitters suites too" discipline noted
+      above.
+    - `..._721_730` (`resolveArrayKeyValueAccessElementKind`,
+      `IrLowererSetupInferenceHelpers.cpp`): still open. A narrower fix
+      than round 2's full gut is needed - one that only defers for the
+      unit-tested false-positive shapes (bare StringLiteral/graph-fact
+      string receiver, entry-args receiver, key-value local,
+      resolveCallCollectionAccessValueKind callback match, map/array/
+      vector constructor call, plain array/vector local - all with NO
+      other receiver-index candidate) without removing the function's
+      real classification behavior wholesale. Verify against
+      `compile_run_vm_core_core_newly_exposed_2026_07_16_114_123` (the
+      exact test this round's over-broad fix broke) before landing.
     - `..._81_90`, `..._91_100`, `..._101_110`
       (`tryEmitInlineCallWithCountFallbacks`,
-      `tryEmitInlineCallDispatchWithLocals`, `tryEmitNativeCallTailDispatch`):
-      same "buffer and native tail wrappers" family as the already-fixed
-      `..._71_80`; check whether the `isStructBoxedRecordTarget` guard
-      needs to be threaded into these inline-call-dispatch siblings too
-      (they call into overlapping but not identical code paths from
-      `IrLowererInlineNativeCallDispatch.cpp`).
+      `tryEmitInlineCallDispatchWithLocals`, `tryEmitNativeCallTailDispatch`,
+      all in `IrLowererInlineNativeCallDispatch.cpp`/
+      `IrLowererNativeTailDispatch.cpp`): still open per round 2's
+      revert. `101-110` also has a separate, not-yet-understood
+      opposite-direction shape in `tryEmitNativeCallTailDispatch` (a
+      malformed/wrong-arg-count bare `at` call and a genuine 2-arg raw
+      `Kind::Array`-local `at` call both currently return `Error`/emit
+      when the unit test wants `NotHandled` - this looks unrelated to
+      the swallowed-diagnostic theme and needs its own narrow repro
+      before touching). For `81-90`/`91-100`, do not repeat round 2's
+      `isBuiltinAccessMethod`-exclusion approach without also verifying
+      against the `compile_run_vm_core_core_newly_exposed_2026_07_16_114_123`/
+      `compile_run_vm_collections_alias_and_basics_21_30`/
+      `compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`/
+      `..._353_362` suite (the exact tests round 2's version of this fix
+      broke).
+    - `..._731_740`, `..._741_750`, `..._691_700`: mostly covered by the
+      confirmed-safe `inferPointerTargetValueKind`/
+      `inferBufferElementValueKind` args-pack fix above and by the
+      (reverted) `resolveArrayKeyValueAccessElementKind` fix; re-run
+      narrowly to see what, if anything, remains once `721-730`'s
+      narrower fix lands (they share the same test source file).
     - `..._241_250`, `..._251_260` (count-access classifiers/emit
-      helpers), `..._331_340` (buffer builtin calls), `..._351_360`,
-      `..._381_390`, `..._401_410`, `..._411_420`, `..._431_440`
-      (inference call-return/expr-kind dispatch setups), and
-      `..._1201_1210` (`inferStructExprPath`): not yet individually
-      root-caused this round: reproduce each narrowly first
+      helpers, `tryEmitCountAccessCall` /
+      `IrLowererCountAccessHelpers.cpp`), `..._331_340` (buffer builtin
+      calls), `..._351_360`, `..._381_390`, `..._401_410`, `..._411_420`,
+      `..._431_440` (inference call-return/expr-kind dispatch setups),
+      and `..._1201_1210` (`inferStructExprPath`): not yet root-caused.
+      `251_260`'s "defer string map access emission" test
+      (`test_ir_pipeline_validation_ir_lowerer_count_access_helpers_emit_count_access_calls.cpp`)
+      was partially investigated this round: `count(at(values, 1))` on a
+      `map<Int32, String>` receiver should defer when the map's value
+      kind is `String` (string-valued map access changes count's
+      meaning) but currently doesn't for several binding/query-fact
+      combinations in `tryEmitCountAccessCall`, an 800+ line function -
+      reproduce narrowly first
       (`ctest --test-dir build-release -R <shard> --output-on-failure`
       or the matching standalone doctest `--test-case`), per the
-      Bug-fix workflow.
+      Bug-fix workflow, and budget real investigation time given the
+      function's size.
     - `ir_pipeline_conversions_variadic_pointer_vectors`: a distinct
-      file/theme (variadic pointer-vector packs), not yet investigated
-      this round - do not assume it shares the access-call fallback
-      theme above without checking.
+      file/theme (variadic pointer-vector packs), still not investigated.
   - acceptance: each targeted shard passes individually via
     `ctest --test-dir build-release -R <shard-name>`, and a full
     `./scripts/compile.sh --release` gate shows zero new failures
-    anywhere (only shards in this list's scope should flip).
+    anywhere (only shards in this list's scope should flip) - run the
+    full gate, not just the narrow shard rerun, before considering any
+    fix in this area done (see the round-2 lesson above).
   - stop_rule: land and verify each fix separately (one logical change
     per commit, per AGENTS.md); do not force a guessed fix onto a
     shard whose exact failing mechanism hasn't been traced (gdb

@@ -15,6 +15,78 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+### TODO-5302 round 2 (2026-09-20): 2 shards closed, 1 reverted false start
+
+This round worked through the 20-shard `ir_pipeline_validation_cases_*`/
+`ir_pipeline_conversions_variadic_pointer_vectors` cluster TODO-5302 tracks.
+
+**2 shards fully fixed and verified clean in the full release gate:**
+- `..._601_610` (`shouldDisarmStructCopySourceExpr`): a builtin array/vector
+  access call (`at(value, index)`) was wrongly excluded from needing its
+  struct copy source disarmed, as if it were a borrow like
+  `dereference`/`location`. It actually produces a fresh by-value element
+  copy. Commit `aef440d`.
+- `..._631_640` (`resolveResultExprInfoFromLocals`): three local-only
+  branches unconditionally reported `Result<Void, FileError>` for a
+  write/flush/close-family method call on an indexed args-pack file-handle
+  access, ignoring what `resolveMethodCallDefinition`/`resolveDefinitionCall`/
+  `lookupReturnInfo` actually said about the call. Removed. Commit `17cfc3b`.
+
+**`..._791_800` improved from ~40 failing assertions to 1** (the
+`resolveCalls == 0` reordered-positional-access short-circuit and the
+at-family access-call resolveMethodCallDefinition distrust, both in
+`resolveCountMethodCallReturnKind`, commit `2323111`) - one deep remaining
+edge case (a graph-fact string inference on a reordered access call's
+non-receiver argument incorrectly self-resolving instead of deferring to a
+better receiver candidate) is still open; see TODO-5302 for the precise
+repro. The shard is still red pending that last assertion.
+
+**Also kept, no regressions:** `inferPointerTargetValueKind` and
+`inferBufferElementValueKind` no longer trust a bare `at`/`at_unsafe` access
+on an args-pack-of-pointers/references/buffers local as a resolved
+pointer/buffer element kind (commit `6e31c1e`) - this didn't fully close any
+shard on its own but is a genuine, verified-safe fix bundled into this
+round's `..._721_730`/`..._691_700` investigation.
+
+**Important false start, reverted:** three fixes initially looked correct
+against their *unit* tests but a full `./scripts/compile.sh --release` gate
+run caught real regressions in compiled-program behavior (not just narrow
+synthetic unit setups):
+- excluding `isBuiltinAccessMethod` from `isBuiltinCountLikeMethod` in
+  `tryEmitInlineCallWithCountFallbacksImpl`, and returning `Error` for an
+  unresolved genuine vector `at()` in `tryEmitInlineCallDispatchWithLocals`
+  (both in `IrLowererInlineNativeCallDispatch.cpp`), broke a real builtin
+  array-access fallback path used by legitimate map-reference string access
+  and count-of-access programs - `PrimeStruct_primestruct_compile_run_vm_core_core_newly_exposed_2026_07_16_114_123`,
+  `..._vm_collections_alias_and_basics_21_30`,
+  `..._emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`, and
+  `..._353_362` all failed with `VM lowering error: inline dispatch failed
+  without diagnostic: at` / `unknown call target: /std/collections/map/at`.
+- gutting `resolveArrayKeyValueAccessElementKind` to always return
+  `NotMatched` (every exercised *unit* test wanted this) broke a real
+  `count(access(...))` materialization path
+  (`..._vm_core_core_newly_exposed_2026_07_16_114_123`) and also tripped
+  `PrimeStruct_map_surface_strict_audit` via an incidental comment-text
+  match.
+All three were reverted in commit `8e610a7` once the full-gate regressions
+were found; their target unit shards (`..._81_90`, `..._91_100`,
+`..._691_700`, `..._721_730` [partially], `..._731_740`, `..._741_750`,
+`..._411_420`) went back to failing as a result - this is the correct
+trade-off (a real compiler regression is worse than a synthetic unit-test
+gap) and is why this round's full gate still shows those shards red. A
+narrower fix for those specific unit shards - one that doesn't touch the
+shared `isBuiltinCountLikeMethod`/`isSemanticOrLegacyVectorTarget` fallback
+paths or gut `resolveArrayKeyValueAccessElementKind` wholesale - is still
+needed; see TODO-5302.
+
+**Full release gate after this round: 19/1897 failed** (down from 21 at the
+start of this round), zero new failures anywhere, confirmed via a second
+full `./scripts/compile.sh --release` run after the revert. The 19 are: the
+18 still-open `ir_pipeline_validation_cases_*`/
+`ir_pipeline_conversions_variadic_pointer_vectors` shards this TODO tracks,
+plus the documented `spinning_cube_argument_validation_51_55` load-flake
+(TODO-4711, times out under parallel load, not a real failure).
+
 ### ir_pipeline_validation_cases regression triage (2026-09-20)
 
 **Not a regression of TODO-4726/4727/4728's original findings** (those
@@ -1559,7 +1631,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-20T08:16:03Z`
+- Last updated: `2026-09-20T09:02:16Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -1577,8 +1649,6 @@ All other test assertion failures have been fixed in this session:
   - `115`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410`
   - `116`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_411_420`
   - `118`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_431_440`
-  - `135`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_601_610`
-  - `138`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_631_640`
   - `144`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_691_700`
   - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
   - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
