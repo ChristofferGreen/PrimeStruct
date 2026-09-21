@@ -1354,7 +1354,17 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
           return true;
         }
       }
-      if (receiver.kind == Expr::Kind::Call) {
+      // TODO-5302 round 7: these two structural-only fallbacks (a bare or
+      // dereferenced indexed args-pack `FileError` element) trust the
+      // receiver's raw `LocalInfo` shape alone, with no semantic
+      // corroboration at all. That is safe for every real compiled program
+      // (`IrLowererLower.cpp` hard-errors before lowering when
+      // `semanticProgram` is null), but is exactly the "no structural
+      // corroboration available" staleness signal this cluster's other
+      // fixes gate on - so require a semantic context to exist before
+      // trusting it, matching the un-annotated/no-semantics-at-all unit
+      // test cases that must defer here instead of silently resolving.
+      if (receiver.kind == Expr::Kind::Call && semanticProgram != nullptr) {
         std::string accessName;
         if (getBuiltinArrayAccessName(receiver, accessName) && receiver.args.size() == 2 &&
             receiver.args.front().kind == Expr::Kind::Name) {
@@ -1420,25 +1430,30 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
         }
       }
     }
-    if (!expr.args.empty() && isIndexedArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
-      if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-          expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-        kindOut = LocalInfo::ValueKind::Int32;
-        return true;
+    // TODO-5302 round 7: same "structural-only, no semantic corroboration"
+    // shape as the `FileError`/`why` fallback above - gate on a semantic
+    // context existing at all, which every real compiled program has.
+    if (semanticProgram != nullptr) {
+      if (!expr.args.empty() && isIndexedArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
+        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+            expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+          kindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
       }
-    }
-    if (!expr.args.empty() && isIndexedBorrowedArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
-      if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-          expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-        kindOut = LocalInfo::ValueKind::Int32;
-        return true;
+      if (!expr.args.empty() && isIndexedBorrowedArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
+        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+            expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+          kindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
       }
-    }
-    if (!expr.args.empty() && isIndexedPointerArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
-      if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-          expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-        kindOut = LocalInfo::ValueKind::Int32;
-        return true;
+      if (!expr.args.empty() && isIndexedPointerArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
+        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+            expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+          kindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
       }
     }
     return false;
