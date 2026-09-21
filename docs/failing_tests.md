@@ -18,7 +18,13 @@ recorded here manually before starting new implementation work.
 As of TODO-5302 round 9 (2026-09-21): 7 shards remain -
 `PrimeStruct_primestruct_ir_pipeline_validation_cases_{81_90,91_100,101_110,
 411_420,721_730,731_740,741_750}`. `401_410` and `431_440` closed this round.
-See the "TODO-5302 round 9" entry below for details.
+A full `./scripts/compile.sh --release` gate afterward showed 8/1897
+failed: exactly those 7 shards plus one confirmed pre-existing
+load-dependent flake
+(`compile_run_examples_spinning_cube_argument_validation_51_55`, timed
+out under full-gate parallel load - TODO-4711, unrelated to this
+cluster), zero new failures anywhere else. See the "TODO-5302 round 9"
+entry below for details.
 
 ### TODO-5302 round 9 (2026-09-21): 2 more shards closed (401-410, 431-440); 7 remain
 
@@ -1997,7 +2003,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-21T11:30:33Z`
+- Last updated: `2026-09-21T21:27:38Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -2006,12 +2012,11 @@ All other test assertion failures have been fixed in this session:
   - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
   - `84`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`
   - `85`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_101_110`
-  - `115`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410`
   - `116`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_411_420`
-  - `118`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_431_440`
   - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
   - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
   - `149`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_741_750`
+  - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes

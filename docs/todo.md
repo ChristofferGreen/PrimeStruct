@@ -663,7 +663,12 @@ This file is the live open-work queue for PrimeStruct.
     revert already confirmed a naive fix there breaks real compiled
     programs, and this round's remaining budget went to verifying the
     Group B/C investigation above instead of a fresh, from-scratch Group
-    A attempt.
+    A attempt. A full `./scripts/compile.sh --release` gate afterward
+    showed 8/1897 failed: the 7 shards still in this task's scope plus
+    one confirmed pre-existing load-dependent flake
+    (`compile_run_examples_spinning_cube_argument_validation_51_55`,
+    TODO-4711, unrelated to this cluster), zero new failures anywhere
+    else.
 
 Note (2026-09-19): TODO-5300 (post-TODO-4683 map-constructor-receiver
 recognition gap causing an `unknown method`/`std::bad_alloc` regression
