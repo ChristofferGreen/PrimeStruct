@@ -70,7 +70,7 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (9 shards)
+- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (7 shards)
   - owner: ai
   - created_at: 2026-09-20
   - phase: Hidden test failure remediation
@@ -80,10 +80,11 @@ This file is the live open-work queue for PrimeStruct.
     `docs/failing_tests.md`'s "ir_pipeline_validation_cases regression
     triage (2026-09-20)" and "TODO-5302 round 2 (2026-09-20)" entries for
     the full investigation)
-  - scope: the 9 still-failing
+  - scope: the 7 still-failing
     `PrimeStruct_primestruct_ir_pipeline_validation_cases_*` shards
-    (81-90, 91-100, 101-110, 401-410, 411-420, 431-440,
-    721-730, 731-740, 741-750). `601-610`, `631-640`, `791-800`,
+    (81-90, 91-100, 101-110, 411-420,
+    721-730, 731-740, 741-750). `401-410` and `431-440` closed in round 9
+    (see below). `601-610`, `631-640`, `791-800`,
     `1201-1210`, `241-250`, `251-260`, `331-340`, `691-700`, `351-360`,
     and `381-390` are now
     closed (rounds 2-5, see below); do not reopen them without a fresh
@@ -611,6 +612,58 @@ This file is the live open-work queue for PrimeStruct.
     semantic-fact resolution for indexed/dereferenced pointer or
     file-handle args-pack receivers), not assume they share Group B's
     root cause. Commit `89f57a2`.
+  - round_9_note: (2026-09-21) Closed `_401_410` and `_431_440` by
+    following round 8's lead. Root cause: `resolveTryValueKind` inside
+    `runLowerInferenceExprKindDispatchSetup`'s `inferExprKind`
+    (`IrLowererLowerInferenceDispatchSetup.cpp`) had **three**
+    structural-only fallback shapes that trusted a receiver's raw
+    `LocalInfo` alone with no check that a semantic context even
+    exists - the exact "TODO-5302 round 7" pattern already fixed in
+    `IrLowererLowerInferenceBaseKindHelpers.cpp`, just not carried over
+    to this sibling orchestrator: (1) a bare indexed args-pack Result
+    access (`try(at(pack, i))`), (2) a dereferenced indexed args-pack
+    Result access (`try(dereference(at(pack, i)))`), and (3) a
+    dispatch-side duplicate of
+    `isIndexed[Borrowed/Pointer]ArgsPackFileHandleReceiver` (a
+    file-handle method call, e.g. `try(flush(dereference(at(pack,
+    i))))`). Gated all three on `semanticProgram != nullptr`, same
+    justification as round 7 (`IrLowererLower.cpp` hard-errors before
+    lowering when `semanticProgram` is null, so the gate only affects
+    the synthetic no-semantics-at-all unit scenarios these tests
+    construct). Verified: target shards now pass; the full
+    `test_ir_pipeline_validation_ir_lowerer_inference_expr_kind_dispatch_infers_try_from_indexed_map_tryat_args_pack_lo.cpp`/
+    `..._get_return_info_step_reports_missing_definitions.cpp` source
+    files and the full `primestruct.ir.pipeline.validation` suite (13
+    pre-existing failures before the change, exactly 3 fewer - 10 - after,
+    zero new failures, confirmed via `git stash` A/B); a 341-test
+    `compile_run_vm_*`/`compile_run_emitters_*` battery (0 failed); a
+    411-test `*collection*`/`*gpu*` battery (0 failed); and all five audit
+    scripts (clean). Commit `b8df8d9`.
+    Investigated `_411_420`'s remaining failure ("call-fallback setup
+    wires callback") and confirmed it is a manifestation of the
+    **already-documented Group C conflict**, not a new bug: the test
+    calls `state.inferCallExprCountAccessGpuFallbackKind` directly with a
+    bare, non-count-wrapped `at(arr, 0)` call and expects
+    `CHECK_FALSE`/`Unknown`, but the real implementation
+    (`IrLowererLowerInferenceFallbackSetup.cpp:366`,
+    `resolveArrayKeyValueAccessElementKind(expr, ...)`) resolves it
+    `Resolved`/`Int64` via the plain-array-local branch. This is the same
+    conflict round 4 already found and documented ("Every currently-
+    failing `ArrayKeyValueAccessElementKindResolution` assertion...wants
+    `NotMatched`, including for receiver shapes that are structurally
+    identical to the one production caller...needs `Resolved` for") -
+    `_411_420`'s failing case is simply another unit assertion on the
+    same production line the `_721_730`/`_731_740`/`_741_750` shards are
+    already blocked on. Re-filed `_411_420` under Group C's scope rather
+    than Group B's (it no longer shares Group B's root cause once the
+    three fixes above land) - whoever resolves Group C's
+    `resolveArrayKeyValueAccessElementKind` conflict should re-check
+    `_411_420` at the same time. Did not attempt Group A
+    (`_81_90`/`_91_100`/`_101_110`) this round - round 2's `8e610a7`
+    revert already confirmed a naive fix there breaks real compiled
+    programs, and this round's remaining budget went to verifying the
+    Group B/C investigation above instead of a fresh, from-scratch Group
+    A attempt.
 
 Note (2026-09-19): TODO-5300 (post-TODO-4683 map-constructor-receiver
 recognition gap causing an `unknown method`/`std::bad_alloc` regression

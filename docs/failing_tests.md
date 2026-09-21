@@ -15,12 +15,48 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
-As of TODO-5302 round 7 (2026-09-21): 9 shards remain -
+As of TODO-5302 round 9 (2026-09-21): 7 shards remain -
 `PrimeStruct_primestruct_ir_pipeline_validation_cases_{81_90,91_100,101_110,
-401_410,411_420,431_440,721_730,731_740,741_750}`. Full
-`./scripts/compile.sh --release` gate: 9/1897 failed, zero new failures
-elsewhere. See the "TODO-5302 round 7" entry below for what closed
-`351-360`/`381-390` this round.
+411_420,721_730,731_740,741_750}`. `401_410` and `431_440` closed this round.
+See the "TODO-5302 round 9" entry below for details.
+
+### TODO-5302 round 9 (2026-09-21): 2 more shards closed (401-410, 431-440); 7 remain
+
+Followed round 8's lead: `resolveTryValueKind` inside
+`runLowerInferenceExprKindDispatchSetup`'s `inferExprKind`
+(`IrLowererLowerInferenceDispatchSetup.cpp`) had three structural-only
+fallback shapes for `try`/method-call Result receivers (bare indexed
+args-pack Result access, dereferenced indexed args-pack Result access, and
+a dispatch-side duplicate of the base-kind helpers'
+`isIndexed[Borrowed/Pointer]ArgsPackFileHandleReceiver` checks) that
+trusted a receiver's raw `LocalInfo` with no check that a semantic context
+existed at all - the same shape round 7 already fixed in
+`IrLowererLowerInferenceBaseKindHelpers.cpp`, just not carried over to
+this sibling file. Gated all three on `semanticProgram != nullptr`
+(commit `b8df8d9`). Verified: target shards pass; the full
+`primestruct.ir.pipeline.validation` suite went from 13 pre-existing
+failures to 10 (zero new failures, `git stash` A/B confirmed); a 341-case
+`compile_run_vm_*`/`compile_run_emitters_*` battery and a 411-case
+`*collection*`/`*gpu*` battery both 100% passed; all five audit scripts
+clean.
+
+Investigated `_411_420`'s remaining failure and confirmed it is the
+already-documented Group C conflict
+(`resolveArrayKeyValueAccessElementKind`,
+`IrLowererLowerInferenceFallbackSetup.cpp:366`), not a new bug: a bare
+`at(arr, 0)` call resolves `Resolved`/element-kind via the plain-array
+branch in production, which is exactly what real compiled programs need,
+but the unit test wants `NotMatched`/`Unknown` for the same shape - the
+same "unit test vs. production" conflict round 4/5 already found and
+left open for `_721_730`/`_731_740`/`_741_750`. Did not touch production
+code for this. Did not attempt Group A this round.
+
+### TODO-5302 round 7 (2026-09-21): 2 more shards closed (351-360, 381-390); 9 remain
+
+Picked up exactly where round 6 left off on Group B
+(`351-360`/`381-390`/`401-410`/`411-420`/`431-440`), implementing round 6's
+refined "cross-check the semantic fact's resolved shape against the
+receiver's own structural `LocalInfo`" characterization per-orchestrator
 
 ### TODO-5302 round 7 (2026-09-21): 2 more shards closed (351-360, 381-390); 9 remain
 
