@@ -15,6 +15,88 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+### TODO-5302 round 5 (2026-09-21): 4 more shards closed, 11 remain
+
+Picked up round 4's list of 15 open shards. This round closed 4 more:
+2 confirmed stale test expectations (`..._331_340`, `..._251_260`), and
+2 real, narrowly-scoped source fixes (`..._691_700`, `..._241_250`).
+Full detail (including the exact traced root cause and unit-test-vs-
+production-behavior evidence for each) is in `docs/todo.md`'s TODO-5302
+task block, round 5 section - summarized here:
+
+- `..._691_700` (`resolveArrayKeyValueAccessElementKind`): real fix.
+  The function's terminal fallback returned `Resolved` (not
+  `NotMatched`) for every unclassifiable shape, and a redundant
+  bare-String-receiver shortcut raced ahead of the already-hardened
+  `isStringAccessReceiverExpr` classifier for the same shape. Fixed
+  both without touching any of the function's real early-return paths.
+  Commit `fad0108`.
+- `..._331_340` (`tryEmitBufferBuiltinCall`): stale test. The unit test
+  pinned `Result::Error` for a bare/dereferenced `at(argsPack, i))`
+  buffer-pack-element receiver, but the function's own
+  `resolveBufferElemKind` lambda already resolves this shape's numeric
+  element kind from the pack's own `LocalInfo` and succeeds - exactly
+  what the real, currently-passing `test_compile_run_vm_gpu.cpp`
+  buffer-pack programs need. Updated the test. Commit `bee56cb`.
+- `..._251_260` (`tryEmitCountAccessCall`): stale test. 3 of 4 pinned
+  `NotHandled` sub-cases for `count(at(map<i32,string>-shaped receiver,
+  key))` already resolve to `Result::Emitted` with `LoadStringLength`,
+  matching the real "compiles native string-valued map constructors on
+  stdlib path" compile_run case; the 4th (a genuinely scalar `i32`
+  query fact) already correctly hits the TODO-5256 non-string guard
+  and returns `Result::Error`. Updated the test to match verified-
+  correct behavior in all 4 cases. Commit `041d31f`.
+- `..._241_250` (`isArrayCountCall`): real fix, narrow. The args-pack-
+  access branch trusted stale raw `LocalInfo` even when a semantic
+  index was available and had no fact for the target's `at()` call -
+  inconsistent with the rest of the classifier's own semantic-fact-
+  preference policy. Gated that one branch on semantic-index
+  availability. Verified via an exact before/after diff of every
+  failing test case name in the suite (zero regressions, despite an
+  initial false alarm that looked like 13 new failures but were
+  already failing in the unmodified baseline). Commit `3260fef`.
+
+All four fixes verified against: their target shard individually; the
+broader `primestruct.ir.pipeline.validation` suite; a full
+`compile_run_vm_*`/`compile_run_emitters_*`/`*collection*`/`*gpu*`
+battery (653 tests, 0 failed); and all five collection audit scripts.
+
+**Investigated but NOT fixed** (11 shards remain open):
+- `81-90`/`91-100`/`101-110`
+  (`tryEmitInlineCallWithCountFallbacks`/`tryEmitInlineCallDispatchWithLocals`/
+  `tryEmitNativeCallTailDispatch`): `81-90`'s one failing assertion is
+  the exact function TODO-5302 round 2's `8e610a7` revert already
+  confirmed unsafe to touch (a real compiled-program regression, not a
+  false positive) - no new narrower repro found this round.
+- `351-360`/`381-390`/`401-410`/`411-420`/`431-440`: a newly-
+  characterized, materially different bug class from the rest of this
+  cluster - several sibling `runLowerInferenceExprKind*Setup`
+  orchestrators (`inferCallExprDirectReturnKind`, `inferCallExprBaseKind`,
+  `inferExprKind`, `inferCallExprCountAccessGpuFallbackKind`) each have
+  a unit test that deliberately makes a semantic fact's literal type
+  text and its separately-interned type text disagree, and expects the
+  dispatch to trust neither and answer `NotResolved`/`Unknown`. This
+  spans at least 4 separate orchestrator entry points on the hot path
+  for ordinary expression-kind inference; needs its own dedicated
+  investigation round with instrumented reproduction before attempting
+  a fix, not a guess.
+- `721-730`/`731-740`/`741-750`: covered in part by `691-700`'s fix
+  above; the remainder is blocked on `resolveArrayKeyValueAccessElementKind`'s
+  other early-return branches (`hasKeyValueKinds` direct-map-local,
+  Name-local `Vector`/`Array` element-kind, `Call`-target
+  `resolveCallCollectionAccessValueKind`), each individually load-
+  bearing for a real receiver shape and each pinned to the opposite
+  answer by at least one unit assertion - the same irreconcilable-at-
+  the-unit-level conflict round 2/4 already hit elsewhere in this
+  cluster.
+
+**Full release gate after this round: 12/1897 failed** - the 11 shards
+above, plus `PrimeStruct_semantic_memory_trend`, which passed cleanly
+when rerun in isolation immediately after (confirmed a load-dependent
+flake under the full parallel gate, the same class of flake as the
+already-documented `spinning_cube_argument_validation_51_55`, not part
+of this cluster). Zero new failures anywhere else.
+
 ### TODO-5302 round 4 (2026-09-21): 2 more shards closed, 15 remain
 
 Picked up round 3's list of 16 open shards (`..._791_800` had already
@@ -1708,7 +1790,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-21T09:57:14Z`
+- Last updated: `2026-09-21T10:38:09Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -1717,18 +1799,15 @@ All other test assertion failures have been fixed in this session:
   - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
   - `84`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`
   - `85`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_101_110`
-  - `99`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250`
-  - `100`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_251_260`
-  - `108`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340`
   - `110`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_351_360`
   - `113`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_381_390`
   - `115`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410`
   - `116`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_411_420`
   - `118`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_431_440`
-  - `144`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_691_700`
   - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
   - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
   - `149`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_741_750`
+  - `1953`: `PrimeStruct_semantic_memory_trend`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
