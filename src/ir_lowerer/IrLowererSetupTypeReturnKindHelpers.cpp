@@ -188,6 +188,57 @@ bool resolveSemanticReturnKindTargetInfo(
   return false;
 }
 
+// Coarse shape category used to cross-check a semantic-fact-resolved
+// receiver type against the receiver's own *structural* `LocalInfo` (see
+// TODO-5302 round 6/7: a real semantic product can still legitimately carry
+// a decoy/mismatched raw type-text field, but its *resolved shape* - map vs.
+// array/vector vs. string vs. plain scalar - should never disagree with the
+// receiver's independently-populated structural `LocalInfo` for a genuine
+// compiled program; when it does, the fact is untrustworthy for classifying
+// that receiver).
+enum class ReceiverShapeCategory { KeyValue, ArrayVector, String, Other };
+
+ReceiverShapeCategory classifySemanticReturnKindShapeCategory(
+    const SemanticReturnKindTargetInfo &info) {
+  if (info.keyValueInfo.isKeyValueTarget) {
+    return ReceiverShapeCategory::KeyValue;
+  }
+  if (info.arrayVectorInfo.isArrayOrVectorTarget) {
+    return ReceiverShapeCategory::ArrayVector;
+  }
+  if (info.valueKind == LocalInfo::ValueKind::String) {
+    return ReceiverShapeCategory::String;
+  }
+  return ReceiverShapeCategory::Other;
+}
+
+ReceiverShapeCategory classifyLocalInfoShapeCategory(const LocalInfo &info) {
+  if (info.isArgsPack) {
+    if (hasKeyValueKinds(info)) {
+      return ReceiverShapeCategory::KeyValue;
+    }
+    if (info.argsPackElementKind == LocalInfo::Kind::Array ||
+        info.argsPackElementKind == LocalInfo::Kind::Vector ||
+        info.argsPackElementKind == LocalInfo::Kind::Buffer) {
+      return ReceiverShapeCategory::ArrayVector;
+    }
+    return ReceiverShapeCategory::Other;
+  }
+  if (hasKeyValueKinds(info)) {
+    return ReceiverShapeCategory::KeyValue;
+  }
+  if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+      info.kind == LocalInfo::Kind::Buffer || info.isSoaVector ||
+      info.referenceToArray || info.pointerToArray || info.referenceToVector ||
+      info.pointerToVector || info.referenceToBuffer || info.pointerToBuffer) {
+    return ReceiverShapeCategory::ArrayVector;
+  }
+  if (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String) {
+    return ReceiverShapeCategory::String;
+  }
+  return ReceiverShapeCategory::Other;
+}
+
 } // namespace
 
 bool resolveReturnInfoKindForPath(const std::string &path,
@@ -717,6 +768,75 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   (void)isArrayCountCall;
   (void)isStringCountCall;
 
+  // A bare (un-reordered) first-position receiver whose semantic fact
+  // resolves to a shape that disagrees with its own structural `LocalInfo`
+  // (TODO-5302 round 6/7) is untrustworthy for this whole call, not just for
+  // one downstream classification step - falling through to the generic
+  // structural fallback here would let a self-consistent-but-unrelated
+  // `LocalInfo` shape silently resolve a call the semantic layer already
+  // flagged as inconsistent. Bail out before any reordering/fallback logic
+  // runs in that case. Scoped to `at`-family access calls only: `count`/
+  // `contains` deliberately let a String-shaped semantic fact win over a
+  // stale/disagreeing structural local elsewhere in this same file's test
+  // suite (see "uses semantic count receiver facts before local metadata"),
+  // so this narrower bail must not apply to them.
+  if (isAccessCall && !callExpr.args.empty() && callExpr.args.front().kind == Expr::Kind::Name) {
+    const Expr &frontCandidate = callExpr.args.front();
+    const auto frontLocalIt = localsIn.find(frontCandidate.name);
+    if (frontLocalIt != localsIn.end()) {
+      SemanticReturnKindTargetInfo frontSemanticInfo;
+      if (resolveSemanticReturnKindTargetInfo(
+              frontCandidate, semanticProgram, semanticIndex, frontSemanticInfo)) {
+        const ReceiverShapeCategory semanticCategory =
+            classifySemanticReturnKindShapeCategory(frontSemanticInfo);
+        const ReceiverShapeCategory localCategory =
+            classifyLocalInfoShapeCategory(frontLocalIt->second);
+        if (semanticCategory != ReceiverShapeCategory::Other &&
+            localCategory != ReceiverShapeCategory::Other &&
+            semanticCategory != localCategory) {
+          return false;
+        }
+      }
+    }
+  }
+
+  // Cross-check a semantic-fact-resolved receiver shape against the
+  // receiver's own structural `LocalInfo` before trusting it (TODO-5302
+  // round 6/7). A `Name` receiver whose semantic fact resolves to a
+  // container/string shape (map, array/vector, or string) but whose
+  // structural `LocalInfo` either disagrees with that shape or is entirely
+  // absent (a real bound local should always have a `LocalInfo` entry by
+  // the time this classifier runs) is untrustworthy for receiver
+  // classification here - treat it the same as "no semantic fact found" so
+  // callers fall through to their normal (typically stricter) structural
+  // handling instead of silently trusting a stale/decoy fact.
+  auto resolveSemanticReturnKindTargetInfoChecked =
+      [&](const Expr &candidate, SemanticReturnKindTargetInfo &infoOut) -> bool {
+    if (!resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, infoOut)) {
+      return false;
+    }
+    if (candidate.kind != Expr::Kind::Name) {
+      return true;
+    }
+    const ReceiverShapeCategory semanticCategory =
+        classifySemanticReturnKindShapeCategory(infoOut);
+    if (semanticCategory == ReceiverShapeCategory::Other) {
+      return true;
+    }
+    const auto localIt = localsIn.find(candidate.name);
+    if (localIt == localsIn.end()) {
+      infoOut = {};
+      return false;
+    }
+    const ReceiverShapeCategory localCategory =
+        classifyLocalInfoShapeCategory(localIt->second);
+    if (localCategory != ReceiverShapeCategory::Other && localCategory != semanticCategory) {
+      infoOut = {};
+      return false;
+    }
+    return true;
+  };
+
   auto hasNamedArgs = [&]() {
     for (const auto &argName : callExpr.argNames) {
       if (argName.has_value()) {
@@ -728,8 +848,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   auto resolveSemanticArrayVectorTargetInfo =
       [&](const Expr &candidate, ArrayVectorAccessTargetInfo &infoOut) {
         SemanticReturnKindTargetInfo semanticInfo;
-        if (!resolveSemanticReturnKindTargetInfo(
-                candidate, semanticProgram, semanticIndex, semanticInfo)) {
+        if (!resolveSemanticReturnKindTargetInfoChecked(candidate, semanticInfo)) {
           return false;
         }
         infoOut = semanticInfo.arrayVectorInfo;
@@ -738,8 +857,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   auto resolveSemanticKeyValueTargetInfo =
       [&](const Expr &candidate, CollectionPairTypeInfo &infoOut) {
         SemanticReturnKindTargetInfo semanticInfo;
-        if (!resolveSemanticReturnKindTargetInfo(
-                candidate, semanticProgram, semanticIndex, semanticInfo)) {
+        if (!resolveSemanticReturnKindTargetInfoChecked(candidate, semanticInfo)) {
           return false;
         }
         infoOut = semanticInfo.keyValueInfo;
@@ -768,8 +886,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     SemanticReturnKindTargetInfo semanticInfo;
-    if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return semanticInfo.valueKind == LocalInfo::ValueKind::String;
     }
     const LocalInfo::ValueKind inferredKind =
@@ -805,8 +922,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     SemanticReturnKindTargetInfo semanticInfo;
-    if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return false;
     }
     return inferExprKind &&
@@ -828,8 +944,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     SemanticReturnKindTargetInfo semanticInfo;
-    if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return false;
     }
     auto it = localsIn.find(candidate.name);
@@ -838,16 +953,14 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   };
   auto hasNonKeyValueReceiverSemanticFact = [&](const Expr &candidate) {
     SemanticReturnKindTargetInfo semanticInfo;
-    if (!resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (!resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return false;
     }
     return !semanticInfo.keyValueInfo.isKeyValueTarget;
   };
   auto hasNonCountReceiverSemanticFact = [&](const Expr &candidate) {
     SemanticReturnKindTargetInfo semanticInfo;
-    if (!resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (!resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return false;
     }
     return !semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
@@ -856,8 +969,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
     SemanticReturnKindTargetInfo semanticInfo;
-    if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return semanticInfo.arrayVectorInfo.isVectorTarget ||
              semanticInfo.arrayVectorInfo.isSoaVector;
     }
@@ -874,8 +986,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   };
   auto hasNonVectorMutatorReceiverSemanticFact = [&](const Expr &candidate) {
     SemanticReturnKindTargetInfo semanticInfo;
-    if (!resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (!resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return false;
     }
     return !semanticInfo.arrayVectorInfo.isVectorTarget &&
@@ -883,8 +994,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   };
   auto hasNonCollectionAccessReceiverSemanticFact = [&](const Expr &candidate) {
     SemanticReturnKindTargetInfo semanticInfo;
-    if (!resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (!resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return false;
     }
     return !semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
@@ -902,8 +1012,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     SemanticReturnKindTargetInfo semanticInfo;
-    if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return semanticInfo.valueKind == LocalInfo::ValueKind::String;
     }
     return inferExprKind &&
@@ -914,8 +1023,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     SemanticReturnKindTargetInfo semanticInfo;
-    if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+    if (resolveSemanticReturnKindTargetInfo(candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return semanticInfo.valueKind == LocalInfo::ValueKind::String;
     }
     return inferExprKind &&
