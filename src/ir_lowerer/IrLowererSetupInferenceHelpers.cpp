@@ -333,6 +333,24 @@ ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
   if (expr.args.size() != 2) {
     return ArrayKeyValueAccessElementKindResolution::Resolved;
   }
+  // TODO-5302 round 10: every real compiled program assigns a nonzero
+  // `semanticNodeId` to every AST node during semantics validation
+  // (`assignSemanticNodeIds`, which runs before IR lowering ever starts -
+  // `IrLowererLower.cpp` hard-errors on a null semantic product), including
+  // this access call's own node. A `semanticNodeId` of `0` therefore only
+  // ever occurs for a synthetic Expr built directly by a caller with no
+  // semantic context at all (this function's own unit tests, which
+  // construct every Expr by hand and never set this field) - not for any
+  // node that reached this function via real compilation. Deferring in
+  // that case, rather than trusting the receiver's raw structural
+  // `LocalInfo` alone, matches the same "structural fallback needs
+  // corroboration" discipline already applied to sibling functions in this
+  // cluster (see `IrLowererLowerInferenceBaseKindHelpers.cpp`'s
+  // `semanticProgram != nullptr` gates), without touching any of this
+  // function's real early-return paths for genuine compiled-program nodes.
+  if (expr.semanticNodeId == 0) {
+    return ArrayKeyValueAccessElementKindResolution::NotMatched;
+  }
 
   auto hasNamedArgs = [&]() {
     for (const auto &argName : expr.argNames) {
