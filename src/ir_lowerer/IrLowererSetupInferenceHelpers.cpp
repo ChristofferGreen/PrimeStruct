@@ -422,14 +422,12 @@ ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
       kindOut = LocalInfo::ValueKind::Int32;
       return ArrayKeyValueAccessElementKindResolution::Resolved;
     }
-    if (target.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(target.name);
-      const LocalInfo *info = it != localsIn.end() ? &it->second : nullptr;
-      if (isGraphOrFallbackStringReceiver(target, info)) {
-        kindOut = LocalInfo::ValueKind::Int32;
-        return ArrayKeyValueAccessElementKindResolution::Resolved;
-      }
-    }
+    // Bare/graph-fact-inferred String receivers are deliberately left for
+    // the dedicated string-character-access classifier
+    // (`isStringAccessReceiverExpr` in
+    // `IrLowererSetupTypeReturnKindHelpers.cpp`), which additionally
+    // guards against a reordered-receiver false positive; resolving them
+    // here too would race ahead of that guard for the exact same shape.
     if (isEntryArgsNameFn(target, localsIn)) {
       return ArrayKeyValueAccessElementKindResolution::Resolved;
     }
@@ -489,7 +487,7 @@ ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
       return ArrayKeyValueAccessElementKindResolution::Resolved;
     }
   }
-  return ArrayKeyValueAccessElementKindResolution::Resolved;
+  return ArrayKeyValueAccessElementKindResolution::NotMatched;
 }
 
 LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
