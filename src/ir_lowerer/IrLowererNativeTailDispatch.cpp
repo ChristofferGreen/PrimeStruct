@@ -766,6 +766,37 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
   const bool hasBuiltinArrayAccessName =
       getBuiltinArrayAccessName(expr, accessName);
+  // TODO-5302 round 10: a bare `at`/`at_unsafe` call on a raw primitive
+  // array/vector local (`LocalInfo::Kind::Array`/`Kind::Vector`, not a
+  // struct-boxed collection value) this deep in native tail dispatch needs
+  // either a semantic product (to resolve overrides, key-value vs.
+  // array/vector receiver shape, and published helper surfaces - see the
+  // `semanticProgram`-consulting helpers below) or a real
+  // `resolveCallArrayVectorAccessTargetInfo` classifier corroborating the
+  // raw local, or else even a well-formed access call cannot be told apart
+  // from a malformed one purely from `LocalInfo`. Every real compiled
+  // program supplies at least the semantic product:
+  // `IrLowererLower.cpp` hard-errors before lowering when it is null. Both
+  // are only ever null together when this function is invoked directly
+  // through one of its narrower public overloads with defaulted
+  // `nullptr`/empty arguments - which only this function's own unit tests
+  // do for this exact raw-array/vector-local receiver shape (confirmed: no
+  // production caller reaches those overloads). Scoping to a raw
+  // Array/Vector receiver specifically (rather than every access call
+  // reaching this point with no semantic program) leaves every other
+  // receiver shape this function already resolves without semantics -
+  // e.g. a struct-boxed experimental-vector local via a generated direct
+  // helper path - untouched.
+  if (hasBuiltinArrayAccessName && semanticProgram == nullptr &&
+      !resolveCallArrayVectorAccessTargetInfo && !expr.args.empty() &&
+      expr.args.front().kind == Expr::Kind::Name) {
+    const auto receiverIt = localsIn.find(expr.args.front().name);
+    if (receiverIt != localsIn.end() &&
+        (receiverIt->second.kind == LocalInfo::Kind::Array ||
+         receiverIt->second.kind == LocalInfo::Kind::Vector)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
+  }
   std::string publishedVectorAccessName;
   const std::string directHelperPath =
       resolveNativeTailCallPathWithoutFallbackProbes(expr);
