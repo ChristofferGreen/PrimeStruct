@@ -717,6 +717,24 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     if (!isBuiltinCountLikeMethod) {
       return InlineCallDispatchResult::Error;
     }
+    // TODO-5302 round 10: a builtin-access-shaped method call
+    // (`isBuiltinAccessMethod`, e.g. `items.at(1)`) with no resolved
+    // callee normally falls through past this point so a later stage that
+    // has real `LocalMap`/`isCollectionAccessReceiverExpr` context (the
+    // dispatch chain that calls the shared Impl directly, always with a
+    // real classifier - see `tryEmitInlineCallDispatchWithLocals`) can
+    // still resolve it. But this specific overload's own no-locals
+    // `isCollectionAccessReceiverExpr` classifier is empty precisely
+    // because every real caller uses a narrower overload/the shared Impl
+    // directly with a real classifier instead (confirmed: no production
+    // caller reaches this exact overload) - so when that classifier is
+    // unset, no later stage this function could still hand off to exists
+    // for the receiver-shape case, and continuing on would just clear a
+    // real diagnostic before failing anyway. Fail fast and keep the
+    // caller's existing diagnostic instead.
+    if (isBuiltinAccessMethod && !isCollectionAccessReceiverExpr) {
+      return InlineCallDispatchResult::Error;
+    }
     error.clear();
   }
 
