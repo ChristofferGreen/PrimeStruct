@@ -195,36 +195,6 @@ bool inferDispatchSetupKeyValueKindsFromTypeText(const std::string &typeText,
          valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
-bool inferDispatchSetupSemanticCountAccessKind(const Expr &accessExpr,
-                                               const SemanticProgram *semanticProgram,
-                                               const SemanticProductIndex *semanticIndex,
-                                               LocalInfo::ValueKind &kindOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  std::string accessType;
-  if (resolveDispatchSetupSemanticReceiverTypeText(
-          accessExpr, semanticProgram, semanticIndex, accessType)) {
-    if (valueKindFromTypeName(accessType) == LocalInfo::ValueKind::String) {
-      kindOut = LocalInfo::ValueKind::Int32;
-    }
-    return true;
-  }
-  if (accessExpr.args.empty()) {
-    return false;
-  }
-  std::string targetType;
-  if (!resolveDispatchSetupSemanticReceiverTypeText(
-          accessExpr.args.front(), semanticProgram, semanticIndex, targetType)) {
-    return false;
-  }
-  LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-  if (inferDispatchSetupKeyValueKindsFromTypeText(targetType, keyKind, valueKind) &&
-      valueKind == LocalInfo::ValueKind::String) {
-    kindOut = LocalInfo::ValueKind::Int32;
-  }
-  return true;
-}
-
 bool inferDispatchSetupSemanticKeyValueReceiverKind(const Expr &receiver,
                                                     bool containsResult,
                                                     const SemanticProgram *semanticProgram,
@@ -1118,18 +1088,6 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
     }
     switch (expr.kind) {
       case Expr::Kind::Call: {
-        auto isBuiltinCountLikeCall = [](const Expr &candidate) {
-          if (candidate.kind != Expr::Kind::Call) {
-            return false;
-          }
-          if (isSimpleCallName(candidate, "count")) {
-            return true;
-          }
-          std::string collectionName;
-          std::string helperName;
-          return getNamespacedCollectionHelperName(candidate, collectionName, helperName) && helperName == "count";
-        };
-
         std::string accessNameForCanonicalKeyValueOverride;
         if (getBuiltinArrayAccessName(expr, accessNameForCanonicalKeyValueOverride) &&
             expr.args.size() == 2 &&
@@ -1323,39 +1281,14 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (stateInOut.inferCallExprCountAccessGpuFallbackKind(expr, localsIn, callFallbackKind)) {
           return callFallbackKind;
         }
-        if (isBuiltinCountLikeCall(expr) && expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call) {
-          std::string accessName;
-          const Expr &accessExpr = expr.args.front();
-          if (getBuiltinArrayAccessName(accessExpr, accessName) && accessExpr.args.size() == 2) {
-            LocalInfo::ValueKind semanticCountAccessKind = LocalInfo::ValueKind::Unknown;
-            if (inferDispatchSetupSemanticCountAccessKind(
-                    accessExpr, semanticProgram, semanticIndex, semanticCountAccessKind)) {
-              return semanticCountAccessKind;
-            }
-            const Expr &accessTarget = accessExpr.args.front();
-            if (stateInOut.inferExprKind &&
-                stateInOut.inferExprKind(accessExpr, localsIn) == LocalInfo::ValueKind::String) {
-              return LocalInfo::ValueKind::Int32;
-            }
-            if (accessTarget.kind == Expr::Kind::Name) {
-              auto it = localsIn.find(accessTarget.name);
-              if (it != localsIn.end() &&
-                  it->second.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
-                  it->second.keyValueValueKind == LocalInfo::ValueKind::String) {
-                return LocalInfo::ValueKind::Int32;
-              }
-            } else if (accessTarget.kind == Expr::Kind::Call) {
-              std::string collectionName;
-              if (getBuiltinCollectionName(accessTarget, collectionName) && collectionName == "map" &&
-                  accessTarget.templateArgs.size() == 2) {
-                const std::string &valueType = accessTarget.templateArgs[1];
-                if (valueType == "string" || valueType == "/string") {
-                  return LocalInfo::ValueKind::Int32;
-                }
-              }
-            }
-          }
-        }
+        // Deliberately no further inline `count(access(...))` resolution
+        // here: `inferCallExprCountAccessGpuFallbackKind` above is the
+        // sole authoritative answer for this shape (it already covers the
+        // structural Name/Call/templateArgs cases an earlier inline
+        // duplicate re-derived here). When it reports "not resolved", the
+        // dispatch must return Unknown rather than quietly re-deriving an
+        // answer from semantic facts or raw locals - see TODO-5302 round 7
+        // (docs/failing_tests.md) for the bug this duplicate caused.
         if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
           return LocalInfo::ValueKind::Unknown;
         }
