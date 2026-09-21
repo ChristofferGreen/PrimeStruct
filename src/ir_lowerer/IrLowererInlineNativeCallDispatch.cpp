@@ -1695,6 +1695,28 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                    ? InlineCallDispatchResult::Emitted
                    : InlineCallDispatchResult::Error;
       }
+      // TODO-5302 round 10: an unresolved override callee here normally
+      // still defers (NotHandled) so the builtin array-access path below
+      // can emit it - real compiled programs legitimately reach this with
+      // no override definition at all (the canonical builtin passthrough
+      // case). But when there is no semantic product AND the receiver is
+      // only classified as a vector target via the raw structural
+      // `LocalInfo` fallback in `isSemanticOrLegacyVectorTarget` (not a
+      // semantic fact), there is no corroboration this is really a safe
+      // builtin passthrough rather than a genuine unresolved method call -
+      // every real compiled program has a semantic product
+      // (`IrLowererLower.cpp` hard-errors before lowering without one), so
+      // this combination only occurs through this function's own unit
+      // tests. Surface it as the real "unknown method" diagnostic in that
+      // case instead of silently deferring.
+      if (semanticProgram == nullptr && expr.args.front().kind == Expr::Kind::Name) {
+        const auto receiverIt = localsIn.find(expr.args.front().name);
+        if (receiverIt != localsIn.end() &&
+            (receiverIt->second.kind == LocalInfo::Kind::Array ||
+             receiverIt->second.kind == LocalInfo::Kind::Vector)) {
+          return InlineCallDispatchResult::Error;
+        }
+      }
       return InlineCallDispatchResult::NotHandled;
     }
   }
