@@ -1224,8 +1224,9 @@ bool isArrayCountCall(const Expr &expr,
     std::string accessName;
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
         target.args.front().kind == Expr::Kind::Name) {
+      const bool hasSemanticIndexAvailable = semanticProgram != nullptr && semanticIndex != nullptr;
       auto localIt = localsIn.find(target.args.front().name);
-        if (localIt != localsIn.end() && localIt->second.isArgsPack) {
+        if (!hasSemanticIndexAvailable && localIt != localsIn.end() && localIt->second.isArgsPack) {
           const LocalInfo &info = localIt->second;
           if (info.argsPackElementKind == LocalInfo::Kind::Array ||
               info.argsPackElementKind == LocalInfo::Kind::Vector ||
