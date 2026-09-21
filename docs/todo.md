@@ -70,7 +70,7 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (18 shards)
+- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (15 shards)
   - owner: ai
   - created_at: 2026-09-20
   - phase: Hidden test failure remediation
@@ -84,10 +84,10 @@ This file is the live open-work queue for PrimeStruct.
     `PrimeStruct_primestruct_ir_pipeline_validation_cases_*` shards
     (81-90, 91-100, 101-110, 241-250, 251-260, 331-340, 351-360,
     381-390, 401-410, 411-420, 431-440, 691-700, 721-730, 731-740,
-    741-750, 791-800, 1201-1210) plus
-    `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`.
-    `601-610` and `631-640` are now closed (round 2, see below); do not
-    reopen them without a fresh repro. Do NOT touch
+    741-750). `601-610`, `631-640`, `791-800`, and `1201-1210` are now
+    closed (rounds 2-4, see below); do not reopen them without a fresh
+    repro. `ir_pipeline_conversions_variadic_pointer_vectors` is also now
+    closed (round 4). Do NOT touch
     `spinning_cube_argument_validation_51_55` - that is a documented
     load-dependent flake (TODO-4711), unrelated to this cluster.
   - implementation_notes: round 1 found and fixed 4 of the original 24
@@ -212,8 +212,81 @@ This file is the live open-work queue for PrimeStruct.
       or the matching standalone doctest `--test-case`), per the
       Bug-fix workflow, and budget real investigation time given the
       function's size.
-    - `ir_pipeline_conversions_variadic_pointer_vectors`: a distinct
-      file/theme (variadic pointer-vector packs), still not investigated.
+    Round 3 (2026-09-20/21) closed `..._791_800`: the remaining
+    "defers reordered bare access graph facts" edge case was fixed by
+    adding `isGraphFactOnlyCollectionAccessReceiverExpr`/
+    `isUnclassifiedLocalNameExpr` so `resolveCountMethodCallReturnKind`
+    only trusts a graph-fact-only String classification on a reordered
+    access call's front argument when no other positional argument is a
+    plausible alternate (unclassified-local) receiver (commit
+    `f9c2c5c`). A follow-up fix (`b084c4e`) reworded a comment that
+    tripped `PrimeStruct_vector_surface_traces` via the literal
+    substring `array-vector/soa`; verified all five audit scripts clean
+    afterward, confirmed via a full gate at 17/1897 (commit `9563a21`).
+    Round 4 (2026-09-21) closed two more, both genuinely stale test
+    expectations rather than the entangled receiver-classification bug
+    class (confirmed via standalone `primec --emit=vm` reruns and/or
+    direct rerun-with-print before touching any assertion):
+    - `ir_pipeline_conversions_variadic_pointer_vectors`: the "rejects
+      variadic pointer vector packs with indexed dereference access
+      helpers" case pinned a rejection
+      ("native backend only supports at() on numeric/bool/string arrays
+      or vectors") for a nested
+      `at_unsafe(dereference(at(values, i)), j)`/
+      `dereference(at(values, i)).at(j)` chain on an
+      `args<Pointer<vector<i32>>>` pack element. Reran the exact source
+      standalone via `primec --emit=vm` (positional, forwarded-spread,
+      and mixed-spread pack shapes) - lowering now succeeds and the
+      program runs to completion with the arithmetically correct
+      result (39). Updated the test to assert success, matching this
+      file's other sibling cases. Commit `4a6850c`.
+    - `..._1201_1210` (`inferStructExprPath`): closed TODO-4900's own
+      flagged gap. That TODO documented a real inconsistency (the
+      method-call-sugar form of an args-pack indexed access,
+      `values.at(0)`, resolved empty while the equivalent bare/
+      namespaced call form resolved a real struct path) as the test's
+      *expected* behavior. Reran the exact scenario and confirmed both
+      call shapes now resolve the same struct path (`/pkg/Ctor`) - the
+      gap was already closed elsewhere; only the stale assertion needed
+      updating. Commit `1f3522b`.
+    Round 4 also traced two of the still-open functions further and
+    found the SAME "unit tests want an unconditional reject/defer, but
+    the exact same receiver shape is genuinely load-bearing in real
+    compiled programs" conflict round 2 already hit, in two more
+    places, not just `resolveArrayKeyValueAccessElementKind`:
+    - Every currently-failing `ArrayKeyValueAccessElementKindResolution`
+      assertion across the whole unit suite (`grep`-verified, zero
+      exceptions) wants `NotMatched`, including for receiver shapes
+      that are structurally identical to the one production caller
+      (`inferCallExprCountAccessGpuFallbackKind`,
+      `IrLowererLowerInferenceFallbackSetup.cpp`) needs Resolved for
+      (the `count(at(values, i))`-shaped materialization path round 2's
+      revert protected). A "narrower" fix that only excludes the
+      unit-tested false-positive shapes without touching the real
+      positional-receiver path was not found this round; the shapes
+      overlap too closely to separate by receiver-classification alone
+      from the information available inside the function. Whoever picks
+      this up next should look at whether the two production call sites
+      (`IrLowererLowerInferenceFallbackSetup.cpp:287` and `:366`) can be
+      narrowed instead of the shared helper itself.
+    - `..._331_340`'s `tryEmitBufferBuiltinCall`/`resolveBufferLoadInfo`
+      (`IrLowererFlowBufferHelpers.cpp`) has the identical conflict:
+      the "emit buffer builtin calls" unit test wants `Result::Error`
+      ("buffer_load requires numeric/bool buffer") for a bare/
+      dereferenced `at()`-on-args-pack `Buffer`/`Reference<Buffer>`/
+      `Pointer<Buffer>` element receiver, but
+      `test_compile_run_vm_gpu.cpp`'s `score_direct`/`score_buffers_reference`/
+      `score_buffers_pointer` functions (lines ~93-107, ~158-170,
+      ~209-223) use exactly that shape
+      (`/std/gpu/buffer_load(values[0i32], 0i32)` and the
+      `dereference(values[i])` variant) as real, currently-passing GPU
+      buffer programs. Do not remove
+      `resolveBufferLoadInfo`'s args-pack-element branches
+      (`IrLowererFlowBufferHelpers.cpp` lines ~223-263) without a
+      standalone `primec --emit=vm` rerun of those exact
+      `test_compile_run_vm_gpu.cpp` scenarios first - this is the same
+      class of trap round 2's `8e610a7` revert documents, just in a
+      different function.
   - acceptance: each targeted shard passes individually via
     `ctest --test-dir build-release -R <shard-name>`, and a full
     `./scripts/compile.sh --release` gate shows zero new failures

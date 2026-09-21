@@ -15,6 +15,83 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+### TODO-5302 round 4 (2026-09-21): 2 more shards closed, 15 remain
+
+Picked up round 3's list of 16 open shards (`..._791_800` had already
+closed in round 3, per that round's commits `f9c2c5c`/`b084c4e`/`9563a21`,
+which this file's own top section had not yet been updated to reflect -
+fixed now). This round closed 2 more, both confirmed as **stale test
+expectations**, not the entangled receiver-classification bug class the
+rest of this cluster is:
+
+- `ir_pipeline_conversions_variadic_pointer_vectors`: reran the exact
+  failing source standalone via `primec --emit=vm` (all three call
+  shapes: direct positional pack, forwarded spread pack, spread pack
+  mixed with a local pointer argument). Lowering succeeds and the
+  program runs to completion with the arithmetically correct result
+  (39) - the test's rejection expectation was stale. Updated the test
+  to expect success, matching this file's other sibling cases. Commit
+  `4a6850c`.
+- `..._1201_1210` (`inferStructExprPath`): TODO-4900 had documented a
+  real inconsistency (method-call-sugar `values.at(0)` on an args-pack
+  resolved empty while the equivalent bare/namespaced call form
+  resolved a real struct path) and pinned the *old, inconsistent*
+  behavior as the test's expectation. Reran the exact scenario and
+  confirmed both call shapes now resolve identically
+  (`/pkg/Ctor`) - the gap was already closed elsewhere; only the
+  assertion was stale. Commit `1f3522b`.
+
+**Both fixes verified**: target shard individually, the broader
+`primestruct.ir.pipeline.validation`/`primestruct.ir.pipeline.conversions`
+suites (all 21 `ir_pipeline_conversions_*` CTest shards, full
+`ir_pipeline_validation` CTest range), a relevant
+`compile_run_vm_core_*`/`compile_run_vm_collections_*`/
+`compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_{303_312,353_362}`
+subset (116 tests, 0 failed), all five audit scripts, and a full
+`./scripts/compile.sh --release` gate.
+
+**Full release gate after this round: 15/1897 failed** (down from 17),
+zero new failures anywhere. The `spinning_cube_argument_validation_51_55`
+load-flake (TODO-4711) did not reappear this run either. The 15 are
+exactly the still-open `ir_pipeline_validation_cases_*` shards: 81-90,
+91-100, 101-110, 241-250, 251-260, 331-340, 351-360, 381-390, 401-410,
+411-420, 431-440, 691-700, 721-730, 731-740, 741-750.
+
+**Investigated further but NOT fixed (two new confirmed-unsafe traps,
+same class as round 2's `8e610a7` revert, found in different
+functions this time)** - see TODO-5302's implementation_notes for the
+full detail:
+- `resolveArrayKeyValueAccessElementKind` (`IrLowererSetupInferenceHelpers.cpp`,
+  drives 691-700/721-730/731-740/741-750 and part of 81-90/91-100/
+  101-110): every currently-failing unit assertion for this function,
+  across the whole suite, wants `NotMatched` with zero exceptions -
+  but the one real production caller
+  (`inferCallExprCountAccessGpuFallbackKind`,
+  `IrLowererLowerInferenceFallbackSetup.cpp:287`/`:366`) needs
+  `Resolved` for a receiver shape that is structurally identical to
+  several of the unit-tested "should defer" shapes. No narrower
+  exclusion was found this round that separates the two without
+  touching the shared helper's core matching logic - the same
+  gutting-this-function trap round 2 already hit and reverted
+  (`8e610a7`). Not touched this round.
+- `tryEmitBufferBuiltinCall`/`resolveBufferLoadInfo`
+  (`IrLowererFlowBufferHelpers.cpp`, drives `..._331_340`): the
+  "emit buffer builtin calls" unit test wants `Result::Error` for a
+  bare/dereferenced `at()`-on-args-pack `Buffer`/`Reference<Buffer>`/
+  `Pointer<Buffer>` element receiver, but
+  `test_compile_run_vm_gpu.cpp`'s `score_direct`/
+  `score_buffers_reference`/`score_buffers_pointer` GPU buffer
+  programs use exactly that shape today and currently pass. Confirmed
+  via source inspection (not yet a standalone repro run, given the
+  gpu-buffer VM path's setup cost) that removing those args-pack
+  branches would repeat round 2's exact mistake in a new function. Not
+  touched this round.
+
+`..._241_250`/`..._251_260` (`tryEmitCountAccessCall`,
+`IrLowererCountAccessHelpers.cpp`) and `..._351_360`/`..._381_390`/
+`..._401_410`/`..._411_420`/`..._431_440` were re-scoped but not
+newly root-caused this round beyond round 2's notes; see TODO-5302.
+
 ### TODO-5302 round 2 (2026-09-20): 2 shards closed, 1 reverted false start
 
 This round worked through the 20-shard `ir_pipeline_validation_cases_*`/
@@ -1631,13 +1708,12 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-21T09:37:29Z`
+- Last updated: `2026-09-21T09:57:14Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
-  - `64`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
   - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
   - `84`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`
   - `85`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_101_110`
@@ -1653,7 +1729,6 @@ All other test assertion failures have been fixed in this session:
   - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
   - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
   - `149`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_741_750`
-  - `195`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_1201_1210`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
