@@ -438,6 +438,38 @@ This file is the live open-work queue for PrimeStruct.
       blocked on `resolveArrayKeyValueAccessElementKind`'s other
       early-return branches, each individually load-bearing for a real
       receiver shape (see the `691-700` note above).
+    Round 6 (2026-09-21) closed no shards; gave Group B
+    (`351-360`/`381-390`/`401-410`/`411-420`/`431-440`) the dedicated
+    instrumented pass round 5 asked for and refined its root cause, but
+    the fix attempted from that refinement regressed a sibling test and
+    was reverted before landing (see `docs/failing_tests.md`'s
+    "TODO-5302 round 6" entry for the full trace). Summary: the shared
+    mechanism these 5 shards' orchestrators funnel through is confirmed
+    to be `resolveSemanticProductTypeText`
+    (`IrLowererBindingTypeHelpers.cpp`), and a real semantic product's
+    `bindingTypeText`/`bindingTypeTextId` pair can never actually
+    disagree (the id is always interned from the text at publication
+    time, per `SemanticPublicationBuilders.cpp`) - but round 5's framing
+    of the bug as "literal text vs. interned text disagreement" is not
+    quite right: nearly every binding fact across this test file
+    deliberately sets a disagreeing decoy `bindingTypeText`, including
+    ones whose expected behavior is to still resolve successfully. The
+    real discriminator, confirmed by direct A/B testing, is whether the
+    `bindingTypeTextId`-resolved type's shape (array/vector vs. map vs.
+    scalar) agrees with the receiver's own **structural `LocalInfo`**
+    (`Kind`/`keyValueKeyKind`/`keyValueValueKind`/`valueKind`, populated
+    independently by binding/statement lowering) - not whether it agrees
+    with the fact's own raw text field. A same-function, single-point
+    fix at `resolveSemanticProductTypeText` cannot express this (it has
+    no access to the receiver's `LocalInfo`), so the real fix needs to
+    be threaded through each of the ~4 orchestrator entry points
+    individually, cross-checking the resolved semantic type against the
+    receiver's structural local shape before trusting it. Whoever picks
+    this up next should start from this narrower, verified
+    characterization rather than re-deriving it, and, per this cluster's
+    established discipline, diff the full failing-assertion set at each
+    orchestrator (not just eyeball a post-change dump) before treating
+    any attempt as safe.
   - acceptance: each targeted shard passes individually via
     `ctest --test-dir build-release -R <shard-name>`, and a full
     `./scripts/compile.sh --release` gate shows zero new failures

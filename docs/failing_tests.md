@@ -15,6 +15,98 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+### TODO-5302 round 6 (2026-09-21): no shard closed; Group B root cause refined, attempted fix reverted
+
+Re-confirmed all 11 shards from round 5 are still failing (`81-90`,
+`91-100`, `101-110`, `351-360`, `381-390`, `401-410`, `411-420`,
+`431-440`, `721-730`, `731-740`, `741-750`) via
+`ctest --test-dir build-release -R
+"ir_pipeline_validation_cases_(81_90|91_100|101_110|351_360|381_390|401_410|411_420|431_440|721_730|731_740|741_750)$"`.
+
+Spent this round's budget on Group B (`351-360`/`381-390`/`401-410`/
+`411-420`/`431-440`), per round 5's instruction to give it a dedicated
+instrumented-repro pass. Traced the shared mechanism round 5 predicted
+exists: `resolveSemanticProductTypeText`
+(`IrLowererBindingTypeHelpers.cpp`), which every one of the affected
+`runLowerInferenceExprKind*Setup` orchestrators eventually calls (via
+`resolveSemanticBindingFactTypeText` and friends) to turn a
+`SemanticProgramBindingFact`'s `bindingTypeText`/`bindingTypeTextId`
+pair into one resolved type string. Confirmed via
+`SemanticPublicationBuilders.cpp` (e.g. line ~788:
+`entry.bindingTypeTextId = semanticProgramInternCallTargetString(state.semanticProgram, entry.bindingTypeText);`)
+that in every real semantic product, `bindingTypeTextId` is *always*
+interned from `bindingTypeText` itself, so the two fields can never
+actually disagree in a real compiled program - only a deliberately
+adversarial unit test can construct a mismatch. That makes a
+disagreement-detection fix at this one shared function provably safe
+against the whole `compile_run_vm_*`/`emitters_*` surface (real programs
+never hit the mismatch branch), which looked like exactly the
+single-point fix Group B needed.
+
+**Tried it, and it is not that simple - reverted, no source change
+landed.** Implemented `resolveSemanticProductTypeText` returning empty
+(untrustworthy) whenever the trimmed literal `text` and the trimmed
+`textId`-resolved text are both non-empty and differ, rebuilt
+`PrimeStruct_backend_ir_tests`, and reran the 11-shard rerun above. This
+did fix the `351-360` assertions it targeted (the "rejects bare semantic
+access receiver/reorder/stale facts" cases), **but regressed two
+sibling, previously-passing cases in the very same source file**
+("uses semantic contains receiver facts before local metadata" and
+"uses semantic count receiver facts before local metadata" flipped from
+`Resolved`/correct-kind to `NotResolved`/`Unknown`). Root cause: those
+two sibling tests *also* construct a disagreeing `bindingTypeText`/
+`bindingTypeTextId` pair (deliberately, as an anti-pinning pattern
+throughout this file - every binding fact in this file's tests sets a
+"decoy" `bindingTypeText` alongside a differently-interned
+`bindingTypeTextId`), but they expect the **textId-resolved type to
+win**, not to be rejected, when it is that fact's structural target
+that is a real map receiver.
+
+The actual discriminator is not "does `bindingTypeText` disagree with
+the `bindingTypeTextId`-resolved text" (that is true in nearly every
+test in this file, on purpose, as noise). It is **whether the
+`bindingTypeTextId`-resolved type agrees with the receiver's own
+structural `LocalInfo`** (its `Kind`/`keyValueKeyKind`/
+`keyValueValueKind`/`valueKind` fields, populated independently by the
+binding/statement-lowering pass, not by the semantic-fact text at all).
+In the failing `351-360` "rejects bare semantic access receiver facts"
+case, the fact's `bindingTypeTextId` resolves to `vector<f32>` but the
+receiver's own `LocalInfo` (`staleLocal`) is map-shaped
+(`keyValueKeyKind`/`keyValueValueKind` set) - fact and structural local
+disagree, so the whole thing should be untrustworthy. In the passing
+"uses semantic contains receiver facts" case, the fact's
+`bindingTypeTextId` resolves to `map<i32,f32>` and the receiver's own
+`LocalInfo` (`staleMapLocal`) is *also* map-shaped - fact and structural
+local agree, so the fact should be trusted (and its `bindingTypeText`
+decoy string ignored, matching pre-existing/original behavior). This is
+a **fact-vs-structural-LocalInfo consistency check**, not a
+**text-vs-textId consistency check** - a materially different, more
+specific condition than round 5's characterization, and it would need
+to be threaded through each of the ~4 orchestrator entry points
+individually (each has its own receiver/local lookup shape), not fixed
+once in the shared text-resolution helper. Given the remaining budget
+this round, did not attempt that broader, per-call-site version of the
+fix without a comparably careful before/after diff of the full failing-
+assertion set at each site (per the `isArrayCountCall`
+near-miss/lesson from round 5). Left as an open, more precisely
+characterized lead for round 7: **when resolving a receiver's semantic
+binding-fact type for these orchestrators, cross-check the resolved
+type's shape (array/vector vs map vs scalar) against the receiver's own
+structural `LocalInfo` before trusting it; disagreement there - not
+raw-text-vs-interned-text disagreement - is the actual staleness
+signal.**
+
+Did not touch Group A (`81-90`/`91-100`/`101-110`) or Group C
+(`721-730`/`731-740`/`741-750`) further this round beyond re-confirming
+they are unchanged from round 5's characterization (still blocked on the
+same confirmed-unsafe/irreconcilable findings documented there and in
+`docs/todo.md`'s TODO-5302 entry).
+
+Net result: 0 shards closed, 0 shards regressed, one incorrect fix
+attempt caught and reverted before landing (never committed). 11 shards
+remain open; `TODO-5302` stays open. Did not run the five audit scripts
+or the full release gate this round since no source change was landed.
+
 ### TODO-5302 round 5 (2026-09-21): 4 more shards closed, 11 remain
 
 Picked up round 4's list of 15 open shards. This round closed 4 more:
