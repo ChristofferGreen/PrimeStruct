@@ -814,9 +814,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   };
   // A positional argument that is a known local but whose kind/valueKind
   // carries no classification at all (not a scalar valueKind, not a
-  // key-value/array-vector/soa target, not covered by semantic info) is
-  // genuinely ambiguous - it could just as well be an unclassified
-  // collection receiver (e.g. a map local) as anything else.
+  // key-value, array, vector, or soa target, not covered by semantic
+  // info) is genuinely ambiguous - it could just as well be an
+  // unclassified collection receiver (e.g. a map local) as anything else.
   auto isUnclassifiedLocalNameExpr = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
       return false;
