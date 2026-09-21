@@ -832,16 +832,26 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (inferSemanticResultMethodKind(resultExpr, kindOut)) {
           return true;
         }
+        // TODO-5302 round 9: same "structural-only, no semantic
+        // corroboration" shape the round 7 fixes above gated - a bare or
+        // dereferenced indexed args-pack Result access trusted the
+        // receiver's raw `LocalInfo` alone, with no check that a semantic
+        // context even exists. Gate on a semantic context existing at all,
+        // which every real compiled program has (`IrLowererLower.cpp`
+        // hard-errors before lowering when `semanticProgram` is null), so
+        // the un-annotated/no-semantics-at-all unit scenarios defer here
+        // instead of silently resolving a stale local's claim.
         std::string accessName;
-        if (getBuiltinArrayAccessName(resultExpr, accessName) && resultExpr.args.size() == 2 &&
-            resultExpr.args.front().kind == Expr::Kind::Name) {
+        if (semanticProgram != nullptr && getBuiltinArrayAccessName(resultExpr, accessName) &&
+            resultExpr.args.size() == 2 && resultExpr.args.front().kind == Expr::Kind::Name) {
           auto it = localsIn.find(resultExpr.args.front().name);
           if (it != localsIn.end() && it->second.isArgsPack && it->second.isResult) {
             kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
             return true;
           }
         }
-        if (isSimpleCallName(resultExpr, "dereference") && resultExpr.args.size() == 1) {
+        if (semanticProgram != nullptr && isSimpleCallName(resultExpr, "dereference") &&
+            resultExpr.args.size() == 1) {
           const Expr &targetExpr = resultExpr.args.front();
           if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
               targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
@@ -1025,7 +1035,16 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           }
         }
       }
-      if (resultExpr.isMethodCall && !resultExpr.args.empty() &&
+      // TODO-5302 round 9: same "structural-only, no semantic
+      // corroboration" shape as `IrLowererLowerInferenceBaseKindHelpers.cpp`
+      // gated in round 7 (`isIndexed[Borrowed/Pointer]ArgsPackFileHandleReceiver`
+      // there) - this dispatch-side copy of the same three checks trusted
+      // the receiver's raw `LocalInfo` alone with no check that a semantic
+      // context even exists. Gate on a semantic context existing at all,
+      // which every real compiled program has, matching the same
+      // un-annotated/no-semantics-at-all unit scenarios that must defer
+      // here instead of silently resolving a stale local's claim.
+      if (semanticProgram != nullptr && resultExpr.isMethodCall && !resultExpr.args.empty() &&
           isIndexedArgsPackFileHandleReceiver(resultExpr.args.front(), localsIn)) {
         if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
             resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
@@ -1033,7 +1052,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           return true;
         }
       }
-      if (resultExpr.isMethodCall && !resultExpr.args.empty() &&
+      if (semanticProgram != nullptr && resultExpr.isMethodCall && !resultExpr.args.empty() &&
           isIndexedBorrowedArgsPackFileHandleReceiver(resultExpr.args.front(), localsIn)) {
         if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
             resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
@@ -1041,7 +1060,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           return true;
         }
       }
-      if (resultExpr.isMethodCall && !resultExpr.args.empty() &&
+      if (semanticProgram != nullptr && resultExpr.isMethodCall && !resultExpr.args.empty() &&
           isIndexedPointerArgsPackFileHandleReceiver(resultExpr.args.front(), localsIn)) {
         if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
             resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
