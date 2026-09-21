@@ -1409,7 +1409,7 @@ TEST_CASE("ir lowerer count access helpers prefer graph facts for runtime string
   CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 }
 
-TEST_CASE("ir lowerer count access helpers defer string map access emission") {
+TEST_CASE("ir lowerer count access helpers resolve string map access emission by semantic fact kind") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using Result = primec::ir_lowerer::CountAccessCallEmitResult;
 
@@ -1545,35 +1545,66 @@ TEST_CASE("ir lowerer count access helpers defer string map access emission") {
         &semanticIndex);
   };
 
-  CHECK(run(makeCountAtExpr(0, 9201)) == Result::NotHandled);
+  // A receiver whose binding fact resolves to a String-valued map (9201)
+  // already reaches tryEmitCountAccessCall's own string-key-value-access
+  // handling (classifySemanticStringKeyValueAccess) and emits the correct
+  // LoadStringLength sequence directly - this must succeed (Emitted), not
+  // defer, matching the real "compiles native string-valued map
+  // constructors on stdlib path" compile_run case
+  // (test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp),
+  // whose `count(at(values, 1i32))` on a `map<i32, string>` local depends
+  // on exactly this shape resolving to a string-length count.
+  CHECK(run(makeCountAtExpr(0, 9201)) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(emitExprCalls == 0);
-  CHECK(instructions.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 29);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 
+  // A map<K, bool> receiver fact (9202) correctly defers: the accessed
+  // value is neither string nor array/vector-collection shaped, so this
+  // classifier is not the one that should decide how to emit it.
   CHECK(run(makeCountAtExpr(0, 9202)) == Result::NotHandled);
   CHECK(error.empty());
   CHECK(emitExprCalls == 0);
   CHECK(instructions.empty());
 
+  // A plain scalar (i32) receiver fact (9203) defers the same way.
   CHECK(run(makeCountAtExpr(0, 9203)) == Result::NotHandled);
   CHECK(error.empty());
   CHECK(emitExprCalls == 0);
   CHECK(instructions.empty());
 
-  CHECK(run(makeCountAtExpr(9204, 0)) == Result::NotHandled);
+  // A query fact directly on the access call itself resolving to "string"
+  // (9204) is handled the same way as the binding-fact case above.
+  CHECK(run(makeCountAtExpr(9204, 0)) == Result::Emitted);
   CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 29);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+
+  // A query fact resolving to a plain scalar ("i32", 9205) is neither a
+  // string nor a collection access, so count() over it is rejected outright
+  // by the TODO-5256 guard (a raw scalar must never be treated as a string
+  // handle at runtime) rather than deferred.
+  CHECK(run(makeCountAtExpr(9205, 0)) == Result::Error);
+  CHECK(error == "count() argument resolves to a non-string value");
   CHECK(emitExprCalls == 0);
   CHECK(instructions.empty());
 
-  CHECK(run(makeCountAtExpr(9205, 0)) == Result::NotHandled);
+  // With no semantic facts at all (both ids 0), the classifier still falls
+  // back to the raw LocalInfo on `values` (map<i32, string>, set up above
+  // as staleStringMapInfo) and correctly emits the string-length count.
+  CHECK(run(makeCountAtExpr(0, 0)) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(emitExprCalls == 0);
-  CHECK(instructions.empty());
-
-  CHECK(run(makeCountAtExpr(0, 0)) == Result::NotHandled);
-  CHECK(error.empty());
-  CHECK(emitExprCalls == 0);
-  CHECK(instructions.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 29);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 }
 
 TEST_CASE("ir lowerer string literal helper interns string table values") {
