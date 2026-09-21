@@ -481,12 +481,14 @@ TEST_CASE("ir lowerer uninitialized type helpers build expression struct path in
   valuesExpr.kind = primec::Expr::Kind::Name;
   valuesExpr.name = "values";
   accessExpr.args = {valuesExpr, indexExpr};
-  // TODO-4900: verified current behavior - the method-call-sugar form of
-  // an args-pack indexed access (values.at(0)) no longer resolves a
-  // struct path through this helper (returns empty), while the
-  // otherwise-equivalent bare/namespaced call form just below still does -
-  // an inconsistency between the two call shapes worth a closer look.
-  CHECK(inferStructExprPath(accessExpr, locals).empty());
+  // TODO-4900 closed (2026-09-21, TODO-5302 round 4): this used to pin a
+  // real inconsistency - the method-call-sugar form of an args-pack
+  // indexed access (values.at(0)) resolved empty while the
+  // otherwise-equivalent bare/namespaced call form just below resolved
+  // "/pkg/Ctor". That gap is gone: both call shapes now resolve the same
+  // struct path, so this now asserts the consistent, resolved value
+  // instead of the old empty/inconsistent one.
+  CHECK(inferStructExprPath(accessExpr, locals) == "/pkg/Ctor");
 
   primec::Expr namespacedAccessExpr;
   namespacedAccessExpr.kind = primec::Expr::Kind::Call;
