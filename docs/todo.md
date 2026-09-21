@@ -584,6 +584,33 @@ This file is the live open-work queue for PrimeStruct.
     per-shard note is a legitimate stopping point, matching this
     cluster's own multi-round history (TODO-4726/4727/4728,
     TODO-5300/5301).
+  - round_8_note: (2026-09-21) Fixed `_401_410`'s originally-diagnosed
+    bug (round 7's lead): `runLowerInferenceExprKindDispatchSetup`'s
+    inline `count(access(...))` handling
+    (`IrLowererLowerInferenceDispatchSetup.cpp`) duplicated
+    `inferCallExprCountAccessGpuFallbackKind`'s job and kept
+    re-deriving an answer from semantic facts/raw locals even after
+    that hook had already reported the case unresolved, silently
+    bypassing its authoritative verdict. Removed the dead-end inline
+    branch and its now-unused `inferDispatchSetupSemanticCountAccessKind`
+    helper. Verified: the full `primestruct.ir.pipeline.validation`/
+    `.conversions` suites (no new failures beyond the shards already
+    tracked here), 1132/1132 on a `*collection*,*gpu*,*emitters*`
+    compile_run battery, and all five collection-audit scripts clean.
+    However, `_401_410`, `_411_420`, and `_431_440` each remain failing
+    as CTest shards - not because of this bug (confirmed absent after
+    the fix), but because each 10-case shard also bundles a SEPARATE,
+    unrelated, pre-existing failure in the same source file(s): "uses
+    semantic try operand Result facts" / "uses semantic method receiver
+    facts" (`Result`/`try`-expression semantic-fact handling, not
+    count-access dispatch) for `_401_410`, and similarly-distinct
+    Result/args-pack cases for `_411_420`/`_431_440` (see the ctest
+    `--output-on-failure` output for exact case names). These are a
+    genuinely different bug from anything rounds 1-8 have traced -
+    round 9 should treat them as a fresh investigation (Result/try
+    semantic-fact resolution for indexed/dereferenced pointer or
+    file-handle args-pack receivers), not assume they share Group B's
+    root cause. Commit `89f57a2`.
 
 Note (2026-09-19): TODO-5300 (post-TODO-4683 map-constructor-receiver
 recognition gap causing an `unknown method`/`std::bad_alloc` regression
