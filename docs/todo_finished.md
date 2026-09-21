@@ -51050,3 +51050,673 @@ real answer.
     already correct and only the test's stale rejection expectation
     needed updating. Full release gate confirms zero remaining failures
     attributable to this task.
+
+**Todo Completion (September 21, 2026) — TODO-5302**
+- [x] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (7 shards)
+  - owner: ai
+  - created_at: 2026-09-20
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-nonsemantics
+  - depends_on: none (TODO-4726/4727/4728 closed; this is a distinct,
+    newly-triaged finding in the same test-file cluster - see
+    `docs/failing_tests.md`'s "ir_pipeline_validation_cases regression
+    triage (2026-09-20)" and "TODO-5302 round 2 (2026-09-20)" entries for
+    the full investigation)
+  - scope: the 7 still-failing
+    `PrimeStruct_primestruct_ir_pipeline_validation_cases_*` shards
+    (81-90, 91-100, 101-110, 411-420,
+    721-730, 731-740, 741-750). `401-410` and `431-440` closed in round 9
+    (see below). `601-610`, `631-640`, `791-800`,
+    `1201-1210`, `241-250`, `251-260`, `331-340`, `691-700`, `351-360`,
+    and `381-390` are now
+    closed (rounds 2-5, see below); do not reopen them without a fresh
+    repro. `ir_pipeline_conversions_variadic_pointer_vectors` is also now
+    closed (round 4). Do NOT touch
+    `spinning_cube_argument_validation_51_55` - that is a documented
+    load-dependent flake (TODO-4711), unrelated to this cluster.
+    `PrimeStruct_semantic_memory_trend` can also flake under full-gate
+    parallel load (passes in isolation every time it has been checked,
+    including round 5's 2026-09-21 full gate) - treat it the same way as
+    `spinning_cube_argument_validation_51_55` if it appears, not as part
+    of this cluster.
+  - implementation_notes: round 1 found and fixed 4 of the original 24
+    shards (71-80, 751-760, 761-770, 831-840) via a shared theme - an
+    `at`/`at_unsafe` access call being wrongly allowed through an
+    `allowBuiltinFallback`-style condition or a struct-boxed-receiver gap
+    meant only for count/capacity probes or raw primitive vector locals.
+    Round 2 (2026-09-20) closed 2 more (601-610, 631-640) and made
+    791-800 nearly closed (1 assertion left), but also found - the hard
+    way, via a full release-gate run, not the narrow unit-shard reruns
+    alone - that the "same theme, just exclude the fallback" pattern
+    from round 1 does NOT generalize safely to every function in this
+    area. Read this before touching any of the remaining shards below:
+    - **Confirmed-safe fixes this round** (commits `aef440d`, `17cfc3b`,
+      `6e31c1e`, `2323111` - kept, zero regressions in two full release
+      gates): `shouldDisarmStructCopySourceExpr` (closed 601-610),
+      `resolveResultExprInfoFromLocals`'s indexed-file-handle-access
+      special case (closed 631-640), `inferPointerTargetValueKind`/
+      `inferBufferElementValueKind`'s args-pack access branches (part of
+      691-700/721-730, safe but didn't close a shard alone), and
+      `resolveCountMethodCallReturnKind`'s reordered-positional
+      short-circuit plus its narrowed (at/at_ref/at_unsafe/at_unsafe_ref
+      only, NOT soa get/ref) resolveMethodCallDefinition distrust
+      (brought 791-800 from ~40 failing assertions to 1).
+    - **Confirmed-UNSAFE, reverted in commit `8e610a7`**: (a) excluding
+      `isBuiltinAccessMethod` from `isBuiltinCountLikeMethod` in
+      `tryEmitInlineCallWithCountFallbacksImpl`
+      (`IrLowererInlineNativeCallDispatch.cpp`) - this function's builtin
+      array-access fallback is genuinely load-bearing for real programs
+      (canonical map reference string access, count-of-access), not just
+      a swallowed diagnostic; excluding it produced
+      `VM lowering error: inline dispatch failed without diagnostic: at`
+      and `unknown call target: /std/collections/map/at` for real
+      compiled programs
+      (`compile_run_vm_core_core_newly_exposed_2026_07_16_114_123`,
+      `compile_run_vm_collections_alias_and_basics_21_30`,
+      `compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`,
+      `..._353_362`, all passed their *unit* tests already and only broke
+      in the full gate). (b) the analogous "return Error for an
+      unresolved genuine vector at()" change in
+      `tryEmitInlineCallDispatchWithLocals` (same file) - same failure
+      shape. (c) gutting `resolveArrayKeyValueAccessElementKind` to
+      always return `NotMatched` (every *unit* test for it wanted this,
+      with zero counterexamples found in the unit suite) - broke a real
+      `count(access(...))` materialization path and tripped
+      `PrimeStruct_map_surface_strict_audit` via an incidental
+      comment-text match. **Lesson for whoever picks this up next: for
+      any remaining shard in this cluster, after a unit-shard fix looks
+      right, run at minimum the relevant `compile_run_vm_*`/
+      `compile_run_emitters_*` suites (or, budget permitting, the full
+      gate) before treating it as done - this cluster's helpers are
+      shared by real compiled-program paths, and the unit tests alone do
+      not cover that surface.**
+    - `..._791_800` (same file as before,
+      `test_ir_pipeline_validation_ir_lowerer_setup_type_helper_rejects_canonical_map_access_fallback_to_compatibility_de.cpp`):
+      one assertion left in "defers reordered bare access graph facts"
+      (2nd subtest, ~line 334). A reordered bare `at_unsafe(key, items)`
+      call where `key` is inferred as a `String` via the passed-in
+      "graph facts" `inferExprKind` callback gets treated as if `key`
+      itself were the string-index receiver (via
+      `isStringAccessReceiverExpr`), instead of recognizing this as a
+      genuinely ambiguous reordered-receiver case (the real receiver is
+      `items`, at index 1) and deferring. The fix likely needs
+      `isKnownCollectionAccessReceiverExpr`'s String-via-`inferExprKind`
+      trust to also check whether another positional argument is a
+      better/more-local-backed receiver candidate before accepting a
+      graph-fact string match as final - but this touches a
+      widely-shared classifier lambda inside
+      `resolveCountMethodCallReturnKind`, so any change needs the same
+      "verify against compile_run/emitters suites too" discipline noted
+      above.
+    - `..._721_730` (`resolveArrayKeyValueAccessElementKind`,
+      `IrLowererSetupInferenceHelpers.cpp`): still open. A narrower fix
+      than round 2's full gut is needed - one that only defers for the
+      unit-tested false-positive shapes (bare StringLiteral/graph-fact
+      string receiver, entry-args receiver, key-value local,
+      resolveCallCollectionAccessValueKind callback match, map/array/
+      vector constructor call, plain array/vector local - all with NO
+      other receiver-index candidate) without removing the function's
+      real classification behavior wholesale. Verify against
+      `compile_run_vm_core_core_newly_exposed_2026_07_16_114_123` (the
+      exact test this round's over-broad fix broke) before landing.
+    - `..._81_90`, `..._91_100`, `..._101_110`
+      (`tryEmitInlineCallWithCountFallbacks`,
+      `tryEmitInlineCallDispatchWithLocals`, `tryEmitNativeCallTailDispatch`,
+      all in `IrLowererInlineNativeCallDispatch.cpp`/
+      `IrLowererNativeTailDispatch.cpp`): still open per round 2's
+      revert. `101-110` also has a separate, not-yet-understood
+      opposite-direction shape in `tryEmitNativeCallTailDispatch` (a
+      malformed/wrong-arg-count bare `at` call and a genuine 2-arg raw
+      `Kind::Array`-local `at` call both currently return `Error`/emit
+      when the unit test wants `NotHandled` - this looks unrelated to
+      the swallowed-diagnostic theme and needs its own narrow repro
+      before touching). For `81-90`/`91-100`, do not repeat round 2's
+      `isBuiltinAccessMethod`-exclusion approach without also verifying
+      against the `compile_run_vm_core_core_newly_exposed_2026_07_16_114_123`/
+      `compile_run_vm_collections_alias_and_basics_21_30`/
+      `compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`/
+      `..._353_362` suite (the exact tests round 2's version of this fix
+      broke).
+    - `..._731_740`, `..._741_750`, `..._691_700`: mostly covered by the
+      confirmed-safe `inferPointerTargetValueKind`/
+      `inferBufferElementValueKind` args-pack fix above and by the
+      (reverted) `resolveArrayKeyValueAccessElementKind` fix; re-run
+      narrowly to see what, if anything, remains once `721-730`'s
+      narrower fix lands (they share the same test source file).
+    - `..._241_250`, `..._251_260` (count-access classifiers/emit
+      helpers, `tryEmitCountAccessCall` /
+      `IrLowererCountAccessHelpers.cpp`), `..._331_340` (buffer builtin
+      calls), `..._351_360`, `..._381_390`, `..._401_410`, `..._411_420`,
+      `..._431_440` (inference call-return/expr-kind dispatch setups),
+      and `..._1201_1210` (`inferStructExprPath`): not yet root-caused.
+      `251_260`'s "defer string map access emission" test
+      (`test_ir_pipeline_validation_ir_lowerer_count_access_helpers_emit_count_access_calls.cpp`)
+      was partially investigated this round: `count(at(values, 1))` on a
+      `map<Int32, String>` receiver should defer when the map's value
+      kind is `String` (string-valued map access changes count's
+      meaning) but currently doesn't for several binding/query-fact
+      combinations in `tryEmitCountAccessCall`, an 800+ line function -
+      reproduce narrowly first
+      (`ctest --test-dir build-release -R <shard> --output-on-failure`
+      or the matching standalone doctest `--test-case`), per the
+      Bug-fix workflow, and budget real investigation time given the
+      function's size.
+    Round 3 (2026-09-20/21) closed `..._791_800`: the remaining
+    "defers reordered bare access graph facts" edge case was fixed by
+    adding `isGraphFactOnlyCollectionAccessReceiverExpr`/
+    `isUnclassifiedLocalNameExpr` so `resolveCountMethodCallReturnKind`
+    only trusts a graph-fact-only String classification on a reordered
+    access call's front argument when no other positional argument is a
+    plausible alternate (unclassified-local) receiver (commit
+    `f9c2c5c`). A follow-up fix (`b084c4e`) reworded a comment that
+    tripped `PrimeStruct_vector_surface_traces` via the literal
+    substring `array-vector/soa`; verified all five audit scripts clean
+    afterward, confirmed via a full gate at 17/1897 (commit `9563a21`).
+    Round 4 (2026-09-21) closed two more, both genuinely stale test
+    expectations rather than the entangled receiver-classification bug
+    class (confirmed via standalone `primec --emit=vm` reruns and/or
+    direct rerun-with-print before touching any assertion):
+    - `ir_pipeline_conversions_variadic_pointer_vectors`: the "rejects
+      variadic pointer vector packs with indexed dereference access
+      helpers" case pinned a rejection
+      ("native backend only supports at() on numeric/bool/string arrays
+      or vectors") for a nested
+      `at_unsafe(dereference(at(values, i)), j)`/
+      `dereference(at(values, i)).at(j)` chain on an
+      `args<Pointer<vector<i32>>>` pack element. Reran the exact source
+      standalone via `primec --emit=vm` (positional, forwarded-spread,
+      and mixed-spread pack shapes) - lowering now succeeds and the
+      program runs to completion with the arithmetically correct
+      result (39). Updated the test to assert success, matching this
+      file's other sibling cases. Commit `4a6850c`.
+    - `..._1201_1210` (`inferStructExprPath`): closed TODO-4900's own
+      flagged gap. That TODO documented a real inconsistency (the
+      method-call-sugar form of an args-pack indexed access,
+      `values.at(0)`, resolved empty while the equivalent bare/
+      namespaced call form resolved a real struct path) as the test's
+      *expected* behavior. Reran the exact scenario and confirmed both
+      call shapes now resolve the same struct path (`/pkg/Ctor`) - the
+      gap was already closed elsewhere; only the stale assertion needed
+      updating. Commit `1f3522b`.
+    Round 4 also traced two of the still-open functions further and
+    found the SAME "unit tests want an unconditional reject/defer, but
+    the exact same receiver shape is genuinely load-bearing in real
+    compiled programs" conflict round 2 already hit, in two more
+    places, not just `resolveArrayKeyValueAccessElementKind`:
+    - Every currently-failing `ArrayKeyValueAccessElementKindResolution`
+      assertion across the whole unit suite (`grep`-verified, zero
+      exceptions) wants `NotMatched`, including for receiver shapes
+      that are structurally identical to the one production caller
+      (`inferCallExprCountAccessGpuFallbackKind`,
+      `IrLowererLowerInferenceFallbackSetup.cpp`) needs Resolved for
+      (the `count(at(values, i))`-shaped materialization path round 2's
+      revert protected). A "narrower" fix that only excludes the
+      unit-tested false-positive shapes without touching the real
+      positional-receiver path was not found this round; the shapes
+      overlap too closely to separate by receiver-classification alone
+      from the information available inside the function. Whoever picks
+      this up next should look at whether the two production call sites
+      (`IrLowererLowerInferenceFallbackSetup.cpp:287` and `:366`) can be
+      narrowed instead of the shared helper itself.
+    - `..._331_340`'s `tryEmitBufferBuiltinCall`/`resolveBufferLoadInfo`
+      (`IrLowererFlowBufferHelpers.cpp`) has the identical conflict:
+      the "emit buffer builtin calls" unit test wants `Result::Error`
+      ("buffer_load requires numeric/bool buffer") for a bare/
+      dereferenced `at()`-on-args-pack `Buffer`/`Reference<Buffer>`/
+      `Pointer<Buffer>` element receiver, but
+      `test_compile_run_vm_gpu.cpp`'s `score_direct`/`score_buffers_reference`/
+      `score_buffers_pointer` functions (lines ~93-107, ~158-170,
+      ~209-223) use exactly that shape
+      (`/std/gpu/buffer_load(values[0i32], 0i32)` and the
+      `dereference(values[i])` variant) as real, currently-passing GPU
+      buffer programs. Do not remove
+      `resolveBufferLoadInfo`'s args-pack-element branches
+      (`IrLowererFlowBufferHelpers.cpp` lines ~223-263) without a
+      standalone `primec --emit=vm` rerun of those exact
+      `test_compile_run_vm_gpu.cpp` scenarios first - this is the same
+      class of trap round 2's `8e610a7` revert documents, just in a
+      different function.
+    Round 5 (2026-09-21) closed 4 more, applying round 4's own
+    "check whether the unit test is just stale first" instruction to the
+    two functions round 4 traced but didn't fix, plus two more shards:
+    - `..._691_700` (`resolveArrayKeyValueAccessElementKind`,
+      `IrLowererSetupInferenceHelpers.cpp`): NOT a stale test this time -
+      a real, narrow code bug. The function's terminal fallback
+      unconditionally returned `Resolved` (with `kindOut` left `Unknown`)
+      for every genuinely-unclassifiable access shape instead of
+      `NotMatched`, so its only two production callers
+      (`inferCallExprCountAccessGpuFallbackKind`,
+      `IrLowererLowerInferenceFallbackSetup.cpp:287`/`:366`) could never
+      fall through to a more specific downstream resolver for those
+      shapes. Fixed the fallback to return `NotMatched`, and separately
+      removed the function's own bare/graph-fact String-receiver
+      shortcut (it raced ahead of the already-hardened, reordered-receiver-
+      aware `isStringAccessReceiverExpr` classifier in
+      `IrLowererSetupTypeReturnKindHelpers.cpp` for the identical shape).
+      Neither change touches the function's real early-return paths
+      (entry_args, direct key-value locals via `hasKeyValueKinds`,
+      `map<K,V>` constructor calls, `StringLiteral` char access) that
+      real compiled programs need - confirmed via a full
+      `compile_run_vm_*`/`compile_run_emitters_*`/`*collection*`/`*gpu*`
+      battery (653 tests, 0 failed) and all five audit scripts. This did
+      NOT fully resolve the function - `721-730`/`731-740`/`741-750`
+      remain open (see below), because several *other* early-return
+      paths in the same function (the `hasKeyValueKinds` direct-map-local
+      branch, the Name-local `Vector`/`Array` element-kind branch, and
+      the `Call`-target `resolveCallCollectionAccessValueKind` branch)
+      are each individually load-bearing for some real receiver shape
+      and each individually pinned to the *opposite* answer by at least
+      one unit assertion in
+      `test_ir_pipeline_validation_ir_lowerer_setup_inference_helper_rejects_invalid_pointer_targets.cpp`'s
+      "ignores unqualified array and map access kinds" case (a bare
+      `map<K, UInt64>` local's `at()` access must resolve `Resolved` for
+      real programs but this unit test pins `NotMatched` for that exact
+      shape) - the same irreconcilable-at-the-unit-level conflict round 2
+      and round 4 already hit elsewhere in this cluster, now confirmed
+      for this function's remaining branches too. Commit `fad0108`.
+    - `..._331_340` (`tryEmitBufferBuiltinCall`/`resolveBufferLoadInfo`,
+      `IrLowererFlowBufferHelpers.cpp`): confirmed **stale test**, per
+      round 4's own hypothesis. Traced `resolveBufferLoadInfo`'s
+      `resolveBufferElemKind` lambda directly: it already resolves a
+      bare/dereferenced `at(argsPack, i)` receiver's numeric element kind
+      straight from the pack's own `LocalInfo` (the
+      `isArgsPack`/`argsPackElementKind` branches at lines ~238-263), so
+      it never actually errors for a numeric element kind - it succeeds.
+      Reran `test_compile_run_vm_gpu.cpp` standalone to confirm this is
+      exactly what the real, currently-passing GPU buffer-pack programs
+      need and get. Updated the three stale sub-assertions (which pinned
+      `Result::Error` for this shape) to expect the real, already-correct
+      `Result::Emitted` outcome and its instruction shape. No production
+      code changed. Commit `bee56cb`.
+    - `..._251_260` (`tryEmitCountAccessCall`,
+      `IrLowererCountAccessHelpers.cpp`, the "defer string map access
+      emission" test): confirmed **stale test**. Traced through the
+      function's own `classifySemanticStringKeyValueAccess`-based
+      handling (lines ~1944-1971) and its raw-`LocalInfo` fallback: 3 of
+      the test's 4 pinned-`NotHandled` sub-cases (a `map<i32, string>`
+      binding fact on the receiver, a query fact directly resolving to
+      `"string"`, and no semantic facts at all but a raw
+      `keyValueValueKind == String` local) already resolve to
+      `Result::Emitted` with a `LoadStringLength` sequence - matching
+      the real, currently-passing
+      "compiles native string-valued map constructors on stdlib path"
+      compile_run case, whose `count(at(values, 1i32))` on a
+      `map<i32, string>` local depends on exactly this shape succeeding.
+      The 4th sub-case (a query fact resolving to a plain scalar `"i32"`)
+      already correctly hits the TODO-5256 guard and returns
+      `Result::Error` ("count() argument resolves to a non-string
+      value") - also updated to match, rather than weaken that guard.
+      No production code changed. Commit `041d31f`.
+    - `..._241_250` (`isArrayCountCall`,
+      `IrLowererCountAccessHelpers.cpp`, the "prefer semantic indexed
+      target facts" test): real code fix, narrowly scoped. The
+      args-pack-access branch (a bare `at(pack, i)` receiver) trusted the
+      pack's raw structural `LocalInfo` even when a semantic product
+      index was available and had no fact for that target - unlike every
+      other branch in this classifier, which already treats a
+      nonzero-but-unmatched `semanticNodeId` as a confirmed non-match via
+      `classifySemanticCountTarget`'s default-info fallthrough. A target
+      with no semantic node id at all (id `0`) skipped that fallthrough
+      entirely and fell into the raw args-pack branch, resolving `true`
+      from stale `LocalInfo` alone. Gated the args-pack branch on the
+      same semantic-index availability the rest of the classifier
+      already uses: once a semantic index is in play, either a matching
+      fact already resolved this target earlier in the function, or the
+      target is untrustworthy and this branch should not decide alone.
+      **Caution for whoever re-verifies this**: an almost-identical
+      first attempt at this exact fix looked like it broke 13 other
+      already-failing test cases in this suite - turned out those were
+      *already failing in the unmodified baseline* (an exact
+      before/after diff of every failing test case name, saved to
+      confirm, showed only the one targeted case leaving the failing
+      set and zero cases entering it). Always diff the full failing-test-
+      name set before concluding a change in this area caused a
+      regression, not just eyeball a post-change failure dump. Verified
+      via that diff, a clean 653-test `compile_run_vm_*`/`emitters_*`/
+      `collection*`/`gpu*` battery, and all five audit scripts. Commit
+      `3260fef`.
+    Round 5 also traced the `351-360`/`381-390`/`401-410`/`411-420`/
+    `431-440` dispatch-setup cluster and `81-90`/`91-100`/`101-110`
+    (both unexplored per round 4's report) far enough to characterize
+    them, but did NOT find a safe fix:
+    - `81-90` (`tryEmitInlineCallWithCountFallbacks`,
+      `IrLowererInlineNativeCallDispatch.cpp`): the one failing
+      assertion ("dispatch inline call with count fallbacks") wants a
+      bare method-call-styled `items.at(1)` access, with every injected
+      classifier/resolver returning false/nullptr, to return
+      `Result::Error` while leaving a pre-set `error` string untouched;
+      current behavior returns `NotHandled`. This is the exact function
+      TODO-5302 round 2's `8e610a7` revert already confirmed-unsafe to
+      touch (excluding `isBuiltinAccessMethod` from
+      `isBuiltinCountLikeMethod` here broke real compiled programs) - did
+      not re-attempt without a narrower, position-specific repro than
+      round 2 had.
+    - `351-360`/`381-390`/`401-410`/`411-420`/`431-440`: all trace back
+      to variations on one theme across several sibling
+      `runLowerInferenceExprKind*Setup` orchestrators
+      (`inferCallExprDirectReturnKind`, `inferCallExprBaseKind`,
+      `inferExprKind`, `inferCallExprCountAccessGpuFallbackKind`): each
+      failing test deliberately constructs a semantic fact whose literal
+      `bindingTypeText`/`queryTypeText` field and its separately-interned
+      `...TextId` field **disagree** (e.g. literal text `"map<i32,i64>"`
+      paired with an interned id resolving to `"vector<f32>"`, or a
+      `dereference(at(pack, 0))` access into a `Reference<Result<...>>`/
+      `Pointer<FileError>` args-pack element with a semantic fact that
+      contradicts the pack's own `LocalInfo`), and wants the whole
+      dispatch to answer `NotResolved`/`Unknown` rather than trust either
+      side. This is a materially different bug class from every other
+      shape this cluster has hit so far (not a receiver-classification
+      false positive, but a "which of two disagreeing fact sources wins,
+      or does neither" design question spanning at least 4 separate
+      orchestrator entry points). Given how deep and widely-shared these
+      call-return/expr-kind dispatch setups are (every one of them sits
+      on the hot path for ordinary expression-kind inference), and this
+      round's own near-miss on `isArrayCountCall` above (which looked
+      like a 13-test regression at first glance and was not), do not
+      guess a fix here without first reproducing one case under
+      instrumentation and tracing exactly which of the two fact sources
+      the real production callers already depend on - this needs its own
+      dedicated round.
+    - `721-730`/`731-740`/`741-750`: unchanged from round 4's
+      finding - covered by `691-700`'s partial fix above, remainder
+      blocked on `resolveArrayKeyValueAccessElementKind`'s other
+      early-return branches, each individually load-bearing for a real
+      receiver shape (see the `691-700` note above).
+    Round 6 (2026-09-21) closed no shards; gave Group B
+    (`351-360`/`381-390`/`401-410`/`411-420`/`431-440`) the dedicated
+    instrumented pass round 5 asked for and refined its root cause, but
+    the fix attempted from that refinement regressed a sibling test and
+    was reverted before landing (see `docs/failing_tests.md`'s
+    "TODO-5302 round 6" entry for the full trace). Summary: the shared
+    mechanism these 5 shards' orchestrators funnel through is confirmed
+    to be `resolveSemanticProductTypeText`
+    (`IrLowererBindingTypeHelpers.cpp`), and a real semantic product's
+    `bindingTypeText`/`bindingTypeTextId` pair can never actually
+    disagree (the id is always interned from the text at publication
+    time, per `SemanticPublicationBuilders.cpp`) - but round 5's framing
+    of the bug as "literal text vs. interned text disagreement" is not
+    quite right: nearly every binding fact across this test file
+    deliberately sets a disagreeing decoy `bindingTypeText`, including
+    ones whose expected behavior is to still resolve successfully. The
+    real discriminator, confirmed by direct A/B testing, is whether the
+    `bindingTypeTextId`-resolved type's shape (array/vector vs. map vs.
+    scalar) agrees with the receiver's own **structural `LocalInfo`**
+    (`Kind`/`keyValueKeyKind`/`keyValueValueKind`/`valueKind`, populated
+    independently by binding/statement lowering) - not whether it agrees
+    with the fact's own raw text field. A same-function, single-point
+    fix at `resolveSemanticProductTypeText` cannot express this (it has
+    no access to the receiver's `LocalInfo`), so the real fix needs to
+    be threaded through each of the ~4 orchestrator entry points
+    individually, cross-checking the resolved semantic type against the
+    receiver's structural local shape before trusting it. Whoever picks
+    this up next should start from this narrower, verified
+    characterization rather than re-deriving it, and, per this cluster's
+    established discipline, diff the full failing-assertion set at each
+    orchestrator (not just eyeball a post-change dump) before treating
+    any attempt as safe.
+    Round 7 (2026-09-21) closed 2 of Group B's 5 shards
+    (`351-360`, `381-390`), picking up round 6's refined characterization
+    but implementing it per-orchestrator (not centrally) as round 6
+    instructed:
+    - `..._351_360` (`resolveCountMethodCallReturnKind`, backing the
+      call-return-setup orchestrator, `IrLowererSetupTypeReturnKindHelpers.cpp`):
+      added a `ReceiverShapeCategory` classifier (KeyValue/ArrayVector/
+      String/Other) for both a semantic fact's resolved shape and a
+      receiver's structural `LocalInfo` shape, and used it in two places:
+      (a) the two feeder lambdas that back the reordered-receiver
+      decision (`resolveSemanticArrayVectorTargetInfo`/
+      `resolveSemanticKeyValueTargetInfo`) now treat a semantic fact as
+      untrustworthy when the candidate Name has no `LocalInfo` entry at
+      all, not just when it disagrees; (b) a new top-level guard,
+      **scoped to `at`-family access calls only** (`isAccessCall`),
+      rejects the whole call outright when the bare front receiver's
+      semantic fact shape disagrees with its own structural `LocalInfo`
+      shape, instead of silently falling through to a structural-fallback
+      resolution. The `isAccessCall` scoping was load-bearing: an
+      identical-looking `text`+`stringFact`+map-shaped-local combination
+      is used by two different sibling tests in the same file with
+      *opposite* expectations - the `at`-call version must reject, but
+      the sibling `count`/`contains`-call version
+      ("uses semantic count receiver facts before local metadata") must
+      still let the String fact win over the disagreeing local (a first,
+      unscoped attempt at this fix passed the target shard but regressed
+      that sibling case - caught only by rerunning the whole file, per
+      round 6's own lesson). All ~13 other direct call sites inside this
+      function that use the shared fact-resolution helper were
+      deliberately left untouched/unwrapped, to keep the fix narrow to
+      the two demonstrated failure shapes. Commit `81515a7`.
+    - `..._381_390` (`inferCallExprBaseKindImpl`, backing the
+      call-base-setup orchestrator,
+      `IrLowererLowerInferenceBaseKindHelpers.cpp`): a different but
+      related shape - five structural-only fallback blocks (a bare or
+      dereferenced indexed `FileError`/`FileHandle` args-pack element for
+      `why()`/`write()`/`flush()`-family methods) trusted the receiver's
+      raw `LocalInfo` alone with **no semantic corroboration check at
+      all** (not even an existence check), unlike every sibling branch in
+      the same function which checks a semantic fact first. Gated all
+      five on `semanticProgram != nullptr`. This is provably safe for
+      every real compiled program: `IrLowererLower.cpp` hard-errors
+      before lowering ever begins when `semanticProgram` is null ("semantic
+      product is required for IR lowering"), so the gate can only ever
+      affect a synthetic no-semantics-at-all unit scenario, exactly the
+      shape the failing sub-cases construct (`makeState(nullptr, nullptr)`).
+      Commit `c5d0227`.
+    Both fixes verified individually and then together: each target
+    shard; the whole
+    `test_ir_pipeline_validation_ir_lowerer_inference_call_return_setup_resolves_namespaced_capacity_definition_directl.cpp`/
+    `..._call_base_setup_infers_try_from_indexed_borrowed_and_po.cpp` source
+    files and the full `primestruct.ir.pipeline.validation` suite (1653
+    cases, only the pre-existing/unrelated `ir lowerer supports map method
+    calls` failure remains - confirmed pre-existing via `git stash` A/B,
+    unrelated to `ir_lowerer` since it fails at the semantics stage
+    before lowering runs at all); the full `compile_run_vm_*`/
+    `compile_run_emitters_*`/`*collection*`/`*gpu*` battery (653/653,
+    twice, once per fix); and all five audit scripts (clean, twice). A
+    full `./scripts/compile.sh --release` gate afterward showed exactly
+    9/1897 failing (down from 11), matching this list's remaining scope
+    with zero new failures anywhere else.
+    Did not attempt the remaining 3 Group B shards
+    (`401-410`/`411-420`/`431-440`, `runLowerInferenceExprKindDispatchSetup`/
+    `IrLowererLowerInferenceDispatchSetup.cpp` and
+    `runLowerInferenceExprKindCallFallbackSetup`/
+    `IrLowererLowerInferenceFallbackSetup.cpp`) or Groups A/C this round.
+    Traced `401-410`'s "rejects stale indexed map value facts" case far
+    enough to find a *third* distinct bug shape in this cluster, worth
+    recording precisely for whoever picks this up next: the dispatch
+    function (`IrLowererLowerInferenceDispatchSetup.cpp`, around its
+    `isBuiltinCountLikeCall(expr)` branch, ~line 1326) contains its own
+    inline, ad hoc semantic+structural resolution for a bare
+    `count(access(...))` expression shape
+    (`inferDispatchSetupSemanticCountAccessKind` plus a raw
+    `localsIn.find(accessTarget.name)` fallback) that runs *after* the
+    officially injected `stateInOut.inferCallExprCountAccessGpuFallbackKind`
+    hook already returned "not resolved" - i.e. it is a second,
+    parallel/duplicate implementation of the same job that hook exists to
+    do, not a shape-disagreement bug: even a sub-case where the semantic
+    fact and the structural local *fully agree*
+    (`map<i32, string>` fact matching a `map<Int32, String>`-shaped local
+    exactly) is still supposed to return `Unknown` in this test, because
+    the test stubs the injected hook to always fail and expects the
+    dispatch to respect that instead of quietly re-deriving an answer
+    itself. This is NOT the same "shape cross-check" fix as `351-360`/
+    `381-390` above - it looks more like this inline block should defer
+    entirely to `stateInOut.inferCallExprCountAccessGpuFallbackKind`
+    (`IrLowererLowerInferenceFallbackSetup.cpp`, the real implementation
+    behind that hook, itself the shard-411-420 orchestrator) rather than
+    duplicate a narrower slice of its job inline - but confirming whether
+    real compiled programs depend on this inline block resolving cases
+    the injected hook's real implementation does not cover needs its own
+    dedicated instrumented pass (per this cluster's established
+    discipline) before touching it; not attempted this round given
+    remaining budget. Did not look at `411-420`'s or `431-440`'s specific
+    failing assertions this round, nor Group A (`81-90`/`91-100`/
+    `101-110`) or Group C (`721-730`/`731-740`/`741-750`) beyond
+    reconfirming via the full gate that they are unchanged from round 5/6's
+    characterization.
+  - acceptance: each targeted shard passes individually via
+    `ctest --test-dir build-release -R <shard-name>`, and a full
+    `./scripts/compile.sh --release` gate shows zero new failures
+    anywhere (only shards in this list's scope should flip) - run the
+    full gate, not just the narrow shard rerun, before considering any
+    fix in this area done (see the round-2 lesson above).
+  - stop_rule: land and verify each fix separately (one logical change
+    per commit, per AGENTS.md); do not force a guessed fix onto a
+    shard whose exact failing mechanism hasn't been traced (gdb
+    breakpoint-sweep or targeted instrumentation, per this project's
+    established methodology) - a shard left unfixed with an honest
+    per-shard note is a legitimate stopping point, matching this
+    cluster's own multi-round history (TODO-4726/4727/4728,
+    TODO-5300/5301).
+  - round_8_note: (2026-09-21) Fixed `_401_410`'s originally-diagnosed
+    bug (round 7's lead): `runLowerInferenceExprKindDispatchSetup`'s
+    inline `count(access(...))` handling
+    (`IrLowererLowerInferenceDispatchSetup.cpp`) duplicated
+    `inferCallExprCountAccessGpuFallbackKind`'s job and kept
+    re-deriving an answer from semantic facts/raw locals even after
+    that hook had already reported the case unresolved, silently
+    bypassing its authoritative verdict. Removed the dead-end inline
+    branch and its now-unused `inferDispatchSetupSemanticCountAccessKind`
+    helper. Verified: the full `primestruct.ir.pipeline.validation`/
+    `.conversions` suites (no new failures beyond the shards already
+    tracked here), 1132/1132 on a `*collection*,*gpu*,*emitters*`
+    compile_run battery, and all five collection-audit scripts clean.
+    However, `_401_410`, `_411_420`, and `_431_440` each remain failing
+    as CTest shards - not because of this bug (confirmed absent after
+    the fix), but because each 10-case shard also bundles a SEPARATE,
+    unrelated, pre-existing failure in the same source file(s): "uses
+    semantic try operand Result facts" / "uses semantic method receiver
+    facts" (`Result`/`try`-expression semantic-fact handling, not
+    count-access dispatch) for `_401_410`, and similarly-distinct
+    Result/args-pack cases for `_411_420`/`_431_440` (see the ctest
+    `--output-on-failure` output for exact case names). These are a
+    genuinely different bug from anything rounds 1-8 have traced -
+    round 9 should treat them as a fresh investigation (Result/try
+    semantic-fact resolution for indexed/dereferenced pointer or
+    file-handle args-pack receivers), not assume they share Group B's
+    root cause. Commit `89f57a2`.
+  - round_9_note: (2026-09-21) Closed `_401_410` and `_431_440` by
+    following round 8's lead. Root cause: `resolveTryValueKind` inside
+    `runLowerInferenceExprKindDispatchSetup`'s `inferExprKind`
+    (`IrLowererLowerInferenceDispatchSetup.cpp`) had **three**
+    structural-only fallback shapes that trusted a receiver's raw
+    `LocalInfo` alone with no check that a semantic context even
+    exists - the exact "TODO-5302 round 7" pattern already fixed in
+    `IrLowererLowerInferenceBaseKindHelpers.cpp`, just not carried over
+    to this sibling orchestrator: (1) a bare indexed args-pack Result
+    access (`try(at(pack, i))`), (2) a dereferenced indexed args-pack
+    Result access (`try(dereference(at(pack, i)))`), and (3) a
+    dispatch-side duplicate of
+    `isIndexed[Borrowed/Pointer]ArgsPackFileHandleReceiver` (a
+    file-handle method call, e.g. `try(flush(dereference(at(pack,
+    i))))`). Gated all three on `semanticProgram != nullptr`, same
+    justification as round 7 (`IrLowererLower.cpp` hard-errors before
+    lowering when `semanticProgram` is null, so the gate only affects
+    the synthetic no-semantics-at-all unit scenarios these tests
+    construct). Verified: target shards now pass; the full
+    `test_ir_pipeline_validation_ir_lowerer_inference_expr_kind_dispatch_infers_try_from_indexed_map_tryat_args_pack_lo.cpp`/
+    `..._get_return_info_step_reports_missing_definitions.cpp` source
+    files and the full `primestruct.ir.pipeline.validation` suite (13
+    pre-existing failures before the change, exactly 3 fewer - 10 - after,
+    zero new failures, confirmed via `git stash` A/B); a 341-test
+    `compile_run_vm_*`/`compile_run_emitters_*` battery (0 failed); a
+    411-test `*collection*`/`*gpu*` battery (0 failed); and all five audit
+    scripts (clean). Commit `b8df8d9`.
+    Investigated `_411_420`'s remaining failure ("call-fallback setup
+    wires callback") and confirmed it is a manifestation of the
+    **already-documented Group C conflict**, not a new bug: the test
+    calls `state.inferCallExprCountAccessGpuFallbackKind` directly with a
+    bare, non-count-wrapped `at(arr, 0)` call and expects
+    `CHECK_FALSE`/`Unknown`, but the real implementation
+    (`IrLowererLowerInferenceFallbackSetup.cpp:366`,
+    `resolveArrayKeyValueAccessElementKind(expr, ...)`) resolves it
+    `Resolved`/`Int64` via the plain-array-local branch. This is the same
+    conflict round 4 already found and documented ("Every currently-
+    failing `ArrayKeyValueAccessElementKindResolution` assertion...wants
+    `NotMatched`, including for receiver shapes that are structurally
+    identical to the one production caller...needs `Resolved` for") -
+    `_411_420`'s failing case is simply another unit assertion on the
+    same production line the `_721_730`/`_731_740`/`_741_750` shards are
+    already blocked on. Re-filed `_411_420` under Group C's scope rather
+    than Group B's (it no longer shares Group B's root cause once the
+    three fixes above land) - whoever resolves Group C's
+    `resolveArrayKeyValueAccessElementKind` conflict should re-check
+    `_411_420` at the same time. Did not attempt Group A
+    (`_81_90`/`_91_100`/`_101_110`) this round - round 2's `8e610a7`
+    revert already confirmed a naive fix there breaks real compiled
+    programs, and this round's remaining budget went to verifying the
+    Group B/C investigation above instead of a fresh, from-scratch Group
+    A attempt. A full `./scripts/compile.sh --release` gate afterward
+    showed 8/1897 failed: the 7 shards still in this task's scope plus
+    one confirmed pre-existing load-dependent flake
+    (`compile_run_examples_spinning_cube_argument_validation_51_55`,
+    TODO-4711, unrelated to this cluster), zero new failures anywhere
+    else.
+  - round_10_note: (2026-09-21) Closed all 7 remaining shards. Group C
+    (`_721_730`, `_731_740`, `_741_750`, `_411_420`): found the precise
+    distinguishing signal rounds 5/6/9 asked for -
+    `resolveArrayKeyValueAccessElementKind`'s structural Name/map/array
+    fallback branches (`IrLowererSetupInferenceHelpers.cpp`) trusted a
+    receiver's raw `LocalInfo` even when the access call's own
+    `semanticNodeId` was `0`. Every real compiled program assigns a
+    nonzero `semanticNodeId` to every AST node during semantics validation
+    (`assignSemanticNodeIds`, which runs before IR lowering ever starts -
+    `IrLowererLower.cpp` hard-errors on a null semantic product), including
+    a real user-written `count(access(...))` materialization; a `0` id
+    only ever occurs for a synthetic `Expr` built directly by this
+    function's own unit tests (confirmed: zero direct-unit-test call to
+    this function anywhere in the suite expects `Resolved`). Deferring on
+    `semanticNodeId == 0` closes all 4 shards without touching any of the
+    function's real early-return paths. Commit `02975ab`.
+    Group A (`_81_90`, `_91_100`, `_101_110`,
+    `IrLowererInlineNativeCallDispatch.cpp`/`IrLowererNativeTailDispatch.cpp`):
+    found that all three target unit tests call production-unused public
+    overloads - `tryEmitInlineCallWithCountFallbacks` (no `LocalMap`),
+    `tryEmitInlineCallDispatchWithLocals` with no `semanticProgram`, and
+    `tryEmitNativeCallTailDispatch` (not `...WithLocals`) with no
+    `semanticProgram`/classifier - confirmed by exhaustive caller search
+    (only `...WithLocals` variants with real, non-empty classifiers and a
+    real `semanticProgram` are reached from `IrLowererLowerEmitExprTailDispatch.h`,
+    the sole production dispatch site, and `IrLowererLower.cpp` hard-errors
+    before lowering without a semantic product). This let each fix be
+    scoped narrowly and safely:
+    - `_81_90`: `tryEmitInlineCallWithCountFallbacksImpl` now fails fast
+      (preserving the caller's diagnostic) for a builtin-access-shaped
+      method call with no resolved callee only when its own
+      `isCollectionAccessReceiverExpr` classifier is unset - true only for
+      the unused locals-less overload. Commit `2958ca6`.
+    - `_101_110`: `tryEmitNativeCallTailDispatch` now defers instead of
+      hard-erroring/emitting for a bare `at`/`at_unsafe` call whose
+      receiver is a raw `Kind::Array`/`Kind::Vector` local, only when both
+      `semanticProgram` is null and `resolveCallArrayVectorAccessTargetInfo`
+      is unset - scoped to that raw-local receiver shape specifically so
+      other access shapes resolved without semantics (e.g. a struct-boxed
+      experimental-vector local via a generated direct helper path, which
+      a sibling currently-passing test exercises) stay untouched. Commit
+      `891b31a`.
+    - `_91_100`: `tryEmitInlineCallDispatchWithLocals`'s vector-`at()`
+      method-call branch now surfaces the real "unknown method" diagnostic
+      instead of deferring, only when there is no semantic product at all
+      *and* the receiver is a raw `Kind::Array`/`Kind::Vector` local (the
+      unresolved-override case still defers unconditionally otherwise, so
+      the real builtin-passthrough shape round 2's `8e610a7` revert
+      protected stays untouched). Commit `d0be27b`.
+    Each fix verified individually against its target shard, the full
+    `primestruct.ir.pipeline.validation`/`.conversions` suites (only the
+    pre-existing unrelated "ir lowerer supports map method calls" failure
+    remains throughout - confirmed unaffected at every step), the exact
+    `compile_run_vm_core_core_newly_exposed_2026_07_16_114_123`/
+    `compile_run_vm_collections_alias_and_basics_21_30`/
+    `compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`/
+    `..._353_362` tests `8e610a7` named as broken by earlier naive
+    versions of these exact fixes, a 653-test
+    `compile_run_vm_*`/`compile_run_emitters_*`/`*collection*`/`*gpu*`
+    battery (0 failed, run 4 times total across the round), and all five
+    collection audit scripts (clean, run after every change). A full
+    `./scripts/compile.sh --release` gate afterward showed **100% tests
+    passed, 0 tests failed out of 1897** (1971 total including 74
+    pre-existing intentionally-disabled cases) - both previously-flaky
+    load-dependent cases (`spinning_cube_argument_validation_51_55`,
+    `PrimeStruct_semantic_memory_definition_worker_parity`) passed too.
+    TODO-5302 is now fully resolved - the entire test suite is green.
+    Moved to `docs/todo_finished.md`.
+

@@ -15,16 +15,87 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
-As of TODO-5302 round 9 (2026-09-21): 7 shards remain -
-`PrimeStruct_primestruct_ir_pipeline_validation_cases_{81_90,91_100,101_110,
-411_420,721_730,731_740,741_750}`. `401_410` and `431_440` closed this round.
-A full `./scripts/compile.sh --release` gate afterward showed 8/1897
-failed: exactly those 7 shards plus one confirmed pre-existing
-load-dependent flake
-(`compile_run_examples_spinning_cube_argument_validation_51_55`, timed
-out under full-gate parallel load - TODO-4711, unrelated to this
-cluster), zero new failures anywhere else. See the "TODO-5302 round 9"
-entry below for details.
+**None.** As of TODO-5302 round 10 (2026-09-21), the full
+`./scripts/compile.sh --release` gate shows **100% tests passed, 0 tests
+failed out of 1897** (1971 total including 74 pre-existing
+intentionally-disabled cases). TODO-5302's last 7
+`PrimeStruct_primestruct_ir_pipeline_validation_cases_*` shards
+(`81_90`, `91_100`, `101_110`, `411_420`, `721_730`, `731_740`,
+`741_750`) are all fixed - see the "TODO-5302 round 10" entry below. Both
+previously-flaky load-dependent cases
+(`compile_run_examples_spinning_cube_argument_validation_51_55`,
+`PrimeStruct_semantic_memory_definition_worker_parity`) also passed in
+this run. This closes the TODO-4683 -> TODO-5300 -> TODO-5301 ->
+TODO-5302 hidden-test-failure remediation chain; TODO-5302 has been
+moved to `docs/todo_finished.md`.
+
+### TODO-5302 round 10 (2026-09-21): all 7 remaining shards closed - test suite fully green
+
+Group C (`_721_730`, `_731_740`, `_741_750`, `_411_420`): the precise
+distinguishing signal rounds 5/6/9 asked for turned out to be
+`semanticNodeId`. `resolveArrayKeyValueAccessElementKind`'s structural
+Name/map/array fallback branches (`IrLowererSetupInferenceHelpers.cpp`)
+trusted a receiver's raw `LocalInfo` even when the access call's own
+`semanticNodeId` was `0`. Every real compiled program assigns a nonzero
+`semanticNodeId` to every AST node during semantics validation
+(`assignSemanticNodeIds`, which runs before IR lowering starts -
+`IrLowererLower.cpp` hard-errors on a null semantic product), including a
+real user-written `count(access(...))` materialization; a `0` id only
+ever occurs for a synthetic `Expr` built directly by this function's own
+unit tests (confirmed: zero direct-unit-test call to this function
+anywhere in the suite expects `Resolved`). Deferring
+(`ArrayKeyValueAccessElementKindResolution::NotMatched`) on
+`semanticNodeId == 0` closed all 4 shards without touching any of the
+function's real early-return paths. Commit `02975ab`.
+
+Group A (`_81_90`, `_91_100`, `_101_110`,
+`IrLowererInlineNativeCallDispatch.cpp`/`IrLowererNativeTailDispatch.cpp`):
+all three target unit tests turned out to call production-unused public
+overloads - `tryEmitInlineCallWithCountFallbacks` (no `LocalMap`),
+`tryEmitInlineCallDispatchWithLocals` with no `semanticProgram`, and
+`tryEmitNativeCallTailDispatch` (not `...WithLocals`) with no
+`semanticProgram`/classifier - confirmed by an exhaustive caller search
+(only `...WithLocals` variants with real, non-empty classifiers and a
+real `semanticProgram` are reached from the sole production dispatch
+site, `IrLowererLowerEmitExprTailDispatch.h`, and `IrLowererLower.cpp`
+hard-errors before lowering without a semantic product). This let each
+fix be scoped narrowly and safely:
+- `_81_90`: `tryEmitInlineCallWithCountFallbacksImpl` now fails fast
+  (preserving the caller's diagnostic) for a builtin-access-shaped method
+  call with no resolved callee only when its own
+  `isCollectionAccessReceiverExpr` classifier is unset - true only for
+  the unused locals-less overload. Commit `2958ca6`.
+- `_101_110`: `tryEmitNativeCallTailDispatch` now defers instead of
+  hard-erroring/emitting for a bare `at`/`at_unsafe` call whose receiver
+  is a raw `Kind::Array`/`Kind::Vector` local, only when both
+  `semanticProgram` is null and `resolveCallArrayVectorAccessTargetInfo`
+  is unset - scoped to that raw-local receiver shape specifically so
+  other access shapes resolved without semantics (e.g. a struct-boxed
+  experimental-vector local via a generated direct helper path, exercised
+  by a sibling currently-passing test) stayed untouched. Commit
+  `891b31a`.
+- `_91_100`: `tryEmitInlineCallDispatchWithLocals`'s vector-`at()`
+  method-call branch now surfaces the real "unknown method" diagnostic
+  instead of deferring, only when there is no semantic product at all
+  *and* the receiver is a raw `Kind::Array`/`Kind::Vector` local (the
+  unresolved-override case still defers unconditionally otherwise, so the
+  real builtin-passthrough shape round 2's `8e610a7` revert protected
+  stayed untouched). Commit `d0be27b`.
+
+Each fix was verified individually against its target shard, the full
+`primestruct.ir.pipeline.validation`/`.conversions` suites (only the
+pre-existing unrelated "ir lowerer supports map method calls" failure
+remained throughout - confirmed unaffected at every step), the exact
+`compile_run_vm_core_core_newly_exposed_2026_07_16_114_123`/
+`compile_run_vm_collections_alias_and_basics_21_30`/
+`compile_run_emitters_cpp_emitters_newly_exposed_2026_07_16_303_312`/
+`..._353_362` tests `8e610a7` named as broken by earlier naive versions
+of these exact fixes, a 653-test
+`compile_run_vm_*`/`compile_run_emitters_*`/`*collection*`/`*gpu*`
+battery (0 failed, run 4 times total across the round), and all five
+collection audit scripts (clean, run after every change). A final full
+`./scripts/compile.sh --release` gate confirmed the whole cluster is
+closed: 100% tests passed, 0 tests failed out of 1897.
 
 ### TODO-5302 round 9 (2026-09-21): 2 more shards closed (401-410, 431-440); 7 remain
 
@@ -2003,20 +2074,11 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-21T21:27:38Z`
+- Last updated: `2026-09-21T22:01:20Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
-  - `84`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`
-  - `85`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_101_110`
-  - `116`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_411_420`
-  - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
-  - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
-  - `149`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_741_750`
-  - `1745`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
+- Result: no failing CTest cases.
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
