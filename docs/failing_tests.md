@@ -15,6 +15,85 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+As of TODO-5302 round 7 (2026-09-21): 9 shards remain -
+`PrimeStruct_primestruct_ir_pipeline_validation_cases_{81_90,91_100,101_110,
+401_410,411_420,431_440,721_730,731_740,741_750}`. Full
+`./scripts/compile.sh --release` gate: 9/1897 failed, zero new failures
+elsewhere. See the "TODO-5302 round 7" entry below for what closed
+`351-360`/`381-390` this round.
+
+### TODO-5302 round 7 (2026-09-21): 2 more shards closed (351-360, 381-390); 9 remain
+
+Picked up exactly where round 6 left off on Group B
+(`351-360`/`381-390`/`401-410`/`411-420`/`431-440`), implementing round 6's
+refined "cross-check the semantic fact's resolved shape against the
+receiver's own structural `LocalInfo`" characterization per-orchestrator
+(not centrally), per round 6's own explicit instruction.
+
+- `..._351_360` (`resolveCountMethodCallReturnKind`,
+  `IrLowererSetupTypeReturnKindHelpers.cpp`, backing the call-return-setup
+  orchestrator): added a `ReceiverShapeCategory` (KeyValue/ArrayVector/
+  String/Other) classifier for both a semantic fact's resolved shape and a
+  receiver's structural `LocalInfo` shape. Used it in two narrowly-scoped
+  places: the two feeder lambdas backing the reordered-receiver decision now
+  treat a semantic fact as untrustworthy when the candidate has no
+  structural `LocalInfo` entry at all (not just when it disagrees); and a
+  new top-level guard, scoped to `at`-family access calls only
+  (`isAccessCall`), rejects the whole call when the bare front receiver's
+  semantic-fact shape disagrees with its own structural `LocalInfo` shape.
+  The `isAccessCall` scoping was load-bearing, found the hard way: an
+  identical `text`+stringFact+map-shaped-local combination appears in two
+  sibling tests in the same source file with opposite expectations - the
+  `at()` version must reject, the `count()`/`contains()` version ("uses
+  semantic count receiver facts before local metadata") must still let the
+  String fact win over the disagreeing local. A first, unscoped version of
+  this fix passed its target shard but silently regressed that sibling
+  case - caught only by rerunning the whole file per round 6's own lesson,
+  not by the target-shard rerun alone. Commit `81515a7`.
+- `..._381_390` (`inferCallExprBaseKindImpl`,
+  `IrLowererLowerInferenceBaseKindHelpers.cpp`, backing the call-base-setup
+  orchestrator): a related but distinct shape - five structural-only
+  fallback blocks (bare/dereferenced indexed `FileError`/`FileHandle`
+  args-pack elements for `why()`/`write()`/`flush()`-family methods)
+  trusted the receiver's raw `LocalInfo` with no semantic corroboration
+  check at all, unlike every sibling branch in the same function. Gated all
+  five on `semanticProgram != nullptr`, provably safe for real compiled
+  programs since `IrLowererLower.cpp` hard-errors before lowering begins
+  when `semanticProgram` is null. Commit `c5d0227`.
+
+Verified both fixes: target shards individually; the whole two source test
+files; the full `primestruct.ir.pipeline.validation` suite (1653 cases -
+only the pre-existing, unrelated `ir lowerer supports map method calls`
+failure remains, confirmed pre-existing via a `git stash` A/B rerun since it
+fails at the semantics stage, before `ir_lowerer` ever runs); the full
+`compile_run_vm_*`/`compile_run_emitters_*`/`*collection*`/`*gpu*` battery
+(653/653, run once per fix); and all five collection audit scripts (clean,
+run once per fix). Final full `./scripts/compile.sh --release` gate:
+9/1897 failed, matching this round's remaining scope exactly, zero new
+failures anywhere.
+
+Traced `401-410`'s "rejects stale indexed map value facts" case far enough
+to find a third, distinct bug shape in this cluster (not the same
+shape-disagreement pattern as the two fixes above): the dispatch function's
+own inline `count(access(...))` resolution
+(`IrLowererLowerInferenceDispatchSetup.cpp`, around
+`isBuiltinCountLikeCall(expr)`, ~line 1326) runs its own semantic+structural
+classification *after* the officially injected
+`stateInOut.inferCallExprCountAccessGpuFallbackKind` hook already reported
+"not resolved" - i.e. a duplicate implementation of that hook's job, not a
+disagreement bug (even a sub-case where the semantic fact and the
+structural local fully agree is still supposed to return `Unknown`, because
+the test stubs the hook to always fail and the dispatch is expected to
+respect that). Did not attempt a fix this round - see the matching
+`docs/todo.md` TODO-5302 round 7 note for the full detail and the
+recommended next step (likely deferring this inline block entirely to the
+real `inferCallExprCountAccessGpuFallbackKind` implementation rather than
+partially duplicating it, pending a dedicated instrumented pass to confirm
+no real compiled program depends on the inline block's narrower coverage).
+Did not look further at `411-420`/`431-440`, or at Group A
+(`81-90`/`91-100`/`101-110`) or Group C (`721-730`/`731-740`/`741-750`)
+beyond reconfirming via the full gate that they are unchanged.
+
 ### TODO-5302 round 6 (2026-09-21): no shard closed; Group B root cause refined, attempted fix reverted
 
 Re-confirmed all 11 shards from round 5 are still failing (`81-90`,
@@ -1882,7 +1961,7 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-21T10:38:09Z`
+- Last updated: `2026-09-21T11:30:33Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
@@ -1891,15 +1970,12 @@ All other test assertion failures have been fixed in this session:
   - `83`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_81_90`
   - `84`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`
   - `85`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_101_110`
-  - `110`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_351_360`
-  - `113`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_381_390`
   - `115`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410`
   - `116`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_411_420`
   - `118`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_431_440`
   - `147`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_721_730`
   - `148`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
   - `149`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_741_750`
-  - `1953`: `PrimeStruct_semantic_memory_trend`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes

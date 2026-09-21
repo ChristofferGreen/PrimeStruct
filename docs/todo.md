@@ -70,7 +70,7 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (11 shards)
+- [ ] TODO-5302: Fix remaining ir_pipeline_validation_cases at()/at_unsafe() receiver-fallback gaps (9 shards)
   - owner: ai
   - created_at: 2026-09-20
   - phase: Hidden test failure remediation
@@ -80,11 +80,12 @@ This file is the live open-work queue for PrimeStruct.
     `docs/failing_tests.md`'s "ir_pipeline_validation_cases regression
     triage (2026-09-20)" and "TODO-5302 round 2 (2026-09-20)" entries for
     the full investigation)
-  - scope: the 11 still-failing
+  - scope: the 9 still-failing
     `PrimeStruct_primestruct_ir_pipeline_validation_cases_*` shards
-    (81-90, 91-100, 101-110, 351-360, 381-390, 401-410, 411-420, 431-440,
+    (81-90, 91-100, 101-110, 401-410, 411-420, 431-440,
     721-730, 731-740, 741-750). `601-610`, `631-640`, `791-800`,
-    `1201-1210`, `241-250`, `251-260`, `331-340`, and `691-700` are now
+    `1201-1210`, `241-250`, `251-260`, `331-340`, `691-700`, `351-360`,
+    and `381-390` are now
     closed (rounds 2-5, see below); do not reopen them without a fresh
     repro. `ir_pipeline_conversions_variadic_pointer_vectors` is also now
     closed (round 4). Do NOT touch
@@ -470,6 +471,105 @@ This file is the live open-work queue for PrimeStruct.
     established discipline, diff the full failing-assertion set at each
     orchestrator (not just eyeball a post-change dump) before treating
     any attempt as safe.
+    Round 7 (2026-09-21) closed 2 of Group B's 5 shards
+    (`351-360`, `381-390`), picking up round 6's refined characterization
+    but implementing it per-orchestrator (not centrally) as round 6
+    instructed:
+    - `..._351_360` (`resolveCountMethodCallReturnKind`, backing the
+      call-return-setup orchestrator, `IrLowererSetupTypeReturnKindHelpers.cpp`):
+      added a `ReceiverShapeCategory` classifier (KeyValue/ArrayVector/
+      String/Other) for both a semantic fact's resolved shape and a
+      receiver's structural `LocalInfo` shape, and used it in two places:
+      (a) the two feeder lambdas that back the reordered-receiver
+      decision (`resolveSemanticArrayVectorTargetInfo`/
+      `resolveSemanticKeyValueTargetInfo`) now treat a semantic fact as
+      untrustworthy when the candidate Name has no `LocalInfo` entry at
+      all, not just when it disagrees; (b) a new top-level guard,
+      **scoped to `at`-family access calls only** (`isAccessCall`),
+      rejects the whole call outright when the bare front receiver's
+      semantic fact shape disagrees with its own structural `LocalInfo`
+      shape, instead of silently falling through to a structural-fallback
+      resolution. The `isAccessCall` scoping was load-bearing: an
+      identical-looking `text`+`stringFact`+map-shaped-local combination
+      is used by two different sibling tests in the same file with
+      *opposite* expectations - the `at`-call version must reject, but
+      the sibling `count`/`contains`-call version
+      ("uses semantic count receiver facts before local metadata") must
+      still let the String fact win over the disagreeing local (a first,
+      unscoped attempt at this fix passed the target shard but regressed
+      that sibling case - caught only by rerunning the whole file, per
+      round 6's own lesson). All ~13 other direct call sites inside this
+      function that use the shared fact-resolution helper were
+      deliberately left untouched/unwrapped, to keep the fix narrow to
+      the two demonstrated failure shapes. Commit `81515a7`.
+    - `..._381_390` (`inferCallExprBaseKindImpl`, backing the
+      call-base-setup orchestrator,
+      `IrLowererLowerInferenceBaseKindHelpers.cpp`): a different but
+      related shape - five structural-only fallback blocks (a bare or
+      dereferenced indexed `FileError`/`FileHandle` args-pack element for
+      `why()`/`write()`/`flush()`-family methods) trusted the receiver's
+      raw `LocalInfo` alone with **no semantic corroboration check at
+      all** (not even an existence check), unlike every sibling branch in
+      the same function which checks a semantic fact first. Gated all
+      five on `semanticProgram != nullptr`. This is provably safe for
+      every real compiled program: `IrLowererLower.cpp` hard-errors
+      before lowering ever begins when `semanticProgram` is null ("semantic
+      product is required for IR lowering"), so the gate can only ever
+      affect a synthetic no-semantics-at-all unit scenario, exactly the
+      shape the failing sub-cases construct (`makeState(nullptr, nullptr)`).
+      Commit `c5d0227`.
+    Both fixes verified individually and then together: each target
+    shard; the whole
+    `test_ir_pipeline_validation_ir_lowerer_inference_call_return_setup_resolves_namespaced_capacity_definition_directl.cpp`/
+    `..._call_base_setup_infers_try_from_indexed_borrowed_and_po.cpp` source
+    files and the full `primestruct.ir.pipeline.validation` suite (1653
+    cases, only the pre-existing/unrelated `ir lowerer supports map method
+    calls` failure remains - confirmed pre-existing via `git stash` A/B,
+    unrelated to `ir_lowerer` since it fails at the semantics stage
+    before lowering runs at all); the full `compile_run_vm_*`/
+    `compile_run_emitters_*`/`*collection*`/`*gpu*` battery (653/653,
+    twice, once per fix); and all five audit scripts (clean, twice). A
+    full `./scripts/compile.sh --release` gate afterward showed exactly
+    9/1897 failing (down from 11), matching this list's remaining scope
+    with zero new failures anywhere else.
+    Did not attempt the remaining 3 Group B shards
+    (`401-410`/`411-420`/`431-440`, `runLowerInferenceExprKindDispatchSetup`/
+    `IrLowererLowerInferenceDispatchSetup.cpp` and
+    `runLowerInferenceExprKindCallFallbackSetup`/
+    `IrLowererLowerInferenceFallbackSetup.cpp`) or Groups A/C this round.
+    Traced `401-410`'s "rejects stale indexed map value facts" case far
+    enough to find a *third* distinct bug shape in this cluster, worth
+    recording precisely for whoever picks this up next: the dispatch
+    function (`IrLowererLowerInferenceDispatchSetup.cpp`, around its
+    `isBuiltinCountLikeCall(expr)` branch, ~line 1326) contains its own
+    inline, ad hoc semantic+structural resolution for a bare
+    `count(access(...))` expression shape
+    (`inferDispatchSetupSemanticCountAccessKind` plus a raw
+    `localsIn.find(accessTarget.name)` fallback) that runs *after* the
+    officially injected `stateInOut.inferCallExprCountAccessGpuFallbackKind`
+    hook already returned "not resolved" - i.e. it is a second,
+    parallel/duplicate implementation of the same job that hook exists to
+    do, not a shape-disagreement bug: even a sub-case where the semantic
+    fact and the structural local *fully agree*
+    (`map<i32, string>` fact matching a `map<Int32, String>`-shaped local
+    exactly) is still supposed to return `Unknown` in this test, because
+    the test stubs the injected hook to always fail and expects the
+    dispatch to respect that instead of quietly re-deriving an answer
+    itself. This is NOT the same "shape cross-check" fix as `351-360`/
+    `381-390` above - it looks more like this inline block should defer
+    entirely to `stateInOut.inferCallExprCountAccessGpuFallbackKind`
+    (`IrLowererLowerInferenceFallbackSetup.cpp`, the real implementation
+    behind that hook, itself the shard-411-420 orchestrator) rather than
+    duplicate a narrower slice of its job inline - but confirming whether
+    real compiled programs depend on this inline block resolving cases
+    the injected hook's real implementation does not cover needs its own
+    dedicated instrumented pass (per this cluster's established
+    discipline) before touching it; not attempted this round given
+    remaining budget. Did not look at `411-420`'s or `431-440`'s specific
+    failing assertions this round, nor Group A (`81-90`/`91-100`/
+    `101-110`) or Group C (`721-730`/`731-740`/`741-750`) beyond
+    reconfirming via the full gate that they are unchanged from round 5/6's
+    characterization.
   - acceptance: each targeted shard passes individually via
     `ctest --test-dir build-release -R <shard-name>`, and a full
     `./scripts/compile.sh --release` gate shows zero new failures
