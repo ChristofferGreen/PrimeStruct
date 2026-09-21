@@ -410,6 +410,12 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
   expr.args = {valuesAccess, indexExpr};
   emitStep = 0;
   nextTemp = 60;
+  // A bare `at(values, i)` receiver into an `args<Buffer<T>>` pack element
+  // resolves its numeric element kind straight from the pack's own
+  // LocalInfo (see tryEmitBufferBuiltinCall's resolveBufferElemKind
+  // lambda), matching real GPU buffer-pack programs
+  // (test_compile_run_vm_gpu.cpp's "runs vm with gpu dispatch fallback and
+  // variadic Buffer packs" case) - this must succeed, not error.
   CHECK(primec::ir_lowerer::tryEmitBufferBuiltinCall(
             expr,
             locals,
@@ -427,10 +433,15 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
-  CHECK(error == "buffer_load requires numeric/bool buffer");
-  CHECK(emitStep == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitStep == 2);
+  REQUIRE(instructions.size() == 12);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 60);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 61);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -460,6 +471,12 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
   expr.args = {borrowedValuesDeref, indexExpr};
   emitStep = 0;
   nextTemp = 80;
+  // A `dereference(at(values, i))` receiver into an
+  // `args<Reference<Buffer<T>>>` pack element resolves its numeric element
+  // kind from the pack's own LocalInfo the same way, matching real GPU
+  // programs (test_compile_run_vm_gpu.cpp's "runs vm variadic
+  // Reference<Buffer> packs through location/dereference" case) - this
+  // must succeed, not error.
   CHECK(primec::ir_lowerer::tryEmitBufferBuiltinCall(
             expr,
             locals,
@@ -477,10 +494,15 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
-  CHECK(error == "buffer_load requires numeric/bool buffer");
-  CHECK(emitStep == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitStep == 2);
+  REQUIRE(instructions.size() == 12);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 80);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 81);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -510,6 +532,12 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
   expr.args = {pointerValuesDeref, indexExpr};
   emitStep = 0;
   nextTemp = 90;
+  // A `dereference(at(values, i))` receiver into an
+  // `args<Pointer<Buffer<T>>>` pack element resolves its numeric element
+  // kind from the pack's own LocalInfo the same way, matching real GPU
+  // programs (test_compile_run_vm_gpu.cpp's "runs vm variadic
+  // Pointer<Buffer> packs with dereference helpers" case) - this must
+  // succeed, not error.
   CHECK(primec::ir_lowerer::tryEmitBufferBuiltinCall(
             expr,
             locals,
@@ -527,10 +555,15 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
-  CHECK(error == "buffer_load requires numeric/bool buffer");
-  CHECK(emitStep == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitStep == 2);
+  REQUIRE(instructions.size() == 12);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 90);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 91);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
