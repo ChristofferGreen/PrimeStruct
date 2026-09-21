@@ -164,7 +164,7 @@ main() {
   checkMaterializedIndirectVectorPack(module, false);
 }
 
-TEST_CASE("ir lowerer rejects variadic pointer vector packs with indexed dereference access helpers") {
+TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -221,9 +221,20 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
-        std::string::npos);
+  // TODO-5302: a nested at_unsafe(dereference(at(values, i)), j)/
+  // dereference(at(values, i)).at(j) chain on an args<Pointer<vector<i32>>>
+  // pack element used to pin a real gap as "expected" (a rejection with
+  // "native backend only supports at() on numeric/bool/string arrays or
+  // vectors"). Confirmed via a standalone `primec --emit=vm` run of this
+  // exact source (all three call shapes: a direct positional pack, a
+  // forwarded spread pack, and a spread pack mixed with a local pointer
+  // argument) that lowering now succeeds and the program runs to
+  // completion with the arithmetically correct result - this test's
+  // rejection expectation was stale, not a real compiler gap.
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  checkMaterializedIndirectVectorPack(module, false);
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference statement mutators") {
