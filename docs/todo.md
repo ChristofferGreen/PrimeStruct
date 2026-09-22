@@ -1179,6 +1179,76 @@ crashes) - see `docs/todo_finished.md`.
     All fixes that did ship this round (5 doctest.h hazard sites) remain
     unconditionally safe regardless of whether resets are ever enabled,
     same reasoning as every prior round.
+  - progress_2026-09-22 (still left open per stop_rule): Rebuilt the audit
+    binaries (`build-audit`, `-DPRIMESTRUCT_ARENA_POISON_AUDIT=ON
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo`) to re-attempt the concrete next
+    step the 2026-08-22b note left off at - finding the process-exit-time
+    thread_local hazard in `PrimeStruct_backend_ir_tests`, narrowed to
+    `semantics validate publishes module artifacts in import order`. That
+    exact repro no longer reproduces: the binary now has 1653 TEST_CASEs
+    vs. the note's 1754 (intervening commits changed this binary's
+    composition), and both a single-case run and the full containing
+    shard came back clean. There is currently no reproducible instance of
+    that specific hazard - a real update to the investigation's state,
+    not a fix.
+    Instead, running the sharded poison audit surfaced a different,
+    genuine bug: an ODR violation causing a real stack-buffer-overflow,
+    unrelated to arena resets but found by the same tooling.
+    `include/primec/testing/ir_lowerer_helpers/*.h` fragments are
+    `#include`d inside `namespace primec::ir_lowerer { ... }` by
+    `include/primec/testing/IrLowererHelpers.h`, so a struct declared
+    there is the SAME type as its identically-named `src/ir_lowerer/`
+    counterpart, not a separate testing copy. `ArrayVectorAccessTargetInfo`
+    gained `bool isStructBoxedRecordTarget` on the src side (TODO-4628)
+    and never gained it on the testing side - 56 bytes vs. the library's
+    64 - so every test declaring it by value and calling the real lowerer
+    wrote 8 bytes past its own stack slot (`WRITE of size 64` at
+    `src/ir_lowerer/IrLowererAccessTargetResolution.cpp:1470`, from
+    `test_ir_pipeline_validation_ir_lowerer_call_helpers_dispatch_buffer_and_native_tail_wrappers.cpp`).
+    This is build-configuration-independent silent UB present in ordinary
+    release test builds too, not an audit-only artifact; ASan classifies
+    it as `unknown-crash` (not `use-after-poison`), which is a real
+    detection gap in the audit tooling itself - every prior round's
+    `grep use-after-poison` would have silently passed over this class of
+    bug. Fixed by adding the missing member to the testing-side struct
+    (`include/primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h`),
+    and checked exhaustively rather than fixing just the crashing one: all
+    139 mirrored struct pairs between the testing fragments and their
+    `src/` counterparts were compared; this was the only real mismatch
+    (other diffs are cosmetic `::primec::` qualification or same-name-
+    different-namespace coincidences). Added a mechanical drift guard,
+    `scripts/check_testing_mirror_structs.py`, wired into CTest as
+    `PrimeStruct_testing_mirror_structs`, to catch a future recurrence
+    automatically instead of relying on another ASan sweep finding it by
+    accident. Also committed `scripts/run_arena_poison_audit.sh`, the
+    sharded audit driver every prior round ran inline and never checked
+    in (a gap this doc already flagged), and fixed its detection gap:
+    it now fails on any `ERROR: AddressSanitizer:` line, not just
+    `use-after-poison`, while still tolerating the arena's expected
+    by-design LeakSanitizer "byte(s) leaked" summaries.
+    Post-fix, the sharded poison audit of `PrimeStruct_backend_ir_tests`
+    came back CLEAN on all 9 shards (1653 TEST_CASEs, zero
+    `ERROR: AddressSanitizer:` in any shard log) - the two shards that
+    failed pre-fix (201-400, 401-600) now pass, and this is the first
+    time this binary has ever passed a complete poison-audit sweep in
+    this investigation. This does NOT meet the bar for flipping the
+    reset-per-compile-scope default: prior rounds always required a
+    second independent sweep before declaring a binary clean (to rule
+    out ordering-dependent luck), and `PrimeStruct_semantics_tests` was
+    not re-audited this round at all. Per this leaf's stop_rule, resets
+    remain OFF (`tests/unit/test_main.cpp` unchanged) and this task's
+    checkbox stays `[ ]`. Verified via a fresh
+    `./scripts/compile.sh --release`: 1899/1899 (1898 baseline + the new
+    `PrimeStruct_testing_mirror_structs` case), 1 failure
+    (`spinning_cube_argument_validation_51_55`, Timeout) confirmed a
+    pre-existing load-dependent flake via an isolated rerun (passed in
+    18.15s) - 0 regressions from this round's changes.
+    If picked up again: a second `backend_ir` sweep, then two `semantics`
+    sweeps (`./scripts/run_arena_poison_audit.sh PrimeStruct_semantics_tests
+    200 build-audit`) - both binaries are already built in `build-audit/`,
+    so each sweep is ~5-10 minutes with no rebuild needed. Only once all
+    four sweeps come back clean would the VmHWM before/after measurement
+    and the default flip be justified.
 
 - [ ] TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
   - owner: ai

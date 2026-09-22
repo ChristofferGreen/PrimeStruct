@@ -614,6 +614,138 @@ for all. A structurally different design (option (b) above, still not
 attempted) remains the only way to remove that standing risk rather than
 keep managing it.
 
+### 2026-08-22/2026-08-22b: doctest.h itself patched, sharded audit reaches full coverage
+
+Two further rounds (tracked only in `docs/todo.md`'s TODO-5235 task block
+until now - this doc had not been updated for them) did the "fix (5) first"
+step the 2026-08-21 follow-up above named as the next move.
+
+**2026-08-22**: patched `third_party/doctest.h` directly (first-ever local
+modification to this vendored file, clearly marked with a
+`PrimeStruct local patch (TODO-5235)` comment block) rather than upgrading
+doctest, after confirming upstream doctest v2.5.3's `g_infoContexts` is
+byte-for-byte the same unwrapped `thread_local std::vector` - an upgrade
+would not have helped. Added a small `PrimeStructSystemHeapAllocator<T>`
+(calls `std::malloc`/`std::free` directly, bypassing the overridden global
+`operator new`/`delete` entirely, deliberately independent of any
+PrimeStruct header to keep the vendored diff minimal) and switched
+`g_infoContexts` to use it. Re-running the audit against
+`PrimeStruct_semantics_tests` surfaced two unrelated real bugs the ASan
+`-fsanitize-address-use-after-scope` instrumentation caught for the first
+time - plain dangling `std::string_view`s reassigned from a by-value
+`std::string`-returning function (`SemanticsValidatorSnapshots.cpp`'s
+`collectionBridgeChoiceFromResolvedPath`, `RequirementPredicateFacts.cpp`'s
+`parseUnsignedRequirementInteger`) - fixed independently of the arena
+investigation. Then hit an environmental wall: one long-running
+single-process ASan run over the whole suite (2000+ `TEST_CASE`s, full
+redzone/shadow memory for the run's entire lifetime) got OOM-killed by this
+sandbox's memory cgroup (~14GB resident) before completing, regardless of
+correctness - not a hang, not a hazard, a real resource ceiling.
+
+**2026-08-22b**: solved that resource ceiling by sharding - a driver
+running `PrimeStruct_semantics_tests` as 15 separate `--first=N --last=M`
+processes (200 cases each, all 2944 covered), each a short-lived process
+whose ASan footprint stays bounded, avoiding the OOM killer and completing
+the first actual full exhaustive sweep this investigation had managed.
+Also switched the audit build to `-DCMAKE_BUILD_TYPE=RelWithDebInfo` so
+`addr2line -f -C -i` resolves real file:line (the default `Release`/`-O3`
+audit build has no line-level DWARF). The first full sweep found one more
+real hazard, root-caused not via `addr2line` but via ASan's own
+symbolizer, to `doctest::String`'s own internal heap buffer (`new char[]`
+in `String::allocate()`) - fixed by adding standalone
+`primeStructSystemHeapAllocChars`/`primeStructSystemHeapFreeChars` helpers
+and routing every `String` heap-touching site through them. Then found the
+*same* class in `ContextState::fullyTraversedSubcases`,
+`ContextState::subcaseStack`/`nextSubcaseStack`,
+`ConsoleReporter::subcasesStack`, and (proactively, not crash-confirmed)
+`JUnitReporter::deepestSubcaseStackNames` - five distinct doctest.h hazard
+sites total across the two rounds, each requiring a separate
+fix-rebuild-rerun cycle to discover (the non-convergence pattern every
+earlier round already noted held here too). Two full 15-shard re-sweeps
+after the last fix came back completely clean - `PrimeStruct_semantics_tests`
+passed a full, twice-confirmed exhaustive poison sweep for the first time
+in this investigation's history. `PrimeStruct_backend_ir_tests` (the binary
+containing `tests/unit/ir_pipeline/**`, this task's other named scope) had
+never actually been audited in any prior round; a first sharded sweep of it
+found a NOT-clean, reproducible `use-after-poison` in shard 1601-1754,
+bisected to a single `TEST_CASE`
+(`semantics validate publishes module artifacts in import order`) whose
+crash - via ASan's real symbolizer, not raw-offset `addr2line` guessing -
+turned out to fire at **process-exit-time thread_local destruction**
+(`__call_tls_dtors` → `arenaDeallocate`), not mid-test-body: something
+thread_local holds a `Definition`/`Expr` past that test's own reset and is
+destroyed only at real process exit. A broad grep for `thread_local`/
+`static` holding AST types across the obvious candidate files found
+nothing; the round stopped here per the stop_rule rather than chase an
+unbounded search surface, leaving `PrimeStruct_backend_ir_tests` as the
+concrete next target.
+
+### 2026-09-22: the named process-exit hazard goes stale; a real ODR bug found instead
+
+Picked up exactly where 2026-08-22b left off - rebuilt the audit binaries
+and re-attempted the `PrimeStruct_backend_ir_tests` process-exit-time
+repro. It no longer reproduces: the binary's `TEST_CASE` count had shifted
+(1653 vs. the prior round's 1754, from intervening unrelated commits), and
+both the single named case and its whole shard now run clean. This is a
+real update to the investigation's state - not a fix, just confirmation
+the specific repro is stale - so no gdb session was needed this round.
+
+Running the sharded audit anyway (to check for other hazards) surfaced a
+different, genuine bug: an ODR violation causing a real stack-buffer-
+overflow. `include/primec/testing/ir_lowerer_helpers/*.h` fragments are
+`#include`d *inside* `namespace primec::ir_lowerer { ... }` by
+`include/primec/testing/IrLowererHelpers.h`, so a struct declared there is
+the SAME type as its identically-named `src/ir_lowerer/` counterpart, not
+an independent testing copy. `ArrayVectorAccessTargetInfo` gained a
+`bool isStructBoxedRecordTarget` member on the `src/` side (TODO-4628) that
+was never mirrored into the testing-header copy - 56 bytes vs. the real
+struct's 64 - so every test declaring this type by value and calling the
+real lowerer wrote 8 bytes past its own stack slot. This is
+build-configuration-independent silent UB present in ordinary (non-ASan)
+release test builds too; ASan classified it as `unknown-crash` rather than
+`use-after-poison` (the first byte written is addressable; only the tail
+lands in a stack redzone) - a real detection gap in every prior round's
+`grep use-after-poison`-based triage. Fixed by adding the missing member to
+the testing-side struct, and - per this task's stop_rule discipline of not
+just patching the one crash found - checked all 139 mirrored struct pairs
+between the testing fragments and their `src/` counterparts; this was the
+only real mismatch (other diffs are cosmetic `::primec::` qualification or
+same-name-different-namespace coincidences like
+`primec::glsl_emitter::LocalInfo`). Added a mechanical drift guard,
+`scripts/check_testing_mirror_structs.py` (wired into CTest as
+`PrimeStruct_testing_mirror_structs`), so a future mirror-drift regression
+is caught automatically instead of waiting for another ASan sweep to find
+it by luck. Also committed `scripts/run_arena_poison_audit.sh` - the
+sharded audit driver every round since 2026-08-22b had run inline and never
+checked in - and fixed its own detection gap: it now fails on any
+`ERROR: AddressSanitizer:` line (not just `use-after-poison`), while still
+tolerating the arena's expected by-design LeakSanitizer "byte(s) leaked"
+summaries.
+
+Post-fix, `PrimeStruct_backend_ir_tests` passed a full 9-shard sweep clean
+(1653 `TEST_CASE`s, zero `ERROR: AddressSanitizer:` in any shard log) - the
+first time this binary has ever passed a complete poison-audit sweep. This
+is only ONE sweep of ONE binary, though: per this investigation's own
+established bar (every earlier "clean" declaration required a second,
+independent sweep to rule out ordering-dependent luck, and
+`PrimeStruct_semantics_tests` was not re-audited this round at all), this
+does not clear the threshold for flipping `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE`
+on by default. `tests/unit/test_main.cpp` is unchanged; TODO-5235's
+checkbox in `docs/todo.md` stays `[ ]`. Full verification:
+`./scripts/compile.sh --release` - 1899/1899 (1898 prior baseline + the
+new `PrimeStruct_testing_mirror_structs` case), 1 failure
+(`spinning_cube_argument_validation_51_55`, Timeout) confirmed a
+pre-existing load-dependent flake via an isolated rerun (passed in
+18.15s) - zero regressions from this round's changes.
+
+If picked up again: a second `PrimeStruct_backend_ir_tests` sweep, then two
+`PrimeStruct_semantics_tests` sweeps
+(`./scripts/run_arena_poison_audit.sh PrimeStruct_semantics_tests 200 build-audit`)
+- both binaries are already built in `build-audit/`, so each sweep is
+~5-10 minutes with no rebuild needed. Only once all four sweeps come back
+clean would the VmHWM before/after measurement and the default flip be
+justified.
+
 ## TODO-5237: mimalloc evaluation - shipped, composes with the arena
 
 Status: implemented and shipped. `primec`/`primevm` now additionally link
