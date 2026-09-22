@@ -2083,6 +2083,37 @@ All other test assertion failures have been fixed in this session:
   - `1746`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
 <!-- compile.sh:failing-tests:end -->
 
+### TODO-5304 stop-rule note (2026-09-22)
+
+While re-verifying TODO-5302 round 10's exhaustive caller search for
+TODO-5304, found two *additional* production-unreachable overloads/call-shapes
+in `src/ir_lowerer/IrLowererNativeTailDispatch.cpp` beyond the three
+TODO-5304 named. Per TODO-5304's stop rule, these were left untouched and are
+noted here for a future task instead:
+
+- `tryEmitNativeCallTailDispatch` overload declared around
+  `IrLowererCallHelpers.h:160` (has a
+  `resolveCallCollectionPairTypeInfo`/`resolveCallArrayVectorAccessTargetInfo`
+  classifier but no `stringTableCount`), defined around
+  `IrLowererNativeTailDispatch.cpp:1060`. Called 8 times, from
+  `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_keep_explicit_map_helpers_out_of_native_builtin_emission.cpp`,
+  mostly with no `semanticProgram` (one call passes a real `&semanticProgram`
+  but still no `stringTableCount`). No production caller reaches this
+  overload - production always goes through
+  `tryEmitNativeCallTailDispatchWithLocals` with both a classifier and a real
+  `stringTable.size()`.
+- `tryEmitNativeCallTailDispatch` overload declared around
+  `IrLowererCallHelpers.h:185` (has `stringTableCount` but no classifier),
+  defined around `IrLowererNativeTailDispatch.cpp:1113`. This one has **zero**
+  callers anywhere in `src/` or `tests/` - it is dead code, not just
+  production-unreachable.
+
+Neither was touched (TODO-5304 only covered the classifier-and-stringTableCount-less
+overload at `IrLowererNativeTailDispatch.cpp:1165`, confirmed as the item the
+task named). A future task should decide whether to delete the fully-dead
+`:1113` overload outright and either delete or test-only-mark the `:1060`
+overload, matching the treatment TODO-5304 gave its sibling overloads.
+
 ## Notes
 
 - The block under `## Current Failures` is managed by `scripts/compile.sh`

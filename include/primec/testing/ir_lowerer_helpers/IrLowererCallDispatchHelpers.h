@@ -173,6 +173,11 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Definition *callee,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
+// TODO-5304: test-only overloads (this header is testing-only; see
+// IrLowererCallHelpers.h in src/ir_lowerer/ for the production declarations
+// and their test-only-shape notes). No production caller reaches either
+// overload below - production always goes through
+// tryEmitInlineCallDispatchWithLocals.
 InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

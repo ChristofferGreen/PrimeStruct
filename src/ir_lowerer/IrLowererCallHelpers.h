@@ -100,6 +100,18 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Definition *callee,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
+// TODO-5304: test-only. This overload has no LocalMap and no
+// isCollectionAccessReceiverExpr classifier, so it always dispatches into
+// tryEmitInlineCallWithCountFallbacksImpl with an empty classifier - a call
+// shape no production caller ever produces (the sole production entry point
+// is tryEmitInlineCallDispatchWithLocals below, which always supplies a real
+// classifier via LocalMap-derived receiver facts). Kept only so
+// tryEmitInlineCallWithCountFallbacksImpl's own internal fallback logic can
+// be unit-tested in isolation from LocalMap plumbing (see TODO-5302 round
+// 10's fail-fast note on this exact overload in
+// IrLowererInlineNativeCallDispatch.cpp). Do not add a production call site
+// for this overload; add one for tryEmitInlineCallDispatchWithLocals
+// instead.
 InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
@@ -109,6 +121,13 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
+// The semanticProgram default of nullptr exists only so unit tests can
+// exercise this function's LocalMap-based dispatch logic in isolation from
+// semantic-product plumbing (TODO-5304). The sole production call site (in
+// IrLowererLowerEmitExprTailDispatch.h) always supplies a real, non-null
+// semantic product - IrLowererLower.cpp hard-errors before lowering starts
+// when one is absent, so a null-semanticProgram call can never happen in a
+// real compiled program.
 InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -206,6 +225,18 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr,
     const SemanticProductIndex *semanticIndex = nullptr);
+// TODO-5304: test-only. This overload has neither a
+// resolveCallCollectionPairTypeInfo/resolveCallArrayVectorAccessTargetInfo
+// classifier nor a stringTableCount, so it always dispatches with an empty
+// classifier - a call shape no production caller ever produces. The sole
+// production dispatch site (IrLowererLowerEmitExprTailDispatch.h) always
+// calls tryEmitNativeCallTailDispatchWithLocals with a real classifier, a
+// real stringTable.size(), and a real semanticProgram (IrLowererLower.cpp
+// hard-errors before lowering starts when the semantic product is null, so
+// a null-semanticProgram call can never happen in a real compiled program
+// either). Kept only so the shared dispatch logic can be unit-tested in
+// isolation from that plumbing. Do not add a production call site for this
+// overload; add one for tryEmitNativeCallTailDispatchWithLocals instead.
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const Expr &expr,
     const LocalMap &localsIn,

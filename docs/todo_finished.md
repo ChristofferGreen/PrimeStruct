@@ -51817,3 +51817,108 @@ real answer.
     607-case compile_run `*collection*,*map*` battery, and all five
     collection audit scripts, all clean.
 
+- [x] TODO-5304: Remove or wall off the production-unreachable inline-call-dispatch overloads TODO-5302 found
+  - owner: ai
+  - created_at: 2026-09-22
+  - finished_at: 2026-09-22
+  - phase: Hidden test failure remediation
+  - parallel_track: dead-code-cleanup
+  - depends_on: none
+  - scope: TODO-5302 round 10's Group A fix confirmed, via an exhaustive
+    production caller search, that three overloads in
+    `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`/
+    `IrLowererNativeTailDispatch.cpp` are never reached from any real
+    compiled program - only their target unit tests call them directly:
+    `tryEmitInlineCallWithCountFallbacks` (the overload without a
+    `LocalMap` parameter), `tryEmitInlineCallDispatchWithLocals` called
+    with no `semanticProgram`, and `tryEmitNativeCallTailDispatch` (the
+    non-`...WithLocals` overload) called with no `semanticProgram`/
+    classifier. Only the `...WithLocals` variants with a real classifier
+    and a real `semanticProgram`, reached from the sole production
+    dispatch site in `IrLowererLowerEmitExprTailDispatch.h`, are ever
+    exercised by a compiled program (`IrLowererLower.cpp` hard-errors
+    before lowering without a semantic product, so a null-`semanticProgram`
+    call can never happen in production). This class of "unit test
+    exercises a path production never reaches" gap is exactly what caused
+    round 2 of TODO-5302 to land a fix that passed its unit shard but
+    broke real compiled programs (reverted as commit `8e610a7`), and cost
+    several subsequent rounds real effort to work around safely rather
+    than fix at the root.
+  - implementation_notes: re-run the exhaustive caller search TODO-5302
+    round 10 did (documented in its `round_10_note` in
+    `docs/todo_finished.md`) before changing anything, in case a caller
+    was added since. If a test genuinely needs one of these overloads for
+    coverage of the *function's own internal logic* in isolation (as
+    opposed to testing a call shape that could occur in a real program),
+    prefer marking it clearly (a comment, or a distinct test-only helper
+    name) over deleting the overload outright.
+  - acceptance:
+    - each of the three confirmed-unreachable overloads/call-shapes is
+      either deleted (with its now-dead unit test coverage removed or
+      adapted to call the real production entry point instead) or clearly
+      documented as test-only at its declaration, so a future contributor
+      does not mistake it for a load-bearing production path the way
+      round 2 implicitly did
+    - `primestruct.ir.pipeline.validation`/`.conversions` suites and a
+      `compile_run_vm_*`/`compile_run_emitters_*`/`*collection*`/`*gpu*`
+      battery stay green throughout
+  - stop_rule: this is a small, contained cleanup - if it turns up other
+    production-unreachable overloads beyond the three already named, note
+    them in `docs/failing_tests.md` for a future task rather than
+    expanding this one's scope
+  - evidence_note: (2026-09-22) re-ran the exhaustive caller search fresh
+    against current code (not trusting round 10's 2026-09-21 snapshot) and
+    confirmed all three named items are still unreachable: (1)
+    `tryEmitInlineCallWithCountFallbacks`'s no-LocalMap overload - two
+    `.cpp` definitions exist (a 7-arg one declared in the production
+    `IrLowererCallHelpers.h`, an 8-arg one with an
+    `isCollectionAccessReceiverExpr` classifier declared only in the
+    testing-only header
+    `include/primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h`)
+    - both have real unit-test callers (~20 and 9 call sites respectively,
+      confirmed by parsing top-level arg counts, not eyeballing) but zero
+      production callers; production only reaches
+      `tryEmitInlineCallDispatchWithLocals` (confirmed by reading the sole
+      dispatch site, `IrLowererLowerEmitExprTailDispatch.h:493`); (2)
+      `tryEmitInlineCallDispatchWithLocals` itself (the production
+      function, so it can't be deleted/renamed) has 33 unit-test call
+      sites that never pass `semanticProgram` (default `nullptr`), a shape
+      production never produces since `IrLowererLower.cpp:134-135`
+      hard-errors ("semantic product is required for IR lowering") before
+      lowering starts without one; (3) `tryEmitNativeCallTailDispatch`'s
+      no-classifier/no-`stringTableCount` overload
+      (`IrLowererNativeTailDispatch.cpp:1165`) has ~13 unit-test call sites
+      (12 with no `semanticProgram`, 1 with a real `&semanticProgram` but
+      still no classifier); production only reaches
+      `tryEmitNativeCallTailDispatchWithLocals` with a real classifier, a
+      real `stringTable.size()`, and a real `semanticProgram` (confirmed
+      at `IrLowererLowerEmitExprTailDispatch.h:584-634`). Per
+      implementation_notes, since every one of these overloads/call-shapes
+      has genuine unit-test coverage of the underlying function's internal
+      dispatch logic (not just a stale duplicate), chose the "mark
+      test-only" path over deletion for all three, matching round 10's
+      preference for narrow, non-destructive fixes: added explanatory
+      "TODO-5304: test-only" doc comments at each overload's declaration
+      (in `IrLowererCallHelpers.h` and the testing-only header) and at its
+      `.cpp` definition, explaining exactly which call shape production
+      never produces and why, and pointing at the real production entry
+      point to use instead. No signatures, deletions, or runtime behavior
+      changed (one overload was mistakenly deleted mid-task on a wrong
+      "zero callers" read that missed the testing-only header declaring
+      it; the mistake surfaced immediately as a release-build link failure
+      and was reverted/fixed before verification). While re-verifying,
+      found two *additional* production-unreachable
+      `tryEmitNativeCallTailDispatch` overloads beyond the three named
+      (one with a classifier but no `stringTableCount`,
+      `.cpp:1060`, 8 test call sites; one with `stringTableCount` but no
+      classifier, `.cpp:1113`, genuinely zero callers anywhere) - per the
+      stop rule, left both untouched and recorded them in
+      `docs/failing_tests.md` for a future task instead of expanding this
+      one's scope. Verified: a full `./scripts/compile.sh`-equivalent
+      Release build (`cmake --build build-release`) succeeds cleanly, the
+      `primestruct.ir.pipeline.validation`/`.conversions` suites are 100%
+      green (161/161, `ctest -R "ir_pipeline_validation|ir_pipeline_conversions"`),
+      and the full `compile_run_vm_*`/`compile_run_emitters_*`/`*collection*`/`*gpu*`
+      battery (653 tests, matching round 10's cited count) is 100% green
+      (0 failed).
+

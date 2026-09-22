@@ -501,6 +501,16 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
 
+// TODO-5304: test-only (declared only in
+// include/primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h,
+// not in the production IrLowererCallHelpers.h header, so no production
+// translation unit can name it). No production caller reaches this overload
+// - production always goes through tryEmitInlineCallDispatchWithLocals,
+// which calls tryEmitInlineCallWithCountFallbacksImpl directly with a real
+// classifier and a real LocalMap. Kept so
+// tryEmitInlineCallWithCountFallbacksImpl's own internal fallback logic can
+// be unit-tested in isolation with a real isCollectionAccessReceiverExpr
+// classifier but no LocalMap plumbing.
 InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
@@ -524,6 +534,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
       error);
 }
 
+// TODO-5304: test-only (see the comment on this overload's declaration in
+// IrLowererCallHelpers.h). No production caller reaches this overload -
+// production always goes through tryEmitInlineCallDispatchWithLocals, which
+// calls tryEmitInlineCallWithCountFallbacksImpl directly with a real
+// classifier.
 InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
@@ -789,6 +804,13 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
   return InlineCallDispatchResult::NotHandled;
 }
 
+// TODO-5304: the semanticProgram default of nullptr (see the declaration in
+// IrLowererCallHelpers.h) exists only so unit tests can exercise this
+// function's LocalMap-based dispatch logic in isolation from
+// semantic-product plumbing - the sole production call site (in
+// IrLowererLowerEmitExprTailDispatch.h) always supplies a real, non-null
+// semantic product, since IrLowererLower.cpp hard-errors before lowering
+// starts when one is absent.
 InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,

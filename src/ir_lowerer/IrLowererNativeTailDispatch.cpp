@@ -1162,6 +1162,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       semanticIndex);
 }
 
+// TODO-5304: test-only (see the comment on this overload's declaration in
+// IrLowererCallHelpers.h). Neither a classifier nor a stringTableCount is
+// taken here, so this always dispatches with an empty classifier - a call
+// shape no production caller ever produces. Production always goes through
+// tryEmitNativeCallTailDispatchWithLocals with a real classifier and a real
+// stringTable.size().
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const Expr &expr,
     const LocalMap &localsIn,
