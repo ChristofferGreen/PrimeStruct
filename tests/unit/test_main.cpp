@@ -6,47 +6,51 @@
 #include "primec/testing/TestScratch.h"
 #include "third_party/doctest.h"
 
-// TODO-5233/TODO-5234/TODO-5235: deliberately does NOT construct a
-// primec::ScopedCompileArena anywhere in this binary. See
+// TODO-5233/TODO-5234/TODO-5235: this file is shared by every doctest
+// binary in the project, but whether it constructs a
+// primec::ScopedCompileArena per TEST_CASE is decided PER BINARY, via
+// whether PRIMEC_TEST_ARENA_RESET_PER_CASE is defined for that specific
+// target (see CMakeLists.txt's target_compile_definitions calls). See
 // docs/CompilerArenaAllocator.md for the full history:
 //
 //   - TODO-5234 first tried giving every TEST_CASE its own reset compile
 //     scope and reproducibly corrupted process-lifetime "magic static"
 //     values a few TEST_CASEs later, falling back to never entering a
-//     compile scope in this binary at all.
+//     compile scope in any test binary at all.
 //   - TODO-5235 built a general escape hatch for that (SystemHeapScope /
 //     systemHeapValue / registerArenaResetCallback in
 //     primec/CompileArena.h) and re-attempted the same per-TEST_CASE reset
-//     wiring under it. Each round of "fix the magic statics the crash
-//     reproduction found, rebuild, rerun the full suite" turned up a
-//     *different* magic static than the last, and - critically - each one
-//     lived in a different, previously-unscoped corner of src/ (first
-//     src/semantics, then a thread_local cache's own bucket-array buffer
-//     surviving .clear(), then src/TransformRegistry.cpp, with
-//     src/IrBackends.cpp/src/TempPaths.cpp/include/primec/ir/SoaPathHelpers.h
-//     found by grep but not yet crash-confirmed at the point this was
-//     stopped). That is exactly the exhaustiveness risk TODO-5234's own
-//     writeup already flagged ("no practical way to enumerate every static
-//     that might get lazily constructed inside a compile scope, forever, as
-//     the codebase evolves") - now demonstrated empirically rather than
-//     just reasoned about. Per TODO-5235's own stop_rule, resets were left
-//     off here rather than shipped on the strength of "found and fixed
-//     every instance I happened to hit so far." The SystemHeapScope
-//     mechanism and every magic static already found and fixed remain in
-//     place (harmless whether or not resets are ever turned on here), so a
-//     future attempt starts with a smaller remaining surface, but this
-//     binary still stays entirely on the system allocator, exactly as
-//     TODO-5234 shipped it.
+//     wiring under it. Many rounds of "fix the magic statics/thread_local
+//     hazards a poison-audit crash found, rebuild, rerun the full suite"
+//     each turned up a genuinely different hazard than the last (see the
+//     doc's full round-by-round history), including hazards inside the
+//     vendored third_party/doctest.h itself and, in a 2026-09-22 round, an
+//     unrelated ODR-violation stack-buffer-overflow the audit tooling
+//     surfaced (fixed separately, mirror-guarded by
+//     scripts/check_testing_mirror_structs.py).
+//   - As of 2026-09-22, PrimeStruct_backend_ir_tests and
+//     PrimeStruct_semantics_tests - the two long-lived binaries this task
+//     was scoped to from the start - have each passed TWO independent,
+//     full PRIMESTRUCT_ARENA_POISON_AUDIT sweeps (all shards clean, zero
+//     hazards) and now ship with PRIMEC_TEST_ARENA_RESET_PER_CASE on by
+//     default (via their own target_compile_definitions in
+//     CMakeLists.txt), so TODO-5234's original reset-per-scope design is
+//     actually live for those two binaries. Every OTHER test binary
+//     (PrimeStruct_backend_runtime_tests, PrimeStruct_compile_run_tests,
+//     PrimeStruct_parser_tests, PrimeStruct_text_filter_tests,
+//     PrimeStruct_misc_tests, PrimeStruct_compile_time_tests, ...) has
+//     never been poison-audited and must NOT be switched on without first
+//     running scripts/run_arena_poison_audit.sh against it clean, twice.
 //
-// PRIMEC_TEST_ARENA_RESET_PER_CASE (default undefined - normal builds are
-// unaffected): a still-experimental, manually-opted-in build-time switch
-// used only for the TODO-5235 poison-audit investigation
-// (docs/CompilerArenaAllocator.md). When defined, this binary constructs
-// one primec::ScopedCompileArena per doctest TEST_CASE via the listener
-// below, re-enabling the exact reset-per-TEST_CASE design described above.
-// Do NOT define this for any build whose result is meant to be trusted
-// without first confirming, for that exact build, that the full suite
-// passes clean under PRIMESTRUCT_ARENA_POISON_AUDIT.
+// PRIMEC_TEST_ARENA_RESET_PER_CASE: when defined for a given target
+// (unconditionally for PrimeStruct_backend_ir_tests/PrimeStruct_semantics_tests,
+// or globally via the PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE/
+// PRIMESTRUCT_ARENA_POISON_AUDIT CMake options for a manual investigation
+// build), this binary constructs one primec::ScopedCompileArena per
+// doctest TEST_CASE via the listener below. Do NOT define this for any
+// OTHER binary's build whose result is meant to be trusted without first
+// confirming, for that exact build, that the full suite passes clean under
+// PRIMESTRUCT_ARENA_POISON_AUDIT.
 #if defined(PRIMEC_TEST_ARENA_RESET_PER_CASE)
 namespace {
 

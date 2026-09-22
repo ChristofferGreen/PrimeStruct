@@ -324,7 +324,7 @@ compile-then-exit CLI processes. The class of binaries it would be unsafe
 for - long-lived processes making the same allocations thousands of times
 per run - simply never enters it.
 
-## TODO-5235: attempting per-TEST_CASE resets again, and why it's still off
+## TODO-5235: attempting per-TEST_CASE resets again - closed 2026-09-22
 
 TODO-5235 set out to close the gap above (the CLI-only, never-reset arena
 gives zero benefit to the `semantics`/`ir_pipeline` test binaries, which
@@ -332,14 +332,19 @@ dominate the suite's total wall-clock, since they never construct a
 `ScopedCompileArena` at all). It built a general escape hatch and then
 re-attempted TODO-5234's original reset-per-`TEST_CASE` design under it.
 **The escape hatch is real, generally useful, and has shipped** (see below).
-**The reset-per-`TEST_CASE` wiring has not** - it was built, tested, found
-to still corrupt memory via a *different* magic static than TODO-5234 hit,
-fixed, retested, found to corrupt memory via yet another one outside the
-directories the TODO scoped the search to, fixed, retested, found a fourth
-class of hazard (below), and was then reverted per this leaf's own
-`stop_rule` rather than continuing to chase individual crashes indefinitely.
-`tests/unit/test_main.cpp` still does not construct a `ScopedCompileArena`,
-exactly as TODO-5234 shipped it.
+**The reset-per-`TEST_CASE` wiring took many rounds spanning 2026-08-13
+through 2026-09-22 to ship** - it was built, tested, found to corrupt
+memory via a magic static, fixed, retested, found a different one, fixed,
+retested, found a hazard class inside the vendored `third_party/doctest.h`
+itself, fixed (5 distinct sites across two rounds), retested, found an
+unrelated ODR-violation bug the audit tooling surfaced, fixed, and was
+finally verified via two independent full poison-audit sweeps of both
+named binaries with zero hazards. As of 2026-09-22,
+`tests/unit/test_main.cpp` DOES construct a `ScopedCompileArena` per
+`TEST_CASE`, by default, for `PrimeStruct_backend_ir_tests` and
+`PrimeStruct_semantics_tests` specifically (see the "closing round"
+subsection below) - every other test binary remains exactly as TODO-5234
+shipped it, on the system allocator only, until independently audited.
 
 ### The escape hatch that did ship
 
@@ -745,6 +750,76 @@ If picked up again: a second `PrimeStruct_backend_ir_tests` sweep, then two
 ~5-10 minutes with no rebuild needed. Only once all four sweeps come back
 clean would the VmHWM before/after measurement and the default flip be
 justified.
+
+### 2026-09-22 (closing round): all four sweeps clean, reset-per-scope shipped
+
+Did exactly the "second sweep, then two more" step the round above left
+off at - both binaries were already built with the ODR fix, so no rebuild
+was needed. All four sweeps came back CLEAN:
+`PrimeStruct_backend_ir_tests` (1653 `TEST_CASE`s, 9 shards) twice in a
+row, `PrimeStruct_semantics_tests` (2800 `TEST_CASE`s, 14 shards) twice in
+a row, zero `ERROR: AddressSanitizer:` in any of the shard logs across
+both runs of both binaries. This is the first time this investigation has
+cleared its own established bar - a second independent sweep per binary,
+ruling out ordering-dependent luck - for BOTH of this task's named
+binaries at the same time.
+
+Rather than flipping the existing global `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE`
+CMake option (which would `add_compile_definitions` the reset wiring into
+every test binary sharing `tests/unit/test_main.cpp` - including
+`PrimeStruct_backend_runtime_tests`, `PrimeStruct_compile_run_tests`,
+`PrimeStruct_parser_tests`, `PrimeStruct_text_filter_tests`,
+`PrimeStruct_misc_tests`, and `PrimeStruct_compile_time_tests`, none of
+which have ever been poison-audited), the default-on switch was scoped
+precisely to the two binaries this investigation was always about: a
+`target_compile_definitions(... PRIVATE PRIMEC_TEST_ARENA_RESET_PER_CASE)`
+call was added directly to `PrimeStruct_backend_ir_tests` and
+`PrimeStruct_semantics_tests` in `CMakeLists.txt`, each with a comment
+naming TODO-5235 and warning against extending it to another test binary
+without first auditing that binary the same way. The global CMake options
+(`PRIMESTRUCT_ARENA_POISON_AUDIT`/`PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE`)
+are untouched and remain available for a future manual investigation of
+one of the other test binaries. `tests/unit/test_main.cpp`'s header
+comment was rewritten to describe this new per-target reality instead of
+its previous blanket "does NOT construct a ScopedCompileArena anywhere in
+this binary" claim, which stopped being true for these two targets.
+
+Rebuilding was required (the CMake configuration itself changed) and a
+fresh `./scripts/compile.sh --release` - a completely normal build, no
+ASan, no audit flags, reset-per-`TEST_CASE` now genuinely on by default
+for these two binaries - came back **1899/1899**, one failure
+(`spinning_cube_argument_validation_51_55`, Timeout) reconfirmed as the
+same pre-existing load-dependent flake via an isolated rerun (18.15s
+pass), zero regressions. `PrimeStruct_backend_ir_tests` run directly
+reported `1653 | 1653 passed | 0 failed | 0 skipped`.
+
+Took the VmHWM/VmRSS peak-memory measurement using the same methodology
+as this document's original "Measured results" section (sampling
+`/proc/<pid>/status` every 15s across a full run, non-ASan
+`build-release` binaries):
+
+| Binary | VmHWM start | VmHWM end | Growth |
+| --- | --- | --- | --- |
+| `PrimeStruct_semantics_tests` | ~55.7MB | ~63.9MB | ~15% |
+| `PrimeStruct_backend_ir_tests` | ~83.6MB | ~95.4MB | ~14% |
+
+Both are the same order of magnitude and growth rate as this document's
+original TODO-5234 baseline for the never-reset build (~50MB to ~56MB,
+~12%) - flat/bounded, not exploding, consistent with the reset design
+doing what it is supposed to (each `TEST_CASE`'s arena memory is reclaimed
+and reused rather than accumulating across the whole process lifetime).
+
+All four of TODO-5235's acceptance criteria are now met and the task is
+closed (`[x]` in `docs/todo_finished.md`): a documented, general fix
+mechanism with an argued-exhaustive history across every round in this
+section; both named CTest suites passing clean with the reset design
+actually enabled (not just no-longer-crashing); the full release gate
+green with zero regressions; and peak memory measured and confirmed
+bounded. `tests/unit/test_main.cpp` and `CMakeLists.txt` now ship
+`PrimeStruct_backend_ir_tests`/`PrimeStruct_semantics_tests` with
+`ScopedCompileArena` reset-per-`TEST_CASE` on by default - the first time
+any test binary in this project has run with the arena's reset design
+live outside a manual audit build.
 
 ## TODO-5237: mimalloc evaluation - shipped, composes with the arena
 

@@ -1155,6 +1155,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
     target_link_libraries(${backendTestTarget} PRIVATE primec_backend_registry_lib primec_ir_lib)
     primestructEnableWarnings(${backendTestTarget})
   endforeach()
+  # TODO-5235: reset-per-TEST_CASE ships by default for this binary only.
+  # PrimeStruct_backend_ir_tests is one of the two long-lived test binaries
+  # this task's scope named (the other is PrimeStruct_semantics_tests below)
+  # and is the only one that has passed two independent, full
+  # PRIMESTRUCT_ARENA_POISON_AUDIT sweeps with zero hazards - see the
+  # "2026-09-22" section of docs/CompilerArenaAllocator.md. Do not extend
+  # PRIMEC_TEST_ARENA_RESET_PER_CASE to PrimeStruct_backend_runtime_tests,
+  # PrimeStruct_compile_run_tests, or any other test binary without first
+  # running the same sharded poison-audit sweep (scripts/run_arena_poison_audit.sh)
+  # against it - none of the others have ever been audited.
+  target_compile_definitions(PrimeStruct_backend_ir_tests PRIVATE PRIMEC_TEST_ARENA_RESET_PER_CASE)
 
   add_executable(PrimeStruct_semantics_tests
     tests/unit/test_main.cpp
@@ -1267,6 +1278,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_semantics_tests PRIVATE primec_ir_lib)
   primestructEnableWarnings(PrimeStruct_semantics_tests)
+  # TODO-5235: reset-per-TEST_CASE ships by default for this binary too -
+  # see the matching comment above PrimeStruct_backend_ir_tests's own
+  # target_compile_definitions call. Do not extend this to any other test
+  # binary without an independent poison-audit sweep first.
+  target_compile_definitions(PrimeStruct_semantics_tests PRIVATE PRIMEC_TEST_ARENA_RESET_PER_CASE)
 
   add_executable(PrimeStruct_text_filter_tests
     tests/unit/test_main.cpp

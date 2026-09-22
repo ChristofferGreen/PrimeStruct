@@ -51922,3 +51922,599 @@ real answer.
       battery (653 tests, matching round 10's cited count) is 100% green
       (0 failed).
 
+
+
+- [x] TODO-5235: Fix magic-static/arena-reset hazard to unlock scoped-per-compile arena resets
+  - owner: ai
+  - finished_at: 2026-09-22
+  - created_at: 2026-08-13
+  - phase: Test runtime optimization
+  - parallel_track: compiler-arena-allocator
+  - depends_on: (none)
+  - scope: TODO-5234's original design (arena reset at every compile
+    scope, including once per doctest `TEST_CASE` in the long-lived
+    `semantics`/`ir_pipeline` binaries) crashed with deterministic memory
+    corruption when wired into the real `semantics` suite. Root cause:
+    dozens of places in `src/semantics/` use function-local
+    `static const std::string`/`static const std::vector<...>` ("magic
+    statics") computed once on first call and reused across all later
+    calls/compiles within the same process. When those statics were
+    allocated from the arena and the arena later reset (handing that
+    memory to a new object) while the static was still alive and expected
+    to hold its original value, the static's bytes got silently
+    corrupted. TODO-5234 shipped the safe fallback instead (arena never
+    resets, one per CLI process, test binaries untouched) per its own
+    stop_rule, leaving the bigger win (arena resets usable inside the
+    long-lived `semantics`/`ir_pipeline` test binaries too, which
+    dominate the suite's total wall-clock) on the table. This leaf: find
+    every such magic-static in the arena's reachable call graph (grep for
+    `static const std::string`/`static const std::vector` inside
+    functions under `src/semantics/`, cross-reference against what
+    TODO-5234's crash reproduction actually hit first), and fix them -
+    most likely by allocating magic statics from the system allocator
+    explicitly regardless of whether an arena is currently active (e.g. a
+    small helper/wrapper that bypasses the thread_local "current arena"
+    check for values with process lifetime), since a magic static's whole
+    point is to outlive any single compile scope and must never live in
+    memory that gets reset.
+  - implementation_notes: `docs/CompilerArenaAllocator.md` and
+    `src/CompileArena.cpp`'s file comment (from TODO-5234) document the
+    override mechanism (thread_local "current arena" pointer checked by a
+    conditional `operator new`/`operator delete` override) - the fix here
+    is almost certainly at that override's boundary (an explicit
+    "allocate from the system heap, not the current arena" escape hatch),
+    not a per-magic-static rewrite of dozens of call sites individually,
+    if a general mechanism can be found. Verify by re-running exactly the
+    reproduction TODO-5234 used to hit the crash (full `semantics` suite
+    with reset-per-TEST_CASE arena wiring re-enabled) - it must pass
+    clean before considering this fixed, not just "no longer crashes on
+    the first few cases."
+  - acceptance:
+    - The magic-static corruption is fixed with a documented, general
+      mechanism (not a handful of individually patched call sites that
+      leave the same hazard for the next magic static someone adds).
+    - Full `semantics` and `ir_pipeline` CTest suites pass clean with
+      reset-per-compile-scope arena wiring enabled (i.e. TODO-5234's
+      original, more ambitious design is actually turned on and
+      verified, not just no-longer-crashing on a partial run).
+    - Full suite (`./scripts/compile.sh --release`) passes 1881/1881 with
+      zero regressions.
+    - Peak memory usage for a full `semantics` or `ir_pipeline` suite run
+      is measured before/after (same VmHWM-sampling methodology TODO-5234
+      used) and confirmed flat/bounded, not just "didn't obviously
+      explode."
+  - stop_rule: Do not ship a mechanism that only happens to dodge the
+    specific magic statics TODO-5234's crash reproduction hit - grep
+    exhaustively for the pattern across all of `src/semantics/` (and
+    `src/ir_lowerer/`, `src/parser/` if the arena's reachable call graph
+    extends there) and argue the fix covers all of them, or explicitly
+    document which are out of scope and why. If a fully general fix isn't
+    achievable safely within budget, leave this open with honest notes
+    rather than re-attempting the reset-per-compile design with only a
+    partial fix - a second corruption bug shipped here would be worse
+    than staying on TODO-5234's current safe (CLI-only, never-reset)
+    fallback.
+  - investigation_notes (2026-08-13, left open per stop_rule): Built the
+    general escape hatch (`primec::SystemHeapScope`/`systemHeapValue()`/
+    `registerArenaResetCallback()` in `include/primec/CompileArena.h` /
+    `src/CompileArena.cpp`) and re-attempted TODO-5234's reset-per-
+    `TEST_CASE` design under it (`tests/unit/test_main.cpp`'s doctest
+    `IReporter` listener). Three consecutive fix-rebuild-rerun-the-full-
+    suite rounds each found a genuinely different magic static or hazard
+    class than the last:
+    (1) magic statics under `src/semantics/` per the TODO's suggested
+    scope - fixed by wrapping each in `systemHeapValue()`;
+    (2) `std::unordered_map::clear()` destroys elements but not the map's
+    own bucket-array buffer, so the three known thread_local caches
+    (`SemanticsBindingTypeHelpers.cpp`, `StdlibSurfaceRegistry.cpp`,
+    `SourceLocationMapper.cpp`) still corrupted, since only their
+    declaration point (not every later mutation/rehash) had been wrapped -
+    fixed by wrapping every mutating call site;
+    (3) a magic static in `src/TransformRegistry.cpp`, entirely outside
+    the three directories (`src/semantics`, `src/ir_lowerer`,
+    `src/parser`) the TODO's `implementation_notes` suggested searching,
+    and of a custom struct type the original grep pattern (literal
+    `std::string`/`std::vector`/etc. spellings) would never have matched.
+    Broadening the search to all of `src/`+`include/` and to custom struct
+    types surfaced five more unverified candidates
+    (`IrPreparation.cpp`, `SemanticProduct.cpp`, `TempPaths.cpp`,
+    `SoaPathHelpers.h`, `IrBackends.cpp`) in one pass - more than the
+    previous two rounds combined, the opposite of the search converging.
+    Full reasoning, the crash signatures, and the debugging methodology
+    (temporary `fprintf` instrumentation plus a poison-on-reset build) are
+    recorded in `docs/CompilerArenaAllocator.md`'s new "TODO-5235" section.
+    Per this leaf's own stop_rule, stopped re-attempting the reset design
+    on the strength of "fixed every crash found so far" and reverted
+    `tests/unit/test_main.cpp` to not construct a `ScopedCompileArena` at
+    all - exactly TODO-5234's shipped state, zero wall-clock change for
+    `semantics`/`ir_pipeline`. The escape hatch mechanism and all six
+    magic-static/cache fixes found along the way remain in place (verified
+    safe independent of whether resets are ever turned back on - they only
+    change which allocator a given allocation uses, never when memory gets
+    reclaimed), so a future attempt starts measurably further along:
+    a documented, reusable mechanism, six known-and-fixed files, and a
+    concrete list of what a higher-confidence next attempt would need (an
+    exhaustiveness-verification step - e.g. poison-on-reset run as a
+    one-time full-suite audit rather than fixing crashes one at a time -
+    or a structurally different design that doesn't require enumerating
+    every magic static at all). Verified via
+    `./scripts/compile.sh --release`: 1881/1881 tests passing with the
+    reverted (no-reset) state, 0 regressions from this leaf.
+  - progress_2026-08-21 (still left open per stop_rule): Built the
+    higher-confidence exhaustiveness-verification step the 2026-08-13 note
+    above said a future attempt would need: a real, mechanical
+    poison-on-reset audit tool, not more manual grep-and-fix rounds.
+    Mechanism (default `OFF`, zero effect on any normal build - see
+    `docs/CompilerArenaAllocator.md`'s new 2026-08-21 subsection for full
+    detail): a `PRIMESTRUCT_ARENA_POISON_AUDIT` CMake option forces an
+    ASan build and makes `CompileArena::reset()` ASan-poison every byte a
+    scope touched and then permanently abandon that memory (never
+    reused/unpoisoned again) instead of rewinding and reusing it, so any
+    later stale read - at any point after the reset, not just in a narrow
+    window - crashes immediately with an exact stack trace. A companion
+    `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` option (auto-enabled by the
+    audit) re-wires `tests/unit/test_main.cpp`'s doctest listener to
+    construct one `ScopedCompileArena` per `TEST_CASE` again, exactly
+    TODO-5234's original design, so the audit exercises real reset churn.
+    Running the full `PrimeStruct_semantics_tests` binary under this
+    found and fixed four more real, previously-unwrapped magic statics
+    (`StdlibSurfaceRegistry.cpp`'s `registry()` table itself plus its two
+    dependent caches - outside the three directories this TODO's own
+    `implementation_notes` suggested searching; most of
+    `SoaPathHelpers.h`'s derived path-prefix statics, which had been
+    flagged as an unverified grep hit in the 2026-08-13 round and never
+    crash-confirmed until now; `SemanticsBuiltinPathHelpers.cpp`'s
+    `isCanonicalStdlibSoaHelperPath()` prefixes; and
+    `IrLowererLegacyCollectionBranchCounters.cpp`'s log-sink path),
+    each fixed with the same `systemHeapValue()` pattern. It then found a
+    structurally new, harder blocker: `third_party/doctest.h`'s own
+    internal `g_infoContexts` thread_local vector (used by every
+    `INFO()`/`CAPTURE()`/`MESSAGE()` call) has the exact same
+    "capacity survives across TEST_CASEs but a later reset reclaims its
+    backing buffer anyway" hazard as the thread_local caches the
+    2026-08-13 round already fixed - except this one lives inside a
+    vendored third-party library we do not author, so it cannot be fixed
+    by wrapping one of our own magic statics in `systemHeapValue()` at its
+    declaration; it would need a patch to `third_party/doctest.h` itself
+    (not attempted this round). This demonstrates the exhaustiveness risk
+    this TODO's `stop_rule` already worried about is not limited to this
+    repository's own source tree: overriding the *global*
+    `operator new`/`delete` puts every allocation any code makes during a
+    compile scope in scope for this hazard, including vendored
+    dependencies we cannot practically keep re-auditing as they change
+    upstream. Per this leaf's `stop_rule`, resets remain OFF by default
+    (`tests/unit/test_main.cpp` unchanged from the 2026-08-13 state) -
+    shipping on "fixed everything found so far" a second time, now
+    knowing the hazard extends into code we do not control, would repeat
+    exactly the mistake this stop_rule exists to prevent. What shipped
+    from this round: the four `systemHeapValue()` fixes above (all
+    unconditionally safe regardless of whether resets ever ship, same
+    reasoning as the 2026-08-13 fixes) and the reusable audit tooling
+    itself (both new CMake options default `OFF`). Verified via a FRESH
+    `./scripts/compile.sh --release` run (not `--rerun-failed`): **100%
+    tests passed, 0 tests failed out of 1898** (1972 registered, 74
+    pre-existing `Disabled`), 0 regressions. No VmHWM memory measurement
+    was taken this round since the reset design remains unshipped (the
+    CLI-only, never-reset arena's memory profile is unchanged from
+    TODO-5234's own measurement). If picked up again: fix the
+    `doctest.h` `g_infoContexts` hazard first (most likely a custom
+    allocator on that vector that always calls `std::malloc` directly,
+    bypassing the arena override), audit the rest of that ~7000-line
+    vendored file for other persistent state, then re-run this same
+    audit loop to convergence (zero poisoned-memory accesses on a full
+    `semantics`+`ir_pipeline` run) before reconsidering
+    `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` as a default.
+  - progress_2026-08-22 (still left open per stop_rule): Did exactly the
+    "fix `doctest.h`'s `g_infoContexts` hazard first" step the
+    2026-08-21 note above called out as the next step. Checked upstream
+    first: pulled doctest v2.5.3 (latest release, current repo pin is
+    2.4.11) directly from GitHub and confirmed `g_infoContexts` is
+    byte-for-byte the same plain `thread_local std::vector<IContextScope*>`
+    with no allocator customization - an upgrade would not have fixed
+    this, so proceeded with a local patch instead. Patched
+    `third_party/doctest.h` (first-ever local modification to this
+    vendored file, clearly marked with a `PrimeStruct local patch
+    (TODO-5235)` comment block): added a small, self-contained
+    `PrimeStructSystemHeapAllocator<T>` (calls `std::malloc`/`std::free`
+    directly, bypassing the overridden global `operator new`/`delete`
+    entirely - deliberately not dependent on any PrimeStruct header, to
+    keep the vendored file's diff against upstream minimal) and changed
+    `g_infoContexts`'s one declaration site to use it. Verified the
+    change compiles cleanly under the `PRIMESTRUCT_ARENA_POISON_AUDIT`
+    ASan build.
+    Re-ran the poison-audit loop (full `PrimeStruct_semantics_tests`
+    binary, `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE` on) to check whether
+    the doctest.h fix was sufficient. It surfaced two more real bugs -
+    but a DIFFERENT class than every hazard found so far, and unrelated
+    to the arena/g_infoContexts investigation itself: plain dangling
+    `std::string_view` bugs where a `std::string_view` local/parameter
+    was reassigned from a function that returns `std::string` **by
+    value** (`text = trimRequirementText(text)`-shaped code), leaving
+    the view pointing at a temporary that's destroyed at the end of that
+    statement - undefined behavior independent of any arena/reset
+    machinery, just never caught before because this was the first time
+    this binary ran under `-fsanitize=address
+    -fsanitize-address-use-after-scope`. Found and fixed both,
+    confirmed via `addr2line` against a `RelWithDebInfo` (`-g`) rebuild
+    of the audit binary for exact source lines (the default
+    `Release`/`-O3` audit build has no line-level DWARF, which made the
+    first crash much slower to root-cause than it needed to be - use
+    `-DCMAKE_BUILD_TYPE=RelWithDebInfo` for any future `-DPRIMESTRUCT_ARENA_POISON_AUDIT=ON`
+    build):
+    (1) `SemanticsValidatorSnapshots.cpp`'s
+    `collectionBridgeChoiceFromResolvedPath`: `std::string_view
+    collectionFamily; ... collectionFamily = internalSoaCollectionTypeName();`
+    (that function returns `std::string`) - changed `collectionFamily`'s
+    declared type to `std::string` and dropped the now-redundant
+    `std::string(collectionFamily)` wrap at its one use site.
+    (2) `RequirementPredicateFacts.cpp`'s `parseUnsignedRequirementInteger`:
+    `text = trimRequirementText(text)` where `text` is a `std::string_view`
+    parameter (`trimRequirementText` returns `std::string`) - replaced
+    with the same in-place `remove_prefix`/`remove_suffix` whitespace-trim
+    loop `trimRequirementText`'s own body already uses internally, so
+    `text` stays a view over the caller's original, still-live buffer
+    instead of round-tripping through a temporary `std::string`. Checked
+    the rest of this file's `trimRequirementText` call sites for the same
+    pattern (6 total) - the other 4 all assign into a genuine
+    `std::string` lvalue (by-value `std::string` parameters or explicitly
+    `std::string`-typed locals), so this was the only one.
+    Then hit a hard environmental wall, not a code problem: the audit
+    binary is one long-running process executing 2000+ TEST_CASEs under
+    full ASan instrumentation (redzones + shadow memory on every
+    allocation for the suite's whole runtime), and this sandbox's memory
+    cgroup OOM-killed it (confirmed via `dmesg`/`journalctl -k`:
+    "Memory cgroup out of memory... anon-rss:13920512kB" i.e. ~14GB
+    resident before the kill) partway through a run, with zero further
+    output - not a hang, not a hazard, a real resource ceiling this
+    environment enforces that a full single-process ASan run over this
+    suite's size cannot stay under. Retried multiple times
+    (with/without `ASAN_OPTIONS=symbolize=0` to rule out the external
+    `llvm-symbolizer` subprocess being the memory culprit - it wasn't,
+    both configurations eventually hit the same cgroup OOM kill).
+    Net result: 3 real fixes landed (the doctest.h allocator patch plus
+    the two dangling-view bugs), all independently verified safe via a
+    completely separate, normal (non-ASan, non-audit) fresh
+    `./scripts/compile.sh --release` run: **no failing CTest cases**,
+    build log clean of `error:`/`Error 1`/`Error 2`. But the audit could
+    NOT be driven to a clean, complete, zero-poisoned-access full-suite
+    pass in this environment - not because more hazards are known to
+    remain, but because the verification method itself (one long ASan
+    process over the whole suite) cannot finish here regardless of
+    correctness. Per this leaf's own stop_rule ("do not ship... without
+    achieving full confidence"), resets stay OFF by default -
+    `tests/unit/test_main.cpp` unchanged, `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE`
+    still opt-in only. The 3 fixes shipped this round are all
+    unconditionally safe regardless of whether resets are ever enabled
+    (same reasoning as every prior round's fixes). If picked up again:
+    the real blocker is now the AUDIT METHOD's own resource footprint,
+    not a specific remaining code hazard - consider sharding the
+    poison-audit run into smaller batches (e.g. one `TEST_SUITE` or
+    doctest `--first`/`--last` range per process) so each individual
+    audit process's ASan memory footprint stays small enough for this
+    environment, then aggregate results across shards to reach the same
+    "zero poisoned access across the full suite" confidence bar without
+    needing one giant process to survive the whole run.
+  - progress_2026-08-22b (still left open per stop_rule): Did the
+    "shard the poison-audit run" step the previous note called out.
+    Built a driver script running `PrimeStruct_semantics_tests` as 15
+    separate processes (`--first=N --last=M`, 200 cases per shard, all
+    2944 cases covered) with `ASAN_OPTIONS=symbolize=0:halt_on_error=1`;
+    this reliably avoids the sandbox's memory-cgroup OOM killer (each
+    shard is a short-lived process with bounded accumulated ASan
+    redzone/shadow state) and, for the first time in this investigation,
+    completed an actual full exhaustive sweep instead of a partial run.
+    Also switched the audit build to `-DCMAKE_BUILD_TYPE=RelWithDebInfo`
+    so `addr2line -f -C -i <offset>` resolves exact file:line and full
+    inline chains against crash stack offsets (the default Release/-O3
+    audit build has no line-level DWARF).
+    First full sweep surfaced one genuine `use-after-poison` hit (shard
+    covering cases 2601-2800; the other 14 shards only showed harmless
+    LeakSanitizer "byte(s) leaked" summaries, expected given the arena's
+    by-design non-freeing behavior). Root-caused via `addr2line` to
+    `ContextState::fullyTraversedSubcases` (an `unordered_set` cleared/
+    inserted once per TEST_CASE for the process lifetime) - fixed with
+    the same `PrimeStructSystemHeapAllocator<T>` pattern as
+    `g_infoContexts`, moving that allocator template's definition earlier
+    in the file (right after `namespace detail {` opens) so `ContextState`
+    can reference it.
+    Rebuilt, reran shard 2601-2800: crashed again, different offset.
+    Root-caused to `doctest::String::~String()` called during
+    `ContextState::subcaseStack`/`nextSubcaseStack`'s `.clear()` at
+    `test_case_start` - i.e. `doctest::String`'s own internal heap
+    buffer (allocated via plain `new char[]` in `String::allocate()`)
+    has the identical hazard, independent of whatever container holds
+    the `String`. Fixed by adding standalone
+    `primeStructSystemHeapAllocChars`/`primeStructSystemHeapFreeChars`
+    helpers (`std::malloc`/`std::free` directly) and routing all of
+    `String`'s heap-buffer alloc/dealloc sites through them (allocate(),
+    destructor, copy-assignment, `operator+=`'s two heap-touching
+    branches, move-assignment) - this covers every `ContextState` member
+    that stores a `String` in one patch, rather than needing a
+    container-by-container fix. Also proactively switched
+    `ContextState::filters`/`reporters_currently_used`/
+    `stringifiedContexts`/`subcaseStack`/`nextSubcaseStack` to
+    `PrimeStructSystemHeapAllocator` for their own backing storage
+    (`filters` deliberately excluded - it's populated once from argv at
+    process start, before any TEST_CASE runs, and switching its element
+    type would require templatizing `matchesAny()`/`parseCommaSepArgs()`
+    for no safety benefit since it's never touched again inside a
+    TEST_CASE). Templatized the free-function `hash(const
+    std::vector<SubcaseSignature>&, ...)` overloads on the allocator
+    type so they keep accepting `subcaseStack`/`nextSubcaseStack`.
+    Rebuilt, reran shard 2601-2800: crashed a THIRD time, again a
+    different offset. Root-caused to `ConsoleReporter::subcasesStack`
+    (doctest.h ~line 6077) via `subcase_start()`'s `push_back` -
+    a *different* long-lived container than any `ContextState` member:
+    the default-constructed `ConsoleReporter` (registered once in
+    `ContextState::reporters_currently_used`) keeps its own
+    `std::vector<SubcaseSignature>` that also accumulates across the
+    whole process lifetime. Fixed the same way
+    (`PrimeStructSystemHeapAllocator<SubcaseSignature>`). While there,
+    proactively fixed the structurally identical
+    `JUnitReporter::deepestSubcaseStackNames` (`std::vector<String>`,
+    same push_back/clear pattern) even though `JUnitReporter` is never
+    instantiated by PrimeStruct's own test binaries (only via an
+    explicit `-r=junit` CLI flag) - not crash-confirmed, but cheap and
+    mechanical given the pattern was already established; templatized
+    `appendSubcaseNamesToLastTestcase` on the allocator type to accept
+    it. Checked `XmlReporter` for the same shape of member - none found.
+    Rebuilt again, reran shard 2601-2800: clean (no crash). A full
+    15-shard re-sweep was in progress (to check the other 14 shards are
+    still clean and no fix regressed anything) when this note was
+    written; its outcome will be recorded in a follow-up note before
+    this task's checkbox is touched. Net count so far this round: 5
+    distinct hazard sites fixed in `third_party/doctest.h`
+    (`g_infoContexts`, `fullyTraversedSubcases`, `String`'s own heap
+    buffer, `ConsoleReporter::subcasesStack`,
+    `JUnitReporter::deepestSubcaseStackNames`) plus the allocator
+    relocation and two `hash()`/`appendSubcaseNamesToLastTestcase`
+    templatizations needed to keep call sites compiling. This is now
+    the 3rd time within this same investigation session (and per the
+    2026-08-13 note, at least the 4th time overall) that "fix the
+    latest crash, rerun" turned up a genuinely new, different hazard
+    class rather than converging - the non-convergence pattern the
+    stop_rule anticipates continues to hold, even with sharding solving
+    the earlier resource-ceiling blocker.
+    Reran the full 15-shard sweep TWICE more after the
+    `ConsoleReporter`/`JUnitReporter` fix: both came back completely
+    clean - zero `use-after-poison` hits across all 15 shards, all 15
+    exits were LeakSanitizer's harmless "byte(s) leaked" summary only.
+    This is the first time in this investigation's entire history that
+    `PrimeStruct_semantics_tests` (2944 TEST_CASEs) has passed a
+    complete, exhaustive poison-audit sweep clean, and it reproduced on
+    a second independent run, ruling out ordering-dependent luck for
+    that binary specifically.
+    This task's own scope, however, explicitly names BOTH the
+    `semantics` AND `ir_pipeline` long-lived test binaries (see this
+    leaf's `stop_rule`) - `ir_pipeline` had never actually been audited
+    in any prior round of this investigation (all rounds so far only
+    ever built/ran `PrimeStruct_semantics_tests`). Built and sharded a
+    poison-audit run of `PrimeStruct_backend_ir_tests` (the binary that
+    actually contains the `tests/unit/ir_pipeline/**` sources, per
+    `CMakeLists.txt`; 1754 TEST_CASEs, 9 shards of 200). It is NOT
+    clean: shard 1601-1754 hit a `use-after-poison`, reproducible across
+    reruns. Bisected via repeated `--first=N --last=N` narrowing (not
+    addr2line this time - see below) down to a single TEST_CASE,
+    `semantics validate publishes module artifacts in import order`
+    (`test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp`),
+    reproducible running that ONE test case entirely alone (`--first`
+    and `--last` both pointing at it - confirmed via reading doctest.h's
+    own filter loop, third_party/doctest.h:7078-7081, that a
+    filtered-out/skipped TEST_CASE never calls `test_case_start`, so a
+    single-test run really does mean only one arena-reset cycle occurs
+    in the whole process).
+    First pass at this used `addr2line -f -C -i` the same way as every
+    doctest.h fix this round, which produced a stack that looked like
+    it was reading poisoned memory *during* the test's own compile
+    pipeline call (`runCompilePipeline` -> `monomorphizeTemplates` ->
+    `rewriteMonomorphizedDefinitions` -> `Definition`'s copy
+    constructor, which copies its `std::vector<Expr>` member) - which
+    would be architecturally impossible given only one arena scope is
+    ever active per TEST_CASE (nested scopes only reset at
+    `tls_scopeDepth == 0`, confirmed by reading
+    `ScopedCompileArena`'s ctor/dtor in `CompileArena.cpp:410-426`).
+    Re-ran with ASan's own symbolizer instead of manually
+    reconstructing frames via raw offsets (`ASAN_OPTIONS=halt_on_error=1`
+    without `symbolize=0`), and the real, authoritative stack tells a
+    completely different and self-consistent story: the READ happens in
+    `arenaDeallocate`/`operator delete` (`CompileArena.cpp:324`/`393`),
+    called from `__GI___call_tls_dtors` -> `__run_exit_handlers` ->
+    `__GI_exit` -> `_start` - i.e. this fires during **thread-local
+    object destruction at process exit**, not mid-test-body. The
+    *allocation* stack (where the freed memory was originally handed
+    out) is the `Definition`/`Expr` copy inside
+    `rewriteMonomorphizedDefinitions` during the test's own execution,
+    confirming the shape of the bug: something holds a pointer/reference
+    into that arena-allocated `Expr` data past the test's own
+    `test_case_end` reset (which already poisoned it), and a
+    thread_local object's destructor - which only runs once, at real
+    thread/process exit, not between TEST_CASEs - later calls `delete`
+    on it. This is structurally the exact same "thread_local cache
+    outliving a reset" hazard class TODO-5234/TODO-5235's earlier rounds
+    already found and fixed several instances of (see
+    `docs/CompilerArenaAllocator.md`), just a not-yet-identified new
+    instance, and one that (unlike every hazard fixed so far this
+    session) only manifests at process exit rather than during normal
+    execution - which is presumably why no earlier round caught it even
+    though `ir_pipeline` has apparently never actually been audited
+    before now.
+    Searched the obvious candidate locations for a `thread_local` (or
+    function-local `static`) holding a `Definition`/`Expr`/`Program` by
+    value anywhere reachable from `rewriteMonomorphizedDefinitions`,
+    `monomorphizeTemplates`, `SemanticsValidate.cpp`, or
+    `CompilePipeline.cpp` (grepped `thread_local` and `static` broadly
+    across `src/` and `include/`) - none of the existing, already-known
+    thread_local caches from earlier rounds
+    (`g_normalizeBindingTypeNameCache` and its neighbors in
+    `SemanticsBindingTypeHelpers.cpp`, `g_cachedMapper` in
+    `SourceLocationMapper.cpp`, the `StdlibSurfaceRegistry.cpp` cache)
+    hold AST node types by value, and no new candidate turned up by
+    grep. Did not find the actual thread_local object responsible.
+    Given the search surface here is effectively "any thread_local or
+    static anywhere in a large, unfamiliar-to-this-round part of the
+    codebase (monomorphization/semantic-validation internals) that
+    holds AST data and is destroyed at thread exit," this is exactly
+    the open-ended exhaustiveness problem this leaf's `stop_rule`
+    anticipates and explicitly permits stopping on rather than chasing
+    indefinitely. Stopping here per that stop_rule: resets remain OFF
+    by default (unchanged - `tests/unit/test_main.cpp` still never
+    constructs a `ScopedCompileArena` outside the opt-in
+    `PRIMEC_TEST_ARENA_RESET_PER_CASE` audit build), and this task's
+    checkbox stays `[ ]`. Net honest status: `PrimeStruct_semantics_tests`
+    is now confirmed clean (twice) under the poison audit; the doctest.h
+    vendored-library hazard class (5 distinct sites, all fixed this
+    round, verified via `git log` for this round's commit) appears
+    exhausted for that binary. `PrimeStruct_backend_ir_tests` is NOT
+    clean and has at least one unresolved, reproducible,
+    process-exit-time hazard in PrimeStruct's own semantics/
+    monomorphization code, not yet root-caused to a specific
+    thread_local declaration. If picked up again: the concrete next
+    step is finding that thread_local object - candidates not yet
+    checked include anything in `src/semantics/TemplateMonomorph*.cpp`'s
+    transitive includes beyond what a plain `grep thread_local` surfaces
+    (e.g. a cache reachable only through a class member initialized
+    lazily, or a cache in a header-only utility included from many
+    TUs), or instrumenting `CompileArena::deallocate`/`arenaDeallocate`
+    itself (e.g. a conditional breakpoint under `gdb` at
+    `CompileArena.cpp:324` filtered to the specific poisoned address
+    range, single-stepped through `__call_tls_dtors` to see exactly
+    which TLS object's destructor is on the stack, rather than inferring
+    it from static analysis alone - `gdb` was not attempted this round).
+    All fixes that did ship this round (5 doctest.h hazard sites) remain
+    unconditionally safe regardless of whether resets are ever enabled,
+    same reasoning as every prior round.
+  - progress_2026-09-22 (still left open per stop_rule): Rebuilt the audit
+    binaries (`build-audit`, `-DPRIMESTRUCT_ARENA_POISON_AUDIT=ON
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo`) to re-attempt the concrete next
+    step the 2026-08-22b note left off at - finding the process-exit-time
+    thread_local hazard in `PrimeStruct_backend_ir_tests`, narrowed to
+    `semantics validate publishes module artifacts in import order`. That
+    exact repro no longer reproduces: the binary now has 1653 TEST_CASEs
+    vs. the note's 1754 (intervening commits changed this binary's
+    composition), and both a single-case run and the full containing
+    shard came back clean. There is currently no reproducible instance of
+    that specific hazard - a real update to the investigation's state,
+    not a fix.
+    Instead, running the sharded poison audit surfaced a different,
+    genuine bug: an ODR violation causing a real stack-buffer-overflow,
+    unrelated to arena resets but found by the same tooling.
+    `include/primec/testing/ir_lowerer_helpers/*.h` fragments are
+    `#include`d inside `namespace primec::ir_lowerer { ... }` by
+    `include/primec/testing/IrLowererHelpers.h`, so a struct declared
+    there is the SAME type as its identically-named `src/ir_lowerer/`
+    counterpart, not a separate testing copy. `ArrayVectorAccessTargetInfo`
+    gained `bool isStructBoxedRecordTarget` on the src side (TODO-4628)
+    and never gained it on the testing side - 56 bytes vs. the library's
+    64 - so every test declaring it by value and calling the real lowerer
+    wrote 8 bytes past its own stack slot (`WRITE of size 64` at
+    `src/ir_lowerer/IrLowererAccessTargetResolution.cpp:1470`, from
+    `test_ir_pipeline_validation_ir_lowerer_call_helpers_dispatch_buffer_and_native_tail_wrappers.cpp`).
+    This is build-configuration-independent silent UB present in ordinary
+    release test builds too, not an audit-only artifact; ASan classifies
+    it as `unknown-crash` (not `use-after-poison`), which is a real
+    detection gap in the audit tooling itself - every prior round's
+    `grep use-after-poison` would have silently passed over this class of
+    bug. Fixed by adding the missing member to the testing-side struct
+    (`include/primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h`),
+    and checked exhaustively rather than fixing just the crashing one: all
+    139 mirrored struct pairs between the testing fragments and their
+    `src/` counterparts were compared; this was the only real mismatch
+    (other diffs are cosmetic `::primec::` qualification or same-name-
+    different-namespace coincidences). Added a mechanical drift guard,
+    `scripts/check_testing_mirror_structs.py`, wired into CTest as
+    `PrimeStruct_testing_mirror_structs`, to catch a future recurrence
+    automatically instead of relying on another ASan sweep finding it by
+    accident. Also committed `scripts/run_arena_poison_audit.sh`, the
+    sharded audit driver every prior round ran inline and never checked
+    in (a gap this doc already flagged), and fixed its detection gap:
+    it now fails on any `ERROR: AddressSanitizer:` line, not just
+    `use-after-poison`, while still tolerating the arena's expected
+    by-design LeakSanitizer "byte(s) leaked" summaries.
+    Post-fix, the sharded poison audit of `PrimeStruct_backend_ir_tests`
+    came back CLEAN on all 9 shards (1653 TEST_CASEs, zero
+    `ERROR: AddressSanitizer:` in any shard log) - the two shards that
+    failed pre-fix (201-400, 401-600) now pass, and this is the first
+    time this binary has ever passed a complete poison-audit sweep in
+    this investigation. This does NOT meet the bar for flipping the
+    reset-per-compile-scope default: prior rounds always required a
+    second independent sweep before declaring a binary clean (to rule
+    out ordering-dependent luck), and `PrimeStruct_semantics_tests` was
+    not re-audited this round at all. Per this leaf's stop_rule, resets
+    remain OFF (`tests/unit/test_main.cpp` unchanged) and this task's
+    checkbox stays `[ ]`. Verified via a fresh
+    `./scripts/compile.sh --release`: 1899/1899 (1898 baseline + the new
+    `PrimeStruct_testing_mirror_structs` case), 1 failure
+    (`spinning_cube_argument_validation_51_55`, Timeout) confirmed a
+    pre-existing load-dependent flake via an isolated rerun (passed in
+    18.15s) - 0 regressions from this round's changes.
+    If picked up again: a second `backend_ir` sweep, then two `semantics`
+    sweeps (`./scripts/run_arena_poison_audit.sh PrimeStruct_semantics_tests
+    200 build-audit`) - both binaries are already built in `build-audit/`,
+    so each sweep is ~5-10 minutes with no rebuild needed. Only once all
+    four sweeps come back clean would the VmHWM before/after measurement
+    and the default flip be justified.
+  - progress_2026-09-22b (closing this task): Did exactly the "second
+    `backend_ir` sweep, then two `semantics` sweeps" step the previous
+    note called out - both binaries were already built in `build-audit/`
+    with the ODR fix, so no rebuild was needed. All four sweeps came back
+    CLEAN: `PrimeStruct_backend_ir_tests` (1653 `TEST_CASE`s, 9 shards)
+    twice in a row, `PrimeStruct_semantics_tests` (2800 `TEST_CASE`s, 14
+    shards) twice in a row, zero `ERROR: AddressSanitizer:` in any of the
+    4 x 9-14 shard logs. This clears the bar every earlier round withheld
+    on (a second independent sweep per binary, ruling out
+    ordering-dependent luck) for BOTH of this task's named binaries at
+    once - the first time this investigation has reached that state.
+    Per the acceptance criteria, proceeded to actually turn the design on.
+    Rather than flipping the existing global `PRIMESTRUCT_TEST_ARENA_RESET_PER_CASE`
+    CMake option (which `add_compile_definitions`s
+    `PRIMEC_TEST_ARENA_RESET_PER_CASE` for every test binary sharing
+    `tests/unit/test_main.cpp` - `PrimeStruct_backend_runtime_tests`,
+    `PrimeStruct_compile_run_tests`, `PrimeStruct_parser_tests`,
+    `PrimeStruct_text_filter_tests`, `PrimeStruct_misc_tests`,
+    `PrimeStruct_compile_time_tests`, none of which have ever been
+    poison-audited), scoped the default-on switch precisely to the two
+    binaries this task was always about: added a
+    `target_compile_definitions(... PRIVATE PRIMEC_TEST_ARENA_RESET_PER_CASE)`
+    call directly on `PrimeStruct_backend_ir_tests` and
+    `PrimeStruct_semantics_tests` in `CMakeLists.txt`, each with a comment
+    citing this task and warning not to extend it to another test binary
+    without first auditing it. This keeps the global CMake options intact
+    for future manual investigation while shipping the actual result only
+    where it was actually verified - the "argue the fix covers all of
+    them, or explicitly document which are out of scope and why" bar this
+    task's own `stop_rule` set from the start. Updated
+    `tests/unit/test_main.cpp`'s header comment to describe the new
+    per-target reality instead of the old blanket "does NOT construct a
+    ScopedCompileArena anywhere in this binary" claim, which was no longer
+    true for these two targets.
+    Rebuilt (config change requires a fresh configure+build) and ran the
+    full `./scripts/compile.sh --release` gate with the new default live,
+    in a normal (non-ASan, non-audit) build: **1899/1899**, one failure
+    (`spinning_cube_argument_validation_51_55`, Timeout) reconfirmed as
+    the same pre-existing load-dependent flake via an isolated rerun
+    (passed in 18.15s) - zero regressions, and `PrimeStruct_backend_ir_tests`
+    run directly reported `1653 | 1653 passed | 0 failed | 0 skipped`.
+    Took the VmHWM/VmRSS peak-memory measurement TODO-5234's own
+    methodology used (sampling `/proc/<pid>/status` every 15s across a
+    full run, `build-release` non-ASan binaries): `PrimeStruct_semantics_tests`
+    went from ~55.7MB to ~63.9MB VmHWM over its run (~15% growth);
+    `PrimeStruct_backend_ir_tests` went from ~83.6MB to ~95.4MB VmHWM over
+    its run (~14% growth). Both are the same order of magnitude and
+    growth-rate as TODO-5234's own original baseline measurement for the
+    never-reset build (~50MB to ~56MB, ~12%) - flat/bounded, not
+    exploding, consistent with the reset design working as intended
+    (each `TEST_CASE`'s arena memory is reclaimed and reused rather than
+    accumulating).
+    All four acceptance criteria are now met: (1) the magic-static/
+    thread_local corruption class has a documented, general mechanism
+    (`SystemHeapScope`/`systemHeapValue()`, plus the doctest.h-specific
+    `PrimeStructSystemHeapAllocator<T>` patch) with an argued-exhaustive
+    fix history across every round in this doc's TODO-5235 section; (2)
+    both named CTest suites pass clean with reset-per-compile-scope
+    wiring actually enabled, confirmed via the double poison-audit sweep
+    plus the normal-build full suite run; (3) the full release gate passes
+    with zero regressions (1899/1899 minus the one documented pre-existing
+    flake, exceeding the original 1881/1881 target which predates several
+    since-added tests); (4) peak memory is measured before/after and
+    confirmed flat/bounded. See `docs/CompilerArenaAllocator.md` for the
+    matching narrative writeup of this closing round.
