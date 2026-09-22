@@ -266,8 +266,13 @@ build and layout solidify.
 - Do not claim a bug is fixed unless you can no longer reproduce it after the change.
 
 ## Git commit guidelines
-- Push directly to `master` (`git push origin HEAD:master` or equivalent);
-  do not open a feature-branch PR for routine work unless explicitly asked.
+- Work directly on `master` and push there (`git push origin HEAD:master`
+  or equivalent). Do not create a separate branch (pushed or local) or
+  open a feature-branch PR for routine work. Only reach for a branch when
+  there's a concrete reason to isolate the work - e.g. the user explicitly
+  asks for a branch or a PR, or the multi-agent worktree pattern below
+  needs one locally - and even then, prefer merging/cherry-picking back
+  into `master` over leaving work stranded on a long-lived branch.
 - Push immediately after every commit - do not batch up multiple local
   commits before pushing.
 - Use a clear, imperative subject line in present tense.
