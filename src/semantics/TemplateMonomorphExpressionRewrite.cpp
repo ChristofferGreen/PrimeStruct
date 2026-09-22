@@ -147,6 +147,7 @@ bool rewriteExpr(Expr &expr,
                  const std::vector<ParameterInfo> &params,
                  bool allowMathBare) {
   expr.namespacePrefix = namespacePrefix;
+  const bool hadExplicitTemplateArgsOnEntry = !expr.templateArgs.empty();
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return false;
   }
@@ -2895,6 +2896,21 @@ bool rewriteExpr(Expr &expr,
     const bool isBuiltinKeyValueCountPath =
         isTemplateMonomorphCanonicalKeyValueCountPath(resolvedPath);
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
+    if (!hadExplicitTemplateArgsOnEntry && !expr.templateArgs.empty() &&
+        !resolvedWasTemplate && isKnownDef && isBuiltinKeyValueCountPath) {
+      // A same-path, non-templated user definition shadows the canonical
+      // key-value count helper here. Implicit template-arg inference
+      // pattern-matches on the canonical path text alone and doesn't know
+      // about this local override, so it has attached template args that
+      // don't apply to it (confirmed not user-written: `expr.templateArgs`
+      // was empty when this call entered rewriting). Clear the inferred
+      // args and let the call resolve as an ordinary, non-templated call
+      // to the known definition instead of erroring. Explicit user-written
+      // template args on such a definition (non-empty on entry) still fall
+      // through to the diagnostic below, unchanged.
+      expr.templateArgs.clear();
+      expr.templateArgDetails.clear();
+    }
     if (!expr.templateArgs.empty() && !resolvedWasTemplate && !isKnownDef && isBuiltinKeyValueCountPath) {
       error = "count does not accept template arguments";
       return false;
