@@ -49,7 +49,23 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 30
   SOURCE_FILE "*test_ir_pipeline_conversions_core.h"
   SHARD_PREFIX "core"
-  TOTAL_CASES 21
+  TOTAL_CASES 23
+  CASES_PER_SHARD 10
+)
+
+# TODO-5303: this file's 10 cases were never matched by any SOURCE_FILE
+# group in this suite (a coverage gap letting a real lowering bug -
+# "ir lowerer supports map method calls" - go unexercised by CTest
+# indefinitely; see docs/todo_finished.md). core.h's TOTAL_CASES above was
+# also silently stale (21 vs. the file's real 23 cases) until this same
+# audit found it.
+addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
+  TARGET PrimeStruct_backend_ir_tests
+  LABEL "parallel-safe"
+  TIMEOUT 30
+  SOURCE_FILE "*test_ir_pipeline_conversions_method_calls_and_argv.cpp"
+  SHARD_PREFIX "method_calls_and_argv"
+  TOTAL_CASES 10
   CASES_PER_SHARD 10
 )
 

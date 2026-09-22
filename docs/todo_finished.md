@@ -51720,3 +51720,100 @@ real answer.
     TODO-5302 is now fully resolved - the entire test suite is green.
     Moved to `docs/todo_finished.md`.
 
+
+- [x] TODO-5303: Fix `primestruct.ir.pipeline.conversions` CTest shard coverage gap hiding a real map-method-call lowering bug
+  - owner: ai
+  - created_at: 2026-09-22
+  - phase: Hidden test failure remediation
+  - parallel_track: ctest-shard-coverage
+  - depends_on: none
+  - scope: while independently re-verifying TODO-5302's "full suite green"
+    claim, found that `tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_method_calls_and_argv.cpp`
+    (10 `TEST_CASE`s) is not matched by any `SOURCE_FILE` pattern in the
+    twelve `addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
+    ...)` calls in `cmake/PrimeStructManagedUnitBackendSuites.cmake` - the
+    file's cases exist in the compiled `PrimeStruct_backend_ir_tests`
+    binary and are counted in the suite's total (confirmed via
+    `--test-suite=primestruct.ir.pipeline.conversions --count` = 154) but
+    are never selected by any shard's `--first`/`--last` window, so CTest
+    always reports this suite 100% green regardless of these cases'
+    actual status. Running the binary directly
+    (`--test-suite="primestruct.ir.pipeline.conversions"`) shows 153/154
+    passed, 1 failed: `TEST_CASE("ir lowerer supports map method calls")`
+    (line 92) fails its `REQUIRE(parseValidateAndLower(source, module, error))`
+    assertion - a real, currently-broken lowering path, not a flake. This
+    is the same bug class as the 2026-07-15 semantics-suite `TOTAL_CASES`
+    drift documented in `docs/failing_tests.md` (roughly 900 cases silently
+    never run before that fix) recurring in a different suite, apparently
+    undetected until now - this exact test has been referenced across many
+    rounds of TODO-4683/5300/5301/5302 as a "confirmed pre-existing flake"
+    without anyone re-checking whether CTest was actually exercising it.
+    Two sub-items:
+    (a) add a `method_calls_and_argv` `SOURCE_FILE` shard group (matching
+    `*test_ir_pipeline_conversions_method_calls_and_argv.cpp`,
+    `TOTAL_CASES 10`) to `cmake/PrimeStructManagedUnitBackendSuites.cmake`'s
+    `primestruct.ir.pipeline.conversions` block so CTest actually runs
+    these cases; then do a broader pass over the *other* eleven
+    `SOURCE_FILE` groups in this same suite (and ideally the sibling
+    `primestruct.ir.pipeline.validation`/`.to_cpp`/other managed suites) to
+    confirm no other source file in scope is similarly uncovered - do not
+    assume this is the only instance.
+    (b) root-cause and fix the actual "ir lowerer supports map method
+    calls" lowering failure this gap was hiding, once (a) makes it visible
+    to CTest.
+  - implementation_notes: `addPrimeStructManagedDoctestSuite`'s `SOURCE_FILE`
+    parameter is a doctest `--source-file` filter combined with `--first`/
+    `--last` derived from `TOTAL_CASES`/`CASES_PER_SHARD` - confirm the
+    exact matching semantics (glob vs substring, case sensitivity) before
+    assuming a fix is complete; verify with `--count` before/after that the
+    sum of all shard groups' effective coverage for this suite equals the
+    binary's real total case count for that suite.
+  - acceptance:
+    - `ctest --test-dir build-release -R "ir_pipeline_conversions"` shards
+      collectively exercise all cases doctest reports for
+      `primestruct.ir.pipeline.conversions` (verified by a direct
+      `--test-suite=... --count` cross-check, not just "shards pass")
+    - the "ir lowerer supports map method calls" case passes for a real,
+      verified-correct reason (not a suppressed/loosened assertion)
+    - a full `./scripts/compile.sh --release` run shows zero new failures
+      anywhere else
+  - stop_rule: if the broader sibling-suite coverage audit in (a) turns up
+    additional gaps beyond this one suite, split each into its own
+    `TODO-53xx` rather than expanding this task's scope indefinitely
+  - resolution_2026-09-22: fixed. (b) first: the "map method calls" failure
+    was a real bug, not test noise - a user-defined, non-templated function
+    at the exact literal path of the canonical key/value-count helper (e.g.
+    a local `/std/collections/map/count` override with no stdlib import)
+    was rejected with "template arguments are only supported on templated
+    definitions", because implicit template-arg inference in
+    `TemplateMonomorphExpressionRewrite.cpp` pattern-matches on the
+    resolved path text alone and doesn't know a local override shadows it,
+    so it attaches inferred K/V args that don't apply. Fixed by tracking
+    whether a call's template args were present before rewriting began
+    (genuine explicit source syntax) versus attached only during rewriting
+    (inferred); when a known, non-templated same-path definition exists and
+    the args were purely inferred, they're cleared and the call resolves
+    normally. Explicit user-written template args on such a definition
+    still correctly error (verified against the existing test covering
+    exactly that case). (a) then: added the missing
+    `method_calls_and_argv` `SOURCE_FILE` shard group, and found a *second*
+    gap in the same audit - `core.h`'s own `TOTAL_CASES` was also stale (21
+    declared vs. 23 real cases), silently dropping its own last 2 cases
+    from every shard's `--first`/`--last` window (both already passed, so
+    no bug was hidden, but the coverage gap was real). Fixed both.
+    Verified empirically, not just by trusting shard pass/fail: extracted
+    every CTest shard's exact `--source-file`/`--first`/`--last` command
+    for this suite, ran `--list-test-cases` on each, unioned the results,
+    and diffed against the binary's full 154-case list - zero missing
+    before commit, confirmed zero missing after. Spot-checked the two
+    named sibling suites: `primestruct.ir.pipeline.validation` is
+    over-declared (`TOTAL_CASES 1389` vs. 1342 actual - safe, just an
+    empty trailing shard) and `.to_cpp` matches exactly (37/37); a full
+    audit of every other managed suite (semantics, parser, compile_run)
+    was not attempted and remains open scope if anyone wants to pursue it
+    further, but is not blocking this task's own acceptance criteria.
+    Full verification: `primestruct.ir.pipeline.conversions` 154/154,
+    `.validation` 1342/1342, `PrimeStruct_semantics_tests` 2800/2800, a
+    607-case compile_run `*collection*,*map*` battery, and all five
+    collection audit scripts, all clean.
+

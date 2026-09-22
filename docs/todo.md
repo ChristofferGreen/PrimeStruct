@@ -70,66 +70,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- [ ] TODO-5303: Fix `primestruct.ir.pipeline.conversions` CTest shard coverage gap hiding a real map-method-call lowering bug
-  - owner: ai
-  - created_at: 2026-09-22
-  - phase: Hidden test failure remediation
-  - parallel_track: ctest-shard-coverage
-  - depends_on: none
-  - scope: while independently re-verifying TODO-5302's "full suite green"
-    claim, found that `tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_method_calls_and_argv.cpp`
-    (10 `TEST_CASE`s) is not matched by any `SOURCE_FILE` pattern in the
-    twelve `addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-    ...)` calls in `cmake/PrimeStructManagedUnitBackendSuites.cmake` - the
-    file's cases exist in the compiled `PrimeStruct_backend_ir_tests`
-    binary and are counted in the suite's total (confirmed via
-    `--test-suite=primestruct.ir.pipeline.conversions --count` = 154) but
-    are never selected by any shard's `--first`/`--last` window, so CTest
-    always reports this suite 100% green regardless of these cases'
-    actual status. Running the binary directly
-    (`--test-suite="primestruct.ir.pipeline.conversions"`) shows 153/154
-    passed, 1 failed: `TEST_CASE("ir lowerer supports map method calls")`
-    (line 92) fails its `REQUIRE(parseValidateAndLower(source, module, error))`
-    assertion - a real, currently-broken lowering path, not a flake. This
-    is the same bug class as the 2026-07-15 semantics-suite `TOTAL_CASES`
-    drift documented in `docs/failing_tests.md` (roughly 900 cases silently
-    never run before that fix) recurring in a different suite, apparently
-    undetected until now - this exact test has been referenced across many
-    rounds of TODO-4683/5300/5301/5302 as a "confirmed pre-existing flake"
-    without anyone re-checking whether CTest was actually exercising it.
-    Two sub-items:
-    (a) add a `method_calls_and_argv` `SOURCE_FILE` shard group (matching
-    `*test_ir_pipeline_conversions_method_calls_and_argv.cpp`,
-    `TOTAL_CASES 10`) to `cmake/PrimeStructManagedUnitBackendSuites.cmake`'s
-    `primestruct.ir.pipeline.conversions` block so CTest actually runs
-    these cases; then do a broader pass over the *other* eleven
-    `SOURCE_FILE` groups in this same suite (and ideally the sibling
-    `primestruct.ir.pipeline.validation`/`.to_cpp`/other managed suites) to
-    confirm no other source file in scope is similarly uncovered - do not
-    assume this is the only instance.
-    (b) root-cause and fix the actual "ir lowerer supports map method
-    calls" lowering failure this gap was hiding, once (a) makes it visible
-    to CTest.
-  - implementation_notes: `addPrimeStructManagedDoctestSuite`'s `SOURCE_FILE`
-    parameter is a doctest `--source-file` filter combined with `--first`/
-    `--last` derived from `TOTAL_CASES`/`CASES_PER_SHARD` - confirm the
-    exact matching semantics (glob vs substring, case sensitivity) before
-    assuming a fix is complete; verify with `--count` before/after that the
-    sum of all shard groups' effective coverage for this suite equals the
-    binary's real total case count for that suite.
-  - acceptance:
-    - `ctest --test-dir build-release -R "ir_pipeline_conversions"` shards
-      collectively exercise all cases doctest reports for
-      `primestruct.ir.pipeline.conversions` (verified by a direct
-      `--test-suite=... --count` cross-check, not just "shards pass")
-    - the "ir lowerer supports map method calls" case passes for a real,
-      verified-correct reason (not a suppressed/loosened assertion)
-    - a full `./scripts/compile.sh --release` run shows zero new failures
-      anywhere else
-  - stop_rule: if the broader sibling-suite coverage audit in (a) turns up
-    additional gaps beyond this one suite, split each into its own
-    `TODO-53xx` rather than expanding this task's scope indefinitely
-
 - [ ] TODO-5304: Remove or wall off the production-unreachable inline-call-dispatch overloads TODO-5302 found
   - owner: ai
   - created_at: 2026-09-22
@@ -178,6 +118,20 @@ This file is the live open-work queue for PrimeStruct.
     production-unreachable overloads beyond the three already named, note
     them in `docs/failing_tests.md` for a future task rather than
     expanding this one's scope
+
+Note (2026-09-22): TODO-5303 (a `primestruct.ir.pipeline.conversions`
+CTest shard coverage gap hiding a real map-method-call lowering bug) has
+resolved - see `docs/todo_finished.md`. Fixed the actual lowering bug (a
+same-path, non-templated user override of the canonical key/value-count
+helper was wrongly rejected, because implicit template-arg inference
+attaches inferred args based on path text alone without checking for a
+local override) and the shard-coverage gap that hid it (an entire test
+file, plus 2 stale cases in a second file, were never selected by any
+CTest shard due to stale `TOTAL_CASES`/missing `SOURCE_FILE` groups in
+`cmake/PrimeStructManagedUnitBackendSuites.cmake` - the same bug class as
+the 2026-07-15 semantics-suite drift fix, recurring undetected in a
+different suite). Verified empirically (not just "shards pass") that all
+154 real cases in the suite are now covered by some shard.
 
 Note (2026-09-21): TODO-5302 (remaining `ir_pipeline_validation_cases`
 `at()`/`at_unsafe()` receiver-fallback gaps, the last item in the
