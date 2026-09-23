@@ -53813,3 +53813,87 @@ crashes) - see `docs/todo_finished.md`.
     `map_surface_strict_audit` and `vector_surface_traces` source audits
     tripping on literal rooted path spellings in new code/comments; both
     were fixed and all 34 audit-style CTest entries pass.
+
+
+- [x] TODO-5305: collect-diagnostics keeps only the first unresolved import and drops its "/*" suffix
+  - owner: ai
+  - created_at: 2026-09-23
+  - finished_at: 2026-09-23
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: split out of TODO-4809 (was its sub-bug 2). With
+    `import /missing_alpha` followed by `import /missing_beta`,
+    `--collect-diagnostics` used to collect one
+    `unknown import path: <path>/*` diagnostic per unresolved import (2
+    total). It now collects only `unknown import path: /missing_alpha`,
+    without the `/*` suffix. Re-confirmed 2026-09-23 against the current
+    compiler (primec and primevm). Pinned to the current behavior in
+    `test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp`
+    (two cases, marked `TODO-5305`).
+  - implementation_notes: import resolution runs before semantics, so
+    start from the import resolver's collect-mode error path, not the
+    semantics intra-body scanner that TODO-4809 (closed 2026-09-23)
+    fixed. Also decide whether the missing `/*` suffix is a deliberate
+    message change or a regression before restoring it.
+  - acceptance:
+    - The two-bad-import repro collects both unresolved-import
+      diagnostics in source order.
+    - The message suffix matches whichever form is confirmed intended.
+    - Both `TODO-5305` test sites are re-pinned to the fixed behavior.
+  - stop_rule: do not combine with TODO-5306 unless a shared root cause
+    is confirmed with a minimal repro for each.
+  - resolution: fixed. Two independent causes, both in semantics
+    (`SemanticsValidator::buildImportAliases`,
+    `src/semantics/SemanticsValidatorBuildImports.cpp`), not in the
+    file-level import resolver: `import /missing_alpha` is a namespace
+    import (PSC1005, stage semantic), so `ImportResolver` never sees it.
+    (1) Count: in collect mode the `addImportDiagnostic` lambda recorded
+    the diagnostic and then returned `false`, and every call site does
+    `if (!addImportDiagnostic(...)) return false;`. The first recorded
+    import diagnostic therefore aborted the loop before
+    `finalizeCollectedStructuredDiagnostics`, discarding the record list;
+    only the legacy message saved by
+    `rememberFirstCollectedDiagnosticMessage` survived, which is also why
+    the payload had a zero (line 0) span. gdb on the release binary
+    confirmed only the (empty) transform-records finalize ran. Every call
+    site already skips past the offending import (`continue`, or
+    `importError = true; break`) after a recorded diagnostic, so the fix
+    is to return `true` in collect mode. Non-collect mode still fails
+    fast through `failImportDiagnostic`.
+    (2) `/*` suffix: a regression, not a deliberate change.
+    `docs/PrimeStruct.md` (Namespace imports) says `import /foo` is
+    shorthand for `import /foo/*`, the parser normalizes it that way in
+    `program.imports` (`ParserCoreDefinitions.cpp`), and the semantics
+    unit test "import rejects wildcard with only private children"
+    expects `unknown import path: /util/*` for a bare `import /util`.
+    But the CLI pipeline also fills `program.sourceImports` from
+    `collectImportPaths` (`CompilePipeline.cpp`), which keeps the bare
+    token text, and the semantic validation plan prefers
+    `sourceImports` for `directImportPaths`. The wildcard branch echoed
+    that raw path. The fix reports `prefix + "/*"` in the wildcard
+    branch (identical for an explicit `/X/*` import). Normalizing
+    `sourceImports` itself was rejected: about a dozen semantic
+    consumers and the published semantic product read it verbatim.
+    Verification (primec and primevm, `--emit-diagnostics
+    --collect-diagnostics`): the repro went from 1 diagnostic
+    (`unknown import path: /missing_alpha`) to 2
+    (`unknown import path: /missing_alpha/*`, then
+    `unknown import path: /missing_beta/*`). Non-collect mode now says
+    `Semantic error: unknown import path: /missing_alpha/*`. Explicit
+    `/X/*` and multi-segment (`/a/x`, `/b/y`) twins also collect both.
+    Both `TODO-5305` test sites now assert 2 PSC1005 records, the `/*`
+    form, and alpha before beta. No other test depended on the old
+    behavior.
+    Side observation, not changed here: import records carry no source
+    span (import paths are plain strings in the AST), so the shared
+    diagnostic sorter (`SourceLocationMapper`, key: unit, line, column,
+    file, message) orders them by message. The builder emits them in
+    source order, but a reversed source (`/missing_beta` then
+    `/missing_alpha`) is reported alpha first. Fixing that means adding
+    import spans to the AST, which was out of scope.
+    Suites: `primestruct.compile.run.text_filters` 417/417 cases; full
+    `./scripts/compile.sh --release` gate: 1898/1899 passed. The one
+    failure is the known load-dependent
+    `spinning_cube_argument_validation_51_55` Timeout flake, which passed
+    in isolation (25.3s).

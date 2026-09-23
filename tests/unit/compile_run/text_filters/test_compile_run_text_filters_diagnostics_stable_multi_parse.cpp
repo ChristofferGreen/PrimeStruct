@@ -206,24 +206,22 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-5305: this used to collect one "unknown import path: X/*" diagnostic
-  // per unresolved import; it now stops after the first unresolved import
-  // (dropping the second one entirely) and the message itself lost its "/*"
-  // suffix. Re-pinned to the verified current (single-diagnostic, no-suffix)
-  // behavior.
-  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_alpha\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_beta\"") == std::string::npos);
-
+  // One diagnostic per unresolved import, in source order. `import /foo` is
+  // shorthand for `import /foo/*`, so the message uses the canonical
+  // wildcard spelling (TODO-5305).
   size_t semanticCount = 0;
   size_t scan = 0;
   while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 1);
+  CHECK(semanticCount == 2);
 
-  const size_t firstMessage = diagnostics.find("\"message\":\"unknown import path: /missing_alpha\"");
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown import path: /missing_alpha/*\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown import path: /missing_beta/*\"");
   REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics maps parse spans through source units") {
@@ -293,24 +291,22 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-5305: this used to collect one "unknown import path: X/*" diagnostic
-  // per unresolved import; it now stops after the first unresolved import
-  // (dropping the second one entirely) and the message itself lost its "/*"
-  // suffix. Re-pinned to the verified current (single-diagnostic, no-suffix)
-  // behavior.
-  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_alpha\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_beta\"") == std::string::npos);
-
+  // One diagnostic per unresolved import, in source order. `import /foo` is
+  // shorthand for `import /foo/*`, so the message uses the canonical
+  // wildcard spelling (TODO-5305).
   size_t semanticCount = 0;
   size_t scan = 0;
   while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 1);
+  CHECK(semanticCount == 2);
 
-  const size_t firstMessage = diagnostics.find("\"message\":\"unknown import path: /missing_alpha\"");
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown import path: /missing_alpha/*\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown import path: /missing_beta/*\"");
   REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for invalid transforms") {

@@ -102,8 +102,7 @@ of sync with them.
 | TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
 | TODO-4752 | Fix struct field access on freshly-returned temporaries | ready | hidden-test-failures-imports-operations |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
-| TODO-5305 | collect-diagnostics keeps only the first unresolved import | ready | hidden-test-failures-text-filters |
-| TODO-5306 | collect-diagnostics reports last duplicate-definition group | ready\* | hidden-test-failures-text-filters |
+| TODO-5306 | collect-diagnostics reports last duplicate-definition group | ready | hidden-test-failures-text-filters |
 | TODO-4816 | `IrLowererHelpers.cpp` hardcodes vector-helper spellings | ready | hidden-test-failures-architecture-audits |
 | TODO-5295 | `/soa/ref_ref<T>` same-path shadow wrongly rejected | ready | hidden-test-failures-vm-collections |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
@@ -114,21 +113,20 @@ of sync with them.
 \* held out of Ready Now this round. TODO-4806/4807 are the 3rd/4th
 `ready` items on the `hidden-test-failures-emitters` track (rule 11 caps
 concurrent same-track `Ready Now` items); pick them up once TODO-4800/4801
-close. TODO-5306 would exceed the eight-item `Ready Now` cap (rule 9); pick
-it up once any `Ready Now` item closes. None of them is blocked.
+close. Neither is blocked.
 
 ### Ready Now
 
 - TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections` `Map<K,V>` type): implement the missing experimental `Map<K,V>` stdlib type - only the lowercase `map<K,V>` builtin and the underlying `MapValue<K,V>` struct exist today.
 - TODO-4752 (track: hidden-test-failures-imports-operations, surface: `ContainerError::why()` / vm backend): a freshly-returned temporary's struct field access reads default/zeroed values instead of the real field on `--emit=vm`.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
-- TODO-5305 (track: hidden-test-failures-text-filters, surface: import resolution collect-mode diagnostics): `--collect-diagnostics` keeps only the first unresolved import and drops the "/*" message suffix.
+- TODO-5306 (track: hidden-test-failures-text-filters, surface: semantics duplicate-definition collect-mode diagnostics): `--collect-diagnostics` reports the last duplicate-definition group instead of the first in source order.
 - TODO-4816 (track: hidden-test-failures-architecture-audits, surface: `src/ir_lowerer/IrLowererHelpers.cpp`): `isBuiltinClassifiedMethodCallTarget` hardcodes canonical vector-helper path spellings as literal strings instead of routing through `CollectionSpellingClassifier`.
 - TODO-5295 (track: hidden-test-failures-vm-collections, surface: semantics validation for `/std/collections/soa/ref_ref`): a same-path user shadow of `ref_ref<T>` is wrongly rejected with a template-arguments error instead of being invoked.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 
-Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes) and TODO-5306 (would exceed the eight-item cap). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -475,35 +473,6 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     they very likely have different root causes (mixing method-sugar
     resolution, template/type inference timing, and IR-lowering loop
     factoring); triage into separate leaves before writing any code.
-
-- [ ] TODO-5305: collect-diagnostics keeps only the first unresolved import and drops its "/*" suffix
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-23
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-text-filters
-  - depends_on: (none)
-  - scope: split out of TODO-4809 (was its sub-bug 2). With
-    `import /missing_alpha` followed by `import /missing_beta`,
-    `--collect-diagnostics` used to collect one
-    `unknown import path: <path>/*` diagnostic per unresolved import (2
-    total). It now collects only `unknown import path: /missing_alpha`,
-    without the `/*` suffix. Re-confirmed 2026-09-23 against the current
-    compiler (primec and primevm). Pinned to the current behavior in
-    `test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp`
-    (two cases, marked `TODO-5305`).
-  - implementation_notes: import resolution runs before semantics, so
-    start from the import resolver's collect-mode error path, not the
-    semantics intra-body scanner that TODO-4809 (closed 2026-09-23)
-    fixed. Also decide whether the missing `/*` suffix is a deliberate
-    message change or a regression before restoring it.
-  - acceptance:
-    - The two-bad-import repro collects both unresolved-import
-      diagnostics in source order.
-    - The message suffix matches whichever form is confirmed intended.
-    - Both `TODO-5305` test sites are re-pinned to the fixed behavior.
-  - stop_rule: do not combine with TODO-5306 unless a shared root cause
-    is confirmed with a minimal repro for each.
 
 - [ ] TODO-5306: collect-diagnostics reports the last duplicate-definition group instead of the first
   - owner: ai

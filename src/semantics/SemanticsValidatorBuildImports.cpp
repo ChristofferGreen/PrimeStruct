@@ -159,7 +159,13 @@ bool SemanticsValidator::buildImportAliases() {
     }
     rememberFirstCollectedDiagnosticMessage(message);
     importDiagnosticRecords.push_back(std::move(record));
-    return false;
+    // Collect mode: keep scanning the remaining imports. Every call site
+    // already skips past the offending import (continue/break) after a
+    // recorded diagnostic, and the records are published together by
+    // finalizeCollectedStructuredDiagnostics() at the end. Returning false
+    // here aborted the loop on the first record and dropped the whole
+    // record list (TODO-5305).
+    return true;
   };
 
   const auto isGeneratedTemplateSpecializationName = [](const std::string &name) {
@@ -451,7 +457,11 @@ bool SemanticsValidator::buildImportAliases() {
         if (lazyStdlibModuleKeys_ != nullptr && lazyStdlibModuleKeys_->count(prefix) > 0) {
           continue;
         }
-        if (!addImportDiagnostic("unknown import path: " + importPath)) {
+        // Report the canonical wildcard spelling: `import /foo` is
+        // shorthand for `import /foo/*`. The parser normalizes it that way
+        // in program.imports, but program.sourceImports (preferred here
+        // when present) keeps the bare token text.
+        if (!addImportDiagnostic("unknown import path: " + prefix + "/*")) {
           return false;
         }
         continue;
