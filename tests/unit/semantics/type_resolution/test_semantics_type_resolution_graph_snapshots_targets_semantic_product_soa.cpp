@@ -1160,17 +1160,15 @@ main() {
   std::string error;
   const bool ok = validateSoaCompatSourceForTesting(source, output, error);
   INFO(error);
-  // TODO-5050: same method-call-form same-path-shadow gap as the borrowed
-  // case above, reproduced here on an OWNED soa<T> receiver too (so it is
-  // not specific to borrowed receivers) - values.ref_ref(idx) does not
-  // honor the /soa/ref_ref shadow the way the direct-call forms
-  // (ref_ref(values, idx) / ref_ref(cloneValues(), idx)) do; the [struct
-  // reflect] tag was also missing on Particle here (stale, unrelated to
-  // the routing gap - soa<T> construction now requires a reflect-enabled
-  // element type) and has been restored so this pins the real routing gap
-  // rather than an unrelated reflect diagnostic.
+  // TODO-5295 (RESOLVED): all three forms (direct, method sugar,
+  // helper-return receiver) now target the user's /soa/ref_ref shadow
+  // instead of failing with "template arguments required for
+  // /std/collections/soa/ref_ref". TODO-5307: the [auto] locals still
+  // take the canonical helper's Reference<T> result type rather than the
+  // shadow's declared int, so plus(...) over them is rejected.
   CHECK_FALSE(ok);
-  CHECK(error.find("template arguments required for /std/collections/soa/ref_ref") != std::string::npos);
+  CHECK(error.find("arithmetic operators require numeric operands in /main") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantic product validates direct return method-like borrowed helper-return experimental soa reads") {

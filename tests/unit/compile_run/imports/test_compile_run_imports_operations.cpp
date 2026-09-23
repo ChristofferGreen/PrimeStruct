@@ -2093,7 +2093,7 @@ main() {
   CHECK(readFile(errPath).find("array index out of bounds") != std::string::npos);
 }
 
-TEST_CASE("rejects builtin helper-return soa ref_ref same-path helper in C++ emitter") {
+TEST_CASE("runs builtin helper-return soa ref_ref same-path helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2122,27 +2122,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_builtin_soa_ref_ref_same_path_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_builtin_soa_ref_ref_same_path_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_builtin_soa_ref_ref_same_path.err")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string error = readFile(errPath);
-  INFO(error);
-  CHECK((error.find("semantic-product method-call target missing lowered definition: "
-                    "/std/collections/soa/ref_ref") != std::string::npos ||
-         error.find("semantic-product method-call target missing lowered definition: "
-                    "/std/collections/soa/ref_ref") != std::string::npos ||
-         error.find("unknown call target: /soa/ref_ref") !=
-             std::string::npos ||
-         error.find("template arguments are only supported on templated definitions: /soa") !=
-             std::string::npos ||
-         error.find("native backend only supports arithmetic/comparison/clamp/min/max/"
-                    "abs/sign/saturate/convert/pointer/assign/increment/decrement "
-                    "calls in expressions (call=/ref_ref") != std::string::npos ||
-         error.find("template arguments required for /std/collections/soa/ref_ref") !=
-             std::string::npos));
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                 " --entry /main 2> " + errPath;
+  // TODO-5295 (RESOLVED): the same-path /soa/ref_ref shadow over a public
+  // soa<T> receiver now wins for bare, method-sugar, and helper-return
+  // call forms, so the C++ emitter compiles it and each call returns 17.
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(runCommand(exePath) == 51);
 }
 
 TEST_CASE("rejects helper-return experimental soa method shadows in C++ emitter") {

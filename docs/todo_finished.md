@@ -53953,3 +53953,79 @@ crashes) - see `docs/todo_finished.md`.
     failure is the known load-dependent
     `spinning_cube_argument_validation_51_55` Timeout flake, which passed
     in isolation (25.2s).
+
+- [x] TODO-5295: Fix `/std/collections/soa/ref_ref<T>(...)` same-path user shadow rejected with "template arguments required" instead of being invoked
+  - owner: ai
+  - created_at: 2026-09-16
+  - finished_at: 2026-09-23
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: split out of TODO-4756 (closed) once that TODO's count/get/ref
+    same-path-shadow-bypass sub-cluster was fixed. Repro: "vm runs
+    builtin helper-return soa ref_ref same-path helper" in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_experimental_runs_borrowed.cpp`
+    - a user-defined `/soa/ref_ref([soa<Particle>] values, [vector<i32>] index)`
+    same-path shadow was rejected with `Semantic error: template
+    arguments required for /std/collections/soa/ref_ref` (exit 2)
+    instead of being invoked, for bare `ref_ref(values, idx)`,
+    method-sugar `values.ref_ref(idx)`, and `ref_ref(cloneValues(), idx)`.
+  - acceptance: the repro's three call forms compile and run, invoking
+    the user's `/soa/ref_ref` shadow (17 each, sum 51) instead of
+    rejecting; the stderr CHECK is replaced with the runtime assertion.
+  - stop_rule: do not assume this shares a root cause with TODO-4756's
+    count/get/ref cluster; verify independently.
+  - resolution: fixed. Not related to TODO-4756's IR-lowering fix. The
+    implementation_notes guess was wrong too: every member of the soa
+    access family (`count`/`get`/`ref`/`get_ref`/`ref_ref`/...) is
+    declared `<T>` in `stdlib/std/collections/soa.prime`, and
+    `get_ref` failed exactly like `ref_ref` for this repro. Two
+    semantics gates did not recognize the public `soa<T>` receiver
+    spelling (only the internal `soa_vector` name or `SoaVector<T>`):
+    1. Method sugar. The `experimental-soa-same-path-helper-methods`
+       pass (`rewriteExperimentalSoaSamePathHelperMethods`) decides
+       whether a `/soa/<helper>` user shadow exists through
+       `hasVisibleExperimentalSoaSamePathHelper`
+       (`src/semantics/SemanticsValidateBuiltinSoaMetadata.cpp`), which
+       only counted shadows whose first param is `SoaVector<T>`. The
+       `soa<Particle>` shadow was missed, so `values.ref_ref(idx)` was
+       rewritten to the canonical `/std/collections/soa/ref_ref(values,
+       idx)` with no template args. Monomorph can infer `<T>` for
+       `count`/`get`/`ref` (it maps them to `soaVectorCount/Get/Ref`),
+       but not for `get_ref`/`ref_ref` (canonical first param is
+       `Reference<SoaVector<T>>`), hence "template arguments required".
+       Fix: also count a shadow whose first param declares a
+       one-argument `soa<...>` type.
+    2. Bare calls. Template monomorph's same-path preference
+       (`src/semantics/TemplateMonomorphExpressionRewrite.cpp`) only
+       picked `/soa/get*`/`/soa/ref*` shadows for receiver family
+       `soa_vector`, experimental `SoaVector`, or `vector`. A public
+       `soa<T>` receiver reports family `soa`, so bare
+       `ref_ref(values, idx)` stayed as unresolved `/ref_ref` and failed
+       in VM lowering. Fix: accept family `soa` in the `get`/`get_ref`
+       and `ref`/`ref_ref` gates only; the count/push gate is unchanged.
+    Verification: the repro went from exit 2 (template-arguments error)
+    to exit 51 with empty stderr on `--emit=vm`. Its `--emit=exe` twin
+    in `test_compile_run_imports_operations.cpp` (was "rejects builtin
+    helper-return soa ref_ref same-path helper in C++ emitter", accepting
+    any of six rejection texts) now compiles and the binary exits 51, so
+    it was renamed "runs ..." and re-pinned. The semantics-stage pin
+    "semantic product keeps builtin soa ref_ref targets on same-path
+    helpers" no longer fails with the template-arguments error; it now
+    reaches the TODO-5307 `[auto]` result-type gap and is re-pinned to
+    that. Unshadowed behavior is
+    unchanged: 28 probe programs (`soa<T>`/`SoaVector<T>` receivers,
+    with/without `import /std/collections/soa/*`, method/bare/explicit
+    canonical `ref_ref`/`get_ref`/`get`/`ref` forms) gave byte-identical
+    output before and after the change.
+    Residual gap, filed as TODO-5307: each call form used on its own as
+    `return(ref_ref(values, idx))` (or via an `[i32]` local) still fails
+    at runtime with "unaligned indirect address in IR: 17", because the
+    shadow's `int` result is dereferenced as a `Reference`. This
+    predates the fix: `SoaVector<Particle>` shadows failed the same way
+    before it.
+    Suites: the 4 soa ref_ref same-path compile-run cases pass (17/17
+    assertions); full `./scripts/compile.sh --release` gate: 1898/1899
+    passed. The one failure is the known load-dependent
+    `spinning_cube_argument_validation_51_55` Timeout flake, which passed
+    in isolation.

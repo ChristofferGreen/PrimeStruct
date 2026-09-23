@@ -1787,11 +1787,16 @@ bool rewriteExpr(Expr &expr,
         return samePathSoaNonRefHelper;
       }
     }
+    // A public soa<T> receiver reports family "soa" rather than the
+    // internal soa_vector name; it must still reach a same-path
+    // /soa/<helper> shadow for the access helpers (TODO-5295).
+    const bool receiverIsPublicSoa = receiverFamily == "soa";
     if (helperName == "get" || helperName == "get_ref") {
       const std::string samePathGetHelper =
           templateMonomorphSamePathSoaHelperPrefix() + helperName;
       if (hasDefinitionFamilyPath(samePathGetHelper) &&
           (isTemplateMonomorphSoaReceiverType(receiverFamily) ||
+           receiverIsPublicSoa ||
            receiverResolvesBorrowedExperimentalSoaVector ||
            receiverResolvesExperimentalSoaVector ||
            receiverFamily == "vector")) {
@@ -1803,6 +1808,7 @@ bool rewriteExpr(Expr &expr,
           templateMonomorphSamePathSoaHelperPrefix() + helperName;
       if (hasDefinitionFamilyPath(samePathRefHelper) &&
           (isTemplateMonomorphSoaReceiverType(receiverFamily) ||
+           receiverIsPublicSoa ||
            receiverResolvesBorrowedExperimentalSoaVector ||
            receiverResolvesExperimentalSoaVector ||
            receiverFamily == "vector")) {

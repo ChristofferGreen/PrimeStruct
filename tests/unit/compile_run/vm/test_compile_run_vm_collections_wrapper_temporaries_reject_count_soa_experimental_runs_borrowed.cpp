@@ -558,10 +558,11 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_builtin_soa_ref_ref_same_path_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4756: same ref_ref resolution gap as the sibling cases above.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("template arguments required for /std/collections/soa/ref_ref") !=
-        std::string::npos);
+  // TODO-5295 (RESOLVED): the user's same-path /soa/ref_ref shadow over a
+  // public soa<T> receiver now wins for all three call forms (bare,
+  // method sugar, helper-return receiver), 17 each.
+  CHECK(runCommand(runCmd) == 51);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm runs builtin helper-return soa get_ref via explicit rooted path") {

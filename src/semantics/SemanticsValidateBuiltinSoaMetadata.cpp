@@ -110,7 +110,21 @@ bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
     if (def.fullPath != samePath || def.parameters.empty()) {
       continue;
     }
-    if (extractExperimentalSoaVectorBinding(def.parameters.front()).has_value()) {
+    // A shadow declared over the public soa<T> surface counts too;
+    // otherwise method sugar on a soa<T> receiver bypasses it and is
+    // rewritten to the canonical templated helper (TODO-5295).
+    const Expr &receiverParam = def.parameters.front();
+    if (extractExperimentalSoaVectorBinding(receiverParam).has_value()) {
+      return true;
+    }
+    const bool declaresPublicSoaReceiver = std::any_of(
+        receiverParam.transforms.begin(),
+        receiverParam.transforms.end(),
+        [](const Transform &transform) {
+          return semantics::normalizeBindingTypeName(transform.name) == "soa" &&
+                 transform.templateArgs.size() == 1;
+        });
+    if (declaresPublicSoaReceiver) {
       return true;
     }
   }

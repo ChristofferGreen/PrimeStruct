@@ -232,14 +232,6 @@ open-work-only scope rule as `docs/todo.md` itself.
   for a session that can get that design question answered first
   rather than guess.
 
-## TODO-5295
-
-- 2026-09-23 (docs/todo.md cleanup pass): re-ran the "vm runs builtin
-  helper-return soa ref_ref same-path helper" TEST_CASE directly -
-  still passes (8/8 assertions), and its assertions still pin the
-  buggy exit-2 rejection, confirming the gap is unchanged and this
-  task is not stale.
-
 ## TODO-4800
 
 - 2026-08-06: attempted a fix by loosening
