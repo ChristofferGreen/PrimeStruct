@@ -116,7 +116,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-4809: this used to report the first duplicate-definition group
+  // TODO-5306: this used to report the first duplicate-definition group
   // encountered in source order (/dup); it now reports the last one (/other)
   // instead. Re-pinned to the verified current (last-group) behavior.
   CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") != std::string::npos);
@@ -168,7 +168,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-4809: this used to report the first duplicate-definition group
+  // TODO-5306: this used to report the first duplicate-definition group
   // encountered in source order (/dup); it now reports the last one (/other)
   // instead. Re-pinned to the verified current (last-group) behavior.
   CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") != std::string::npos);
@@ -206,7 +206,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-4809: this used to collect one "unknown import path: X/*" diagnostic
+  // TODO-5305: this used to collect one "unknown import path: X/*" diagnostic
   // per unresolved import; it now stops after the first unresolved import
   // (dropping the second one entirely) and the message itself lost its "/*"
   // suffix. Re-pinned to the verified current (single-diagnostic, no-suffix)
@@ -293,7 +293,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-4809: this used to collect one "unknown import path: X/*" diagnostic
+  // TODO-5305: this used to collect one "unknown import path: X/*" diagnostic
   // per unresolved import; it now stops after the first unresolved import
   // (dropping the second one entirely) and the message itself lost its "/*"
   // suffix. Re-pinned to the verified current (single-diagnostic, no-suffix)

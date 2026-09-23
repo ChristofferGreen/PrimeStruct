@@ -102,7 +102,9 @@ of sync with them.
 | TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
 | TODO-4752 | Fix struct field access on freshly-returned temporaries | ready | hidden-test-failures-imports-operations |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
-| TODO-4809 | collect-diagnostics collapses mixed map/vector errors | ready | hidden-test-failures-text-filters |
+| TODO-4809 | collect-diagnostics drops bare map `count(m)` diagnostic | deferred | hidden-test-failures-text-filters |
+| TODO-5305 | collect-diagnostics keeps only the first unresolved import | ready | hidden-test-failures-text-filters |
+| TODO-5306 | collect-diagnostics reports last duplicate-definition group | ready\* | hidden-test-failures-text-filters |
 | TODO-4816 | `IrLowererHelpers.cpp` hardcodes vector-helper spellings | ready | hidden-test-failures-architecture-audits |
 | TODO-5295 | `/soa/ref_ref<T>` same-path shadow wrongly rejected | ready | hidden-test-failures-vm-collections |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
@@ -110,22 +112,24 @@ of sync with them.
 | TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready\* | hidden-test-failures-emitters |
 | TODO-4807 | `resolveMethodCallPath` alias/canonical fallback regressions | ready\* | hidden-test-failures-emitters |
 
-\* held out of Ready Now this round: 3rd/4th `ready` item on the
-`hidden-test-failures-emitters` track (rule 11 caps concurrent same-track
-`Ready Now` items). Not blocked - pick up once TODO-4800/4801 close.
+\* held out of Ready Now this round. TODO-4806/4807 are the 3rd/4th
+`ready` items on the `hidden-test-failures-emitters` track (rule 11 caps
+concurrent same-track `Ready Now` items); pick them up once TODO-4800/4801
+close. TODO-5306 would exceed the eight-item `Ready Now` cap (rule 9); pick
+it up once any `Ready Now` item closes. None of them is blocked.
 
 ### Ready Now
 
 - TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections` `Map<K,V>` type): implement the missing experimental `Map<K,V>` stdlib type - only the lowercase `map<K,V>` builtin and the underlying `MapValue<K,V>` struct exist today.
 - TODO-4752 (track: hidden-test-failures-imports-operations, surface: `ContainerError::why()` / vm backend): a freshly-returned temporary's struct field access reads default/zeroed values instead of the real field on `--emit=vm`.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
-- TODO-4809 (track: hidden-test-failures-text-filters, surface: `--collect-diagnostics`/`--emit-diagnostics` pipeline): diagnostic collection collapses or corrupts messages when a definition mixes map- and vector-receiver errors.
+- TODO-5305 (track: hidden-test-failures-text-filters, surface: import resolution collect-mode diagnostics): `--collect-diagnostics` keeps only the first unresolved import and drops the "/*" message suffix.
 - TODO-4816 (track: hidden-test-failures-architecture-audits, surface: `src/ir_lowerer/IrLowererHelpers.cpp`): `isBuiltinClassifiedMethodCallTarget` hardcodes canonical vector-helper path spellings as literal strings instead of routing through `CollectionSpellingClassifier`.
 - TODO-5295 (track: hidden-test-failures-vm-collections, surface: semantics validation for `/std/collections/soa/ref_ref`): a same-path user shadow of `ref_ref<T>` is wrongly rejected with a template-arguments error instead of being invoked.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 
-Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes) and TODO-5306 (would exceed the eight-item cap). TODO-4809 is `deferred` pending a map-alias policy decision (see its block). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -473,99 +477,150 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     resolution, template/type inference timing, and IR-lowering loop
     factoring); triage into separate leaves before writing any code.
 
-- [ ] TODO-4809: collect-diagnostics collection-helper (count/capacity) diagnostic collection collapses or corrupts messages when a definition mixes map- and vector-receiver errors
+- [ ] TODO-4809: collect-diagnostics drops the bare map `count(m)` diagnostic when a definition also has a scanner-detected helper error
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-07-30
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-text-filters
   - depends_on: (none)
-  - scope: found sweeping the ~150-case `--collect-diagnostics`/
-    `--emit-diagnostics` cluster across
-    `test_compile_run_text_filters_diagnostics_*.cpp`. Three related
-    diagnostic-collection bugs, all in the same subsystem:
-    1. **Mixed map/vector collection-helper diagnostic collapse.** When
-       a single definition contains two separate erroring
-       collection-helper calls where one resolves through the `/map/...`
-       namespace and the other through `/vector/...` (e.g. `count(m)`
-       with a wrong arg count, then `capacity(v, true)` with a wrong arg
-       type), only ONE of the two diagnostics survives in
-       `--collect-diagnostics` output - never both - regardless of
-       source order. Minimal repro:
-       ```
-       [return<i32>]
-       /map/count([map<i32, i32>] values, [i32] marker) {
-         return(marker)
-       }
-       [effects(heap_alloc), return<i32>]
-       /vector/capacity([vector<i32>] values, [i32] marker) {
-         return(marker)
-       }
-       [return<i32>]
-       bad() {
-         [map<i32, i32>] m{map<i32, i32>(1i32, 2i32)}
-         [vector<i32>] v{vector<i32>(3i32, 4i32)}
-         count(m)
-         capacity(v, true)
-         return(0i32)
-       }
-       [return<i32>]
-       main() {
-         return(0i32)
-       }
-       ```
-       Two identically-named-builtin calls to the SAME namespace (e.g.
-       two `/vector/capacity` calls) both collect correctly - only the
-       map/vector *mix* triggers the collapse. In some variants the
-       surviving diagnostic's message text itself is wrong for its
-       reported source position (e.g. "unknown call target: count"
-       pointing at a line containing an unrelated `m[true]` expression),
-       suggesting the two candidate diagnostics share a single
-       overwritten scratch slot rather than each being independently
-       collected.
-       2. **Multi-diagnostic collection drops all-but-first for
-       unresolved imports.** `import /missing_alpha` followed by `import
-       /missing_beta` used to collect one "unknown import path: X/*"
-       diagnostic per bad import (2 total); it now collects only the
-       first (`/missing_alpha`), and that diagnostic's message also lost
-       its "/*" suffix (now "unknown import path: /missing_alpha" instead
-       of ".../missing_alpha/*").
-       3. **Duplicate-definition report picks the last group, not the
-       first.** Two duplicate-definition groups in one file (`dup`
-       defined twice, then `other` defined twice) used to report the
-       FIRST group encountered in source order (`/dup`); it now reports
-       the LAST (`/other`) instead - still only one diagnostic total
-       (`semanticCount == 1` still holds), just the wrong one relative to
-       the "keeps first duplicate-definition payload" test's original
-       name/intent.
-       Roughly 140+ TEST_CASE assertions across 20 files were re-pinned
-       to their exact verified current messages (see the `TODO-4809`
-       references left at the individual fix sites, mostly the count/
-       capacity call-pair message swaps and the two duplicate-definition/
-       import tests).
-  - implementation_notes: start with (1) - it's the most reproducible and
-    has the clearest minimal repro. Check whatever code path collects
-    diagnostics from collection-helper (`count`/`capacity`/`at`/etc.)
-    resolution attempts within a single definition - likely a shared
-    per-definition (not per-statement) scratch/pending-diagnostic slot
-    that gets overwritten by each subsequent collection-helper candidate
-    check instead of appended to a list. (2) and (3) may share the same
-    root cause (a general "only the last thing written to a shared slot
-    survives" pattern) or may be independent - verify before assuming.
-  - acceptance: the minimal repro in (1) above collects BOTH the
-    `/map/count` arg-count-mismatch and `/vector/capacity`
-    arg-type-mismatch diagnostics (2 entries, not 1); the two-bad-import
-    repro in (2) collects both diagnostics with the "/*" suffix restored;
-    the duplicate-definition repro in (3) reports `/dup` (first group)
-    again. All ~140+ re-pinned test cases should revert to checking for
-    the multi-diagnostic/first-occurrence forms once fixed - this is a
-    large but mechanical re-pin-back pass once the underlying collection
-    bug(s) are fixed.
-  - stop_rule: do not fix (1)/(2)/(3) as one patch without first
-    confirming (via minimal repros, same as above) whether they share a
-    root cause - if they turn out to be unrelated, split into separate
-    TODOs rather than one combined fix that's hard to verify
-    independently.
+  - scope: originally three `--collect-diagnostics` bugs; sub-bugs (2)
+    (unresolved-import collection) and (3) (duplicate-definition report)
+    were split out on 2026-09-23 as TODO-5305 and TODO-5306. What remains
+    is sub-bug (1): with a user `/map/count` and `/vector/capacity`
+    same-path shadow, a definition containing `count(m)` (wrong arg count)
+    and `capacity(v, true)` (wrong arg type) collects only the
+    `/vector/capacity` diagnostic. Minimal repro:
+    ```
+    [return<i32>]
+    /map/count([map<i32, i32>] values, [i32] marker) {
+      return(marker)
+    }
+    [effects(heap_alloc), return<i32>]
+    /vector/capacity([vector<i32>] values, [i32] marker) {
+      return(marker)
+    }
+    [return<i32>]
+    bad() {
+      [map<i32, i32>] m{map<i32, i32>(1i32, 2i32)}
+      [vector<i32>] v{vector<i32>(3i32, 4i32)}
+      count(m)
+      capacity(v, true)
+      return(0i32)
+    }
+    [return<i32>]
+    main() {
+      return(0i32)
+    }
+    ```
+    Root cause (verified 2026-09-23 with instrumentation, see
+    `docs/todo_log.md`): template monomorphization rewrites bare
+    `capacity(v, ...)` to `/vector/capacity` via the vector-only same-path
+    branch in `preferCanonicalStdlibCollectionHelperPath`
+    (`src/semantics/TemplateMonomorphExpressionRewrite.cpp`), but bare
+    `count(m)` stays spelled `count`. The intra-body scanner
+    (`collectDefinitionIntraBodyCallDiagnostics`,
+    `src/semantics/SemanticsValidatorPassesDiagnostics.cpp`) treats
+    bare `count` as a builtin and skips it. It records the capacity
+    diagnostic, and `SemanticsValidatorPassesDefinitions.cpp` then skips
+    full `validateDefinition` for `/bad`, which is the only pass that
+    would have rejected `count(m)`.
+  - implementation_notes: needs a design decision before any code change.
+    The acceptance below (collect a `/map/count` arg-count mismatch)
+    requires bare `count(m)` to route to a rooted `/map/count` user
+    shadow. A working prototype of that (map mirror of the vector
+    same-path monomorph branch plus a scanner exemption; 27 text_filters
+    cases re-pinned; diff described in `docs/todo_log.md`) contradicts
+    current, deliberately pinned map policy: "rejects vm user map count
+    call shadow without imported canonical helper"
+    (`test_compile_run_vm_collections_array_and_wrapper_shadows.cpp`),
+    "rejects bare map count through compatibility alias when canonical
+    helper is absent in C++ emitter"
+    (`test_compile_run_emitters_canonical_map_helper_calls.cpp`), and
+    "C++ emitter keeps canonical map sugar before compatibility aliases"
+    (`test_compile_run_emitters_wrapper_map_count_sugar.cpp`), plus the
+    `docs/PrimeStruct.md` note that rooted `/map/*` spellings are
+    retiring compatibility seams. Options: (a) change policy so rooted
+    `/map/count`/`count_ref` shadows win for bare calls like the vector
+    same-path shadows do (the prototype), re-pinning those three tests
+    and updating the spec; or (b) keep the policy and instead make
+    collect mode also report the validator-only rejection of `count(m)`
+    ("unknown call target: count") when the scanner has already
+    recorded other diagnostics. (b) is a general change to the
+    scanner-then-validator gating and interacts with other
+    validator-only errors in the same definition (the repro's `/bad`
+    also lacks `effects(heap_alloc)`, which the validator reports
+    before `count(m)`).
+  - acceptance:
+    - A decision between (a) and (b) is recorded in this block.
+    - The repro above collects two diagnostics in collect mode: under
+      (a) `argument count mismatch for /map/count` plus the
+      `/vector/capacity` arg-type mismatch; under (b) the policy
+      rejection for `count(m)` plus the `/vector/capacity` mismatch.
+    - Every affected text_filters collect-diagnostics case is re-pinned
+      to verified output, and the full release gate stays green.
+  - stop_rule: do not land option (a) without explicit sign-off; it
+    reverses a pinned map-alias policy. Do not widen (b) beyond the
+    scanner/validator gating for definitions without first measuring
+    how many existing collect-diagnostics cases change.
+
+- [ ] TODO-5305: collect-diagnostics keeps only the first unresolved import and drops its "/*" suffix
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-23
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: split out of TODO-4809 (was its sub-bug 2). With
+    `import /missing_alpha` followed by `import /missing_beta`,
+    `--collect-diagnostics` used to collect one
+    `unknown import path: <path>/*` diagnostic per unresolved import (2
+    total). It now collects only `unknown import path: /missing_alpha`,
+    without the `/*` suffix. Re-confirmed 2026-09-23 against the current
+    compiler (primec and primevm). Pinned to the current behavior in
+    `test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp`
+    (two cases, marked `TODO-5305`).
+  - implementation_notes: import resolution runs before semantics, so
+    start from the import resolver's collect-mode error path, not the
+    semantics intra-body scanner that TODO-4809 is about. Also decide
+    whether the missing `/*` suffix is a deliberate message change or a
+    regression before restoring it.
+  - acceptance:
+    - The two-bad-import repro collects both unresolved-import
+      diagnostics in source order.
+    - The message suffix matches whichever form is confirmed intended.
+    - Both `TODO-5305` test sites are re-pinned to the fixed behavior.
+  - stop_rule: do not combine with TODO-5306 unless a shared root cause
+    is confirmed with a minimal repro for each.
+
+- [ ] TODO-5306: collect-diagnostics reports the last duplicate-definition group instead of the first
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-23
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: split out of TODO-4809 (was its sub-bug 3). A file that
+    defines `dup` twice and then `other` twice reports
+    `duplicate definition: /other` (the last group) instead of
+    `duplicate definition: /dup` (the first group in source order),
+    which the "keeps first duplicate-definition payload" test name
+    promises. It is still one diagnostic total. Re-confirmed 2026-09-23
+    against the current compiler (primec and primevm). Pinned to the
+    current behavior in
+    `test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp`
+    (two cases, marked `TODO-5306`).
+  - implementation_notes: look for the duplicate-definition check's
+    iteration order (probably a map or set iterated in a non-source
+    order, or a "last write wins" error slot). AGENTS.md requires
+    deterministic, source-ordered diagnostics.
+  - acceptance:
+    - The duplicate-definition repro reports `/dup` again.
+    - Both `TODO-5306` test sites are re-pinned to the first-group
+      expectation.
+  - stop_rule: do not change how many duplicate-definition diagnostics
+    are collected (still one) in the same change. Collecting every group
+    is a separate behavior decision.
 
 - [ ] TODO-4816: `IrLowererHelpers.cpp` duplicates canonical vector-helper spellings as literal strings instead of routing through `CollectionSpellingClassifier`
   - owner: ai

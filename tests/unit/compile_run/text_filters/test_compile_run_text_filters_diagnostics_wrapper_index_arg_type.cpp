@@ -111,10 +111,10 @@ main() {
 }
 )";
 
-  // TODO-4809: expected the /map/count-qualified message; the collection-
-  // helper diagnostic collision bug now surfaces the generic
-  // "builtin count" wording instead when a mixed map/vector call pair is
-  // present in the same definition. Re-pinned to the verified current text.
+  // TODO-4809: expected the /map/count-qualified message. Bare
+  // count(wrapMap(), ...) is not routed to the rooted /map/count shadow,
+  // so it is validated as builtin count. Re-pinned to the verified current
+  // text.
   SUBCASE("primec") {
     expectCollectDiagnosticsInDefinitionScope(
         "primec",
@@ -222,7 +222,7 @@ main() {
 }
 )";
 
-  // TODO-4809: same collection-helper diagnostic collision as above - the
+  // TODO-4809: same bare-count builtin classification as above - the
   // generic "builtin count" wording appears instead of the /map/count-
   // qualified message. Re-pinned to the verified current text.
   SUBCASE("primec") {
@@ -329,10 +329,11 @@ main() {
 }
 )";
 
-  // TODO-4809: expected the first statement's (/vector/capacity) diagnostic;
-  // the collection-helper diagnostic collision bug now surfaces the second
-  // statement's (/map/count) diagnostic instead. Re-pinned to the verified
-  // current text.
+  // Expected the first statement's (/vector/capacity) diagnostic. That
+  // statement is method-call sugar, which the intra-body call scanner
+  // skips; once the scanner records the second statement's /map/count
+  // diagnostic, full validation of /bad (which would report the first
+  // statement) is skipped. Re-pinned to the verified current text.
   SUBCASE("primec") {
     expectCollectDiagnosticsInDefinitionScope(
         "primec",

@@ -527,7 +527,7 @@ execute_repeat([i32] a, [i32] b) {
   }
   CHECK(semanticCount == 2);
 
-  // TODO-4809: [capabilities(...)] is now recognized as a capability
+  // [capabilities(...)] is now recognized as a capability
   // annotation (producing its own specific diagnostic) instead of being
   // misparsed as an unknown call target named "capabilities". This looks
   // like a plausible improvement, not a regression, so just re-pinned.
@@ -585,7 +585,7 @@ execute_repeat([i32] a, [i32] b) {
   }
   CHECK(semanticCount == 2);
 
-  // TODO-4809: [capabilities(...)] is now recognized as a capability
+  // [capabilities(...)] is now recognized as a capability
   // annotation (producing its own specific diagnostic) instead of being
   // misparsed as an unknown call target named "capabilities". This looks
   // like a plausible improvement, not a regression, so just re-pinned.

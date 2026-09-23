@@ -274,6 +274,54 @@ open-work-only scope rule as `docs/todo.md` itself.
   assume: still only 1 of the 2 expected diagnostics collected
   (`/vector/capacity`'s, not `/map/count`'s) - sub-bug (1) is
   unblocked and still real, `status: ready`, not `blocked`.
+- 2026-09-23 (implementation attempt, not landed): re-reproduced
+  sub-bug (1) with the exact repro (1 of 2 diagnostics). Temporary
+  `scanExpr` instrumentation (reverted) confirmed `count(m)` reaches
+  the scanner as bare `count` (builtin=1) and `capacity(v, true)` as
+  `/vector/capacity` (builtin=0). Correction to the 2026-08-06 entry:
+  the rewrite that matters is not the validator-side
+  `tryRewriteBareVectorHelperCall` (it only rewrites a temporary copy
+  during `validateExpr`, which collect mode never reaches for `/bad`,
+  because `SemanticsValidatorPassesDefinitions.cpp` skips
+  `validateDefinition` once the scanner records anything). It is the
+  AST rewrite in template monomorphization:
+  `preferCanonicalStdlibCollectionHelperPath` in
+  `TemplateMonomorphExpressionRewrite.cpp` has a vector-only
+  `receiverFamily == "vector"` same-path branch for
+  count/count_ref/capacity, with no map twin. A map-side
+  `tryRewriteBareKeyValueHelperCall` already exists, but it targets
+  the canonical `/std/collections/map/*` path, not the rooted shadow.
+  Prototype: add the map twin in the monomorph branch plus a scanner
+  `isBuiltinCall` exemption for rooted `/map/count`/`count_ref` calls
+  with a real definition (needed because `isSimpleCallName` maps
+  `map/count` back to `count` through the key-value member resolver,
+  while `vector/capacity` does not match). The repro then collected
+  both diagnostics (`argument count mismatch for /map/count` and the
+  `/vector/capacity` arg-type mismatch), and 27 text_filters cases
+  needed re-pinning (all verified against real output). However, a
+  wider run found 3 deliberately pinned policy tests that the change
+  breaks, because they require bare `count(values)` NOT to route to a
+  rooted `/map/count` user definition: "rejects vm user map count
+  call shadow without imported canonical helper", "rejects bare map
+  count through compatibility alias when canonical helper is absent
+  in C++ emitter", and "C++ emitter keeps canonical map sugar before
+  compatibility aliases" (canonical wins uniformly, expects 169). That
+  matches `docs/PrimeStruct.md`'s description of rooted `/map/*`
+  spellings as retiring compatibility seams. The TODO's acceptance
+  was derived from pre-2026-06 test expectations that predate that
+  policy. Reverted everything; nothing landed. The block is now
+  `deferred` with options (a) policy change and (b) collect-mode
+  gating change spelled out. Side observations: (1) ordinary
+  validation accepts `bool` for an `[i32]` parameter (even for a plain
+  user function), while the intra-body scanner reports it, so the two
+  paths disagree on arg-type strictness; (2) under the prototype, the
+  arity error for wrapper-call receivers (`count(wrapMap(), 1i32)`)
+  surfaced as an uncollected bare "argument count mismatch" from
+  monomorphization, exactly like the existing vector twin
+  `capacity(wrapVector(), 1i32, 2i32)`. Sub-bugs (2)/(3) re-confirmed
+  unchanged and split out as TODO-5305/TODO-5306 (different
+  subsystems: import resolution and duplicate-definition reporting,
+  not the intra-body scanner).
 
 ## TODO-5295
 
