@@ -102,7 +102,6 @@ of sync with them.
 | TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
 | TODO-4752 | Fix struct field access on freshly-returned temporaries | ready | hidden-test-failures-imports-operations |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
-| TODO-5306 | collect-diagnostics reports last duplicate-definition group | ready | hidden-test-failures-text-filters |
 | TODO-4816 | `IrLowererHelpers.cpp` hardcodes vector-helper spellings | ready | hidden-test-failures-architecture-audits |
 | TODO-5295 | `/soa/ref_ref<T>` same-path shadow wrongly rejected | ready | hidden-test-failures-vm-collections |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
@@ -120,7 +119,6 @@ close. Neither is blocked.
 - TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections` `Map<K,V>` type): implement the missing experimental `Map<K,V>` stdlib type - only the lowercase `map<K,V>` builtin and the underlying `MapValue<K,V>` struct exist today.
 - TODO-4752 (track: hidden-test-failures-imports-operations, surface: `ContainerError::why()` / vm backend): a freshly-returned temporary's struct field access reads default/zeroed values instead of the real field on `--emit=vm`.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
-- TODO-5306 (track: hidden-test-failures-text-filters, surface: semantics duplicate-definition collect-mode diagnostics): `--collect-diagnostics` reports the last duplicate-definition group instead of the first in source order.
 - TODO-4816 (track: hidden-test-failures-architecture-audits, surface: `src/ir_lowerer/IrLowererHelpers.cpp`): `isBuiltinClassifiedMethodCallTarget` hardcodes canonical vector-helper path spellings as literal strings instead of routing through `CollectionSpellingClassifier`.
 - TODO-5295 (track: hidden-test-failures-vm-collections, surface: semantics validation for `/std/collections/soa/ref_ref`): a same-path user shadow of `ref_ref<T>` is wrongly rejected with a template-arguments error instead of being invoked.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
@@ -473,35 +471,6 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     they very likely have different root causes (mixing method-sugar
     resolution, template/type inference timing, and IR-lowering loop
     factoring); triage into separate leaves before writing any code.
-
-- [ ] TODO-5306: collect-diagnostics reports the last duplicate-definition group instead of the first
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-23
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-text-filters
-  - depends_on: (none)
-  - scope: split out of TODO-4809 (was its sub-bug 3). A file that
-    defines `dup` twice and then `other` twice reports
-    `duplicate definition: /other` (the last group) instead of
-    `duplicate definition: /dup` (the first group in source order),
-    which the "keeps first duplicate-definition payload" test name
-    promises. It is still one diagnostic total. Re-confirmed 2026-09-23
-    against the current compiler (primec and primevm). Pinned to the
-    current behavior in
-    `test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp`
-    (two cases, marked `TODO-5306`).
-  - implementation_notes: look for the duplicate-definition check's
-    iteration order (probably a map or set iterated in a non-source
-    order, or a "last write wins" error slot). AGENTS.md requires
-    deterministic, source-ordered diagnostics.
-  - acceptance:
-    - The duplicate-definition repro reports `/dup` again.
-    - Both `TODO-5306` test sites are re-pinned to the first-group
-      expectation.
-  - stop_rule: do not change how many duplicate-definition diagnostics
-    are collected (still one) in the same change. Collecting every group
-    is a separate behavior decision.
 
 - [ ] TODO-4816: `IrLowererHelpers.cpp` duplicates canonical vector-helper spellings as literal strings instead of routing through `CollectionSpellingClassifier`
   - owner: ai

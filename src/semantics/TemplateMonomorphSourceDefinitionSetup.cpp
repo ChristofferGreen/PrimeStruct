@@ -53,14 +53,24 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
   definitionsByPath.reserve(ctx.program.definitions.size());
   std::unordered_set<std::string> occupiedPaths;
   occupiedPaths.reserve(ctx.program.definitions.size());
+  // Visit families in first-occurrence program order rather than hash order
+  // so the first failing family (e.g. "duplicate definition") is the one
+  // that appears first in source, deterministically.
+  std::vector<std::string> pathsInProgramOrder;
+  pathsInProgramOrder.reserve(ctx.program.definitions.size());
   for (const auto &def : ctx.program.definitions) {
     if (!validateTemplateParameterMetadataForTemplateSetup(def, error)) {
       return false;
     }
-    definitionsByPath[def.fullPath].push_back(&def);
+    auto &familyDefs = definitionsByPath[def.fullPath];
+    if (familyDefs.empty()) {
+      pathsInProgramOrder.push_back(def.fullPath);
+    }
+    familyDefs.push_back(&def);
     occupiedPaths.insert(def.fullPath);
   }
-  for (const auto &[publicPath, family] : definitionsByPath) {
+  for (const std::string &publicPath : pathsInProgramOrder) {
+    const std::vector<const Definition *> &family = definitionsByPath.at(publicPath);
     if (family.size() == 1) {
       const Definition &def = *family.front();
       ctx.sourceDefs.emplace(def.fullPath, def);

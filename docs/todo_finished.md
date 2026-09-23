@@ -53897,3 +53897,59 @@ crashes) - see `docs/todo_finished.md`.
     failure is the known load-dependent
     `spinning_cube_argument_validation_51_55` Timeout flake, which passed
     in isolation (25.3s).
+
+- [x] TODO-5306: collect-diagnostics reports the last duplicate-definition group instead of the first
+  - owner: ai
+  - created_at: 2026-09-23
+  - finished_at: 2026-09-23
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: split out of TODO-4809 (was its sub-bug 3). A file that
+    defines `dup` twice and then `other` twice reports
+    `duplicate definition: /other` (the last group) instead of
+    `duplicate definition: /dup` (the first group in source order),
+    which the "keeps first duplicate-definition payload" test name
+    promises. It is still one diagnostic total. Re-confirmed 2026-09-23
+    against the current compiler (primec and primevm). Pinned to the
+    current behavior in
+    `test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp`
+    (two cases, marked `TODO-5306`).
+  - implementation_notes: look for the duplicate-definition check's
+    iteration order (probably a map or set iterated in a non-source
+    order, or a "last write wins" error slot). AGENTS.md requires
+    deterministic, source-ordered diagnostics.
+  - acceptance:
+    - The duplicate-definition repro reports `/dup` again.
+    - Both `TODO-5306` test sites are re-pinned to the first-group
+      expectation.
+  - stop_rule: do not change how many duplicate-definition diagnostics
+    are collected (still one) in the same change. Collecting every group
+    is a separate behavior decision.
+  - resolution: fixed. The single collected diagnostic comes from
+    template-monomorph setup, not the validator's
+    `collectDuplicateDefinitionDiagnostics` (which already sorts groups
+    by source position, but never runs here because the monomorph
+    pass fails first). `initializeTemplateMonomorphSourceDefinitions`
+    (`src/semantics/TemplateMonomorphSourceDefinitionSetup.cpp`)
+    grouped definitions into a `std::unordered_map` keyed by path and
+    iterated that map, returning on the first failing family. So the
+    reported group followed hash-table order, not source order. It was
+    not a "last write wins" slot: libstdc++ happened to yield the
+    later-inserted path first for every tested pair.
+    The fix records each path at its first occurrence in
+    `program.definitions` and iterates families in that order. Every
+    container the loop writes is keyed, so only the choice of which
+    error is returned changes. Still exactly one diagnostic.
+    Verification (primec and primevm, `--emit-diagnostics
+    --collect-diagnostics`, plus plain non-collect mode):
+    `dup,dup,other,other` went from `duplicate definition: /other` to
+    `/dup`. `zzz,zzz,aaa,aaa` went from `/aaa` to `/zzz`, so the order
+    is by source, not alphabetical. `other,other,dup,dup` went from
+    `/dup` to `/other`. Both `TODO-5306` test sites now expect `/dup`.
+    No other test depended on the old order.
+    Suites: 214/214 `*collect-diagnostics*` compile-run cases; full
+    `./scripts/compile.sh --release` gate: 1898/1899 passed. The one
+    failure is the known load-dependent
+    `spinning_cube_argument_validation_51_55` Timeout flake, which passed
+    in isolation (25.2s).

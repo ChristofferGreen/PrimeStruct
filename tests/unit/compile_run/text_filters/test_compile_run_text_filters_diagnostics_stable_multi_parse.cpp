@@ -116,11 +116,10 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-5306: this used to report the first duplicate-definition group
-  // encountered in source order (/dup); it now reports the last one (/other)
-  // instead. Re-pinned to the verified current (last-group) behavior.
-  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate definition: /dup\"") == std::string::npos);
+  // Only the first duplicate-definition group in source order is reported
+  // (TODO-5306).
+  CHECK(diagnostics.find("\"message\":\"duplicate definition: /dup\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") == std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -130,7 +129,7 @@ main() {
   }
   CHECK(semanticCount == 1);
 
-  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate definition: /other\"");
+  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate definition: /dup\"");
   REQUIRE(firstMessage != std::string::npos);
 }
 
@@ -168,11 +167,10 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  // TODO-5306: this used to report the first duplicate-definition group
-  // encountered in source order (/dup); it now reports the last one (/other)
-  // instead. Re-pinned to the verified current (last-group) behavior.
-  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate definition: /dup\"") == std::string::npos);
+  // Only the first duplicate-definition group in source order is reported
+  // (TODO-5306).
+  CHECK(diagnostics.find("\"message\":\"duplicate definition: /dup\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") == std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -182,7 +180,7 @@ main() {
   }
   CHECK(semanticCount == 1);
 
-  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate definition: /other\"");
+  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate definition: /dup\"");
   REQUIRE(firstMessage != std::string::npos);
 }
 
