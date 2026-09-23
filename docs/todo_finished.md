@@ -52518,3 +52518,614 @@ real answer.
     since-added tests); (4) peak memory is measured before/after and
     confirmed flat/bounded. See `docs/CompilerArenaAllocator.md` for the
     matching narrative writeup of this closing round.
+
+
+## Archived docs/todo.md queue-tracking sections (as of 2026-09-23)
+
+The sections below (`Ready Now`, `Immediate Next 10`, `Priority Lanes`,
+`Execution Queue`) were removed from `docs/todo.md` in a cleanup pass.
+By that point every item they referenced had resolved except TODO-4710
+and TODO-4712, both of which remain tracked as live task blocks in
+`docs/todo.md`'s `Task Blocks` section. Archived here verbatim for
+historical reference rather than deleted, since several entries link to
+design docs and cross-reference chains still worth having in one place.
+
+### Ready Now (archived)
+
+Note (2026-09-22): TODO-5303 (a `primestruct.ir.pipeline.conversions`
+CTest shard coverage gap hiding a real map-method-call lowering bug) has
+resolved - see `docs/todo_finished.md`. Fixed the actual lowering bug (a
+same-path, non-templated user override of the canonical key/value-count
+helper was wrongly rejected, because implicit template-arg inference
+attaches inferred args based on path text alone without checking for a
+local override) and the shard-coverage gap that hid it (an entire test
+file, plus 2 stale cases in a second file, were never selected by any
+CTest shard due to stale `TOTAL_CASES`/missing `SOURCE_FILE` groups in
+`cmake/PrimeStructManagedUnitBackendSuites.cmake` - the same bug class as
+the 2026-07-15 semantics-suite drift fix, recurring undetected in a
+different suite). Verified empirically (not just "shards pass") that all
+154 real cases in the suite are now covered by some shard.
+
+Note (2026-09-21): TODO-5302 (remaining `ir_pipeline_validation_cases`
+`at()`/`at_unsafe()` receiver-fallback gaps, the last item in the
+TODO-4683 -> TODO-5300 -> TODO-5301 -> TODO-5302 hidden-test-failure
+remediation chain) has resolved - see `docs/todo_finished.md`. All 7
+remaining CTest shards are fixed. A full `./scripts/compile.sh --release`
+gate afterward showed **100% tests passed, 0 tests failed out of 1897**
+(1971 total including 74 pre-existing intentionally-disabled cases) -
+the entire test suite is fully green. This section is now empty - no
+other genuinely open leaf-shaped item was found to replace it with this
+round.
+
+Note (2026-09-19): TODO-5300 (post-TODO-4683 map-constructor-receiver
+recognition gap causing an `unknown method`/`std::bad_alloc` regression
+cluster) has resolved - see `docs/todo_finished.md`. Of the original 7
+CTest shards + 1 timeout, 4 were genuine regressions and are fixed
+(repro A: a monomorph-rewritten map-constructor receiver's method-call
+dispatch now falls back to the specialized struct's own member when no
+separately-monomorphized free-function helper exists; repro B: a struct
+args-pack element such as `args<Entry<K,V>>` used directly as a
+struct-typed call argument no longer gets its bounds-check jump patches
+silently discarded, which was causing the `std::bad_alloc` crash via a
+non-terminating restart-from-instruction-0 loop), and the other 4 were
+individually confirmed pre-existing (unrelated to TODO-4683) via direct
+A/B reproduction against the pre-TODO-4683 `c7cc6f0` baseline. This
+section is now empty - no other genuinely open leaf-shaped item was
+found to replace it with this round.
+
+Note (2026-09-20): TODO-5301 (remaining map-surface receiver-routing/
+lowering gaps left after TODO-5300) has resolved - see
+`docs/todo_finished.md`. Sub-item (a): a named `Reference<map<K,V>>`
+local's bracket-index access now gets the same `defMap`-free native
+key-value-lookup emission the bare (non-method) access path already had,
+fixing an `unknown method`-shaped gap for that receiver shape. Sub-item
+(b): confirmed the native backend already correctly lowers and runs
+fully-qualified `map`-helper calls reached through a wildcard import -
+the test's "reject" expectation was stale, not a real guard gap. Full
+release gate: 25/1897 failed, matching the already-tracked
+`ir_pipeline_validation`/`ir_pipeline_conversions_variadic_pointer_vectors`
+cluster (TODO-4726/4727/4728) plus one documented load-dependent flake,
+zero new failures.
+
+Note (2026-09-11): TODO-5294 (receiver-target resolution consolidation)
+has resolved - see `docs/todo_finished.md`. Both consolidation tracks
+this task scoped - `classifyReceiverElementFamilyJoint` (receiver-family
+classification: 2 semantics call sites + 5 monomorphization branches
+migrated, F14 deleted as dead code, every other branch in
+monomorphization's Row F and `ir_lowerer`'s full Row G/RT/CH cascade
+individually assessed and rejected for a documented reason) and
+`resolveReceiverType`/`CanonicalReceiverType` (receiver-type inference:
+`ir_lowerer`'s RT2/RT3b/RT3c and monomorphization's entire F3 cascade
+migrated end-to-end) - are migrated everywhere a genuine fit was found,
+per `docs/ReceiverTargetResolutionConsolidation.md`'s Closing Summary
+section. **The revisit list below is now actionable** - a real,
+authoritative classifier and receiver-type-inference module exist for
+any of these to build on, where before they were explicitly deferred
+because the area was fragile:
+
+- TODO-5286 (closed latent-only: `unwrapCollectionReceiverEnvelope`'s
+  missing `args<T>` case) - revisit: this fix should be trivial once a
+  single authoritative receiver-family classifier exists, since it
+  collapses the current need for a per-site latent-bug judgment call.
+- TODO-5292 (closed latent-only: the same discriminator gap for
+  Call-kind receivers) - revisit: same reasoning as TODO-5286: a shared
+  classifier removes the "is this reachable today" judgment call this
+  closure had to make.
+- TODO-5293 (open follow-up: merge `getBuiltinArrayAccessName`'s two
+  stage implementations, found genuinely divergent) - revisit: Step 0's
+  rule table (see the doc's new "Row category D") should make the
+  divergent-vs-latent-gap branches provable instead of judgment calls,
+  which is exactly what TODO-5293's own stop_rule is waiting on.
+- TODO-5292's own deferred part (b) (the `CollectionPairTypeInfo`/
+  `ArrayVectorAccessTargetInfo` struct merge, 70+ call sites) - revisit:
+  explicitly deferred pending this consolidation; do not attempt before
+  Step 2 reaches `ir_lowerer`.
+
+Note (2026-09-02): The full method-target-collection-resolvers-retirement
+track (TODO-5280 through TODO-5284) has resolved - see
+`docs/todo_finished.md`. `MethodTargetCollectionResolvers` no longer
+exists anywhere in `src/semantics/`, and all 7 of the local forwarder
+lambdas TODO-5275 left in `resolveMethodTarget`'s own body to feed the
+struct's construction are gone too - each of their ~40 call sites now
+calls the corresponding `SemanticsValidator::` member directly.
+`resolveArgsPackAccessTarget` is the one lambda deliberately kept: unlike
+the other 7, it is itself threaded by name as a `std::function` argument
+into ~6 sibling member calls (`resolveArrayTarget`, `resolveSoaVectorTarget`,
+`resolveVectorTarget`, `resolveKeyValueTarget`, `resolveStringTarget`,
+`resolveMethodTargetKeyValueValueType`), so it is genuinely necessary
+plumbing rather than struct-construction scaffolding.
+
+Note (2026-09-01): TODO-5270 through TODO-5278 (the full top-priority
+follow-on batch to TODO-4724's seams (5)-(9)) have all resolved - see
+`docs/todo_finished.md`. `SemanticsValidatorExprMethodTargetResolution.cpp`
+shrank from ~4300 to ~2300 lines across the five file-split moves (plus
+a new shared `SemanticsValidatorMethodTargetResolutionDetail.h`/`.cpp`
+pair), TODO-5275's forwarder-lambda cleanup (16 of 22 forwarders
+removed), and TODO-5277's promotion of the last large local lambda
+(`explicitRemovedCollectionMethodPathLocal`, the seam (4d) scar) under
+the collision-safe name
+`explicitRemovedCollectionMethodPathForCallNamespace`. TODO-5276
+(retire the MethodTargetCollectionResolvers indirection) resolved as an
+investigation rather than a code change, and TODO-5278 (unit tests for
+the promoted resolvers) resolved as source-level regression tests rather
+than literal private-member unit tests - both documented deliberate
+scope adjustments, not shortfalls; see `docs/todo_finished.md` for each
+finding. `resolveMethodTarget` itself is now ~1350 lines (was ~2846 at
+this session's continue-until-done phase start) - real, substantial
+progress, though still short of TODO-4724's own "under a few hundred
+lines" acceptance target. TODO-4724 itself has since closed (see
+`docs/todo_finished.md`) as a documented scope adjustment: the line
+count never hit that target, but the task's real motivating problem
+(untraceable branches requiring gdb to localize) was resolved by other
+measures - see its resolution note for the full reasoning.
+
+Note (2026-08-30): TODO-4743 (diffuse per-call resolution cost left over
+after TODO-4742's hasDefinitionFamilyPath fix) has resolved - see
+`docs/todo_finished.md`. Its own five leaf-level rounds never hit the
+acceptance target, but TODO-5226's separate lazy-stdlib-import default
+flip (2026-08-12) eliminated the whole-file text-splicing cost class this
+task was chasing; re-measured 2026-08-30 at ~6-7ms (was ~12s), decisively
+beating the ~2-5s target.
+
+Note (2026-08-30): TODO-5265 (generic-template-specialization
+parameter-type cross-contamination between sibling instantiations of a
+mutually-recursive stdlib overload pair) has resolved - see
+`docs/todo_finished.md`.
+
+Note (2026-08-28): TODO-5256 (count()'s hardcoded string-handle assumption
+for an "at"-shaped argument whose override changes the return type) has
+resolved - see `docs/todo_finished.md`.
+
+Note (2026-08-22): synced this section - every entry previously listed
+here (TODO-4686/4690/4694/4707) is confirmed `[x]` resolved in the task
+blocks below; see that round's Execution Queue progress notes for
+verification detail. Replaced with the genuinely-still-open leaves found
+while re-auditing the full numbered Execution Queue list this round.
+
+Note (2026-08-13): `TODO-5235` was deprioritized out of this list in favor
+of TODO-5237/5238 - its own investigation trended away from convergence
+(each fix round found a new corruption class rather than closing out the
+known set), so the lower-risk allocator-swap and direct-redundancy-mining
+lines are being tried first. TODO-5235's task block remains open below for
+whoever picks it back up. TODO-5237 (the allocator-swap line) has since
+resolved - see `docs/todo_finished.md` - and mimalloc now ships linked
+into `primec`/`primevm` alongside the TODO-5234 arena. TODO-5238 (the
+direct-redundancy-mining line) has also since resolved - see
+`docs/todo_finished.md`. TODO-5239/5240 (the envelope-parsing-redundancy
+line that followed) have also since resolved - see
+`docs/todo_finished.md`. TODO-5241/5242 (the whole-file text-splicing
+import-cost characterization and fix) have also since resolved - see
+`docs/todo_finished.md`. TODO-5243 (the SoA path-classification
+compile-time-constant-string memoization) and TODO-5244 (the remaining
+sibling instances of that same pattern) have also since resolved - see
+`docs/todo_finished.md`. TODO-5245 (the stdlib surface registry's
+`matchesAny()`/`findStdlibSurfaceMetadataBySpelling()` O(N) lookup
+structure) has also since resolved - see `docs/todo_finished.md`.
+TODO-5246 (a redundant `SemanticProductIndex` by-value lambda-capture
+copy found via fresh post-TODO-5245 profiling, plus a second-round
+diffuse-cost check) has also since resolved and closes out this
+investigation chain's actively-productive leaves - see
+`docs/todo_finished.md`.
+
+Note (2026-09-03): TODO-4753 and TODO-4760's investigations both converged
+on the same architectural cause - receiver-type/method-target resolution
+is independently re-implemented across semantics, monomorphization, and
+`ir_lowerer`, the sibling problem `docs/CompatPathResolutionConsolidation.md`
+deliberately deferred as a non-goal. Wrote
+`docs/ReceiverTargetResolutionConsolidation.md` (Problem/Evidence/Goal/Plan,
+mirroring that document's structure) and landed its Step 1a: a verified,
+independently-tested name-set library
+(`include/primec/support/ReceiverElementFamilyClassifier.h` /
+`src/support/ReceiverElementFamilyClassifier.cpp`) extracting the
+vector/array base-name set, Buffer/File method-name sets, and primitive-name
+set that `resolveArgsPackElementMethodTarget`,
+`resolveMethodCallTemplateTarget`, and the `ir_lowerer` receiver-target
+helpers each currently re-type from scratch - not yet wired into any call
+site. The attempt to go further (a byte-faithful drop-in classifier per
+this session's "implement it" instruction) surfaced two method-name- and
+template-shape-gated quirks in `resolveArgsPackElementMethodTarget` that
+mean family classification there is not a pure function of type text
+alone; safely resolving them needs the Step 0 rule table the doc scopes
+next, not a guessed extraction - see the doc's Step 1a section for detail.
+No behavior changed; this is additive-only (new module + tests, unwired).
+
+### Immediate Next 10 (archived)
+
+Note (2026-09-16): TODO-4747 (replace universal call-inlining with real
+Call/CallVoid IR emission) has resolved - see `docs/todo_finished.md`. All
+phases (0-4) verified in this session's x86_64 Linux environment: real
+calls and recursion (self- and mutual) work correctly across vm/native/cpp/
+wasm, and a real gap in the GLSL/SPIR-V shader-target exclusion (silently
+accepted spec-illegal recursive shader output) was found and fixed. This
+section is now empty - no other genuinely open leaf-shaped item was found
+to replace it with this round; see the `Task Blocks` section below for the
+remaining open (non-"Immediate Next") work.
+
+Note (2026-09-03): TODO-5285 (the TODO-5050 shape (c) residual) has
+resolved - see `docs/todo_finished.md`. Root cause: a pure
+string-spelling mismatch in `TemplateMonomorphExpressionRewrite.cpp`'s
+`resolvesSoaReceiverForRewrite` - it checked a correctly-inferred
+receiver family against `"soa_vector"` (the internal legacy label) but
+the family value was actually `"soa"` (the current builtin type name).
+Fixed narrowly at that one call site rather than in the shared
+`normalizeCollectionReceiverTypeName` helper (a first attempt there
+broke 5 unrelated tests - reverted). Nothing from the
+hidden-test-failures-soa-surface / TODO-5050 investigation remains
+open.
+
+Note (2026-09-02): The full method-target-collection-resolvers-retirement
+track (TODO-5280 through TODO-5284) has resolved - see
+`docs/todo_finished.md`; nothing from that track remains open.
+
+Note (2026-09-03): TODO-4724 (decompose resolveMethodTarget) has
+closed - see `docs/todo_finished.md`. Final state: ~2846 -> ~1087
+lines, 54 -> 26 direct `resolvedOut = ` assignment sites, ~35+ named
+extracted helper members replacing what used to be large opaque local
+lambdas. Closed as a documented scope adjustment rather than a literal
+hit on the "under a few hundred lines" target - see its resolution
+note for why the target was judged no longer worth chasing once the
+task's real motivating problem (untraceable branches) was resolved.
+
+Note (2026-08-30): TODO-4743 has resolved (superseded by TODO-5226's
+lazy-stdlib-import default flip) - see `docs/todo_finished.md`.
+
+Note (2026-08-28): TODO-5256 has resolved - see `docs/todo_finished.md`.
+
+Note (2026-08-22): synced this section against the task blocks below -
+every other entry previously listed here (TODO-4708/4709/4710/4711/4712/
+4713/4715/4723/4725/4726/4727/4728/4731/4741/4742/4748) is confirmed
+`[x]` resolved.
+
+### Priority Lanes (archived)
+
+- Scene graph renderer and UI presentation: TODO-4565 completed the data-only
+  scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;
+  TODO-4567 completed the first globally lit 3D SDF widget primitive, and
+  TODO-4595 completed deterministic shaped glyph runs. TODO-4596 completed
+  deterministic text atlas/raster composition. TODO-4568 completed the first
+  UI scene-record adapter, and TODO-4569 completed the software-surface UI
+  presentation bridge.
+- Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
+  surface, TODO-4571 added the compiler-knowledge inventory categories that
+  guide deletion scope, and TODO-4573 removed compiler-owned map literal
+  lowering. TODO-4575 removed map helper/access classifiers, and vector path
+  TODO-4572 and TODO-4574 completed the public helper classifier deletions.
+  TODO-4576 and TODO-4577 removed map/vector backing classifiers. TODO-4578
+  was split into TODO-4597 registry foundation plus TODO-4598, TODO-4599, and
+  TODO-4600 subsystem migrations; TODO-4597 completed the generic registry
+  IDs, TODO-4598 completed the semantics migration, TODO-4599 completed the
+  emitter migration, TODO-4600 completed the IR-lowerer migration, and
+  TODO-4601 removed the final map-helper classifier trace. TODO-4602 removed
+  semantic vector-literal diagnostic traces, TODO-4603 completed the
+  IR-lowerer vector-literal cleanup, and TODO-4579 wired the broad zero audit
+  into release validation.
+- Architecture hardening backlog: TODO-4586 completed parser diagnostic
+  stability tiers. TODO-4587 completed the shared compile-time/runtime VM
+  kernel boundary. TODO-4588 added the IR-preparation phase manifest.
+  TODO-4589 added the architecture health dashboard. TODO-4594 completed the
+  semantic unknown-call diagnostic stability slice. TODO-4616 made the
+  semantic validation manifest executable. TODO-4619 completed the runtime
+  reflection backend-profile capability gate. TODO-4620 completed indexed
+  expanded-source diagnostic lookup.
+- Architecture review hardening: TODO-4613 through TODO-4616 retired the
+  temporary semantic/lowerer/emitter source locks and made the semantic
+  validation manifest executable. TODO-4619 completed the second backend
+  capability gate, and TODO-4620 completed deterministic indexed
+  expanded-source diagnostic lookup. TODO-4617 completed preflight
+  stale/missing diagnostics, TODO-4618 completed CT-eval
+  requirement-predicate fail-closed coverage, and TODO-4621 completed one
+  lowerer/backend variadic diagnostic stability-tier promotion.
+- Safe array extents and capability views: TODO-4604 completed the requirement
+  contract phase split, TODO-4622 implemented the first contract-form
+  `require(...)` runtime slice (integer-parameter and `count(parameter)`
+  comparisons lower to deterministic call-boundary checks), and TODO-4605
+  completed the non-null safe pointer optionality model. TODO-4606 specified the capability-parameterized
+  reference/slice view model in the normative docs. TODO-4607 published the
+  initial semantic-product array extent facts, and TODO-4608 added the first
+  checked read-only array slice construction surface. TODO-4609 added the
+  first conservative view-escape diagnostic (rejecting a slice of a local
+  array returned or stored into a struct field, while passing it to a
+  callee that does not store/return it stays accepted). TODO-4610 added the
+  first read-only forward cursor traversal API (`Cursor<T>`, plus
+  `startVector`/`limitVector`/`readVector` and `startArray`/`limitArray`/
+  `readArray` for `vector<T>` and `array<T>` respectively, `advance`/
+  `cursorEqual`/`cursorNotEqual` shared, all as plain generic stdlib
+  struct/functions with no new compiler builtin recognition). TODO-5247
+  found and fixed a real compiler bug uncovered while adding `array<T>`
+  support - `count(...)`/`capacity(...)` on a bare local/parameter inside a
+  `namespace` block were misclassified due to conflating a call's inherited
+  namespace context with explicit call-site qualification - see its outcome
+  notes in `docs/todo_finished.md`. TODO-4611 added reverse read-only
+  cursor traversal (`reverseStartVector`/`reverseStartArray`,
+  `reverseLimitVector`/`reverseLimitArray`, `retreat`, same shared
+  `Cursor<T>`/`cursorEqual`/`cursorNotEqual`). TODO-4612 added
+  runnable style-aligned examples to `docs/CodeExamples.md` for the
+  implemented surfaces (runtime extent contracts, checked slices, forward
+  and reverse cursor loops), plus explicitly-marked proposed-syntax
+  sketches for the still-unimplemented `Maybe<Pointer<T>>` and
+  capability-parameterized view surfaces, closing out the "Safe array
+  extents and views" phase's original backlog from
+  `docs/SafeArrayExtentViews.md`. TODO-5248 and TODO-5249 pick the two
+  explicitly-marked "Proposed" sketches from TODO-4612's doc examples back
+  up for real implementation, one at a time. TODO-5248 made
+  `Maybe<Pointer<T>>` a real, compiling, running fallible-allocation return
+  type - the root cause was the generic sum-payload storage machinery in
+  `IrLowererLowerSumHelpers.h` having no representation for a `Pointer<T>`/
+  `Reference<T>` payload (only a scalar `ValueKind` or a resolved struct
+  path), fixed by storing such payloads as a single `Int64` address slot and
+  restoring the payload's `Kind::Pointer` identity when a `pick` binds it
+  back out - see its outcome notes in `docs/todo_finished.md`. TODO-5249
+  made `Reference<T, Capability>` (`Read`/`Write`/`ReadWrite` markers,
+  cross-checked against the binding's own `mut` declaration) a real,
+  compiling, running surface for function parameters specifically - the
+  arity-relaxation fix needed to thread the optional second template
+  argument through touches dozens of independent Reference/Pointer
+  consumers across semantics, the IR lowerer, and the emitter, most of
+  which were never audited for a 2-argument form, so the leaf scoped itself
+  to parameters (the doc sketch's own use case, fully verified on both
+  backends) and made every other binding context (locals, struct fields,
+  return types) fail closed with a clear diagnostic instead of risking
+  silent miscompilation - see its outcome notes in `docs/todo_finished.md`.
+  TODO-5250 made `Slice<T, Capability>` a real, compiling, running surface
+  for function parameters the same way, and found a much cheaper path than
+  Reference/Pointer's: `Slice<T, Capability>` desugars to `array<T>` (the
+  exact representation `slice(...)` already produces), so no new runtime
+  shape or arity fan-out was needed - see its outcome notes in
+  `docs/todo_finished.md`. TODO-5251 extended capability support to local
+  bindings for both `Reference<T, Capability>`/`Pointer<T, Capability>` and
+  `Slice<T, Capability>`, root-causing the wrong-runtime-value bug an
+  earlier attempt in the same session had reverted on: the IR lowerer's
+  explicit-binding-type-text reconstruction joined a 2-argument capability
+  form's template arguments into one comma-joined string
+  ("Reference<int, Read>") and fed that whole blob to the pointee/struct
+  type resolver, which made the binding look like an aggregate pointer and
+  silently skip the dereference read - see its outcome notes in
+  `docs/todo_finished.md`. Struct fields and return types remain
+  unaudited and out of scope.
+- Collections naming and surface-manifest retirement: remove the
+  `experimental_*` and `internal_*` module-naming layers from
+  `stdlib/std/collections` and retire `stdlib/std/collections/surfaces.psmeta`.
+  The canonical `Vector`/`SoaVector` type identities still live in the
+  `experimental_vector`/`experimental_soa_vector` namespaces, and roughly 45
+  C++ files hardcode `experimental_` path literals plus 32 more for
+  `internal_`, so the sequence is: TODO-4623 deleted the comment-only retired
+  stubs, TODO-4624 added the shared `StdlibCollectionPaths.h` constants
+  header with a pilot consumer, and TODO-4625 through TODO-4627 migrated the
+  semantics, IR-lowerer, and emitter/pipeline literals so production C++ has
+  no collection path literals outside the constants header; next, move the
+  type identities to canonical
+  namespaces and delete the experimental shims (TODO-4628 moved the Vector
+  identity to `/std/collections/vector/Vector` and TODO-4629 moved the
+  SoaVector identity to `/std/collections/soa/SoaVector`, and TODO-4630 deleted the
+  deletable shims),
+  collapse the `internal_*` modules into their public modules with visibility
+  instead of naming as the boundary (TODO-4631 through TODO-4634 done), and finally
+  derive the surface registry from stdlib declarations and delete the psmeta
+  manifest (TODO-4635, TODO-4636).
+- File layout restructuring: restructure the flat file layouts in
+  `tests/unit/` (523 files), `include/primec/` (67 headers), and the
+  top-level `src/` directory (~20 loose files). Phase 1 moves test shards
+  into subdirectories mirroring source module structure (TODO-4637 through
+  TODO-4640, done, see `docs/todo_finished.md`). Phase 2 groups headers by
+  pipeline stage (TODO-4641, done, see `docs/todo_finished.md`). Phase 3
+  consolidates loose src files (TODO-4642, done, see
+  `docs/todo_finished.md`). Full design document at
+  `docs/FileLayoutRestructuring.md`.
+- Test name quality: improve test file and test case naming across the
+  suite. Rename 63 opaque letter-suffixed shard files to topic-descriptive
+  names (TODO-4647, done, see `docs/todo_finished.md`). Fix 8 duplicate
+  test names (TODO-4643, done, see `docs/todo_finished.md`). Rewrite 53
+  overlong names (TODO-4644, done, see `docs/todo_finished.md`). Drop
+  ~740 redundant `compiles and runs`
+  prefixes (TODO-4645, done, see `docs/todo_finished.md`). Tighten 12
+  vague short names (TODO-4646, done, see `docs/todo_finished.md`). Full
+  analysis at `docs/FileLayoutRestructuring.md`.
+- Oversized file refactoring: split files that are too large for
+  maintainable development. Split `SemanticsValidate.cpp` (8,025 lines)
+  into focused compilation units (TODO-4648, done, see
+  `docs/todo_finished.md`). Convert IR lowerer include-only
+  `.h` fragments to compileable `.h/.cpp` pairs (TODO-4649, done, see
+  `docs/todo_finished.md`). Convert
+  `TemplateMonomorph*.h` semantics fragments (TODO-4650). Split oversized
+  test files (TODO-4651) and oversized single test case bodies (TODO-4652).
+  Full analysis at `docs/FileLayoutRestructuring.md`.
+- Test coverage and stdlib quality: add dedicated IrPrinter unit tests
+  (TODO-4653). Add `[public]` annotations to style-aligned stdlib modules
+  (TODO-4654). Add compile-run tests for all language level examples
+  (TODO-4655). Full analysis at `docs/FileLayoutRestructuring.md`.
+- Collection decoupling: move hardcoded collection knowledge from C++ to
+  .prime files. ~75 production files have special-cased vector/map/soa
+  logic. Phase 1 (manifest extension) complete: TODO-4656 through
+  TODO-4661, TODO-4672 through TODO-4675 done (all 10 confirmed `[x]` in
+  `docs/todo_finished.md` with commit-hash evidence, re-verified
+  2026-08-21 per TODO-4705). Phase 2 (type-category declarations)
+  complete: TODO-4662 through TODO-4667 done. Phase 3 (generic slot
+  layout): TODO-4668 and TODO-4669 done, and TODO-4670/TODO-4671 (remove
+  old alias branches, cleanup dead helpers) are also done - TODO-4670 was
+  later superseded/extended by TODO-4700's evidence-based deletion of the
+  3-slot branches plus a duplicate definition TODO-4670's original scope
+  never covered (see TODO-4670's entry below for the cross-reference).
+  Phase 4 (evidence-based branch deletion) and Phase 5 (proof) are also
+  done: TODO-4699 through TODO-4702 landed the reachability
+  instrumentation, evidence-based deletions, and a second zero-C++ toy
+  collection type. This effort's top-level completion definition is
+  TODO-4703 (a diff-based zero-C++ gate script, passing against the
+  TODO-4702 commit range) and TODO-4704 (an audit-exemption-count ratchet
+  wired into CTest/CI) - both `[x]` below with commit-verified evidence.
+  Full design document at `docs/CollectionDecoupling.md`. A separate
+  registry-generalization track (`phase: Collection decoupling — Phase 1`
+  on its own task blocks, not to be confused with the manifest-extension
+  Phase 1 above) works through `StdlibSurfaceRegistry.cpp`'s remaining
+  hardcoded collection-file/struct-name knowledge: TODO-4685 replaced the
+  hardcoded `vector.prime`/`map.prime`/`soa.prime` file lookups with a
+  directory scan over `stdlib/std/collections/` (found already implemented
+  when picked up - `listStdlibCollectionFiles()`/
+  `findInStdlibCollectionFileList()` - no code change needed, only
+  `docs/todo.md` bookkeeping was stale). TODO-4686 through TODO-4689 remain:
+  generic `[collection_type]`/`[key_value_type]` struct detection, derived
+  canonicalPath/bridgeKey/prefix, folding the 3 hand-written derivation
+  blocks into one loop, and dynamically-sized registry storage.
+- Test runtime optimization: get the test suite fast and hang-proof (no
+  test should ever exceed 30s; most should run under 5s). Triggered by
+  discovering an unsharded `calls_flow.collections` invocation left
+  running for 2h13m undetected. TODO-4706 (done) root-caused the
+  `calls_flow_collections` `181_190`-family shard timeouts to `SoaColumnsN`
+  stdlib templates with up to 16 type parameters (measured at 426s for a
+  single 16-column case, 1762s for the worst full shard) and shipped a
+  CTest `TIMEOUT` override (300s -> 2400s) as the near-term fix, all 3
+  previously-timing-out shards now pass. TODO-4707 (done) investigated the
+  cross-test-case pollution that motivated small 10-case shards and found
+  it no longer reproduces (resolved as a side effect of intervening
+  collection-decoupling work, not by a targeted fix - see its
+  `progress_2026-08-21` note), so pollution-freedom is confirmed for these
+  two suites; TODO-4708 measures
+  fixed per-shard binary startup cost, TODO-4709 audits `compile_run`
+  cases that only check pass/fail (candidates for downgrading off the full
+  compile-and-execute path), TODO-4710 caches redundant stdlib `.prime`
+  re-parsing across compile-pipeline test helpers, TODO-4711 tightens
+  CTest `TIMEOUT` values once real per-shard costs are known, TODO-4712
+  grows shard size once TODO-4707 proves pollution-free (so hundreds of
+  tiny shards stop each paying fixed binary-launch/registration cost), and
+  TODO-4713 tracks the actual algorithmic investigation into why
+  `SoaColumnsN` monomorphization cost grows so sharply, profiled to
+  implicate the same fragmented compat-path resolution helpers documented
+  in `docs/CompatPathResolutionConsolidation.md`. TODO-4710's original
+  premise (cache stdlib parse results across test PROCESSES) turned out
+  moot - superseded by TODO-5230 (done), which found and fixed the real
+  issue: a single compile invocation using any collection type re-derives
+  the same binding-type-name strings millions of times WITHIN one
+  process via unmemoized pure helpers, memoized 3 of them for a verified
+  ~5.8% instruction-count win, and diagnosed (but did not attempt, as
+  out of leaf scope) the larger remaining cost: `parseBindingInfo` itself
+  re-derived from scratch at ~50 separate validator-pass call sites. Full
+  findings log at `docs/TestRuntimeOptimization.md`.
+- Hidden test failure remediation: 13 of 27 `primestruct.semantics` CTest
+  suites had a stale `TOTAL_CASES` in
+  `cmake/PrimeStructManagedSemanticsSuites.cmake` that silently capped
+  `--first`/`--last` sharding below the real case count, so roughly 900
+  test cases (including all of the known SoA-cluster failures) were never
+  once executed by the CTest gate despite `docs/failing_tests.md` claiming
+  a green 1548/1548 run. The stale counts are now fixed; running the
+  corrected gate end to end surfaced 46 failing shards / 122 individual
+  failing test cases, documented in `docs/failing_tests.md`'s 2026-07-15
+  entry. TODO-4714 fixes the single worst cluster (named-argument
+  call-form receiver dispatch for vector/map mutator helpers, ~10 cases,
+  root-cause partially traced already). TODO-4715 triaged the remaining
+  92-case `calls_flow.collections` cluster and confirmed two dominant
+  root causes without yet fixing them: same-path shadow precedence for
+  explicit namespaced method calls (23 cases, one file) and the same
+  generic-fallback-instead-of-specific-diagnostic pattern TODO-4714
+  already started tracing (most of the rest, across ~9 more files).
+  TODO-4716 (done) fixed 4 newly-exposed `effects`
+  shards - two batches of stale test content (a rooted-path naming
+  convention change, a text-transform-only `==` operator used on the raw
+  no-transform parse path, and a struct-definition typo) plus a genuine
+  ~605s reflected-SoaSchema case needing a `TIMEOUT` bump, same pattern as
+  TODO-4706. TODO-4717 (done) re-investigated
+  an `imports` case whose "always passes in isolation" documented finding
+  just got contradicted by a genuine single-case CTest failure - it
+  turned out to be stale test syntax (`mapPair<i32,i32>` no longer
+  resolves for primitive keys; `map<i32,i32>` is the current constructor),
+  not flakiness. TODO-4718 (done) fixed a `maybe.cpp` nullptr failure that
+  turned out to be a test
+  helper searching the wrong semantic-product fact table (method-call vs.
+  direct-call targets) for a templated type's monomorphized method calls
+  - not a compiler bug. TODO-4719 fixes the pre-existing 10-case
+  `type_resolution_graph` SoA-cluster (already deeply investigated in an
+  earlier session; blocked on a further `/soa/push` stdlib-syntax
+  question for at least one case). TODO-4720 audits the other
+  (non-semantics) suite-definition files for the same drift pattern, not
+  yet checked.
+
+### Execution Queue (archived)
+
+Note (2026-08-22): items 17-72 (TODO-4650 through TODO-5251) are all
+resolved as of this round - see each one's task block below (most moved
+to `docs/todo_finished.md`; a few left in place in this file with
+`[x] ... (RESOLVED)` markers and a resolution note, per this doc's
+existing convention for entries other leaves still cross-reference).
+Exceptions: TODO-4724 (comment-clarity step landed; the larger
+decomposition remains open) and TODO-5050 (shapes (a)/(b) resolved;
+shape (c) still open) - both still genuinely actionable, see their task
+blocks. Replaced this list with the next genuinely open items found
+while re-auditing the full queue this round; renumbering from 73 to
+avoid clashing with this list's own history.
+
+Note (2026-09-03): TODO-4724 has since closed - see
+`docs/todo_finished.md`. TODO-5050 (shape (c)) remains open.
+
+76. TODO-4747: Replace universal call-inlining with real Call/CallVoid IR emission (multi-phase; recursion support included)
+79. TODO-5270: Move the vector/array/soa method-target resolver family into its own file
+80. TODO-5271: Move the string method-target resolver into its own file
+81. TODO-5272: Move the key-value method-target resolver family into its own file
+82. TODO-5273: Move the args-pack method-target resolver family into its own file
+83. TODO-5274: Move the struct/sum-type-path method-target resolver family into its own file
+84. TODO-5275: Shrink resolveMethodTarget to a real dispatcher by retiring its forwarder-lambda scaffolding
+85. TODO-5276: Retire the MethodTargetCollectionResolvers std::function indirection
+86. TODO-5277: Properly promote explicitRemovedCollectionMethodPathLocal under a collision-safe name
+87. TODO-5278: Add direct unit tests for resolveMethodTarget's extracted resolver members
+88. TODO-5280: Promote resolveCurrentDefinitionParamBinding/resolveArgsPackCountTarget/resolveArgsPackAccessTarget to real members
+89. TODO-5281: Audit SemanticsValidatorInferMethodResolution.cpp's parallel local-lambda-scaffolding pattern
+90. TODO-5282: Retire the MethodTargetCollectionResolvers std::function indirection
+91. TODO-5283: Deduplicate resolveInferMethodCallPath's local resolveBorrowedVectorReceiver/preferredBorrowedSoaAccessHelperTarget
+92. TODO-5284: Remove the 7 std::function forwarder lambdas TODO-5275 left in resolveMethodTarget's body
+
+Note (2026-08-28): item 77 (TODO-5256) has resolved - see
+`docs/todo_finished.md`.
+Note (2026-08-30): item 78 (TODO-5265) has resolved - see
+`docs/todo_finished.md`.
+Note (2026-09-01): items 79-87 (TODO-5270 through TODO-5278) have
+resolved - see `docs/todo_finished.md`.
+Note (2026-09-02): items 88-92 (TODO-5280 through TODO-5284) have
+resolved - see `docs/todo_finished.md`.
+Note (2026-08-30): item 75 (TODO-4743) has resolved - see
+`docs/todo_finished.md`.
+Note (2026-09-06): item 93 (TODO-5286) has resolved (closed as
+latent-only debt) - see `docs/todo_finished.md`.
+Note (2026-09-06): item 94 (TODO-5287) has resolved (audited and
+documented; follow-up filed as TODO-5292, which has itself since
+resolved 2026-09-07 as latent-only debt - see `docs/todo_finished.md`).
+Note (2026-09-06): item 95 (TODO-5288) has resolved (ir_lowerer-stage
+duplication merged to one implementation; cross-stage
+getBuiltinArrayAccessName merge deferred as item 100/TODO-5293) - see
+`docs/todo_finished.md`.
+Note (2026-09-07): item 96 (TODO-5289) has resolved (named/documented
+the two args-pack-element storage-layout predicates and switched their
+fix sites over) - see `docs/todo_finished.md`.
+Note (2026-09-07): item 97 (TODO-5290) has resolved (reindented
+IrLowererLowerStatementsExpr.h to match true brace nesting via a
+custom bracket-depth-tracking script, plus 9 `// end if (...)` banner
+comments; whitespace/comment-only, full 3-suite battery byte-identical)
+- see `docs/todo_finished.md`.
+Note (2026-09-07): item 98 (TODO-5291) has resolved - TODO-5289's own
+new test file already contained the exact direct unit tests this task
+asked for (isMapArgsPackElement map-vs-Entry discrimination,
+isSingleSlotPointerStyleKeyValueStorage for elemSlotCount 1/2/3);
+added doc comments pinning the historical bug and verified via a
+scratch worktree at pre-fix commit e4cd1c8 that both predicates did
+not exist there and that commit's literal `elemSlotCount > 0` formula
+misclassifies elemSlotCount==1 - see `docs/todo_finished.md`.
+Note (2026-09-07): item 99 (TODO-5292) has resolved (closed as
+latent-only debt - no reachable surface syntax found that presents a
+Call-kind nested args-pack-of-map receiver to the affected resolvers)
+- see `docs/todo_finished.md`.
+Note (2026-09-15): item 100 (TODO-5293) has resolved - both stages'
+`getBuiltinArrayAccessName` migrated onto the shared
+`primec::BuiltinArrayAccessNameClassifier` module as their sole
+production implementation - see
+`docs/ReceiverTargetResolutionConsolidation.md`'s Closing Summary section
+and `docs/todo_finished.md`.
+Note (2026-09-16): item 76 (TODO-4747) has resolved - see
+`docs/todo_finished.md`.
+Note (2026-09-11): item 101 (TODO-5294) has resolved - both
+consolidation tracks (`classifyReceiverElementFamilyJoint` and
+`resolveReceiverType`/`CanonicalReceiverType`) migrated everywhere a
+genuine fit was found, cumulative 3-suite battery clean against this
+project's recorded baseline - see
+`docs/ReceiverTargetResolutionConsolidation.md`'s Closing Summary
+section and `docs/todo_finished.md`.
+Note (2026-09-17): item 102 (TODO-4683) has resolved - the pair-constructor
+ladder is deleted, map.prime exposes exactly the zero-arg and variadic
+entries constructors, and the full release suite battery matches its
+established pre-existing baseline exactly (zero new failures, zero
+crashes) - see `docs/todo_finished.md`.
