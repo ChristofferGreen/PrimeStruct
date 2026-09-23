@@ -51,6 +51,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter marker: expected i32 got bool\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter marker: expected i32 got bool\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -59,7 +60,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 1);
+  CHECK(semanticCount == 2);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count call-pair mixed-shape diagnostics in definition scope") {

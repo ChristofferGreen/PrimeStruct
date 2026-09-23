@@ -74,7 +74,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare count call rejects user-defined map alias helper precedence") {
+TEST_CASE("bare count call uses user-defined rooted map count shadow") {
+  // TODO-4809: rooted /map/count is a same-path shadow for bare
+  // count(values), like rooted /vector/count for vector receivers.
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -88,9 +90,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown call target: count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("count method requires canonical map helper even when alias helper exists") {

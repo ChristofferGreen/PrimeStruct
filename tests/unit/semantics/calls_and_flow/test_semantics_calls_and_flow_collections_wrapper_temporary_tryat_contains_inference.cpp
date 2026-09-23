@@ -253,7 +253,8 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced count call ignores explicit same-path alias helper") {
+TEST_CASE("map unnamespaced count call uses explicit same-path shadow helper") {
+  // TODO-4809: rooted /map/count is honored for bare count(values).
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values) {
@@ -267,8 +268,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map unnamespaced count call requires imported canonical helper or explicit definition") {

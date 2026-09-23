@@ -62,7 +62,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 1);
+  CHECK(semanticCount == 2);
 }
 
 TEST_CASE(
@@ -125,7 +125,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 1);
+  CHECK(semanticCount == 2);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count pair arg-shape diagnostics in definition scope") {

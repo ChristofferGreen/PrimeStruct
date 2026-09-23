@@ -234,7 +234,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical map sugar before compatibility aliases") {
+TEST_CASE("C++ emitter routes bare map count to rooted shadow and map sugar to canonical helpers") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -276,11 +276,12 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_canonical_map_sugar_before_aliases.prime", source);
 
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  // Canonical now wins uniformly over the compatibility alias for both
-  // bare-call and method-sugar spellings (73+73+11+12=169), rather than
-  // canonical-for-bare/alias-for-method-sugar - a more consistent single
-  // precedence rule.
-  CHECK(runCommand(compileCmd) == 169);
+  // Bare count(values) calls the rooted /map/count same-path shadow (96),
+  // the same way a rooted /vector/count shadow wins for bare vector count
+  // (TODO-4809). Method sugar keeps the canonical helpers:
+  // values.count() -> 73, values.at() -> 11, values.at_unsafe() -> 12.
+  // 96+73+11+12=192.
+  CHECK(runCommand(compileCmd) == 192);
 }
 
 TEST_CASE("C++ emitter rejects explicit-template map count method with non-templated alias helper") {

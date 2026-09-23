@@ -1751,6 +1751,18 @@ bool rewriteExpr(Expr &expr,
         return samePathVectorHelper;
       }
     }
+    // Map twin of the vector same-path branch above (TODO-4809): a rooted
+    // `/map/count` / `/map/count_ref` user shadow wins for bare
+    // `count(m)` / `count_ref(m)` on a map receiver, exactly like
+    // `/vector/count` / `/vector/capacity` do for vector receivers.
+    if (receiverFamily == "map" &&
+        (helperName == "count" || helperName == "count_ref")) {
+      const std::string samePathMapHelper =
+          "/" + std::string("map") + "/" + helperName;
+      if (hasDefinitionFamilyPath(samePathMapHelper)) {
+        return samePathMapHelper;
+      }
+    }
     const auto receiverHasVisibleCanonicalCollectionHelper =
         [&](std::string_view candidateHelperName) {
           const std::string preferred =

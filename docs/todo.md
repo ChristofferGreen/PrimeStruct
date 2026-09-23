@@ -102,7 +102,6 @@ of sync with them.
 | TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
 | TODO-4752 | Fix struct field access on freshly-returned temporaries | ready | hidden-test-failures-imports-operations |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
-| TODO-4809 | collect-diagnostics drops bare map `count(m)` diagnostic | deferred | hidden-test-failures-text-filters |
 | TODO-5305 | collect-diagnostics keeps only the first unresolved import | ready | hidden-test-failures-text-filters |
 | TODO-5306 | collect-diagnostics reports last duplicate-definition group | ready\* | hidden-test-failures-text-filters |
 | TODO-4816 | `IrLowererHelpers.cpp` hardcodes vector-helper spellings | ready | hidden-test-failures-architecture-audits |
@@ -129,7 +128,7 @@ it up once any `Ready Now` item closes. None of them is blocked.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 
-Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes) and TODO-5306 (would exceed the eight-item cap). TODO-4809 is `deferred` pending a map-alias policy decision (see its block). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes) and TODO-5306 (would exceed the eight-item cap). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -477,93 +476,6 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     resolution, template/type inference timing, and IR-lowering loop
     factoring); triage into separate leaves before writing any code.
 
-- [ ] TODO-4809: collect-diagnostics drops the bare map `count(m)` diagnostic when a definition also has a scanner-detected helper error
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-07-30
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-text-filters
-  - depends_on: (none)
-  - scope: originally three `--collect-diagnostics` bugs; sub-bugs (2)
-    (unresolved-import collection) and (3) (duplicate-definition report)
-    were split out on 2026-09-23 as TODO-5305 and TODO-5306. What remains
-    is sub-bug (1): with a user `/map/count` and `/vector/capacity`
-    same-path shadow, a definition containing `count(m)` (wrong arg count)
-    and `capacity(v, true)` (wrong arg type) collects only the
-    `/vector/capacity` diagnostic. Minimal repro:
-    ```
-    [return<i32>]
-    /map/count([map<i32, i32>] values, [i32] marker) {
-      return(marker)
-    }
-    [effects(heap_alloc), return<i32>]
-    /vector/capacity([vector<i32>] values, [i32] marker) {
-      return(marker)
-    }
-    [return<i32>]
-    bad() {
-      [map<i32, i32>] m{map<i32, i32>(1i32, 2i32)}
-      [vector<i32>] v{vector<i32>(3i32, 4i32)}
-      count(m)
-      capacity(v, true)
-      return(0i32)
-    }
-    [return<i32>]
-    main() {
-      return(0i32)
-    }
-    ```
-    Root cause (verified 2026-09-23 with instrumentation, see
-    `docs/todo_log.md`): template monomorphization rewrites bare
-    `capacity(v, ...)` to `/vector/capacity` via the vector-only same-path
-    branch in `preferCanonicalStdlibCollectionHelperPath`
-    (`src/semantics/TemplateMonomorphExpressionRewrite.cpp`), but bare
-    `count(m)` stays spelled `count`. The intra-body scanner
-    (`collectDefinitionIntraBodyCallDiagnostics`,
-    `src/semantics/SemanticsValidatorPassesDiagnostics.cpp`) treats
-    bare `count` as a builtin and skips it. It records the capacity
-    diagnostic, and `SemanticsValidatorPassesDefinitions.cpp` then skips
-    full `validateDefinition` for `/bad`, which is the only pass that
-    would have rejected `count(m)`.
-  - implementation_notes: needs a design decision before any code change.
-    The acceptance below (collect a `/map/count` arg-count mismatch)
-    requires bare `count(m)` to route to a rooted `/map/count` user
-    shadow. A working prototype of that (map mirror of the vector
-    same-path monomorph branch plus a scanner exemption; 27 text_filters
-    cases re-pinned; diff described in `docs/todo_log.md`) contradicts
-    current, deliberately pinned map policy: "rejects vm user map count
-    call shadow without imported canonical helper"
-    (`test_compile_run_vm_collections_array_and_wrapper_shadows.cpp`),
-    "rejects bare map count through compatibility alias when canonical
-    helper is absent in C++ emitter"
-    (`test_compile_run_emitters_canonical_map_helper_calls.cpp`), and
-    "C++ emitter keeps canonical map sugar before compatibility aliases"
-    (`test_compile_run_emitters_wrapper_map_count_sugar.cpp`), plus the
-    `docs/PrimeStruct.md` note that rooted `/map/*` spellings are
-    retiring compatibility seams. Options: (a) change policy so rooted
-    `/map/count`/`count_ref` shadows win for bare calls like the vector
-    same-path shadows do (the prototype), re-pinning those three tests
-    and updating the spec; or (b) keep the policy and instead make
-    collect mode also report the validator-only rejection of `count(m)`
-    ("unknown call target: count") when the scanner has already
-    recorded other diagnostics. (b) is a general change to the
-    scanner-then-validator gating and interacts with other
-    validator-only errors in the same definition (the repro's `/bad`
-    also lacks `effects(heap_alloc)`, which the validator reports
-    before `count(m)`).
-  - acceptance:
-    - A decision between (a) and (b) is recorded in this block.
-    - The repro above collects two diagnostics in collect mode: under
-      (a) `argument count mismatch for /map/count` plus the
-      `/vector/capacity` arg-type mismatch; under (b) the policy
-      rejection for `count(m)` plus the `/vector/capacity` mismatch.
-    - Every affected text_filters collect-diagnostics case is re-pinned
-      to verified output, and the full release gate stays green.
-  - stop_rule: do not land option (a) without explicit sign-off; it
-    reverses a pinned map-alias policy. Do not widen (b) beyond the
-    scanner/validator gating for definitions without first measuring
-    how many existing collect-diagnostics cases change.
-
 - [ ] TODO-5305: collect-diagnostics keeps only the first unresolved import and drops its "/*" suffix
   - owner: ai
   - status: ready
@@ -582,9 +494,9 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     (two cases, marked `TODO-5305`).
   - implementation_notes: import resolution runs before semantics, so
     start from the import resolver's collect-mode error path, not the
-    semantics intra-body scanner that TODO-4809 is about. Also decide
-    whether the missing `/*` suffix is a deliberate message change or a
-    regression before restoring it.
+    semantics intra-body scanner that TODO-4809 (closed 2026-09-23)
+    fixed. Also decide whether the missing `/*` suffix is a deliberate
+    message change or a regression before restoring it.
   - acceptance:
     - The two-bad-import repro collects both unresolved-import
       diagnostics in source order.

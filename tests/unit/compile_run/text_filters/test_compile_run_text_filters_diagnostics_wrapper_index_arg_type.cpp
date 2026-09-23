@@ -111,16 +111,17 @@ main() {
 }
 )";
 
-  // TODO-4809: expected the /map/count-qualified message. Bare
-  // count(wrapMap(), ...) is not routed to the rooted /map/count shadow,
-  // so it is validated as builtin count. Re-pinned to the verified current
-  // text.
+  // Bare count(wrapMap(), ...) routes to the rooted /map/count same-path
+  // shadow (the map twin of the /vector/count and /vector/capacity
+  // shadows). With a wrapper-call receiver, the arity error comes from
+  // template monomorphization as a bare "argument count mismatch", the
+  // same as the vector twin capacity(wrapVector(), 1i32, 2i32).
   SUBCASE("primec") {
     expectCollectDiagnosticsInDefinitionScope(
         "primec",
         "semantic_intra_definition_wrapper_temp_count_capacity_shadow",
         source,
-        "\"message\":\"argument count mismatch for builtin count\"");
+        "\"message\":\"argument count mismatch\"");
   }
 
   SUBCASE("primevm") {
@@ -128,7 +129,7 @@ main() {
         "primevm",
         "semantic_intra_definition_wrapper_temp_count_capacity_shadow",
         source,
-        "\"message\":\"argument count mismatch for builtin count\"");
+        "\"message\":\"argument count mismatch\"");
   }
 }
 
@@ -167,15 +168,17 @@ main() {
 }
 )";
 
-  // TODO-4809: expected an "unknown method" rejection; the current verified
-  // behavior instead resolves the call and reports its own (correct-shape)
-  // argument count mismatch. Re-pinned to the verified current text.
+  // The bare count(wrapMap(), 1i32) arity error comes from template
+  // monomorphization and stops before the intra-body scanner reports the
+  // earlier wrapVector().capacity(1i32) mismatch. A pure-vector version
+  // (wrapVector().capacity(1i32) then count(wrapVector(), 1i32) with a
+  // /vector/count shadow) behaves the same way.
   SUBCASE("primec") {
     expectCollectDiagnosticsInDefinitionScope(
         "primec",
         "semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow",
         source,
-        "\"message\":\"argument count mismatch for /vector/capacity\"");
+        "\"message\":\"argument count mismatch\"");
   }
 
   SUBCASE("primevm") {
@@ -183,7 +186,7 @@ main() {
         "primevm",
         "semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow",
         source,
-        "\"message\":\"argument count mismatch for /vector/capacity\"");
+        "\"message\":\"argument count mismatch\"");
   }
 }
 
@@ -222,15 +225,14 @@ main() {
 }
 )";
 
-  // TODO-4809: same bare-count builtin classification as above - the
-  // generic "builtin count" wording appears instead of the /map/count-
-  // qualified message. Re-pinned to the verified current text.
+  // Same rooted /map/count routing as above: the wrapper-call receiver's
+  // arity error comes from monomorphization as a bare message.
   SUBCASE("primec") {
     expectCollectDiagnosticsInDefinitionScope(
         "primec",
         "semantic_intra_definition_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow",
         source,
-        "\"message\":\"argument count mismatch for builtin count\"");
+        "\"message\":\"argument count mismatch\"");
   }
 
   SUBCASE("primevm") {
@@ -238,7 +240,7 @@ main() {
         "primevm",
         "semantic_intra_definition_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow",
         source,
-        "\"message\":\"argument count mismatch for builtin count\"");
+        "\"message\":\"argument count mismatch\"");
   }
 }
 

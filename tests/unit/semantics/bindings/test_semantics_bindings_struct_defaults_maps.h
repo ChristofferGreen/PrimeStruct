@@ -68,7 +68,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("canonical map call precedence keeps builtin count diagnostics before omitted initializer") {
+TEST_CASE("rooted map count shadow effects reject omitted initializer Create") {
+  // TODO-4809: bare count(items, true) now resolves to the rooted /map/count
+  // same-path shadow, whose io_out effect makes Create effectful.
   const std::string source = R"(
 [effects(io_out), return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -100,11 +102,14 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
-  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
+        std::string::npos);
 }
 
-TEST_CASE("map call precedence keeps builtin diagnostics before omitted initializer") {
+TEST_CASE("rooted map count shadow call reaches omitted initializer effect gate") {
+  // TODO-4809: bare count(items, true) now resolves to the rooted /map/count
+  // same-path shadow, so no builtin arity error fires first; the map
+  // construction in Create then trips the effect-free constructor gate.
   const std::string source = R"(
 [return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -136,8 +141,8 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
-  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
+        std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects Create with canonical slash-path map call helper when constructor is not effect-free") {

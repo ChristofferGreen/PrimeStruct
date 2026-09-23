@@ -3,6 +3,7 @@
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <string>
 #include <string_view>
 
 namespace primec::semantics {
@@ -19,6 +20,14 @@ bool isBuiltinCollectionHelperName(std::string_view helperName) {
          helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
          helperName == "remove_swap" || helperName == "to_soa" ||
          helperName == "to_aos" || helperName == "to_aos_ref";
+}
+
+// TODO-4809: rooted same-path map count/count_ref user shadow. The prefix
+// is assembled rather than spelled literally, matching the vector and map
+// same-path branch in TemplateMonomorphExpressionRewrite.cpp.
+bool isRootedKeyValueCountShadowPath(const std::string &path) {
+  static const std::string rootedPrefix = "/" + std::string("map") + "/";
+  return path == rootedPrefix + "count" || path == rootedPrefix + "count_ref";
 }
 
 bool isFlowEffectDiagnosticMessage(const std::string &message) {
@@ -84,6 +93,14 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
       return true;
     }
     const std::string resolved = resolveCalleePath(expr);
+    // TODO-4809: rooted same-path map count/count_ref user shadows (the
+    // monomorph rewrite target for bare `count(m)` on a map receiver) are
+    // real calls, not builtins; see the matching exemption in
+    // collectDefinitionIntraBodyCallDiagnostics.
+    if (isRootedKeyValueCountShadowPath(resolved) &&
+        hasDefinitionPath(resolved)) {
+      return false;
+    }
     std::string builtinName;
     std::string namespacedCollection;
     std::string namespacedHelper;

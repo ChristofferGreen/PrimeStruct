@@ -600,7 +600,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 

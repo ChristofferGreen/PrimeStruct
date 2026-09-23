@@ -121,7 +121,11 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /array/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm user map count call shadow without imported canonical helper") {
+TEST_CASE("runs vm user map count call shadow without imported canonical helper") {
+  // A rooted /map/count same-path shadow wins for bare count(values) on a
+  // map receiver, exactly like /vector/count and /vector/capacity do for
+  // vector receivers (TODO-4809). Method sugar (values.count()) is not
+  // routed to the rooted shadow; see the method-shadow case below.
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -138,8 +142,7 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_user_map_count_call_shadow.out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: count") != std::string::npos);
+  CHECK(runCommand(runCmd) == 96);
 }
 
 TEST_CASE("rejects vm user map count method shadow without imported canonical helper") {
@@ -204,7 +207,10 @@ main() {
   )";
   const std::string srcPath = writeTemp("vm_canonical_map_sugar_before_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 169);
+  // Bare count(values) calls the rooted /map/count same-path shadow (96),
+  // matching the rooted /vector/count shadow rule (TODO-4809). Method sugar
+  // keeps the canonical helpers: 73 + 11 + 12. 96+73+11+12=192.
+  CHECK(runCommand(runCmd) == 192);
 }
 
 TEST_CASE("rejects vm canonical unknown map helper with canonical diagnostics") {

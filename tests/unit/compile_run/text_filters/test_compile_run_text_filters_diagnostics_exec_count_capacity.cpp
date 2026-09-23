@@ -50,7 +50,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().capacity(1i32, 2i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
@@ -102,7 +102,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().capacity(1i32, 2i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 

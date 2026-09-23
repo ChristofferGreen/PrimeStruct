@@ -68,7 +68,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects bare map count through compatibility alias when canonical helper is absent in C++ emitter") {
+TEST_CASE("bare map count through rooted same-path shadow when canonical helper is absent in C++ emitter") {
+  // The rooted /map/count definition is a same-path shadow, the map twin of
+  // /vector/count, so bare count(values) calls it (TODO-4809).
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values) {
@@ -82,15 +84,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_count_compatibility_alias_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_compatibility_alias.err")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: count") !=
-        std::string::npos);
+      writeTemp("compile_cpp_map_unnamespaced_count_rooted_shadow.prime", source);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 19);
 }
 
 TEST_CASE("bare map at through canonical helper in C++ emitter") {

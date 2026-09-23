@@ -119,7 +119,9 @@ main() {
   CHECK(error.find("unknown call target: /map/count_ref") != std::string::npos);
 }
 
-TEST_CASE("bare map count call rejects when only compatibility alias is present") {
+TEST_CASE("bare map count call resolves rooted same-path shadow when it is the only helper") {
+  // TODO-4809: a rooted /map/count definition is a same-path shadow for
+  // bare count(values), the map twin of the rooted /vector/count shadow.
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -133,8 +135,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map count call keeps explicit root helper precedence") {

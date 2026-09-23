@@ -69,7 +69,7 @@ Total: 10022 test cases across 459 files.
 - rejects canonical slash-method map access without helper on canonical at first in C++ emitter
 - compiles and runs bare map count through canonical helper in C++ emitter
 - rejects bare map count without imported canonical helper in C++ emitter
-- rejects bare map count through compatibility alias when canonical helper is absent in C++ emitter
+- bare map count through rooted same-path shadow when canonical helper is absent in C++ emitter
 - compiles and runs bare map at through canonical helper in C++ emitter
 - compiles and runs bare map at_unsafe through canonical helper in C++ emitter
 - rejects bare map at call without helper in C++ emitter with unknown-target diagnostics
@@ -755,7 +755,7 @@ Total: 10022 test cases across 459 files.
 - C++ emitter keeps canonical diagnostics on direct canonical map count reference wrappers
 - C++ emitter keeps canonical map return arity diagnostics for stdlib envelopes
 - C++ emitter rejects explicit canonical map typed bindings for builtin helpers
-- C++ emitter keeps canonical map sugar before compatibility aliases
+- C++ emitter routes bare map count to rooted shadow and map sugar to canonical helpers
 - C++ emitter rejects explicit-template map count method with non-templated alias helper
 - C++ emitter resolves alias explicit-template map count method precedence
 - C++ emitter keeps builtin map diagnostics on explicit canonical typed bindings
@@ -3448,7 +3448,7 @@ Total: 10022 test cases across 459 files.
 - rejects vm wrapper-returned canonical vector count slash-method on array receiver
 - rejects vm wrapper-returned canonical vector capacity slash-method on array receiver
 - rejects vm alias slash-method vector access on array receiver
-- rejects vm user map count call shadow without imported canonical helper
+- runs vm user map count call shadow without imported canonical helper
 - rejects vm user map count method shadow without imported canonical helper
 - runs vm canonical map sugar with current helper precedence
 - rejects vm canonical unknown map helper with canonical diagnostics
@@ -8066,8 +8066,8 @@ Total: 10022 test cases across 459 files.
 
 - omitted initializer rejects Create with canonical map method precedence when constructor is not effect-free
 - map method precedence now rejects omitted initializer through Create effectfulness gate
-- canonical map call precedence keeps builtin count diagnostics before omitted initializer
-- map call precedence keeps builtin diagnostics before omitted initializer
+- rooted map count shadow effects reject omitted initializer Create
+- rooted map count shadow call reaches omitted initializer effect gate
 - omitted initializer rejects Create with canonical slash-path map call helper when constructor is not effect-free
 - omitted initializer keeps alias diagnostics for map call helper fallback
 - wrapper-returned canonical map call keeps builtin count diagnostics before omitted initializer
@@ -8782,7 +8782,7 @@ Total: 10022 test cases across 459 files.
 - bare map count call resolves through canonical helper definition
 - imported canonical map count validates builtin map method receivers
 - imported canonical map count keeps borrowed args pack count_ref diagnostics
-- bare map count call rejects when only compatibility alias is present
+- bare map count call resolves rooted same-path shadow when it is the only helper
 - bare map count call keeps explicit root helper precedence
 - bare map contains call requires imported canonical helper or explicit definition
 - bare map contains call resolves through canonical helper definition
@@ -9171,7 +9171,7 @@ Total: 10022 test cases across 459 files.
 - capacity call keeps user-defined array helper precedence
 - count method keeps user-defined array helper precedence
 - count call keeps user-defined array helper precedence
-- bare count call rejects user-defined map alias helper precedence
+- bare count call uses user-defined rooted map count shadow
 - count method requires canonical map helper even when alias helper exists
 - count call keeps user-defined string helper precedence
 - count method keeps user-defined string helper precedence
@@ -9629,8 +9629,8 @@ Total: 10022 test cases across 459 files.
 - stdlib canonical map count method auto inference keeps return mismatch diagnostics
 - stdlib canonical map count method auto inference keeps canonical precedence over alias helper
 - stdlib canonical map count method auto inference keeps canonical mismatch diagnostics over alias helper
-- stdlib canonical map count call auto inference keeps canonical precedence over alias helper
-- stdlib canonical map count call auto inference keeps canonical mismatch diagnostics over alias helper
+- map count call auto inference prefers rooted same-path shadow over canonical helper
+- map count call auto inference accepts rooted same-path shadow return type
 - stdlib canonical map access count shadow keeps canonical precedence over alias helper
 - stdlib canonical map access count shadow currently validates mixed canonical and alias returns
 - rejects stdlib canonical vector helper method-precedence forwarding in method-call sugar
@@ -9864,7 +9864,7 @@ Total: 10022 test cases across 459 files.
 - stdlib namespaced map constructor does not resolve map alias helper fallback
 - map unnamespaced count call resolves through canonical helper
 - map unnamespaced count auto inference resolves through canonical helper
-- map unnamespaced count call ignores explicit same-path alias helper
+- map unnamespaced count call uses explicit same-path shadow helper
 - map unnamespaced count call requires imported canonical helper or explicit definition
 - map unnamespaced count auto inference requires imported canonical helper or explicit definition
 - bare map at call resolves through canonical helper

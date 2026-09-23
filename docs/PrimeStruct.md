@@ -4252,12 +4252,41 @@ re-defining it piecemeal.
   wrapper bridges are rejected or retired, and lowerer/emitter production C++
   no longer adapts internal `mapCount`-style helper spellings as canonical map
   operations.
-- **Migration-only seams:** rooted `/map/*` spellings plus
-  experimental map implementation modules remain temporary compatibility
-  seams. Rooted
-  `/vector/*` helper spellings no longer act as builtin vector compatibility
-  aliases; explicit user definitions under those paths remain ordinary
-  definitions. The vector/map adapter cutover is complete for semantic,
+- **Migration-only seams:** experimental map implementation modules remain
+  temporary compatibility seams. Rooted `/vector/*` and `/map/*` helper
+  spellings no longer act as builtin compatibility aliases for canonical
+  `/std/collections/*` helpers; explicit user definitions under those paths
+  remain ordinary definitions.
+- **Rooted same-path shadows (vector and map, symmetric):** an explicit user
+  definition at a rooted same-path helper is an intentional override for the
+  matching bare call on that receiver family, not a retiring alias. Bare
+  `count(v)`, `count_ref(v)`, and `capacity(v)` on a `vector<T>` receiver call
+  a user `/vector/count`, `/vector/count_ref`, or `/vector/capacity`
+  definition when one exists. Bare `count(m)` and `count_ref(m)` on a
+  `map<K, V>` receiver call a user `/map/count` or `/map/count_ref`
+  definition in the same way (TODO-4809). Template monomorphization rewrites
+  the call onto the rooted path before the canonical
+  `/std/collections/*` import preference is considered, so the rooted shadow
+  wins even when the canonical helper is also imported. Method sugar
+  (`values.count()`) is not covered by this rule and keeps its
+  canonical-helper routing. Because the call is resolved to a real
+  definition, `--collect-diagnostics` reports its argument-count and
+  argument-type mismatches against the rooted path (for example `argument
+  count mismatch for /map/count`) alongside other diagnostics in the same
+  definition or execution, instead of treating it as a builtin `count`.
+  Example:
+  ```
+  [return<i32>]
+  /map/count([map<i32, i32>] values) {
+    return(96i32)
+  }
+  [return<i32>]
+  main() {
+    [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+    return(count(values))   // calls /map/count, exits with 96
+  }
+  ```
+- **Cutover status:** The vector/map adapter cutover is complete for semantic,
   template-monomorph, and lowerer helper path-candidate decisions; direct
   experimental vector source imports are rejected, map surface metadata is now
   stdlib-owned, and the surface manifest no longer advertises map compatibility
