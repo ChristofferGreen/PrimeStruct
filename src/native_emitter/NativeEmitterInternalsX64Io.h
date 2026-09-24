@@ -193,8 +193,11 @@ inline size_t X64Emitter::emitPrintStringDynamicPlaceholder(uint64_t offsetTable
                                                              bool newline,
                                                              uint64_t fd) {
   emitPopReg(0); // index
-  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 8, 7);
-  emitWriteSyscall(fd, 8, 7);
+  // Length goes in reg3 (rbx), not reg7: on x86_64 reg7 is rdi, which
+  // emitWriteSyscall overwrites with the fd before copying the length into
+  // rdx, truncating every dynamic string write to fd's value (1 byte).
+  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 8, 3);
+  emitWriteSyscall(fd, 8, 3);
   if (newline) {
     emitWriteNewline(fd, scratchOffset);
   }
@@ -296,8 +299,9 @@ inline size_t X64Emitter::emitFileWriteStringPlaceholder(uint64_t lengthBytes, u
 inline size_t X64Emitter::emitFileWriteStringDynamicPlaceholder(uint64_t offsetTableDelta, uint64_t offsetTableSize) {
   emitPopReg(0); // index
   emitPopReg(8); // fd (r8 - not used internally by the resolve helper below)
-  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 11, 7);
-  emitWriteSyscallReg(8, 11, 7);
+  // Length in reg3 (rbx), not reg7 (rdi) - see emitPrintStringDynamicPlaceholder.
+  const size_t fixupIndex = emitResolveDynamicStringAddressAndLength(offsetTableDelta, offsetTableSize, 0, 11, 3);
+  emitWriteSyscallReg(8, 11, 3);
   emitMovRegImm64(0, 0);
   emitPushReg(0);
   return fixupIndex;

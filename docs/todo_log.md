@@ -156,45 +156,6 @@ open-work-only scope rule as `docs/todo.md` itself.
   landed there (that task decomposed a different function
   entirely). This item's remaining scope is unchanged.
 
-## TODO-4752
-
-- 2026-08-05: **the vm-side bug is confirmed fixed** - it was
-  the same root cause as TODO-4757 (the `hasScalarOrVoidReturn`
-  real-call-eligibility fix in `IrLowererRecursionAnalysis.cpp`
-  already excludes `ContainerError` from real-call treatment). Both
-  `expectContainerErrorConformance`'s `vm` branch and all 3
-  conformance TEST_CASEs (`container error contract conformance in C++
-  emitter`, `native imported container error contract conformance`,
-  `runs vm imported container error contract conformance`) pass
-  currently. The **native-side truncation bug is still open and is
-  broader than originally scoped** - it is NOT specific to `why()`,
-  `ContainerError`, or unbound temporaries: `[return<string>]
-  makeMsg() { return("hello world"raw_utf8) }` then `[string]
-  msg{makeMsg()}; print_line(msg)` (fully bound, no field access, no
-  error-struct types involved at all) still prints only `h` on
-  `--emit=native`, while the identical source prints the full string
-  correctly on `--emit=vm`. A literal bound directly (`[string]
-  msg{"hello world"raw_utf8}`, no function call) prints correctly on
-  native too - so the truncation is specific to a `string` value that
-  crossed a real (non-inlined) native function-call return boundary.
-  Since `"string"` is not in `isSupportedScalarTypeName`
-  (`IrLowererRecursionAnalysis.cpp:14-26`), it should already be
-  ineligible for real-call treatment and forced to inline the same way
-  the VM path now does for the four packed-error-struct types - the
-  fact that native still truncates suggests the native/ARM64/x86_64
-  emitter has its own, separate real-call/struct-return-ABI path that
-  doesn't consult (or isn't governed by) this same eligibility
-  analysis, and that path's handling of a struct-shaped return value
-  (likely a `{Pointer<u8>, i32 length}`-shaped `string`) truncates the
-  length to 1 when actually going through a real native call. This is
-  a materially different, native-emitter-specific investigation from
-  anything already traced for TODO-4757 - needs its own gdb/trace pass
-  into the native/ARM64/x86_64 backend's call-emission code (not
-  `IrLowererRecursionAnalysis.cpp`, which VM already correctly
-  respects) before any fix. Not fixed this session; the acceptance
-  criterion's native half remains unmet, so leaving this TODO open
-  despite the vm half now being correct.
-
 ## TODO-4812
 
 - 2026-08-07: triaged finding (1) (`.push()` sugar without

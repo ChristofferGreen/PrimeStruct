@@ -100,7 +100,6 @@ of sync with them.
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
 | TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
-| TODO-4752 | Fix struct field access on freshly-returned temporaries | ready | hidden-test-failures-imports-operations |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
@@ -116,7 +115,6 @@ close. Neither is blocked.
 ### Ready Now
 
 - TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections` `Map<K,V>` type): implement the missing experimental `Map<K,V>` stdlib type - only the lowercase `map<K,V>` builtin and the underlying `MapValue<K,V>` struct exist today.
-- TODO-4752 (track: hidden-test-failures-imports-operations, surface: `ContainerError::why()` / vm backend): a freshly-returned temporary's struct field access reads default/zeroed values instead of the real field on `--emit=vm`.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
@@ -340,62 +338,6 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     direction first (option (a) vs (b) above) - this is a multi-file
     stdlib + compiler feature addition with real design tradeoffs, not a
     mechanical fix, and guessing wrong risks a second round of rework.
-
-- [ ] TODO-4752: Fix struct field access on freshly-returned temporaries reading default/zeroed values instead of the real field
-  - owner: ai
-  - status: ready
-  - created_at: 2026-07-29
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-imports-operations
-  - depends_on: (none)
-  - scope: found while triaging "container error contract conformance in
-    C++ emitter"
-    (`tests/unit/compile_run/test_compile_run_container_error_conformance_helpers.h`).
-    Minimal repro on `--emit=vm`:
-    `print_line(/ContainerError/why(/ContainerError/missing_key()))`
-    prints the wrong ("container error", the why() fallback) instead of
-    the correct ("container missing key") text - `missing_key()` returns
-    a `ContainerError{1i32}` struct temporary directly into the `why(...)`
-    call. Binding the SAME call to a local first works correctly:
-    `[ContainerError] err{/ContainerError/missing_key()}; print_line(/ContainerError/why(err))`
-    prints "container missing key" as expected. Isolated further:
-    `[ContainerError] err{...}; print_line(err.code)` (bound) correctly
-    prints `1`, so the struct literal and field itself are fine - the bug
-    is specifically about a struct value returned directly from one call
-    and immediately passed as an argument to another call (or having a
-    field read off it inline) without an intervening local binding. The
-    full test source's `total` sum (built from four `.code` field reads
-    directly off inline call results, e.g.
-    `/ContainerError/missing_key().code`) also comes out as `0` instead
-    of the correct `10`, consistent with the same root cause.
-  - implementation_notes: this smells like a temporary-value lifetime or
-    calling-convention bug - the callee likely receives/reads the struct
-    before it's fully materialized, or the field-read path assumes the
-    receiver is an addressable local (has a stack slot) and silently
-    reads garbage/zero for a bare call-result temporary that doesn't have
-    one yet. Compare how struct-returning call results are lowered/passed
-    when used as a bare local's initializer (works) vs. passed straight
-    into another call's argument position or dotted into for a field read
-    (broken). Since ARM64/x86_64 native backends ALSO showed a
-    (different) `ContainerError`-related bug in this exact test (every
-    `print_line(string)` call truncated to one character on native, "c"
-    instead of the real string, exit code 10 - i.e. the field-read part
-    may actually be fine on native but plain string printing is broken)
-    - investigate that natively-specific truncation separately, it may or
-    may not share a root cause with the vm-side temporary bug.
-  - acceptance: `test_compile_run_container_error_conformance_helpers.h`'s
-    `expectContainerErrorConformance` reverts to the fully-correct pinned
-    values for both vm (exit 10, "container missing key" x8 then
-    "container error") and native (same text, exit 10, no truncation)
-    once both bugs are fixed - re-pinned in the meantime to the verified
-    current (buggy) output so the suite stays green without hiding this.
-  - stop_rule: don't assume the vm-side "temporary field access" bug and
-    the native-side "string truncation" bug are the same root cause just
-    because they show up in the same test - verify independently (the vm
-    repro above never touches native, and the native truncation affects
-    literal-string print_line calls that don't involve field access at
-    all, e.g. print_line of already-correct string content), and confirm
-    the fix for one doesn't mask investigating the other.
 
 - [ ] TODO-4812: Modern soa<T>/SoaVector<T> public-surface method-sugar and canonicalization gaps found sweeping text_filters dumps
   - owner: ai

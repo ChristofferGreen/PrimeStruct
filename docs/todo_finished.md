@@ -54314,3 +54314,113 @@ crashes) - see `docs/todo_finished.md`.
     (24 assertions). Full `./scripts/compile.sh --release` gate:
     1898/1899 passed; the one failure is the same Timeout flake, which
     passed in isolation (18.1s).
+
+- [x] TODO-4752: Fix struct field access on freshly-returned temporaries reading default/zeroed values instead of the real field
+  - owner: ai
+  - created_at: 2026-07-29
+  - finished_at: 2026-09-24
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-imports-operations
+  - depends_on: (none)
+  - scope: found while triaging "container error contract conformance in
+    C++ emitter"
+    (`tests/unit/compile_run/test_compile_run_container_error_conformance_helpers.h`).
+    Minimal repro on `--emit=vm`:
+    `print_line(/ContainerError/why(/ContainerError/missing_key()))`
+    prints the wrong ("container error", the why() fallback) instead of
+    the correct ("container missing key") text - `missing_key()` returns
+    a `ContainerError{1i32}` struct temporary directly into the `why(...)`
+    call. Binding the SAME call to a local first works correctly:
+    `[ContainerError] err{/ContainerError/missing_key()}; print_line(/ContainerError/why(err))`
+    prints "container missing key" as expected. Isolated further:
+    `[ContainerError] err{...}; print_line(err.code)` (bound) correctly
+    prints `1`, so the struct literal and field itself are fine - the bug
+    is specifically about a struct value returned directly from one call
+    and immediately passed as an argument to another call (or having a
+    field read off it inline) without an intervening local binding. The
+    full test source's `total` sum (built from four `.code` field reads
+    directly off inline call results, e.g.
+    `/ContainerError/missing_key().code`) also comes out as `0` instead
+    of the correct `10`, consistent with the same root cause.
+  - implementation_notes: this smells like a temporary-value lifetime or
+    calling-convention bug - the callee likely receives/reads the struct
+    before it's fully materialized, or the field-read path assumes the
+    receiver is an addressable local (has a stack slot) and silently
+    reads garbage/zero for a bare call-result temporary that doesn't have
+    one yet. Compare how struct-returning call results are lowered/passed
+    when used as a bare local's initializer (works) vs. passed straight
+    into another call's argument position or dotted into for a field read
+    (broken). Since ARM64/x86_64 native backends ALSO showed a
+    (different) `ContainerError`-related bug in this exact test (every
+    `print_line(string)` call truncated to one character on native, "c"
+    instead of the real string, exit code 10 - i.e. the field-read part
+    may actually be fine on native but plain string printing is broken)
+    - investigate that natively-specific truncation separately, it may or
+    may not share a root cause with the vm-side temporary bug.
+  - acceptance: `test_compile_run_container_error_conformance_helpers.h`'s
+    `expectContainerErrorConformance` reverts to the fully-correct pinned
+    values for both vm (exit 10, "container missing key" x8 then
+    "container error") and native (same text, exit 10, no truncation)
+    once both bugs are fixed - re-pinned in the meantime to the verified
+    current (buggy) output so the suite stays green without hiding this.
+  - stop_rule: don't assume the vm-side "temporary field access" bug and
+    the native-side "string truncation" bug are the same root cause just
+    because they show up in the same test - verify independently (the vm
+    repro above never touches native, and the native truncation affects
+    literal-string print_line calls that don't involve field access at
+    all, e.g. print_line of already-correct string content), and confirm
+    the fix for one doesn't mask investigating the other.
+  - resolution: done. The vm and native halves were two separate bugs,
+    as the stop_rule said they might be.
+    VM half (fixed earlier, confirmed 2026-08-05): same root cause as
+    TODO-4757. `hasScalarOrVoidReturn` in
+    `IrLowererRecursionAnalysis.cpp` treated the four packed error
+    structs (`ContainerError`/`GfxError`/`ImageError`/`FileError`) as
+    scalar returns. That let struct-building helpers such as
+    `missing_key()` run through a real VM Call/Return, and the returned
+    frame-relative struct address outlived the callee's frame. With
+    those types excluded from real-call eligibility (so they inline),
+    the vm branch gives exit 10 and "container missing key" x8 then
+    "container error".
+    Native half (fixed 2026-09-24): x86_64 only. It was not about call
+    boundaries, `ContainerError`, or temporaries. Any string that
+    reached `PrintStringDynamic` or `FileWriteStringDynamic` (a
+    runtime string-table index, which a helper-returned `string` always
+    is) was written with length = fd. A bound literal took the
+    static-length `PrintString` path, which is why it looked fine.
+    `X64Emitter::emitPrintStringDynamicPlaceholder` and
+    `emitFileWriteStringDynamicPlaceholder`
+    (`src/native_emitter/NativeEmitterInternalsX64Io.h`) loaded the
+    length into reg7. That number was carried over from the Arm64
+    emitter, where x7 is a plain scratch register, but on x86_64 reg7
+    is `rdi`. `emitWriteSyscall`/`emitWriteSyscallReg` set
+    `rdi = fd` before `rdx = lengthReg`, so the length became 1 on
+    stdout, 2 on stderr and 3 on the first opened file. The fix loads
+    the length into reg3 (`rbx`) instead. The resolve helper already
+    uses that register as scratch, and `emitPrintUnsignedInternal`
+    already uses it as its write length. Arm64 is unaffected, since its
+    write syscall uses x0-x2.
+    `IrLowererRecursionAnalysis.cpp` and real-call eligibility were not
+    involved and were left unchanged.
+    Coverage gap: the native half was never caught on Linux because
+    "native imported container error contract conformance" is compiled
+    only on macOS/arm64 (`PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED`).
+    Two new cases in `test_compile_run_native_backend_control.cpp`,
+    which is enabled on Linux x86_64, pin the fix: "native prints full
+    helper-returned string" (print_line, print, print_line_error) and
+    "native file write keeps full helper-returned string".
+    Verification: the minimal repro (`makeMsg()` returning
+    "hello world", bound, `print_line`) printed `h` on `--emit=native`
+    before the fix and prints `hello world` after; `--emit=vm` printed
+    `hello world` both times. The conformance program from
+    `expectContainerErrorConformance`, built by hand with
+    `--emit=native`, printed `c` x9 (exit 10) before and the full
+    pinned text (exit 10) after. That matches the helper's
+    already-pinned native expectation, so no test re-pin was needed.
+    With only the emitter fix reverted, both new cases fail with
+    `h` on stdout, `he` on stderr and `hel` in the file (length = fd),
+    and pass with it restored.
+    Full `./scripts/compile.sh --release` gate:
+    1898/1899 passed; the one failure is the known
+    `spinning_cube_argument_validation_51_55` Timeout flake, which
+    passed in isolation (25.5s).

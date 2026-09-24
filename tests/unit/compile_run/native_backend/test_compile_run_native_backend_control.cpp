@@ -595,5 +595,76 @@ main() {
   CHECK(readFile(errPath) == "string index out of bounds\n");
 }
 
+TEST_CASE("native prints full helper-returned string") {
+  // TODO-4752: x86_64 PrintStringDynamic used to load the string length
+  // into rdi, which the write syscall setup overwrote with the fd, so every
+  // runtime-indexed string printed only its first byte.
+  const std::string source = R"(
+[return<string>]
+make_message() {
+  return("hello world"utf8)
+}
+
+[return<int> effects(io_out, io_err)]
+main() {
+  [string] message{make_message()}
+  print_line(message)
+  print(message)
+  print_line_error(message)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_helper_string_print.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_native_helper_string_print_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_native_helper_string_print_out.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_native_helper_string_print_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath + " 2> " + errPath) == 0);
+  CHECK(readFile(outPath) == "hello world\nhello world");
+  CHECK(readFile(errPath) == "hello world\n");
+}
+
+TEST_CASE("native file write keeps full helper-returned string") {
+  // TODO-4752: same x86_64 rdi length clobber as the print case, in
+  // FileWriteStringDynamic.
+  const std::string filePath =
+      (testScratchPath("") / "primec_native_helper_string_file_out.txt").string();
+  std::string source = R"(
+import /std/file/*
+
+[return<string>]
+make_text() {
+  return("hello file"utf8)
+}
+
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [string] text{make_text()}
+  [File<Write>] file{ File<Write>("__PATH__"utf8)? }
+  file.write(text)?
+  file.close()?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(FileError.why(err))
+}
+)";
+  const std::string placeholder = "__PATH__";
+  const size_t pathPos = source.find(placeholder);
+  REQUIRE(pathPos != std::string::npos);
+  source.replace(pathPos, placeholder.size(), filePath);
+  const std::string srcPath = writeTemp("compile_native_helper_string_file.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_native_helper_string_file_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(filePath) == "hello file");
+}
+
 TEST_SUITE_END();
 #endif
