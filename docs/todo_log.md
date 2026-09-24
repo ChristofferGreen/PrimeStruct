@@ -156,6 +156,48 @@ open-work-only scope rule as `docs/todo.md` itself.
   landed there (that task decomposed a different function
   entirely). This item's remaining scope is unchanged.
 
+## TODO-4751
+
+- 2026-09-24: design decided by the user - option (a), `Map<K, V>` as a
+  thin struct owning one `MapValue<K, V>`. Prototyped it; not landed.
+  What worked in isolation: a `[public struct] Map<K, V>` in
+  `stdlib/std/collections/map.prime` with field
+  `[public MapValue<K, V> mut] inner{mapNew<K, V>()}` (a field named
+  `entries` is mis-inferred as `array` - avoid it), methods that copy
+  `this.inner` into a typed local before calling the `MapValue`
+  helpers, plus `mapSingle`/`mapPair` returning `Map<K, V>{inner}`.
+  With i32 keys the TODO-4741 insert conformance program printed
+  `3/9/13/11` and exited 36 (its original expectation).
+- 2026-09-24: approaches ruled out. (1) Same-arity `Map`/`MapValue`
+  overloads of the canonical helpers (`count`, `at`, `insert`, `*_ref`)
+  need structural generic-struct matching in
+  `evaluateRequirementOverloadViability` (the exact-match path compares
+  `Map` against `Map__t<hash>`) and generic specialized-struct implicit
+  template inference (recover args from `ctx.specializationCache`); both
+  worked, but turning the helpers into `__ovN_M` families regressed
+  14-19 `primestruct.semantics.calls_flow.collections` cases (named
+  args, borrowed receivers, pinned `/std/collections/map/at` argument
+  diagnostics) because downstream code keys on the un-suffixed helper
+  paths, and it broke `/string/equal`'s bare `count(self)` unless the
+  family passed through the unsuffixed path when nothing was viable.
+  (2) Redirecting canonical helper calls with a wrapper receiver to the
+  specialized struct methods (`Map__t<hash>/insert`) resolves in
+  monomorph, but the validator and VM lowering still treat the call as
+  a builtin map helper ("insert requires exactly 2 arguments", "vm
+  backend only supports at() on ..."). Root cause for both: a bare
+  `Map` spelling is still the builtin key/value storage identity across
+  ~40 sites (TODO-5310), so the wrapper's own methods are never
+  selected. Also found: every map helper change must keep the
+  `scripts/check_map_*` audits green (map spellings only in
+  `collection-surface-audit: exempt` files, and no `Map<` text at all
+  for `check_map_backing_traces.py`), and the surface registry derives
+  `collections.map_helpers` member order from `[public]` functions in
+  `map.prime`, so new public helpers must come after the existing ones.
+- 2026-09-24: most TODO-4741 sources use `string` keys; string-keyed
+  `.prime` maps fail VM/native lowering even for `map<string, V>` and
+  `MapValue<string, V>` today (filed as TODO-5311), so those cases will
+  not run even after the wrapper exists.
+
 ## TODO-4812
 
 - 2026-08-07: triaged finding (1) (`.push()` sugar without

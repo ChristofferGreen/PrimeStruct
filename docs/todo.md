@@ -99,7 +99,9 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
+| TODO-4751 | Implement a real experimental `Map<K,V>` collection type | blocked | hidden-test-failures-imports-operations |
+| TODO-5310 | Retire the legacy bare-`Map` builtin key/value identity | ready | hidden-test-failures-imports-operations |
+| TODO-5311 | Lower string-keyed `.prime` maps on VM/native | ready | string-keyed-map-lowering |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
@@ -114,12 +116,13 @@ close. Neither is blocked.
 
 ### Ready Now
 
-- TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections` `Map<K,V>` type): implement the missing experimental `Map<K,V>` stdlib type - only the lowercase `map<K,V>` builtin and the underlying `MapValue<K,V>` struct exist today.
+- TODO-5310 (track: hidden-test-failures-imports-operations, surface: `src/semantics` + `src/ir_lowerer` bare-`Map` key/value classifiers): stop treating a bare `Map` spelling as the builtin `map`/`MapValue` storage identity so a real `/std/collections/map/Map<K,V>` wrapper struct can exist (prerequisite for TODO-4751).
+- TODO-5311 (track: string-keyed-map-lowering, surface: VM/native lowering of `MapValue<string, V>` helpers and `/string/equal`): string-keyed `.prime` maps fail VM/native lowering even on the working `map<string, V>` surface.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 
-Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5310 (see its block). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -295,49 +298,127 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
 
-- [ ] TODO-4751: (Optional/deferred) Implement a real, working experimental `Map<K,V>` collection type
+- [ ] TODO-4751: Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
-  - status: ready
+  - status: blocked
+  - blocked_on: TODO-5310
   - created_at: 2026-07-29
   - phase: New feature (not a bug fix)
   - parallel_track: hidden-test-failures-imports-operations
+  - depends_on: TODO-5310, TODO-5311
+  - scope: add the capitalized public `Map<K, V>` collection type, which
+    does not exist anywhere today (only the lowercase builtin `map<K, V>`
+    and the `MapValue<K, V>` backing struct in
+    `stdlib/std/collections/map.prime`), plus `mapSingle<K, V>` and a
+    general (non-nested) `mapPair<K, V>` constructor under
+    `/std/collections/map/`, and restore the ~28+ compile-run cases that
+    TODO-4741 re-pinned to reject (`expect*ExperimentalMap*Conformance` /
+    `expectCanonicalMapNamespace*` in
+    `tests/unit/compile_run/map_conformance/*expectations.h`, plus
+    `test_compile_run_imports_operations.cpp` and the
+    `test_compile_run_vm_collections_wrapper_temporaries_*` files).
+  - implementation_notes: design decided by the user (2026-09-24): option
+    (a) - `Map<K, V>` is a thin public struct owning one `MapValue<K, V>`
+    (mirroring how `Vector<T>` is itself the canonical struct), with
+    `count/contains/tryAt/at/at_unsafe/insert` methods, not an alias.
+    Blocked because the compiler still classifies a bare `Map` spelling as
+    the builtin key/value storage type (TODO-5310), so a `Map<K, V>`
+    wrapper binding is routed onto the `MapValue` helper family and its
+    own methods are never selected. Prototype findings and the approaches
+    already ruled out are in `docs/todo_log.md` under `## TODO-4751`.
+  - acceptance:
+    - `[Map<i32, i32> mut] values{mapSingle<i32, i32>(1i32, 4i32)}` with
+      `values.insert(...)`, `values.count()`, `values[key]`,
+      `count(values)`, explicit `/std/collections/map/insert<K, V>(values,
+      ...)` and `Reference<Map<K, V>>` `*_ref` helpers compiles and runs
+      on vm/native/exe (i32 keys) with no change to existing lowercase
+      `map<K, V>` diagnostics or behavior.
+    - every TODO-4741 reject pin whose source uses non-string keys is
+      restored to its originally intended runtime expectation; string-key
+      sources move with TODO-5311.
+    - one positive and one negative (e.g. key-type mismatch) test for the
+      new surface; `./scripts/compile.sh --release` at baseline.
+  - stop_rule: do not add same-arity `Map`/`MapValue` overloads to the
+    canonical helper family (`count`, `at`, `insert`, ...) - that was
+    prototyped on 2026-09-24 and regressed 14-19 existing
+    `primestruct.semantics.calls_flow.collections` cases because
+    downstream code keys on the un-suffixed `/std/collections/map/<helper>`
+    paths; route wrapper receivers to the struct's own methods instead
+    once TODO-5310 lands.
+
+- [ ] TODO-5310: Retire the legacy bare-`Map` builtin key/value identity
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-24
+  - phase: Prerequisite for TODO-4751
+  - parallel_track: hidden-test-failures-imports-operations
   - depends_on: (none)
-  - scope: TODO-4741's investigation found that the capitalized
-    experimental `Map<K, V>` collection type (distinct from both the
-    lowercase builtin `map<K, V>` and the underlying `MapValue<K, V>`
-    struct that `stdlib/std/collections/map.prime` actually defines) does
-    not exist anywhere - no stdlib struct named `Map`, no `mapSingle`
-    function, and `mapPair` is only special-cased as a nested argument to
-    `count`/`capacity`, not as a general constructor. Roughly 28+ test
-    cases across `test_compile_run_imports_operations.cpp`,
-    `test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp`,
-    `test_compile_run_vm_collections_wrapper_temporaries_templated.cpp`,
-    and others assume this type is meant to work (their TEST_CASE names
-    literally say "runs vm experimental map ..."), and extensive
-    supporting machinery already exists in the compiler for resolving
-    `Map` as an alias-ish receiver
-    (`TemplateMonomorphExperimentalCollectionReceiverResolution.h`'s
-    `isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution`
-    etc.) - suggesting this was a genuinely-planned feature whose stdlib
-    half was never finished, not a typo or abandoned idea.
-  - implementation_notes: decide (with the user, this is a design
-    question, not purely mechanical) whether `Map<K,V>` should be (a) a
-    thin struct wrapping `MapValue<K,V>` the way `Vector<T>` is itself
-    the canonical struct (no separate `-Value` split for vectors), or (b)
-    a true alias/rename. Then add `mapSingle<K,V>`/a general (non-nested)
-    `mapPair<K,V>` constructor, and wire template-instantiation to
-    recognize `Map` as templated (the root cause of "template arguments
-    are only supported on templated definitions: /Map").
-  - acceptance: this is scoped as OPTIONAL/deferred - only pursue if the
-    experimental `Map<K,V>` surface is still wanted going forward; if the
-    decision is "no, this experimental surface should be retired," the
-    ~28+ tests re-pinned to reject by TODO-4741 stay as permanent
-    rejection tests instead, and this TODO should be closed as "won't
-    fix, surface retired" rather than implemented.
-  - stop_rule: do not start implementing without confirming the design
-    direction first (option (a) vs (b) above) - this is a multi-file
-    stdlib + compiler feature addition with real design tradeoffs, not a
-    mechanical fix, and guessing wrong risks a second round of rework.
+  - scope: the retired `experimental_map` module's `Map<K, V>` storage
+    identity survives only as bare-spelling special cases: bare `Map`
+    satisfies `isExperimentalCollectionBackingTypeName("map", "Map", ...)`
+    (`src/semantics/StdlibCollectionSurfaceHelpers.h`),
+    `normalizeCollectionReceiverTypeName` maps bare `Map`/`Map__*` to
+    `map` (`TemplateMonomorphCollectionCompatibilityPaths.cpp`), the IR
+    lowerer's `isExperimentalCollectionTypeName` accepts raw `Map`
+    (`IrLowererSetupTypeCollectionHelpers.cpp`), and
+    `SemanticsValidatorBuildInitializerInference*.cpp` still *infers*
+    `bindingOut.typeName = "Map"` for canonical `map(...)` constructor
+    results. Remove these so bare `Map` resolves like any other struct
+    name (via imports/namespace) while `map<K, V>` keeps resolving to
+    `MapValue<K, V>`.
+  - implementation_notes: ~40 call sites across `src/semantics/*` (grep
+    `"Map"` and `isExperimentalCollectionBackingTypeName("map", "Map"`)
+    plus `src/emitter/EmitterHelpersTypes.cpp` and
+    `src/ir_lowerer/*`. Start by switching the inference sites that
+    produce `"Map"` to the canonical `MapValue`/`map` spelling, then drop
+    the bare-name matches; the experimental-path (`experimental_map/Map`)
+    matches are dead once nothing produces them. Keep
+    `scripts/check_map_*` audits green (they forbid new map spellings
+    outside `collection-surface-audit: exempt` files).
+  - acceptance:
+    - a user-defined struct named `Map<K, V>` (in a user namespace, with
+      its own `count()`/`insert()` methods) dispatches method sugar and
+      `values[key]` to its own methods instead of
+      `/std/collections/map/*` (new positive test), while all existing
+      `map<K, V>` semantics/compile-run tests keep their current results.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if more than a handful of pinned `map<K, V>` diagnostics
+    change, stop and re-scope into per-subsystem leaves (semantics
+    inference, monomorph receiver classification, IR lowerer) instead of
+    re-pinning them wholesale.
+
+- [ ] TODO-5311: Lower string-keyed `.prime` maps on VM/native
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-24
+  - phase: Collections runtime
+  - parallel_track: string-keyed-map-lowering
+  - depends_on: (none)
+  - scope: string-keyed maps built from the `.prime` map implementation
+    fail VM/native lowering even on today's working surface. Repros
+    (import `/std/collections/*` + `/std/collections/map/*`):
+    `[map<string, i32> mut] values{map<string, i32>("left"raw_utf8,
+    4i32)}` followed by `/std/collections/map/insert<string, i32>(values,
+    "right"raw_utf8, 7i32)` and `at`/`at_ref` reads fails with "vm
+    backend only supports indexing into string literals or string
+    bindings" (native: same message with "native"); the same program with
+    an explicit `[MapValue<string, i32> mut]` binding fails with "struct
+    parameter type mismatch: expected
+    /std/collections/map/MapValue__t<hash>, got <unknown>". The i32-key
+    version of the same program runs (exit 36). Likely culprit for the
+    first: `/string/equal` in `stdlib/std/collections/equality.prime`
+    uses bare `count(self)`/`at(self, index)`, which the imported
+    `/std/collections/map/*` helper family captures.
+  - acceptance:
+    - both repros above run on vm and native with the same results as
+      their i32-key equivalents (output `3/9/13/11`, exit 36).
+    - most TODO-4741 map-conformance sources use `string` keys; after
+      TODO-4751 they should then run instead of stopping in lowering.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if the fix requires threading monomorphized
+    `MapValue__t<hash>` types through `inferBindingTypeFromInitializer`
+    (the TODO-5300 round-2 plumbing problem in `docs/failing_tests.md`),
+    split that plumbing into its own leaf first.
 
 - [ ] TODO-4812: Modern soa<T>/SoaVector<T> public-surface method-sugar and canonicalization gaps found sweeping text_filters dumps
   - owner: ai
