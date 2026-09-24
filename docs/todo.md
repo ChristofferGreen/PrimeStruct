@@ -102,7 +102,6 @@ of sync with them.
 | TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
 | TODO-4752 | Fix struct field access on freshly-returned temporaries | ready | hidden-test-failures-imports-operations |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
-| TODO-4816 | `IrLowererHelpers.cpp` hardcodes vector-helper spellings | ready | hidden-test-failures-architecture-audits |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready\* | hidden-test-failures-emitters |
@@ -119,7 +118,6 @@ close. Neither is blocked.
 - TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections` `Map<K,V>` type): implement the missing experimental `Map<K,V>` stdlib type - only the lowercase `map<K,V>` builtin and the underlying `MapValue<K,V>` struct exist today.
 - TODO-4752 (track: hidden-test-failures-imports-operations, surface: `ContainerError::why()` / vm backend): a freshly-returned temporary's struct field access reads default/zeroed values instead of the real field on `--emit=vm`.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
-- TODO-4816 (track: hidden-test-failures-architecture-audits, surface: `src/ir_lowerer/IrLowererHelpers.cpp`): `isBuiltinClassifiedMethodCallTarget` hardcodes canonical vector-helper path spellings as literal strings instead of routing through `CollectionSpellingClassifier`.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 
@@ -470,58 +468,6 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     they very likely have different root causes (mixing method-sugar
     resolution, template/type inference timing, and IR-lowering loop
     factoring); triage into separate leaves before writing any code.
-
-- [ ] TODO-4816: `IrLowererHelpers.cpp` duplicates canonical vector-helper spellings as literal strings instead of routing through `CollectionSpellingClassifier`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-07-30
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-architecture-audits
-  - depends_on: (none)
-  - scope: found while fixing the `check_vector_surface_traces.py` /
-    `check_map_surface_strict_audit.py` / `check_soa_surface_trace_
-    inventory.py` governance audits (4 top-level CTest failures outside
-    the compile_run test binary). `isBuiltinClassifiedMethodCallTarget`
-    in `src/ir_lowerer/IrLowererHelpers.cpp` (around lines 311-339)
-    hardcodes the canonical vector/soa helper path spellings
-    (`"/std/collections/vector/count"`, `"/std/collections/vector/
-    capacity"`, `"/std/collections/vector/at"`, `"/std/collections/
-    vector/at_unsafe"`, `"/std/collections/soa/count"`, `"/std/
-    collections/soa/to_aos"`) as string literals compared directly
-    against `semanticTarget`, rather than asking
-    `primec::CollectionSpellingClassifier` (specifically
-    `classifyCollectionHelperSpelling` /
-    `isResolutionStageCollectionSpellingPrefix`, already the canonical
-    owner of collection-path-spelling knowledge per
-    `docs/CompatPathResolutionConsolidation.md`) whether a given path is
-    a recognized canonical collection-helper spelling. This is genuine
-    literal-duplication debt in real code, distinct from the false
-    positives elsewhere in this audit sweep, which were unrelated
-    production files whose exemption comment used an audit-specific
-    marker (`soa-surface-audit: exempt`) instead of the shared
-    `collection-surface-audit: exempt` marker all three scripts also
-    accept - those were fixed by updating the marker text, not by
-    changing any logic.
-  - implementation_notes: the compat/lowering-spelling migration epic
-    (see the pre-existing "Step 2a/2b/2c: migrate ... to classifier"
-    steps earlier in this document) intentionally left call sites like
-    this one unmigrated in earlier phases; this is a leftover, not a new
-    regression. A migration here would replace each hardcoded
-    `semanticTarget == "/std/collections/.../X"` comparison with a
-    classifier call that both confirms canonical-collection-domain
-    membership and extracts the leaf helper name, then compare the leaf
-    name (`count`/`capacity`/`at`/`at_unsafe`/`to_aos`) instead of the
-    full path - reads the same but stops literal-duplicating the
-    canonical prefix strings.
-  - acceptance: `isBuiltinClassifiedMethodCallTarget` no longer contains
-    literal `"/std/collections/..."` path strings; behavior is unchanged
-    (same builtin-classification decisions) verified by the full
-    `PrimeStruct_compile_run_tests` binary staying 100% green before and
-    after.
-  - stop_rule: do not widen this into a general refactor of
-    `IrLowererHelpers.cpp` beyond `isBuiltinClassifiedMethodCallTarget` -
-    scope is exactly the literal-duplicated spellings found by this
-    audit sweep, not a broader cleanup pass.
 
 - [ ] TODO-4800: Fix `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` variadic-pack elements failing to lower on vm with "missing lowered definition: /array/at"
   - owner: ai

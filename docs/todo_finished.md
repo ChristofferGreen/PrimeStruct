@@ -54219,3 +54219,98 @@ crashes) - see `docs/todo_finished.md`.
     `spinning_cube_argument_validation_51_55` Timeout flake (30s limit),
     which runs green directly in 34.4s post-fix vs 34.7s with a pre-fix
     `primec`, so it is unrelated to this change.
+
+- [x] TODO-4816: `IrLowererHelpers.cpp` duplicates canonical vector-helper spellings as literal strings instead of routing through `CollectionSpellingClassifier`
+  - owner: ai
+  - created_at: 2026-07-30
+  - finished_at: 2026-09-24
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-architecture-audits
+  - depends_on: (none)
+  - scope: found while fixing the `check_vector_surface_traces.py` /
+    `check_map_surface_strict_audit.py` / `check_soa_surface_trace_
+    inventory.py` governance audits (4 top-level CTest failures outside
+    the compile_run test binary). `isBuiltinClassifiedMethodCallTarget`
+    in `src/ir_lowerer/IrLowererHelpers.cpp` (around lines 311-339)
+    hardcodes the canonical vector/soa helper path spellings
+    (`"/std/collections/vector/count"`, `"/std/collections/vector/
+    capacity"`, `"/std/collections/vector/at"`, `"/std/collections/
+    vector/at_unsafe"`, `"/std/collections/soa/count"`, `"/std/
+    collections/soa/to_aos"`) as string literals compared directly
+    against `semanticTarget`, rather than asking
+    `primec::CollectionSpellingClassifier` (specifically
+    `classifyCollectionHelperSpelling` /
+    `isResolutionStageCollectionSpellingPrefix`, already the canonical
+    owner of collection-path-spelling knowledge per
+    `docs/CompatPathResolutionConsolidation.md`) whether a given path is
+    a recognized canonical collection-helper spelling. This is genuine
+    literal-duplication debt in real code, distinct from the false
+    positives elsewhere in this audit sweep, which were unrelated
+    production files whose exemption comment used an audit-specific
+    marker (`soa-surface-audit: exempt`) instead of the shared
+    `collection-surface-audit: exempt` marker all three scripts also
+    accept - those were fixed by updating the marker text, not by
+    changing any logic.
+  - implementation_notes: the compat/lowering-spelling migration epic
+    (see the pre-existing "Step 2a/2b/2c: migrate ... to classifier"
+    steps earlier in this document) intentionally left call sites like
+    this one unmigrated in earlier phases; this is a leftover, not a new
+    regression. A migration here would replace each hardcoded
+    `semanticTarget == "/std/collections/.../X"` comparison with a
+    classifier call that both confirms canonical-collection-domain
+    membership and extracts the leaf helper name, then compare the leaf
+    name (`count`/`capacity`/`at`/`at_unsafe`/`to_aos`) instead of the
+    full path - reads the same but stops literal-duplicating the
+    canonical prefix strings.
+  - acceptance: `isBuiltinClassifiedMethodCallTarget` no longer contains
+    literal `"/std/collections/..."` path strings; behavior is unchanged
+    (same builtin-classification decisions) verified by the full
+    `PrimeStruct_compile_run_tests` binary staying 100% green before and
+    after.
+  - stop_rule: do not widen this into a general refactor of
+    `IrLowererHelpers.cpp` beyond `isBuiltinClassifiedMethodCallTarget` -
+    scope is exactly the literal-duplicated spellings found by this
+    audit sweep, not a broader cleanup pass.
+  - resolution: done, pure refactor. `isBuiltinClassifiedMethodCallTarget`
+    now splits the semantic target into a canonical collection folder
+    and a leaf helper name, and compares the leaf names (`count`,
+    `capacity`, `at`, `at_unsafe`, `to_aos`). It no longer compares
+    whole `"/std/collections/..."` literals. A file-local helper
+    `canonicalCollectionHelperLeaf(target, folder)` gates on the
+    classifier's `isResolutionStageCollectionSpellingPrefix`
+    (collection-domain membership), then peels
+    `collection_paths::kCollectionsRoot` + `/` + folder + `/` using the
+    `StdlibCollectionPaths.h` constants and returns the rest, or empty
+    when the target is outside that folder. The function body has zero
+    `/std/collections` literals left; `/string/count` stays, since it
+    is not a collection path. Finding: the classifier has no public
+    leaf-extraction API (its `leafName` is file-private) and
+    `classifyCollectionHelperSpelling` answers a different question
+    (compat disposition plus a definition callback). So the leaf split
+    uses `collection_paths`, which owns these spellings. Nothing outside
+    this function changed (stop_rule). One detour: a first version held
+    the prefixes in function-local `static const std::string`s. That
+    made `PrimeStruct_backend_ir_tests` abort at exit
+    (`free(): invalid size` inside glibc `__run_exit_handlers`, rc 134)
+    whenever the "classify exactly" case ran with another case.
+    Valgrind reported 0 errors. Replacing the statics with piecewise
+    `string_view` matching (no allocation, no exit-time destructors)
+    fixed it. The exit-handler fragility itself predates this change
+    and was not investigated further.
+    Verification: (1) exhaustive equivalence harness, the old body
+    copied verbatim against the rebuilt library function, over 16 roots
+    x 12 leaves x 9 call names x arity 0-3 x method flag: 13824
+    combinations, 96 classified true, 0 diffs. (2) Before/after
+    compile_run diff, same pattern as TODO-4737: pre-change release
+    build, then `ctest -R compile_run --parallel 8`, capture the
+    per-shard status for all 1179 shards; rebuild with the change,
+    rerun, `diff`. Byte-identical: 1104 passed, 74 disabled, and the 1
+    known `spinning_cube_argument_validation_51_55` Timeout flake on
+    both sides. (3) New unit case "ir lowerer helpers reject near-miss
+    collection helper spellings for builtin method call targets" pins
+    10 near-miss spellings as unclassified: `/vector/count`,
+    `/soa/count`, map, dead `soa_vector`, trailing segment, empty
+    leaves, wrong arity, wrong folder. All 3 classification cases pass
+    (24 assertions). Full `./scripts/compile.sh --release` gate:
+    1898/1899 passed; the one failure is the same Timeout flake, which
+    passed in isolation (18.1s).

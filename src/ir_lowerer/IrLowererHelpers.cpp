@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string_view>
 
+#include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
@@ -296,31 +297,63 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   return name == targetName;
 }
 
+namespace {
+
+// TODO-4816: leaf helper name of a canonical
+// `/std/collections/<folder>/<leaf>` semantic target, or empty when the
+// target lies outside that folder. Collection-domain membership is decided
+// by the shared CollectionSpellingClassifier, and the root/folder spellings
+// come from collection_paths, so this file no longer repeats canonical
+// helper path literals.
+std::string_view canonicalCollectionHelperLeaf(std::string_view semanticTarget,
+                                               std::string_view folder) {
+  if (!isResolutionStageCollectionSpellingPrefix(semanticTarget)) {
+    return {};
+  }
+  std::string_view rest = semanticTarget;
+  const auto consume = [&rest](std::string_view piece) {
+    if (rest.substr(0, piece.size()) != piece) {
+      return false;
+    }
+    rest.remove_prefix(piece.size());
+    return true;
+  };
+  if (!consume(collection_paths::kCollectionsRoot) || !consume("/") ||
+      !consume(folder) || !consume("/")) {
+    return {};
+  }
+  return rest;
+}
+
+} // namespace
+
 bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, const Expr &callExpr) {
   if (semanticTarget.empty()) {
     return false;
   }
-  if ((semanticTarget == "/string/count" ||
-       semanticTarget == "/std/collections/vector/count") &&
+  const std::string_view vectorLeaf =
+      canonicalCollectionHelperLeaf(semanticTarget, collection_paths::kVectorFolder);
+  const std::string_view soaLeaf =
+      canonicalCollectionHelperLeaf(semanticTarget, collection_paths::kSoaFolder);
+  if ((semanticTarget == "/string/count" || vectorLeaf == "count") &&
       callExpr.args.size() == 1 &&
       isSimpleCallName(callExpr, "count")) {
     return true;
   }
-  if (semanticTarget == "/std/collections/vector/capacity" &&
+  if (vectorLeaf == "capacity" &&
       callExpr.args.size() == 1 &&
       isSimpleCallName(callExpr, "capacity")) {
     return true;
   }
-  if (semanticTarget == "/std/collections/soa/count") {
+  if (soaLeaf == "count") {
     return true;
   }
-  if ((semanticTarget == "/std/collections/vector/at" ||
-       semanticTarget == "/std/collections/vector/at_unsafe") &&
+  if ((vectorLeaf == "at" || vectorLeaf == "at_unsafe") &&
       callExpr.args.size() == 2 &&
       (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe"))) {
     return true;
   }
-  if (semanticTarget == "/std/collections/soa/to_aos" &&
+  if (soaLeaf == "to_aos" &&
       callExpr.args.size() == 1 &&
       isSimpleCallName(callExpr, "to_aos")) {
     return true;

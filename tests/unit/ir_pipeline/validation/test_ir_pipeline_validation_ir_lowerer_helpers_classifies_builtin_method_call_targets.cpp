@@ -62,3 +62,30 @@ TEST_CASE("ir lowerer helpers reject targets outside the known builtin method ca
   CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
       "/std/collections/vector/capacity", makeMethodCallExpr("capacity", 2)));
 }
+
+// TODO-4816: the classification now decomposes the target into a canonical
+// collection folder plus leaf helper name instead of comparing full path
+// literals. Pin that near-miss spellings (compat roots, other folders,
+// extra segments, empty leaves) stay unclassified exactly as before.
+TEST_CASE("ir lowerer helpers reject near-miss collection helper spellings for builtin method call targets") {
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/vector/count", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/soa/count", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/map/count", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/soa_vector/count", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/vector/count/extra", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/vector/", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/soa/", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/soa/to_aos", makeMethodCallExpr("to_aos", 2)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/vector/to_aos", makeMethodCallExpr("to_aos", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/std/collections/soa/capacity", makeMethodCallExpr("capacity", 1)));
+}
