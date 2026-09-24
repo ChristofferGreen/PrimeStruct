@@ -107,6 +107,7 @@ of sync with them.
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready\* | hidden-test-failures-emitters |
 | TODO-4807 | `resolveMethodCallPath` alias/canonical fallback regressions | ready\* | hidden-test-failures-emitters |
+| TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
 \* held out of Ready Now this round. TODO-4806/4807 are the 3rd/4th
 `ready` items on the `hidden-test-failures-emitters` track (rule 11 caps
@@ -739,4 +740,59 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     reproducible), this may be purely a metadata-plumbing internal
     inconsistency that never surfaces in real compiled programs, which
     would change this TODO's priority significantly.
+
+- [ ] TODO-5309: Rename the soa `ref_ref` builtin to `ref_borrowed`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-09-24
+  - phase: Naming/API clarity
+  - parallel_track: (none)
+  - depends_on: (none)
+  - scope: `/std/collections/soa/ref_ref<T>([Reference<SoaVector<T>>] values,
+    [i32] index)` (`stdlib/std/collections/soa.prime:230-233`) is the one
+    member of the soa accessor family (`count`/`count_ref`/`get`/`get_ref`/
+    `ref`/`ref_ref`) whose name doubles a suffix instead of composing two
+    distinct axes: which value it returns (`get` = value, `ref` =
+    `Reference<T>`) and whether the receiver is borrowed (bare name = by
+    value `SoaVector<T>`, `_ref` suffix = `Reference<SoaVector<T>>`).
+    `ref_ref` collapses "returns a reference" and "receiver is borrowed"
+    into one doubled token, which reads like a typo and was genuinely
+    confusing enough to prompt a user question outside any specific bug
+    investigation. Rename to `ref_borrowed` (or another name that keeps
+    `ref`'s existing "returns a reference" meaning and makes "receiver is
+    borrowed" explicit rather than doubling the suffix - confirm exact
+    spelling before implementing, this scope intentionally doesn't lock it
+    in). This TODO was filed immediately after TODO-5295/5307/5308 (closed
+    2026-09-23/24) all landed real bug fixes in this exact accessor's
+    same-path-shadow resolution - deliberately deferred rather than
+    started immediately, to let that code settle first and avoid
+    colliding with any follow-up fixes in the same area.
+  - implementation_notes: this is a public stdlib rename, not a local
+    refactor - `/std/collections/soa/ref_ref` is `[public]` and callable
+    by name from user `.prime` code, and its rooted spelling
+    (`/std/collections/soa/ref_ref`) plus the same-path-shadow spelling
+    (`/soa/ref_ref`) both appear throughout `tests/unit/` (several dozen
+    sites, many added/touched by TODO-5295/5307/5308's fixes literally
+    today). A safe migration needs: (1) add the new name as the real
+    implementation, (2) decide whether the old name stays as a
+    deprecated/compatibility alias or is deleted outright (check this
+    repo's usual policy for renaming public stdlib symbols - search
+    `docs/PrimeStruct.md`/`docs/CompatPathResolutionConsolidation.md` for
+    precedent), (3) update every call site across `stdlib/`, `tests/`, and
+    any docs that reference `ref_ref` by name.
+  - acceptance:
+    - The soa accessor family's naming consistently encodes "returns a
+      reference" and "receiver is borrowed" as two separable axes, not a
+      doubled suffix.
+    - Every test and stdlib call site is updated to the new name (or the
+      old name is kept working as a documented compatibility alias, per
+      whatever migration policy step (2) above settles on).
+    - `docs/PrimeStruct.md` (or wherever this accessor family is
+      documented) reflects the new name.
+  - stop_rule: do not start this while any of TODO-5295/5307/5308's
+    immediate follow-up work is still active in this same file
+    (`src/semantics/TemplateMonomorphExpressionRewrite.cpp`,
+    `stdlib/std/collections/soa.prime`) - confirm no other in-flight task
+    touches soa same-path-shadow resolution first, to avoid a rename
+    landing on top of a still-moving target.
 
