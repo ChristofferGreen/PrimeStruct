@@ -1163,12 +1163,12 @@ main() {
   // TODO-5295 (RESOLVED): all three forms (direct, method sugar,
   // helper-return receiver) now target the user's /soa/ref_ref shadow
   // instead of failing with "template arguments required for
-  // /std/collections/soa/ref_ref". TODO-5307: the [auto] locals still
-  // take the canonical helper's Reference<T> result type rather than the
-  // shadow's declared int, so plus(...) over them is rejected.
-  CHECK_FALSE(ok);
-  CHECK(error.find("arithmetic operators require numeric operands in /main") !=
-        std::string::npos);
+  // /std/collections/soa/ref_ref". TODO-5307 (RESOLVED): the [auto]
+  // locals now take the shadow's declared int result instead of the
+  // canonical helper's element type, so plus(...) over them validates
+  // (and runs to 51 on --emit=vm).
+  CHECK(ok);
+  CHECK(error.empty());
 }
 
 TEST_CASE("semantic product validates direct return method-like borrowed helper-return experimental soa reads") {

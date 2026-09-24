@@ -103,7 +103,7 @@ of sync with them.
 | TODO-4752 | Fix struct field access on freshly-returned temporaries | ready | hidden-test-failures-imports-operations |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
 | TODO-4816 | `IrLowererHelpers.cpp` hardcodes vector-helper spellings | ready | hidden-test-failures-architecture-audits |
-| TODO-5307 | Same-path `/soa/<access>` shadow result deref'd as `Reference` | ready | hidden-test-failures-vm-collections |
+| TODO-5308 | Borrowed `SoaVector` `return(ref_ref(...))` shadow rejected as escape | ready | hidden-test-failures-vm-collections |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready\* | hidden-test-failures-emitters |
@@ -120,7 +120,7 @@ close. Neither is blocked.
 - TODO-4752 (track: hidden-test-failures-imports-operations, surface: `ContainerError::why()` / vm backend): a freshly-returned temporary's struct field access reads default/zeroed values instead of the real field on `--emit=vm`.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
 - TODO-4816 (track: hidden-test-failures-architecture-audits, surface: `src/ir_lowerer/IrLowererHelpers.cpp`): `isBuiltinClassifiedMethodCallTarget` hardcodes canonical vector-helper path spellings as literal strings instead of routing through `CollectionSpellingClassifier`.
-- TODO-5307 (track: hidden-test-failures-vm-collections, surface: vm lowering of calls to same-path `/soa/<access>` shadows): a scalar-returning `/soa/ref_ref`/`get`/`get_ref`/`ref` shadow's result is dereferenced as a `Reference` when returned directly or bound to a local.
+- TODO-5308 (track: hidden-test-failures-vm-collections, surface: semantics target selection for bare `ref_ref` over borrowed `SoaVector<T>` receivers): `return(ref_ref(pickBorrowed(location(values)), 0i32))` over a scalar `/soa/ref_ref` shadow is rejected as a reference escape because semantics selects the canonical helper while vm runs the shadow.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 
@@ -524,54 +524,46 @@ Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-fa
     scope is exactly the literal-duplicated spellings found by this
     audit sweep, not a broader cleanup pass.
 
-- [ ] TODO-5307: Same-path `/soa/<access>` shadow result wrongly dereferenced as a `Reference` on vm
+- [ ] TODO-5308: Borrowed `SoaVector` `return(ref_ref(...))` over a same-path shadow rejected as a reference escape
   - owner: ai
   - status: ready
-  - created_at: 2026-09-23
+  - created_at: 2026-09-24
   - phase: Hidden test failure remediation
   - parallel_track: hidden-test-failures-vm-collections
   - depends_on: (none)
-  - scope: found while closing TODO-5295. A user same-path shadow of a
-    soa access helper that returns a scalar, e.g.
-    `[return<int>] /soa/ref_ref([soa<Particle>] values, [vector<i32>] index) { return(17i32) }`,
-    is now correctly selected for all call forms, but when its result
-    is returned directly (`return(ref_ref(values, idx))`) or bound to a
-    local first (`[i32] r{ref_ref(values, idx)} return(r)`), `--emit=vm`
-    fails at runtime with `VM error: unaligned indirect address in IR:
-    17` (exit 3) - the shadow's `int` result is dereferenced as if it
-    were the canonical helper's `Reference<T>`. Same for `get`,
-    `get_ref`, and `ref` shadows, and for `SoaVector<Particle>`
-    receivers (that variant predates TODO-5295's fix). Using the result
-    inside `plus(...)` works (TODO-5295's repro returns 51).
-    Related shape at the semantics stage: binding the result to an
-    `[auto]` local (`[auto] direct{ref_ref(values, idx)}`) infers the
-    canonical `Reference<T>` type, so a later `plus(direct, ...)` is
-    rejected with `arithmetic operators require numeric operands`
-    (pinned in
-    `test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`,
-    "semantic product keeps builtin soa ref_ref targets on same-path
-    helpers", marked `TODO-5307`).
-  - implementation_notes: the call target is right after semantics
-    (`/soa/ref_ref`), so look at IR lowering's return/binding
-    value-kind inference for calls whose helper name matches a soa
-    access helper (`get`/`get_ref`/`ref`/`ref_ref`); it likely infers
-    the canonical helper's reference return instead of the resolved
-    shadow definition's declared `return<int>`. Compare with how the
-    `plus(...)` argument path types the same call. For the `[auto]`
-    shape, check semantics' binding-type inference for the same call
-    (it likely reads the canonical helper's return type too).
+  - scope: found while closing TODO-5307. With
+    `[return<int>] /soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) { return(17i32) }`
+    and `pickBorrowed([Reference<SoaVector<Particle>>] values)` returning
+    its argument, `return(ref_ref(pickBorrowed(location(values)), 0i32))`
+    in `main` fails semantics with `reference escapes via return` (exit
+    2). The `[i32]` local, `[auto]` local and `plus(...)` forms of the
+    same call all run to 17 on `--emit=vm`, and the same shape with a
+    `/soa/get_ref` shadow returns 17 directly. `--dump-stage
+    ast-semantic` shows the call rewritten to the canonical
+    `/std/collections/soa/ref_ref__t...` (not the shadow), while vm
+    execution runs the shadow, so semantics and lowering disagree on
+    the selected target.
+  - implementation_notes: start from the ast-semantic target for the
+    bare call (template monomorph's same-path preference in
+    `src/semantics/TemplateMonomorphExpressionRewrite.cpp`, which
+    TODO-5295 widened for `soa<T>` receivers) and compare with how the
+    `get_ref` twin selects `/soa/get_ref`. The escape diagnostic comes
+    from `isStandaloneSoaRefCall` in
+    `src/semantics/SemanticsValidatorStatementReturns.cpp`, which is
+    correct for the canonical target it is given. Also observed (may be
+    intended, confirm first): by-value `/soa/get_ref`/`/soa/ref_ref`
+    shadows over a local `SoaVector<Particle>` are never selected (vm
+    lowering error on `/get_ref`), and `ref_ref(location(values), 0i32)`
+    with a `Reference<SoaVector<Particle>>` shadow fails with `unknown
+    method: /std/collections/soa/ref_ref`.
   - acceptance:
-    - `return(ref_ref(values, idx))` and the local-binding form both
-      exit 17 on `--emit=vm` for the TODO-5295 shadow, for both
-      `soa<Particle>` and `SoaVector<Particle>` receivers.
-    - Same for `get`/`get_ref`/`ref` shadows.
-    - The `TODO-5307` `[auto]` test case validates and runs, returning
-      51.
-    - A focused compile-run test pins each fixed form.
-  - stop_rule: do not change same-path shadow selection in semantics
-    (TODO-5295's fix); this is about the lowered value kind of an
-    already-correct call target only (its result type, in IR lowering
-    and in semantics' `[auto]` inference).
+    - The borrowed `return(ref_ref(pickBorrowed(location(values)), 0i32))`
+      repro exits 17 on `--emit=vm`, and ast-semantic names the shadow.
+    - A focused compile-run test pins it next to "vm runs borrowed
+      helper-return soa ref_ref same-path helper compatibility".
+  - stop_rule: if selecting the shadow here changes which target
+    existing `SoaVector` method-sugar (`.ref(...)`) tests pick, stop and
+    document the conflict instead of re-pinning those tests.
 
 - [ ] TODO-4800: Fix `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` variadic-pack elements failing to lower on vm with "missing lowered definition: /array/at"
   - owner: ai

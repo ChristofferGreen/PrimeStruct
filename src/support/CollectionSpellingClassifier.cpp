@@ -115,10 +115,12 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
   // shadow-blind in non-method shapes. The binding-initializer inference
   // consumer's reference behavior canonicalizes even when a same-path
   // shadow definition exists - the shadow's divergent signature is then
-  // surfaced by ordinary type checking rather than silently preferred
-  // (pinned by container_error_and_result_helpers.cpp:4093, "ref method
-  // fallback ignores retired same-path helper shadow for auto
-  // inference"). Method-shape shadow handling stays shadow-first: that is
+  // surfaced by ordinary type checking rather than silently preferred.
+  // The semantics validator's preferredCollectionHelperResolvedPath()
+  // no longer asks this classifier when a call is already spelled as an
+  // existing /soa/<helper> shadow (TODO-5307): such a call runs the
+  // shadow, so its result is typed by the shadow's declared return.
+  // Method-shape shadow handling stays shadow-first: that is
   // Mechanism B's visible-same-path escape (pinned by :4059).
   if (shape != CollectionCallShape::MethodCall &&
       startsWith(rooted, kBareSoaPrefix) &&

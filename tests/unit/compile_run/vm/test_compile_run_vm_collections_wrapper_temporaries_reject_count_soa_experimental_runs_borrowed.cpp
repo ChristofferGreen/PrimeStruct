@@ -565,6 +565,86 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
+namespace {
+
+// TODO-5307: a scalar-returning same-path /soa/<helper> shadow over a
+// public soa<T> receiver must be typed by its own declared return<int>,
+// not the canonical helper's element/Reference<T> result. `mainBody`
+// uses `values` and `idx`.
+std::string samePathSoaAccessShadowScalarSource(const std::string &helper,
+                                                const std::string &mainBody) {
+  const bool vectorIndex = helper == "ref_ref";
+  return std::string(R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa/)") + helper + "([soa<Particle>] values, [" +
+         (vectorIndex ? "vector<i32>" : "i32") + R"(] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  )" + (vectorIndex ? "[vector<i32>] idx{vector<i32>(0i32)}" : "[i32] idx{0i32}") +
+         R"(
+  [soa<Particle>] values{soa<Particle>()}
+  )" + mainBody + R"(
+}
+)";
+}
+
+void checkSamePathSoaAccessShadowScalarResult(const std::string &helper) {
+  const std::string call = helper + "(values, idx)";
+  const std::string directSource = samePathSoaAccessShadowScalarSource(
+      helper, "return(" + call + ")");
+  const std::string bindingSource = samePathSoaAccessShadowScalarSource(
+      helper,
+      "[i32] typed{" + call + "}\n  [auto] inferred{" + call +
+          "}\n  [i32] viaMethod{values." + helper +
+          "(idx)}\n  return(plus(typed, plus(inferred, viaMethod)))");
+  const std::string stem = "vm_soa_" + helper + "_same_path_scalar_shadow";
+  const std::string errPath =
+      (testScratchPath("") / ("primec_" + stem + "_err.txt")).string();
+
+  // Before TODO-5307 the direct return and typed-local forms failed at
+  // runtime with "unaligned indirect address in IR: 17" (the int result
+  // was copied as the canonical helper's Particle), and the [auto] local
+  // was rejected with "arithmetic operators require numeric operands".
+  const std::string directPath = writeTemp(stem + "_direct.prime", directSource);
+  CHECK(runCommand("./primec --emit=vm " + directPath + " --entry /main 2> " +
+                   errPath) == 17);
+  CHECK(readFile(errPath).empty());
+
+  const std::string bindingPath =
+      writeTemp(stem + "_bindings.prime", bindingSource);
+  CHECK(runCommand("./primec --emit=vm " + bindingPath + " --entry /main 2> " +
+                   errPath) == 51);
+  CHECK(readFile(errPath).empty());
+}
+
+} // namespace
+
+TEST_CASE("vm types same-path soa get shadow scalar results") {
+  checkSamePathSoaAccessShadowScalarResult("get");
+}
+
+TEST_CASE("vm types same-path soa get_ref shadow scalar results") {
+  checkSamePathSoaAccessShadowScalarResult("get_ref");
+}
+
+TEST_CASE("vm types same-path soa ref shadow scalar results") {
+  checkSamePathSoaAccessShadowScalarResult("ref");
+}
+
+TEST_CASE("vm types same-path soa ref_ref shadow scalar results") {
+  checkSamePathSoaAccessShadowScalarResult("ref_ref");
+}
+
 TEST_CASE("vm runs builtin helper-return soa get_ref via explicit rooted path") {
   const std::string source = R"(
 [struct reflect]

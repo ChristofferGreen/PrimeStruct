@@ -54029,3 +54029,107 @@ crashes) - see `docs/todo_finished.md`.
     passed. The one failure is the known load-dependent
     `spinning_cube_argument_validation_51_55` Timeout flake, which passed
     in isolation.
+
+- [x] TODO-5307: Same-path `/soa/<access>` shadow result wrongly dereferenced as a `Reference` on vm
+  - owner: ai
+  - created_at: 2026-09-23
+  - finished_at: 2026-09-24
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found while closing TODO-5295. A user same-path shadow of a
+    soa access helper that returns a scalar, e.g.
+    `[return<int>] /soa/ref_ref([soa<Particle>] values, [vector<i32>] index) { return(17i32) }`,
+    is now correctly selected for all call forms, but when its result
+    is returned directly (`return(ref_ref(values, idx))`) or bound to a
+    local first (`[i32] r{ref_ref(values, idx)} return(r)`), `--emit=vm`
+    fails at runtime with `VM error: unaligned indirect address in IR:
+    17` (exit 3) - the shadow's `int` result is dereferenced as if it
+    were the canonical helper's `Reference<T>`. Same for `get`,
+    `get_ref`, and `ref` shadows, and for `SoaVector<Particle>`
+    receivers (that variant predates TODO-5295's fix). Using the result
+    inside `plus(...)` works (TODO-5295's repro returns 51).
+    Related shape at the semantics stage: binding the result to an
+    `[auto]` local (`[auto] direct{ref_ref(values, idx)}`) infers the
+    canonical `Reference<T>` type, so a later `plus(direct, ...)` is
+    rejected with `arithmetic operators require numeric operands`
+    (pinned in
+    `test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp`,
+    "semantic product keeps builtin soa ref_ref targets on same-path
+    helpers", marked `TODO-5307`).
+  - implementation_notes: the call target is right after semantics
+    (`/soa/ref_ref`), so look at IR lowering's return/binding
+    value-kind inference for calls whose helper name matches a soa
+    access helper (`get`/`get_ref`/`ref`/`ref_ref`); it likely infers
+    the canonical helper's reference return instead of the resolved
+    shadow definition's declared `return<int>`. Compare with how the
+    `plus(...)` argument path types the same call. For the `[auto]`
+    shape, check semantics' binding-type inference for the same call
+    (it likely reads the canonical helper's return type too).
+  - acceptance:
+    - `return(ref_ref(values, idx))` and the local-binding form both
+      exit 17 on `--emit=vm` for the TODO-5295 shadow, for both
+      `soa<Particle>` and `SoaVector<Particle>` receivers.
+    - Same for `get`/`get_ref`/`ref` shadows.
+    - The `TODO-5307` `[auto]` test case validates and runs, returning
+      51.
+    - A focused compile-run test pins each fixed form.
+  - stop_rule: do not change same-path shadow selection in semantics
+    (TODO-5295's fix); this is about the lowered value kind of an
+    already-correct call target only (its result type, in IR lowering
+    and in semantics' `[auto]` inference).
+  - resolution: fixed. Root cause was in semantics, not IR lowering.
+    Selection was already right (the AST call keeps the shadow name
+    `/soa/<helper>`, so lowering runs the shadow), but the semantic
+    product typed the call off the canonical helper: its `query_facts`
+    said `resolved_path="/std/collections/soa/ref_ref"`,
+    `query_type_text="Particle"`. `preferredCollectionHelperResolvedPath`
+    (`src/semantics/SemanticsValidatorBuildInitializerInference.cpp`)
+    asks the shared spelling classifier, which canonicalizes bare
+    `/soa/` spellings shadow-blind in non-method shapes. That answer
+    drives `[auto]` binding inference (hence the `plus(...)` rejection)
+    and the query fact that IR lowering's
+    `resolveSemanticExprStructPath` trusts. The lowerer then treated the
+    `int` 17 as a `Particle` struct pointer and copied slots from it in
+    `return(...)` and local-binding positions ("unaligned indirect
+    address in IR: 17"). Argument positions (`plus(...)`, a plain
+    `[i32]` parameter) never consult the struct path, which is why they
+    worked. Fix: `preferredCollectionHelperResolvedPath` returns no
+    canonical preference when the call is already spelled as an existing
+    user `/soa/<helper>` definition, so callers fall back to
+    `resolveCalleePath` and read the shadow's declared return. The
+    classifier itself is unchanged, since template monomorph uses it for
+    selection (stop_rule). A first lowering-side guard in
+    `IrLowererUninitializedStructInference.cpp` had no effect (the
+    semantic fact wins first) and was reverted.
+    Verification, `--emit=vm` with a pre/post build over 45 probe
+    programs: all 12 `soa<Particle>` cases (`get`/`get_ref`/`ref`/
+    `ref_ref` x direct return / `[i32]` local / `[auto]` local) went
+    from exit 3 (unaligned indirect) or 2 (arithmetic operands) to 17.
+    Explicit `/soa/ref_ref(values, idx)` and method-sugar
+    `values.ref_ref(idx)` returns also went from 3 to 17. The other 31
+    probes kept identical exit codes. `SoaVector<Particle>`: the
+    "predates TODO-5295" claim did not reproduce. By-value `get`/`ref`
+    shadows and borrowed `pickBorrowed(location(values))` `get_ref`/
+    `ref_ref` shadows already returned 17 in every shape except borrowed
+    `return(ref_ref(...))`. That one fails with "reference escapes via
+    return" because semantics selects the canonical helper there (a
+    selection issue, out of scope per stop_rule), filed as TODO-5308.
+    Tests: 4 new compile-run cases "vm types same-path soa <helper>
+    shadow scalar results" pin, per helper, the direct return (17) and
+    `[i32]` + `[auto]` + method-sugar locals (51). The `TODO-5307`
+    semantics pin now validates (its fixture runs to 51). "ref method
+    fallback ignores retired same-path helper shadow for auto inference"
+    pinned the same bug: its call runs the `/soa/ref` shadow (exit 7)
+    while the `[auto]` local was typed off the canonical helper. It was
+    renamed "ref method fallback types same-path helper shadow result
+    for auto inference" and re-pinned to validate. The classifier
+    comment and the `docs/CompatPathResolutionConsolidation.md` Step 2b
+    note record this narrowing. Canonical unshadowed soa access helpers
+    are unaffected: the guard only fires when a `/soa/<helper>`
+    definition exists.
+    Suites: soa semantics slice 273/273; full
+    `./scripts/compile.sh --release` gate 1898/1899 passed. The one
+    failure is the known load-dependent
+    `spinning_cube_argument_validation_51_55` Timeout flake, which
+    passed in isolation (29.8s).

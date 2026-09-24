@@ -414,7 +414,12 @@ returns the classifier's answer. Two rule refinements were discovered by
 the gates and pinned: shadow-blind public-SOA canonicalization in
 non-method shapes (the retired-shadow auto-inference test), and identity
 canonicalization for already-canonical `/std/collections` spellings (the
-vector count auto-inference test).
+vector count auto-inference test). TODO-5307 later narrowed the first
+refinement: `preferredCollectionHelperResolvedPath` skips the classifier
+when the call is already spelled as an existing user `/soa/<helper>`
+shadow. That call runs the shadow, so its result (for `[auto]` locals,
+query facts, and lowering) is typed by the shadow's declared return. The
+retired-shadow auto-inference test was re-pinned to validate.
 
 Step 2c (commits `05a4769`, `a0e95fa`): all six duplicate removed-helper
 predicate implementations (four hardcoded copies, two registry-membership

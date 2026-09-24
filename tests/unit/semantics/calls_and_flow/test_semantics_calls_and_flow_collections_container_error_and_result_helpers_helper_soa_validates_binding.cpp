@@ -547,7 +547,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref method fallback ignores retired same-path helper shadow for auto inference") {
+TEST_CASE("ref method fallback types same-path helper shadow result for auto inference") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -578,9 +578,15 @@ main() {
 }
 )";
   std::string error;
+  // TODO-5307 (RESOLVED): the call is rewritten onto the user's /soa/ref
+  // shadow (it runs to 7 on --emit=vm), so the [auto] local now takes the
+  // shadow's declared int instead of the canonical helper's element type.
+  // This used to be pinned as a "return type mismatch: expected i32"
+  // rejection that typed the local off a helper the call never ran.
+  const bool ok = validateProgram(source, "/main", error);
   INFO(error);
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
+  CHECK(ok);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ref call fallback auto inference validates internal metadata validation through struct helper return receivers") {
