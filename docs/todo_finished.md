@@ -54133,3 +54133,89 @@ crashes) - see `docs/todo_finished.md`.
     failure is the known load-dependent
     `spinning_cube_argument_validation_51_55` Timeout flake, which
     passed in isolation (29.8s).
+
+- [x] TODO-5308: Borrowed `SoaVector` `return(ref_ref(...))` over a same-path shadow rejected as a reference escape
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-09-24
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-vm-collections
+  - depends_on: (none)
+  - scope: found while closing TODO-5307. With
+    `[return<int>] /soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) { return(17i32) }`
+    and `pickBorrowed([Reference<SoaVector<Particle>>] values)` returning
+    its argument, `return(ref_ref(pickBorrowed(location(values)), 0i32))`
+    in `main` fails semantics with `reference escapes via return` (exit
+    2). The `[i32]` local, `[auto]` local and `plus(...)` forms of the
+    same call all run to 17 on `--emit=vm`, and the same shape with a
+    `/soa/get_ref` shadow returns 17 directly. `--dump-stage
+    ast-semantic` shows the call rewritten to the canonical
+    `/std/collections/soa/ref_ref__t...` (not the shadow), while vm
+    execution runs the shadow, so semantics and lowering disagree on
+    the selected target.
+  - implementation_notes: start from the ast-semantic target for the
+    bare call (template monomorph's same-path preference in
+    `src/semantics/TemplateMonomorphExpressionRewrite.cpp`, which
+    TODO-5295 widened for `soa<T>` receivers) and compare with how the
+    `get_ref` twin selects `/soa/get_ref`. The escape diagnostic comes
+    from `isStandaloneSoaRefCall` in
+    `src/semantics/SemanticsValidatorStatementReturns.cpp`, which is
+    correct for the canonical target it is given. Also observed (may be
+    intended, confirm first): by-value `/soa/get_ref`/`/soa/ref_ref`
+    shadows over a local `SoaVector<Particle>` are never selected (vm
+    lowering error on `/get_ref`), and `ref_ref(location(values), 0i32)`
+    with a `Reference<SoaVector<Particle>>` shadow fails with `unknown
+    method: /std/collections/soa/ref_ref`.
+  - acceptance:
+    - The borrowed `return(ref_ref(pickBorrowed(location(values)), 0i32))`
+      repro exits 17 on `--emit=vm`, and ast-semantic names the shadow.
+    - A focused compile-run test pins it next to "vm runs borrowed
+      helper-return soa ref_ref same-path helper compatibility".
+  - stop_rule: if selecting the shadow here changes which target
+    existing `SoaVector` method-sugar (`.ref(...)`) tests pick, stop and
+    document the conflict instead of re-pinning those tests.
+  - resolution: fixed. Root cause was in template monomorph's same-path
+    selection. With `import /std/collections/soa/*` the bare call
+    arrives at monomorph already resolved (by implicit template
+    inference) to the public `/std/collections/soa/ref_ref` spelling
+    with one inferred template arg. `preferCanonicalStdlibCollectionHelperPath`
+    returns early at its "exact spelled path has a definition" gate,
+    and the fallback `preferredConcreteSamePathSoaHelperPath`
+    (`src/semantics/TemplateMonomorphExpressionRewrite.cpp`) only took
+    helper names from the compatibility `/std/collections/soa_vector/`
+    prefix, so the public spelling never reached the `/soa/<helper>`
+    shadow. Every position (not just `return(...)`) kept the canonical
+    target in ast-semantic; IR lowering ran the shadow anyway, so only
+    the direct return failed, via the (correct) escape check on the
+    canonical `Reference`-returning helper. The `get_ref` twin had the
+    same wrong ast-semantic target and only passed because canonical
+    `get_ref` returns a value. Fix: that fallback also takes helper
+    names from the public `/std/collections/soa/` prefix; its existing
+    shadow-exists / non-template / soa-receiver gates are unchanged.
+    Verification (pre/post `--emit=vm`): borrowed
+    `return(ref_ref(pickBorrowed(location(values)), 0i32))` 2 -> 17,
+    ast-semantic now `return /soa/ref_ref(...)` (and `/soa/get_ref`
+    for the twin); `[i32]`/`[auto]`/`plus(...)`/`get_ref` forms stay
+    17. Both "may be intended" observations were the same root cause
+    and are fixed too: by-value `/soa/get_ref`/`/soa/ref_ref` shadows
+    over a local `SoaVector<Particle>` went from the vm lowering error
+    to 17, and `ref_ref(location(values), 0i32)` went from `unknown
+    method: /std/collections/soa/ref_ref` to 17. stop_rule check: the
+    "vm runs borrowed helper-return soa ref_ref same-path helper
+    compatibility" `.ref(0i32)` method sugar already ran the shadow
+    (38); its ast-semantic target moved from the canonical
+    `ref_ref__t...` to `/soa/ref_ref`, matching what it runs, and the
+    test is unchanged and green, so no method-sugar pin changed. One
+    semantics pin captured this bug: "ref call fallback direct returns
+    reject internal metadata validation through struct helper return
+    receivers" (bare `ref(holder.cloneValues(), 0i32)` with a `/soa/ref`
+    shadow, pinned to "reference escapes via return" as a stale
+    "residual TODO-4731 gap"). It now validates and runs to 7, and was
+    renamed "... select same-path helper shadow ..." and re-pinned.
+    New compile-run test "vm returns borrowed helper-return soa ref_ref
+    same-path shadow directly" pins exit 17 plus the ast-semantic
+    target. Full `./scripts/compile.sh --release`
+    gate: 1898/1899 passed; the one failure is the known
+    `spinning_cube_argument_validation_51_55` Timeout flake (30s limit),
+    which runs green directly in 34.4s post-fix vs 34.7s with a pre-fix
+    `primec`, so it is unrelated to this change.

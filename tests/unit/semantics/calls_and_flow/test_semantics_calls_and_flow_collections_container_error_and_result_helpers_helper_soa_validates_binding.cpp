@@ -625,7 +625,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref call fallback direct returns reject internal metadata validation through struct helper return receivers") {
+TEST_CASE("ref call fallback direct returns select same-path helper shadow through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -655,10 +655,15 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  // TODO-5308 (RESOLVED): the bare ref call arrives at monomorph already
+  // resolved to the public /std/collections/soa/ref spelling and now still
+  // selects the user's scalar /soa/ref shadow (runs to 7 on --emit=vm).
+  // This used to be pinned as a "reference escapes via return" rejection
+  // against the canonical Reference-returning helper the call never ran.
+  const bool ok = validateProgram(source, "/main", error);
   INFO(error);
-  // Residual TODO-4731 gap: bare ref with a user same-path shadow on call receivers routes to the stdlib wrapper instead of the shadow.
-  CHECK(error.find("reference escapes via return") != std::string::npos);
+  CHECK(ok);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ref_ref keeps same-path helper shadow through borrowed soa vector returns") {

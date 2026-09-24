@@ -2968,6 +2968,12 @@ bool rewriteExpr(Expr &expr,
       std::string helperName =
           extractHelperName(templateMonomorphCompatibilitySoaHelperPrefix());
       if (helperName.empty()) {
+        // TODO-5308: with `import /std/collections/soa/*` a bare helper call
+        // arrives already resolved to the public /std/collections/soa/<helper>
+        // spelling, which must reach the same-path /soa/<helper> shadow too.
+        helperName = extractHelperName(templateMonomorphPublicSoaHelperPrefix());
+      }
+      if (helperName.empty()) {
         return std::string{};
       }
       if (helperName != "count" && helperName != "count_ref" &&

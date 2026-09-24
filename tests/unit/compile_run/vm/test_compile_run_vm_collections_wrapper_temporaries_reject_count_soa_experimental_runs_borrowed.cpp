@@ -526,6 +526,60 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
+TEST_CASE("vm returns borrowed helper-return soa ref_ref same-path shadow directly") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[return<int>]
+/soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  return(ref_ref(pickBorrowed(location(values)), 0i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_borrowed_return_ref_ref_same_path_direct.prime",
+                source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_vm_experimental_soa_borrowed_return_ref_ref_same_path_direct_err.txt")
+          .string();
+  const std::string astPath =
+      (testScratchPath("") /
+       "primec_vm_experimental_soa_borrowed_return_ref_ref_same_path_direct_ast.txt")
+          .string();
+  // TODO-5308: the bare call arrives at monomorph already resolved to the
+  // public /std/collections/soa/ref_ref spelling; it must still select the
+  // scalar /soa/ref_ref shadow, not the canonical Reference-returning helper
+  // (which the return(...) escape check rejected).
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 17);
+  CHECK(readFile(errPath).empty());
+  const std::string dumpCmd = "./primec " + quoteShellArg(srcPath) +
+                              " --entry /main --dump-stage ast-semantic > " +
+                              quoteShellArg(astPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(astPath);
+  CHECK(ast.find("return /soa/ref_ref(/pickBorrowed(location(values)), 0)") !=
+        std::string::npos);
+}
+
 TEST_CASE("vm runs builtin helper-return soa ref_ref same-path helper") {
   const std::string source = R"(
 import /std/collections/*
