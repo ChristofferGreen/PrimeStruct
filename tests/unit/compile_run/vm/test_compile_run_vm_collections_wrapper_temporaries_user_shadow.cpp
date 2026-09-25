@@ -467,4 +467,48 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm user struct insert method statement instead of path-space insert") {
+  // A user struct method statement named like the path-space builtin
+  // (`values.insert(key, value)`) must lower as that method, not as the
+  // two-argument path-space `insert(path, value)` builtin (TODO-5310).
+  // insert(1, 2) -> total 3; count() -> 103.
+  const std::string source = R"(
+namespace demo {
+  [public struct]
+  Ledger() {
+    [public i32 mut] total{0i32}
+
+    [return<i32>]
+    count() {
+      return(plus(this.total, 100i32))
+    }
+
+    [mut]
+    insert([i32] key, [i32] value) {
+      this.total = plus(this.total, plus(key, value))
+    }
+  }
+}
+
+import /demo/*
+
+[return<int>]
+main() {
+  [Ledger mut] values{Ledger{}}
+  values.insert(1i32, 2i32)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_struct_insert_method_statement.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 103);
+
+  const std::string nativePath =
+      (testScratchPath("") / "primec_user_struct_insert_method_statement").string();
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 103);
+}
+
 TEST_SUITE_END();

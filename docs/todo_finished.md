@@ -54424,3 +54424,79 @@ crashes) - see `docs/todo_finished.md`.
     1898/1899 passed; the one failure is the known
     `spinning_cube_argument_validation_51_55` Timeout flake, which
     passed in isolation (25.5s).
+
+**Todo Completion (September 24, 2026) — TODO-5310**
+- [x] TODO-5310: Retire the legacy bare-`Map` builtin key/value identity
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-09-24
+  - phase: Prerequisite for TODO-4751
+  - parallel_track: hidden-test-failures-imports-operations
+  - depends_on: (none)
+  - scope: the retired `experimental_map` module's `Map<K, V>` storage
+    identity survives only as bare-spelling special cases: bare `Map`
+    satisfies `isExperimentalCollectionBackingTypeName("map", "Map", ...)`
+    (`src/semantics/StdlibCollectionSurfaceHelpers.h`),
+    `normalizeCollectionReceiverTypeName` maps bare `Map`/`Map__*` to
+    `map` (`TemplateMonomorphCollectionCompatibilityPaths.cpp`), the IR
+    lowerer's `isExperimentalCollectionTypeName` accepts raw `Map`
+    (`IrLowererSetupTypeCollectionHelpers.cpp`), and
+    `SemanticsValidatorBuildInitializerInference*.cpp` still *infers*
+    `bindingOut.typeName = "Map"` for canonical `map(...)` constructor
+    results. Remove these so bare `Map` resolves like any other struct
+    name (via imports/namespace) while `map<K, V>` keeps resolving to
+    `MapValue<K, V>`.
+  - implementation_notes: ~40 call sites across `src/semantics/*` (grep
+    `"Map"` and `isExperimentalCollectionBackingTypeName("map", "Map"`)
+    plus `src/emitter/EmitterHelpersTypes.cpp` and
+    `src/ir_lowerer/*`. Start by switching the inference sites that
+    produce `"Map"` to the canonical `MapValue`/`map` spelling, then drop
+    the bare-name matches; the experimental-path (`experimental_map/Map`)
+    matches are dead once nothing produces them. Keep
+    `scripts/check_map_*` audits green (they forbid new map spellings
+    outside `collection-surface-audit: exempt` files).
+  - acceptance:
+    - a user-defined struct named `Map<K, V>` (in a user namespace, with
+      its own `count()`/`insert()` methods) dispatches method sugar and
+      `values[key]` to its own methods instead of
+      `/std/collections/map/*` (new positive test), while all existing
+      `map<K, V>` semantics/compile-run tests keep their current results.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if more than a handful of pinned `map<K, V>` diagnostics
+    change, stop and re-scope into per-subsystem leaves (semantics
+    inference, monomorph receiver classification, IR lowerer) instead of
+    re-pinning them wholesale.
+  - resolution_2026-09-24: closed by split under its own stop_rule, not
+    implemented. Baseline gate: 1898/1899 (only the known
+    `spinning_cube_argument_validation_51_55` Timeout). The full
+    retirement was prototyped: inference sites switched to `map`, bare
+    `Map` dropped from the semantics/monomorph/IR-lowerer/IR-printer/
+    emitter classifiers, plus prototype fixes for user-struct `values[key]`
+    dispatch and path-space `insert` collisions. It made a namespaced user
+    `Map<K, V>` with its own `count`/`insert`/`at` run through its own
+    methods on vm/native/exe (exit 111), and the `scripts/check_map_*`
+    audits passed. It also regressed 17 CTest shards (~30 pinned
+    `map<K, V>`/map-conformance cases), far beyond the stop_rule's "a
+    handful". Attribution by partial reverts: the user-struct fixes
+    alone -> 0 of the 17 fail. The inference switch alone -> 4 shards
+    / 7 cases (receiver/return inference still keys on `Map`). The
+    classifier removal accounts for the rest (mostly map-conformance
+    sources that spell `Map<K, V>` directly). The work is split into
+    TODO-5312 (semantics inference), TODO-5313 (semantics/monomorph
+    classifiers) and TODO-5314 (IR lowerer/printer/emitter), each with its
+    own measured scope. Two general user-struct gaps found along the
+    way are TODO-5315 (`values[key]` on a user struct with its own `at`
+    is rejected; the prototype miscompiled in `return`/binding positions,
+    so it was not landed) and TODO-5316 (calling the same user struct
+    method twice fails VM/native lowering with "does not know
+    identifier: this"; reproduced on the unmodified baseline). Landed
+    here: only the self-contained fix that a user struct method
+    statement named like a path-space builtin (`values.insert(k, v)`)
+    now lowers as that method instead of failing with "insert requires
+    exactly 2 arguments". `IrLowererLowerStatementsBindings.h` now
+    resolves method-call statements through `resolveMethodCallDefinition`
+    before the path-space builtin check. It is pinned by "runs vm user
+    struct insert method statement instead of path-space insert"
+    (vm/native exit 103) in
+    `test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp`.
+    TODO-4751 stays `blocked`, now on TODO-5314.

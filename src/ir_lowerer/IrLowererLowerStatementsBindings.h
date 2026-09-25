@@ -1249,7 +1249,19 @@
         [&](const Expr &argExpr, const LocalMap &valueLocals, const ir_lowerer::PrintBuiltin &builtin) {
           return emitPrintArg(argExpr, valueLocals, builtin);
         },
-        [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+        [&](const Expr &callExpr) -> const Definition * {
+          if (callExpr.isMethodCall) {
+            // A user struct method sharing a path-space builtin name
+            // (`values.insert(key, value)`) is a definition call, not the
+            // builtin; probe without leaking a resolution error.
+            const std::string priorError = error;
+            const Definition *methodDefinition =
+                resolveMethodCallDefinition(callExpr, localsIn);
+            error = priorError;
+            return methodDefinition;
+          }
+          return resolveDefinitionCall(callExpr);
+        },
         [&](const Expr &argExpr, const LocalMap &valueLocals) { return emitExpr(argExpr, valueLocals); },
         function.instructions,
         error);
