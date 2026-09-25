@@ -54877,3 +54877,119 @@ crashes) - see `docs/todo_finished.md`.
     `test_compile_run_text_filters_dumps.cpp` stay accurate for
     (4)-(7). The no-import to_aos pin is now covered by TODO-5318, and
     the two `TODO-4756 (extends)` to_aos comments by TODO-5320.
+
+- [x] TODO-5317: Fix `.push`/`.reserve` sugar on `[auto]` locals built from `soa<T>(...)`
+  - owner: ai
+  - created_at: 2026-09-25
+  - finished_at: 2026-09-25
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: split from TODO-4812 finding (1). With the documented imports
+    (`import /std/collections/*` + `import /std/collections/soa/*`),
+    `[auto mut] values{soa<Particle>()}` (also `soa<Particle>(Particle(5i32))`)
+    followed by `values.push(Particle(3i32))` or `values.reserve(4i32)`
+    rejects with `unknown call target: push` / `unknown call target:
+    reserve`, and bare `push(values, ...)` resolves to
+    `/std/collections/vector/push` instead. On the same local
+    `values.count()` works, and the ast-semantic dump already types the
+    initializer as `/std/collections/soa/soa__t<hash>()`. Everything else
+    works: the fully-qualified constructor
+    `[auto mut] values{/std/collections/soa/soa<Particle>()}` +
+    `values.push(...)`/`values.reserve(...)`, an explicit
+    `[soa<Particle> mut]` local, and an explicit
+    `/std/collections/soa/push(values, ...)` call. So the short `soa<T>(...)`
+    constructor spelling does not seed the `auto` binding's receiver type
+    for the mutator (push/reserve) method-target path, while the read
+    (count/get) path copes.
+  - implementation_notes: compare how `count` vs `push` method targets are
+    picked for an `auto` binding in
+    `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`
+    (`resolveMethodCallPath`) and the initializer inference in
+    `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`
+    (`preferredSoaHelperTargetForCollectionType`); the fully-qualified
+    constructor spelling working is the key contrast. Add the positive
+    compile-run case plus the explicit-`soa<Particle>` sibling as a
+    guard.
+  - acceptance:
+    - `[auto mut] values{soa<Particle>()}` + `values.push(Particle(3i32))`
+      + `values.push(Particle(4i32))` + `return(values.count())` exits 2 on
+      vm and native; the same with `values.reserve(4i32)` compiles and
+      runs.
+    - bare `push(values, Particle(3i32))` on that local resolves to the soa
+      helper, not `/std/collections/vector/push`.
+    - one new compile-run case pins it; `./scripts/compile.sh --release`
+      back at baseline.
+  - stop_rule: if the fix requires reordering `auto` initializer inference
+    relative to method-target resolution for all collections (not just the
+    soa constructor spelling), stop and split that pass-order change out
+    with evidence.
+  - resolution: root cause was the pre-monomorph
+    `experimental-soa-same-path-helper-methods` pass
+    (`rewriteExperimentalSoaSamePathHelperMethods`,
+    `src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp`).
+    It desugars `values.push(...)`/`values.count()` into
+    `/std/collections/soa/<helper>(values, ...)`, but only for receivers
+    whose binding it recognizes. Its binding source,
+    `extractParsedOrExperimentalSoaBindingInfo`
+    (`SemanticsValidateBuiltinSoaMetadata.cpp`), turns an `auto` local
+    into `SoaVector<T>` only for the fully-qualified
+    `/std/collections/soa/soa|single|from_aos` constructor paths. The
+    short `soa<T>(...)` spelling (path `/soa`) stayed `auto`, so its
+    method calls survived to the validator.
+    `resolveExprVectorHelperCall` (`SemanticsValidatorExprVectorHelpers.cpp`)
+    then classified the concrete `SoaVector__t<hash>` struct (it has the
+    `Collection` trait) as the vector family and rejected push/reserve
+    as vector mutator sugar with `unknown call target: push|reserve`.
+    `count`/`get` survived through a separate validator method path.
+    Contrary to the scope, bare `push(values, ...)` already resolved to
+    `/std/collections/soa/push` (bridge choice, direct-call target and
+    runtime result all agreed), so nothing changed there. It is now
+    pinned. Fix: a file-local `extractSamePathSoaMethodReceiverBinding`
+    in that pass types an `auto` local whose initializer is the short
+    `soa<T>(...)` call as a public `soa<T>` binding, exactly like the
+    already-working explicit `[soa<T>]` sibling. It applies only when the
+    public soa surface is visible (the pass's existing
+    `publicSoaSurfaceVisible` import/merge gate) and no user definition
+    named `soa` shadows the short constructor. No pass reordering was
+    needed, so the stop_rule was not hit. With the fix the ast-semantic
+    dump for the short spelling matches the fully-qualified spelling
+    exactly. Checked on vm and native: push+push+count exits 2,
+    reserve+push+count exits 1, `soa<Particle>(Particle(5i32))`+push
+    exits 2, and a mixed reserve/push/bare-push/`get(1).x` program
+    exits 12. The no-import form (`unknown method: /auto/push`) and a
+    user-shadowed `soa<T>()` returning a struct (exits 7) are unchanged
+    from before. New case "vm public soa auto short constructor mutator
+    methods use wrappers" in
+    `tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_helper_public_runs.cpp`
+    covers the auto push/reserve program on vm and native (exit 2, empty
+    stderr), bare push on a `soa<Particle>(Particle(5i32))` auto local
+    (exit 2, ast-semantic dump has `/std/collections/soa/push__t` and no
+    `/std/collections/vector/push`), and the explicit `[soa<Particle>]`
+    sibling guard (exit 2). The vm checks also require an empty stderr,
+    because primec's own diagnostic exit code is 2. The case fails
+    without the fix and runs in about 3.7s. Follow-up found: soa method
+    sugar inside nested `then(){}`/`do(){}` bodies still rejects for all
+    constructor spellings, which predates this task. Split into TODO-5321.
+    Re-pinned: "3.Surface soa_ecs example is pinned to its current
+    known-broken compile state"
+    (`test_compile_run_examples_language_levels.cpp`, shard
+    `spinning_cube_argument_validation_51_55`) had pinned
+    `unknown call target: push` for `examples/3.Surface/soa_ecs.prime`
+    (`[auto mut] particles{soa</Particle>()}`). With the fix that example
+    gets past push/reserve and now fails in lowering on
+    `particles.get(i)` inside its `while` body (`semantic-product
+    method-call target missing lowered definition:
+    /std/collections/soa/get`), the same as the fully-qualified and
+    explicit `[soa</Particle>]` spellings. That is the TODO-5321
+    nested-body gap: a copy with the loop flattened exits 10. The pin
+    now asserts the new failure and the absence of `unknown call target:
+    push`. TODO-5321's acceptance includes making the example run. In the
+    first post-fix gate this shard showed as a ctest `Timeout` (it takes
+    about 19s alone against a 30s limit under load), which masked the
+    stale pin until a focused rerun.
+    Release gate (`./scripts/compile.sh --release`): before the change
+    1898/1899 (only the known
+    `spinning_cube_argument_validation_51_55` Timeout flake), after it
+    1898/1899 with the same single Timeout; a focused rerun of that shard
+    passes (19.0s).

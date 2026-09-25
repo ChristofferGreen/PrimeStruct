@@ -36,6 +36,64 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     bool publicSoaSurfaceVisible,
     const std::unordered_set<std::string> &overloadedCanonicalHelpers);
 
+namespace {
+
+// TODO-5317: `[auto] values{soa<T>(...)}` spells the public soa constructor
+// by its short imported name, which extractParsedOrExperimentalSoaBindingInfo
+// (keyed on the fully-qualified /std/collections/soa/soa path) leaves as a
+// plain `auto` binding. Treat it exactly like the explicit `[soa<T>]` local
+// it constructs, so `values.push(...)`/`values.reserve(...)` desugar to the
+// public soa helpers the same way the fully-qualified constructor spelling
+// does. Only applies when the public soa surface is visible and no
+// user-declared `soa` definition shadows the short constructor name.
+std::optional<semantics::BindingInfo> extractSamePathSoaMethodReceiverBinding(
+    const Expr &expr,
+    const std::unordered_set<std::string> &structPaths,
+    bool shortSoaConstructorVisible) {
+  auto binding = extractParsedOrExperimentalSoaBindingInfo(expr, &structPaths);
+  if (!binding.has_value() || !shortSoaConstructorVisible || !expr.isBinding ||
+      expr.args.size() != 1 ||
+      semantics::normalizeBindingTypeName(binding->typeName) != "auto") {
+    return binding;
+  }
+  const Expr &initializer = expr.args.front();
+  if (initializer.kind != Expr::Kind::Call || initializer.isBinding ||
+      initializer.isMethodCall || initializer.isFieldAccess ||
+      initializer.templateArgs.size() != 1 || initializer.name != "soa") {
+    return binding;
+  }
+  semantics::BindingInfo inferred = *binding;
+  inferred.typeName = "soa";
+  inferred.typeTemplateArg = initializer.templateArgs.front();
+  return inferred;
+}
+
+bool hasUserSoaConstructorShadow(const Program &program) {
+  for (const Definition &def : program.definitions) {
+    std::string path = def.fullPath;
+    if (path.rfind("/std/", 0) == 0) {
+      continue;
+    }
+    const size_t templateStart = path.find('<');
+    if (templateStart != std::string::npos) {
+      path.erase(templateStart);
+    }
+    const size_t leafStart = path.find_last_of('/');
+    std::string leaf =
+        path.substr(leafStart == std::string::npos ? 0 : leafStart + 1);
+    const size_t generatedSuffix = leaf.find("__");
+    if (generatedSuffix != std::string::npos) {
+      leaf.erase(generatedSuffix);
+    }
+    if (leaf == "soa") {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
+
 void rewriteExperimentalSoaSamePathHelperMethodStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
@@ -44,6 +102,7 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers,
     bool publicSoaSurfaceVisible,
+    bool shortSoaConstructorVisible,
     const std::unordered_set<std::string> &overloadedCanonicalHelpers) {
   for (Expr &stmt : statements) {
     rewriteExperimentalSoaSamePathHelperMethodExpr(
@@ -65,10 +124,12 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
           definitionNamespace,
           visibleSoaHelpers,
           publicSoaSurfaceVisible,
+          shortSoaConstructorVisible,
           overloadedCanonicalHelpers);
     }
     if (stmt.isBinding) {
-      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
+      if (auto binding = extractSamePathSoaMethodReceiverBinding(
+              stmt, structPaths, shortSoaConstructorVisible);
           binding.has_value()) {
         bindings[stmt.name] = *binding;
       }
@@ -230,6 +291,8 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
       }
     }
   }
+  const bool shortSoaConstructorVisible =
+      publicSoaSurfaceVisible && !hasUserSoaConstructorShadow(program);
   // Helpers whose canonical /std/collections/soa/<helper> path carries
   // more than one definition (the stdlib template plus user
   // type-differentiated shadows) - see the skip in
@@ -284,11 +347,13 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
         definitionNamespace,
         visibleSoaHelpers,
         publicSoaSurfaceVisible,
+        shortSoaConstructorVisible,
         overloadedCanonicalHelpers);
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
-        if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
+        if (auto binding = extractSamePathSoaMethodReceiverBinding(
+                stmt, structPaths, shortSoaConstructorVisible);
             binding.has_value()) {
           returnBindings[stmt.name] = *binding;
         }

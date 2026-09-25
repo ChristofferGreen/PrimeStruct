@@ -110,14 +110,17 @@ TEST_CASE("3.Surface raytracer example compiles and renders a PPM frame via VM")
 
 TEST_CASE("3.Surface soa_ecs example is pinned to its current known-broken compile state") {
   // soa_ecs.prime declares `particles` with `[auto mut]` bound to
-  // `soa</Particle>()`. Method-target resolution on that auto-inferred
-  // SoaVector</Particle> receiver currently fails semantic analysis with
-  // "unknown call target: push" for `particles.push(...)` -- a tracked
-  // SoA/auto-inference method-resolution gap (see docs/todo.md's SoA
-  // same-path user shadow / receiver-precedence entries), not something
-  // this test coverage leaf is meant to fix. This test pins the current
-  // failure so a fix (or further regression) in that resolution logic is
-  // caught here instead of silently drifting.
+  // `soa</Particle>()`. TODO-5317 fixed the top-level
+  // `particles.push(...)`/`particles.reserve(...)` method sugar on that
+  // short-constructor auto local (it used to fail semantics with
+  // "unknown call target: push"). The example still fails, now in
+  // lowering: `particles.get(i)` inside the `while(...) { ... }` body is
+  // not desugared to the soa helper (soa method sugar in nested bodies,
+  // TODO-5321), and every constructor spelling fails the same way. A
+  // flattened copy without the loop runs and exits 10. This test pins the
+  // current failure so a TODO-5321 fix (or a regression) is caught here
+  // instead of silently drifting; move the example into the runnable
+  // table (exit 10) once TODO-5321 lands.
   const std::filesystem::path examplePath = resolveExamplePath("3.Surface/soa_ecs.prime");
   REQUIRE(std::filesystem::exists(examplePath));
   const std::string errPath = (testScratchPath("") / "primec_soa_ecs_known_failure.err.txt").string();
@@ -126,5 +129,7 @@ TEST_CASE("3.Surface soa_ecs example is pinned to its current known-broken compi
                                   " --entry /main > " + quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   const std::string errorText = readFile(errPath);
-  CHECK(errorText.find("unknown call target: push") != std::string::npos);
+  CHECK(errorText.find("unknown call target: push") == std::string::npos);
+  CHECK(errorText.find("semantic-product method-call target missing lowered definition: "
+                       "/std/collections/soa/get") != std::string::npos);
 }

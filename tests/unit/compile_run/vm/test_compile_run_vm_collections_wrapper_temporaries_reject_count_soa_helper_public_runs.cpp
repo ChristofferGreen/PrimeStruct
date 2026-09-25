@@ -378,6 +378,99 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
+TEST_CASE("vm public soa auto short constructor mutator methods use wrappers") {
+  // TODO-5317: `[auto] values{soa<T>(...)}` (short constructor spelling)
+  // must desugar `values.push(...)`/`values.reserve(...)` to the public soa
+  // helpers exactly like the fully-qualified constructor spelling and the
+  // explicit `[soa<T>]` local do, instead of rejecting with
+  // `unknown call target: push`/`reserve`.
+  const std::string autoSource = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{soa<Particle>()}
+  values.reserve(4i32)
+  values.push(Particle(3i32))
+  values.push(Particle(4i32))
+  return(values.count())
+}
+)";
+  const std::string autoSrcPath =
+      writeTemp("vm_public_soa_auto_short_ctor_mutator_methods.prime", autoSource);
+  // primec's own diagnostic exit code is also 2, so pin an empty stderr too.
+  const std::string autoErrPath =
+      (testScratchPath("") / "primec_public_soa_auto_short_ctor_mutator_methods_err.txt").string();
+  CHECK(runCommand("./primec --emit=vm " + autoSrcPath + " --entry /main 2> " + autoErrPath) == 2);
+  CHECK(readFile(autoErrPath).empty());
+  const std::string nativePath =
+      (testScratchPath("") / "primec_public_soa_auto_short_ctor_mutator_methods").string();
+  CHECK(runCommand("./primec --emit=native " + autoSrcPath + " -o " + nativePath +
+                   " --entry /main") == 0);
+  CHECK(runCommand(nativePath) == 2);
+
+  const std::string bareSource = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{soa<Particle>(Particle(5i32))}
+  push(values, Particle(3i32))
+  return(values.count())
+}
+)";
+  const std::string bareSrcPath =
+      writeTemp("vm_public_soa_auto_short_ctor_bare_push.prime", bareSource);
+  const std::string bareErrPath =
+      (testScratchPath("") / "primec_public_soa_auto_short_ctor_bare_push_err.txt").string();
+  CHECK(runCommand("./primec --emit=vm " + bareSrcPath + " --entry /main 2> " + bareErrPath) == 2);
+  CHECK(readFile(bareErrPath).empty());
+  const std::string dumpPath =
+      (testScratchPath("") / "primec_public_soa_auto_short_ctor_bare_push_dump.txt").string();
+  CHECK(runCommand("./primec --dump-stage=ast-semantic " + bareSrcPath +
+                   " --entry /main > " + dumpPath) == 0);
+  const std::string dump = readFile(dumpPath);
+  CHECK(dump.find("/std/collections/soa/push__t") != std::string::npos);
+  CHECK(dump.find("/std/collections/vector/push") == std::string::npos);
+
+  const std::string explicitSource = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa<Particle> mut] values{soa<Particle>()}
+  values.reserve(4i32)
+  values.push(Particle(3i32))
+  values.push(Particle(4i32))
+  return(values.count())
+}
+)";
+  const std::string explicitSrcPath =
+      writeTemp("vm_public_soa_explicit_short_ctor_mutator_methods.prime", explicitSource);
+  const std::string explicitErrPath =
+      (testScratchPath("") / "primec_public_soa_explicit_short_ctor_mutator_methods_err.txt").string();
+  CHECK(runCommand("./primec --emit=vm " + explicitSrcPath + " --entry /main 2> " + explicitErrPath) == 2);
+  CHECK(readFile(explicitErrPath).empty());
+}
+
 TEST_CASE("vm public soa construction and mutators use wrappers") {
   const std::string source = R"(
 import /std/collections/*
