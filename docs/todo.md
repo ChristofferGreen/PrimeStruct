@@ -371,23 +371,33 @@ TODO-4751 is `blocked` on TODO-5314 (TODO-5310 was split on 2026-09-24 into TODO
     to the canonical `map` spelling so nothing in semantics produces a
     bare `Map` type any more, while downstream consumers still see a
     key/value collection.
-  - implementation_notes: switching only these sites to `"map"` (the
-    bare-`Map` classifiers left unchanged) was measured on 2026-09-24.
-    It changes exactly 7 cases in 4 CTest shards. Semantics:
+  - implementation_notes: the producer-only switch changes 8 cases, not
+    7 (re-measured 2026-09-25; details and the full prototype design in
+    `docs/todo_log.md` under `## TODO-5312`). Semantics:
     `inferred canonical map call receivers resolve tryAt/count/contains`
-    (now fails validation) and `stdlib map constructors reject inferred
-    canonical map struct field mismatch` (now validates, so the pinned
-    "expected Map<string, i32> got map<string, i32>" mismatch
-    disappears). Return solver: `graph type resolver infers direct-call
-    auto binding from imported map-return helper`, `... answers map
-    receiver queries through shared type-text helper` and `... infers
-    map value return kinds through shared infer helper` (all now fail
-    validation). IR pipeline validation: `ir lowerer call helpers
-    resolve inferred map receiver methods` and `... keep exact-import
-    vector and map bridge parity`. So receiver/return inference still
-    keys on the `Map` spelling somewhere after initializer inference.
-    Find those consumers and move them to `map` together with the
-    producers.
+    and `stdlib map constructors reject inferred canonical map struct
+    field mismatch`. Return solver: `graph type resolver infers
+    direct-call auto binding from imported map-return helper`, `...
+    answers map receiver queries through shared type-text helper`,
+    `... infers map value return kinds through shared infer helper`. IR
+    pipeline validation: `ir lowerer call helpers resolve inferred map
+    receiver methods`, `... keep exact-import vector and map bridge
+    parity`. The one the 2026-09-24 measurement missed:
+    `semantic product keeps vector and map bridge parity` (graph shard
+    `111_120`). Its fixture declares
+    `/std/collections/map/count<K, V>([Map<K, V>] values)` and now fails
+    with "expected Map<i32, i32> got map<i32, i32>". The consumer behind
+    the first 6 is the pre-dispatch legacy-alias receiver guard
+    (`SemanticsValidatorExprPreDispatchDirectCalls.cpp`). Its only
+    exemption is `extractExperimentalKeyValueFieldTypes`, which accepts
+    just bare `Map`. Switching that to `map` would also exempt declared
+    `map<K, V>` receivers and flip ~25 `/map/<helper>` retirement pins.
+    A prototype fixed those 6 without touching other pins by replacing
+    the spelling with a provenance flag
+    (`BindingInfo::isInferredKeyValueConstructorResult`) set at the
+    producer sites, honored by `extractExperimentalKeyValueFieldTypes`,
+    propagated through if/else unification, and preferred from
+    `returnBindings_` in `inferResolvedDirectCallBindingType`.
   - acceptance:
     - no production code under `src/semantics` assigns the bare `Map`
       spelling to a binding type (`rg '"Map"'` in the initializer
@@ -396,8 +406,19 @@ TODO-4751 is `blocked` on TODO-5314 (TODO-5310 was split on 2026-09-24 into TODO
       mismatch case may be re-pinned to a successful validation only
       with a note explaining that both fields are now `map<string, i32>`.
     - `./scripts/compile.sh --release` back at baseline.
-  - stop_rule: if more than the 7 cases above change, stop and record
-    the extra consumers here instead of re-pinning them.
+  - stop_rule: if any case other than the 8 listed above changes, stop
+    and record the extra consumers here instead of re-pinning them. Do
+    not re-pin or work around the 8th case until the owner decision in
+    `notes` is recorded here.
+  - notes: needs an owner decision about
+    `semantic product keeps vector and map bridge parity` (stop_rule hit
+    2026-09-25 with the old 7-case bound). Options: (a) change that
+    fixture's helper param from `[Map<K, V>]` to `[map<K, V>]`. It tests
+    vector/map bridge parity, not the capitalized spelling, and
+    TODO-5313 would break the bare spelling anyway. (b) Move the case
+    into TODO-5313's scope. Adding a `Map`==`map` argument-matching
+    equivalence is not recommended because it grows the classifier
+    surface TODO-5313 deletes.
 
 - [ ] TODO-5313: Drop bare `Map` from semantics/monomorph classifiers
   - owner: ai

@@ -198,6 +198,86 @@ open-work-only scope rule as `docs/todo.md` itself.
   `MapValue<string, V>` today (filed as TODO-5311), so those cases will
   not run even after the wrapper exists.
 
+## TODO-5312
+
+- 2026-09-25: stop_rule hit, nothing landed. Baseline on
+  `claude/todo-list-next-kmozfg` @ bb3cf770: 1898/1899 passing (only the
+  known `spinning_cube_argument_validation_51_55` timeout). The plain
+  producer-only switch (5 sites in `inferDirectMapConstructorBinding` +
+  entry-pack fallback, 1 site in `...InferenceCalls.cpp`, the
+  `normalizedBindingType == "Map"` early return) reproduces all 7
+  measured cases, and ALSO an 8th that the 2026-09-24 measurement
+  missed: `semantic product keeps vector and map bridge parity`
+  (`test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp`,
+  CTest shard `..._graph_type_resolution_graph_111_120`). Verified by
+  rebuilding `PrimeStruct_semantics_tests` with only the producer
+  switch: "argument type mismatch for
+  /std/collections/map/count__ta77c4e1cde0d2ba9 parameter values:
+  expected Map<i32, i32> got map<i32, i32>". The fixture declares its
+  own `/std/collections/map/count<K, V>([Map<K, V>] values)` and passes
+  an `[auto] pairs{map<i32, i32>(...)}` local, so it relied on
+  inference also spelling the local `Map`. It cannot pass without
+  either re-pinning (changing its param spelling to `map<K, V>`) or
+  adding a new `Map`==`map` equivalence to argument matching (more
+  bare-`Map` classifier surface, which TODO-5313 deletes).
+- 2026-09-25: consumer found for the other 6 failing cases. It is not
+  a `"Map"` literal that can simply become `"map"`. The pre-dispatch
+  legacy-alias guard in `validateExprPreDispatchDirectCalls`
+  (`SemanticsValidatorExprPreDispatchDirectCalls.cpp`, the "calling it
+  on a legacy alias receiver (map<K,V> rather than MapValue<K,V>) is
+  retired" branch) rejects a canonical key/value helper call on a
+  `map<K, V>` receiver as `/map/<helper>` unless
+  `dispatchResolvers.resolveKeyValueTarget` classifies the receiver as
+  the experimental key/value type. That resolver
+  (`extractExperimentalKeyValueFieldTypes`, member in
+  `SemanticsValidatorMethodTargetKeyValueResolvers.cpp` + lambda in
+  `SemanticsValidatorInferCollections.cpp`) only accepts the bare `Map`
+  spelling (`isUnspecializedExperimentalKeyValueBackingTypeName`).
+  Inferred-`auto` receivers reach the guard because template monomorph
+  cannot pre-specialize their method sugar (declared `[map<K, V>]`
+  locals are rewritten earlier and never get there). Teaching the
+  classifier to accept every `map<K, V>` would disable the guard for
+  declared receivers too and flip ~25 `/map/<helper>` retirement pins
+  (e.g. `map wrapper temporary count method validates target
+  classification`, `wrapMapAuto()` returning a declared
+  `[map<i32, i32>]` local). Inferred and declared `map<K, V>` are
+  indistinguishable by type text once the producers switch.
+- 2026-09-25: prototype that fixed the 6 cases plus the struct-field
+  re-pin, with no other change except the 8th case above (full gate:
+  1895/1899, i.e. the 8th case, the known timeout, and two
+  `scripts/check_map_*` audits that tripped only on a comment spelling
+  the capitalized type with type args; after rewording that comment
+  the audits pass). The design is a provenance flag instead of the
+  spelling:
+  (1) `BindingInfo::isInferredKeyValueConstructorResult` (bool,
+  `SemanticsHelpers.h`), set at the 6 producer sites next to
+  `typeName = "map"`, plus shared helper
+  `extractInferredKeyValueConstructorResultTypes` (in
+  `SemanticsBindingTypeHelpers.cpp`).
+  (2) Both `extractExperimentalKeyValueFieldTypes` variants accept a
+  flagged `map<K, V>` binding first.
+  (3) The `canonicalizeInferredCollectionBinding` early return is gated
+  on `normalizedBindingType == "map" && flag`, not on every `map`.
+  (4) The if/else branch unification in
+  `inferBindingTypeFromInitializer` requires matching flags and
+  propagates the flag. This keeps the old `Map`-vs-`map` mismatch
+  semantics.
+  (5) `inferResolvedDirectCallBindingType`
+  (`SemanticsValidatorBuildDirectCallBinding.cpp`) answers with a
+  flagged `returnBindings_` entry before its `returnStructs_` check,
+  because `returnStructs_` holds the specialized `MapValue__t...` path
+  and otherwise callers fall back to type text, which drops the flag.
+  Before, the old `Map<K, V>` text carried the identity through that
+  fallback.
+  (6) The `isSpecializedExperimentalKeyValueBackingPath` helper at the top
+  of `SemanticsValidatorBuildInitializerInference.cpp` switched to
+  `isQualifiedExperimentalKeyValueBackingTypeName` (behavior-neutral:
+  it already required `__`), so the initializer inference files contain
+  no `"Map"` literal.
+  Struct-field case re-pinned as `stdlib map constructors validate
+  inferred canonical map struct fields` (CHECK validated + empty error).
+  To land, first decide what to do with the 8th case.
+
 ## TODO-4812
 
 - 2026-08-07: triaged finding (1) (`.push()` sugar without
