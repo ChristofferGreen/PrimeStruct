@@ -54743,3 +54743,137 @@ crashes) - see `docs/todo_finished.md`.
     1898/1899 before and after (only the known
     `spinning_cube_argument_validation_51_55` timeout, which passes in
     isolation).
+
+**Todo Completion (September 25, 2026) — TODO-4812**
+- [x] TODO-4812: Modern soa<T>/SoaVector<T> public-surface method-sugar and canonicalization gaps found sweeping text_filters dumps
+  - owner: ai
+  - created_at: 2026-07-30
+  - finished_at: 2026-09-25
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: a catch-all for several distinct drifts found re-pinning
+    `test_compile_run_text_filters_dumps.cpp`'s large soa/SoaVector
+    ast-semantic dump cluster (~30 cases), after modernizing those tests
+    off the now-hard-rejected `import /std/collections/internal_soa(_conversions)/*`
+    spelling (see the "direct import of retired soa compatibility modules
+    is not supported" rejection, a deliberate TODO-4633-era removal, not
+    itself a bug). Distinct findings once the retired imports were
+    dropped:
+    1. `.push(...)` method-call sugar on a `[soa<Particle>, mut]` or
+       `[auto mut]`-typed local fails with `unknown call target: push`
+       when no `import /std/collections/*` is present (or, for `[auto
+       mut]`, even when the generic import IS present - the `auto`
+       inference apparently isn't complete by the time `.push()` is
+       resolved). Explicitly `[SoaVector<Particle> mut]`-typed locals
+       with `import /std/collections/*` present are unaffected.
+    2. Root-level same-path shadow definitions (`/to_aos`, not
+       `/soa/to_aos`) are not honored for `SoaVector<Particle>`/public
+       `soa<Particle>` receivers the way sibling shadows (`/soa/count`,
+       `/soa/get`, `/soa/ref`, `/soa/push`, `/soa/reserve`) are - `.to_aos()`
+       method-call sugar resolves straight to the canonical
+       `/std/collections/soa/to_aos__` builtin instead, an asymmetry
+       between `to_aos` and its siblings.
+    3. `count()` can no longer be used inside an expression (only as a
+       bare statement) - `plus(count(values), ...)` now rejects with
+       `count is only supported as a statement`.
+    4. Field-index-view mutation syntax (`values.y()[i]`,
+       `y(values)[i]`) no longer routes through a dedicated
+       `soaVectorRef__`/`experimental_soa/soaVectorRef__` column-view
+       helper - it now lowers to plain per-element
+       `ref__(values, i).y`/`ref_ref__(...).y` forms instead. Likely an
+       intentional simplification, not a regression.
+    5. By-value (non-borrowed) `get`/`count` helper-return receivers now
+       canonicalize to the plain `get__`/`count__` forms instead of the
+       `_ref` borrowed-reference variants, even when reached through
+       `location(...)`/`dereference(...)` wrapper syntax - also likely
+       an intentional simplification.
+    6. `to_aos__`'s own body no longer directly contains
+       `count__`/`get__` calls - the loop was factored into a separate
+       `soaVectorToAos__` implementation helper (defined earlier in the
+       dump) that uses internal `soaVectorCount__`/`soaVectorGet__`
+       names instead of the public spellings.
+    7. `soaVectorSingle`/`soaVectorNew`-family helpers now canonicalize
+       under `/std/collections/soa/...` instead of the old
+       `/std/collections/experimental_soa/...` namespace (consistent with
+       the TODO-4633 `soa`/`experimental_soa` merge - not itself a bug).
+    Each affected case was re-pinned individually to its exact verified
+    current behavior; see the `TODO-4812` comments left at each site in
+    `test_compile_run_text_filters_dumps.cpp` for the specific repro and
+    message.
+  - implementation_notes: (1) and (2) look like the highest-value real
+    bugs here (broken/asymmetric method-call-sugar resolution); (3)-(7)
+    are more likely intentional simplifications from ongoing soa
+    modernization work and may not need code changes, just confirmation.
+    Start with (1)'s `auto`-typed-local push failure (narrowest, clearest
+    repro) and (2)'s `to_aos` same-path-shadow asymmetry (directly
+    parallels the already-tracked TODO-4756 `ref_ref` gap) before the
+    rest.
+  - acceptance: split into properly-scoped sub-TODOs once triaged - this
+    entry's job is first to determine which of the 7 findings above are
+    genuine bugs (fix) vs. intentional (just confirm and close).
+  - stop_rule: do not attempt to fix all 7 findings under one change -
+    they very likely have different root causes (mixing method-sugar
+    resolution, template/type inference timing, and IR-lowering loop
+    factoring); triage into separate leaves before writing any code.
+  - resolution: triaged all 7 findings against a fresh release build
+    (tree at 7d76012d) with scratch repros on vm and native; no code or
+    test changes. Findings (4)-(7) are intentional; (1) and (3) produced
+    three new leaves; (2) is behaviour-correct but left one deferred
+    dump-fidelity leaf.
+    - (1) genuine, two separate root causes. Split into TODO-5317
+      (`[auto mut] values{soa<Particle>()}` loses `.push`/`.reserve`
+      sugar under the documented imports, while `.count()`, the
+      fully-qualified `/std/collections/soa/soa<T>()` constructor and an
+      explicit `[soa<Particle> mut]` local all work) and TODO-5318
+      (no-import soa helpers: `.push` rejects in semantics while
+      `.count()` runs; `[SoaVector<Particle> mut]` `.push` passes
+      semantics then fails VM lowering; `plus(count(values), 1i32)` fails
+      lowering with "missing semantic-product bridge-path choice";
+      `values./soa/count()` fails lowering naming
+      `/std/collections/soa_vector/count`). This carries forward the
+      2026-08-07 `docs/todo_log.md` note that the no-import allowlist
+      `matchesBuiltinSoaCollectionHelper`
+      (`SemanticsValidatorExprMethodTargetResolution.cpp`) covers
+      count/get/ref/to_aos but not push/reserve. `docs/PrimeStruct.md`
+      answers that note's design question (import required; unsupported
+      paths reject explicitly), so TODO-5318 is ready.
+    - (2) not a behaviour bug. Method sugar honours both a root `/to_aos`
+      and a `/soa/to_aos` shadow on vm/native (exit 7 in every receiver
+      spelling, including the pinned helper-return program), matching the
+      `/soa/count|get|ref|push|reserve` siblings. Bare `to_aos(values)`
+      ignores a `/soa/to_aos` shadow, but so do bare get/ref/push/reserve
+      (only bare `count` routes to `/soa/count`), so that is ordinary name
+      resolution, not a to_aos asymmetry. The only defect: for
+      `soa<Particle>` locals and helper-return receivers the ast-semantic
+      dump spells the call `/std/collections/soa/to_aos__t<hash>` while
+      the semantic product resolves it to `/to_aos`. Split as TODO-5320
+      (deferred, dump fidelity). TODO-4756's residual shadow-value gap is
+      also confirmed fixed: the dumps file's global helper-return shadow
+      program now exits 131 (11+23+29+31+37).
+    - (3) already fixed by TODO-4811: `plus(count(values), 1i32)` and
+      `plus(values.count(), 1i32)` run with the imports. Its pinned case
+      still fails because rooted `/soa/count(values)` (no user shadow)
+      rejects with `unknown method:
+      /std/collections/soa_vector/count`, while `/soa/get`/`/soa/ref`
+      route to canonical and `/soa/to_aos|push|reserve` reject with
+      `unknown method: /soa/<name>`. Split as TODO-5319.
+    - (4) intentional: indexed field-view mutation lowering to
+      `ref__(values, i).y` is behaviour-correct (pinned programs exit
+      36/36/104/40 on vm and native, matching hand-computed values), and
+      `docs/PrimeStruct.md` prescribes no dedicated column-view helper.
+    - (5) intentional: by-value receivers use the plain
+      `get__`/`ref__`/`count__`/`to_aos__` forms. `location(values)` and
+      `dereference(location(values))` collapse to the owning local in
+      the ast-semantic dump; programs exit 7 and 40 on vm and native.
+    - (6) intentional: stdlib source design. `/std/collections/soa/to_aos<T>`
+      delegates to `soaVectorToAos<T>` in
+      `stdlib/std/collections/soa.prime` (TODO-4633/TODO-5050); the
+      pinned program exits 1 on vm and native.
+    - (7) intentional: TODO-4633 merged `experimental_soa*` into
+      `/std/collections/soa`; no `experimental_soa` namespace remains in
+      stdlib.
+    The `TODO-4812` comments left in
+    `test_compile_run_text_filters_dumps.cpp` stay accurate for
+    (4)-(7). The no-import to_aos pin is now covered by TODO-5318, and
+    the two `TODO-4756 (extends)` to_aos comments by TODO-5320.
