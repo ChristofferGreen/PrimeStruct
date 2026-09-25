@@ -103,7 +103,6 @@ of sync with them.
 | TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | blocked | (none) |
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
-| TODO-5311 | Lower string-keyed `.prime` maps on VM/native | ready | string-keyed-map-lowering |
 | TODO-4812 | Modern soa/SoaVector public-surface method-sugar gaps | ready | hidden-test-failures-text-filters |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
@@ -118,7 +117,6 @@ close. Neither is blocked.
 
 ### Ready Now
 
-- TODO-5311 (track: string-keyed-map-lowering, surface: VM/native lowering of `MapValue<string, V>` helpers and `/string/equal`): string-keyed `.prime` maps fail VM/native lowering even on the working `map<string, V>` surface.
 - TODO-4812 (track: hidden-test-failures-text-filters, surface: `stdlib/std/collections/soa`, `stdlib/std/collections/experimental_soa_vector*`): modern `soa<T>`/`SoaVector<T>` public-surface method-sugar/canonicalization gaps found re-pinning `test_compile_run_text_filters_dumps.cpp`'s soa dump cluster.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
@@ -308,7 +306,7 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - created_at: 2026-07-29
   - phase: New feature (not a bug fix)
   - parallel_track: hidden-test-failures-imports-operations
-  - depends_on: TODO-5315, TODO-5316, TODO-5311
+  - depends_on: TODO-5315, TODO-5316
   - scope: add the capitalized public `Map<K, V>` collection type, which
     does not exist anywhere today (only the lowercase builtin `map<K, V>`
     and the `MapValue<K, V>` backing struct in
@@ -354,8 +352,9 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
       on vm/native/exe (i32 keys) with no change to existing lowercase
       `map<K, V>` diagnostics or behavior.
     - every TODO-4741 reject pin whose source uses non-string keys is
-      restored to its originally intended runtime expectation; string-key
-      sources move with TODO-5311.
+      restored to its originally intended runtime expectation (the six
+      string-key `map<string, V>` sources were already restored by
+      TODO-5311 on 2026-09-25).
     - one positive and one negative (e.g. key-type mismatch) test for the
       new surface; `./scripts/compile.sh --release` at baseline.
     - a user `Map<K, V>` declared in its own namespace publishes
@@ -514,39 +513,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
     - `./scripts/compile.sh --release` back at baseline.
   - stop_rule: if the fix needs a change to the inlining recursion or
     real-call eligibility model, stop and split that out with evidence.
-
-- [ ] TODO-5311: Lower string-keyed `.prime` maps on VM/native
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-24
-  - phase: Collections runtime
-  - parallel_track: string-keyed-map-lowering
-  - depends_on: (none)
-  - scope: string-keyed maps built from the `.prime` map implementation
-    fail VM/native lowering even on today's working surface. Repros
-    (import `/std/collections/*` + `/std/collections/map/*`):
-    `[map<string, i32> mut] values{map<string, i32>("left"raw_utf8,
-    4i32)}` followed by `/std/collections/map/insert<string, i32>(values,
-    "right"raw_utf8, 7i32)` and `at`/`at_ref` reads fails with "vm
-    backend only supports indexing into string literals or string
-    bindings" (native: same message with "native"); the same program with
-    an explicit `[MapValue<string, i32> mut]` binding fails with "struct
-    parameter type mismatch: expected
-    /std/collections/map/MapValue__t<hash>, got <unknown>". The i32-key
-    version of the same program runs (exit 36). Likely culprit for the
-    first: `/string/equal` in `stdlib/std/collections/equality.prime`
-    uses bare `count(self)`/`at(self, index)`, which the imported
-    `/std/collections/map/*` helper family captures.
-  - acceptance:
-    - both repros above run on vm and native with the same results as
-      their i32-key equivalents (output `3/9/13/11`, exit 36).
-    - most TODO-4741 map-conformance sources use `string` keys; after
-      TODO-4751 they should then run instead of stopping in lowering.
-    - `./scripts/compile.sh --release` back at baseline.
-  - stop_rule: if the fix requires threading monomorphized
-    `MapValue__t<hash>` types through `inferBindingTypeFromInitializer`
-    (the TODO-5300 round-2 plumbing problem in `docs/failing_tests.md`),
-    split that plumbing into its own leaf first.
 
 - [ ] TODO-4812: Modern soa<T>/SoaVector<T> public-surface method-sugar and canonicalization gaps found sweeping text_filters dumps
   - owner: ai

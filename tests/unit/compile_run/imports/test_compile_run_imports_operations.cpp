@@ -2974,7 +2974,7 @@ main() {
   CHECK(runCommand(emitCmd) == 0);
 }
 
-TEST_CASE("rejects string-keyed map constructors in C++ emitter") {
+TEST_CASE("compiles and runs string-keyed map constructors in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2985,17 +2985,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_collections_string_map_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_collections_string_map_exe").string();
 
+  // TODO-5311: string-keyed .prime maps lower on native/exe.
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports indexing into string literals or string bindings") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects string-keyed map constructor indexing sugar in C++ emitter") {
+TEST_CASE("compiles and runs string-keyed map constructor indexing sugar in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -3006,14 +3006,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map_brackets.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_collections_string_map_brackets_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_collections_string_map_brackets_exe").string();
 
+  // TODO-5311: string-keyed .prime maps lower on native/exe.
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports indexing into string literals or string bindings") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("canonical namespaced map helpers on experimental map values in C++ emitter") {

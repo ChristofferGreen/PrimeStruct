@@ -190,11 +190,12 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
-  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
-  expectMapConformanceCompileReject(makeExperimentalMapMethodConformanceSource(),
-                                    "experimental_map_methods",
-                                    emitMode,
-                                    backendLabel + " backend only supports indexing into string literals or string bindings");
+  // TODO-5311: string-keyed .prime maps now lower on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapMethodConformanceSource(),
+                                            "experimental_map_methods",
+                                            emitMode,
+                                            20,
+                                            "container missing key\n");
 }
 
 inline void expectExperimentalMapReferenceHelperConformance(const std::string &emitMode) {

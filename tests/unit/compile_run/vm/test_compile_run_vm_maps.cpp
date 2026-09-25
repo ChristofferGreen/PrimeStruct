@@ -196,4 +196,105 @@ main([array<string>] args) {
         std::string::npos);
 }
 
+namespace {
+
+// TODO-5311: string-keyed `.prime` maps used to fail VM/native lowering.
+// Instantiating /std/collections/map/at<string, V> let the bare
+// `at(self, index)` calls inside /string/equal resolve onto that map
+// specialization, and a blanket string-key constructor rejection hid the
+// map<string, V> spelling entirely. Both binding spellings must now match
+// their i32-key equivalents (output 3/9/13/11, exit 36).
+std::string makeStringKeyedMapInsertAtSource(const std::string &bindingType) {
+  return R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [)" + bindingType + R"( mut] values{map<string, i32>("left"raw_utf8, 4i32)}
+  /std/collections/map/insert<string, i32>(values, "right"raw_utf8, 7i32)
+  /std/collections/map/insert<string, i32>(values, "left"raw_utf8, 9i32)
+  [i32] a{plus(count(values), 1i32)}
+  [i32] b{/std/collections/map/at<string, i32>(values, "left"raw_utf8)}
+  [i32] c{plus(/std/collections/map/at_ref<string, i32>(values, "right"raw_utf8), 6i32)}
+  [i32] d{plus(b, 2i32)}
+  print_line(a)
+  print_line(b)
+  print_line(c)
+  print_line(d)
+  return(plus(plus(a, b), plus(c, d)))
+}
+)";
+}
+
+void expectStringKeyedMapInsertAtRuns(const std::string &bindingType,
+                                      const std::string &nameStem,
+                                      const std::string &emitMode) {
+  const std::string srcPath =
+      writeTemp(nameStem + ".prime", makeStringKeyedMapInsertAtSource(bindingType));
+  const std::string outPath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+    CHECK(runCommand(runCmd) == 36);
+  } else {
+    const std::string exePath =
+        (testScratchPath("") / (nameStem + "_" + emitMode + "_exe")).string();
+    const std::string compileCmd = "./primec --emit=" + emitMode + " " + srcPath +
+                                   " -o " + exePath + " --entry /main";
+    CHECK(runCommand(compileCmd) == 0);
+    CHECK(runCommand(exePath + " > " + outPath) == 36);
+  }
+  CHECK(readFile(outPath) == "3\n9\n13\n11\n");
+}
+
+} // namespace
+
+TEST_CASE("runs vm string-keyed map insert and at helpers on map binding") {
+  expectStringKeyedMapInsertAtRuns("map<string, i32>", "vm_string_keyed_map_insert_at", "vm");
+}
+
+TEST_CASE("runs vm string-keyed map insert and at helpers on MapValue binding") {
+  expectStringKeyedMapInsertAtRuns("MapValue<string, i32>",
+                                   "vm_string_keyed_map_value_insert_at", "vm");
+}
+
+TEST_CASE("runs native string-keyed map insert and at helpers on map binding") {
+  expectStringKeyedMapInsertAtRuns("map<string, i32>", "native_string_keyed_map_insert_at",
+                                   "native");
+}
+
+TEST_CASE("runs native string-keyed map insert and at helpers on MapValue binding") {
+  expectStringKeyedMapInsertAtRuns("MapValue<string, i32>",
+                                   "native_string_keyed_map_value_insert_at", "native");
+}
+
+TEST_CASE("runs vm string-keyed map lookups distinguishing prefix keys") {
+  // Exercises both /string/equal mismatch paths (length and byte) once a
+  // string-keyed map specialization exists.
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32> mut] values{map<string, i32>("ab"raw_utf8, 1i32)}
+  /std/collections/map/insert<string, i32>(values, "abc"raw_utf8, 20i32)
+  /std/collections/map/insert<string, i32>(values, "ac"raw_utf8, 100i32)
+  /std/collections/map/insert<string, i32>(values, "abc"raw_utf8, 40i32)
+  if(/std/collections/map/contains<string, i32>(values, "a"raw_utf8)) {
+    return(0i32)
+  }
+  [i32] total{plus(/std/collections/map/at<string, i32>(values, "ab"raw_utf8),
+      plus(/std/collections/map/at<string, i32>(values, "abc"raw_utf8),
+          /std/collections/map/at<string, i32>(values, "ac"raw_utf8)))}
+  return(plus(total, count(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_keyed_map_prefix_keys.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 144);
+}
+
 TEST_SUITE_END();

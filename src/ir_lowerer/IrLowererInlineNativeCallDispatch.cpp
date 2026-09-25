@@ -818,7 +818,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
     const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCallFn,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinitionFn,
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFnIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error,
     const SemanticProgram *semanticProgram,
@@ -831,6 +831,57 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   }
   const SemanticProductIndex *const semanticIndexPtr =
       semanticProgram == nullptr ? nullptr : semanticIndex;
+  // TODO-5311: a bare `at(text, index)` / `at_unsafe(text, index)` on a
+  // string receiver is builtin string indexing, never a key/value helper
+  // call. The semantic product still labels every bare `at` with the
+  // canonical /std/collections/map/at helper family, and the direct-helper
+  // resolver falls back to *any* generated specialization of that family
+  // in defMap. Once a program instantiates a string-keyed map (e.g.
+  // /std/collections/map/at<string, V>), the bare `at(self, index)` calls
+  // inside /string/equal were routed onto that specialization and failed
+  // with "struct parameter type mismatch". Drop key/value helper callees
+  // for string receivers so the builtin string-access path handles them,
+  // exactly as it already does when no such specialization exists.
+  auto isStringReceiverBareAccessCall = [&](const Expr &callExpr) {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
+        callExpr.args.size() != 2 || !callExpr.namespacePrefix.empty() ||
+        !(isSimpleCallName(callExpr, "at") ||
+          isSimpleCallName(callExpr, "at_unsafe"))) {
+      return false;
+    }
+    const Expr &receiver = callExpr.args.front();
+    if (receiver.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    const SemanticStringAccessTargetKind semanticKind =
+        classifyAccessTargetSemanticStringKind(receiver, semanticProgram,
+                                               semanticIndexPtr);
+    if (semanticKind != SemanticStringAccessTargetKind::Unknown) {
+      return semanticKind == SemanticStringAccessTargetKind::String;
+    }
+    if (receiver.kind != Expr::Kind::Name) {
+      return false;
+    }
+    const auto localIt = localsIn.find(receiver.name);
+    return localIt != localsIn.end() &&
+           localIt->second.kind == LocalInfo::Kind::Value &&
+           localIt->second.valueKind == LocalInfo::ValueKind::String &&
+           localIt->second.structTypeName.empty();
+  };
+  const std::function<const Definition *(const Expr &)> resolveDefinitionCallFn =
+      [&](const Expr &callExpr) -> const Definition * {
+    const Definition *callee = resolveDefinitionCallFnIn
+                                   ? resolveDefinitionCallFnIn(callExpr)
+                                   : nullptr;
+    std::string keyValueHelperName;
+    if (callee != nullptr &&
+        resolvePublishedInlineKeyValueHelperName(callee->fullPath,
+                                                 keyValueHelperName) &&
+        isStringReceiverBareAccessCall(callExpr)) {
+      return nullptr;
+    }
+    return callee;
+  };
   auto resolveInlineSemanticTypeText = [&](SymbolId typeTextId,
                                            const std::string &typeText) {
     if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {

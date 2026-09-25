@@ -184,7 +184,7 @@ main() {
             "/std/math/Mat3") != std::string::npos);
 }
 
-TEST_CASE("rejects string-keyed map constructor in C++ emitter") {
+TEST_CASE("runs string-keyed map constructor access helpers on vm") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -195,18 +195,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_string_keys_exe.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_map_string_keys.err").string();
 
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  // Verified current behavior: this string-keyed map construction is
-  // still correctly rejected, but the diagnostic text has changed -
-  // it now surfaces as a bare/at()-style indexing restriction instead
-  // of naming the map/at call target directly.
-  CHECK(readFile(errPath).find(
-            "vm backend only supports indexing into string literals or string bindings") !=
-        std::string::npos);
+  // TODO-5311: string-keyed .prime maps lower on vm; at("b") + at_unsafe("a")
+  // + count = 2 + 1 + 2.
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
 }
 
 TEST_CASE("std/math/lerp resolves via import in C++ emitter") {

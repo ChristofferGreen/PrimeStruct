@@ -197,6 +197,11 @@ open-work-only scope rule as `docs/todo.md` itself.
   `.prime` maps fail VM/native lowering even for `map<string, V>` and
   `MapValue<string, V>` today (filed as TODO-5311), so those cases will
   not run even after the wrapper exists.
+- 2026-09-25: TODO-5311 landed - string-keyed `map<string, V>` and
+  `MapValue<string, V>` now lower on vm/native, and the six string-key
+  TODO-4741 conformance pins were restored to runtime expectations. Any
+  remaining string-key `Map<string, V>` placeholders now depend only on
+  the TODO-4751 wrapper itself.
 - 2026-09-25 (folded from TODO-5313, stop_rule): the bare-`Map`
   semantics/monomorph classifier removal was measured alone on top of
   TODO-5312. Six edits: `isExperimentalCollectionBackingTypeName` keeps

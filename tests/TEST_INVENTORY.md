@@ -413,7 +413,7 @@ Total: 10022 test cases across 459 files.
 - rejects C++ quaternion arithmetic helpers with unsupported divide lowering
 - C++ emitter keeps support-matrix plus mismatch diagnostics
 - C++ emitter keeps support-matrix implicit conversion diagnostics
-- rejects string-keyed map constructor in C++ emitter
+- runs string-keyed map constructor access helpers on vm
 - compiles and runs lerp in C++ emitter
 - compiles and runs math-qualified clamp in C++ emitter
 - compiles and runs math-qualified trig in C++ emitter
@@ -1056,8 +1056,8 @@ Total: 10022 test cases across 459 files.
 - emits experimental fourteen-column soa storage helpers in C++ emitter
 - emits experimental fifteen-column soa storage helpers in C++ emitter
 - emits experimental sixteen-column soa storage helpers in C++ emitter
-- rejects string-keyed map constructors in C++ emitter
-- rejects string-keyed map constructor indexing sugar in C++ emitter
+- compiles and runs string-keyed map constructors in C++ emitter
+- compiles and runs string-keyed map constructor indexing sugar in C++ emitter
 - compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter
 - compiles and runs wrapper map helpers on experimental map values in C++ emitter
 - compiles and runs ownership-sensitive experimental map value methods in C++ emitter

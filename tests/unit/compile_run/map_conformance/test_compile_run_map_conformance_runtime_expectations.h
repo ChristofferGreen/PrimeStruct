@@ -34,19 +34,21 @@ inline void expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
 }
 
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
-  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
-  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
-                                    "map_namespace_canonical_experimental_value",
-                                    emitMode,
-                                    backendLabel + " backend only supports indexing into string literals or string bindings");
+  // TODO-5311: string-keyed .prime maps now lower on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
+                                            "map_namespace_canonical_experimental_value",
+                                            emitMode,
+                                            20,
+                                            "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const std::string &emitMode) {
-  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
-  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
-                                    "map_namespace_canonical_experimental_constructor",
-                                    emitMode,
-                                    backendLabel + " backend only supports indexing into string literals or string bindings");
+  // TODO-5311: string-keyed .prime maps now lower on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
+                                            "map_namespace_canonical_experimental_constructor",
+                                            emitMode,
+                                            20,
+                                            "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
 }
 
 inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
@@ -66,11 +68,12 @@ inline void expectExperimentalMapOwnershipMethodConformance(const std::string &e
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
-  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
-  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
-                                    "map_namespace_canonical_experimental_return",
-                                    emitMode,
-                                    backendLabel + " backend only supports indexing into string literals or string bindings");
+  // TODO-5311: string-keyed .prime maps now lower on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
+                                            "map_namespace_canonical_experimental_return",
+                                            emitMode,
+                                            18,
+                                            "2\n4\n4\n7\n1\n");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const std::string &emitMode) {
@@ -183,13 +186,12 @@ inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::
 }
 
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
-  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
-  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
-  // same as exe/native instead of running.
-  expectMapConformanceCompileReject(makeWrapperMapHelperExperimentalValueConformanceSource(),
-                                    "map_wrapper_helper_experimental_value",
-                                    emitMode,
-                                    backendLabel + " backend only supports indexing into string literals or string bindings");
+  // TODO-5311: string-keyed .prime maps now lower on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrapperMapHelperExperimentalValueConformanceSource(),
+                                            "map_wrapper_helper_experimental_value",
+                                            emitMode,
+                                            21,
+                                            "2\n4\n9\n5\n1\n");
 }
 
 inline void expectExperimentalMapAssignConformance(const std::string &emitMode) {
@@ -208,13 +210,12 @@ inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMod
 }
 
 inline void expectInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  const std::string backendLabel = emitMode == "vm" ? "vm" : "native";
-  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
-  // same as exe/native instead of running.
-  expectMapConformanceCompileReject(makeInferredExperimentalMapReturnConformanceSource(),
-                                    "map_inferred_experimental_return",
-                                    emitMode,
-                                    backendLabel + " backend only supports indexing into string literals or string bindings");
+  // TODO-5311: string-keyed .prime maps now lower on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapReturnConformanceSource(),
+                                            "map_inferred_experimental_return",
+                                            emitMode,
+                                            16,
+                                            "3\n4\n9\n");
 }
 
 inline void expectBlockInferredExperimentalMapReturnConformance(const std::string &emitMode) {

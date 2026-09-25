@@ -354,13 +354,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_string_indexing.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_map_string_indexing_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_map_string_indexing_exe").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCppCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports indexing into string literals or string bindings") !=
-        std::string::npos);
+  // TODO-5311: string-keyed .prime maps lower on native/exe.
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("map indexing checks missing key") {

@@ -54656,3 +54656,90 @@ crashes) - see `docs/todo_finished.md`.
     placeholders are blocked on TODO-4751. TODO-5314 is now blocked on
     TODO-4751. It is not a prerequisite for the wrapper. After the
     revert the tree is identical to the baseline-measured HEAD.
+
+**Todo Completion (September 25, 2026) — TODO-5311**
+- [x] TODO-5311: Lower string-keyed `.prime` maps on VM/native
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-09-25
+  - phase: Collections runtime
+  - parallel_track: string-keyed-map-lowering
+  - depends_on: (none)
+  - scope: string-keyed maps built from the `.prime` map implementation
+    fail VM/native lowering even on today's working surface. Repros
+    (import `/std/collections/*` + `/std/collections/map/*`):
+    `[map<string, i32> mut] values{map<string, i32>("left"raw_utf8,
+    4i32)}` followed by `/std/collections/map/insert<string, i32>(values,
+    "right"raw_utf8, 7i32)` and `at`/`at_ref` reads fails with "vm
+    backend only supports indexing into string literals or string
+    bindings" (native: same message with "native"); the same program with
+    an explicit `[MapValue<string, i32> mut]` binding fails with "struct
+    parameter type mismatch: expected
+    /std/collections/map/MapValue__t<hash>, got <unknown>". The i32-key
+    version of the same program runs (exit 36). Likely culprit for the
+    first: `/string/equal` in `stdlib/std/collections/equality.prime`
+    uses bare `count(self)`/`at(self, index)`, which the imported
+    `/std/collections/map/*` helper family captures.
+  - acceptance:
+    - both repros above run on vm and native with the same results as
+      their i32-key equivalents (output `3/9/13/11`, exit 36).
+    - most TODO-4741 map-conformance sources use `string` keys; after
+      TODO-4751 they should then run instead of stopping in lowering.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if the fix requires threading monomorphized
+    `MapValue__t<hash>` types through `inferBindingTypeFromInitializer`
+    (the TODO-5300 round-2 plumbing problem in `docs/failing_tests.md`),
+    split that plumbing into its own leaf first.
+  - resolution: one root cause for both repros, plus a stale blanket
+    rejection. (1) The semantic product labels every bare `at(x, i)`
+    with the canonical `/std/collections/map/at` helper family
+    (receiver-blind spelling classifier), and
+    `TailDispatchContext::resolveTailDispatchDirectHelperDefinition`
+    falls back to *any* generated `__t` specialization of that family in
+    `defMap`. Once a program instantiated `map/at<string, V>`, the bare
+    `at(self, index)` calls inside `/string/equal` (reached through
+    `keysEqual<string>` -> `findIndex`) were emitted by
+    `tryEmitInlineCallDispatchWithLocals`'s first branch
+    (`isSemanticBarePreferredKeyValueHelperDefinitionCall`) as a call to
+    `/std/collections/map/at__t<hash>` with a `string` argument ->
+    "struct parameter type mismatch: expected MapValue__t<hash>, got
+    <unknown>". Without such a specialization (e.g. i32-key maps, or a
+    direct `/string/equal` call) the builtin string-indexing path ran,
+    which is why the i32 version worked. Fix
+    (`IrLowererInlineNativeCallDispatch.cpp`): wrap the dispatcher's
+    `resolveDefinitionCallFn` so a published key/value helper callee is
+    dropped for a bare `at`/`at_unsafe` whose receiver is a string
+    (string literal, semantic string fact via
+    `classifyAccessTargetSemanticStringKind`, or a plain string value
+    local), leaving it to builtin string access exactly as when no
+    specialization exists. `count(self)` was never affected (already
+    published as `/string/count`). (2) Repro 1's "only supports indexing
+    into string literals or string bindings" was a blanket May-2026
+    rejection of string-keyed map constructors (commit `fed34762`, from
+    the builtin-map era) in `IrLowererLowerStatementsBindings.h` and
+    `IrLowererLowerEmitExprCollectionHelpers.cpp`; both were deleted.
+    With (2) alone repro 1 fell through to the same (1) error as repro 2,
+    so repro 2 needed no `inferBindingTypeFromInitializer` plumbing and
+    the stop_rule was not hit (nothing split out). Both repros now print
+    `3/9/13/11` and exit 36 on vm and native, identical to the i32-key
+    controls. Pins restored to runtime expectations (all verified by
+    hand, identical on vm/native/exe): the six string-key TODO-4741
+    conformance sources (`expectCanonicalMapNamespaceExperimental
+    Value/Constructor/ReturnConformance`,
+    `expectWrapperMapHelperExperimentalValueConformance`,
+    `expectInferredExperimentalMapReturnConformance`,
+    `expectExperimentalMapMethodConformance`, exits 20/20/18/21/16/20),
+    two `test_compile_run_imports_operations.cpp` exe cases (renamed
+    `compiles and runs string-keyed map constructors ...`, exit 2/2),
+    `string-keyed map indexing in C++ emitter` (smoke, exe exit 4) and
+    `runs string-keyed map constructor access helpers on vm` (renamed,
+    exit 5). `runs vm with map access preferring later map receiver over
+    string` goes back to its original April pin ("vm backend requires
+    integer indices for at"), which the blanket rejection had masked.
+    New tests in `test_compile_run_vm_maps.cpp`: both repros on vm and
+    native (4 cases, output + exit 36) plus `runs vm string-keyed map
+    lookups distinguishing prefix keys` (exit 144, exercises both
+    `/string/equal` mismatch paths). `./scripts/compile.sh --release`
+    1898/1899 before and after (only the known
+    `spinning_cube_argument_validation_51_55` timeout, which passes in
+    isolation).

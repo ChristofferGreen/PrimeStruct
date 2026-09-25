@@ -54,7 +54,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_access_later_receiver_precedence_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports indexing into string literals or string bindings") !=
+  CHECK(readFile(errPath).find("vm backend requires integer indices for at") !=
         std::string::npos);
 }
 
