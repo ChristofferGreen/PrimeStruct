@@ -68,6 +68,18 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
     return true;
   }
 
+  // TODO-5312: a return binding inferred from a key/value constructor call
+  // carries its provenance flag. returnStructs_ only holds the specialized
+  // backing struct path, and callers that fall back to type text would drop
+  // the flag, so answer with the flagged binding first.
+  const auto flaggedBindingIt = returnBindings_.find(resolvedPath);
+  if (flaggedBindingIt != returnBindings_.end() &&
+      flaggedBindingIt->second.isInferredKeyValueConstructorResult &&
+      !flaggedBindingIt->second.typeName.empty()) {
+    bindingOut = flaggedBindingIt->second;
+    return true;
+  }
+
   const auto directStructIt = returnStructs_.find(resolvedPath);
   if (directStructIt != returnStructs_.end() && !directStructIt->second.empty()) {
     if (isExperimentalKeyValueBackingReturnStruct(directStructIt->second)) {

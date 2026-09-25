@@ -54500,3 +54500,69 @@ crashes) - see `docs/todo_finished.md`.
     (vm/native exit 103) in
     `test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp`.
     TODO-4751 stays `blocked`, now on TODO-5314.
+
+- [x] TODO-5312: Infer canonical `map` for map-constructor initializers
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-09-25
+  - phase: Prerequisite for TODO-4751 (split from TODO-5310)
+  - parallel_track: hidden-test-failures-imports-operations
+  - depends_on: (none)
+  - scope: `SemanticsValidatorBuildInitializerInference.cpp` (5 sites in
+    `inferDirectMapConstructorBinding` plus the entry-pack fallback) and
+    `SemanticsValidatorBuildInitializerInferenceCalls.cpp` (1 site) set
+    `bindingOut.typeName = "Map"` for canonical `map(...)` constructor
+    results, and the `normalizedBindingType == "Map"` early return in
+    `inferBindingTypeFromInitializer` accepts that spelling. Switch them
+    to the canonical `map` spelling so nothing in semantics produces a
+    bare `Map` type any more, while downstream consumers still see a
+    key/value collection.
+  - acceptance:
+    - no production code under `src/semantics` assigns the bare `Map`
+      spelling to a binding type (`rg '"Map"'` in the initializer
+      inference files is empty).
+    - the 6 regressing cases above pass unchanged. The struct-field
+      mismatch case may be re-pinned to a successful validation only
+      with a note explaining that both fields are now `map<string, i32>`.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if any case other than the 8 measured ones changes, stop
+    and record the extra consumers instead of re-pinning them.
+  - resolution: producers now infer `map` plus a provenance flag instead
+    of the bare `Map` spelling. `BindingInfo::isInferredKeyValueConstructorResult`
+    (`SemanticsHelpers.h`) is set next to `typeName = "map"` at the 5
+    `inferDirectMapConstructorBinding` sites, the entry-pack fallback
+    (`SemanticsValidatorBuildInitializerInference.cpp`) and the
+    key/value-alias site in `...InferenceCalls.cpp`. The
+    `canonicalizeInferredCollectionBinding` early return is gated on
+    `map` AND the flag (declared `map<K, V>` locals do not take it). Both
+    `extractExperimentalKeyValueFieldTypes` variants
+    (`SemanticsValidatorMethodTargetKeyValueResolvers.cpp`, lambda in
+    `SemanticsValidatorInferCollections.cpp`) accept a flagged `map<K, V>`
+    via the shared `extractInferredKeyValueConstructorResultTypes`
+    (`SemanticsBindingTypeHelpers.cpp`), so the pre-dispatch legacy-alias
+    receiver guard in `SemanticsValidatorExprPreDispatchDirectCalls.cpp`
+    still exempts only inferred constructor results. If/else initializer
+    unification in `inferBindingTypeFromInitializer` requires matching
+    flags and carries the flag forward. `inferResolvedDirectCallBindingType`
+    (`SemanticsValidatorBuildDirectCallBinding.cpp`) answers with a
+    flagged `returnBindings_` entry before its `returnStructs_` check
+    (that map holds the specialized backing path, and the type-text
+    fallback would drop the flag). The file-local
+    `isSpecializedExperimentalKeyValueBackingPath` helper now uses
+    `isQualifiedExperimentalKeyValueBackingTypeName` (behavior-neutral,
+    still requires `__`), so `rg '"Map"'` over both initializer
+    inference files is empty. Owner decision (a) for the 8th case:
+    `semantic product keeps vector and map bridge parity` now declares
+    its fixture helper as `/std/collections/map/count<K, V>([map<K, V>]
+    values)` (it tests bridge parity, not the capitalized spelling).
+    `stdlib map constructors reject inferred canonical map struct field
+    mismatch` was re-pinned as `stdlib map constructors validate inferred
+    canonical map struct fields` (both sides are now `map<string, i32>`).
+    Evidence: the other 6 measured cases pass unchanged; all 294 cases in
+    the 10 semantics files that pin `unknown call target: /map/<helper>`
+    on declared `map<K, V>` receivers (27 such assertions, e.g. `map
+    wrapper temporary count method validates target classification`)
+    pass unedited; `scripts/check_map_*` audits pass;
+    `./scripts/compile.sh --release` 1898/1899 before and after (only
+    the known `spinning_cube_argument_validation_51_55` timeout, which
+    passes in isolation).

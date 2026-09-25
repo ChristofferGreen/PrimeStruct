@@ -510,7 +510,10 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("stdlib map constructors reject inferred canonical map struct field mismatch") {
+// TODO-5312: the inferred field and the constructor result are now both
+// canonical map<string, i32>, so the old Map-vs-map mismatch no longer
+// occurs and this validates.
+TEST_CASE("stdlib map constructors validate inferred canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -532,11 +535,8 @@ main() {
   std::string error;
   const bool validated = validateProgram(source, "/main", error);
   INFO(error);
-  CHECK_FALSE(validated);
-  CHECK(error.find("argument type mismatch for /Holder parameter primary") !=
-        std::string::npos);
-  CHECK(error.find("expected Map<string, i32> got map<string, i32>") !=
-        std::string::npos);
+  CHECK(validated);
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib map constructors keep mismatch diagnostics on inferred canonical map struct fields") {

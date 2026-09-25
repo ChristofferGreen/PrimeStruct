@@ -8841,7 +8841,7 @@ Total: 10022 test cases across 459 files.
 - inferred canonical map call receivers keep mismatch diagnostics
 - stdlib map constructors accept explicit canonical map struct fields
 - stdlib map constructors keep mismatch diagnostics on canonical map struct fields
-- stdlib map constructors reject inferred canonical map struct field mismatch
+- stdlib map constructors validate inferred canonical map struct fields
 - stdlib map constructors keep mismatch diagnostics on inferred canonical map struct fields
 - helper-wrapped inferred canonical map struct fields validate
 - helper-wrapped inferred canonical map struct fields keep mismatch diagnostics

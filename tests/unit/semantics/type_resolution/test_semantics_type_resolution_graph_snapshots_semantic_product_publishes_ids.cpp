@@ -1174,7 +1174,7 @@ import /std/collections/map
 }
 
 [return<i32>]
-/std/collections/map/count<K, V>([Map<K, V>] values) {
+/std/collections/map/count<K, V>([map<K, V>] values) {
   return(2i32)
 }
 

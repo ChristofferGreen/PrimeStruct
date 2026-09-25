@@ -61,6 +61,9 @@ bool SemanticsValidator::extractExperimentalKeyValueFieldTypes(
 
   keyTypeOut.clear();
   valueTypeOut.clear();
+  if (extractInferredKeyValueConstructorResultTypes(binding, keyTypeOut, valueTypeOut)) {
+    return true;
+  }
   if (binding.typeTemplateArg.empty()) {
     return extractFromTypeText(normalizeBindingTypeName(binding.typeName));
   }

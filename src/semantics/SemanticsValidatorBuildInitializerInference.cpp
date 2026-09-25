@@ -15,7 +15,7 @@ bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+  return isQualifiedExperimentalKeyValueBackingTypeName(typeName) &&
          typeName.find("__") != std::string::npos;
 }
 } // namespace
@@ -906,7 +906,8 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
       return false;
     }
     if (candidate.templateArgs.size() == 2) {
-      bindingOut.typeName = "Map";
+      bindingOut.typeName = "map";
+      bindingOut.isInferredKeyValueConstructorResult = true;
       bindingOut.typeTemplateArg = joinTemplateArgs(candidate.templateArgs);
       return true;
     }
@@ -928,7 +929,8 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
                       isEntryConstructorArg)) {
         const Expr &firstEntry = candidate.args.front();
         if (firstEntry.templateArgs.size() == 2) {
-          bindingOut.typeName = "Map";
+          bindingOut.typeName = "map";
+          bindingOut.isInferredKeyValueConstructorResult = true;
           bindingOut.typeTemplateArg = joinTemplateArgs(firstEntry.templateArgs);
           return true;
         }
@@ -936,7 +938,8 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
         std::string entryValueType;
         if (deriveKeyValueTypesFromEntryPackCall(candidate, entryKeyType,
                                                  entryValueType)) {
-          bindingOut.typeName = "Map";
+          bindingOut.typeName = "map";
+          bindingOut.isInferredKeyValueConstructorResult = true;
           bindingOut.typeTemplateArg = entryKeyType + ", " + entryValueType;
           return true;
         }
@@ -962,7 +965,8 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
         !inferArgumentTypeText(candidate.args[1], valueTypeText)) {
       return false;
     }
-    bindingOut.typeName = "Map";
+    bindingOut.typeName = "map";
+    bindingOut.isInferredKeyValueConstructorResult = true;
     bindingOut.typeTemplateArg = keyTypeText + ", " + valueTypeText;
     return true;
   };
@@ -1024,7 +1028,9 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
       isLegacyExperimentalVectorCompatibilityTypePath("/" + normalizedBindingType)) {
     return true;
   }
-  if ((normalizedBindingType == "Map" && !bindingOut.typeTemplateArg.empty()) ||
+  if ((normalizedBindingType == "map" &&
+       bindingOut.isInferredKeyValueConstructorResult &&
+       !bindingOut.typeTemplateArg.empty()) ||
       isSpecializedExperimentalKeyValueBackingPath(normalizedBindingType)) {
     return true;
   }
@@ -1104,9 +1110,13 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
           inferBindingTypeFromInitializer(*elseValueExpr, params, locals, elseBinding) &&
           !thenBinding.typeName.empty() &&
           thenBinding.typeName == elseBinding.typeName &&
-          thenBinding.typeTemplateArg == elseBinding.typeTemplateArg) {
+          thenBinding.typeTemplateArg == elseBinding.typeTemplateArg &&
+          thenBinding.isInferredKeyValueConstructorResult ==
+              elseBinding.isInferredKeyValueConstructorResult) {
         bindingOut.typeName = thenBinding.typeName;
         bindingOut.typeTemplateArg = thenBinding.typeTemplateArg;
+        bindingOut.isInferredKeyValueConstructorResult =
+            thenBinding.isInferredKeyValueConstructorResult;
         return preserveBindingQualifiers();
       }
     }
@@ -1359,7 +1369,8 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     std::string entryPackKeyType;
     std::string entryPackValueType;
     if (deriveKeyValueTypesFromEntryPackCall(initializer, entryPackKeyType, entryPackValueType)) {
-      bindingOut.typeName = "Map";
+      bindingOut.typeName = "map";
+      bindingOut.isInferredKeyValueConstructorResult = true;
       bindingOut.typeTemplateArg = entryPackKeyType + ", " + entryPackValueType;
       return preserveBindingQualifiers();
     }

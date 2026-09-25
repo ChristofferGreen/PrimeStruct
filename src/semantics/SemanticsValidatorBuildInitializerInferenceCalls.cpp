@@ -900,7 +900,8 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
           resolveCallCollectionTemplateArgs(
               *initializerExprForInference, keyValueAlias, params, locals, keyValueArgs) &&
           keyValueArgs.size() == 2) {
-        bindingOut.typeName = "Map";
+        bindingOut.typeName = "map";
+        bindingOut.isInferredKeyValueConstructorResult = true;
         bindingOut.typeTemplateArg = joinTemplateArgs(keyValueArgs);
         return true;
       }

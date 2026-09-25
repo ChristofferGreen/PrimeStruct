@@ -41,6 +41,12 @@ struct BindingInfo {
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
   std::string referenceRoot;
+  // TODO-5312: set only when the type (canonical `map<K, V>`) was inferred
+  // from a key/value constructor call result. Declared `map<K, V>` bindings
+  // leave it false, so method-target resolution can still tell an inferred
+  // constructor result (treated as the experimental key/value backing) from
+  // a declared legacy-alias receiver without relying on a type spelling.
+  bool isInferredKeyValueConstructorResult = false;
 };
 
 struct ParameterInfo {
@@ -101,6 +107,11 @@ bool extractKeyValueCollectionTypesFromTypeText(const std::string &typeText,
                                                 std::string &keyTypeOut,
                                                 std::string &valueTypeOut);
 bool extractKeyValueCollectionTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut);
+// Answers K/V for a binding flagged as an inferred key/value constructor
+// result (canonical `map<K, V>` plus isInferredKeyValueConstructorResult).
+bool extractInferredKeyValueConstructorResultTypes(const BindingInfo &binding,
+                                                   std::string &keyTypeOut,
+                                                   std::string &valueTypeOut);
 bool getArgsPackElementType(const BindingInfo &binding, std::string &elementTypeOut);
 bool isArgsPackBinding(const BindingInfo &binding);
 bool resolveArgsPackElementTypeForExpr(const Expr &expr,

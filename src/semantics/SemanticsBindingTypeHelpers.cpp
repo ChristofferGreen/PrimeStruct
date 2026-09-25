@@ -446,6 +446,23 @@ bool extractKeyValueCollectionTypes(const BindingInfo &binding, std::string &key
                                              valueTypeOut);
 }
 
+bool extractInferredKeyValueConstructorResultTypes(const BindingInfo &binding,
+                                                   std::string &keyTypeOut,
+                                                   std::string &valueTypeOut) {
+  if (!binding.isInferredKeyValueConstructorResult ||
+      normalizeBindingTypeName(binding.typeName) != "map" ||
+      binding.typeTemplateArg.empty()) {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(binding.typeTemplateArg, args) || args.size() != 2) {
+    return false;
+  }
+  keyTypeOut = args[0];
+  valueTypeOut = args[1];
+  return true;
+}
+
 bool getArgsPackElementType(const BindingInfo &binding, std::string &elementTypeOut) {
   elementTypeOut.clear();
   const std::string normalizedTypeName = normalizeBindingTypeName(binding.typeName);
