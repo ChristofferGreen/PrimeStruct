@@ -197,6 +197,51 @@ open-work-only scope rule as `docs/todo.md` itself.
   `.prime` maps fail VM/native lowering even for `map<string, V>` and
   `MapValue<string, V>` today (filed as TODO-5311), so those cases will
   not run even after the wrapper exists.
+- 2026-09-25 (folded from TODO-5313, stop_rule): the bare-`Map`
+  semantics/monomorph classifier removal was measured alone on top of
+  TODO-5312. Six edits: `isExperimentalCollectionBackingTypeName` keeps
+  its bare `typeName == backingTypeName` match only when
+  `backingTypeName != "Map"`; `isBareExperimentalKeyValueBackingTypeName`
+  was deleted (plus its one use in
+  `SemanticsValidatorInferCollectionReturnInference.cpp`);
+  `isUnspecializedExperimentalCollectionTypeBaseLocal` dropped
+  `base == typeName`; `normalizeCollectionTypePath` dropped both
+  `"Map"` arms; `resolveBuiltinKeyValueResultType` matches only `map`;
+  `normalizeCollectionReceiverTypeName` keeps only the
+  `isExperimentalCollectionBackingTypeName("map", "Map", value)` arm.
+  Positive semantic-product test (source: `namespace mylib { [public
+  struct] Map<K, V> { [i32 mut] total{0i32} count() insert([K] key, [V]
+  value) } }`, `import /mylib/*`, `[Map<i32, i32> mut]
+  values{Map<i32, i32>{}}`): `/main` targets land under
+  `/mylib/Map__t<hash>/{count,insert}` (method or direct target view),
+  none under `/std/collections/map/`. It ran on vm/native/exe (exit 1)
+  with no backend edit. Baseline rejects it with "insert does not
+  accept template arguments".
+- 2026-09-25: regressions from that change, 12 shards / 21 cases (gate
+  1886/1899 vs 1898/1899). Moves to `map<Key, i32>` with its diagnostic
+  unchanged (3): `experimental map custom comparable struct keys keep
+  canonical map helper diagnostics` (semantics calls_flow 241_250),
+  `runs vm experimental map custom comparable struct keys` (vm 443_452),
+  `C++ emitter rejects experimental map custom comparable struct keys`
+  (emitters_cpp 74_75, `--emit=exe`, semantics-driven). Wrapper
+  placeholders (18 = 9 sources, vm + vm-backed `... in C++ emitter`
+  twins), new vm diagnostic in brackets:
+  `expectImplicitMapAutoInferenceConformance`,
+  `expectInferredExperimentalMapReturnConformance`,
+  `expectBlockInferredExperimentalMapReturnConformance`,
+  `expectAutoBlockInferredExperimentalMapReturnConformance`,
+  `expectInferredExperimentalMapCallReceiverConformance` [all: unable to
+  infer return type on /buildValues];
+  `expectExperimentalMapStructFieldConformance`,
+  `expectExperimentalMapFieldAssignConformance` [unknown struct type for
+  layout: Map]; `expectExperimentalMapMethodParameterConformance`
+  [unknown call target: /std/collections/map/count];
+  `expectCanonicalMapNamespaceExperimentalParameterConformance` [VM
+  lowering error: missing semantic-product collection specialization:
+  /scoreValues -> parameter values - semantics wrongly accepts the
+  unresolved `Map<string, i32>` parameter]. Shards: vm 393_402,
+  403_412, 413_422; imports_operations 95_96, 101_102, 103_104, 105_106,
+  109_110, 117_118.
 
 ## TODO-4812
 

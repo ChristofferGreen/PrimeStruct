@@ -54566,3 +54566,93 @@ crashes) - see `docs/todo_finished.md`.
     `./scripts/compile.sh --release` 1898/1899 before and after (only
     the known `spinning_cube_argument_validation_51_55` timeout, which
     passes in isolation).
+
+**Todo Completion (September 25, 2026) — TODO-5313**
+- [x] TODO-5313: Drop bare `Map` from semantics/monomorph classifiers
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-09-25
+  - phase: Prerequisite for TODO-4751 (split from TODO-5310)
+  - parallel_track: hidden-test-failures-imports-operations
+  - depends_on: TODO-5312
+  - scope: stop the semantics and template-monomorph classifiers from
+    treating a bare `Map`/`Map<K, V>` spelling as builtin key/value
+    storage: the bare `typeName == backingTypeName` match in
+    `isExperimentalCollectionBackingTypeName`
+    (`src/semantics/StdlibCollectionSurfaceHelpers.h`, only for `Map`;
+    `Entry`/`Vector` keep theirs), `isBareExperimentalKeyValueBackingTypeName`,
+    the bare arm of `isUnspecializedExperimentalCollectionTypeBaseLocal`
+    in `SemanticsBindingTypeHelpers.cpp`, the `base == "Map"` arms in
+    `SemanticsValidator::normalizeCollectionTypePath`
+    (`SemanticsValidatorInferCollectionCompatibility.cpp`) and
+    `resolveBuiltinKeyValueResultType` (`SemanticsValidatorResultHelpers.cpp`),
+    and the bare `Map`/generated-bare arm of
+    `normalizeCollectionReceiverTypeName`
+    (`TemplateMonomorphCollectionCompatibilityPaths.cpp`).
+  - implementation_notes: the 2026-09-24 attempt applied these together
+    with TODO-5312 and TODO-5314 in one change and regressed 17 CTest
+    shards (~30 cases). About 23 of those cases came from the classifier
+    removal, not the inference switch. Most are compile-run map-conformance
+    pins whose sources spell `Map<K, V>` directly
+    (`tests/unit/compile_run/map_conformance/*_sources.h`, the
+    `imports_operations_and_collections_95..118` and
+    `vm_collections_newly_exposed_393..452` shards), plus
+    `experimental map custom comparable struct keys keep canonical map
+    helper diagnostics` and the C++-emitter map-conformance cases in
+    `emitters_cpp_collection_access_and_alias_forwarding_74_75`. Those
+    sources rely on bare `Map` being the builtin, so once it is an
+    ordinary name they either stop resolving or change diagnostics.
+    Decide first whether each pin should move to `map<K, V>` spelling or
+    wait for the TODO-4751 wrapper struct. The semantics and IR-lowerer
+    halves were not measured separately. Measure this leaf alone (with
+    TODO-5314's IR/emitter edits reverted) before landing.
+  - acceptance:
+    - `Map<K, V>` declared in a user namespace resolves through
+      imports/namespace lookup in semantics and monomorph: method sugar
+      (`values.count()`, `values.insert(...)`) publishes
+      `/<ns>/Map__t<hash>/<method>` targets, not `/std/collections/map/*`.
+    - every changed pin is either unchanged or re-pinned with a per-case
+      justification, and the re-pinned count is recorded here.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if more than a handful of map-conformance pins change and
+    cannot be moved to the `map<K, V>` spelling without changing what
+    they test, stop and fold the remaining work into TODO-4751, since
+    the wrapper struct is what those pins describe.
+  - resolution: closed under its own stop_rule and folded into
+    TODO-4751, not landed. Baseline gate: 1898/1899 (only the known
+    `spinning_cube_argument_validation_51_55` Timeout). All six
+    classifier arms in scope were removed together, measured alone
+    (TODO-5312 landed, no TODO-5314 IR/emitter edits). What worked: a
+    namespaced user `Map<i32, i32>` with its own `count`/`insert` passed
+    a new semantic-product test (targets under `/mylib/Map__t<hash>/`,
+    none under `/std/collections/map/`) and ran through its own methods
+    on vm/native/exe (exit 1) with no backend edit. The gate then showed
+    1886/1899: 12 shards / 21 cases plus the known Timeout. Per case
+    group: (1) 3 cases (`experimental map custom comparable struct keys
+    keep canonical map helper diagnostics`, `runs vm experimental map
+    custom comparable struct keys`, `C++ emitter rejects experimental
+    map custom comparable struct keys` - the last is semantics-driven,
+    not a C++-emitter classifier) can move to `[map<Key, i32>]
+    values{/std/collections/map/map<Key, i32>(...)}` with their exact
+    Comparable-key diagnostic unchanged. (2) 18 cases, 9 TODO-4741
+    reject-placeholder sources each pinned twice (vm plus the vm-backed
+    `... in C++ emitter` twin in `test_compile_run_imports_operations.cpp`):
+    implicit map auto constructor inference, inferred / block-inferred /
+    auto-block-inferred experimental map returns, inferred experimental
+    map call receivers, experimental map struct fields (and its
+    `rejects explicit ... struct field constructors` twin), experimental
+    map method parameters, experimental map field assignments, and
+    canonical namespaced map constructors through explicit experimental
+    map parameters. They spell `Map<string, V>` with the nonexistent
+    `mapPair`/`mapSingle` and still exit 2, but the pinned diagnostic
+    changes. Moving them to `map<string, V>` would turn them into
+    string-keyed runtime tests (TODO-5311), which changes what they
+    test. Their subject is the TODO-4751 wrapper, which restores them to
+    runtime expectations. The last one also exposed a hole: its
+    unresolved `[Map<string, i32>]` parameter then passed semantics and
+    failed only in VM lowering. 18 > "a handful", so no pin was changed
+    and no code landed. The classifier removal, the 3 moves above and
+    the hole became TODO-4751 scope; the remaining
+    placeholders are blocked on TODO-4751. TODO-5314 is now blocked on
+    TODO-4751. It is not a prerequisite for the wrapper. After the
+    revert the tree is identical to the baseline-measured HEAD.
