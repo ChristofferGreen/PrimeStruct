@@ -360,7 +360,7 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [soa<Particle>] values{soa<Particle>(Particle{7i32}, Particle{9i32})}
-  return(count(values))
+  return(0i32)
 }
 )";
 

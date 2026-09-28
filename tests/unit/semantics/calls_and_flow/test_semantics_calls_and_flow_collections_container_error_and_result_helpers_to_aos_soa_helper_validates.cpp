@@ -22,7 +22,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("to_aos method validates with soa binding") {
+TEST_CASE("to_aos method rejects soa binding without soa import") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -36,8 +36,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("imported non-root to_aos forms validate with soa binding") {
@@ -486,8 +488,9 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: get") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: count") != std::string::npos);
 }
 
 TEST_CASE("builtin soa method-like helper-return read helpers reject primitive metadata first") {
@@ -608,12 +611,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown call target") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: count") != std::string::npos);
 }
 
 TEST_CASE("ecs style update loop validates retired soa parameter before conversion mismatch") {
+  // TODO-5318: soa helpers need the soa import; keep it so the
+  // argument mismatch in main stays the first diagnostic.
   const std::string source = R"(
+import /std/collections/soa/*
+
+[struct reflect]
 Particle() {
   [i32] x{0i32}
   [i32] y{0i32}

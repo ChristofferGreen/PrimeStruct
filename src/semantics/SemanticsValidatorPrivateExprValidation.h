@@ -675,6 +675,14 @@
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const std::function<bool(const Expr &, std::string &)> &resolveArgsPackAccessTarget);
+  // TODO-5318: returns the "soa helper requires import" diagnostic when
+  // `expr` is a public soa helper call on a soa receiver while the public
+  // stdlib soa wrappers are not visible and no user same-path shadow
+  // exists; std::nullopt otherwise. See the .cpp for the helper list.
+  std::optional<std::string> noImportSoaHelperCallDiagnostic(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   // TODO-4724 seam (8): self-contained recursive lambda promoted verbatim.
   bool resolveStringTarget(
       const Expr &target, const std::vector<ParameterInfo> &params,

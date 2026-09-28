@@ -98,6 +98,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (isIfCall(expr)) {
       return validateIfExpr(params, locals, expr);
     }
+    if (auto noImportSoaDiagnostic =
+            noImportSoaHelperCallDiagnostic(expr, params, locals)) {
+      return failExprRootDiagnostic(std::move(*noImportSoaDiagnostic));
+    }
     if (isTaskTypeCarrierExpr(expr)) {
       return validateTaskTypeCarrierExpr(
           params, locals, expr, enclosingStatements, statementIndex);
@@ -206,6 +210,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
            *elementAccessHelper == "get_ref" ||
            *elementAccessHelper == "ref" ||
            *elementAccessHelper == "ref_ref")) {
+        if (auto noImportSoaDiagnostic = noImportSoaHelperCallDiagnostic(
+                expr.args.front(), params, locals)) {
+          return failExprDiagnostic(expr.args.front(),
+                                    std::move(*noImportSoaDiagnostic));
+        }
         for (const Expr &arg : expr.args.front().args) {
           if (!validateExpr(params, locals, arg, enclosingStatements,
                             statementIndex)) {

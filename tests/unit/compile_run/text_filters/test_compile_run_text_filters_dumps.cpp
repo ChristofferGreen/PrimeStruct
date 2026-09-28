@@ -1383,19 +1383,19 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_dump_ast_semantic_builtin_soa_count_err.txt").string();
 
-  // TODO-4811 fix: the over-broad "count is only supported as a statement"
-  // rejection (count/get/ref/to_aos incorrectly classified as statement-only
-  // mutators alongside push/reserve) is gone - expression position is
-  // legitimate for these same-path soa read helpers. Still fails to compile,
-  // but now for a separate, still-open reason: same-path shadow routing for
-  // an explicit /soa/count(...) call falls through to the retired
-  // soa_vector diagnostic family (see TODO-4756's investigation notes).
+  // TODO-5318: with no soa import, every public soa helper call (bare,
+  // rooted /soa/, and slash-method forms alike) rejects in semantic
+  // validation with one import diagnostic instead of leaking the retired
+  // soa_vector family or failing later in IR lowering. The imported
+  // rooted-call behaviour is tracked by TODO-5319.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: unknown method: /std/collections/soa_vector/count") !=
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Semantic error: soa helper requires import /std/collections/soa/*: count") !=
         std::string::npos);
+  CHECK(err.find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites imported builtin soa to_aos forms to canonical helper path") {
@@ -1451,25 +1451,21 @@ main() {
       writeTemp("compile_dump_ast_semantic_root_builtin_soa_to_aos.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_dump_ast_semantic_root_builtin_soa_to_aos.txt").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_root_builtin_soa_to_aos_err.txt").string();
 
-  // TODO-4812: without an explicit soa-namespace import, bare/method-call
-  // to_aos(values)/values.to_aos() no longer get rewritten to the canonical
-  // /std/collections/soa/to_aos__ helper path at the ast-semantic stage -
-  // the calls now stay as-written (still compiles overall, exit 0; the
-  // canonicalization apparently now happens at a later pipeline stage, if
-  // at all). Re-pinned to the verified current (unrewritten) ast-semantic
-  // dump.
+  // TODO-5318: without the soa import there is no to_aos wrapper to
+  // rewrite to, so the call rejects in semantic validation (same rule as
+  // count/get/ref/push/reserve) instead of passing the ast-semantic dump
+  // and failing IR lowering on a retired soa_vector target.
   const std::string dumpCmd =
-      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
-  CHECK(runCommand(dumpCmd) == 0);
-  const std::string ast = readFile(outPath);
-  const size_t mainPos = ast.find("/main()");
-  CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) == std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) ==
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(dumpCmd) == 2);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Semantic error: soa helper requires import /std/collections/soa/*: to_aos") !=
         std::string::npos);
-  CHECK(ast.find("to_aos(values)", mainPos) != std::string::npos);
-  CHECK(ast.find("values.to_aos()", mainPos) != std::string::npos);
+  CHECK(err.find("soa_vector") == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites vector-target helper-shadowed to_aos method forms to direct helper path") {

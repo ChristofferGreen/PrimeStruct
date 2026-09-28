@@ -27,7 +27,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("get helper validates retired soa binding") {
+TEST_CASE("get helper rejects soa binding without soa import") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -41,11 +41,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get") != std::string::npos);
 }
 
-TEST_CASE("get method validates retired soa binding") {
+TEST_CASE("get method rejects soa binding without soa import") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -59,8 +61,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get") != std::string::npos);
 }
 
 TEST_CASE("imported get forms validate with soa binding") {
@@ -101,8 +105,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get") != std::string::npos);
 }
 
 TEST_CASE("explicit old-surface soa get slash-method validates retired binding spelling") {
@@ -121,8 +126,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get") != std::string::npos);
 }
 
 TEST_CASE("explicit old-surface soa get_ref validates retired soa binding spelling") {
@@ -141,8 +147,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get_ref") != std::string::npos);
 }
 
 TEST_CASE("explicit old-surface soa get_ref slash-method validates retired soa binding spelling") {
@@ -161,8 +168,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get_ref") != std::string::npos);
 }
 
 TEST_CASE("get root forms reject vector target") {
@@ -304,7 +312,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref helper validates with soa binding") {
+TEST_CASE("ref helper rejects soa binding without soa import") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -318,8 +326,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: ref") != std::string::npos);
 }
 
 TEST_CASE("imported ref local bindings reject retired builtin soa binding") {
@@ -360,8 +370,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: ref") != std::string::npos);
 }
 
 TEST_CASE("explicit old-surface soa ref_ref validates retired soa binding spelling") {
@@ -380,8 +391,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: ref_ref") != std::string::npos);
 }
 
 TEST_CASE("explicit old-surface soa ref_ref slash-method validates retired soa binding spelling") {
@@ -400,8 +412,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: ref_ref") != std::string::npos);
 }
 
 TEST_CASE("ref root forms reject vector target") {
@@ -1145,8 +1158,9 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: reserve") != std::string::npos);
 }
 
 TEST_CASE("imported soa mutators reject retired builtin soa binding") {
@@ -1283,7 +1297,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos helper validates with soa binding") {
+TEST_CASE("to_aos helper rejects soa binding without soa import") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1297,8 +1311,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 

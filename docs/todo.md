@@ -103,8 +103,7 @@ of sync with them.
 | TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | blocked | (none) |
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
-| TODO-5318 | No-import `soa<T>` helpers pass semantics, fail lowering | ready | hidden-test-failures-text-filters |
-| TODO-5319 | Rooted `/soa/<helper>` calls inconsistent; `soa_vector` leak | ready\* | hidden-test-failures-text-filters |
+| TODO-5319 | Rooted `/soa/<helper>` calls inconsistent; `soa_vector` leak | ready | hidden-test-failures-text-filters |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
 | TODO-5321 | soa method sugar inside nested bodies (`soa_ecs` example) | ready\* | hidden-test-failures-text-filters |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
@@ -117,20 +116,20 @@ of sync with them.
 `ready` items on the `hidden-test-failures-emitters` track (rule 11 caps
 concurrent same-track `Ready Now` items); pick them up once TODO-4800/4801
 close. Neither is blocked.
-TODO-5319/5321 are likewise held behind TODO-5318 on the
-`hidden-test-failures-text-filters` track (TODO-5318 took TODO-5317's
-slot when it closed on 2026-09-25); pick one up once TODO-5318 closes.
-Neither is blocked.
+TODO-5321 is likewise held behind TODO-5319 on the
+`hidden-test-failures-text-filters` track (TODO-5319 took TODO-5318's
+slot when it closed on 2026-09-28); pick it up once TODO-5319 closes.
+It is not blocked.
 
 ### Ready Now
 
-- TODO-5318 (track: hidden-test-failures-text-filters, surface: no-import soa helper visibility in `SemanticsValidatorExprMethodTargetResolution.cpp` + soa lowering): with no collections import, `soa<T>` read/mutator helpers split between semantic rejection and IR-lowering failures instead of one deterministic behaviour.
+- TODO-5319 (track: hidden-test-failures-text-filters, surface: imported rooted `/soa/<helper>` direct-call routing in `src/semantics` + the `soa_vector` count fallback): with the soa imports, rooted `/soa/count|get|ref|to_aos|push|reserve(values, ...)` calls route, reject, or leak `/std/collections/soa_vector/count` inconsistently.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 - TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-5319/TODO-5321 (same `hidden-test-failures-text-filters` track as TODO-5318; TODO-5319 split from TODO-4812 on 2026-09-25, TODO-5321 found while closing TODO-5317 on 2026-09-25). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-5321 (same `hidden-test-failures-text-filters` track as TODO-5319; found while closing TODO-5317 on 2026-09-25). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -521,56 +520,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - stop_rule: if the fix needs a change to the inlining recursion or
     real-call eligibility model, stop and split that out with evidence.
 
-- [ ] TODO-5318: Stop no-import `soa<T>` helper calls passing semantics then failing lowering
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-25
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-text-filters
-  - depends_on: (none)
-  - scope: split from TODO-4812 finding (1) (and the 2026-08-07 log note
-    that found three different behaviours). With NO collections import,
-    the same logical soa operations hit different pipeline stages:
-    - `[soa<Particle> mut] values{soa<Particle>()}` + `values.push(...)`
-      rejects in semantics with `unknown call target: push`, while
-      `values.count()` on the same local compiles and runs.
-    - `[SoaVector<Particle> mut] values{soa<Particle>()}` +
-      `values.push(...)` passes semantics, then VM lowering fails with
-      `vm backend only supports arithmetic/.../increment/decrement calls
-      in expressions (call=/std/collections/soa/push, ...)`.
-    - `[soa<Particle>] values{soa<Particle>()}` +
-      `[int] total{plus(count(values), 1i32)}` fails lowering with
-      `missing semantic-product bridge-path choice: /main -> count`
-      (the same program with `import /std/collections/soa/*` exits 1).
-    - `values./soa/count()` fails lowering with `semantic-product
-      method-call target missing lowered definition:
-      /std/collections/soa_vector/count` (exits 0 with the import).
-    `docs/PrimeStruct.md` ("Generic SoA Substrate Boundary") says user code
-    spells `soa<T>` and imports `/std/collections/soa/*`, and that
-    unsupported paths reject explicitly instead of falling through.
-  - implementation_notes: the no-import visibility allowlist is
-    `matchesBuiltinSoaCollectionHelper` in
-    `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`
-    (covers count/get/ref/to_aos families but not push/reserve). The
-    pinned no-import cases in
-    `tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp`
-    ("rewrites no-import builtin soa to_aos forms to canonical helper
-    path", "rewrites builtin soa count forms to canonical helper path")
-    will need re-pinning whichever direction is chosen.
-  - acceptance:
-    - every repro above either runs on vm and native with the same result
-      as its imported equivalent, or rejects in semantic validation with
-      one deterministic diagnostic that names `/std/collections/soa/*`;
-      none fails in IR lowering.
-    - read helpers (count/get/ref/to_aos) and mutators (push/reserve) get
-      the same no-import treatment, and the chosen rule is stated in the
-      `docs/PrimeStruct.md` soa section.
-    - affected pins re-pinned; `./scripts/compile.sh --release` back at
-      baseline.
-  - stop_rule: if making no-import behaviour uniform requires changing
-    lazy stdlib import loading (not just helper visibility or semantic
-    diagnostics), stop and split the loader change out with evidence.
-
 - [ ] TODO-5319: Make rooted `/soa/<helper>` direct calls consistent; drop `soa_vector` leak
   - owner: ai
   - status: ready
@@ -588,8 +537,9 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
     behaves four ways:
     `/soa/get(values, 0i32)` and `/soa/ref(values, 0i32)` route to the
     canonical helpers and run; `/soa/count(values)` rejects with `unknown
-    method: /std/collections/soa_vector/count` (a retired namespace, also
-    without imports); `/soa/to_aos(values)`, `/soa/push(values, ...)` and
+    method: /std/collections/soa_vector/count` (a retired namespace;
+    without imports it now rejects with TODO-5318's import diagnostic);
+    `/soa/to_aos(values)`, `/soa/push(values, ...)` and
     `/soa/reserve(values, ...)` reject with `unknown method: /soa/<name>`.
     The slash-method forms (`values./soa/get(0i32)`,
     `values./soa/to_aos()`, `values./soa/count()`) all run with the
@@ -608,8 +558,11 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
       is documented in the `docs/PrimeStruct.md` soa section.
     - user `/soa/<name>` same-path shadows keep winning for both bare
       rooted and slash-method forms.
-    - the pinned count-forms case is re-pinned; `./scripts/compile.sh
-      --release` back at baseline.
+    - an imported rooted-call case pins the chosen behaviour (the
+      no-import "dump ast-semantic rewrites builtin soa count forms to
+      canonical helper path" case now pins TODO-5318's
+      `soa helper requires import /std/collections/soa/*: count` rule);
+      `./scripts/compile.sh --release` back at baseline.
   - stop_rule: if choosing between routing and rejecting needs a spec
     decision about whether rooted `/soa/*` is public surface, land only
     the `soa_vector` leak removal (count rejecting like to_aos/push/reserve)

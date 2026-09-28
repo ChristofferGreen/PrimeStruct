@@ -202,7 +202,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count method validates with soa binding") {
+TEST_CASE("count method rejects soa binding without soa import") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -215,8 +215,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: count") != std::string::npos);
 }
 
 TEST_CASE("imported count forms validate with soa binding") {
@@ -256,16 +258,12 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  // TODO-4811 fix: "count is only supported as a statement" was an
-  // over-broad rejection (count is a same-path read helper, not a
-  // statement-only mutator) - expression position is legitimate now.
-  // Still rejects, for a separate, still-open reason (same-path shadow
-  // routing falls through to the retired soa_vector diagnostic family -
-  // see TODO-4756's investigation notes).
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count") != std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: count") != std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa count slash-method validates with soa type") {
+TEST_CASE("explicit old-surface soa count slash-method rejects without soa import") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -278,8 +276,10 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: count") != std::string::npos);
 }
 
 TEST_CASE("explicit soa count forms reject non-soa target") {

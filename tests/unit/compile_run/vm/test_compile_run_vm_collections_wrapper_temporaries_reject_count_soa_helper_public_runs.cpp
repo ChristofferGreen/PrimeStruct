@@ -777,7 +777,9 @@ main() {
   const std::string errPath = (testScratchPath("") / "primec_vm_root_soa_to_aos_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /to_aos") != std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(readFile(errPath).find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("vm no-import root soa to_aos method helper forms reject SoaVector-only canonical helper contract") {
@@ -800,11 +802,16 @@ main() {
       (testScratchPath("") / "primec_vm_root_soa_to_aos_method_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /to_aos") != std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(readFile(errPath).find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("vm materializes non-empty root soa struct literals") {
+  // TODO-5318: soa helpers need the soa import.
   const std::string source = R"(
+import /std/collections/soa/*
+
 [struct reflect]
 Particle() {
   [i32] x{1i32}

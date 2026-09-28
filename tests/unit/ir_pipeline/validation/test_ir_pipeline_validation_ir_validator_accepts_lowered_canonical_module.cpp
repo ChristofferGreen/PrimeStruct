@@ -2096,15 +2096,11 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
-  // TODO-4811 fix: "get"/"count" are same-path soa read helpers, not
-  // statement-only mutators, so expression position is legitimate - the
-  // over-broad "is only supported as a statement" rejection is gone.
-  // Still rejects for a separate, still-open reason (same-path shadow
-  // routing falls through to the retired soa_vector diagnostic family -
-  // see TODO-4756's investigation notes).
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa/get") != std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get") != std::string::npos);
 }
 
 TEST_CASE("root get vector receiver rejects template arguments") {
@@ -2275,7 +2271,9 @@ main() {
   // Explicit old-surface /soa/reserve without an import or shadow is rejected per the same-path contract.
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa/reserve") != std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: reserve") != std::string::npos);
 }
 
 TEST_CASE("root to_aos bare and direct helper forms reject during semantics") {
@@ -2296,7 +2294,9 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown method: /to_aos") != std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("imported root to_aos bare and direct helper forms still need compile-pipeline helper materialization") {
@@ -2342,7 +2342,9 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown method: /to_aos") != std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("imported root to_aos method helper forms still need compile-pipeline helper materialization") {
@@ -2685,7 +2687,9 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "named arguments not supported for builtin calls");
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(error.find("soa helper requires import /std/collections/soa/*: get") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {

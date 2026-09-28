@@ -227,6 +227,85 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
   return true;
 }
 
+std::optional<std::string> SemanticsValidator::noImportSoaHelperCallDiagnostic(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
+  // TODO-5318: the public soa<T> helpers only exist as
+  // /std/collections/soa/* wrappers. Without that module in scope the
+  // builtin fallback routes some helpers to the retired soa_vector family
+  // (which then fails in IR lowering) and rejects others as unknown call
+  // targets. Reject every public helper uniformly here instead.
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isFieldAccess ||
+      expr.args.empty()) {
+    return std::nullopt;
+  }
+  if (currentDefinitionContext_ != nullptr &&
+      currentDefinitionContext_->fullPath.rfind("/std/", 0) == 0) {
+    return std::nullopt;
+  }
+  std::string helperName = expr.name;
+  constexpr std::string_view RootedSoaPrefix = "/soa/";
+  // Earlier rewrites may already have canonicalized method sugar on an
+  // explicit SoaVector<T> receiver to /std/collections/soa/<name> even
+  // though that wrapper was never imported.
+  constexpr std::string_view CanonicalSoaPrefix = "/std/collections/soa/";
+  if (helperName.rfind(RootedSoaPrefix, 0) == 0) {
+    helperName.erase(0, RootedSoaPrefix.size());
+  } else if (helperName.rfind(CanonicalSoaPrefix, 0) == 0) {
+    helperName.erase(0, CanonicalSoaPrefix.size());
+    const size_t specializationSuffix = helperName.find("__");
+    if (specializationSuffix != std::string::npos) {
+      helperName.erase(specializationSuffix);
+    }
+  }
+  if (helperName.find('/') != std::string::npos) {
+    return std::nullopt;
+  }
+  if (!expr.isMethodCall && !expr.namespacePrefix.empty() &&
+      expr.namespacePrefix != "/" && expr.namespacePrefix != "/soa") {
+    return std::nullopt;
+  }
+  const bool isPublicSoaHelper =
+      helperName == "count" || helperName == "count_ref" ||
+      helperName == "get" || helperName == "get_ref" ||
+      helperName == "ref" || helperName == "ref_ref" ||
+      helperName == "to_aos" || helperName == "to_aos_ref" ||
+      helperName == "push" || helperName == "reserve";
+  if (!isPublicSoaHelper) {
+    return std::nullopt;
+  }
+  const std::string publicPath = "/std/collections/soa/" + helperName;
+  if (hasVisibleDefinitionPathForCurrentImports(publicPath)) {
+    return std::nullopt;
+  }
+  // User same-path shadows (`/soa/<name>`, root `/<name>`) keep winning.
+  const std::string samePath = "/soa/" + helperName;
+  const std::string rootPath = "/" + helperName;
+  if (hasVisibleDefinitionPathForCurrentImports(samePath) ||
+      hasDefinitionFamilyPath(samePath) ||
+      hasVisibleDefinitionPathForCurrentImports(rootPath) ||
+      hasDefinitionFamilyPath(rootPath)) {
+    return std::nullopt;
+  }
+  const std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTargetFn =
+      [this, &params, &locals](const Expr &target, std::string &elemType) -> bool {
+    return this->resolveArgsPackAccessTarget(target, elemType, params, locals);
+  };
+  std::string ignoredElemType;
+  bool receiverIsSoa = false;
+  withPreservedError([&]() {
+    receiverIsSoa = resolveSoaVectorTarget(expr.args.front(), ignoredElemType,
+                                           params, locals,
+                                           resolveArgsPackAccessTargetFn);
+    return receiverIsSoa;
+  });
+  if (!receiverIsSoa) {
+    return std::nullopt;
+  }
+  return "soa helper requires import /std/collections/soa/*: " + helperName;
+}
+
 bool SemanticsValidator::withPreservedError(const std::function<bool()> &fn) {
   const std::string previousError = error_;
   error_.clear();

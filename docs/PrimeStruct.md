@@ -4461,6 +4461,37 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
   count/get/ref, push/reserve, field-view, conversion helper names, import
   aliases, and compatibility spelling rejection belong in stdlib wrapper
   modules or focused diagnostics, not in compiler-owned policy.
+- **No-import helper rule:** the public helpers (`count`/`count_ref`,
+  `get`/`get_ref`, `ref`/`ref_ref`, `to_aos`/`to_aos_ref`, `push`,
+  `reserve`) exist only as `/std/collections/soa/*` wrappers. When a call
+  to one of them has a `soa<T>` (or `SoaVector<T>`) receiver and the
+  wrapper is not visible (neither `/std/collections/soa/*` nor
+  `/std/collections/*` is imported), semantic validation rejects it with
+  `soa helper requires import /std/collections/soa/*: <helper>`. The rule
+  is the same for read helpers and mutators and for every spelling: bare
+  (`count(values)`), method (`values.push(...)`), slash-method
+  (`values./soa/count()`), rooted (`/soa/count(values)`), and canonical
+  (`/std/collections/soa/count(values)`). A user same-path shadow
+  (`/soa/<helper>` or root `/<helper>`) still wins and is not rejected.
+  Constructing `soa<T>()` without the import stays allowed. No helper call
+  reaches IR lowering without its wrapper definition.
+  ```
+  import /std/collections/soa/*
+
+  [struct reflect]
+  Particle() {
+    [i32] x{1i32}
+  }
+
+  [effects(heap_alloc), return<int>]
+  main() {
+    [soa<Particle> mut] values{soa<Particle>()}
+    values.push(Particle(3i32))
+    return(values.count())
+  }
+  ```
+  Dropping the import line from this example makes both `values.push(...)`
+  and `values.count()` fail semantic validation with the diagnostic above.
 - **Allowed compiler/runtime substrate:** field-layout/codegen/introspection,
   generated `SoaSchema*` metadata, `SoaColumn<T>` column storage,
   `SoaFieldView<T>` non-owning field views, checked-buffer allocation/growth,

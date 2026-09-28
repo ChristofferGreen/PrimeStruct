@@ -54993,3 +54993,111 @@ crashes) - see `docs/todo_finished.md`.
     `spinning_cube_argument_validation_51_55` Timeout flake), after it
     1898/1899 with the same single Timeout; a focused rerun of that shard
     passes (19.0s).
+
+- [x] TODO-5318: Stop no-import `soa<T>` helper calls passing semantics then failing lowering
+  - owner: ai
+  - created_at: 2026-09-25
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: split from TODO-4812 finding (1) (and the 2026-08-07 log note
+    that found three different behaviours). With NO collections import,
+    the same logical soa operations hit different pipeline stages:
+    - `[soa<Particle> mut] values{soa<Particle>()}` + `values.push(...)`
+      rejects in semantics with `unknown call target: push`, while
+      `values.count()` on the same local compiles and runs.
+    - `[SoaVector<Particle> mut] values{soa<Particle>()}` +
+      `values.push(...)` passes semantics, then VM lowering fails with
+      `vm backend only supports arithmetic/.../increment/decrement calls
+      in expressions (call=/std/collections/soa/push, ...)`.
+    - `[soa<Particle>] values{soa<Particle>()}` +
+      `[int] total{plus(count(values), 1i32)}` fails lowering with
+      `missing semantic-product bridge-path choice: /main -> count`
+      (the same program with `import /std/collections/soa/*` exits 1).
+    - `values./soa/count()` fails lowering with `semantic-product
+      method-call target missing lowered definition:
+      /std/collections/soa_vector/count` (exits 0 with the import).
+    `docs/PrimeStruct.md` ("Generic SoA Substrate Boundary") says user code
+    spells `soa<T>` and imports `/std/collections/soa/*`, and that
+    unsupported paths reject explicitly instead of falling through.
+  - implementation_notes: the no-import visibility allowlist is
+    `matchesBuiltinSoaCollectionHelper` in
+    `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`
+    (covers count/get/ref/to_aos families but not push/reserve). The
+    pinned no-import cases in
+    `tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp`
+    ("rewrites no-import builtin soa to_aos forms to canonical helper
+    path", "rewrites builtin soa count forms to canonical helper path")
+    will need re-pinning whichever direction is chosen.
+  - acceptance:
+    - every repro above either runs on vm and native with the same result
+      as its imported equivalent, or rejects in semantic validation with
+      one deterministic diagnostic that names `/std/collections/soa/*`;
+      none fails in IR lowering.
+    - read helpers (count/get/ref/to_aos) and mutators (push/reserve) get
+      the same no-import treatment, and the chosen rule is stated in the
+      `docs/PrimeStruct.md` soa section.
+    - affected pins re-pinned; `./scripts/compile.sh --release` back at
+      baseline.
+  - stop_rule: if making no-import behaviour uniform requires changing
+    lazy stdlib import loading (not just helper visibility or semantic
+    diagnostics), stop and split the loader change out with evidence.
+  - resolution: root cause: with no soa import the `/std/collections/soa/*`
+    wrappers are not loaded, and each helper fell through a different
+    fallback. `preferredSoaHelperTargetForCurrentImports`
+    (`SemanticsValidatorBuildInitializerInference.cpp`) falls back to the
+    retired `/std/collections/soa_vector/<helper>` spelling when the
+    public wrapper is invisible. `resolveExplicitOrCanonicalCollectionMethodTarget`
+    (`matchesBuiltinSoaCollectionHelper`, only count/get/ref/to_aos)
+    marked read helpers builtin. So `values.count()` ran on a builtin
+    path, `values./soa/count()` and `values.to_aos()` failed lowering on
+    `soa_vector/*`, bare `count(values)` failed on a missing bridge-path
+    choice, push/reserve rejected as `unknown call target`, and an
+    explicit `[SoaVector<T>]` local got its push pre-rewritten to
+    `/std/collections/soa/push` and failed in vm/native lowering. Making
+    these run without the import would mean loading the soa module with no
+    import (the lazy stdlib import loader), which the stop_rule forbids,
+    so every repro now rejects in semantics instead (stop_rule not hit).
+    Fix: new `SemanticsValidator::noImportSoaHelperCallDiagnostic`
+    (`SemanticsValidatorExprMethodTargetResolution.cpp`, declared in
+    `SemanticsValidatorPrivateExprValidation.h`), called at the top of the
+    `validateExpr` call branch and on its soa `get/ref(...).field`
+    fast path (`SemanticsValidatorExpr.cpp`). It rejects
+    count/count_ref/get/get_ref/ref/ref_ref/to_aos/to_aos_ref/push/reserve
+    (bare, method, `/soa/`, slash-method and canonical
+    `/std/collections/soa/` spellings) on a soa receiver with
+    `soa helper requires import /std/collections/soa/*: <helper>` when
+    the wrapper is not visible, no user `/soa/<helper>` or root
+    `/<helper>` shadow exists, and the caller is not a `/std/` definition.
+    Reads and mutators get the same treatment. `soa<T>()` construction
+    without the import stays allowed. Docs: new "No-import helper rule"
+    bullet with a verified example in `docs/PrimeStruct.md` (Generic SoA
+    Substrate Boundary). Checked on vm and native: all four scope repros
+    plus reserve/get/ref/to_aos/bare-push variants and
+    `get(values, 0i32).x` reject in semantics with that diagnostic;
+    every imported equivalent is unchanged (push+count 1, reserve 0,
+    get/ref 3, `values./soa/count()` 0, bare count+1 exits 1). A user `/soa/count`
+    shadow and `import /std/collections/*` alone still run. Re-pinned 35
+    cases from no-import success/other-diagnostic expectations to the new
+    diagnostic, or added the soa import where the helper call was
+    incidental: the two named text-filter dump cases; 12 in
+    `..._helper_soa_validates_binding.cpp`; 3 in
+    `..._public_soa_helper_count.cpp`; 4 in
+    `..._to_aos_soa_helper_validates.cpp`; 5 in
+    `test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`;
+    2 in `test_compile_run_imports_operations.cpp`; 3 in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_helper_public_runs.cpp`;
+    2 in `test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp`
+    (added a stderr assertion to two exit-2-only cases that the new
+    diagnostic would otherwise mask); and one each in
+    `test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`
+    and `test_semantics_bindings_core.cpp` (dropped an incidental no-import
+    `count`). TODO-5319's acceptance was updated: its no-import count-forms
+    pin now covers this rule. Release gate: before the change the
+    branch baseline was 1898/1899 (only the known
+    `spinning_cube_argument_validation_51_55` Timeout flake). The first
+    post-fix gate was 1880/1899 (18 stale pins plus the soa surface-trace
+    audit tripped by a header comment, now reworded). After re-pinning:
+    1898/1899 with the same single Timeout; a focused rerun of that shard
+    passes (20.8s).

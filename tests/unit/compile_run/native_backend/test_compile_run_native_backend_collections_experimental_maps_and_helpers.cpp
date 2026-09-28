@@ -891,6 +891,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(readFile(errPath).find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("native rejects non-empty root soa struct literals") {
@@ -913,6 +916,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(readFile(errPath).find("soa helper requires import /std/collections/soa/*: count") != std::string::npos);
 }
 
 TEST_CASE("native rejects non-empty root soa literals with unsupported element envelopes") {

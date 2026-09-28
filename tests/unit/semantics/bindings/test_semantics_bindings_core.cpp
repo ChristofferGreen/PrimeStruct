@@ -307,7 +307,7 @@ main() {
   [soa<Particle>] cloned{cloneValues()}
   [Reference<soa<Particle>>] borrowed{borrowValues(location(values))}
   [Pointer<soa<Particle>>] ptr{pointValues(location(values))}
-  return(plus(count(values), count(cloned)))
+  return(0i32)
 }
 )";
   std::string error;

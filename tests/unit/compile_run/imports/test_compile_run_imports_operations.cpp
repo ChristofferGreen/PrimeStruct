@@ -756,8 +756,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /to_aos") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(readFile(errPath).find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("no-import root soa to_aos method helper forms reject during semantics in C++ emitter") {
@@ -781,8 +782,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /to_aos") !=
-        std::string::npos);
+  // TODO-5318: no-import soa helpers reject in semantics with one import
+  // diagnostic (docs/PrimeStruct.md, No-import helper rule).
+  CHECK(readFile(errPath).find("soa helper requires import /std/collections/soa/*: to_aos") != std::string::npos);
 }
 
 TEST_CASE("no-import root soa canonical to_aos_ref helper form rejects in C++ emitter") {
