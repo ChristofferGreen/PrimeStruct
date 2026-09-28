@@ -4492,6 +4492,38 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
   ```
   Dropping the import line from this example makes both `values.push(...)`
   and `values.count()` fail semantic validation with the diagnostic above.
+- **Rooted helper rule:** with the wrapper visible, a rooted direct call
+  `/soa/<helper>(values, ...)` on a `soa<T>` receiver is the non-method
+  twin of the slash-method form `values./soa/<helper>(...)` and routes the
+  same way for every public helper (`count`, `get`, `ref`, `to_aos`,
+  `push`, `reserve` and their `_ref` variants): to a visible user
+  `/soa/<helper>` shadow when one exists, otherwise to the canonical
+  `/std/collections/soa/<helper>` wrapper. A rooted call on a non-soa
+  receiver (for example `vector<i32>`) still rejects with
+  `unknown call target: /soa/<helper>`, and no diagnostic names the
+  retired `/std/collections/soa_vector/*` family.
+  ```
+  import /std/collections/*
+  import /std/collections/soa/*
+
+  [struct reflect]
+  Particle() {
+    [i32] x{3i32}
+  }
+
+  [effects(heap_alloc), return<int>]
+  main() {
+    [soa<Particle> mut] values{soa<Particle>()}
+    /soa/reserve(values, 4i32)
+    /soa/push(values, Particle{})
+    [int] counted{/soa/count(values)}
+    [Particle] picked{/soa/get(values, 0i32)}
+    [Particle] borrowed{/soa/ref(values, 0i32)}
+    [int] unpacked{/soa/to_aos(values).count()}
+    return(plus(plus(counted, unpacked), plus(picked.x, borrowed.x)))
+  }
+  ```
+  This exits with 8 on vm and native.
 - **Allowed compiler/runtime substrate:** field-layout/codegen/introspection,
   generated `SoaSchema*` metadata, `SoaColumn<T>` column storage,
   `SoaFieldView<T>` non-owning field views, checked-buffer allocation/growth,

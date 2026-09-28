@@ -1168,12 +1168,9 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
       isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
     return canonicalSoaGetPath;
   }
-  if (normalizedResolvedPath == samePathSoaHelperTargetPath("count")) {
-    return compatibilitySoaHelperTargetPath("count");
-  }
-  if (normalizedResolvedPath == samePathSoaHelperTargetPath("count_ref")) {
-    return compatibilitySoaHelperTargetPath("count_ref");
-  }
+  // TODO-5319: `/soa/count` and `/soa/count_ref` used to be reported under
+  // the retired /std/collections/soa_vector/* family here. They now stay
+  // on their own `/soa/<helper>` spelling like to_aos/push/reserve.
   return std::string(resolvedPath);
 }
 

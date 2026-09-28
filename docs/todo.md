@@ -103,9 +103,8 @@ of sync with them.
 | TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | blocked | (none) |
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
-| TODO-5319 | Rooted `/soa/<helper>` calls inconsistent; `soa_vector` leak | ready | hidden-test-failures-text-filters |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
-| TODO-5321 | soa method sugar inside nested bodies (`soa_ecs` example) | ready\* | hidden-test-failures-text-filters |
+| TODO-5321 | soa method sugar inside nested bodies (`soa_ecs` example) | ready | hidden-test-failures-text-filters |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready\* | hidden-test-failures-emitters |
@@ -116,20 +115,16 @@ of sync with them.
 `ready` items on the `hidden-test-failures-emitters` track (rule 11 caps
 concurrent same-track `Ready Now` items); pick them up once TODO-4800/4801
 close. Neither is blocked.
-TODO-5321 is likewise held behind TODO-5319 on the
-`hidden-test-failures-text-filters` track (TODO-5319 took TODO-5318's
-slot when it closed on 2026-09-28); pick it up once TODO-5319 closes.
-It is not blocked.
 
 ### Ready Now
 
-- TODO-5319 (track: hidden-test-failures-text-filters, surface: imported rooted `/soa/<helper>` direct-call routing in `src/semantics` + the `soa_vector` count fallback): with the soa imports, rooted `/soa/count|get|ref|to_aos|push|reserve(values, ...)` calls route, reject, or leak `/std/collections/soa_vector/count` inconsistently.
+- TODO-5321 (track: hidden-test-failures-text-filters, surface: `rewriteExperimentalSoaSamePathHelperMethodExpr` nested call-argument body recursion in `src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp`): with the soa imports, soa method sugar (e.g. `values.push(...)`, `particles.get(i)`) inside nested `then(){}`/`do(){}`/`while` bodies is not desugared, so `soa_ecs.prime` fails to compile. Took TODO-5319's slot when it closed on 2026-09-28.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 - TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-5321 (same `hidden-test-failures-text-filters` track as TODO-5319; found while closing TODO-5317 on 2026-09-25). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -520,54 +515,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - stop_rule: if the fix needs a change to the inlining recursion or
     real-call eligibility model, stop and split that out with evidence.
 
-- [ ] TODO-5319: Make rooted `/soa/<helper>` direct calls consistent; drop `soa_vector` leak
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-25
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-text-filters
-  - depends_on: (none)
-  - scope: split from TODO-4812 finding (3). The finding itself (count in
-    expression position) was already fixed by TODO-4811, but its pinned
-    case ("dump ast-semantic rewrites builtin soa count forms to canonical
-    helper path" in `test_compile_run_text_filters_dumps.cpp`) still fails
-    because of this. With `import /std/collections/*` +
-    `import /std/collections/soa/*`, a `[soa<Particle> mut]` local, and NO
-    user `/soa/*` definitions, the explicit rooted direct-call family
-    behaves four ways:
-    `/soa/get(values, 0i32)` and `/soa/ref(values, 0i32)` route to the
-    canonical helpers and run; `/soa/count(values)` rejects with `unknown
-    method: /std/collections/soa_vector/count` (a retired namespace;
-    without imports it now rejects with TODO-5318's import diagnostic);
-    `/soa/to_aos(values)`, `/soa/push(values, ...)` and
-    `/soa/reserve(values, ...)` reject with `unknown method: /soa/<name>`.
-    The slash-method forms (`values./soa/get(0i32)`,
-    `values./soa/to_aos()`, `values./soa/count()`) all run with the
-    imports.
-  - implementation_notes: grep `src/semantics` for the
-    `/std/collections/soa_vector/` fallback that `count` alone still maps
-    to; compare with the `get`/`ref` routing that already reaches the
-    canonical helpers.
-  - acceptance:
-    - no diagnostic or lowering error for rooted `/soa/<helper>` calls
-      names `/std/collections/soa_vector/*`.
-    - count/get/ref/to_aos/push/reserve rooted direct calls without a user
-      shadow behave the same way (all route to the canonical
-      `/std/collections/soa/*` helper, or all reject with one
-      `unknown call target: /soa/<name>`-style diagnostic), and the rule
-      is documented in the `docs/PrimeStruct.md` soa section.
-    - user `/soa/<name>` same-path shadows keep winning for both bare
-      rooted and slash-method forms.
-    - an imported rooted-call case pins the chosen behaviour (the
-      no-import "dump ast-semantic rewrites builtin soa count forms to
-      canonical helper path" case now pins TODO-5318's
-      `soa helper requires import /std/collections/soa/*: count` rule);
-      `./scripts/compile.sh --release` back at baseline.
-  - stop_rule: if choosing between routing and rejecting needs a spec
-    decision about whether rooted `/soa/*` is public surface, land only
-    the `soa_vector` leak removal (count rejecting like to_aos/push/reserve)
-    and split the uniformity decision into its own leaf.
-
 - [ ] TODO-5320: Make ast-semantic `.to_aos()` spelling match the resolved root `/to_aos` shadow
   - owner: ai
   - status: deferred
@@ -646,7 +593,9 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
     `classifyReceiverFamily` sees the concrete `SoaVector__t<hash>`
     struct's `Collection` trait and rejects push/reserve as vector
     mutator sugar. Check whether the sibling to_aos/inline-borrow
-    rewrites in that file have the same gap.
+    rewrites in that file have the same gap. Since TODO-5319 the same
+    rewrite also routes rooted `/soa/<helper>(values, ...)` calls, so the
+    body-recursion fix should cover those too.
   - acceptance:
     - both nested repros above run on vm and native for all three
       constructor spellings (for example, `reserve` + push in the `then`

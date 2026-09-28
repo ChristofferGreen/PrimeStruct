@@ -157,12 +157,34 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
         publicSoaSurfaceVisible,
         overloadedCanonicalHelpers);
   }
-  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
+  if (expr.kind != Expr::Kind::Call || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
     return;
   }
+  // TODO-5319: a rooted direct call (`/soa/<helper>(values, ...)`) is the
+  // non-method twin of the slash-method form (`values./soa/<helper>(...)`)
+  // and routes the same way: to a user `/soa/<helper>` shadow when one is
+  // visible, otherwise to the canonical /std/collections/soa/<helper>
+  // wrapper. Without the soa surface in scope the no-import helper rule
+  // (TODO-5318) rejects it instead, so leave it untouched here.
+  if (!expr.isMethodCall) {
+    const std::string rootedPath =
+        expr.namespacePrefix.empty() || expr.namespacePrefix == "/"
+            ? expr.name
+            : expr.namespacePrefix + "/" + expr.name;
+    if (!publicSoaSurfaceVisible || rootedPath.rfind("/soa/", 0) != 0 ||
+        !expr.templateArgs.empty() ||
+        semantics::hasNamedArguments(expr.argNames)) {
+      return;
+    }
+  }
 
-  std::string helperName = expr.name;
+  std::string helperName = expr.isMethodCall
+                               ? expr.name
+                               : (expr.namespacePrefix.empty() ||
+                                          expr.namespacePrefix == "/"
+                                      ? expr.name
+                                      : expr.namespacePrefix + "/" + expr.name);
   if (!helperName.empty() && helperName.front() == '/') {
     helperName.erase(helperName.begin());
   }

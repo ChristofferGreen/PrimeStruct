@@ -55101,3 +55101,107 @@ crashes) - see `docs/todo_finished.md`.
     audit tripped by a header comment, now reworded). After re-pinning:
     1898/1899 with the same single Timeout; a focused rerun of that shard
     passes (20.8s).
+
+- [x] TODO-5319: Make rooted `/soa/<helper>` direct calls consistent; drop `soa_vector` leak
+  - owner: ai
+  - created_at: 2026-09-25
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: split from TODO-4812 finding (3). The finding itself (count in
+    expression position) was already fixed by TODO-4811, but its pinned
+    case ("dump ast-semantic rewrites builtin soa count forms to canonical
+    helper path" in `test_compile_run_text_filters_dumps.cpp`) still fails
+    because of this. With `import /std/collections/*` +
+    `import /std/collections/soa/*`, a `[soa<Particle> mut]` local, and NO
+    user `/soa/*` definitions, the explicit rooted direct-call family
+    behaves four ways:
+    `/soa/get(values, 0i32)` and `/soa/ref(values, 0i32)` route to the
+    canonical helpers and run; `/soa/count(values)` rejects with `unknown
+    method: /std/collections/soa_vector/count` (a retired namespace;
+    without imports it now rejects with TODO-5318's import diagnostic);
+    `/soa/to_aos(values)`, `/soa/push(values, ...)` and
+    `/soa/reserve(values, ...)` reject with `unknown method: /soa/<name>`.
+    The slash-method forms (`values./soa/get(0i32)`,
+    `values./soa/to_aos()`, `values./soa/count()`) all run with the
+    imports.
+  - implementation_notes: grep `src/semantics` for the
+    `/std/collections/soa_vector/` fallback that `count` alone still maps
+    to; compare with the `get`/`ref` routing that already reaches the
+    canonical helpers.
+  - acceptance:
+    - no diagnostic or lowering error for rooted `/soa/<helper>` calls
+      names `/std/collections/soa_vector/*`.
+    - count/get/ref/to_aos/push/reserve rooted direct calls without a user
+      shadow behave the same way (all route to the canonical
+      `/std/collections/soa/*` helper, or all reject with one
+      `unknown call target: /soa/<name>`-style diagnostic), and the rule
+      is documented in the `docs/PrimeStruct.md` soa section.
+    - user `/soa/<name>` same-path shadows keep winning for both bare
+      rooted and slash-method forms.
+    - an imported rooted-call case pins the chosen behaviour (the
+      no-import "dump ast-semantic rewrites builtin soa count forms to
+      canonical helper path" case now pins TODO-5318's
+      `soa helper requires import /std/collections/soa/*: count` rule);
+      `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if choosing between routing and rejecting needs a spec
+    decision about whether rooted `/soa/*` is public surface, land only
+    the `soa_vector` leak removal (count rejecting like to_aos/push/reserve)
+    and split the uniformity decision into its own leaf.
+  - resolution: stop_rule not hit; took the "route all six" direction.
+    It was decidable from precedent: the slash-method form
+    (`values./soa/<helper>(...)`) already routed every helper to the
+    canonical wrapper, the IR test "root get helper forms lower through
+    canonical helper routing" treats rooted `/soa/get` as canonical
+    routing, and the `docs/PrimeStruct.md` no-import rule lists rooted
+    `/soa/<helper>(values)` as one spelling of the public helper (only
+    rooted `/soa_vector/*` is a retired spelling). Root cause:
+    `rewriteExperimentalSoaSamePathHelperMethodExpr`
+    (`src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp`),
+    the pass that routes slash-method calls to a user `/soa/<helper>`
+    shadow or else `/std/collections/soa/<helper>`, returned early for
+    every non-method call. So rooted calls fell through to the validator:
+    get/ref happened to reach the canonical helpers via collection-access
+    resolution; to_aos/push/reserve failed in
+    `resolveExprCollectionAccessTarget` with `unknown method: /soa/<name>`;
+    count reached `validateExprCountCapacityBuiltins` with target
+    `/soa/count`, and `canonicalSoaPendingHelperPath`
+    (`src/semantics/SemanticsBuiltinPathHelpers.cpp`, via
+    `soaUnavailableMethodDiagnostic`) rewrote `/soa/count` and
+    `/soa/count_ref` to `compatibilitySoaHelperTargetPath(...)`, the
+    retired `/std/collections/soa_vector/*` family (found with a gdb
+    breakpoint on `soaUnavailableMethodDiagnostic`). Fix: (1) the rewrite
+    now also accepts non-method calls whose rooted path starts with
+    `/soa/`, only when the public soa surface is visible and with no
+    template or named args. It reuses the existing soa-receiver check, so
+    non-soa receivers are untouched. (2) The count/count_ref ->
+    `soa_vector` mapping in `canonicalSoaPendingHelperPath` is deleted, so
+    any leftover diagnostic keeps the `/soa/<helper>` spelling. Checked on
+    vm and native with both imports and a `[soa<Particle> mut]` local
+    holding one element: `/soa/count` 1, `/soa/get(...).x` 3,
+    `/soa/ref(...).x` 3, `/soa/to_aos(values).count()` 1, `/soa/push` then
+    count 2, `/soa/reserve` then count 1, and
+    `count(values) + /soa/count(values) + values./soa/count()` 3. User
+    `/soa/count` (returns 7) and `/soa/push` (returns 20) shadows win for
+    both rooted and slash-method forms (exit 54 on vm and native). The
+    no-import rooted count still gives TODO-5318's
+    `soa helper requires import /std/collections/soa/*: count`, and an
+    imported rooted `/soa/count` on a `vector<i32>` still rejects with
+    `unknown call target: /soa/count`. Docs: new "Rooted helper rule"
+    bullet with a verified example (exits 8 on vm and native) in
+    `docs/PrimeStruct.md` (Generic SoA Substrate Boundary). Pins: the
+    no-import "dump ast-semantic rewrites builtin soa count forms to
+    canonical helper path" case already pinned TODO-5318's diagnostic
+    (re-pinned when TODO-5318 landed; confirmed passing, left unchanged).
+    New case "dump ast-semantic routes imported rooted soa helper calls to
+    canonical helpers" in `test_compile_run_text_filters_dumps.cpp` checks
+    that all six rooted calls in `main` become `/std/collections/soa/*`
+    calls, that nothing names `soa_vector`, and that vm exits 8. The
+    rewrite still skips call-argument body envelopes, so rooted calls
+    inside `then(){}`/`do(){}` bodies have the same nesting gap as
+    TODO-5321's method sugar (same function). Release gate: baseline
+    before was 1898/1899 (only the known
+    `spinning_cube_argument_validation_51_55` Timeout flake); after the
+    change 1898/1899 with the same single Timeout, and a focused rerun of
+    that shard passes (21.8s).

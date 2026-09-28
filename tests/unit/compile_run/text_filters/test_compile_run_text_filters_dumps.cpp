@@ -1398,6 +1398,60 @@ main() {
   CHECK(err.find("soa_vector") == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic routes imported rooted soa helper calls to canonical helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{3i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa<Particle> mut] values{soa<Particle>()}
+  /soa/reserve(values, 4i32)
+  /soa/push(values, Particle{})
+  [int] counted{/soa/count(values)}
+  [Particle] picked{/soa/get(values, 0i32)}
+  [Particle] borrowed{/soa/ref(values, 0i32)}
+  [int] unpacked{/soa/to_aos(values).count()}
+  return(plus(plus(counted, unpacked), plus(picked.x, borrowed.x)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_rooted_soa_helpers.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_rooted_soa_helpers.txt").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_rooted_soa_helpers_err.txt").string();
+
+  // TODO-5319: with the soa import and no user /soa/<helper> shadow, every
+  // rooted /soa/<helper>(values, ...) direct call routes to the canonical
+  // /std/collections/soa/* helper, exactly like the slash-method form.
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  REQUIRE(mainPos != std::string::npos);
+  const size_t mainEnd = ast.find("\n  }\n", mainPos);
+  REQUIRE(mainEnd != std::string::npos);
+  const std::string mainBody = ast.substr(mainPos, mainEnd - mainPos);
+  CHECK(mainBody.find("{/soa/") == std::string::npos);
+  CHECK(mainBody.find("    /soa/") == std::string::npos);
+  CHECK(mainBody.find("/std/collections/soa/soaVectorPush__") != std::string::npos);
+  CHECK(mainBody.find("/std/collections/soa/soaVectorReserve__") != std::string::npos);
+  CHECK(mainBody.find("soa_vector") == std::string::npos);
+  CHECK(mainBody.find("[int] counted{/std/collections/soa/") != std::string::npos);
+  CHECK(mainBody.find("[int] unpacked{/std/collections/soa/to_aos__") != std::string::npos);
+  CHECK(readFile(errPath).find("soa_vector") == std::string::npos);
+
+  const std::string runVmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 8);
+}
+
 TEST_CASE("dump ast-semantic rewrites imported builtin soa to_aos forms to canonical helper path") {
   const std::string source = R"(
 import /std/collections/*
