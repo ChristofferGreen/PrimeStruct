@@ -355,8 +355,15 @@ std::string inferUninitializedTargetStructPath(const std::string &typeText,
     if (!splitTemplateArgs(argList, wrappedArgs) || wrappedArgs.size() != 1) {
       return "";
     }
+    // TODO-5322: unwrap `uninitialized<X>` under Reference/Pointer, as
+    // TODO-4802 does for args-pack element metadata. Otherwise a
+    // `Reference<uninitialized<Pair>>` binding fact resolves to "" while
+    // still counting as a semantic fact, which suppresses the local-info
+    // fallback and fails struct-parameter matching at helper calls.
     return inferUninitializedTargetStructPath(
-        wrappedArgs.front(), namespacePrefix, resolveStructTypeName);
+        unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(wrappedArgs.front())),
+        namespacePrefix,
+        resolveStructTypeName);
   }
   if (normalizedBase == "vector") {
     return normalizeUninitializedVectorStructPath(base);

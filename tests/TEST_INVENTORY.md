@@ -550,6 +550,7 @@ Total: 10022 test cases across 459 files.
 - C++ emitter materializes variadic struct reference packs from borrowed pack reference fields
 - C++ emitter materializes variadic pointer uninitialized scalar packs with indexed init and take
 - C++ emitter materializes variadic pointer uninitialized struct packs from borrowed helper references
+- helper calls accept uninitialized struct references on vm and native
 - C++ emitter materializes variadic borrowed uninitialized scalar packs with indexed init and take
 - C++ emitter materializes variadic borrowed uninitialized struct packs with indexed init and take
 

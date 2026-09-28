@@ -55763,3 +55763,91 @@ crashes) - see `docs/todo_finished.md`.
     in `test_compile_run_emitters_vector_access_metadata_resolution.cpp`.
     If the legacy `src/emitter` AST emitter is ever deleted as a
     compatibility subsystem, these tests go with it.
+
+**Todo Completion (September 28, 2026) — TODO-5322**
+- [x] TODO-5322: Fix a helper-returned `Reference<uninitialized<Struct>>` forwarded into an `args<Pointer<uninitialized<Struct>>>` pack losing its struct type
+  - owner: ai
+  - created_at: 2026-09-28
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: split out of TODO-4800. Minimal repro on `--emit=vm`:
+    ```
+    [struct]
+    Pair() {
+      [i32] left{0i32}
+      [i32] right{0i32}
+    }
+    [return<Reference<uninitialized<Pair>>>]
+    borrow_ref([Reference<uninitialized<Pair>>] value) {
+      return(value)
+    }
+    [return<int>]
+    score_ptrs([args<Pointer<uninitialized<Pair>>>] values) {
+      init(dereference(values[0i32]), Pair{1i32, 5i32})
+      [Pair] first{take(dereference(values[0i32]))}
+      return(first.right)
+    }
+    [return<int>]
+    main() {
+      [uninitialized<Pair>] a0{uninitialized<Pair>()}
+      [Reference<uninitialized<Pair>>] p0{location(a0)}
+      return(score_ptrs(location(borrow_ref(p0))))
+    }
+    ```
+    fails with `VM lowering error: struct parameter type mismatch:
+    expected /Pair, got <unknown>` (exit 2). Passing `location(p0)`
+    instead of `location(borrow_ref(p0))` runs and returns 5. No `.at`
+    sugar is involved. The only pinned test is "C++ emitter materializes
+    variadic pointer uninitialized struct packs from borrowed helper
+    references" in
+    `test_compile_run_emitters_variadic_reference_pack_access.cpp`.
+  - implementation_notes: TODO-4802 fixed the same symptom for direct
+    `location(local)` pack arguments in
+    `applyArgsPackElementStructMetadata`
+    (`src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp`) by
+    unwrapping `uninitialized<X>`. Check where the pack element struct
+    type comes from when the element is `location(<helper call>)`,
+    because the helper's `Reference<uninitialized<Pair>>` return type is
+    probably not unwrapped the same way.
+  - acceptance: the minimal repro above returns 5 on vm and native; the
+    pinned TEST_CASE goes back to `CHECK(runCommand(compileCmd) == 30)`.
+  - stop_rule: if the fix needs changes to how helper return types are
+    inferred for ordinary (non-pack) bindings, stop and split that out
+    rather than widening this leaf.
+  - resolution: fixed; the pack was not the cause. Any helper call
+    passing a `Reference<uninitialized<Pair>>` argument to a
+    `[Reference<uninitialized<Pair>>]` parameter failed the same way,
+    e.g. a bare `borrow_ref(p0)` or `borrow_ref(location(a0))` statement
+    with no pack involved. The call-site check in
+    `IrLowererInlineParamHelpers.cpp` (reference-struct param branch)
+    calls `inferStructExprPath`, which first consults
+    `resolveSemanticExprStructPath`
+    (`src/ir_lowerer/IrLowererUninitializedStructInference.cpp`). The
+    arg has a semantic binding fact `Reference<uninitialized<Pair>>`;
+    `inferUninitializedTargetStructPath` stripped `Reference<...>` but
+    could not resolve the inner `uninitialized<Pair>`, so it returned ""
+    while `hasSemanticTypeFact` was true. That suppressed the local-info
+    fallback, even though the local `p0` already had
+    `structTypeName=/Pair`, which gave "got <unknown>". Passing
+    `location(p0)` straight into the pack avoided this only because
+    pack element packing never goes through that per-param check.
+    Fix: in `inferUninitializedTargetStructPath`'s Reference/Pointer
+    branch, apply `unwrapTopLevelUninitializedTypeText` to the wrapped
+    arg before recursing. This is the same `uninitialized<X>` unwrap
+    TODO-4802 added in `applyArgsPackElementStructMetadata`, but that
+    fix covers callee-side pack param metadata, while this one covers
+    caller-side arg struct inference from semantic facts. It unwraps
+    only under Reference/Pointer; bare `uninitialized<X>` still
+    resolves to "". Not a return-type inference change, so the
+    stop_rule did not apply. The pinned "C++ emitter materializes
+    variadic pointer uninitialized struct packs from borrowed helper
+    references" is back to `CHECK(runCommand(compileCmd) == 30)`. New
+    "helper calls accept uninitialized struct references on vm and
+    native" pins the minimal repro plus the bare no-pack call; it
+    returns 5 on `--emit=vm` and on the `--emit=native` binary.
+    Release gate: baseline (ae156f09) 1898/1899 with only the known
+    `spinning_cube_argument_validation_51_55` Timeout flake; after the
+    fix also 1898/1899 with the same single Timeout, and a focused
+    rerun of that shard passes.

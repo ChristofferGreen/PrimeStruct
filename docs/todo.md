@@ -104,16 +104,14 @@ of sync with them.
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
-| TODO-5322 | Helper-returned `Reference<uninitialized<Struct>>` into `args<Pointer<...>>` pack loses struct type | ready | hidden-test-failures-emitters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
 ### Ready Now
 
-- TODO-5322 (track: hidden-test-failures-emitters, surface: `src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp` args-pack element struct metadata for `location(<helper call>)`): helper-returned `Reference<uninitialized<Pair>>` forwarded into an `args<Pointer<uninitialized<Pair>>>` pack fails with "struct parameter type mismatch: expected /Pair, got <unknown>".
 - TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5322 closed on 2026-09-28 (the last `hidden-test-failures-emitters` leaf) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -544,58 +542,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - stop_rule: if the AST rewrite cannot see the shadow without moving
     shadow resolution earlier in `semanticValidationPassManifest()`, stop
     and document the pass-order constraint instead of reordering passes.
-
-- [ ] TODO-5322: Fix a helper-returned `Reference<uninitialized<Struct>>` forwarded into an `args<Pointer<uninitialized<Struct>>>` pack losing its struct type
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-28
-  - phase: Hidden test failure remediation (emitters cluster)
-  - parallel_track: hidden-test-failures-emitters
-  - depends_on: (none)
-  - scope: split out of TODO-4800. Minimal repro on `--emit=vm`:
-    ```
-    [struct]
-    Pair() {
-      [i32] left{0i32}
-      [i32] right{0i32}
-    }
-    [return<Reference<uninitialized<Pair>>>]
-    borrow_ref([Reference<uninitialized<Pair>>] value) {
-      return(value)
-    }
-    [return<int>]
-    score_ptrs([args<Pointer<uninitialized<Pair>>>] values) {
-      init(dereference(values[0i32]), Pair{1i32, 5i32})
-      [Pair] first{take(dereference(values[0i32]))}
-      return(first.right)
-    }
-    [return<int>]
-    main() {
-      [uninitialized<Pair>] a0{uninitialized<Pair>()}
-      [Reference<uninitialized<Pair>>] p0{location(a0)}
-      return(score_ptrs(location(borrow_ref(p0))))
-    }
-    ```
-    fails with `VM lowering error: struct parameter type mismatch:
-    expected /Pair, got <unknown>` (exit 2). Passing `location(p0)`
-    instead of `location(borrow_ref(p0))` runs and returns 5. No `.at`
-    sugar is involved. The only pinned test is "C++ emitter materializes
-    variadic pointer uninitialized struct packs from borrowed helper
-    references" in
-    `test_compile_run_emitters_variadic_reference_pack_access.cpp`.
-  - implementation_notes: TODO-4802 fixed the same symptom for direct
-    `location(local)` pack arguments in
-    `applyArgsPackElementStructMetadata`
-    (`src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp`) by
-    unwrapping `uninitialized<X>`. Check where the pack element struct
-    type comes from when the element is `location(<helper call>)`,
-    because the helper's `Reference<uninitialized<Pair>>` return type is
-    probably not unwrapped the same way.
-  - acceptance: the minimal repro above returns 5 on vm and native; the
-    pinned TEST_CASE goes back to `CHECK(runCommand(compileCmd) == 30)`.
-  - stop_rule: if the fix needs changes to how helper return types are
-    inferred for ordinary (non-pack) bindings, stop and split that out
-    rather than widening this leaf.
 
 - [ ] TODO-5309: Rename the soa `ref_ref` builtin to `ref_borrowed`
   - owner: ai

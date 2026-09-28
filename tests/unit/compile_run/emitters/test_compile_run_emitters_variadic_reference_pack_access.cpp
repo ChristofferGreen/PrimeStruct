@@ -130,20 +130,50 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_pointer_uninitialized_struct_helper_ref.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_variadic_args_pointer_uninitialized_struct_helper_ref_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  // TODO-5322: the `.at()`/`.at_unsafe()` pack sugar here now lowers
-  // (TODO-4800 fixed). This case still fails for an unrelated reason: a
-  // helper-returned `Reference<uninitialized<Pair>>` (`borrow_ref(...)`)
-  // forwarded into the `args<Pointer<uninitialized<Pair>>>` pack loses its
-  // struct type. It fails identically with only `values[N]` indexing.
-  // Restore `CHECK(runCommand(...) == 30)` once TODO-5322 lands.
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch: expected /Pair, got <unknown>") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 30);
+}
+
+TEST_CASE("helper calls accept uninitialized struct references on vm and native") {
+  // TODO-5322: a `Reference<uninitialized<Pair>>` argument to a helper
+  // taking `[Reference<uninitialized<Pair>>]` used to fail with "struct
+  // parameter type mismatch: expected /Pair, got <unknown>" because the
+  // semantic binding fact's `uninitialized<Pair>` target was not unwrapped.
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Reference<uninitialized<Pair>>>]
+borrow_ref([Reference<uninitialized<Pair>>] value) {
+  return(value)
+}
+
+[return<int>]
+score_ptrs([args<Pointer<uninitialized<Pair>>>] values) {
+  init(dereference(values[0i32]), Pair{1i32, 5i32})
+  [Pair] first{take(dereference(values[0i32]))}
+  return(first.right)
+}
+
+[return<int>]
+main() {
+  [uninitialized<Pair>] a0{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] p0{location(a0)}
+  borrow_ref(location(a0))
+  return(score_ptrs(location(borrow_ref(p0))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_uninitialized_struct_helper_ref_arg.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 5);
+  const std::string exePath =
+      (testScratchPath("") / "primec_uninitialized_struct_helper_ref_arg_native").string();
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + quoteShellArg(exePath) +
+                   " --entry /main") == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 5);
 }
 
 TEST_SUITE_END();
