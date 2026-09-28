@@ -104,18 +104,16 @@ of sync with them.
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
-| TODO-4807 | `resolveMethodCallPath` alias/canonical fallback regressions | ready | hidden-test-failures-emitters |
 | TODO-5322 | Helper-returned `Reference<uninitialized<Struct>>` into `args<Pointer<...>>` pack loses struct type | ready | hidden-test-failures-emitters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
 ### Ready Now
 
-- TODO-4807 (track: hidden-test-failures-emitters, surface: `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` `resolveMethodCallPath` alias/canonical cross-path fallback; disjoint from TODO-5322's `IrLowererStatementBindingTypeMetadata.cpp` args-pack surface): bare-alias vector/map receiver shapes regressed in the emitter's cross-path metadata fallback.
-- TODO-5322 (track: hidden-test-failures-emitters, surface: `src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp` args-pack element struct metadata for `location(<helper call>)`; disjoint from TODO-4807's emitter surface): helper-returned `Reference<uninitialized<Pair>>` forwarded into an `args<Pointer<uninitialized<Pair>>>` pack fails with "struct parameter type mismatch: expected /Pair, got <unknown>".
+- TODO-5322 (track: hidden-test-failures-emitters, surface: `src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp` args-pack element struct metadata for `location(<helper call>)`): helper-returned `Reference<uninitialized<Pair>>` forwarded into an `args<Pointer<uninitialized<Pair>>>` pack fails with "struct parameter type mismatch: expected /Pair, got <unknown>".
 - TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -546,67 +544,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - stop_rule: if the AST rewrite cannot see the shadow without moving
     shadow resolution earlier in `semanticValidationPassManifest()`, stop
     and document the pass-order constraint instead of reordering passes.
-
-- [ ] TODO-4807: `resolveMethodCallPath`'s alias<->canonical cross-path fallback broke for several bare-alias vector/map receiver shapes (emitter-internal unit-test regressions, not yet observed end-to-end)
-  - owner: ai
-  - status: ready
-  - created_at: 2026-07-30
-  - phase: Hidden test failure remediation (emitters cluster)
-  - parallel_track: hidden-test-failures-emitters
-  - depends_on: (none)
-  - scope: found via several `resolveMethodCallPath(...)` unit tests in
-    `test_compile_run_emitters_vector_receiver_metadata_resolution.cpp`
-    and `test_compile_run_emitters_map_metadata_resolution.cpp` that
-    exercise the emitter's internal C++ helper directly (no `.prime`
-    source involved, so no end-to-end repro is confirmed to be affected
-    yet - see stop_rule). Concretely, given only ONE of a
-    alias-path/canonical-path pair has return-kind/return-struct
-    metadata registered (e.g. only `/std/collections/vector/at` has
-    metadata, not `/vector/at`, or vice versa), `resolveMethodCallPath`
-    used to fall back across the pair to find it; this cross-path
-    fallback now fails (returns unresolved) specifically when the
-    receiver is (a) a plain non-method `Call` node spelled with the
-    ALIAS path (`/vector/at`, not `/std/collections/vector/at`), or (b)
-    an `isMethodCall=true` node whose `name` is literally the bare alias
-    string `/vector/at` (with no `namespacePrefix`) - the equivalent
-    canonical-path and parser-shaped (`name="at"` +
-    `namespacePrefix="/std/collections/vector"`) spellings both still
-    resolve correctly in the same scenarios. Conversely, two DIFFERENT
-    resolution branches (rooted non-method-call receivers spelled as
-    bare map alias paths like `/map/contains(values, key)`, and bare
-    map method-call-sugar `values.at(key)`/`values.at_unsafe(key)`) now
-    resolve successfully where they previously (per the pre-existing
-    test expectations) did not - i.e. this isn't a uniform "aliases got
-    stricter" change, some alias-receiver shapes got MORE permissive and
-    others got LESS. All affected TEST_CASEs re-pinned to their exact
-    current verified behavior (5 across the two files).
-  - implementation_notes: the resolution behavior differs by which of
-    the several receiver-shape branches in
-    `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp`'s
-    `resolveMethodCallPath` a given call takes (`receiver.kind==Name`,
-    `receiver.kind==Call && !isMethodCall` non-method branch, or the
-    generic `else` branch reached for `isMethodCall==true` Call
-    receivers) - build a small table of (receiver shape, alias vs
-    canonical spelling, has-metadata-on-which-path) x (old expected
-    result, new actual result) from the re-pinned tests in both files
-    before attempting a fix, since a naive "restore the old fallback
-    everywhere" change would likely re-break the cases that got MORE
-    permissive (which have their own now-passing sibling tests
-    elsewhere in the same files that must not regress).
-  - acceptance: not yet scoped to specific target behavior - first pass
-    should determine whether the pre-change or post-change behavior is
-    actually intended for each of the 5 re-pinned assertions (this may
-    require asking the user, since both directions are plausible
-    deliberate refactor outcomes), then fix `resolveMethodCallPath`
-    accordingly and flip the corresponding re-pinned tests back.
-  - stop_rule: before spending time on a code fix, try to construct at
-    least one real `.prime` source (not a direct C++ unit test) that
-    actually observably depends on this fallback behavior end-to-end -
-    if none of this session's 35 fixed emitters failures needed it
-    (TODO-4800 (finished) through 4806 cover the ones that were end-to-end
-    reproducible), this may be purely a metadata-plumbing internal
-    inconsistency that never surfaces in real compiled programs, which
-    would change this TODO's priority significantly.
 
 - [ ] TODO-5322: Fix a helper-returned `Reference<uninitialized<Struct>>` forwarded into an `args<Pointer<uninitialized<Struct>>>` pack losing its struct type
   - owner: ai

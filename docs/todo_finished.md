@@ -55636,3 +55636,130 @@ crashes) - see `docs/todo_finished.md`.
     `spinning_cube_argument_validation_51_55` Timeout flake; after the
     fix also 1898/1899 with the same single Timeout, and a focused
     rerun of that shard passes.
+
+**Todo Completion (September 28, 2026) — TODO-4807**
+- [x] TODO-4807: `resolveMethodCallPath`'s alias<->canonical cross-path fallback broke for several bare-alias vector/map receiver shapes (emitter-internal unit-test regressions, not yet observed end-to-end)
+  - owner: ai
+  - created_at: 2026-07-30
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: found via several `resolveMethodCallPath(...)` unit tests in
+    `test_compile_run_emitters_vector_receiver_metadata_resolution.cpp`
+    and `test_compile_run_emitters_map_metadata_resolution.cpp` that
+    exercise the emitter's internal C++ helper directly (no `.prime`
+    source involved, so no end-to-end repro is confirmed to be affected
+    yet - see stop_rule). Concretely, given only ONE of a
+    alias-path/canonical-path pair has return-kind/return-struct
+    metadata registered (e.g. only `/std/collections/vector/at` has
+    metadata, not `/vector/at`, or vice versa), `resolveMethodCallPath`
+    used to fall back across the pair to find it; this cross-path
+    fallback now fails (returns unresolved) specifically when the
+    receiver is (a) a plain non-method `Call` node spelled with the
+    ALIAS path (`/vector/at`, not `/std/collections/vector/at`), or (b)
+    an `isMethodCall=true` node whose `name` is literally the bare alias
+    string `/vector/at` (with no `namespacePrefix`) - the equivalent
+    canonical-path and parser-shaped (`name="at"` +
+    `namespacePrefix="/std/collections/vector"`) spellings both still
+    resolve correctly in the same scenarios. Conversely, two DIFFERENT
+    resolution branches (rooted non-method-call receivers spelled as
+    bare map alias paths like `/map/contains(values, key)`, and bare
+    map method-call-sugar `values.at(key)`/`values.at_unsafe(key)`) now
+    resolve successfully where they previously (per the pre-existing
+    test expectations) did not - i.e. this isn't a uniform "aliases got
+    stricter" change, some alias-receiver shapes got MORE permissive and
+    others got LESS. All affected TEST_CASEs re-pinned to their exact
+    current verified behavior (5 across the two files).
+  - implementation_notes: the resolution behavior differs by which of
+    the several receiver-shape branches in
+    `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp`'s
+    `resolveMethodCallPath` a given call takes (`receiver.kind==Name`,
+    `receiver.kind==Call && !isMethodCall` non-method branch, or the
+    generic `else` branch reached for `isMethodCall==true` Call
+    receivers) - build a small table of (receiver shape, alias vs
+    canonical spelling, has-metadata-on-which-path) x (old expected
+    result, new actual result) from the re-pinned tests in both files
+    before attempting a fix, since a naive "restore the old fallback
+    everywhere" change would likely re-break the cases that got MORE
+    permissive (which have their own now-passing sibling tests
+    elsewhere in the same files that must not regress).
+  - acceptance: not yet scoped to specific target behavior - first pass
+    should determine whether the pre-change or post-change behavior is
+    actually intended for each of the 5 re-pinned assertions (this may
+    require asking the user, since both directions are plausible
+    deliberate refactor outcomes), then fix `resolveMethodCallPath`
+    accordingly and flip the corresponding re-pinned tests back.
+  - stop_rule: before spending time on a code fix, try to construct at
+    least one real `.prime` source (not a direct C++ unit test) that
+    actually observably depends on this fallback behavior end-to-end -
+    if none of this session's 35 fixed emitters failures needed it
+    (TODO-4800 (finished) through 4806 cover the ones that were end-to-end
+    reproducible), this may be purely a metadata-plumbing internal
+    inconsistency that never surfaces in real compiled programs, which
+    would change this TODO's priority significantly.
+  - resolution: closed per the stop_rule as a confirmed internal-only
+    metadata inconsistency, not end-to-end reproducible; deprioritized
+    and no source or test changes. Re-open only if new evidence shows a
+    `.prime` program whose compiled behavior depends on it.
+    Structural evidence: `emitter::resolveMethodCallPath` is reached only
+    through the legacy AST-to-C++ `primec::Emitter::emitCpp`
+    (`include/primec/backend/Emitter.h`, `src/emitter/`), and no
+    production source calls `emitCpp` (only tests under
+    `tests/unit/ir_pipeline/validation/` and the emitter unit tests via
+    `include/primec/testing/EmitterHelpers.h`). Every `--emit` kind goes
+    through IR backends: `resolveIrBackendEmitKind`
+    (`src/support/EmitKind.cpp`) maps `cpp`->`cpp-ir`, `exe`->`exe-ir`,
+    `glsl`->`glsl-ir`, `spirv`->`spirv-ir`, and `IrBackends.cpp` uses
+    `IrToCppEmitter` on the IR module. `nm -C build-release/primec`
+    shows 0 symbols for `primec::emitter::resolveMethodCallPath` and
+    `primec::Emitter::emitCpp`, because the linker drops them as
+    unreferenced. `PrimeStruct_compile_run_tests` does contain them.
+    Empirical evidence: 14 `.prime` programs covering every pinned
+    receiver shape, each built with `--emit=vm`, `--emit=cpp` and
+    `--emit=exe` (run), all fixtures using
+    `Marker { [i32] value }` + `/Marker/tag([Marker] self)` with the
+    user-defined helper returning `Marker(...)`. Semantics decides every
+    outcome before any backend runs, and results match across all
+    three backends:
+    - (A1) only canonical `/std/collections/vector/at` defined, direct
+      alias call `/vector/at(values, 2i32).tag()`: semantic error
+      "unknown call target: /vector/at" (no cross-path fallback).
+    - (A3) only alias `/vector/at` defined, direct canonical call:
+      "unknown call target: /std/collections/vector/at".
+    - (A2/A4) same-path direct calls run and return 2.
+    - (B1) canonical helper, `values./vector/at(2i32).tag()`: "unknown
+      method: /vector/at". (B2/B3) same-path slash-method chains into a
+      struct method: "argument type mismatch for /Marker/tag parameter
+      self: expected /Marker got array", which is an already-pinned,
+      intended semantics diagnostic (see
+      `test_semantics_calls_and_flow_collections_vector_method_alias_struct_diagnostics.cpp`).
+      (B4) alias string-returning helper with
+      `values./vector/at(2i32).count()` runs and returns 3.
+    - (C1/C2) alias `/map/contains` / `/map/tryAt` helpers with rooted
+      direct calls `.tag()`-chained run and return 1. (C3) only
+      canonical `/std/collections/map/contains` defined, alias call:
+      "unknown call target: /map/contains".
+    - (D1) canonical `/std/collections/map/at(_unsafe)` helpers with
+      method sugar `values.at(1i32).tag()` + `values.at_unsafe(1i32)
+      .tag()` run and return 12.
+    - (E1) alias `/map/count` helper, `values./map/count().tag()`:
+      "unknown call target: /std/collections/map/count". (E2) canonical
+      slash spelling runs and returns 9.
+    Cross-path alias/canonical fallback is therefore never observable
+    end-to-end today. Semantics rejects the mismatched-spelling calls
+    itself, and the emitter helper is not in the shipped compiler. The
+    re-pinned unit tests remain as-is. They pin a test-only helper. The
+    pinned TEST_CASEs are "keeps cross-path vector access return-kind
+    metadata", "resolves explicit vector slash-method receivers through
+    builtin receiver typing" and "prefers same-path vector slash-method
+    access return-kind metadata" in
+    `test_compile_run_emitters_vector_receiver_metadata_resolution.cpp`,
+    and "rejects explicit map slash-method count receiver fallback",
+    "rejects rooted map contains and tryAt direct-call return metadata"
+    and "keeps cross-path vector alias access struct-return metadata" in
+    `test_compile_run_emitters_map_metadata_resolution.cpp`. The
+    related "rejects bare map access metadata-only struct forwarding" is
+    in `test_compile_run_emitters_vector_access_metadata_resolution.cpp`.
+    If the legacy `src/emitter` AST emitter is ever deleted as a
+    compatibility subsystem, these tests go with it.
