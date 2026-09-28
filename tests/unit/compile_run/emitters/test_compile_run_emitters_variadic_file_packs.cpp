@@ -338,16 +338,46 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_borrowed_experimental_map_count.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_variadic_args_borrowed_experimental_map_count_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/"
-            "assign/increment/decrement calls in expressions (call=/std/collections/map/count_ref") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 11);
+}
+
+TEST_CASE("direct canonical map count_ref calls lower on borrowed receivers") {
+  // TODO-4801: an explicit `/std/collections/map/count_ref<K, V>(...)` call
+  // used as an expression was deferred to count emitters that only know
+  // bare `count`, so it failed to lower on vm/native. Cover the inline
+  // `location(...)`, borrowed-binding, and Reference-parameter receiver
+  // shapes plus the `contains_ref` sibling in one program.
+  const std::string source = R"(
+import /std/collections/map/*
+
+[return<int> effects(heap_alloc)]
+count_through_param([Reference<map<i32, i32>>] entries) {
+  return(/std/collections/map/count_ref<i32, i32>(entries))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32)}
+  [Reference<map<i32, i32>>] borrowed{location(values)}
+  [i32] direct{/std/collections/map/count_ref<i32, i32>(location(values))}
+  [i32] viaBinding{/std/collections/map/count_ref<i32, i32>(borrowed)}
+  [i32] viaParam{count_through_param(location(values))}
+  [i32] hasKey{convert<int>(/std/collections/map/contains_ref<i32, i32>(borrowed, 5i32))}
+  return(plus(plus(direct, multiply(4i32, viaBinding)),
+              plus(multiply(16i32, viaParam), multiply(100i32, hasKey))))
+}
+)";
+  // 3 + 4*3 + 16*3 + 100*1
+  constexpr int ExpectedExitCode = 163;
+  const std::string srcPath = writeTemp("compile_direct_map_count_ref_borrowed_receivers.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == ExpectedExitCode);
+#if (defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))) || (defined(__linux__) && defined(__x86_64__))
+  const std::string exePath =
+      (testScratchPath("") / "primec_direct_map_count_ref_borrowed_receivers_native").string();
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main") == 0);
+  CHECK(runCommand(exePath) == ExpectedExitCode);
+#endif
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from borrowed locations") {

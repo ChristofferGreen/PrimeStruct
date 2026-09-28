@@ -674,7 +674,12 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
     if (!keyType.empty() && !valueType.empty()) {
       const std::string storageRoot = keyValueStorageStructRootPath();
       if (!storageRoot.empty()) {
-        return storageRoot + templateSpecializationSuffixForStructType(keyType + ", " + valueType);
+        // Must match the semantic monomorphizer's `type:K,type:V` suffix
+        // (mangleTemplateTypeArgsSuffix); the unprefixed
+        // templateSpecializationSuffixForStructType hash never names a real
+        // key/value storage specialization, so args<Reference<map<K, V>>> pack
+        // elements failed struct-parameter matching (TODO-4801).
+        return storageRoot + mangleTemplateTypeArgsSuffix({keyType, valueType});
       }
     }
   }

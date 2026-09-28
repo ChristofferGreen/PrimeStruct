@@ -55423,3 +55423,122 @@ crashes) - see `docs/todo_finished.md`.
     `spinning_cube_argument_validation_51_55` Timeout flake). After the
     fix it is also 1898/1899 with the same single Timeout, and a focused
     rerun of that shard passes.
+
+- [x] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
+  - owner: ai
+  - created_at: 2026-07-30
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: found via "C++ emitter materializes variadic borrowed map
+    packs with indexed count_ref calls" in
+    `test_compile_run_emitters_variadic_file_packs.cpp`. Minimal repro on
+    `--emit=vm`:
+    ```
+    import /std/collections/map/*
+    [return<int> effects(heap_alloc)]
+    main() {
+      [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+      return(/std/collections/map/count_ref<i32, i32>(location(values)))
+    }
+    ```
+    fails with `VM lowering error: vm backend only supports arithmetic/
+    comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/
+    increment/decrement calls in expressions (call=/std/collections/map/
+    count_ref, name=/std/collections/map/count_ref__<mangled>, args=1,
+    method=false)` (exit 2) - the "vm backend" wording is produced by a
+    `native backend` -> `vm backend` string substitution applied to a
+    shared lowering-error message (see `IrBackendProfiles.cpp`'s
+    `replaceAll(error, "native backend", "vm backend")`), so this is
+    really the same shared "unhandled call shape in expression position"
+    fallback used across both backends. Re-pinned the one affected
+    TEST_CASE to this exact verified rejection.
+  - implementation_notes: this is the map-side sibling of TODO-4756's
+    soa `ref_ref`/`to_aos_ref`/`count_ref` gaps - compare how
+    `/std/collections/soa/count_ref` and other `_ref`-suffixed soa
+    helpers get (or don't get) registered for inline-call-in-expression
+    dispatch versus how `/std/collections/map/count_ref` should be
+    registered analogously. The failing call here is a fully-qualified,
+    explicitly-templated, non-method direct call - check whether
+    method-call-sugar form (`values.count_ref()`, if that spelling even
+    exists for map) resolves differently before assuming this is purely
+    a registration-table gap.
+  - acceptance: the minimal repro above runs and returns 2 (the map's
+    element count) instead of rejecting; the re-pinned TEST_CASE reverts
+    to its original "runs and returns 11" expectation once fixed.
+  - stop_rule: do not conflate this with TODO-4800 (finished) just because
+    both are variadic-args-pack-adjacent findings from the same session -
+    TODO-4800's repro reproduces with zero use of `map` or `count_ref`
+    at all (plain `args<string>`), so verify independently before
+    assuming a shared fix.
+  - resolution: fixed. Two independent bugs, both needed for the
+    re-pinned TEST_CASE.
+    (1) The TODO-4801 rejection itself. In
+    `tryEmitInlineCallDispatchWithLocals`
+    (`src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`), explicit
+    same-path map `count` AND `count_ref` calls returned `NotHandled` to
+    defer to later count emitters. That deferral came in with 66cd1820
+    ("Publish map struct paths"). But neither the builtin count emitter
+    (`IrLowererCountAccessHelpers.cpp`) nor the statement-expression
+    key-value count path (`IrLowererLowerStatementsExpr.h`) knows
+    `count_ref`. The statement-expression path only derives a helper
+    name for leaves `at`/`tryAt`/`at_unsafe` (plus `_ref`), or through
+    `resolveSameFamilyKeyValueHelperMemberName`. That lookup needs the
+    receiver's collection family, which a `location(values)` receiver
+    doesn't have. So `count_ref` fell through to the shared "only
+    supports arithmetic/..." fallback. Instrumentation confirmed it:
+    the direct callee resolved and was canonical-family, but
+    helperName stayed empty. This is not a registration-table gap like
+    TODO-4756. The 2026-08-07 attempt (adding `count_ref` next to the
+    `"count"` check at ~line 1718) was the wrong site, because
+    helperName was never populated there. Fix: defer only bare
+    `count`. `count_ref` now inline-emits its stdlib definition like
+    its `contains_ref`/`tryAt_ref` siblings, which already worked.
+    (2) Surfaced once (1) was fixed. For the variadic pack case,
+    `score_refs([args<Reference<map<i32, i32>>>] values)` still failed
+    with `struct parameter type mismatch: expected
+    /std/collections/map/MapValue__ta77c4e1cde0d2ba9, got
+    ...MapValue__tc311edd4d584bcc1`. This was pre-existing:
+    `contains_ref(values[0i32], k)` failed the same way before any
+    change. `inferStructPathFromNameExpr`
+    (`src/ir_lowerer/IrLowererStructTypeHelpers.cpp`) synthesizes the
+    MapValue path for key/value locals that have no `structTypeName`.
+    It used `templateSpecializationSuffixForStructType("i32, i32")`,
+    an FNV hash of `i32,i32`. The semantic monomorphizer names the
+    real struct with `mangleTemplateTypeArgsSuffix`, an FNV hash of
+    `type:i32,type:i32`. Fix: use `mangleTemplateTypeArgsSuffix`.
+    Method-vs-direct-call finding: `count_ref(location(values))` and
+    `location(values).count()` are both rejected by semantics (unknown
+    call target), so only the explicit direct spelling reaches
+    lowering. The direct-call rejection was identical inline in
+    `return(...)` and bound to a local. The `_ref` family
+    on a `location(...)` receiver: `contains_ref` and `count` already
+    lowered; `count_ref` was the only gap. Direct
+    `at_ref`/`at_unsafe_ref` on `location(values)` are rejected earlier
+    by semantics ("at requires array, vector, map, or string target").
+    That is a separate, pre-existing surface, not in this leaf's scope.
+    Independent of TODO-4800. TODO-4800 changed `IrLowererHelpers.cpp`
+    (`isBuiltinClassifiedMethodCallTarget`) and the semantics vector
+    access fallback. This fix touches different files and was
+    reproduced and verified separately.
+    Note: the scope repro's map `map<i32, i32>(1i32, 2i32)` has ONE
+    entry (key 1 -> value 2). It correctly returns 1, matching plain
+    `/std/collections/map/count` on the same map. The "returns 2" in
+    the acceptance text was a miscount.
+    Verified on vm, native and exe. The repro returns 1 everywhere, and
+    the 4-arg variant returns 2. The pack program returns 11 on vm,
+    native and exe. The re-pinned TEST_CASE
+    "C++ emitter materializes variadic borrowed map packs with indexed
+    count_ref calls" is reverted to its original `--emit=vm` == 11
+    assertion. Added "direct canonical map count_ref calls lower on
+    borrowed receivers" (vm + native): inline `location(...)`,
+    borrowed-binding and Reference-parameter receivers, plus
+    `contains_ref`.
+    Release gate: baseline (75dc9d0d) 1898/1899, with only the known
+    `spinning_cube_argument_validation_51_55` Timeout flake. After the
+    fix it is also 1898/1899 with the same single Timeout, and a focused
+    rerun of that shard passes. An intermediate run flagged
+    `map_vector_compiler_knowledge_zero_audit` because a new code comment
+    contained the literal `MapValue`. The comment was reworded, and the
+    audit and final gate are clean.

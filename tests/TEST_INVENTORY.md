@@ -528,6 +528,7 @@ Total: 10022 test cases across 459 files.
 - C++ emitter rejects variadic reference packs without location forwarding
 - C++ emitter rejects variadic pointer packs without location forwarding
 - C++ emitter materializes variadic borrowed map packs with indexed count_ref calls
+- direct canonical map count_ref calls lower on borrowed receivers
 - C++ emitter materializes variadic scalar pointer packs from borrowed locations
 - C++ emitter materializes variadic struct pointer packs from borrowed locations
 - C++ emitter materializes variadic scalar pointer packs from imported helper references
