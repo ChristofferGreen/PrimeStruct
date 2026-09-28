@@ -104,25 +104,25 @@ of sync with them.
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
-| TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
-| TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready\* | hidden-test-failures-emitters |
+| TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready | hidden-test-failures-emitters |
 | TODO-4807 | `resolveMethodCallPath` alias/canonical fallback regressions | ready\* | hidden-test-failures-emitters |
+| TODO-5322 | Helper-returned `Reference<uninitialized<Struct>>` into `args<Pointer<...>>` pack loses struct type | ready\* | hidden-test-failures-emitters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
-\* held out of Ready Now this round. TODO-4806/4807 are the 3rd/4th
+\* held out of Ready Now this round. TODO-4807/TODO-5322 are the 3rd/4th
 `ready` items on the `hidden-test-failures-emitters` track (rule 11 caps
-concurrent same-track `Ready Now` items); pick them up once TODO-4800/4801
+concurrent same-track `Ready Now` items); pick them up once TODO-4801/4806
 close. Neither is blocked.
 
 ### Ready Now
 
-- TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
+- TODO-4806 (track: hidden-test-failures-emitters, surface: `IrLowererLowerEmitExpr.h` `isWrapperReturnedKeyValueAccessCall` guard for `count(...)` of a helper-return vector `at`): chained `count(wrapValues()./vector/at(0i32))` fails to lower with "struct parameter type mismatch".
 - TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track, and TODO-4806/4807 remain held by the same-track cap). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4807/TODO-5322 (same `hidden-test-failures-emitters` track as TODO-4801/4806 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot. TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track, and TODO-4807/5322 remain held by the same-track cap). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -554,64 +554,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
     shadow resolution earlier in `semanticValidationPassManifest()`, stop
     and document the pass-order constraint instead of reordering passes.
 
-- [ ] TODO-4800: Fix `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` variadic-pack elements failing to lower on vm with "missing lowered definition: /array/at"
-  - owner: ai
-  - status: ready
-  - created_at: 2026-07-30
-  - phase: Hidden test failure remediation (emitters cluster)
-  - parallel_track: hidden-test-failures-emitters
-  - depends_on: (none)
-  - scope: found while triaging `primestruct.compile.run.emitters.cpp`.
-    Minimal repro on `--emit=vm`:
-    ```
-    [return<int>]
-    packScore([args<string>] values) {
-      return(values.at(1i32).count())
-    }
-    [return<int>]
-    main() {
-      return(packScore("ab"utf8, "cde"utf8, "fghi"utf8))
-    }
-    ```
-    fails with `VM lowering error: semantic-product method-call target
-    missing lowered definition: /array/at` (exit 2) instead of compiling
-    and running. Confirmed to reproduce identically across every element
-    type tried: `args<string>`, `args<i32>`, `args<Reference<i32>>`,
-    `args<Reference<Struct>>`, `args<Pointer<i32>>`,
-    `args<Pointer<Struct>>`, and `args<Reference<uninitialized<i32>>>` -
-    both the bare `at(values, N)` call form and the `.at(N)`/
-    `.at_unsafe(N)` method-call-sugar forms trigger it identically. This
-    is the single largest root cause found this session, accounting for
-    14 of the 35 `primestruct.compile.run.emitters.cpp` failures re-pinned
-    in this pass, spanning
-    `test_compile_run_emitters_variadic_pointer_pack_access.cpp` (all 8
-    cases), 4 cases in
-    `test_compile_run_emitters_variadic_reference_pack_access.cpp`, and 2
-    cases in `test_compile_run_emitters_loop_sugar_runtime.cpp`. All
-    re-pinned to the verified current rejection (exit 2, this exact
-    message) rather than silently papered over.
-  - implementation_notes: `/array/at` looks like an internal semantic-
-    product target name synthesized for indexed access into a variadic
-    args pack (which is represented/lowered similarly to an array), but
-    whatever VM-lowering stage is supposed to provide its definition no
-    longer does so - contrast with plain indexed access
-    (`values[0i32]`), which still works fine in the same sources (only
-    `.at(N)`/`at(values, N)` sugar on the pack fails). Likely a
-    registration gap in the same "semantic-product method-call target"
-    dispatch table implicated by TODO-4753's `remove_at`/`remove_swap`
-    gap and TODO-4756's soa `ref_ref` gap - check whether `/array/at`'s
-    lowered-definition synthesis was dropped or renamed during a related
-    refactor.
-  - acceptance: the minimal repro above compiles and runs on `--emit=vm`
-    (and exe/native, not independently checked this session); all 14
-    re-pinned cases above revert to their original "runs and returns N"
-    expectations once fixed.
-  - stop_rule: verify the fix doesn't only cover the specific element
-    types listed above - reproduce with at least one more untried
-    `args<T>` shape (e.g. `args<map<K,V>>` or `args<vector<T>>`) before
-    closing, since the bug appears to be about the pack-indexing
-    mechanism itself, not any specific element type.
-
 - [ ] TODO-4801: Direct (non-method) call to a canonical map ref-form helper (e.g. `/std/collections/map/count_ref<K,V>(...)`) used in an expression fails to lower on vm
   - owner: ai
   - status: ready
@@ -655,7 +597,7 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - acceptance: the minimal repro above runs and returns 2 (the map's
     element count) instead of rejecting; the re-pinned TEST_CASE reverts
     to its original "runs and returns 11" expectation once fixed.
-  - stop_rule: do not conflate this with TODO-4800 above just because
+  - stop_rule: do not conflate this with TODO-4800 (finished) just because
     both are variadic-args-pack-adjacent findings from the same session -
     TODO-4800's repro reproduces with zero use of `map` or `count_ref`
     at all (plain `args<string>`), so verify independently before
@@ -767,10 +709,62 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
     least one real `.prime` source (not a direct C++ unit test) that
     actually observably depends on this fallback behavior end-to-end -
     if none of this session's 35 fixed emitters failures needed it
-    (TODO-4800 through 4806 above cover the ones that were end-to-end
+    (TODO-4800 (finished) through 4806 cover the ones that were end-to-end
     reproducible), this may be purely a metadata-plumbing internal
     inconsistency that never surfaces in real compiled programs, which
     would change this TODO's priority significantly.
+
+- [ ] TODO-5322: Fix a helper-returned `Reference<uninitialized<Struct>>` forwarded into an `args<Pointer<uninitialized<Struct>>>` pack losing its struct type
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-28
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: split out of TODO-4800. Minimal repro on `--emit=vm`:
+    ```
+    [struct]
+    Pair() {
+      [i32] left{0i32}
+      [i32] right{0i32}
+    }
+    [return<Reference<uninitialized<Pair>>>]
+    borrow_ref([Reference<uninitialized<Pair>>] value) {
+      return(value)
+    }
+    [return<int>]
+    score_ptrs([args<Pointer<uninitialized<Pair>>>] values) {
+      init(dereference(values[0i32]), Pair{1i32, 5i32})
+      [Pair] first{take(dereference(values[0i32]))}
+      return(first.right)
+    }
+    [return<int>]
+    main() {
+      [uninitialized<Pair>] a0{uninitialized<Pair>()}
+      [Reference<uninitialized<Pair>>] p0{location(a0)}
+      return(score_ptrs(location(borrow_ref(p0))))
+    }
+    ```
+    fails with `VM lowering error: struct parameter type mismatch:
+    expected /Pair, got <unknown>` (exit 2). Passing `location(p0)`
+    instead of `location(borrow_ref(p0))` runs and returns 5. No `.at`
+    sugar is involved. The only pinned test is "C++ emitter materializes
+    variadic pointer uninitialized struct packs from borrowed helper
+    references" in
+    `test_compile_run_emitters_variadic_reference_pack_access.cpp`.
+  - implementation_notes: TODO-4802 fixed the same symptom for direct
+    `location(local)` pack arguments in
+    `applyArgsPackElementStructMetadata`
+    (`src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp`) by
+    unwrapping `uninitialized<X>`. Check where the pack element struct
+    type comes from when the element is `location(<helper call>)`,
+    because the helper's `Reference<uninitialized<Pair>>` return type is
+    probably not unwrapped the same way.
+  - acceptance: the minimal repro above returns 5 on vm and native; the
+    pinned TEST_CASE goes back to `CHECK(runCommand(compileCmd) == 30)`.
+  - stop_rule: if the fix needs changes to how helper return types are
+    inferred for ordinary (non-pack) bindings, stop and split that out
+    rather than widening this leaf.
 
 - [ ] TODO-5309: Rename the soa `ref_ref` builtin to `ref_borrowed`
   - owner: ai

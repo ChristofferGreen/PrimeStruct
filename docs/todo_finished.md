@@ -55296,3 +55296,130 @@ crashes) - see `docs/todo_finished.md`.
     Timeout flake); after the change 1898/1899 with the same single
     Timeout (on both full runs), and a focused rerun of that shard
     passes.
+
+- [x] TODO-4800: Fix `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` variadic-pack elements failing to lower on vm with "missing lowered definition: /array/at"
+  - owner: ai
+  - created_at: 2026-07-30
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: found while triaging `primestruct.compile.run.emitters.cpp`.
+    Minimal repro on `--emit=vm`:
+    ```
+    [return<int>]
+    packScore([args<string>] values) {
+      return(values.at(1i32).count())
+    }
+    [return<int>]
+    main() {
+      return(packScore("ab"utf8, "cde"utf8, "fghi"utf8))
+    }
+    ```
+    fails with `VM lowering error: semantic-product method-call target
+    missing lowered definition: /array/at` (exit 2) instead of compiling
+    and running. Confirmed to reproduce identically across every element
+    type tried: `args<string>`, `args<i32>`, `args<Reference<i32>>`,
+    `args<Reference<Struct>>`, `args<Pointer<i32>>`,
+    `args<Pointer<Struct>>`, and `args<Reference<uninitialized<i32>>>` -
+    both the bare `at(values, N)` call form and the `.at(N)`/
+    `.at_unsafe(N)` method-call-sugar forms trigger it identically. This
+    is the single largest root cause found this session, accounting for
+    14 of the 35 `primestruct.compile.run.emitters.cpp` failures re-pinned
+    in this pass, spanning
+    `test_compile_run_emitters_variadic_pointer_pack_access.cpp` (all 8
+    cases), 4 cases in
+    `test_compile_run_emitters_variadic_reference_pack_access.cpp`, and 2
+    cases in `test_compile_run_emitters_loop_sugar_runtime.cpp`. All
+    re-pinned to the verified current rejection (exit 2, this exact
+    message) rather than silently papered over.
+  - implementation_notes: `/array/at` looks like an internal semantic-
+    product target name synthesized for indexed access into a variadic
+    args pack (which is represented/lowered similarly to an array), but
+    whatever VM-lowering stage is supposed to provide its definition no
+    longer does so - contrast with plain indexed access
+    (`values[0i32]`), which still works fine in the same sources (only
+    `.at(N)`/`at(values, N)` sugar on the pack fails). Likely a
+    registration gap in the same "semantic-product method-call target"
+    dispatch table implicated by TODO-4753's `remove_at`/`remove_swap`
+    gap and TODO-4756's soa `ref_ref` gap - check whether `/array/at`'s
+    lowered-definition synthesis was dropped or renamed during a related
+    refactor.
+  - acceptance: the minimal repro above compiles and runs on `--emit=vm`
+    (and exe/native, not independently checked this session); all 14
+    re-pinned cases above revert to their original "runs and returns N"
+    expectations once fixed.
+  - stop_rule: verify the fix doesn't only cover the specific element
+    types listed above - reproduce with at least one more untried
+    `args<T>` shape (e.g. `args<map<K,V>>` or `args<vector<T>>`) before
+    closing, since the bug appears to be about the pack-indexing
+    mechanism itself, not any specific element type.
+  - resolution: fixed; stop_rule generalization check passed. Only the
+    method-call sugar (`pack.at(N)`, `pack.at_unsafe(N)`) failed. Bare
+    `at(pack, N)` and `pack[N]` already worked. There were two gaps:
+    (1) Lowering. Semantics publishes `/array/at` / `/array/at_unsafe`
+    as the method-call target for these calls, and they have no lowered
+    definition. `isBuiltinClassifiedMethodCallTarget`
+    (`src/ir_lowerer/IrLowererHelpers.cpp`) exempted vector
+    `at`/`at_unsafe` but not the `/array/` spellings, so
+    `tryEmitInlineCallDispatchWithLocals`
+    (`IrLowererInlineNativeCallDispatch.cpp`) reported "missing lowered
+    definition" instead of falling through to the builtin
+    indexed-access path. This was never a dropped registration: git
+    history has no `/array/at` literal anywhere in `src/ir_lowerer`.
+    Fix: classify `/array/at` and `/array/at_unsafe` as builtin for the
+    exact two-arg `at`/`at_unsafe` call shape.
+    Earlier attempts (2026-08-06/08, in the old todo_log) loosened
+    `emitVectorIndexedAccessBeforeInline`'s receiver gate. That was one
+    layer too late, because inline dispatch rejected the call before
+    that function ran.
+    (2) Semantics, found during the generalization check. With
+    `import /std/collections/*`, the same sugar on any `args<T>` pack
+    (the minimal repro included) failed earlier with `argument type
+    mismatch for /std/collections/vector/at`.
+    `validateExprCollectionAccessFallbacks`
+    (`SemanticsValidatorExprCollectionAccessValidation.cpp`) accepted
+    only vector receivers on its std-namespaced vector-access path. It
+    now also accepts `args<T>` pack receivers
+    (`resolveArgsPackAccessTarget`).
+    Generalization check: the fix is element-type independent. The TODO
+    repro (`args<string>`) returns 3 and `args<i32>` returns 7. Two
+    untried shapes also pass: `args<bool>` (`if(values.at(1i32), ...)`,
+    returns 7) and `args<vector<i32>>` under the collections import
+    (`values.at(1i32)[1i32] + values.at_unsafe(2i32)[2i32]`, returns
+    14). Each gives the same result with and without the import, on
+    vm, native and exe. Two separate element-type gaps also fail the
+    same way with plain `pack[N]`, so they are not part of this bug and
+    are not fixed here: `args<vector<i32>>` element `.count()` ("count()
+    argument resolves to a non-string value") and `args<map<K,V>>`
+    element access (`unknown call target: /map/at`).
+    Un-pinned tests: 7 of the original 14 pins remain (the TODO-5257
+    audit deleted the other 7) and 6 now assert their original results.
+    Those 6 are the 3 cases in
+    `test_compile_run_emitters_variadic_pointer_pack_access.cpp`
+    (29/75/23), the "pointer uninitialized scalar packs" case in
+    `test_compile_run_emitters_variadic_reference_pack_access.cpp` (27),
+    and 2 cases in `test_compile_run_emitters_loop_sugar_runtime.cpp`
+    (9/20). The 7th ("pointer uninitialized struct packs from borrowed
+    helper references") still fails with `struct parameter type
+    mismatch: expected /Pair, got <unknown>`. It fails the same way
+    with only `values[N]` indexing and without any `.at`, so it is a
+    separate bug, split out as TODO-5322 and re-pinned with a corrected
+    comment. The same rejection was pinned in 12 more places, and all
+    12 now assert runtime results: the vm case in
+    `test_compile_run_vm_core_variadics.cpp` (27), 4 ir_pipeline
+    conversions cases (39/29/75/75, renamed "rejects" to
+    "materializes"), and 7 cases in
+    `test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp`
+    (75/29, renamed likewise). The native_backend core suite compiles
+    only on macOS arm64. Its 7 sources were run by hand with
+    `--emit=native` on Linux x86_64, where they return exactly those
+    values. New tests: the "ir lowerer helpers classify builtin array
+    access method call targets" pin, plus 2 compile-run cases in
+    `test_compile_run_emitters_variadic_pointer_pack_access.cpp`
+    (`args<vector<i32>>` with at sugar under import on vm and exe, and
+    `args<string>`/`args<bool>` under import on vm).
+    Release gate: baseline 1898/1899 (only the known
+    `spinning_cube_argument_validation_51_55` Timeout flake). After the
+    fix it is also 1898/1899 with the same single Timeout, and a focused
+    rerun of that shard passes.

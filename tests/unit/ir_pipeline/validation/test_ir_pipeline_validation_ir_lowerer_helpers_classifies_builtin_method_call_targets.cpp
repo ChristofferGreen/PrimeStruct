@@ -89,3 +89,22 @@ TEST_CASE("ir lowerer helpers reject near-miss collection helper spellings for b
   CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
       "/std/collections/soa/capacity", makeMethodCallExpr("capacity", 1)));
 }
+
+// TODO-4800: semantics publishes `/array/at` / `/array/at_unsafe` for
+// `.at(N)` / `.at_unsafe(N)` on array and `args<T>` pack receivers. They
+// have no lowered definition and go through the builtin indexed-access
+// path, so they are exempt - but only for the exact two-arg access shape.
+TEST_CASE("ir lowerer helpers classify builtin array access method call targets") {
+  CHECK(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/array/at", makeMethodCallExpr("at", 2)));
+  CHECK(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/array/at_unsafe", makeMethodCallExpr("at_unsafe", 2)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/array/at", makeMethodCallExpr("at", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/array/at", makeMethodCallExpr("get", 2)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/array/count", makeMethodCallExpr("count", 1)));
+  CHECK_FALSE(primec::ir_lowerer::isBuiltinClassifiedMethodCallTarget(
+      "/array/push", makeMethodCallExpr("push", 2)));
+}

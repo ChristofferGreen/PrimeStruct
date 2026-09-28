@@ -62,15 +62,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_uninitialized_scalar.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_variadic_args_pointer_uninitialized_scalar_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 27);
 }
 
 TEST_CASE("C++ emitter materializes variadic pointer uninitialized struct packs from borrowed helper references") {
@@ -142,12 +135,12 @@ main() {
                                   .string();
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  // TODO-4802 (fixed): args<Pointer<uninitialized<Struct>>> itself now
-  // resolves its struct type correctly (see the minimal repro in that
-  // TODO, now passing independently). This test's own source additionally
-  // uses .at()/.at_unsafe() method-call sugar to index the pack, which
-  // still hits TODO-4800's separate "/array/at" gap - re-pinned to that
-  // now-current rejection rather than TODO-4802's original one.
+  // TODO-5322: the `.at()`/`.at_unsafe()` pack sugar here now lowers
+  // (TODO-4800 fixed). This case still fails for an unrelated reason: a
+  // helper-returned `Reference<uninitialized<Pair>>` (`borrow_ref(...)`)
+  // forwarded into the `args<Pointer<uninitialized<Pair>>>` pack loses its
+  // struct type. It fails identically with only `values[N]` indexing.
+  // Restore `CHECK(runCommand(...) == 30)` once TODO-5322 lands.
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("struct parameter type mismatch: expected /Pair, got <unknown>") !=
         std::string::npos);

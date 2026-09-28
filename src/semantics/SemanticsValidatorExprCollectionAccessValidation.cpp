@@ -375,7 +375,14 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           receiverIndex < expr.args.size() &&
           context.resolveCollectionVectorValueTarget != nullptr &&
           context.resolveCollectionVectorValueTarget(expr.args[receiverIndex], elemType);
-      if (!isBuiltinVectorReceiver && !isCollectionVectorReceiver) {
+      // TODO-4800: an `args<T>` pack receiver is the builtin pack access
+      // (same as `pack[N]`), not a call to the imported vector helper.
+      const bool isArgsPackReceiver =
+          receiverIndex < expr.args.size() &&
+          context.resolveArgsPackAccessTarget != nullptr &&
+          context.resolveArgsPackAccessTarget(expr.args[receiverIndex], elemType);
+      if (!isBuiltinVectorReceiver && !isCollectionVectorReceiver &&
+          !isArgsPackReceiver) {
         const std::string canonicalVectorAccessPath =
             canonicalVectorCompatibilityHelperPathOrFallback(builtinName);
         return failCollectionAccessDiagnostic(

@@ -353,6 +353,15 @@ bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, cons
       (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe"))) {
     return true;
   }
+  // TODO-4800: semantics publishes `/array/at` / `/array/at_unsafe` as the
+  // method-call target for `.at(N)` / `.at_unsafe(N)` on builtin array and
+  // `args<T>` variadic-pack receivers. Neither has a lowered definition; the
+  // access is emitted by the builtin indexed-access path, same as `pack[N]`.
+  if ((semanticTarget == "/array/at" || semanticTarget == "/array/at_unsafe") &&
+      callExpr.args.size() == 2 &&
+      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe"))) {
+    return true;
+  }
   if (soaLeaf == "to_aos" &&
       callExpr.args.size() == 1 &&
       isSimpleCallName(callExpr, "to_aos")) {

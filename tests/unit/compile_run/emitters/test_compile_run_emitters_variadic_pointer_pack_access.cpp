@@ -61,15 +61,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_scalar_pointer_pack_access.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_variadic_args_scalar_pointer_pack_access_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 29);
 }
 
 TEST_CASE("C++ emitter materializes variadic struct pointer packs from borrowed pack access") {
@@ -137,15 +130,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_struct_pointer_pack_access.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_variadic_args_struct_pointer_pack_access_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 75);
 }
 
 TEST_CASE("C++ emitter materializes variadic scalar reference packs from borrowed pack reference fields") {
@@ -227,15 +213,64 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_variadic_args_scalar_reference_pack_reference_field.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_variadic_args_scalar_reference_pack_reference_field_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 23);
+}
+
+TEST_CASE("C++ emitter indexes variadic vector packs with at sugar under collections import") {
+  // TODO-4800: `.at(N)` / `.at_unsafe(N)` on an args<vector<T>> pack must
+  // stay the builtin pack access even when the imported
+  // /std/collections/vector/at helper is visible, and must match the
+  // bracket-index form on vm and exe.
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+packScore([args<vector<i32>>] values) {
+  return(plus(values.at(1i32)[1i32], values.at_unsafe(2i32)[2i32]))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32>] a{vector<i32>(1i32)}
+  [vector<i32>] b{vector<i32>(4i32, 5i32)}
+  [vector<i32>] c{vector<i32>(7i32, 8i32, 9i32)}
+  return(packScore(a, b, c))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_vector_pack_at_sugar.prime", source);
+  const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(vmCmd) == 14);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_vector_pack_at_sugar_exe").string();
+  const std::string exeCmd =
+      "./primec --emit=exe " + srcPath + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 14);
+}
+
+TEST_CASE("C++ emitter indexes variadic scalar packs with at sugar under collections import") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+packScore([args<string>] values) {
+  return(plus(values.at(1i32).count(), values.at_unsafe(2i32).count()))
+}
+
+[return<int>]
+pickFlag([args<bool>] values) {
+  if(values.at(1i32), then() { return(7i32) }, else() { return(3i32) })
+}
+
+[return<int>]
+main() {
+  return(plus(packScore("ab"utf8, "cde"utf8, "fghi"utf8), pickFlag(false, true)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_scalar_pack_at_sugar_import.prime", source);
+  const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(vmCmd) == 14);
 }
 
 TEST_SUITE_END();

@@ -79,7 +79,7 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer rejects variadic pointer array packs with indexed dereference access helpers") {
+TEST_CASE("ir lowerer materializes variadic pointer array packs with indexed dereference access helpers") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<array<i32>>>] values) {
@@ -135,9 +135,15 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  INFO(error);
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 39);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed helper inference") {

@@ -13,7 +13,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
-TEST_CASE("ir lowerer rejects variadic struct pointer packs from borrowed pack reference fields") {
+TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack reference fields") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -110,9 +110,15 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  INFO(error);
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 75);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed uninitialized scalar packs with indexed init and take") {

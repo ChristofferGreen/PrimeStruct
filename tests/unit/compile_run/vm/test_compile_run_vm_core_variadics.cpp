@@ -345,15 +345,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_variadic_args_pointer_uninitialized_scalar.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_variadic_args_pointer_uninitialized_scalar_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4760: .at()/.at_unsafe() method-call sugar on an
-  // args<Pointer<uninitialized<T>>> pack now fails with a missing lowered
-  // /array/at definition.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /array/at") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 27);
 }
 
 TEST_CASE("vm materializes variadic borrowed Result packs with indexed dereference try and why access") {
