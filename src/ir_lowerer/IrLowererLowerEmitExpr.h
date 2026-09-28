@@ -167,6 +167,42 @@
             return leaf == "at" || leaf == "at_unsafe" ||
                    leaf == "at_ref" || leaf == "at_unsafe_ref";
           };
+          // Vector access helpers forwarding a helper-returned vector are
+          // only a struct mismatch when the helper actually yields a
+          // struct; a declared scalar/string return is a valid `count(...)`
+          // operand (TODO-4806).
+          auto isVectorAccessPath = [](std::string path) {
+            path = normalizeCollectionHelperPath(std::move(path));
+            return path.rfind("/" + std::string("vector") + "/", 0) == 0 ||
+                   path.rfind(collectionMemberRoot("vector"), 0) == 0;
+          };
+          if (isVectorAccessPath(candidate.name) ||
+              isVectorAccessPath(resolveExprPath(candidate))) {
+            const Definition *accessCallee = resolveDefinitionCall(candidate);
+            if (accessCallee == nullptr) {
+              // Slash-method receivers (`wrapValues()./<helper>(i)`) do not
+              // resolve through resolveDefinitionCall; look the explicit
+              // helper path up directly.
+              for (const std::string &accessPath :
+                   {resolveExprPath(candidate), candidate.name}) {
+                auto accessIt = defMap.find(accessPath);
+                if (accessIt != defMap.end() && accessIt->second != nullptr) {
+                  accessCallee = accessIt->second;
+                  break;
+                }
+              }
+            }
+            if (accessCallee != nullptr && getReturnInfo) {
+              ReturnInfo accessReturnInfo;
+              if (getReturnInfo(accessCallee->fullPath, accessReturnInfo) &&
+                  !accessReturnInfo.returnsVoid &&
+                  !accessReturnInfo.returnsArray &&
+                  !accessReturnInfo.isResult &&
+                  accessReturnInfo.kind != LocalInfo::ValueKind::Unknown) {
+                return false;
+              }
+            }
+          }
           if (accessLeafMatches(candidate.name) ||
               accessLeafMatches(resolveExprPath(candidate))) {
             return true;

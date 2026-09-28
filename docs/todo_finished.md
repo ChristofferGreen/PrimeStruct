@@ -55542,3 +55542,97 @@ crashes) - see `docs/todo_finished.md`.
     `map_vector_compiler_knowledge_zero_audit` because a new code comment
     contained the literal `MapValue`. The comment was reworded, and the
     audit and final gate are clean.
+
+**Todo Completion (September 28, 2026) — TODO-4806**
+- [x] TODO-4806: Slash-method-call chained off a helper-return vector temporary into `count(...)` fails to lower with "struct parameter type mismatch"
+  - owner: ai
+  - created_at: 2026-07-30
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation (emitters cluster)
+  - parallel_track: hidden-test-failures-emitters
+  - depends_on: (none)
+  - scope: found via "C++ emitter keeps slash-method vector access count
+    through builtin string length" in
+    `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`.
+    Minimal repro on `--emit=vm`:
+    ```
+    [return<string>]
+    /vector/at([vector<i32>] values, [i32] index) {
+      return("abc"raw_utf8)
+    }
+    [effects(heap_alloc), return<vector<i32>>]
+    wrapValues() {
+      return(vector<i32>(1i32))
+    }
+    [effects(heap_alloc), return<int>]
+    main() {
+      return(count(wrapValues()./vector/at(0i32)))
+    }
+    ```
+    fails with `VM lowering error: struct parameter type mismatch` (exit
+    2) instead of running and returning 3 (the "abc" string's length).
+    The equivalent DIRECT-call form (`count(/vector/at(wrapValues(),
+    0i32))`, no slash-method-call chaining) was not independently
+    re-tested this session - only the slash-method-call receiver form
+    (`wrapValues()./vector/at(0i32)`) was confirmed broken. Re-pinned to
+    the verified current rejection.
+  - implementation_notes: "struct parameter type mismatch" suggests the
+    lowering path is trying to pass the `wrapValues()` result (a
+    `vector<i32>`) into `/vector/at`'s first parameter using a struct-
+    by-value calling convention that doesn't match what `/vector/at`'s
+    actual parameter slot expects when reached via slash-method-call
+    syntax on a non-local (helper-return) receiver - compare IR
+    generation for this receiver shape against the working local-
+    variable-receiver case (`values./vector/at(0i32)` where `values` is
+    a bound local, covered by passing sibling tests in the same file).
+  - acceptance: the minimal repro above runs and returns 3; the re-pinned
+    TEST_CASE reverts to its original "runs and returns 6" expectation
+    once fixed (the original test summed two such calls).
+  - stop_rule: reproduce the direct-call (non-slash-method) form too
+    before closing, to confirm the bug is specifically about
+    slash-method-call syntax on a helper-return receiver and not a
+    broader "any call forwarding a helper-return vector into
+    /vector/at" gap.
+  - resolution: fixed. Not slash-method-specific: per the stop_rule the
+    direct-call form `count(/vector/at(wrapValues(), 0i32))` failed
+    identically (same "struct parameter type mismatch", on vm, native
+    and exe), with the same root cause, so both were fixed here.
+    Root cause: `isWrapperReturnedKeyValueAccessCall` at the top of
+    `emitExpr`'s `Expr::Kind::Call` case
+    (`src/ir_lowerer/IrLowererLowerEmitExpr.h`) rejected ANY one-arg
+    call whose argument is an `at`/`at_unsafe`(`_ref`) call on a call
+    receiver, matching only the path leaf. Its statement-path siblings
+    in `IrLowererLowerStatementsExpr.h` only match key-value paths and
+    also require a struct first parameter on the outer callee, so the
+    emitExpr copy also caught vector access helpers returning plain
+    strings (`resolveKeyValueHelperAliasName` is a stub that always
+    returns false, so only the leaf match was live).
+    Fix: for vector access helper paths (rooted vector root or
+    `collectionMemberRoot("vector")`, built via helpers so the vector
+    surface / compiler-knowledge audits stay at zero), look up the
+    helper definition and skip the rejection when `getReturnInfo`
+    reports a known non-void, non-array, non-Result value kind.
+    `resolveDefinitionCall` returns null for the slash-method receiver
+    (`isMethodCall` candidate), so it falls back to `defMap` on the
+    resolved/explicit path - that fallback is the only slash-specific
+    part. Map-shaped `at` rejections and the struct-returning vector
+    `at` case ("wrapper canonical direct-call struct method chain
+    forwarding in C++ emitter", `Marker` return) still reject as
+    pinned.
+    Verified: scope repro returns 3 on vm, native and exe in both the
+    slash-method and direct-call forms. Re-pinned TEST_CASE "C++
+    emitter keeps slash-method vector access count through builtin
+    string length": the original April pin (`--emit=exe` == 6, builtin
+    length 3 + 3) is stale because the user `/string/count` shadow (91)
+    now takes precedence for call-result strings, as the sibling "keeps
+    canonical vector unsafe direct-call count via builtin string length"
+    case (== 91) and the bound-local receiver reference
+    (`values./vector/at(0i32)` -> 91) already show; it now asserts it
+    runs and returns 182 (91 + 91) with no mismatch diagnostic (182 on
+    vm, native and exe). Added "vm counts helper-return vector access
+    string via slash-method receiver" and "... via direct call" (both
+    == 3, no shadow).
+    Release gate: baseline (6911a033) 1898/1899 with only the known
+    `spinning_cube_argument_validation_51_55` Timeout flake; after the
+    fix also 1898/1899 with the same single Timeout, and a focused
+    rerun of that shard passes.

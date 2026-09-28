@@ -104,24 +104,18 @@ of sync with them.
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
-| TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready | hidden-test-failures-emitters |
 | TODO-4807 | `resolveMethodCallPath` alias/canonical fallback regressions | ready | hidden-test-failures-emitters |
-| TODO-5322 | Helper-returned `Reference<uninitialized<Struct>>` into `args<Pointer<...>>` pack loses struct type | ready\* | hidden-test-failures-emitters |
+| TODO-5322 | Helper-returned `Reference<uninitialized<Struct>>` into `args<Pointer<...>>` pack loses struct type | ready | hidden-test-failures-emitters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
-
-\* held out of Ready Now this round. TODO-5322 is the 3rd `ready` item
-on the `hidden-test-failures-emitters` track (rule 11 caps concurrent
-same-track `Ready Now` items); pick it up once TODO-4806 or TODO-4807
-closes. It is not blocked.
 
 ### Ready Now
 
-- TODO-4806 (track: hidden-test-failures-emitters, surface: `IrLowererLowerEmitExpr.h` `isWrapperReturnedKeyValueAccessCall` guard for `count(...)` of a helper-return vector `at`): chained `count(wrapValues()./vector/at(0i32))` fails to lower with "struct parameter type mismatch".
-- TODO-4807 (track: hidden-test-failures-emitters, surface: `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` `resolveMethodCallPath` alias/canonical cross-path fallback; disjoint from TODO-4806's `IrLowererLowerEmitExpr.h` surface): bare-alias vector/map receiver shapes regressed in the emitter's cross-path metadata fallback.
+- TODO-4807 (track: hidden-test-failures-emitters, surface: `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` `resolveMethodCallPath` alias/canonical cross-path fallback; disjoint from TODO-5322's `IrLowererStatementBindingTypeMetadata.cpp` args-pack surface): bare-alias vector/map receiver shapes regressed in the emitter's cross-path metadata fallback.
+- TODO-5322 (track: hidden-test-failures-emitters, surface: `src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp` args-pack element struct metadata for `location(<helper call>)`; disjoint from TODO-4807's emitter surface): helper-returned `Reference<uninitialized<Pair>>` forwarded into an `args<Pointer<uninitialized<Pair>>>` pack fails with "struct parameter type mismatch: expected /Pair, got <unknown>".
 - TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-5322 (same `hidden-test-failures-emitters` track as TODO-4806/4807 - rule 11 caps concurrent same-track items; pick it up once one of those two closes). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track, and TODO-5322 remains held by the same-track cap). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -552,56 +546,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - stop_rule: if the AST rewrite cannot see the shadow without moving
     shadow resolution earlier in `semanticValidationPassManifest()`, stop
     and document the pass-order constraint instead of reordering passes.
-
-- [ ] TODO-4806: Slash-method-call chained off a helper-return vector temporary into `count(...)` fails to lower with "struct parameter type mismatch"
-  - owner: ai
-  - status: ready
-  - created_at: 2026-07-30
-  - phase: Hidden test failure remediation (emitters cluster)
-  - parallel_track: hidden-test-failures-emitters
-  - depends_on: (none)
-  - scope: found via "C++ emitter keeps slash-method vector access count
-    through builtin string length" in
-    `test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp`.
-    Minimal repro on `--emit=vm`:
-    ```
-    [return<string>]
-    /vector/at([vector<i32>] values, [i32] index) {
-      return("abc"raw_utf8)
-    }
-    [effects(heap_alloc), return<vector<i32>>]
-    wrapValues() {
-      return(vector<i32>(1i32))
-    }
-    [effects(heap_alloc), return<int>]
-    main() {
-      return(count(wrapValues()./vector/at(0i32)))
-    }
-    ```
-    fails with `VM lowering error: struct parameter type mismatch` (exit
-    2) instead of running and returning 3 (the "abc" string's length).
-    The equivalent DIRECT-call form (`count(/vector/at(wrapValues(),
-    0i32))`, no slash-method-call chaining) was not independently
-    re-tested this session - only the slash-method-call receiver form
-    (`wrapValues()./vector/at(0i32)`) was confirmed broken. Re-pinned to
-    the verified current rejection.
-  - implementation_notes: "struct parameter type mismatch" suggests the
-    lowering path is trying to pass the `wrapValues()` result (a
-    `vector<i32>`) into `/vector/at`'s first parameter using a struct-
-    by-value calling convention that doesn't match what `/vector/at`'s
-    actual parameter slot expects when reached via slash-method-call
-    syntax on a non-local (helper-return) receiver - compare IR
-    generation for this receiver shape against the working local-
-    variable-receiver case (`values./vector/at(0i32)` where `values` is
-    a bound local, covered by passing sibling tests in the same file).
-  - acceptance: the minimal repro above runs and returns 3; the re-pinned
-    TEST_CASE reverts to its original "runs and returns 6" expectation
-    once fixed (the original test summed two such calls).
-  - stop_rule: reproduce the direct-call (non-slash-method) form too
-    before closing, to confirm the bug is specifically about
-    slash-method-call syntax on a helper-return receiver and not a
-    broader "any call forwarding a helper-return vector into
-    /vector/at" gap.
 
 - [ ] TODO-4807: `resolveMethodCallPath`'s alias<->canonical cross-path fallback broke for several bare-alias vector/map receiver shapes (emitter-internal unit-test regressions, not yet observed end-to-end)
   - owner: ai

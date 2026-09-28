@@ -188,14 +188,62 @@ main() {
       (testScratchPath("") /
        "primec_cpp_slash_method_vector_access_count_receiver_forwarding_err.txt")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  // Verified current behavior: forwarding wrapValues() through the
-  // slash-method /vector/at and /std/collections/vector/at_unsafe
-  // receivers into count(...) now fails to lower ("struct parameter
-  // type mismatch") instead of running and returning 6.
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + quoteShellArg(errPath);
+  // Helper-return receivers now lower like bound-local receivers
+  // (TODO-4806). The original April pin expected 6 (builtin length
+  // 3 + 3), but the user /string/count shadow (91) now takes
+  // precedence over builtin string length for call-result strings,
+  // matching the sibling "keeps canonical vector unsafe direct-call
+  // count via builtin string length" case: 91 + 91 = 182.
+  CHECK(runCommand(runCmd) == 182);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") == std::string::npos);
+}
+
+TEST_CASE("vm counts helper-return vector access string via slash-method receiver") {
+  const std::string source = R"(
+[return<string>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(wrapValues()./vector/at(0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_helper_return_vector_slash_access_count.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
+TEST_CASE("vm counts helper-return vector access string via direct call") {
+  const std::string source = R"(
+[return<string>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/vector/at(wrapValues(), 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_helper_return_vector_direct_access_count.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("C++ emitter rejects slash-method vector count receivers before deleted access stubs") {
