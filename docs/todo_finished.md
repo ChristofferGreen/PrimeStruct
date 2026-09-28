@@ -55205,3 +55205,94 @@ crashes) - see `docs/todo_finished.md`.
     `spinning_cube_argument_validation_51_55` Timeout flake); after the
     change 1898/1899 with the same single Timeout, and a focused rerun of
     that shard passes (21.8s).
+
+- [x] TODO-5321: Desugar soa method sugar inside nested `then(){}`/`do(){}`/`while` bodies
+  - owner: ai
+  - created_at: 2026-09-25
+  - finished_at: 2026-09-28
+  - phase: Hidden test failure remediation
+  - parallel_track: hidden-test-failures-text-filters
+  - depends_on: (none)
+  - scope: found while closing TODO-5317. With `import /std/collections/*`
+    + `import /std/collections/soa/*`, a soa local's `values.push(...)`
+    at top level of `main` runs, but the same call inside a nested body
+    argument rejects with `unknown call target: push`:
+    `if(true, then(){ values.push(Particle(3i32)) }, else(){ })` and
+    `while(less_than(i, 1i32), do(){ values.push(Particle(3i32))
+    increment(i) })`. This happens for every constructor spelling
+    (`[auto mut] values{soa<Particle>()}`,
+    `values{/std/collections/soa/soa<Particle>()}`, and
+    `[soa<Particle> mut] values{soa<Particle>()}`), so it predates
+    TODO-5317. Read helpers in nested bodies fail later instead:
+    `examples/3.Surface/soa_ecs.prime` calls `particles.get(i)` inside a
+    `while(...) { ... }` body and fails every backend with `semantic-product
+    method-call target missing lowered definition:
+    /std/collections/soa/get` (same for all three spellings; a copy with
+    the loop flattened exits 10). It is pinned as known-broken in
+    `tests/unit/compile_run/examples/test_compile_run_examples_language_levels.cpp`
+    ("3.Surface soa_ecs example is pinned to its current known-broken
+    compile state").
+  - implementation_notes: `rewriteExperimentalSoaSamePathHelperMethodExpr`
+    in `src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp`
+    recurses into `expr.args` but not into the `bodyArguments` of
+    call-argument envelopes such as `then(){...}`/`do(){...}`; only the
+    statement-level `stmt.bodyArguments` recursion carries the outer
+    bindings. The un-desugared method call then reaches
+    `resolveExprVectorHelperCall`
+    (`SemanticsValidatorExprVectorHelpers.cpp`), whose
+    `classifyReceiverFamily` sees the concrete `SoaVector__t<hash>`
+    struct's `Collection` trait and rejects push/reserve as vector
+    mutator sugar. Check whether the sibling to_aos/inline-borrow
+    rewrites in that file have the same gap. Since TODO-5319 the same
+    rewrite also routes rooted `/soa/<helper>(values, ...)` calls, so the
+    body-recursion fix should cover those too.
+  - acceptance:
+    - both nested repros above run on vm and native for all three
+      constructor spellings (for example, `reserve` + push in the `then`
+      body + a top-level push + `return(values.count())` exits 2).
+    - `examples/3.Surface/soa_ecs.prime` runs (exit 10); move it from its
+      known-broken pin into the runnable examples table.
+    - one new compile-run case pins it; `./scripts/compile.sh --release`
+      back at baseline.
+  - stop_rule: if the fix needs the validator's vector-mutator guard to
+    treat `SoaVector__t<hash>` receivers differently (not just a rewrite
+    that descends into nested body arguments), stop and split that change
+    out with evidence.
+  - resolution: stop_rule not hit; the rewrite recursion alone was
+    enough and the validator's vector-mutator guard is unchanged. Root
+    cause: the three soa rewrite walkers in
+    `src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp`
+    (`rewriteExperimentalSoaSamePathHelperMethodExpr`,
+    `rewriteExperimentalSoaToAosMethodExpr`,
+    `rewriteExperimentalSoaInlineBorrowMethodExpr`) recursed into
+    `expr.args` but never into an argument's own `bodyArguments`, so the
+    statements of `then(){}`/`else(){}`/`do(){}` envelopes were never
+    visited. Fix: each Expr walker now runs its Statements walker over a
+    call argument's `bodyArguments` with the enclosing bindings (the
+    same-path walker now also takes `shortSoaConstructorVisible`). All
+    three siblings had the same gap and all three were fixed. The
+    same-path fix also covers TODO-5319's rooted `/soa/<helper>` calls in
+    nested bodies, and a nested `.to_aos()` that previously failed
+    lowering with `missing lowered definition:
+    /std/collections/soa/to_aos` now runs. Checked on vm and native for
+    all three constructor spellings: the `if`/`then` push repro (reserve +
+    nested push + top-level push + `return(values.count())`) exits 2,
+    the `while`/`do` push repro plus a `get` read loop exits 9, and
+    rooted `/soa/reserve`/`/soa/push` in a `then` body exit 6.
+    `examples/3.Surface/soa_ecs.prime` exits 10 on vm and native. Its
+    known-broken pin in `test_compile_run_examples_language_levels.cpp`
+    is deleted and it is now `{"3.Surface/soa_ecs.prime", 10}` in the
+    3.Surface runnable table. The `soa_ecs.prime` skip in the
+    examples-to-IR sweep (`test_compile_run_bindings_and_examples.cpp`)
+    is also removed. New cases "vm public soa helpers desugar inside
+    nested body arguments" (all three spellings, vm) and "native public
+    soa helpers desugar inside nested body arguments" in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_soa_helper_public_runs.cpp`
+    run one program that uses if/then push, while/do push, a rooted
+    `/soa/push` in a then body, `get` in a while body, and `.to_aos()`
+    in a then body (exit 26). The case is split in two to stay under the
+    5s doctest guardrail (4.7s + 1.7s). Release gate: baseline before
+    1898/1899 (only the known `spinning_cube_argument_validation_51_55`
+    Timeout flake); after the change 1898/1899 with the same single
+    Timeout (on both full runs), and a focused rerun of that shard
+    passes.

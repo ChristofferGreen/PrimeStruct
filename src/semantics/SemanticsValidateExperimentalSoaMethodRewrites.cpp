@@ -34,6 +34,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers,
     bool publicSoaSurfaceVisible,
+    bool shortSoaConstructorVisible,
     const std::unordered_set<std::string> &overloadedCanonicalHelpers);
 
 namespace {
@@ -113,6 +114,7 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
         definitionNamespace,
         visibleSoaHelpers,
         publicSoaSurfaceVisible,
+        shortSoaConstructorVisible,
         overloadedCanonicalHelpers);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
@@ -145,6 +147,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers,
     bool publicSoaSurfaceVisible,
+    bool shortSoaConstructorVisible,
     const std::unordered_set<std::string> &overloadedCanonicalHelpers) {
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaSamePathHelperMethodExpr(
@@ -155,7 +158,25 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
         definitionNamespace,
         visibleSoaHelpers,
         publicSoaSurfaceVisible,
+        shortSoaConstructorVisible,
         overloadedCanonicalHelpers);
+    // TODO-5321: call-argument body envelopes (`if(c, then(){...},
+    // else(){...})`, `while(c, do(){...})`) carry their statements in the
+    // argument's own bodyArguments; walk them with the enclosing bindings
+    // so soa method sugar and rooted /soa/* calls in nested bodies are
+    // rewritten like top-level statements.
+    if (!arg.bodyArguments.empty()) {
+      rewriteExperimentalSoaSamePathHelperMethodStatements(
+          arg.bodyArguments,
+          bindings,
+          soaCollectionReturnDefinitions,
+          structPaths,
+          definitionNamespace,
+          visibleSoaHelpers,
+          publicSoaSurfaceVisible,
+          shortSoaConstructorVisible,
+          overloadedCanonicalHelpers);
+    }
   }
   if (expr.kind != Expr::Kind::Call || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
@@ -388,6 +409,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
           definitionNamespace,
           visibleSoaHelpers,
           publicSoaSurfaceVisible,
+          shortSoaConstructorVisible,
           overloadedCanonicalHelpers);
     }
   }
@@ -447,6 +469,17 @@ void rewriteExperimentalSoaToAosMethodExpr(
         definitionNamespace,
         hasVisibleRootToAosHelper,
         hasVisibleCanonicalToAosHelper);
+    // TODO-5321: walk call-argument body envelopes (then/else/do bodies).
+    if (!arg.bodyArguments.empty()) {
+      rewriteExperimentalSoaToAosMethodStatements(
+          arg.bodyArguments,
+          bindings,
+          soaCollectionReturnDefinitions,
+          structPaths,
+          definitionNamespace,
+          hasVisibleRootToAosHelper,
+          hasVisibleCanonicalToAosHelper);
+    }
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
@@ -1170,6 +1203,11 @@ void rewriteExperimentalSoaInlineBorrowMethodExpr(
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaInlineBorrowMethodExpr(
         arg, bindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
+    // TODO-5321: walk call-argument body envelopes (then/else/do bodies).
+    if (!arg.bodyArguments.empty()) {
+      rewriteExperimentalSoaInlineBorrowMethodStatements(
+          arg.bodyArguments, bindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
+    }
   }
   if (expr.kind != Expr::Kind::Call) {
     return;

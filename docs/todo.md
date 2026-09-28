@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
-| TODO-5321 | soa method sugar inside nested bodies (`soa_ecs` example) | ready | hidden-test-failures-text-filters |
 | TODO-4800 | `args<T>` pack `.at()`/`.at_unsafe()` fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4801 | Canonical map ref-form helper call fails to lower on vm | ready | hidden-test-failures-emitters |
 | TODO-4806 | Chained `count(...)` off helper-return vector fails to lower | ready\* | hidden-test-failures-emitters |
@@ -118,13 +117,12 @@ close. Neither is blocked.
 
 ### Ready Now
 
-- TODO-5321 (track: hidden-test-failures-text-filters, surface: `rewriteExperimentalSoaSamePathHelperMethodExpr` nested call-argument body recursion in `src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp`): with the soa imports, soa method sugar (e.g. `values.push(...)`, `particles.get(i)`) inside nested `then(){}`/`do(){}`/`while` bodies is not desugared, so `soa_ecs.prime` fails to compile. Took TODO-5319's slot when it closed on 2026-09-28.
 - TODO-4800 (track: hidden-test-failures-emitters, surface: vm lowering, `args<T>` variadic-pack access): `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` elements fails to lower on vm with "missing lowered definition: /array/at".
 - TODO-4801 (track: hidden-test-failures-emitters, surface: vm lowering, canonical map ref-form helpers): a direct (non-method) call to a canonical map ref-form helper used in an expression fails to lower on vm.
 - TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). Held back from this round's Ready Now: TODO-4806/TODO-4807 (same `hidden-test-failures-emitters` track as TODO-4800/4801 - rule 11 caps concurrent same-track items; pick these up once one of the two above closes). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track, and TODO-4806/4807 remain held by the same-track cap). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -555,59 +553,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
   - stop_rule: if the AST rewrite cannot see the shadow without moving
     shadow resolution earlier in `semanticValidationPassManifest()`, stop
     and document the pass-order constraint instead of reordering passes.
-
-- [ ] TODO-5321: Desugar soa method sugar inside nested `then(){}`/`do(){}`/`while` bodies
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-25
-  - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-text-filters
-  - depends_on: (none)
-  - scope: found while closing TODO-5317. With `import /std/collections/*`
-    + `import /std/collections/soa/*`, a soa local's `values.push(...)`
-    at top level of `main` runs, but the same call inside a nested body
-    argument rejects with `unknown call target: push`:
-    `if(true, then(){ values.push(Particle(3i32)) }, else(){ })` and
-    `while(less_than(i, 1i32), do(){ values.push(Particle(3i32))
-    increment(i) })`. This happens for every constructor spelling
-    (`[auto mut] values{soa<Particle>()}`,
-    `values{/std/collections/soa/soa<Particle>()}`, and
-    `[soa<Particle> mut] values{soa<Particle>()}`), so it predates
-    TODO-5317. Read helpers in nested bodies fail later instead:
-    `examples/3.Surface/soa_ecs.prime` calls `particles.get(i)` inside a
-    `while(...) { ... }` body and fails every backend with `semantic-product
-    method-call target missing lowered definition:
-    /std/collections/soa/get` (same for all three spellings; a copy with
-    the loop flattened exits 10). It is pinned as known-broken in
-    `tests/unit/compile_run/examples/test_compile_run_examples_language_levels.cpp`
-    ("3.Surface soa_ecs example is pinned to its current known-broken
-    compile state").
-  - implementation_notes: `rewriteExperimentalSoaSamePathHelperMethodExpr`
-    in `src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp`
-    recurses into `expr.args` but not into the `bodyArguments` of
-    call-argument envelopes such as `then(){...}`/`do(){...}`; only the
-    statement-level `stmt.bodyArguments` recursion carries the outer
-    bindings. The un-desugared method call then reaches
-    `resolveExprVectorHelperCall`
-    (`SemanticsValidatorExprVectorHelpers.cpp`), whose
-    `classifyReceiverFamily` sees the concrete `SoaVector__t<hash>`
-    struct's `Collection` trait and rejects push/reserve as vector
-    mutator sugar. Check whether the sibling to_aos/inline-borrow
-    rewrites in that file have the same gap. Since TODO-5319 the same
-    rewrite also routes rooted `/soa/<helper>(values, ...)` calls, so the
-    body-recursion fix should cover those too.
-  - acceptance:
-    - both nested repros above run on vm and native for all three
-      constructor spellings (for example, `reserve` + push in the `then`
-      body + a top-level push + `return(values.count())` exits 2).
-    - `examples/3.Surface/soa_ecs.prime` runs (exit 10); move it from its
-      known-broken pin into the runnable examples table.
-    - one new compile-run case pins it; `./scripts/compile.sh --release`
-      back at baseline.
-  - stop_rule: if the fix needs the validator's vector-mutator guard to
-    treat `SoaVector__t<hash>` receivers differently (not just a rewrite
-    that descends into nested body arguments), stop and split that change
-    out with evidence.
 
 - [ ] TODO-4800: Fix `.at()`/`.at_unsafe()` method-call sugar (and bare `at(pack, N)`) on `args<T>` variadic-pack elements failing to lower on vm with "missing lowered definition: /array/at"
   - owner: ai

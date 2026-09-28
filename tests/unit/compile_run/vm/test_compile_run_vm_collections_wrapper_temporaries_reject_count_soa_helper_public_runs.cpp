@@ -471,6 +471,85 @@ main() {
   CHECK(readFile(explicitErrPath).empty());
 }
 
+namespace {
+
+// TODO-5321: soa method sugar and rooted /soa/* calls inside call-argument
+// body envelopes (`if(c, then(){...}, else(){...})`, `while(c, do(){...})`)
+// must be rewritten to the public soa helpers exactly like top-level
+// statements, instead of rejecting with `unknown call target: push` or
+// failing lowering with a missing /std/collections/soa/get or to_aos.
+// Exit code: pushed x values 3+4+5+6 = 18, plus to_aos count 4, plus
+// count 4 = 26.
+std::string publicSoaNestedBodyHelpersSource(const std::string &declaration) {
+  return R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  )" + declaration + R"(
+  values.reserve(4i32)
+  if(true, then(){ values.push(Particle(3i32)) }, else(){ })
+  [i32 mut] i{0i32}
+  while(less_than(i, 1i32), do(){
+    values.push(Particle(4i32))
+    increment(i)
+  })
+  if(true, then(){ /soa/push(values, Particle(5i32)) }, else(){ })
+  values.push(Particle(6i32))
+  [i32 mut] total{0i32}
+  [i32 mut] j{0i32}
+  while(less_than(j, values.count())) {
+    [Particle] current{values.get(j)}
+    assign(total, plus(total, current.x))
+    assign(j, plus(j, 1i32))
+  }
+  if(true, then(){
+    [vector<Particle>] packed{values.to_aos()}
+    assign(total, plus(total, packed.count()))
+  }, else(){ })
+  return(plus(total, /soa/count(values)))
+}
+)";
+}
+
+} // namespace
+
+TEST_CASE("vm public soa helpers desugar inside nested body arguments") {
+  // TODO-5321: every constructor spelling (see
+  // publicSoaNestedBodyHelpersSource) runs on vm.
+  const std::vector<std::pair<std::string, std::string>> spellings = {
+      {"auto_short", "[auto mut] values{soa<Particle>()}"},
+      {"auto_qualified", "[auto mut] values{/std/collections/soa/soa<Particle>()}"},
+      {"explicit", "[soa<Particle> mut] values{soa<Particle>()}"}};
+  for (const auto &[label, declaration] : spellings) {
+    CAPTURE(label);
+    const std::string srcPath = writeTemp("vm_public_soa_nested_body_helpers_" + label + ".prime",
+                                          publicSoaNestedBodyHelpersSource(declaration));
+    const std::string errPath =
+        (testScratchPath("") / ("primec_public_soa_nested_body_helpers_" + label + "_err.txt")).string();
+    // primec's own diagnostic exit code is 2, so pin an empty stderr too.
+    CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath) == 26);
+    CHECK(readFile(errPath).empty());
+  }
+}
+
+TEST_CASE("native public soa helpers desugar inside nested body arguments") {
+  // TODO-5321: native twin of the vm case above (short auto spelling).
+  const std::string srcPath =
+      writeTemp("native_public_soa_nested_body_helpers.prime",
+                publicSoaNestedBodyHelpersSource("[auto mut] values{soa<Particle>()}"));
+  const std::string nativePath =
+      (testScratchPath("") / "primec_public_soa_nested_body_helpers_native").string();
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main") == 0);
+  CHECK(runCommand(nativePath) == 26);
+}
+
 TEST_CASE("vm public soa construction and mutators use wrappers") {
   const std::string source = R"(
 import /std/collections/*
