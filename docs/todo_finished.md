@@ -55943,3 +55943,65 @@ crashes) - see `docs/todo_finished.md`.
     the known `spinning_cube_argument_validation_51_55` Timeout flake.
     After the fix: 1899/1899, 0 failed. No builtin collection indexing
     test changed, so the stop_rule did not trigger.
+
+**Todo Completion (September 29, 2026) — TODO-5316**
+- [x] TODO-5316: Fix repeated user struct method calls on VM/native
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-09-29
+  - phase: User struct method dispatch
+  - parallel_track: user-struct-method-inlining
+  - depends_on: (none)
+  - scope: calling the same user struct method twice in one definition
+    fails lowering with `vm backend does not know identifier: this`
+    (native: same message). Minimal repro, confirmed on the unmodified
+    2026-09-24 baseline: a root-level `[struct] Bag() { [i32 mut]
+    total{0i32} [return<i32>] size() { return(plus(this.total, 100i32)) }
+    }` with `main` doing `[Bag mut] values{Bag{}}` then
+    `return(plus(values.size(), values.size()))`. The same failure occurs
+    for two `values.addPair(...)` statements or
+    `[i32] a{values.size()} [i32] b{values.size()}`, for generic and
+    non-generic structs, and in or out of a namespace. A single call
+    works.
+  - acceptance:
+    - the repros above run on vm and native (e.g. `plus(values.size(),
+      values.size())` exits 200).
+    - one new compile-run case pins it.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if the fix needs a change to the inlining recursion or
+    real-call eligibility model, stop and split that out with evidence.
+  - resolution: the inline-call path was not at fault; nothing caches
+    the inlined body or its `this` local. Root cause: TODO-4747's
+    real-call eligibility scan (`computeRealCallEligibleDefinitionPaths`,
+    `src/ir_lowerer/IrLowererRecursionAnalysis.cpp`) marks a
+    non-recursive definition with 2+ call sites, scalar declared
+    parameters and a scalar/void return as a real (non-inlined) Call.
+    A struct method's implicit `this` (a `Reference<Struct>`, added only
+    by `buildInlineCallParameterList`) is not in `def.parameters`, so
+    `hasOnlyScalarParameters` passed and the second call site made the
+    method eligible. The real-call body loop
+    (`IrLowererLowerStatementsCallsStage.cpp`) binds only
+    `def.parameters`, so the body's `this` never resolved. One call
+    site stays below `kMinCallSitesForRealCall` and is inlined, which is
+    why a single call worked. Fix: the eligibility scan now skips struct
+    helpers that take an implicit `this` (`isStructHelperDefinition`
+    over the program's `isStructDefinition` set, excluding `static`
+    helpers), so they stay on the inline path. This enforces the existing
+    scalar-parameters-only real-call rule for a parameter the scan could
+    not see; it does not change the inlining recursion or real-call
+    eligibility model, so the stop_rule did not trigger. Giving real
+    calls a bound `this` (struct-reference parameters on real calls) was
+    deliberately left out. Verified by hand on vm and `--emit=native`:
+    the root repro exits 200 (single call 100), two `addPair` mutator
+    statements plus `[i32] a{values.size()} [i32] b{values.size()}`
+    exit 220, and a namespaced generic `/demo/Bag<i32>` exits 200. New
+    tests in `primestruct.compile.run.vm.collections`
+    (`test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp`):
+    "runs vm repeated user struct method calls in one expression"
+    (root, 200) and "runs vm repeated generic user struct mutator and
+    binding calls" (namespaced generic, 220). Each runs on vm and on the
+    native binary.
+    Release gate: baseline 1899/1899, recorded at a5c1364a. After the
+    fix: 1898/1899. The only failure is the known
+    `spinning_cube_argument_validation_51_55` Timeout flake (30.01s),
+    and a focused release rerun of that shard passes (19.2s).

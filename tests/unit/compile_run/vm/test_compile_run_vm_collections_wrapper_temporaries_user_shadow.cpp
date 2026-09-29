@@ -613,4 +613,74 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /demo/Plain/at") != std::string::npos);
 }
 
+namespace {
+
+// TODO-5316: calling the same user struct method at two or more sites made it
+// real-call eligible, but a real call never binds the method's implicit `this`,
+// so lowering failed with "does not know identifier: this". Each source must
+// give the same exit code on vm and native.
+void checkRepeatedUserStructMethodCalls(const std::string &stem,
+                                        const std::string &source,
+                                        int expectedExit) {
+  const std::string srcPath = writeTemp(stem + ".prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == expectedExit);
+  const std::string nativePath = (testScratchPath("") / ("primec_" + stem)).string();
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + nativePath +
+                   " --entry /main") == 0);
+  CHECK(runCommand(nativePath) == expectedExit);
+}
+
+} // namespace
+
+TEST_CASE("runs vm repeated user struct method calls in one expression") {
+  checkRepeatedUserStructMethodCalls("vm_user_struct_repeated_method_expr", R"(
+[struct]
+Bag() {
+  [i32 mut] total{0i32}
+
+  [return<i32>]
+  size() {
+    return(plus(this.total, 100i32))
+  }
+}
+
+[return<int>]
+main() {
+  [Bag mut] values{Bag{}}
+  return(plus(values.size(), values.size()))
+}
+)", 200);
+}
+
+TEST_CASE("runs vm repeated generic user struct mutator and binding calls") {
+  checkRepeatedUserStructMethodCalls("vm_user_struct_repeated_method_generic", R"(
+namespace demo {
+  [struct]
+  Bag<T>() {
+    [T mut] total{0i32}
+
+    [return<T>]
+    size() {
+      return(plus(this.total, 100i32))
+    }
+
+    [mut]
+    addPair([T] first, [T] second) {
+      assign(this.total, plus(this.total, plus(first, second)))
+    }
+  }
+}
+
+[return<int>]
+main() {
+  [/demo/Bag<i32> mut] values{/demo/Bag<i32>{}}
+  values.addPair(1i32, 2i32)
+  values.addPair(3i32, 4i32)
+  [i32] first{values.size()}
+  [i32] second{values.size()}
+  return(plus(first, second))
+}
+)", 220);
+}
+
 TEST_SUITE_END();

@@ -352,6 +352,25 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
     byPath.emplace(def.fullPath, &def);
   }
 
+  // Struct helpers (nested methods and lifecycle helpers) take an implicit
+  // `this` (a Reference<Struct>) that is not in `def.parameters` - see
+  // buildInlineCallParameterList. hasOnlyScalarParameters cannot see it,
+  // and the real-call body lowering only binds `def.parameters`, so such a
+  // helper lowered as a real Call fails with "does not know identifier:
+  // this" (TODO-5316). Keep them on the inline path, matching the existing
+  // scalar-parameters-only real-call rule; `static` helpers have no `this`.
+  std::unordered_set<std::string> structNames;
+  for (const Definition &def : program.definitions) {
+    if (isStructDefinition(def)) {
+      structNames.insert(def.fullPath);
+    }
+  }
+  const auto takesImplicitThis = [&](const Definition &def) {
+    std::string parentStructPath;
+    return isStructHelperDefinition(def, structNames, parentStructPath) &&
+           !definitionHasTransform(def, "static");
+  };
+
   std::unordered_set<std::string> eligible;
   for (const std::string &path : reachable) {
     if (path == entryPath) {
@@ -377,6 +396,9 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
     const Definition &def = *defIt->second;
     if (definitionHasTransform(def, "struct") || definitionHasTransform(def, "sum") ||
         definitionHasTransform(def, "compute") || definitionHasTransform(def, "on_error")) {
+      continue;
+    }
+    if (takesImplicitThis(def)) {
       continue;
     }
     if (!hasOnlyScalarParameters(def) || !hasScalarOrVoidReturn(def)) {

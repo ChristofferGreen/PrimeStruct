@@ -99,17 +99,16 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-4751 | Implement a real experimental `Map<K,V>` collection type | blocked | hidden-test-failures-imports-operations |
+| TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
 | TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | blocked | (none) |
-| TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
 ### Ready Now
 
-- TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
+- TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections/map.prime` public `Map<K, V>` wrapper plus the semantics/monomorph bare-`Map` classifiers): add the working `Map<K, V>` struct and restore the TODO-4741 reject pins.
 
-TODO-4751 is `blocked` on TODO-5316 (TODO-5315 closed on 2026-09-29 and its `user-struct-indexing` slot stays empty - no other `ready` leaf remains outside `Ready Now`; TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5322 closed on 2026-09-28 (the last `hidden-test-failures-emitters` leaf) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 became `ready` on 2026-09-29 when its last blocker TODO-5316 closed, and took the only open slot (TODO-5315 and TODO-5316 closed on 2026-09-29; their `user-struct-indexing` and `user-struct-method-inlining` slots stay empty - no other `ready` leaf remains outside `Ready Now`; TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5322 closed on 2026-09-28 (the last `hidden-test-failures-emitters` leaf) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -287,12 +286,12 @@ TODO-4751 is `blocked` on TODO-5316 (TODO-5315 closed on 2026-09-29 and its `use
 
 - [ ] TODO-4751: Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5316
+  - status: ready
   - created_at: 2026-07-29
   - phase: New feature (not a bug fix)
   - parallel_track: hidden-test-failures-imports-operations
-  - depends_on: TODO-5316 (TODO-5315 closed 2026-09-29)
+  - depends_on: (none - TODO-5315 closed 2026-09-29, TODO-5316 closed
+    2026-09-29)
   - scope: add the capitalized public `Map<K, V>` collection type, which
     does not exist anywhere today (only the lowercase builtin `map<K, V>`
     and the `MapValue<K, V>` backing struct in
@@ -354,9 +353,10 @@ TODO-4751 is `blocked` on TODO-5316 (TODO-5315 closed on 2026-09-29 and its `use
     `primestruct.semantics.calls_flow.collections` cases because
     downstream code keys on the un-suffixed `/std/collections/map/<helper>`
     paths; route wrapper receivers to the struct's own methods instead
-    once the classifier removal above lands. The wrapper also needs
-    repeated method calls (TODO-5316); `values[key]` dispatch to a user
-    struct's own `at` landed with TODO-5315 (2026-09-29; a non-generic
+    once the classifier removal above lands. Repeated method calls on a
+    user struct work since TODO-5316 (2026-09-29; `insert` called
+    repeatedly stays inlined); `values[key]` dispatch to a user struct's
+    own `at` landed with TODO-5315 (2026-09-29; a non-generic
     namespaced `/demo/Map` with its own `at` already indexes through it).
     Measured 2026-09-25 (TODO-5313): the classifier removal alone makes
     a namespaced user `Map<i32, i32>` with its own `count`/`insert` run
@@ -423,39 +423,6 @@ TODO-4751 is `blocked` on TODO-5316 (TODO-5315 closed on 2026-09-29 and its `use
     - `./scripts/compile.sh --release` back at baseline.
   - stop_rule: if any `map<K, V>` lowering test changes, stop and record
     which classifier still carries the builtin identity.
-
-- [ ] TODO-5316: Fix repeated user struct method calls on VM/native
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-24
-  - phase: User struct method dispatch
-  - parallel_track: user-struct-method-inlining
-  - depends_on: (none)
-  - scope: calling the same user struct method twice in one definition
-    fails lowering with `vm backend does not know identifier: this`
-    (native: same message). Minimal repro, confirmed on the unmodified
-    2026-09-24 baseline: a root-level `[struct] Bag() { [i32 mut]
-    total{0i32} [return<i32>] size() { return(plus(this.total, 100i32)) }
-    }` with `main` doing `[Bag mut] values{Bag{}}` then
-    `return(plus(values.size(), values.size()))`. The same failure occurs
-    for two `values.addPair(...)` statements or
-    `[i32] a{values.size()} [i32] b{values.size()}`, for generic and
-    non-generic structs, and in or out of a namespace. A single call
-    works.
-  - implementation_notes: suspect the inline-call path
-    (`emitInlineDefinitionCall`, `buildInlineCallParameterList` /
-    `makeStructHelperThisParam` in `IrLowererCallHelpers.cpp`) caches the
-    first inlined body or its `this` local and reuses it without
-    rebinding. Start with `--dump-stage ir` for both calls. This blocks
-    any realistic struct-backed collection wrapper (TODO-4751 calls
-    `insert` repeatedly).
-  - acceptance:
-    - the repros above run on vm and native (e.g. `plus(values.size(),
-      values.size())` exits 200).
-    - one new compile-run case pins it.
-    - `./scripts/compile.sh --release` back at baseline.
-  - stop_rule: if the fix needs a change to the inlining recursion or
-    real-call eligibility model, stop and split that out with evidence.
 
 - [ ] TODO-5320: Make ast-semantic `.to_aos()` spelling match the resolved root `/to_aos` shadow
   - owner: ai
