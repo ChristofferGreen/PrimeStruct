@@ -89,7 +89,7 @@ bool isUnspecializedExperimentalCollectionTypeBaseLocal(
       experimentalCollectionTypePathLocal(collectionName, typeName);
   const std::string rooted =
       experimentalCollectionTypePathLocal(collectionName, typeName, true);
-  return base == typeName || base == bare || base == rooted;
+  return base == bare || base == rooted;
 }
 
 std::string stripLeadingSlashLocal(std::string_view text) {

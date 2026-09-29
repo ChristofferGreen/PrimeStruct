@@ -99,16 +99,23 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-4751 | Implement a real experimental `Map<K,V>` collection type | ready | hidden-test-failures-imports-operations |
-| TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | blocked | (none) |
+| TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | ready | map-backend-classifiers |
+| TODO-5323 | Make `MapValue` insert overwrite non-trivial values | ready | map-value-overwrite |
+| TODO-5324 | Reject struct initializers of another struct type in semantics | ready | struct-initializer-typecheck |
+| TODO-5325 | Run the remaining pinned `Map<K, V>` wrapper conformance shapes | ready | map-wrapper-conformance |
+| TODO-5326 | Restore canonical `map<K, V>` wrapper-temporary compile-run pins | ready | canonical-map-wrapper-temporaries |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
 ### Ready Now
 
-- TODO-4751 (track: hidden-test-failures-imports-operations, surface: `stdlib/std/collections/map.prime` public `Map<K, V>` wrapper plus the semantics/monomorph bare-`Map` classifiers): add the working `Map<K, V>` struct and restore the TODO-4741 reject pins.
+- TODO-5314 (track: map-backend-classifiers, surface: bare-`Map` arms in `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp`, `src/ir/IrPrinterHelpers.cpp`, `src/emitter/EmitterHelpersTypes.cpp`, `src/emitter/EmitterBuiltinCallPathHelpers.cpp`): drop the backend-side bare-`Map` classifiers.
+- TODO-5323 (track: map-value-overwrite, surface: `overwriteSlot`/`mapInsert*` in `stdlib/std/collections/map.prime` and struct assign-through-`Reference` lowering): make `MapValue` insert overwrite non-relocation-trivial payloads.
+- TODO-5324 (track: struct-initializer-typecheck, surface: semantics binding/assign/field initializer type checks in `src/semantics/`): reject a struct initialized from another struct type before lowering.
+- TODO-5325 (track: map-wrapper-conformance, surface: the nine `TODO-5325` helpers in `tests/unit/compile_run/map_conformance/*expectations.h` plus the monomorph wrapper-routing rewrite): run the remaining `Map<K, V>` wrapper shapes.
+- TODO-5326 (track: canonical-map-wrapper-temporaries, surface: `tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_*.cpp` canonical-map cases): restore the canonical `map<K, V>` wrapper-temporary pins.
 
-TODO-4751 became `ready` on 2026-09-29 when its last blocker TODO-5316 closed, and took the only open slot (TODO-5315 and TODO-5316 closed on 2026-09-29; their `user-struct-indexing` and `user-struct-method-inlining` slots stay empty - no other `ready` leaf remains outside `Ready Now`; TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5322 closed on 2026-09-28 (the last `hidden-test-failures-emitters` leaf) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (`blocked` -> `ready`, now on its own `map-backend-classifiers` track). Its follow-ups TODO-5323/5324/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 is the last leaf). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -284,111 +291,13 @@ TODO-4751 became `ready` on 2026-09-29 when its last blocker TODO-5316 closed, a
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
 
-- [ ] TODO-4751: Implement a real, working experimental `Map<K,V>` collection type
-  - owner: ai
-  - status: ready
-  - created_at: 2026-07-29
-  - phase: New feature (not a bug fix)
-  - parallel_track: hidden-test-failures-imports-operations
-  - depends_on: (none - TODO-5315 closed 2026-09-29, TODO-5316 closed
-    2026-09-29)
-  - scope: add the capitalized public `Map<K, V>` collection type, which
-    does not exist anywhere today (only the lowercase builtin `map<K, V>`
-    and the `MapValue<K, V>` backing struct in
-    `stdlib/std/collections/map.prime`), plus `mapSingle<K, V>` and a
-    general (non-nested) `mapPair<K, V>` constructor under
-    `/std/collections/map/`, and restore the ~28+ compile-run cases that
-    TODO-4741 re-pinned to reject (`expect*ExperimentalMap*Conformance` /
-    `expectCanonicalMapNamespace*` in
-    `tests/unit/compile_run/map_conformance/*expectations.h`, plus
-    `test_compile_run_imports_operations.cpp` and the
-    `test_compile_run_vm_collections_wrapper_temporaries_*` files).
-    Also owns the semantics/monomorph bare-`Map` classifier removal
-    folded in from TODO-5313 (stop_rule, 2026-09-25), which must land in
-    the same change as the wrapper: the bare `typeName == backingTypeName`
-    match of `isExperimentalCollectionBackingTypeName` for `Map`
-    (`src/semantics/StdlibCollectionSurfaceHelpers.h`),
-    `isBareExperimentalKeyValueBackingTypeName` (same file; one caller in
-    `SemanticsValidatorInferCollectionReturnInference.cpp`), the
-    `base == typeName` arm of
-    `isUnspecializedExperimentalCollectionTypeBaseLocal`
-    (`SemanticsBindingTypeHelpers.cpp`), the `base == "Map"` /
-    `normalizedType == "Map"` arms of `normalizeCollectionTypePath`
-    (`SemanticsValidatorInferCollectionCompatibility.cpp`), the `"Map"`
-    arm of `resolveBuiltinKeyValueResultType`
-    (`SemanticsValidatorResultHelpers.cpp`) and the bare/generated-bare
-    `Map` arm of `normalizeCollectionReceiverTypeName`
-    (`TemplateMonomorphCollectionCompatibilityPaths.cpp`).
-  - implementation_notes: design decided by the user (2026-09-24): option
-    (a) - `Map<K, V>` is a thin public struct owning one `MapValue<K, V>`
-    (mirroring how `Vector<T>` is itself the canonical struct), with
-    `count/contains/tryAt/at/at_unsafe/insert` methods, not an alias.
-    Blocked because the compiler still classifies a bare `Map` spelling as
-    the builtin key/value storage type (TODO-5310, split into
-    TODO-5312/5313/5314 on 2026-09-24), so a `Map<K, V>`
-    wrapper binding is routed onto the `MapValue` helper family and its
-    own methods are never selected. Prototype findings and the approaches
-    already ruled out are in `docs/todo_log.md` under `## TODO-4751`.
-  - acceptance:
-    - `[Map<i32, i32> mut] values{mapSingle<i32, i32>(1i32, 4i32)}` with
-      `values.insert(...)`, `values.count()`, `values[key]`,
-      `count(values)`, explicit `/std/collections/map/insert<K, V>(values,
-      ...)` and `Reference<Map<K, V>>` `*_ref` helpers compiles and runs
-      on vm/native/exe (i32 keys) with no change to existing lowercase
-      `map<K, V>` diagnostics or behavior.
-    - every TODO-4741 reject pin whose source uses non-string keys is
-      restored to its originally intended runtime expectation (the six
-      string-key `map<string, V>` sources were already restored by
-      TODO-5311 on 2026-09-25).
-    - one positive and one negative (e.g. key-type mismatch) test for the
-      new surface; `./scripts/compile.sh --release` at baseline.
-    - a user `Map<K, V>` declared in its own namespace publishes
-      `/<ns>/Map__t<hash>/<method>` targets for `values.count()` /
-      `values.insert(...)`, not `/std/collections/map/*` (semantic-product
-      test; the TODO-5313 prototype passed one next to "semantic product
-      method-call targets stay separated by receiver type").
-  - stop_rule: do not add same-arity `Map`/`MapValue` overloads to the
-    canonical helper family (`count`, `at`, `insert`, ...) - that was
-    prototyped on 2026-09-24 and regressed 14-19 existing
-    `primestruct.semantics.calls_flow.collections` cases because
-    downstream code keys on the un-suffixed `/std/collections/map/<helper>`
-    paths; route wrapper receivers to the struct's own methods instead
-    once the classifier removal above lands. Repeated method calls on a
-    user struct work since TODO-5316 (2026-09-29; `insert` called
-    repeatedly stays inlined); `values[key]` dispatch to a user struct's
-    own `at` landed with TODO-5315 (2026-09-29; a non-generic
-    namespaced `/demo/Map` with its own `at` already indexes through it).
-    Measured 2026-09-25 (TODO-5313): the classifier removal alone makes
-    a namespaced user `Map<i32, i32>` with its own `count`/`insert` run
-    through its own methods on vm/native/exe (exit 1) without any
-    TODO-5314 backend edit, and regresses exactly 21 cases in 12 shards.
-    18 are 9 TODO-4741 reject-placeholder sources (each pinned twice:
-    `runs vm ...` and the vm-backed `... in C++ emitter` twin in
-    `test_compile_run_imports_operations.cpp`) that spell `Map<string, V>`
-    with the nonexistent `mapPair`/`mapSingle`; they still exit 2 but their
-    pinned text changes to `unable to infer return type on /buildValues`,
-    `unknown struct type for layout: Map` or `unknown call target:
-    /std/collections/map/count`. This task restores them to runtime
-    expectations, so re-pin or restore them here, not earlier. One of them
-    (`scoreValues([Map<string, i32>] values)`,
-    `expectCanonicalMapNamespaceExperimentalParameterConformance`) then
-    passes semantics with an unresolved `Map` parameter and fails only in VM
-    lowering ("missing semantic-product collection specialization") - close
-    that hole (unknown `Map` must stay a semantic error when no `Map` struct
-    is visible) before re-pinning. The other 3 (`experimental map custom
-    comparable struct keys ...` in semantics, vm and C++/exe) test the
-    builtin Comparable-key rule and keep their exact diagnostic when
-    respelled `[map<Key, i32>] values{/std/collections/map/map<Key,
-    i32>(...)}` - move them to that spelling. Full per-case list in
-    `docs/todo_log.md` under `## TODO-4751`.
-
 - [ ] TODO-5314: Drop bare `Map` from IR lowerer, IR printer and emitter
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-4751
+  - status: ready
   - created_at: 2026-09-24
   - phase: Follow-up cleanup after TODO-4751 (split from TODO-5310)
-  - depends_on: TODO-4751
+  - parallel_track: map-backend-classifiers
+  - depends_on: (none - TODO-4751 closed 2026-09-29)
   - scope: stop the backend-side classifiers from matching a bare `Map`:
     the `normalized == raw || raw + "<"` arm of
     `isExperimentalCollectionTypeName` (`IrLowererSetupTypeCollectionHelpers.cpp`)
@@ -401,9 +310,11 @@ TODO-4751 became `ready` on 2026-09-29 when its last blocker TODO-5316 closed, a
     `isKeyValueCollectionTypeNameLocal`
     (`src/emitter/EmitterBuiltinCallPathHelpers.cpp`).
   - implementation_notes: part of the 2026-09-24 combined attempt (see
-    TODO-5313 in `docs/todo_finished.md`). Blocked on TODO-4751 because
-    the semantics classifier removal it depends on was folded into
-    TODO-4751 on 2026-09-25. Not a prerequisite for the wrapper: with
+    TODO-5313 in `docs/todo_finished.md`). The semantics/monomorph
+    classifier removal it depended on landed with TODO-4751 on
+    2026-09-29 (public `/std/collections/map/Map<K, V>` wrapper now
+    exists; semantics never produces a bare-`Map` builtin identity).
+    Not a prerequisite for the wrapper: with
     only that semantics change, a user `Map<i32, i32>` with its own
     `count`/`insert` already ran on vm/native/exe (exit 1), and the
     2026-09-24 combined prototype (these edits included) ran one with
@@ -423,6 +334,139 @@ TODO-4751 became `ready` on 2026-09-29 when its last blocker TODO-5316 closed, a
     - `./scripts/compile.sh --release` back at baseline.
   - stop_rule: if any `map<K, V>` lowering test changes, stop and record
     which classifier still carries the builtin identity.
+
+- [ ] TODO-5323: Make `MapValue` insert overwrite non-trivial values
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-29
+  - phase: Map wrapper follow-up (found while closing TODO-4751)
+  - parallel_track: map-value-overwrite
+  - depends_on: (none)
+  - scope: overwriting an existing key keeps the old payload when the
+    value type is not relocation-trivial (a struct with `Move`/`Destroy`).
+    Repro: `import /std/collections/*` + `import /std/collections/map/*`,
+    a `[struct] Owned() { [i32 mut] value{0i32} [mut] Move([Reference<Self>]
+    other) { assign(this.value, other.value) assign(other.value, 0i32) }
+    Destroy() { } }`, then `[MapValue<string, Owned> mut]
+    values{mapNew<string, Owned>()}`, `mapInsert<string, Owned>(values,
+    "left"raw_utf8, Owned{4i32})`, the same with `Owned{9i32}`, and
+    `return(mapAt<string, Owned>(values, "left"raw_utf8).value)` exits 4
+    (expected 9) on vm. i32 payloads overwrite correctly. The fault is in
+    the `overwriteSlot<V>` / `vectorBorrowSlot` path in
+    `stdlib/std/collections/map.prime` or its struct-assign-through-
+    `Reference` lowering. Builtin `map<K, V>` literals reject such values
+    up front ("map literal requires relocation-trivial map value type").
+  - acceptance:
+    - the repro exits 9 on vm/native/exe.
+    - `expectCanonicalMapNamespaceExperimentalInsertConformance` and
+      `expectExperimentalMapOwnershipMethodConformance`
+      (`tests/unit/compile_run/map_conformance/*expectations.h`, pinned at
+      13 and 28 with TODO-5323 comments) move to 18 and 33.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs container move/reallocation semantics
+    (the reason builtin map literals reject these types), stop and make
+    the `Map`/`MapValue` surface reject non-relocation-trivial values
+    with the builtin diagnostic instead.
+
+- [ ] TODO-5324: Reject struct binding/assign/field initializers of another struct type in semantics
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-29
+  - phase: Semantic validation hole (found while closing TODO-4751)
+  - parallel_track: struct-initializer-typecheck
+  - depends_on: (none)
+  - scope: semantics accepts a struct-typed binding, assignment or field
+    initialized from a call returning a different struct type. Repro:
+    root `[struct] A() { [i32] x{1i32} }`, `[struct] B() { [i32]
+    y{2i32} }`, `[return<B>] makeB() { return(B{}) }`, `main` with
+    `[A] a{makeB()}` and `return(a.x)` runs on vm and exits 2 (B's field
+    read as A's). With generic structs the VM lowerer catches some cases
+    late ("VM lowering error: struct binding initializer type mismatch",
+    "struct field type mismatch", "assign requires matching struct
+    value"), e.g. `[Map<string, i32>] out{mapNew<string, i32>()}` (a
+    `MapValue` into the public `Map` wrapper) passes semantics.
+    Parameters are already checked ("argument type mismatch for ...
+    parameter ...").
+  - acceptance:
+    - the repro and the `Map`/`MapValue` initializer, `assign(...)` and
+      struct-field variants fail in semantics with a type-mismatch
+      diagnostic on vm/native/exe.
+    - one positive and one negative compile-run or semantics case.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if more than ~10 existing tests depend on the implicit
+    struct reinterpretation, stop and list them before changing the rule.
+
+- [ ] TODO-5325: Run the remaining pinned `Map<K, V>` wrapper conformance shapes
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-29
+  - phase: Map wrapper follow-up (split from TODO-4751)
+  - parallel_track: map-wrapper-conformance
+  - depends_on: (none)
+  - scope: TODO-4751 moved 33 map-conformance helpers to runtime
+    expectations; nine still compile-reject and are pinned with
+    `TODO-5325` comments in
+    `tests/unit/compile_run/map_conformance/*expectations.h`, each with
+    its current diagnostic:
+    `expectExperimentalMapHelperReceiverConformance` (untemplated
+    `/std/collections/map/count(...)` on a temporary wrapper receiver),
+    `expectWrappedExperimentalMapHelperReceiverConformance` ("unknown
+    method" on a generic-helper-returned wrapper),
+    `expectExperimentalMapReferenceMethodConformance` (borrowed wrapper
+    method with a non-trivial value: "struct parameter type mismatch"),
+    `expectExperimentalMapVariadicConstructorConformance` (no variadic
+    entry constructor returns the wrapper),
+    `expectInferredExperimentalMapCallReceiverConformance` (`try` on
+    `tryAt` of a block-inferred wrapper call receiver),
+    `expectInferredExperimentalMapParameterConformance` and
+    `expectInferredExperimentalMapDefaultParameterConformance` (`[auto]`
+    wrapper parameters/defaults),
+    `expectWrappedInferredExperimentalMapDefaultParameterConformance` and
+    `expectWrappedInferredExperimentalMapStructFieldConformance` (inferred
+    `MapValue` initializers flowing into wrapper slots).
+  - acceptance:
+    - each listed helper either runs on vm/native/exe with the value its
+      source computes, or its source is respelled to the wrapper surface
+      (`mapSingle`/`mapPair`/`Map<K, V>{}`) with a note why the old shape
+      is invalid under TODO-4751's design.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: do not add `Map`/`MapValue` overloads to the canonical
+    helper family (see TODO-4751); split any shape needing a new
+    inference feature into its own leaf.
+
+- [ ] TODO-5326: Restore canonical `map<K, V>` wrapper-temporary compile-run pins
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-29
+  - phase: Canonical map follow-up (split from TODO-4751)
+  - parallel_track: canonical-map-wrapper-temporaries
+  - depends_on: (none)
+  - scope: several `primestruct.compile.run.vm.collections` cases build a
+    lowercase `map<K, V>` with a `mapSingle<K, V>(key, value)` that never
+    existed for canonical maps (only `/std/collections/*` is imported), so
+    they stay pinned to "unknown call target: mapSingle" with `TODO-4741`
+    comments. With the canonical `/std/collections/map/map<K, V>(key,
+    value)` spelled out they hit separate canonical-map gaps: "runs vm
+    templated stdlib return wrapper temporaries in expressions" and the
+    method-arity rejects ("unknown call target: /map/at"), "runs vm with
+    templated stdlib wrapper temporary call forms" and "... count
+    capacity parity" ("argument type mismatch for
+    /std/collections/map/count" on a templated temporary), "... index
+    forms" (VM "struct parameter type mismatch" MapValue vs Vector),
+    "... syntax parity" (vector `at` argument mismatch inside
+    `map.prime`) in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_*`
+    files. Several `rejects vm templated stdlib ... mismatch` cases in
+    `test_compile_run_vm_collections_wrapper_temporaries_templated.cpp`
+    only check exit code 2, which the unknown `mapSingle` also produces
+    (one value-mismatch case would run and exit 4 once respelled).
+  - acceptance:
+    - each listed case uses the canonical constructor and pins its real
+      runtime result or specific diagnostic (checking stderr, not only
+      exit code 2).
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: split any underlying canonical-map lowering bug into its
+    own leaf instead of fixing it here.
 
 - [ ] TODO-5320: Make ast-semantic `.to_aos()` spelling match the resolved root `/to_aos` shadow
   - owner: ai

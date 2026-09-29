@@ -58,17 +58,22 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{/std/collections/vector/vector<i32>(7i32)}
-  [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
+  [map<i32, i32>] pairs{/std/collections/map/map<i32, i32>(3i32, 9i32)}
   [i32 mut] total{plus(/std/collections/vector/count<i32>(values), /std/collections/map/count<i32, i32>(pairs))}
   [vector<i32>] emptyValues{/std/collections/vector/vector<i32>()}
-  [map<i32, i32>] emptyPairs{mapNew<i32, i32>()}
+  [map<i32, i32>] emptyPairs{/std/collections/map/mapNew<i32, i32>()}
   assign(total, plus(total, plus(/std/collections/vector/count<i32>(emptyValues), /std/collections/map/count<i32, i32>(emptyPairs))))
   return(total)
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shims.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_stdlib_collection_shims_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  // TODO-4751: the source previously named a nonexistent canonical mapSingle
+  // and only passed because the compile-reject exit code is also 2.
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("runs vm with stdlib collection shim multi constructors") {
@@ -78,7 +83,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{/std/collections/vector/vector<i32>(5i32, 7i32, 9i32)}
-  [map<i32, i32>] pairs{mapDouble<i32, i32>(1i32, 11i32, 2i32, 22i32)}
+  [map<i32, i32>] pairs{/std/collections/map/map<i32, i32>(1i32, 11i32, 2i32, 22i32)}
   [i32] vectorTotal{plus(/std/collections/vector/at<i32>(values, 0i32), /std/collections/vector/at<i32>(values, 2i32))}
   [i32] mapTotal{plus(/std/collections/map/at<i32, i32>(pairs, 1i32), /std/collections/map/at_unsafe<i32, i32>(pairs, 2i32))}
   return(plus(plus(vectorTotal, mapTotal), plus(/std/collections/vector/count<i32>(values), /std/collections/map/count<i32, i32>(pairs))))
@@ -88,10 +93,10 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_multi_ctor_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4741: mapDouble<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapDouble") != std::string::npos);
+  // TODO-4751: restored with the canonical map constructor (mapDouble never
+  // existed).
+  CHECK(runCommand(runCmd) == 52);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("runs vm with templated stdlib collection return envelopes") {
@@ -105,7 +110,7 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)
 }
 
@@ -120,10 +125,9 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_returns_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4741: mapSingle<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
+  // TODO-4751: restored with the canonical map constructor.
+  CHECK(runCommand(runCmd) == 6);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("runs vm templated stdlib return wrapper temporaries in expressions") {
@@ -157,8 +161,9 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  // TODO-4741: mapSingle<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
+  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
+  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
+  // imported here; respell with /std/collections/map/map<K, V>(...).
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: mapSingle") != std::string::npos);
 }
@@ -185,8 +190,9 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_call_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4741: mapSingle<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
+  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
+  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
+  // imported here; respell with /std/collections/map/map<K, V>(...).
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
 }

@@ -64,7 +64,10 @@ inline bool isExperimentalCollectionBackingTypeName(
     std::string_view collectionName,
     std::string_view backingTypeName,
     std::string_view typeName) {
-  if (typeName == backingTypeName) {
+  // A bare `Map` spelling is an ordinary struct name (the public
+  // `/std/collections/map/Map` wrapper or a user struct), never the
+  // builtin key/value backing identity.
+  if (typeName == backingTypeName && backingTypeName != "Map") {
     return true;
   }
   std::string expected = experimentalCollectionConstructorRootLocal(collectionName);
@@ -99,14 +102,6 @@ inline bool isUnspecializedExperimentalKeyValueBackingTypeName(std::string_view 
   }
   return experimentalKeyValueBackingLeafName(normalized) == "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", normalized);
-}
-
-inline bool isBareExperimentalKeyValueBackingTypeName(std::string_view typeName) {
-  std::string normalized(typeName);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  return normalized == "Map";
 }
 
 inline bool isQualifiedExperimentalKeyValueBackingTypeName(std::string_view typeName) {

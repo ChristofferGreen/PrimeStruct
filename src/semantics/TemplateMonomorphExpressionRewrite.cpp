@@ -137,6 +137,99 @@ bool rewriteCompileTimePredicateExpr(Expr &expr,
   return true;
 }
 
+namespace {
+
+// TODO-4751: the public key/value wrapper struct lives at this path. Calls to
+// the canonical key/value helper family (`/std/collections/map/<helper>` and
+// its `<helper>_ref` borrowed form) whose receiver is that wrapper (or a
+// Reference/Pointer to it) are routed to the wrapper's own methods instead of
+// the MapValue-typed free helpers. This deliberately avoids adding wrapper
+// overloads to the canonical helper family.
+constexpr std::string_view KeyValueWrapperStructPath = "/std/collections/map/Map";
+constexpr std::string_view KeyValueHelperRoot = "/std/collections/map/";
+
+bool isKeyValueWrapperMethodHelperName(std::string_view name) {
+  return name == "count" || name == "contains" || name == "tryAt" ||
+         name == "at" || name == "at_unsafe" || name == "insert";
+}
+
+bool isKeyValueWrapperStructTypeText(std::string typeText,
+                                     const std::string &namespacePrefix,
+                                     Context &ctx) {
+  typeText = normalizeBindingTypeName(typeText);
+  std::string base = typeText;
+  std::string argText;
+  if (splitTemplateTypeName(typeText, base, argText)) {
+    base = normalizeBindingTypeName(base);
+  }
+  if (base.empty()) {
+    return false;
+  }
+  const std::string wrapperPath(KeyValueWrapperStructPath);
+  if (base.front() != '/') {
+    base = resolveNameToPath(base,
+                             namespacePrefix,
+                             scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                             ctx.sourceDefs);
+  }
+  return base == wrapperPath || base.rfind(wrapperPath + "__", 0) == 0;
+}
+
+bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
+                                              const std::string &namespacePrefix,
+                                              Context &ctx,
+                                              const LocalTypeMap &locals,
+                                              const std::vector<ParameterInfo> &params,
+                                              bool allowMathBare) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
+      expr.isFieldAccess || expr.args.empty() || expr.hasBodyArguments ||
+      !expr.bodyArguments.empty() || hasNamedCallArguments(expr)) {
+    return false;
+  }
+  std::string resolved =
+      stripCollectionConstructorSuffixes(resolveCalleePath(expr, namespacePrefix, ctx));
+  if (resolved.rfind(KeyValueHelperRoot, 0) != 0) {
+    return false;
+  }
+  std::string helperName = resolved.substr(KeyValueHelperRoot.size());
+  bool borrowedHelper = false;
+  constexpr std::string_view RefSuffix = "_ref";
+  if (helperName.size() > RefSuffix.size() &&
+      helperName.compare(helperName.size() - RefSuffix.size(), RefSuffix.size(), RefSuffix) == 0) {
+    helperName.erase(helperName.size() - RefSuffix.size());
+    borrowedHelper = true;
+  }
+  if (!isKeyValueWrapperMethodHelperName(helperName)) {
+    return false;
+  }
+  BindingInfo receiverInfo;
+  if (!inferBindingTypeForMonomorph(
+          expr.args.front(), params, locals, allowMathBare, ctx, receiverInfo)) {
+    return false;
+  }
+  const std::string receiverBase = normalizeBindingTypeName(receiverInfo.typeName);
+  const bool receiverIsBorrowed =
+      receiverBase == "Reference" || receiverBase == "Pointer";
+  if (borrowedHelper && !receiverIsBorrowed) {
+    return false;
+  }
+  const std::string receiverTypeText =
+      receiverIsBorrowed ? receiverInfo.typeTemplateArg : bindingTypeToString(receiverInfo);
+  if (!isKeyValueWrapperStructTypeText(receiverTypeText, namespacePrefix, ctx)) {
+    return false;
+  }
+  if (expr.sourceName.empty()) {
+    expr.sourceName = expr.name;
+  }
+  expr.name = helperName;
+  expr.isMethodCall = true;
+  expr.templateArgs.clear();
+  expr.templateArgDetails.clear();
+  return true;
+}
+
+} // namespace
+
 bool rewriteExpr(Expr &expr,
                  const SubstMap &mapping,
                  const std::unordered_set<std::string> &allowedParams,
@@ -698,6 +791,9 @@ bool rewriteExpr(Expr &expr,
   expandCurrentTypePackSpreadArguments(expr.args, expr.argNames);
   std::vector<std::optional<std::string>> bodyArgumentNames;
   expandCurrentTypePackSpreadArguments(expr.bodyArguments, bodyArgumentNames);
+
+  (void)rewriteKeyValueWrapperHelperCallToMethod(
+      expr, namespacePrefix, ctx, locals, params, allowMathBare);
 
   if (!expr.isMethodCall && !expr.isBinding && !expr.isFieldAccess &&
       expr.kind == Expr::Kind::Call && expr.transforms.empty() &&

@@ -303,7 +303,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental map custom comparable struct keys keep canonical map helper diagnostics") {
+TEST_CASE("canonical map custom comparable struct keys keep builtin Comparable diagnostics") {
   const std::string source = R"(
 import /std/collections/map/*
 
@@ -324,7 +324,7 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapPair<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
+  [map<Key, i32>] values{/std/collections/map/map<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
   [i32 mut] total{/std/collections/map/count<Key, i32>(values)}
   assign(total, plus(total, /std/collections/map/at<Key, i32>(values, Key{2i32})))
   assign(total, plus(total, /std/collections/map/at_unsafe<Key, i32>(values, Key{5i32})))
@@ -340,7 +340,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental map method-call sugar keeps missing Map helper diagnostics") {
+TEST_CASE("public Map wrapper method-call sugar validates") {
   const std::string source = R"(
 import /std/collections/map/*
 
@@ -351,9 +351,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: mapPair") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map Ref helper calls validate") {
@@ -483,7 +483,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical namespaced map insert reports retired insert diagnostics") {
+TEST_CASE("canonical namespaced map insert on public Map wrapper validates") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -513,8 +513,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: mapSingle") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("builtin canonical map insert method sugar validates") {
@@ -897,7 +898,7 @@ TEST_CASE("experimental map direct-import shim is removed") {
   CHECK_FALSE(std::filesystem::exists(experimentalMapStdlibPath));
 }
 
-TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
+TEST_CASE("public Map wrapper bracket access validates on value and borrowed call receivers") {
   const std::string source = R"(
 import /std/collections/map/*
 
@@ -914,11 +915,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
-TEST_CASE("wrapper-returned experimental map bracket access stays unsupported") {
+TEST_CASE("wrapper-returned public Map wrapper bracket access validates") {
   const std::string source = R"(
 import /std/collections/map/*
 
@@ -934,8 +936,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental map bracket access on borrowed calls fails before key diagnostics") {

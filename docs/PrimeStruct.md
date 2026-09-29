@@ -4159,7 +4159,8 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
 - `stdlib-owned`
-  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, `soa<T>`,
+  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, the public
+  `Map<K, V>` wrapper struct, `soa<T>`,
   `tuple<Ts...>`, and the `/std/scene` descriptor surface (`Scene`, `Node`,
   `Transform`, `Camera`, `Material`, `Light`, and `Primitive`).
   Ownership rule: public API should live in stdlib `.prime` on top of minimal generic substrate.
@@ -5122,6 +5123,41 @@ bad_set() {
     `/std/collections/map/map(...)` helpers over the internal `MapValue<K, V>`
     backing implementation. Future variadic entry work can extend that helper
     surface without reviving compiler-owned map literal lowering.
+  - Public `Map<K, V>` wrapper (TODO-4751): `stdlib/std/collections/map.prime`
+    defines `/std/collections/map/Map<K, V>`, a thin public struct that owns one
+    `MapValue<K, V>` (`inner`), mirroring how `Vector<T>` is itself the canonical
+    vector struct. It exposes `count()`, `contains(key)`, `tryAt(key)`,
+    `at(key)`, `at_unsafe(key)`, and `insert(key, value)` methods, and is built
+    with `mapSingle<K, V>(key, value)`, `mapPair<K, V>(k1, v1, k2, v2)`, or
+    `Map<K, V>{}`. A bare `Map` spelling is an ordinary struct name resolved
+    through imports and namespaces (a user `Map<K, V>` in its own namespace
+    dispatches to its own methods); it is never the builtin key/value storage
+    identity, and a templated `Map<...>` with no visible `Map` struct is a
+    semantic error. Wrapper receivers route every helper form to the struct's
+    own methods: `values.count()`, `values[key]`, bare `count(values)`,
+    explicit `/std/collections/map/insert<K, V>(values, key, value)`, and the
+    borrowed `/std/collections/map/<helper>_ref<K, V>(ref, ...)` forms on a
+    `Reference<Map<K, V>>`. The canonical helper family is not overloaded for
+    the wrapper, and `map<K, V>` / `MapValue<K, V>` values do not convert to
+    `Map<K, V>` implicitly. Unlike builtin `map<K, V>`, the wrapper accepts user
+    struct keys that define `equal`/`less_than`.
+
+    ```prime
+    import /std/collections/*
+    import /std/collections/map/*
+
+    [effects(heap_alloc), return<int>]
+    main() {
+      [Map<i32, i32> mut] values{mapSingle<i32, i32>(1i32, 4i32)}
+      values.insert(2i32, 7i32)
+      /std/collections/map/insert<i32, i32>(values, 1i32, 5i32)
+      return(values.count() + values[2i32] + values.at(1i32))
+    }
+    ```
+
+    The example exits with `14` (2 + 7 + 5) on vm, native, and exe. The
+    `/main` semantic product publishes `/std/collections/map/Map__t<hash>/insert`,
+    `.../count`, and `.../at` method targets (no IR-format change).
   - Current discard contract: builtin `pop` and `clear` are only defined for drop-trivial element types while
     container-owned destruction is still being specified. Drop-trivial currently includes scalar primitives, `string`,
     `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*`

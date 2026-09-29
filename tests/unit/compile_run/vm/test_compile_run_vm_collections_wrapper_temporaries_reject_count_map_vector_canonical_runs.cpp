@@ -96,7 +96,7 @@ TEST_CASE("runs vm experimental map bracket access") {
   expectExperimentalMapIndexConformance("vm");
 }
 
-TEST_CASE("runs vm experimental map custom comparable struct keys") {
+TEST_CASE("rejects vm canonical map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -118,7 +118,7 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapPair<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
+  [map<Key, i32>] values{/std/collections/map/map<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
   [i32 mut] total{/std/collections/map/count<Key, i32>(values)}
   assign(total, plus(total, /std/collections/map/at<Key, i32>(values, Key{2i32})))
   assign(total, plus(total, /std/collections/map/at_unsafe<Key, i32>(values, Key{5i32})))
@@ -132,8 +132,9 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_map_custom_comparable_key_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4741: experimental Map<K,V> rejects custom Comparable struct keys
-  // even when the struct defines equal/less_than.
+  // The builtin map<K, V> keeps its builtin Comparable key rule even when the
+  // struct defines equal/less_than; the public Map<K, V> wrapper accepts such
+  // keys (TODO-4751, see test_compile_run_vm_map_wrapper.cpp).
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find(
             "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=

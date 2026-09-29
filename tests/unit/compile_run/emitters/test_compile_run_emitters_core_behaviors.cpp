@@ -288,7 +288,7 @@ main() {
   CHECK(runCommand(compileCmd) == 14);
 }
 
-TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
+TEST_CASE("C++ emitter rejects canonical map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -310,7 +310,7 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapPair<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
+  [map<Key, i32>] values{/std/collections/map/map<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
   [i32 mut] total{/std/collections/map/count<Key, i32>(values)}
   assign(total, plus(total, /std/collections/map/at<Key, i32>(values, Key{2i32})))
   assign(total, plus(total, /std/collections/map/at_unsafe<Key, i32>(values, Key{5i32})))

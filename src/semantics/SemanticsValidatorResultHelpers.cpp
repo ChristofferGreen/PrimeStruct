@@ -320,7 +320,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     std::string base;
     std::string argText;
     if (splitTemplateTypeName(normalizedTypeText, base, argText) &&
-        (normalizeBindingTypeName(base) == "map" || normalizeBindingTypeName(base) == "Map")) {
+        normalizeBindingTypeName(base) == "map") {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
         return false;
@@ -649,14 +649,25 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return resolveExprConcreteCallPath(
           params, locals, receiverExpr, resolvedReceiverPath);
     };
+    // TODO-4751: a borrowed `Reference<T>` / `Pointer<T>` receiver
+    // dispatches to `T`'s own methods, so resolve the Result type from the
+    // pointee struct rather than the envelope name.
+    auto receiverBindingTypeName = [](const BindingInfo &binding) -> std::string {
+      const std::string envelope = normalizeBindingTypeName(binding.typeName);
+      if ((envelope == "Reference" || envelope == "Pointer") &&
+          !binding.typeTemplateArg.empty()) {
+        return binding.typeTemplateArg;
+      }
+      return binding.typeName;
+    };
     const std::string receiverTypeName = [&]() -> std::string {
       if (receiver.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
-          return paramBinding->typeName;
+          return receiverBindingTypeName(*paramBinding);
         }
         auto localIt = locals.find(receiver.name);
         if (localIt != locals.end()) {
-          return localIt->second.typeName;
+          return receiverBindingTypeName(localIt->second);
         }
         if (isPrimitiveBindingTypeName(receiver.name)) {
           return receiver.name;

@@ -14,7 +14,7 @@ inline std::string makeWrapperMapConstructorExperimentalBindingConformanceSource
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapConstructorError>]\n";
   source += "main() {\n";
   source +=
-      "  [Map<string, i32>] values{/std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [Map<string, i32>] values{/std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
   source +=
       "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<string, i32>(values, \"missing\"raw_utf8)}\n";
@@ -58,7 +58,7 @@ inline std::string makeWrapperMapConstructorExperimentalReturnConformanceSource(
   source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
   source +=
-      "  [Map<string, i32>] out{/std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [Map<string, i32>] out{/std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  return(out)\n";
   source += "}\n\n";
   source +=
@@ -123,7 +123,7 @@ inline std::string makeWrapperMapConstructorExperimentalParameterConformanceSour
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapParameterError>]\n";
   source += "main() {\n";
   source +=
-      "  return(scoreValues(/std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
+      "  return(scoreValues(/std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
   source += "}\n";
   return source;
 }
@@ -137,13 +137,13 @@ inline std::string makeWrappedExperimentalMapParameterConformanceSource() {
   source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
   source += "wrapPrimaryValues() {\n";
   source +=
-      "  [Map<string, i32>] out{/std/collections/experimental_map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [Map<string, i32>] out{/std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  return(out)\n";
   source += "}\n\n";
   source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
   source += "wrapSecondaryValues() {\n";
   source +=
-      "  [Map<string, i32>] out{/std/collections/experimental_map/mapPair<string, i32>(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32)}\n";
+      "  [Map<string, i32>] out{/std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32)}\n";
   source += "  return(out)\n";
   source += "}\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
@@ -192,7 +192,7 @@ inline std::string makeWrappedExperimentalMapBindingConformanceSource() {
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapBindingError>]\n";
   source += "main() {\n";
   source +=
-      "  [Map<string, i32>] explicit{wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
+      "  [Map<string, i32>] explicit{wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
   source +=
       "  [auto] inferred{wrapValues(/std/collections/map/map(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32))}\n";
   source += "  [i32] left{try(/std/collections/map/tryAt(explicit, \"left\"raw_utf8))}\n";
@@ -221,12 +221,12 @@ inline std::string makeWrappedExperimentalMapAssignConformanceSource() {
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapAssignError>]\n";
   source += "main() {\n";
-  source += "  [Map<string, i32> mut] values{mapNew<string, i32>()}\n";
+  source += "  [Map<string, i32> mut] values{Map<string, i32>{}}\n";
   source +=
-      "  assign(values, wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
+      "  assign(values, wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
   source += "  [i32] first{try(/std/collections/map/tryAt(values, \"left\"raw_utf8))}\n";
   source +=
-      "  assign(values, wrapValues(/std/collections/map/map(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32)))\n";
+      "  assign(values, wrapValues(/std/collections/map/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32)))\n";
   source += "  [i32] second{try(/std/collections/map/tryAt(values, \"extra\"raw_utf8))}\n";
   source += "  print_line(first)\n";
   source += "  print_line(second)\n";
@@ -257,7 +257,7 @@ inline std::string makeWrappedExperimentalMapResultFieldAssignConformanceSource(
   source += "main() {\n";
   source += "  [Holder mut] holder{Holder()}\n";
   source +=
-      "  assign(holder.status, wrapStatus(Result.ok(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))))\n";
+      "  assign(holder.status, wrapStatus(Result.ok(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))))\n";
   source += "  [Map<string, i32>] values{try(holder.status)}\n";
   source += "  [i32] score{plus(/std/collections/map/count(values), /std/collections/map/at(values, \"left\"raw_utf8))}\n";
   source += "  print_line(score)\n";
@@ -292,7 +292,7 @@ inline std::string makeWrappedExperimentalMapResultDerefFieldAssignConformanceSo
   source += "main() {\n";
   source += "  [Holder mut] holder{Holder()}\n";
   source +=
-      "  assign(dereference(borrowHolder(location(holder))).status, wrapStatus(Result.ok(/std/collections/mapPair(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))))\n";
+      "  assign(dereference(borrowHolder(location(holder))).status, wrapStatus(Result.ok(/std/collections/map/mapPair(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))))\n";
   source += "  [Map<string, i32>] values{try(holder.status)}\n";
   source += "  [i32] count{/std/collections/map/count(values)}\n";
   source += "  [i32] extra{/std/collections/map/at(values, \"extra\"raw_utf8)}\n";
@@ -319,7 +319,7 @@ inline std::string makeWrappedExperimentalMapStorageFieldConformanceSource() {
   source += "main() {\n";
   source += "  [Holder mut] holder{Holder()}\n";
   source +=
-      "  init(holder.storage, wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
+      "  init(holder.storage, wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
   source += "  [Map<string, i32>] values{take(holder.storage)}\n";
   source += "  [i32] score{plus(/std/collections/map/count(values),\n";
   source += "                   /std/collections/map/at(values, \"right\"raw_utf8))}\n";
@@ -351,7 +351,7 @@ inline std::string makeWrappedExperimentalMapStorageDerefFieldConformanceSource(
   source +=
       "  init(dereference(borrowHolder(location(holder))).storage,\n";
   source +=
-      "       wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
+      "       wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
   source += "  [Map<string, i32>] values{take(holder.storage)}\n";
   source += "  [i32] score{plus(/std/collections/map/count(values),\n";
   source += "                   /std/collections/map/at(values, \"right\"raw_utf8))}\n";
@@ -436,16 +436,16 @@ inline std::string makeExperimentalMapAssignConformanceSource() {
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]\n";
   source += "replaceAndScore([Map<string, i32> mut] values) {\n";
   source +=
-      "  assign(values, /std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+      "  assign(values, /std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
   source += "  return(scoreValues(values))\n";
   source += "}\n\n";
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]\n";
   source += "main() {\n";
-  source += "  [Map<string, i32> mut] values{mapNew<string, i32>()}\n";
-  source += "  [Map<string, i32> mut] other{mapNew<string, i32>()}\n";
+  source += "  [Map<string, i32> mut] values{Map<string, i32>{}}\n";
+  source += "  [Map<string, i32> mut] other{Map<string, i32>{}}\n";
   source +=
-      "  assign(values, /std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+      "  assign(values, /std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
   source += "  [i32] localScore{try(scoreValues(values))}\n";
   source += "  [i32] paramScore{try(replaceAndScore(other))}\n";
   source += "  return(Result.ok(plus(localScore, paramScore)))\n";
@@ -461,7 +461,7 @@ inline std::string makeImplicitMapAutoInferenceConformanceSource() {
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
   source +=
-      "  [Map<string, i32>] out{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [Map<string, i32>] out{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  return(out)\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
@@ -493,7 +493,7 @@ inline std::string makeInferredExperimentalMapReturnConformanceSource() {
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
   source +=
-      "  [Map<string, i32>] out{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [Map<string, i32>] out{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  return(out)\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
@@ -526,11 +526,11 @@ inline std::string makeBlockInferredExperimentalMapReturnConformanceSource() {
   source += "buildValues([bool] useCanonical) {\n";
   source += "  if(useCanonical,\n";
   source += "     then() {\n";
-  source += "       [Map<string, i32>] values{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "       [Map<string, i32>] values{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "       return(values)\n";
   source += "     },\n";
   source += "     else() {\n";
-  source += "       [Map<string, i32>] values{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
+  source += "       [Map<string, i32>] values{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
   source += "       return(values)\n";
   source += "     })\n";
   source += "}\n\n";
@@ -564,12 +564,12 @@ inline std::string makeAutoBlockInferredExperimentalMapReturnConformanceSource()
   source += "buildValues([bool] useCanonical) {\n";
   source += "  if(useCanonical,\n";
   source += "     then() {\n";
-  source += "       [Map<string, i32> mut] values{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "       [Map<string, i32> mut] values{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "       /std/collections/map/insert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
   source += "       return(values)\n";
   source += "     },\n";
   source += "     else() {\n";
-  source += "       [Map<string, i32>] values{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
+  source += "       [Map<string, i32>] values{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
   source += "       return(values)\n";
   source += "     })\n";
   source += "}\n\n";
@@ -605,8 +605,8 @@ inline std::string makeWrappedInferredExperimentalMapReturnConformanceSource() {
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues([bool] useCanonical) {\n";
   source += "  if(useCanonical,\n";
-  source += "     then() { return(wrapValues(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))) },\n";
-  source += "     else() { return(wrapValues(/std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"bonus\"raw_utf8, 5i32))) })\n";
+  source += "     then() { return(wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))) },\n";
+  source += "     else() { return(wrapValues(/std/collections/map/mapPair(\"extra\"raw_utf8, 9i32, \"bonus\"raw_utf8, 5i32))) })\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedWrappedExperimentalMapReturnError([ContainerError] err) {\n";
@@ -638,11 +638,11 @@ inline std::string makeInferredExperimentalMapCallReceiverConformanceSource() {
   source += "buildValues([bool] useCanonical) {\n";
   source += "  if(useCanonical,\n";
   source += "     then() {\n";
-  source += "       [Map<string, i32>] values{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "       [Map<string, i32>] values{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "       return(values)\n";
   source += "     },\n";
   source += "     else() {\n";
-  source += "       [Map<string, i32>] values{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
+  source += "       [Map<string, i32>] values{/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
   source += "       return(values)\n";
   source += "     })\n";
   source += "}\n\n";

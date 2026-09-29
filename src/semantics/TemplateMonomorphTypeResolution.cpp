@@ -689,6 +689,16 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
         }
         const bool canResolveTemplatedName =
             isBuiltinTemplateContainer(transform.name) || ctx.templateDefs.count(resolvedPath) > 0;
+        // TODO-4751: a bare `Map` spelling used to be classified as the
+        // builtin key/value storage type. Now that it resolves like any
+        // ordinary struct name, a templated `Map` spelling with no visible
+        // `Map` struct (stdlib wrapper or user struct) must stay a semantic
+        // error instead of reaching IR lowering with an unspecialized
+        // collection type.
+        if (!canResolveTemplatedName && transform.name == "Map") {
+          error = "template arguments are only supported on templated definitions: " + resolvedPath;
+          return false;
+        }
         if (canResolveTemplatedName) {
           std::string templatedName = transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
           ResolvedType resolvedName = resolveTypeString(templatedName, mapping, allowedParams, namespacePrefix, ctx, error);

@@ -347,6 +347,67 @@ namespace std {
   at_unsafe_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     return(mapAtUnsafeRef<K, V>(entries, key))
   }
+
+  // Public map collection: a thin struct owning one MapValue<K, V>, mirroring
+  // how Vector<T> is itself the canonical vector struct. Its methods route
+  // through the MapValue helpers above instead of adding Map overloads to the
+  // canonical helper family.
+  [public struct]
+  Map<K, V>() {
+    [public MapValue<K, V> mut] inner{mapNew<K, V>()}
+
+    [public return<i32>]
+    count() {
+      [MapValue<K, V>] inner{this.inner}
+      return(mapCount<K, V>(inner))
+    }
+
+    [public return<bool> Comparable<K>]
+    contains([K] key) {
+      [MapValue<K, V>] inner{this.inner}
+      return(mapContains<K, V>(inner, key))
+    }
+
+    [public return<Result<V, ContainerError>> Comparable<K>]
+    tryAt([K] key) {
+      [MapValue<K, V>] inner{this.inner}
+      return(mapTryAt<K, V>(inner, key))
+    }
+
+    [public return<V> Comparable<K>]
+    at([K] key) {
+      [MapValue<K, V>] inner{this.inner}
+      return(mapAt<K, V>(inner, key))
+    }
+
+    [public return<V> Comparable<K>]
+    at_unsafe([K] key) {
+      [MapValue<K, V>] inner{this.inner}
+      return(mapAtUnsafe<K, V>(inner, key))
+    }
+
+    [public effects(heap_alloc), return<void> Comparable<K>]
+    insert([K] key, [V] value) {
+      [MapValue<K, V> mut] inner{this.inner}
+      mapInsert<K, V>(inner, key, value)
+      this.inner = inner
+    }
+  }
+
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
+  mapSingle<K, V>([K] key, [V] value) {
+    [MapValue<K, V> mut] inner{mapNew<K, V>()}
+    mapInsert<K, V>(inner, key, value)
+    return(Map<K, V>{inner})
+  }
+
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
+  mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
+    [MapValue<K, V> mut] inner{mapNew<K, V>()}
+    mapInsert<K, V>(inner, firstKey, firstValue)
+    mapInsert<K, V>(inner, secondKey, secondValue)
+    return(Map<K, V>{inner})
+  }
   }
   }
 }

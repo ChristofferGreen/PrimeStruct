@@ -238,13 +238,7 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (isTemplateMonomorphMapCollectionRoot(value)) {
     return "map";
   }
-  const std::string keyValueBackingName = "Map";
-  const bool bareGeneratedKeyValueBacking =
-      value.find('/') == std::string::npos &&
-      (value == keyValueBackingName ||
-       value.rfind(keyValueBackingName + "__", 0) == 0);
-  if (bareGeneratedKeyValueBacking ||
-      isExperimentalCollectionBackingTypeName("map", keyValueBackingName, value)) {
+  if (isExperimentalCollectionBackingTypeName("map", "Map", value)) {
     return "map";
   }
   return value;

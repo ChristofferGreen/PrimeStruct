@@ -52,19 +52,14 @@ inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const 
 }
 
 inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
-  // TODO-4741: experimental Map<K,V> constructors (mapSingle) are
-  // unimplemented; vm now rejects at compile time like exe/native.
-  const std::string source = makeExperimentalMapOwnershipMethodConformanceSource();
-  const std::string srcPath = writeTemp("map_experimental_ownership_method_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (testScratchPath("") / ("map_experimental_ownership_method_" + emitMode + "_out.txt")).string();
-  const std::string artifactPath =
-      (testScratchPath("") / ("map_experimental_ownership_method_" + emitMode + "_artifact")).string();
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o " + quoteShellArg(artifactPath) + " --entry /main > " +
-                                 quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  // TODO-5323: expected 33 once MapValue insert overwrites a
+  // non-relocation-trivial value in place (today the old value is kept).
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipMethodConformanceSource(),
+                                            "map_experimental_ownership_method_" + emitMode,
+                                            emitMode,
+                                            28,
+                                            "container missing key\n");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
@@ -77,112 +72,102 @@ inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::
 }
 
 inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
-        "map_namespace_canonical_experimental_parameter",
-        18,
-        "2\n4\n4\n7\n1\n",
-        "argument type mismatch for /scoreValues parameter values");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
-                                    "map_namespace_canonical_experimental_parameter",
-                                    emitMode,
-                                    "argument type mismatch for /scoreValues parameter values");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
+                                            "map_namespace_canonical_experimental_parameter_" + emitMode,
+                                            emitMode,
+                                            18,
+                                            "2\n4\n4\n7\n1\n");
 }
 
 inline void expectWrapperMapConstructorExperimentalBindingConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrapperMapConstructorExperimentalBindingConformanceSource(),
-                                    "map_wrapper_constructor_experimental_binding",
-                                    emitMode,
-                                    "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalBindingConformanceSource(),
+                                            "map_wrapper_constructor_experimental_binding_" + emitMode,
+                                            emitMode,
+                                            20,
+                                            "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
 }
 
 inline void expectWrapperMapConstructorExperimentalReturnConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrapperMapConstructorExperimentalReturnConformanceSource(),
-                                    "map_wrapper_constructor_experimental_return",
-                                    emitMode,
-                                    "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalReturnConformanceSource(),
+                                            "map_wrapper_constructor_experimental_return_" + emitMode,
+                                            emitMode,
+                                            18,
+                                            "2\n4\n4\n7\n1\n");
 }
 
 inline void expectWrapperMapConstructorExperimentalParameterConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrapperMapConstructorExperimentalParameterConformanceSource(),
-                                    "map_wrapper_constructor_experimental_parameter",
-                                    emitMode,
-                                    "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalParameterConformanceSource(),
+                                            "map_wrapper_constructor_experimental_parameter_" + emitMode,
+                                            emitMode,
+                                            18,
+                                            "2\n4\n4\n7\n1\n");
 }
 
 inline void expectWrappedExperimentalMapParameterConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapParameterConformanceSource(),
-                                    "map_wrapped_experimental_parameter",
-                                    emitMode,
-                                    "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapParameterConformanceSource(),
+                                            "map_wrapped_experimental_parameter_" + emitMode,
+                                            emitMode,
+                                            19,
+                                            "3\n4\n3\n9\n");
 }
 
 inline void expectWrappedExperimentalMapBindingConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapBindingConformanceSource(),
-                                    "map_wrapped_experimental_binding_" + emitMode,
-                                    emitMode,
-                                    "unable to infer implicit template arguments for /wrapValues");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapBindingConformanceSource(),
+                                            "map_wrapped_experimental_binding_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "4\n9\n");
 }
 
 inline void expectWrappedExperimentalMapAssignConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapAssignConformanceSource(),
-                                    "map_wrapped_experimental_assign_" + emitMode,
-                                    emitMode,
-                                    "unable to infer implicit template arguments for /wrapValues");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapAssignConformanceSource(),
+                                            "map_wrapped_experimental_assign_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "4\n9\n");
 }
 
 inline void expectWrappedExperimentalMapResultFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapResultFieldAssignConformanceSource(),
-                                    "map_wrapped_experimental_result_field_assign_" + emitMode,
-                                    emitMode,
-                                    "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapResultFieldAssignConformanceSource(),
+                                            "map_wrapped_experimental_result_field_assign_" + emitMode,
+                                            emitMode,
+                                            6,
+                                            "6\n");
 }
 
 inline void expectWrappedExperimentalMapResultDerefFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource(),
-                                    "map_wrapped_experimental_result_deref_field_assign_" + emitMode,
-                                    emitMode,
-                                    "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource(),
+                                            "map_wrapped_experimental_result_deref_field_assign_" + emitMode,
+                                            emitMode,
+                                            11,
+                                            "2\n9\n");
 }
 
 inline void expectWrappedExperimentalMapStorageFieldConformance(const std::string &emitMode) {
-  if (emitMode == "exe") {
-    expectMapConformanceCompileReject(
-        makeWrappedExperimentalMapStorageFieldConformanceSource(),
-        "map_wrapped_experimental_storage_field_" + emitMode,
-        emitMode,
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  if (emitMode == "native") {
-    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
-        makeWrappedExperimentalMapStorageFieldConformanceSource(),
-        "map_wrapped_experimental_storage_field_" + emitMode,
-        9,
-        "9\n",
-        "template arguments are only supported on templated definitions: /Map");
-    return;
-  }
-
-  // TODO-4741: experimental Map<K,V> is unimplemented; vm now rejects the
-  // same as exe/native instead of running.
-  expectMapConformanceCompileReject(
-      makeWrappedExperimentalMapStorageFieldConformanceSource(),
-      "map_wrapped_experimental_storage_field_" + emitMode,
-      emitMode,
-      "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapStorageFieldConformanceSource(),
+                                            "map_wrapped_experimental_storage_field_" + emitMode,
+                                            emitMode,
+                                            9,
+                                            "9\n");
 }
 
 inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapStorageDerefFieldConformanceSource(),
-                                    "map_wrapped_experimental_storage_deref_field_" + emitMode,
-                                    emitMode,
-                                    "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapStorageDerefFieldConformanceSource(),
+                                            "map_wrapped_experimental_storage_deref_field_" + emitMode,
+                                            emitMode,
+                                            9,
+                                            "9\n");
 }
 
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
@@ -195,238 +180,192 @@ inline void expectWrapperMapHelperExperimentalValueConformance(const std::string
 }
 
 inline void expectExperimentalMapAssignConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapAssignConformanceSource(),
-                                    "map_experimental_assign",
-                                    emitMode,
-                                    "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapAssignConformanceSource(),
+                                            "map_experimental_assign_" + emitMode,
+                                            emitMode,
+                                            36,
+                                            "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n");
 }
 
 inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeImplicitMapAutoInferenceConformanceSource(),
-      "map_implicit_auto_inference_" + emitMode,
-      emitMode,
-      "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeImplicitMapAutoInferenceConformanceSource(),
+                                            "map_implicit_auto_inference_" + emitMode,
+                                            emitMode,
+                                            19,
+                                            "");
 }
 
 inline void expectInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  // TODO-5311: string-keyed .prime maps now lower on vm/native/exe.
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
   expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapReturnConformanceSource(),
-                                            "map_inferred_experimental_return",
+                                            "map_inferred_experimental_return_" + emitMode,
                                             emitMode,
                                             16,
                                             "3\n4\n9\n");
 }
 
 inline void expectBlockInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeBlockInferredExperimentalMapReturnConformanceSource(),
-                                    "map_block_inferred_experimental_return",
-                                    emitMode,
-                                    "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeBlockInferredExperimentalMapReturnConformanceSource(),
+                                            "map_block_inferred_experimental_return_" + emitMode,
+                                            emitMode,
+                                            16,
+                                            "3\n4\n9\n");
 }
 
 inline void expectAutoBlockInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeAutoBlockInferredExperimentalMapReturnConformanceSource(),
-                                    "map_auto_block_inferred_experimental_return",
-                                    emitMode,
-                                    "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeAutoBlockInferredExperimentalMapReturnConformanceSource(),
+                                            "map_auto_block_inferred_experimental_return_" + emitMode,
+                                            emitMode,
+                                            16,
+                                            "3\n4\n9\n");
 }
 
 inline void expectWrappedInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeWrappedInferredExperimentalMapReturnConformanceSource(),
-      "map_wrapped_inferred_experimental_return_" + emitMode,
-      emitMode,
-      "unable to infer implicit template arguments for /wrapValues");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedInferredExperimentalMapReturnConformanceSource(),
+                                            "map_wrapped_inferred_experimental_return_" + emitMode,
+                                            emitMode,
+                                            11,
+                                            "2\n4\n5\n");
 }
 
 inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeInferredExperimentalMapCallReceiverConformanceSource(),
-        "map_inferred_experimental_call_receiver_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-
-  expectMapConformanceCompileReject(
-      makeInferredExperimentalMapCallReceiverConformanceSource(),
-      "map_inferred_experimental_call_receiver_" + emitMode,
-      emitMode,
-      "unknown call target: /std/collections/mapPair");
+  // TODO-5325: tryAt on block-inferred wrapper call receivers loses its Result type; the public Map<K, V> wrapper
+  // (TODO-4751) does not run this shape yet.
+  expectMapConformanceCompileReject(makeInferredExperimentalMapCallReceiverConformanceSource(),
+                                    "map_inferred_experimental_call_receiver_" + emitMode,
+                                    emitMode,
+                                    "try requires Result argument");
 }
 
 inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapStructFieldConformanceSource(),
-                                    "map_experimental_struct_fields",
-                                    emitMode,
-                                    emitMode == "native" ? "error:" : "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapStructFieldConformanceSource(),
+                                            "map_experimental_struct_fields_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "");
 }
 
 inline void expectInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceCompileReject(
-        makeInferredExperimentalMapStructFieldConformanceSource(),
-        "map_experimental_inferred_struct_fields_" + emitMode,
-        emitMode,
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeInferredExperimentalMapStructFieldConformanceSource(),
-        "map_experimental_inferred_struct_fields_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeInferredExperimentalMapStructFieldConformanceSource(),
-                                    "map_experimental_inferred_struct_fields_" + emitMode,
-                                    emitMode,
-                                    "native backend");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapStructFieldConformanceSource(),
+                                            "map_experimental_inferred_struct_fields_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "");
 }
 
 inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceCompileReject(
-        makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
-        "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
-        emitMode,
-        "unknown call target: /std/collections/mapPair");
-    return;
-  }
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
-        "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-
+  // TODO-5325: inferred struct fields from wrapped MapValue initializers; the public Map<K, V> wrapper
+  // (TODO-4751) does not run this shape yet.
   expectMapConformanceCompileReject(makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
                                     "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
                                     emitMode,
-                                    "native backend");
+                                    "argument type mismatch for /Holder parameter primary");
 }
 
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeExperimentalMapMethodParameterConformanceSource(),
-      "map_experimental_method_parameter_" + emitMode,
-      emitMode,
-      emitMode == "native" ? "" : "argument type mismatch for /Holder/score parameter values");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapMethodParameterConformanceSource(),
+                                            "map_experimental_method_parameter_" + emitMode,
+                                            emitMode,
+                                            10,
+                                            "2\n4\n2\n2\n6\n4\n");
 }
 
 inline void expectInferredExperimentalMapParameterConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeInferredExperimentalMapParameterConformanceSource(),
-      "map_experimental_inferred_parameter_" + emitMode,
-      emitMode,
-      emitMode == "native" ? "" : "unable to infer implicit template arguments for /Holder/score");
+  // TODO-5325: auto-typed wrapper parameters fail in lowering; the public Map<K, V> wrapper
+  // (TODO-4751) does not run this shape yet.
+  expectMapConformanceCompileReject(makeInferredExperimentalMapParameterConformanceSource(),
+                                    "map_experimental_inferred_parameter_" + emitMode,
+                                    emitMode,
+                                    "backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions");
 }
 
 inline void expectInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeInferredExperimentalMapDefaultParameterConformanceSource(),
-      "map_experimental_inferred_default_parameter_" + emitMode,
-      emitMode,
-      emitMode == "native" ? "" : "unable to infer implicit template arguments for /scoreValues");
+  // TODO-5325: auto parameter defaults built from wrapper constructors are not pure; the public Map<K, V> wrapper
+  // (TODO-4751) does not run this shape yet.
+  expectMapConformanceCompileReject(makeInferredExperimentalMapDefaultParameterConformanceSource(),
+                                    "map_experimental_inferred_default_parameter_" + emitMode,
+                                    emitMode,
+                                    "parameter default must be a literal or pure expression: values");
 }
 
 inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
-        "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-
-  if (emitMode == "vm") {
-    expectMapConformanceCompileReject(
-        makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
-        "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
-        emitMode,
-        "unable to infer implicit template arguments for /Holder/score");
-    return;
-  }
-
+  // TODO-5325: inferred wrapper defaults mix MapValue and Map; the public Map<K, V> wrapper
+  // (TODO-4751) does not run this shape yet.
   expectMapConformanceCompileReject(makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
                                     "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
                                     emitMode,
-                                    "template arguments required for /std/collections/experimental_map/mapNew");
+                                    "argument type mismatch for /wrapValues parameter values");
 }
 
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeExperimentalMapHelperReceiverConformanceSource(),
-      "map_experimental_helper_receiver_" + emitMode,
-      emitMode,
-      "unknown call target: /std/collections/mapPair");
+  // TODO-5325: untemplated canonical helper calls on temporary wrapper receivers; the public Map<K, V> wrapper
+  // (TODO-4751) does not run this shape yet.
+  expectMapConformanceCompileReject(makeExperimentalMapHelperReceiverConformanceSource(),
+                                    "map_experimental_helper_receiver_" + emitMode,
+                                    emitMode,
+                                    "unknown call target: /std/collections/map/count");
 }
 
 inline void expectWrappedExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeWrappedExperimentalMapHelperReceiverConformanceSource(),
-      "map_wrapped_experimental_helper_receiver_" + emitMode,
-      emitMode,
-      "unable to infer implicit template arguments for /wrapValues");
+  // TODO-5325: helper calls on generic-wrapper-returned wrapper receivers; the public Map<K, V> wrapper
+  // (TODO-4751) does not run this shape yet.
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
+                                    "map_wrapped_experimental_helper_receiver_" + emitMode,
+                                    emitMode,
+                                    "unknown method: /std/collections/map/Map__t");
 }
 
 inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeExperimentalMapMethodReceiverConformanceSource(),
-                                      "map_experimental_method_receiver",
-                                      emitMode,
-                                      "");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeExperimentalMapMethodReceiverConformanceSource(),
-                                    "map_experimental_method_receiver",
-                                    emitMode,
-                                    "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapMethodReceiverConformanceSource(),
+                                            "map_experimental_method_receiver_" + emitMode,
+                                            emitMode,
+                                            15,
+                                            "");
 }
 
 inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
-                                      "map_wrapped_experimental_method_receiver_" + emitMode,
-                                      emitMode,
-                                      "");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
-                                    "map_wrapped_experimental_method_receiver_" + emitMode,
-                                    emitMode,
-                                    "unable to infer implicit template arguments for /wrapValues");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
+                                            "map_wrapped_experimental_method_receiver_" + emitMode,
+                                            emitMode,
+                                            16,
+                                            "");
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapFieldAssignConformanceSource(),
-                                    "map_experimental_field_assign",
-                                    emitMode,
-                                    "unknown call target: /std/collections/mapPair");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapFieldAssignConformanceSource(),
+                                            "map_experimental_field_assign_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "");
 }
 
 inline void expectExperimentalMapStorageReferenceConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapStorageReferenceConformanceSource(),
-                                    "map_experimental_storage_reference_" + emitMode,
-                                    emitMode,
-                                    "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapStorageReferenceConformanceSource(),
+                                            "map_experimental_storage_reference_" + emitMode,
+                                            emitMode,
+                                            7,
+                                            "2\n5\n");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(
-      makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource(),
-      "map_namespace_canonical_experimental_borrowed_ref_" + emitMode,
-      emitMode,
-      emitMode == "native" ? "" : "template arguments are only supported on templated definitions: /Map");
+  // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
+  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource(),
+                                            "map_namespace_canonical_experimental_borrowed_ref_" + emitMode,
+                                            emitMode,
+                                            27,
+                                            "container missing key\n");
 }
 
 inline void expectCanonicalMapNamespaceNamedArgsVmConformance() {

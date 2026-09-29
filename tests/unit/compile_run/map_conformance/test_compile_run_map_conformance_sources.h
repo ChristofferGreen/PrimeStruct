@@ -494,7 +494,7 @@ inline std::string makeExperimentalMapStorageReferenceConformanceSource() {
   source += "  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}\n";
   source += "  [Reference<uninitialized<Map<string, i32>>>] ref{location(storage)}\n";
   source +=
-      "  init(dereference(ref), /std/collections/mapPair(\"left\"raw_utf8, 5i32, \"right\"raw_utf8, 8i32))\n";
+      "  init(dereference(ref), /std/collections/map/mapPair(\"left\"raw_utf8, 5i32, \"right\"raw_utf8, 8i32))\n";
   source += "  [Map<string, i32>] values{take(storage)}\n";
   source += "  [i32] count{/std/collections/map/count(values)}\n";
   source += "  [i32] left{/std/collections/map/at(values, \"left\"raw_utf8)}\n";
@@ -1137,7 +1137,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalReferenceConformanceSour
   source += "main() {\n";
   source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}\n";
-  source += "  return(/std/collections/map/count<string, i32>(ref))\n";
+  source += "  return(plus(/std/collections/map/count<string, i32>(ref), 10i32))\n";
   source += "}\n";
   return source;
 }
@@ -1307,7 +1307,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalParameterConformanceSour
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapParameterError>]\n";
   source += "main() {\n";
   source +=
-      "  return(scoreValues(/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
+      "  return(scoreValues(/std/collections/map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
   source += "}\n";
   return source;
 }

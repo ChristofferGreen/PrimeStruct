@@ -1100,6 +1100,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_gpu.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_maps.cpp
+    tests/unit/compile_run/vm/test_compile_run_vm_map_wrapper.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_math.cpp
     tests/unit/compile_run/test_compile_run_math_conformance.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_maybe.cpp
@@ -2127,6 +2128,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     elseif(suite STREQUAL "primestruct.compile.run.vm.maps")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers"
                                  SOURCE_FILE "*test_compile_run_vm_maps.cpp")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 300 SHARD_NAME "map_wrapper"
+                                 SOURCE_FILE "*test_compile_run_vm_map_wrapper.cpp")
     elseif(suite STREQUAL "primestruct.compile.run.vm.math")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_helpers"
                                  SOURCE_FILE "*test_compile_run_vm_math.cpp")

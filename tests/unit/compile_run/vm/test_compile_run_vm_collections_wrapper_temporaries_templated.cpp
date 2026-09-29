@@ -87,7 +87,7 @@ import /std/collections/*
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  return(/std/collections/map/map<K, V>(key, value))
 }
 
 [return<int>]
@@ -103,10 +103,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-4741: mapSingle<K,V> is unimplemented, so this now fails inside
-  // wrapMap's body before ever reaching the /map/at key-type check.
+  // TODO-4751: with the canonical map constructor spelled out, the key-type
+  // check on the canonical at helper is reached again.
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapSingle") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
 

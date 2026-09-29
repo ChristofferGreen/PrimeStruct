@@ -1164,8 +1164,6 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                   collectionMethodFallbackTypeText) ||
               isLegacyExperimentalVectorCompatibilityTypePath(
                   "/" + collectionMethodFallbackTypeText) ||
-              isBareExperimentalKeyValueBackingTypeName(
-                  collectionMethodFallbackTypeText) ||
               isQualifiedExperimentalKeyValueBackingTypeName(
                   collectionMethodFallbackTypeText);
           if (!keepExperimentalCollectionPath) {

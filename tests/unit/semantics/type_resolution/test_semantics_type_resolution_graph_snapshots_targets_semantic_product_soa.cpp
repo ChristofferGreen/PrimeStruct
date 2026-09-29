@@ -590,6 +590,77 @@ TEST_CASE("semantic product publishes user struct own at as index direct-call ta
   }
 }
 
+TEST_CASE("semantic product routes namespaced user Map methods to the user struct") {
+  // TODO-4751: a bare `Map` spelling is an ordinary struct name, so a user
+  // `Map<K, V>` in its own namespace publishes its own specialized method
+  // targets instead of the canonical `/std/collections/map/*` helpers.
+  const std::string source =
+      "namespace mylib {\n"
+      "  [public struct]\n"
+      "  Map<K, V>() {\n"
+      "    [i32 mut] total{0i32}\n"
+      "\n"
+      "    [public return<i32>]\n"
+      "    count() {\n"
+      "      return(this.total)\n"
+      "    }\n"
+      "\n"
+      "    [public mut return<void>]\n"
+      "    insert([K] key, [V] value) {\n"
+      "      assign(this.total, plus(this.total, 1i32))\n"
+      "    }\n"
+      "  }\n"
+      "}\n"
+      "import /mylib/*\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [Map<i32, i32> mut] values{Map<i32, i32>{}}\n"
+      "  values.insert(1i32, 2i32)\n"
+      "  return(values.count())\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const std::string userMapPrefix = "/mylib/Map__t";
+  auto isUserMapMethod = [&](const std::string &path, const std::string &method) {
+    return path.rfind(userMapPrefix, 0) == 0 &&
+           path.size() > method.size() + 1 &&
+           path.compare(path.size() - method.size() - 1, method.size() + 1, "/" + method) == 0;
+  };
+  std::vector<std::string> mainTargets;
+  for (const auto *entry : primec::semanticProgramMethodCallTargetView(semanticProgram)) {
+    if (entry->scopePath == "/main") {
+      mainTargets.emplace_back(
+          primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry));
+    }
+  }
+  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
+    if (entry->scopePath == "/main" &&
+        (entry->callName == "count" || entry->callName == "insert")) {
+      mainTargets.emplace_back(
+          primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry));
+    }
+  }
+  const bool hasCount = std::any_of(mainTargets.begin(), mainTargets.end(), [&](const std::string &path) {
+    return isUserMapMethod(path, "count");
+  });
+  const bool hasInsert = std::any_of(mainTargets.begin(), mainTargets.end(), [&](const std::string &path) {
+    return isUserMapMethod(path, "insert");
+  });
+  CHECK(hasCount);
+  CHECK(hasInsert);
+  for (const auto &path : mainTargets) {
+    CHECK(path.rfind("/std/collections/map/", 0) != 0);
+  }
+}
+
 TEST_CASE("semantic product keeps helper-return soa mutator targets on alias wrappers") {
   const std::string source = R"(
 [struct reflect]

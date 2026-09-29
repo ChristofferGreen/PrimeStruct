@@ -100,8 +100,9 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_index_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-4741: mapSingle<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
+  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
+  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
+  // imported here; respell with /std/collections/map/map<K, V>(...).
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
 }
@@ -140,8 +141,9 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  // TODO-4741: mapSingle<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
+  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
+  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
+  // imported here; respell with /std/collections/map/map<K, V>(...).
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: mapSingle") != std::string::npos);
 }
@@ -157,7 +159,7 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)
 }
 
@@ -178,10 +180,9 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  // TODO-4741: mapSingle<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: mapSingle") != std::string::npos);
+  // TODO-4751: restored with the canonical map constructor.
+  CHECK(runCommand(runCmd) == 18);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm templated stdlib wrapper temporary count capacity parity") {
@@ -216,8 +217,9 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_count_capacity_parity_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
-  // TODO-4741: mapSingle<K,V> is unimplemented (no constructor of that name
-  // exists even for concrete key/value types).
+  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
+  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
+  // imported here; respell with /std/collections/map/map<K, V>(...).
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
 }
