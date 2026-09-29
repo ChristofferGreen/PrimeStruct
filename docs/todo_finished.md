@@ -55851,3 +55851,95 @@ crashes) - see `docs/todo_finished.md`.
     `spinning_cube_argument_validation_51_55` Timeout flake; after the
     fix also 1898/1899 with the same single Timeout, and a focused
     rerun of that shard passes.
+
+**Todo Completion (September 29, 2026) — TODO-5315**
+- [x] TODO-5315: Dispatch `values[key]` on user structs to their own `at`
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-09-29
+  - phase: User struct method dispatch
+  - parallel_track: user-struct-indexing
+  - depends_on: (none)
+  - scope: docs/PrimeStruct.md ("Method calls & indexing") says
+    `value[index]` rewrites to `at(value, index)` and is equivalent to
+    `value.at(index)`. For a user struct that declares its own `at`,
+    `values.at(k)` works but `values[k]` / `at(values, k)` is rejected in
+    semantics with `unknown method: /<ns>/<Struct>/at`. The rejection
+    comes from `prepareExprCollectionDispatchSetup`
+    (`SemanticsValidatorExprCollectionDispatchSetup.cpp`), which fails via
+    `resolveLeadingNonCollectionAccessReceiverPath` even when that path is
+    a real definition. Make the bare form dispatch to the struct's own
+    access helper on vm/native/exe.
+  - implementation_notes: 2026-09-24 prototype (not landed): skipping
+    that diagnostic when `defMap_` has the path lets semantics pass, but
+    the semantic product still publishes `/at` (or
+    `/std/collections/map/at` when `/std/collections/*` is imported) as
+    the direct-call target, so lowering reaches the builtin
+    `emitBuiltinArrayAccess`. The receiver local is `LocalInfo::Kind::Array`
+    with the struct's `structTypeName`. Routing
+    `IrLowererLowerEmitExprTailDispatch.h` to
+    `emitInlineDefinitionCall(expr, <struct>/at)` for such locals worked
+    inside `plus(...)` (correct result) but miscompiled `return(values[k])`
+    and `[i32] r{values[k]}` (VM "unaligned indirect address"). Struct
+    return-path inference (`IrLowererStructReturnPathHelpers.cpp`) likely
+    treats `at(structLocal, k)` as struct-valued. The real fix should have
+    semantics publish the struct method as the direct-call target, so the
+    lowerer needs no receiver heuristics.
+  - acceptance:
+    - `values[k]`, `at(values, k)` and `values.at(k)` on a user struct
+      with an `at` method give the same result in expression, `return`,
+      and binding-initializer positions on vm and native.
+    - a user struct without `at` still rejects `values[k]` with
+      `unknown method: /<ns>/<Struct>/at`.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if publishing the struct method as the direct-call target
+    changes any existing collection (`vector`/`map`/`soa`/`string`)
+    indexing test, stop and record which receiver classifier claimed the
+    struct.
+  - resolution: fixed at the semantics layer; no lowerer change. Root
+    cause: nothing in semantics ever named the struct's own `at` for the
+    bare form. Validation rejected `at(values, k)` (and the parser's
+    `values[k]` rewrite of it) in `prepareExprCollectionDispatchSetup`
+    even when `resolveLeadingNonCollectionAccessReceiverPath` found a
+    real `/<ns>/<Struct>/at` definition. Separately,
+    `inferCallSnapshotData` published `/at` or
+    `/std/collections/map/at` as the direct-call target. Fix: new
+    `SemanticsValidator::resolveUserStructOwnAccessHelperCallPath`
+    (`SemanticsValidatorExprReceiverPaths.cpp`). It matches only
+    unqualified, non-method, unnamed-arg `at`/`at_ref`/`at_unsafe`/
+    `at_unsafe_ref` calls with no root `/<helper>` definition. It reuses
+    the existing receiver resolvers, which already exclude
+    vector/array/soa/string/map/pointer/args-pack receivers. It then
+    requires the owner to be in `structNames_` and the helper path to be
+    in `defMap_`. `validateExpr` uses it to validate the call exactly
+    like the explicit `/<ns>/<Struct>/at(values, k)` direct call.
+    `inferCallSnapshotData` uses it ahead of
+    `preferredCollectionHelperResolvedPath`, so the semantic product
+    publishes `resolved_path="/demo/Bag/at"` for `values[k]`, also with
+    `/std/collections/*` imported. The lowerer already lowers an explicit
+    direct call to a struct method correctly in every position.
+    Contrast: the 2026-09-24 prototype left the published target as the
+    builtin, then special-cased `LocalInfo::Kind::Array` struct
+    receivers in `IrLowererLowerEmitExprTailDispatch.h`. That worked
+    inside `plus(...)` but miscompiled `return(values[k])` and
+    `[i32] r{values[k]}`, because the rest of the lowerer (for example
+    struct return-path inference) still saw a builtin access. Publishing
+    the real target removes that mismatch. A struct without `at` still
+    fails with `unknown method: /demo/Plain/at`, since the diagnostic
+    path is unchanged and the new helper requires a real definition.
+    Also checked by hand: a root-level struct with `at_unsafe`, a
+    generic `Holder<T>` with `at`, `--emit=exe`, and a namespaced
+    `/demo/Map` struct with its own `at`. New tests: three
+    `primestruct.compile.run.vm.collections` cases ("runs vm user
+    struct own at for index call and method in expressions / return /
+    bindings"). Each runs `values[3i32]`, `at(values, 3i32)` and
+    `values.at(3i32)` on vm and on the `--emit=native` binary (110 /
+    10 / 30). A negative case, "rejects vm user struct index without own
+    at method", pins the diagnostic. A semantic-product case, "semantic
+    product publishes user struct own at as index direct-call target",
+    pins `/demo/Bag/at`. Each spelling is its own program because
+    repeated method calls in one definition are still TODO-5316.
+    Release gate: baseline 1898/1899, recorded at 0e126e5e, with only
+    the known `spinning_cube_argument_validation_51_55` Timeout flake.
+    After the fix: 1899/1899, 0 failed. No builtin collection indexing
+    test changed, so the stop_rule did not trigger.

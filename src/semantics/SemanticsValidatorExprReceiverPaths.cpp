@@ -230,4 +230,46 @@ bool SemanticsValidator::resolveDirectCallTemporaryAccessReceiverPath(
              pathOut);
 }
 
+bool SemanticsValidator::resolveUserStructOwnAccessHelperCallPath(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr,
+    std::string &pathOut) {
+  pathOut.clear();
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
+      expr.args.size() < 2 || hasNamedArguments(expr.argNames) ||
+      !(isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
+        isSimpleCallName(expr, "at_unsafe") ||
+        isSimpleCallName(expr, "at_unsafe_ref")) ||
+      defMap_.count("/" + expr.name) > 0) {
+    return false;
+  }
+  ExprDispatchBootstrap dispatchBootstrap;
+  prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
+  std::string candidatePath;
+  if (!resolveDirectCallTemporaryAccessReceiverPath(
+          expr.args.front(), expr.name, candidatePath) &&
+      !resolveLeadingNonCollectionAccessReceiverPath(
+          params,
+          locals,
+          expr.args.front(),
+          expr.name,
+          dispatchBootstrap.dispatchResolvers,
+          candidatePath)) {
+    return false;
+  }
+  const size_t helperSlash = candidatePath.find_last_of('/');
+  if (helperSlash == std::string::npos || helperSlash == 0) {
+    return false;
+  }
+  const std::string structPath = candidatePath.substr(0, helperSlash);
+  auto defIt = defMap_.find(candidatePath);
+  if (structNames_.count(structPath) == 0 || defIt == defMap_.end() ||
+      defIt->second == nullptr) {
+    return false;
+  }
+  pathOut = std::move(candidatePath);
+  return true;
+}
+
 } // namespace primec::semantics

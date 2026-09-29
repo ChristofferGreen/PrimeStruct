@@ -851,6 +851,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return failExprRootDiagnostic("unknown method: " +
                                     rootedVectorHelperPath(expr.name));
     }
+    if (std::string userStructAccessPath;
+        resolveUserStructOwnAccessHelperCallPath(
+            params, locals, expr, userStructAccessPath)) {
+      // `values[k]` / `at(values, k)` on a user struct that declares its own
+      // `at`: validate exactly like the explicit `/<Struct>/at(values, k)`
+      // direct call, which is also the published direct-call target.
+      Expr structAccessCall = expr;
+      structAccessCall.name = std::move(userStructAccessPath);
+      structAccessCall.namespacePrefix.clear();
+      return validateExpr(params, locals, structAccessCall);
+    }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
     if (!expr.isMethodCall && expr.namespacePrefix.empty() &&

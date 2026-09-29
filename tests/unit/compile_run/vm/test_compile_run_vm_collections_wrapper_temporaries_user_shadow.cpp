@@ -511,4 +511,106 @@ main() {
   CHECK(runCommand(nativePath) == 103);
 }
 
+namespace {
+
+// TODO-5315: `values[k]` rewrites to `at(values, k)`, which must dispatch to a
+// user struct's own `at` exactly like `values.at(k)`. Each spelling gets its
+// own program (one access per definition) and must give the same exit code on
+// vm and native.
+const char UserStructOwnAtPrelude[] = R"(
+namespace demo {
+  [struct]
+  Bag() {
+    [i32 mut] total{7i32}
+
+    [return<i32>]
+    at([i32] key) {
+      return(plus(this.total, key))
+    }
+  }
+}
+)";
+
+void checkUserStructOwnAtAccessSpellings(const std::string &caseName,
+                                         const std::string &mainTemplate,
+                                         int expectedExit) {
+  const std::array<std::pair<const char *, const char *>, 3> spellings = {{
+      {"index", "values[3i32]"},
+      {"call", "at(values, 3i32)"},
+      {"method", "values.at(3i32)"},
+  }};
+  for (const auto &[label, access] : spellings) {
+    CAPTURE(label);
+    std::string mainSource = mainTemplate;
+    const size_t accessPos = mainSource.find("ACCESS");
+    REQUIRE(accessPos != std::string::npos);
+    mainSource.replace(accessPos, std::string_view("ACCESS").size(), access);
+    const std::string stem =
+        "vm_user_struct_own_at_" + caseName + "_" + std::string(label);
+    const std::string srcPath =
+        writeTemp(stem + ".prime", std::string(UserStructOwnAtPrelude) + mainSource);
+    CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") ==
+          expectedExit);
+    const std::string nativePath = (testScratchPath("") / ("primec_" + stem)).string();
+    CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + nativePath +
+                     " --entry /main") == 0);
+    CHECK(runCommand(nativePath) == expectedExit);
+  }
+}
+
+} // namespace
+
+TEST_CASE("runs vm user struct own at for index call and method in expressions") {
+  checkUserStructOwnAtAccessSpellings("expr", R"(
+[return<int>]
+main() {
+  [/demo/Bag mut] values{/demo/Bag{}}
+  return(plus(ACCESS, 100i32))
+}
+)", 110);
+}
+
+TEST_CASE("runs vm user struct own at for index call and method in return") {
+  checkUserStructOwnAtAccessSpellings("return", R"(
+[return<int>]
+main() {
+  [/demo/Bag mut] values{/demo/Bag{}}
+  return(ACCESS)
+}
+)", 10);
+}
+
+TEST_CASE("runs vm user struct own at for index call and method in bindings") {
+  checkUserStructOwnAtAccessSpellings("binding", R"(
+[return<int>]
+main() {
+  [/demo/Bag mut] values{/demo/Bag{}}
+  [i32] result{ACCESS}
+  return(plus(result, 20i32))
+}
+)", 30);
+}
+
+TEST_CASE("rejects vm user struct index without own at method") {
+  const std::string source = R"(
+namespace demo {
+  [struct]
+  Plain() {
+    [i32 mut] total{7i32}
+  }
+}
+
+[return<int>]
+main() {
+  [/demo/Plain mut] values{/demo/Plain{}}
+  return(values[3i32])
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_struct_index_without_at.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_user_struct_index_without_at_err.txt").string();
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath) == 2);
+  CHECK(readFile(errPath).find("unknown method: /demo/Plain/at") != std::string::npos);
+}
+
 TEST_SUITE_END();

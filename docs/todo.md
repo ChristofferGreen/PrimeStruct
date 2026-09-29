@@ -101,17 +101,15 @@ of sync with them.
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
 | TODO-4751 | Implement a real experimental `Map<K,V>` collection type | blocked | hidden-test-failures-imports-operations |
 | TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | blocked | (none) |
-| TODO-5315 | Dispatch `values[key]` on user structs to their own `at` | ready | user-struct-indexing |
 | TODO-5316 | Fix repeated user struct method calls on VM/native | ready | user-struct-method-inlining |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
 ### Ready Now
 
-- TODO-5315 (track: user-struct-indexing, surface: `SemanticsValidatorExprCollectionDispatchSetup.cpp` + semantic-product direct-call targets for bare `at`): `values[key]` on a user struct with its own `at` is rejected instead of dispatching to it.
 - TODO-5316 (track: user-struct-method-inlining, surface: `src/ir_lowerer` inline struct-helper calls / `this` binding): calling the same user struct method twice fails VM/native lowering with "does not know identifier: this".
 
-TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5322 closed on 2026-09-28 (the last `hidden-test-failures-emitters` leaf) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 is `blocked` on TODO-5316 (TODO-5315 closed on 2026-09-29 and its `user-struct-indexing` slot stays empty - no other `ready` leaf remains outside `Ready Now`; TODO-5310 was split on 2026-09-24 into TODO-5312 -> TODO-5313 -> TODO-5314; TODO-5312 landed 2026-09-25; TODO-5313 hit its stop_rule on 2026-09-25 and its classifier removal was folded into TODO-4751; TODO-5314 is now `blocked` on TODO-4751). TODO-4800 closed on 2026-09-28 and TODO-4806 took its slot; TODO-4806 closed on 2026-09-28 and TODO-5322 (held on the same track, disjoint surface from TODO-4807) took its slot; TODO-4801 closed on 2026-09-28 and TODO-4807 (oldest held item on the track, disjoint surface) took its slot. TODO-4807 closed on 2026-09-28 as confirmed internal-only (the legacy AST `primec::Emitter` it lives in is not linked into `primec`; no end-to-end repro) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5322 closed on 2026-09-28 (the last `hidden-test-failures-emitters` leaf) and its slot stays empty (no other `ready` leaf remains outside `Ready Now`). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct); TODO-5321 closed on 2026-09-28 and its `hidden-test-failures-text-filters` slot stays empty (no other `ready` leaf on that track). TODO-4710/4712/4732/4737 are `deferred` (none are actually `blocked` on a still-open TODO as of the 2026-09-23 pass - see the Queue Summary table and each block's own `log:`) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -290,11 +288,11 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
 - [ ] TODO-4751: Implement a real, working experimental `Map<K,V>` collection type
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5315, TODO-5316
+  - blocked_on: TODO-5316
   - created_at: 2026-07-29
   - phase: New feature (not a bug fix)
   - parallel_track: hidden-test-failures-imports-operations
-  - depends_on: TODO-5315, TODO-5316
+  - depends_on: TODO-5316 (TODO-5315 closed 2026-09-29)
   - scope: add the capitalized public `Map<K, V>` collection type, which
     does not exist anywhere today (only the lowercase builtin `map<K, V>`
     and the `MapValue<K, V>` backing struct in
@@ -357,31 +355,32 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
     downstream code keys on the un-suffixed `/std/collections/map/<helper>`
     paths; route wrapper receivers to the struct's own methods instead
     once the classifier removal above lands. The wrapper also needs
-    `values[key]` dispatch (TODO-5315) and repeated method calls
-    (TODO-5316). Measured 2026-09-25 (TODO-5313): the classifier removal
-    alone makes a namespaced user `Map<i32, i32>` with its own
-    `count`/`insert` run through its own methods on vm/native/exe (exit
-    1) without any TODO-5314 backend edit, and regresses exactly 21
-    cases in 12 shards. 18 are 9 TODO-4741 reject-placeholder sources
-    (each pinned twice: `runs vm ...` and the vm-backed `... in C++
-    emitter` twin in `test_compile_run_imports_operations.cpp`) that
-    spell `Map<string, V>` with the nonexistent `mapPair`/`mapSingle`;
-    they still exit 2 but their pinned text changes to `unable to infer
-    return type on /buildValues`, `unknown struct type for layout: Map`
-    or `unknown call target: /std/collections/map/count`. This task
-    restores them to runtime expectations, so re-pin or restore them
-    here, not earlier. One of them (`scoreValues([Map<string, i32>]
-    values)`, `expectCanonicalMapNamespaceExperimentalParameterConformance`)
-    then passes semantics with an unresolved `Map` parameter and fails
-    only in VM lowering ("missing semantic-product collection
-    specialization") - close that hole (unknown `Map` must stay a
-    semantic error when no `Map` struct is visible) before re-pinning.
-    The other 3 (`experimental map custom comparable struct keys ...` in
-    semantics, vm and C++/exe) test the builtin Comparable-key rule and
-    keep their exact diagnostic when respelled `[map<Key, i32>]
-    values{/std/collections/map/map<Key, i32>(...)}` - move them to that
-    spelling. Full per-case list in `docs/todo_log.md` under
-    `## TODO-4751`.
+    repeated method calls (TODO-5316); `values[key]` dispatch to a user
+    struct's own `at` landed with TODO-5315 (2026-09-29; a non-generic
+    namespaced `/demo/Map` with its own `at` already indexes through it).
+    Measured 2026-09-25 (TODO-5313): the classifier removal alone makes
+    a namespaced user `Map<i32, i32>` with its own `count`/`insert` run
+    through its own methods on vm/native/exe (exit 1) without any
+    TODO-5314 backend edit, and regresses exactly 21 cases in 12 shards.
+    18 are 9 TODO-4741 reject-placeholder sources (each pinned twice:
+    `runs vm ...` and the vm-backed `... in C++ emitter` twin in
+    `test_compile_run_imports_operations.cpp`) that spell `Map<string, V>`
+    with the nonexistent `mapPair`/`mapSingle`; they still exit 2 but their
+    pinned text changes to `unable to infer return type on /buildValues`,
+    `unknown struct type for layout: Map` or `unknown call target:
+    /std/collections/map/count`. This task restores them to runtime
+    expectations, so re-pin or restore them here, not earlier. One of them
+    (`scoreValues([Map<string, i32>] values)`,
+    `expectCanonicalMapNamespaceExperimentalParameterConformance`) then
+    passes semantics with an unresolved `Map` parameter and fails only in VM
+    lowering ("missing semantic-product collection specialization") - close
+    that hole (unknown `Map` must stay a semantic error when no `Map` struct
+    is visible) before re-pinning. The other 3 (`experimental map custom
+    comparable struct keys ...` in semantics, vm and C++/exe) test the
+    builtin Comparable-key rule and keep their exact diagnostic when
+    respelled `[map<Key, i32>] values{/std/collections/map/map<Key,
+    i32>(...)}` - move them to that spelling. Full per-case list in
+    `docs/todo_log.md` under `## TODO-4751`.
 
 - [ ] TODO-5314: Drop bare `Map` from IR lowerer, IR printer and emitter
   - owner: ai
@@ -424,50 +423,6 @@ TODO-4751 is `blocked` on TODO-5315/TODO-5316 (TODO-5310 was split on 2026-09-24
     - `./scripts/compile.sh --release` back at baseline.
   - stop_rule: if any `map<K, V>` lowering test changes, stop and record
     which classifier still carries the builtin identity.
-
-- [ ] TODO-5315: Dispatch `values[key]` on user structs to their own `at`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-24
-  - phase: User struct method dispatch
-  - parallel_track: user-struct-indexing
-  - depends_on: (none)
-  - scope: docs/PrimeStruct.md ("Method calls & indexing") says
-    `value[index]` rewrites to `at(value, index)` and is equivalent to
-    `value.at(index)`. For a user struct that declares its own `at`,
-    `values.at(k)` works but `values[k]` / `at(values, k)` is rejected in
-    semantics with `unknown method: /<ns>/<Struct>/at`. The rejection
-    comes from `prepareExprCollectionDispatchSetup`
-    (`SemanticsValidatorExprCollectionDispatchSetup.cpp`), which fails via
-    `resolveLeadingNonCollectionAccessReceiverPath` even when that path is
-    a real definition. Make the bare form dispatch to the struct's own
-    access helper on vm/native/exe.
-  - implementation_notes: 2026-09-24 prototype (not landed): skipping
-    that diagnostic when `defMap_` has the path lets semantics pass, but
-    the semantic product still publishes `/at` (or
-    `/std/collections/map/at` when `/std/collections/*` is imported) as
-    the direct-call target, so lowering reaches the builtin
-    `emitBuiltinArrayAccess`. The receiver local is `LocalInfo::Kind::Array`
-    with the struct's `structTypeName`. Routing
-    `IrLowererLowerEmitExprTailDispatch.h` to
-    `emitInlineDefinitionCall(expr, <struct>/at)` for such locals worked
-    inside `plus(...)` (correct result) but miscompiled `return(values[k])`
-    and `[i32] r{values[k]}` (VM "unaligned indirect address"). Struct
-    return-path inference (`IrLowererStructReturnPathHelpers.cpp`) likely
-    treats `at(structLocal, k)` as struct-valued. The real fix should have
-    semantics publish the struct method as the direct-call target, so the
-    lowerer needs no receiver heuristics.
-  - acceptance:
-    - `values[k]`, `at(values, k)` and `values.at(k)` on a user struct
-      with an `at` method give the same result in expression, `return`,
-      and binding-initializer positions on vm and native.
-    - a user struct without `at` still rejects `values[k]` with
-      `unknown method: /<ns>/<Struct>/at`.
-    - `./scripts/compile.sh --release` back at baseline.
-  - stop_rule: if publishing the struct method as the direct-call target
-    changes any existing collection (`vector`/`map`/`soa`/`string`)
-    indexing test, stop and record which receiver classifier claimed the
-    struct.
 
 - [ ] TODO-5316: Fix repeated user struct method calls on VM/native
   - owner: ai

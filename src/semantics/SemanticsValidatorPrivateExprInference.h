@@ -228,6 +228,17 @@
   bool resolveDirectCallTemporaryAccessReceiverPath(const Expr &receiverExpr,
                                                     std::string_view helperName,
                                                     std::string &pathOut);
+  // Resolves a bare `at`/`at_ref`/`at_unsafe`/`at_unsafe_ref(receiver, ...)`
+  // call (including the `receiver[index]` rewrite) whose leading receiver is
+  // a user struct that declares that helper itself to the struct's own
+  // definition path, e.g. `/demo/Bag/at`. Builtin collection receivers never
+  // match. Validation and semantic-product publication both use this so the
+  // published direct-call target is the struct method, not the builtin.
+  bool resolveUserStructOwnAccessHelperCallPath(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      std::string &pathOut);
   struct ExprArgumentValidationContext {
     const Expr *callExpr = nullptr;
     const std::string *resolved = nullptr;

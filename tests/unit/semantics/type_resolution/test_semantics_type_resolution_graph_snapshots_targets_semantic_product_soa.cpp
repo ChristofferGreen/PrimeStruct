@@ -542,6 +542,54 @@ TEST_CASE("semantic product method-call targets stay separated by receiver type"
   CHECK(hasBIdTarget);
 }
 
+TEST_CASE("semantic product publishes user struct own at as index direct-call target") {
+  // TODO-5315: `values[k]` and `at(values, k)` on a user struct that declares
+  // its own `at` publish the struct method, not the builtin `/at`, so lowering
+  // needs no receiver heuristics.
+  const std::string source =
+      "namespace demo {\n"
+      "  [struct]\n"
+      "  Bag() {\n"
+      "    [i32 mut] total{7i32}\n"
+      "\n"
+      "    [return<i32>]\n"
+      "    at([i32] key) {\n"
+      "      return(plus(this.total, key))\n"
+      "    }\n"
+      "  }\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [/demo/Bag mut] values{/demo/Bag{}}\n"
+      "  [i32] indexed{values[1i32]}\n"
+      "  return(plus(indexed, at(values, 2i32)))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto directTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
+  std::vector<std::string> mainAtTargets;
+  for (const auto *entry : directTargets) {
+    if (entry->scopePath == "/main" && entry->callName == "at") {
+      mainAtTargets.emplace_back(
+          primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry));
+    }
+  }
+  // Binding initializers can publish more than one entry for the same call,
+  // so pin the resolved path of every `/main` `at` entry, not their count.
+  REQUIRE(mainAtTargets.size() >= 2);
+  for (const auto &target : mainAtTargets) {
+    CHECK(target == "/demo/Bag/at");
+  }
+}
+
 TEST_CASE("semantic product keeps helper-return soa mutator targets on alias wrappers") {
   const std::string source = R"(
 [struct reflect]

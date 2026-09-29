@@ -120,7 +120,15 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     }
   }
 
-  out.resolvedPath = preferredCollectionHelperResolvedPath(expr);
+  std::string userStructAccessPath;
+  if (withPreservedError([&]() {
+        return resolveUserStructOwnAccessHelperCallPath(
+            defParams, activeLocals, expr, userStructAccessPath);
+      })) {
+    out.resolvedPath = std::move(userStructAccessPath);
+  } else {
+    out.resolvedPath = preferredCollectionHelperResolvedPath(expr);
+  }
   if (out.resolvedPath.empty() && expr.kind == Expr::Kind::Call &&
       !expr.isMethodCall && expr.args.size() == 1 &&
       (isUnqualifiedCollectionBuiltinName(expr, "count") ||
