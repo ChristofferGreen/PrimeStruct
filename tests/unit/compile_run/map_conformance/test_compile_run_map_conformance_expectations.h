@@ -284,12 +284,10 @@ inline void expectExperimentalMapOwnershipConformance(const std::string &emitMod
 
 inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::string &emitMode) {
   // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
-  // TODO-5323: expected 18 once MapValue insert overwrites a
-  // non-relocation-trivial value in place (today the old value is kept).
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
                                             "map_namespace_canonical_experimental_insert_" + emitMode,
                                             emitMode,
-                                            13,
+                                            18,
                                             "");
 }
 

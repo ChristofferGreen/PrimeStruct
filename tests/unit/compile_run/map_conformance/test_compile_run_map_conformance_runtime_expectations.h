@@ -53,12 +53,10 @@ inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const 
 
 inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
   // TODO-4751: runs through the public Map<K, V> wrapper on vm/native/exe.
-  // TODO-5323: expected 33 once MapValue insert overwrites a
-  // non-relocation-trivial value in place (today the old value is kept).
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipMethodConformanceSource(),
                                             "map_experimental_ownership_method_" + emitMode,
                                             emitMode,
-                                            28,
+                                            33,
                                             "container missing key\n");
 }
 

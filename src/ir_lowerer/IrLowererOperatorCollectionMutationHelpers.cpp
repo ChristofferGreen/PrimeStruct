@@ -785,6 +785,33 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        if (!it->second.structTypeName.empty()) {
+          // Struct pointee: copy every slot instead of storing the source
+          // struct's address into the first slot.
+          const Expr &rhsExpr = expr.args[1];
+          const std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
+          if (rhsStruct.empty() ||
+              !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
+            error = "assign requires matching struct value";
+            return false;
+          }
+          int32_t structSlotCount = 0;
+          if (!resolveStructSlotCount(it->second.structTypeName, structSlotCount)) {
+            return false;
+          }
+          const int32_t destPtrLocal = allocTempLocal();
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+          if (!emitExpr(rhsExpr, localsIn)) {
+            return false;
+          }
+          const int32_t srcPtrLocal = allocTempLocal();
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, structSlotCount)) {
+            return false;
+          }
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+          return true;
+        }
       } else {
         if (!emitExpr(pointerExpr, localsIn)) {
           return false;

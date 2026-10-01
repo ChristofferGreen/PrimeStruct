@@ -99,7 +99,6 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5323 | Make `MapValue` insert overwrite non-trivial values | ready | map-value-overwrite |
 | TODO-5324 | Reject struct initializers of another struct type in semantics | ready | struct-initializer-typecheck |
 | TODO-5325 | Run the remaining pinned `Map<K, V>` wrapper conformance shapes | ready | map-wrapper-conformance |
 | TODO-5326 | Restore canonical `map<K, V>` wrapper-temporary compile-run pins | ready | canonical-map-wrapper-temporaries |
@@ -108,12 +107,11 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5323 (track: map-value-overwrite, surface: `overwriteSlot`/`mapInsert*` in `stdlib/std/collections/map.prime` and struct assign-through-`Reference` lowering): make `MapValue` insert overwrite non-relocation-trivial payloads.
 - TODO-5324 (track: struct-initializer-typecheck, surface: semantics binding/assign/field initializer type checks in `src/semantics/`): reject a struct initialized from another struct type before lowering.
 - TODO-5325 (track: map-wrapper-conformance, surface: the nine `TODO-5325` helpers in `tests/unit/compile_run/map_conformance/*expectations.h` plus the monomorph wrapper-routing rewrite): run the remaining `Map<K, V>` wrapper shapes.
 - TODO-5326 (track: canonical-map-wrapper-temporaries, surface: `tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_*.cpp` canonical-map cases): restore the canonical `map<K, V>` wrapper-temporary pins.
 
-TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323/5324/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -288,39 +286,6 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     wrong re-derivation would silently narrow or widen which method-call
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
-
-- [ ] TODO-5323: Make `MapValue` insert overwrite non-trivial values
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-29
-  - phase: Map wrapper follow-up (found while closing TODO-4751)
-  - parallel_track: map-value-overwrite
-  - depends_on: (none)
-  - scope: overwriting an existing key keeps the old payload when the
-    value type is not relocation-trivial (a struct with `Move`/`Destroy`).
-    Repro: `import /std/collections/*` + `import /std/collections/map/*`,
-    a `[struct] Owned() { [i32 mut] value{0i32} [mut] Move([Reference<Self>]
-    other) { assign(this.value, other.value) assign(other.value, 0i32) }
-    Destroy() { } }`, then `[MapValue<string, Owned> mut]
-    values{mapNew<string, Owned>()}`, `mapInsert<string, Owned>(values,
-    "left"raw_utf8, Owned{4i32})`, the same with `Owned{9i32}`, and
-    `return(mapAt<string, Owned>(values, "left"raw_utf8).value)` exits 4
-    (expected 9) on vm. i32 payloads overwrite correctly. The fault is in
-    the `overwriteSlot<V>` / `vectorBorrowSlot` path in
-    `stdlib/std/collections/map.prime` or its struct-assign-through-
-    `Reference` lowering. Builtin `map<K, V>` literals reject such values
-    up front ("map literal requires relocation-trivial map value type").
-  - acceptance:
-    - the repro exits 9 on vm/native/exe.
-    - `expectCanonicalMapNamespaceExperimentalInsertConformance` and
-      `expectExperimentalMapOwnershipMethodConformance`
-      (`tests/unit/compile_run/map_conformance/*expectations.h`, pinned at
-      13 and 28 with TODO-5323 comments) move to 18 and 33.
-    - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: if the fix needs container move/reallocation semantics
-    (the reason builtin map literals reject these types), stop and make
-    the `Map`/`MapValue` surface reject non-relocation-trivial values
-    with the builtin diagnostic instead.
 
 - [ ] TODO-5324: Reject struct binding/assign/field initializers of another struct type in semantics
   - owner: ai

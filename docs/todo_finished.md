@@ -56235,3 +56235,44 @@ crashes) - see `docs/todo_finished.md`.
     `experimental_map/Map` spellings still match. Release gate: only the
     known `spinning_cube_argument_validation_51_55` flake (passed on
     focused rerun).
+
+- [x] TODO-5323: Make `MapValue` insert overwrite non-trivial values
+  - owner: ai
+  - created_at: 2026-09-29
+  - finished_at: 2026-10-01
+  - phase: Map wrapper follow-up (found while closing TODO-4751)
+  - parallel_track: map-value-overwrite
+  - depends_on: (none)
+  - scope: overwriting an existing key keeps the old payload when the
+    value type is not relocation-trivial (a struct with `Move`/`Destroy`).
+    Repro: `import /std/collections/*` + `import /std/collections/map/*`,
+    a `[struct] Owned() { [i32 mut] value{0i32} [mut] Move([Reference<Self>]
+    other) { assign(this.value, other.value) assign(other.value, 0i32) }
+    Destroy() { } }`, then `[MapValue<string, Owned> mut]
+    values{mapNew<string, Owned>()}`, `mapInsert<string, Owned>(values,
+    "left"raw_utf8, Owned{4i32})`, the same with `Owned{9i32}`, and
+    `return(mapAt<string, Owned>(values, "left"raw_utf8).value)` exits 4
+    (expected 9) on vm. i32 payloads overwrite correctly. The fault is in
+    the `overwriteSlot<V>` / `vectorBorrowSlot` path in
+    `stdlib/std/collections/map.prime` or its struct-assign-through-
+    `Reference` lowering. Builtin `map<K, V>` literals reject such values
+    up front ("map literal requires relocation-trivial map value type").
+  - acceptance:
+    - the repro exits 9 on vm/native/exe.
+    - `expectCanonicalMapNamespaceExperimentalInsertConformance` and
+      `expectExperimentalMapOwnershipMethodConformance`
+      (`tests/unit/compile_run/map_conformance/*expectations.h`, pinned at
+      13 and 28 with TODO-5323 comments) move to 18 and 33.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs container move/reallocation semantics
+    (the reason builtin map literals reject these types), stop and make
+    the `Map`/`MapValue` surface reject non-relocation-trivial values
+    with the builtin diagnostic instead.
+  - result: the fault was not in `map.prime`. Assign through
+    `dereference` (`*slot = value`) in
+    `IrLowererOperatorCollectionMutationHelpers.cpp` stored one slot, so
+    a struct pointee got the source address written into its first field
+    instead of a field copy (any struct, not only `Move`/`Destroy` ones).
+    It now copies every slot like the Reference/Value assign paths. The
+    repro exits 9 on vm/native/exe and both conformance pins moved to 18
+    and 33. Release gate 1904/1904.
