@@ -56436,3 +56436,18 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: the VM lowering guard in `IrLowererLowerEmitExpr.h` that rejected a one-argument expression over a wrapper-returned key/value `at` call (meant for `count(at(...))`-style struct mismatches) also caught field access such as `.value`; it now skips field accesses. The chained `borrowExperimentalMap(location(values)).at("right"raw_utf8).value` form runs on vm/native/exe and the conformance source uses it again.
+
+- [x] TODO-5328: Keep the Result type for `tryAt` on a block-inferred wrapper call receiver
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: inferred-call-receiver-try
+  - depends_on: (none)
+  - scope: `[return<auto>] buildValues(...)` returning a `Map<string, i32>` from `if` branches, then `try(buildValues(true).tryAt("left"raw_utf8))`, fails semantics with "try requires Result argument". Pinned by `expectInferredExperimentalMapCallReceiverConformance`.
+  - acceptance:
+    - the shape runs on vm/native/exe and the pin moves from reject to run.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: receiver-path resolution in `SemanticsValidatorExprReceiverPaths.cpp` read the declared `return<auto>` template argument as a type name and produced `/auto/tryAt`, so `try` saw no Result. It now skips `auto` return declarations and falls through to the inferred receiver type. `try(buildValues(true).tryAt(...))` runs; `expectInferredExperimentalMapCallReceiverConformance` pins exit 7 with output 2/4/1.

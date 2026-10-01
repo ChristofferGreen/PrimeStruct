@@ -144,7 +144,8 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
   auto defIt = defMap_.find(resolvedReceiverPath);
   if (defIt != defMap_.end() && defIt->second != nullptr) {
     for (const auto &transform : defIt->second->transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1 ||
+          normalizeBindingTypeName(transform.templateArgs.front()) == "auto") {
         continue;
       }
       if (resolveNonCollectionAccessHelperPathFromTypeText(

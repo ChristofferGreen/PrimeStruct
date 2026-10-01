@@ -232,11 +232,12 @@ inline void expectWrappedInferredExperimentalMapReturnConformance(const std::str
 }
 
 inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {
-  // TODO-5328: tryAt on block-inferred wrapper call receivers loses its Result type.
-  expectMapConformanceCompileReject(makeInferredExperimentalMapCallReceiverConformanceSource(),
-                                    "map_inferred_experimental_call_receiver_" + emitMode,
-                                    emitMode,
-                                    "try requires Result argument");
+  // TODO-5328: tryAt on a return<auto> wrapper call receiver keeps its Result type.
+  expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapCallReceiverConformanceSource(),
+                                            "map_inferred_experimental_call_receiver_" + emitMode,
+                                            emitMode,
+                                            7,
+                                            "2\n4\n1\n");
 }
 
 inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {

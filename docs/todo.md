@@ -99,7 +99,6 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5328 | Keep the Result type for `tryAt` on a block-inferred wrapper call receiver | ready | inferred-call-receiver-try |
 | TODO-5329 | Resolve calls inside an `[auto]`-parameter `/Type/method` correctly | ready | auto-param-method-resolution |
 | TODO-5330 | Decide whether allocating wrapper constructors may be parameter defaults | ready | wrapper-default-parameters |
 | TODO-5331 | Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>` | ready | canonical-map-count-temporaries |
@@ -112,7 +111,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5328 (track: inferred-call-receiver-try, surface: semantics `try` Result inference for `return<auto>` wrapper calls): keep the `Result` type for `tryAt` on an inferred wrapper call receiver.
 - TODO-5329 (track: auto-param-method-resolution, surface: lowering of `[auto]`-parameter `/Type/method` bodies): stop resolving `print_line` as `/Holder/print_line`.
 - TODO-5330 (track: wrapper-default-parameters, surface: parameter-default purity rule and its spec note): decide on allocating wrapper constructors as defaults.
 - TODO-5331 (track: canonical-map-count-temporaries, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`.
@@ -295,20 +293,6 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     wrong re-derivation would silently narrow or widen which method-call
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
-
-- [ ] TODO-5328: Keep the Result type for `tryAt` on a block-inferred wrapper call receiver
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Map wrapper follow-up (split from TODO-5325)
-  - parallel_track: inferred-call-receiver-try
-  - depends_on: (none)
-  - scope: `[return<auto>] buildValues(...)` returning a `Map<string, i32>` from `if` branches, then `try(buildValues(true).tryAt("left"raw_utf8))`, fails semantics with "try requires Result argument". Pinned by `expectInferredExperimentalMapCallReceiverConformance`.
-  - acceptance:
-    - the shape runs on vm/native/exe and the pin moves from reject to run.
-    - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: if the fix needs a design decision beyond this shape, stop and
-    record it here instead of widening the change.
 
 - [ ] TODO-5329: Resolve calls inside an `[auto]`-parameter `/Type/method` correctly
   - owner: ai
