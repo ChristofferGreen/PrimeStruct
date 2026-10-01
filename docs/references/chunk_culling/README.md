@@ -11,6 +11,7 @@ summary only, so details may be incomplete.
 
 | Note | Source | Status | Verdict |
 |---|---|---|---|
+| [Findings.md](Findings.md) | Narrative: goal, method, findings, open risks | n/a | Start here |
 | [msoc.md](msoc.md) | Masked Software Occlusion Culling (HPG 2016) | read | Core CPU depth-buffer method |
 | [procworld_voxel_occlusion.md](procworld_voxel_occlusion.md) | Procedural World blog, "Voxel Occlusion" | summary | Closest match to chunk occlusion by voxel-derived occluders |
 | [aokana.md](aokana.md) | Aokana (arXiv 2505.02017, 2025) | read (sections 3.x) | Chunk selection, Hi-Z tiles, streaming/LOD |
