@@ -18,6 +18,7 @@ summary only, so details may be incomplete.
 | [hiz_two_pass.md](hiz_two_pass.md) | Nanite two-pass HZB, Darnell Hi-Z | summary | Reference for a future compute/GPU path |
 | [terrain_horizon_and_generation.md](terrain_horizon_and_generation.md) | Horizon culling, Cinevva terrain post, generation-time search | summary | Only material bearing on pre-generation rejection |
 | [gigavoxels_dp.md](gigavoxels_dp.md) | GigaVoxels DP (HPG 2024) | read | Visibility-driven on-demand brick production: closest match to rejecting chunks from generation |
+| [kuth_work_graphs.md](kuth_work_graphs.md) | Kuth et al., GPU work graphs (HPG 2024) | read (culling parts) | Frustum-only generation culling from worst-case bounds; coarse-then-fine |
 | [citation_leads.md](citation_leads.md) | Google Scholar "cited by" sweep | titles/abstracts | Newer papers to read next (voxel two-pass HZB, GigaVoxels DP, work graphs) |
 
 ## Link-only further reading
