@@ -342,6 +342,10 @@ bool extractArchive(const std::filesystem::path &archive,
   }
   if (processRunner.run({"unzip", "-q", "-o", absPath, "-d", outDir.string()}) != 0) {
     error = "failed to extract archive: " + absPath;
+    if (!processSpawningAvailable()) {
+      error += " (archive import roots need process spawning, which this build does not support;"
+               " extract the archive and use the directory instead)";
+    }
     return false;
   }
   return true;

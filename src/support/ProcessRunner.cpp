@@ -1,7 +1,20 @@
 #include "primec/support/ProcessRunner.h"
 
-#include <algorithm>
 #include <cerrno>
+
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
+// iOS (and any embedding build with PRIMESTRUCT_EMBED_NO_PROCESS) cannot spawn
+// processes: posix_spawn/waitpid are unavailable or sandboxed, so the runner
+// below reports ENOSYS instead of referencing them.
+#if defined(PRIMESTRUCT_NO_PROCESS) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+#define PRIMESTRUCT_PROCESS_SPAWNING_UNAVAILABLE 1
+#endif
+
+#if !defined(PRIMESTRUCT_PROCESS_SPAWNING_UNAVAILABLE)
+#include <algorithm>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -9,9 +22,20 @@
 #include <vector>
 
 extern char **environ;
+#endif
 
 namespace primec {
 namespace {
+
+#if defined(PRIMESTRUCT_PROCESS_SPAWNING_UNAVAILABLE)
+class SystemProcessRunner final : public ProcessRunner {
+public:
+  int run(const std::vector<std::string> &args) const override {
+    (void)args;
+    return ENOSYS;
+  }
+};
+#else
 
 #if defined(__APPLE__)
 std::vector<std::string> sanitizeProcessArgs(std::vector<std::string> args) {
@@ -69,7 +93,17 @@ public:
   }
 };
 
+#endif // PRIMESTRUCT_PROCESS_SPAWNING_UNAVAILABLE
+
 } // namespace
+
+bool processSpawningAvailable() {
+#if defined(PRIMESTRUCT_PROCESS_SPAWNING_UNAVAILABLE)
+  return false;
+#else
+  return true;
+#endif
+}
 
 const ProcessRunner &systemProcessRunner() {
   static const SystemProcessRunner runner;

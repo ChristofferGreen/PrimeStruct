@@ -95,19 +95,19 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5343 | iOS-safe embed build: no process spawning, bundled stdlib, cross-compile check | ready | embedding-ios |
+| TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
 
-- TODO-5343 (track: embedding-ios, surface: `src/support/ProcessRunner.cpp`, `ImportResolver`, CMake option, iOS toolchain recipe): iOS-safe build.
+(none - the one open leaf, TODO-5348, needs macOS and is deferred)
 
 ### Immediate Next 10
 
-1. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
+(none)
 
 ### Priority Lanes
 
-- Embedding (top priority, user-set; must support iOS): TODO-5343
+- Embedding (top priority, user-set; must support iOS): TODO-5348 (needs macOS)
 
 ### Execution Queue
 
@@ -115,31 +115,28 @@ Run `ready` leaves in the order listed under Immediate Next 10.
 
 ### Task Blocks
 
-- [ ] TODO-5343: iOS-safe embed build - no process spawning, bundled stdlib, cross-compile check
-  - owner: ai
-  - status: ready
+- [ ] TODO-5348: Verify the iOS embed build and XCFramework packaging on macOS
+  - owner: human
+  - status: deferred
   - created_at: 2026-10-01
   - phase: Embedding
   - parallel_track: embedding-ios
-  - scope: make `primec_embed_runtime_lib` (and, as a stretch, the full
-    `primec_embed_lib` for on-device compiling of small scripts) build for
-    iOS: gate `fork`/`exec`/`posix_spawn` users (`src/support/ProcessRunner.cpp`,
-    `ImportResolver` archive roots, `TempPaths`) behind a platform option so
-    iOS builds exclude them; no reliance on `/tmp` or the working
-    directory; provide the stdlib as a bundle path or embedded blob for the
-    full-compile variant; ensure no executable-memory allocation. Add a CMake
-    toolchain recipe (`-DCMAKE_SYSTEM_NAME=iOS`) and an XCFramework packaging
-    script.
-  - implementation_notes: this Linux CI cannot build or run iOS. Verify with
-    a macOS runner (or have the user run the recipe) and record the exact
-    toolchain version; until then acceptance covers the portable parts
-    (a Linux build with the process-spawning sources excluded must pass the
-    embed tests).
+  - scope: split from TODO-5343, which finished everything verifiable on Linux
+    (process spawning compiled out via `PRIMESTRUCT_EMBED_NO_PROCESS`,
+    `PRIMESTRUCT_EMBED_ONLY`, forbidden-symbol scan, `scripts/check_embed_no_process.sh`,
+    iOS section in docs/Embedding.md). What remains needs macOS + Xcode, which
+    this repository's CI and agent sandboxes do not have: run
+    `scripts/build_ios_embed.sh`, fix any toolchain errors it exposes (iOS SDK
+    availability of APIs used under `__APPLE__`, e.g. `mach/mach.h` task_info in
+    the semantics validator, `std::filesystem` deployment target), link the
+    runtime XCFramework into a sample iOS app target that loads bytecode and
+    calls a bound host function on device and simulator, and add a macOS CI job
+    running the script.
   - acceptance:
-    - Linux build with `PRIMESTRUCT_EMBED_NO_PROCESS=ON` links and passes the
-      runtime-only bytecode test.
-    - documented, reproducible iOS cross-compile recipe; compile of
-      `primec_embed_runtime_lib` for iOS arm64 verified on macOS.
-  - stop_rule: if the full compiler pipeline cannot drop process spawning
-    cleanly, ship runtime-only for iOS and record the gap.
-
+    - `scripts/build_ios_embed.sh` succeeds on macOS for device and simulator
+      and produces both XCFrameworks.
+    - a sample app runs `Script::loadBytecode` + `bind` + `run` on the simulator.
+    - result (Xcode version, deployment target, library sizes) recorded here.
+  - stop_rule: if an API used by the full compiler is unavailable on iOS, ship
+    the runtime-only XCFramework and record the gap rather than widening the
+    scope.

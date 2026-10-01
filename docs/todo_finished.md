@@ -57205,3 +57205,34 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: the embed API deliberately does not use `ScopedCompileArena` (compiled Scripts own system-heap memory, survive their engine, move across threads); `primestruct.embed.lifetime` (7 cases): 1000 runs, 1000 string/host exported calls, 200 repeated and 200 failed compiles each stay within an 8 MB resident-set bound, engines/scripts coexist and outlive each other, concurrent engines produce byte-identical bytecode; `PrimeStruct_embed_tsan_smoke` (built with `PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE=ON`) is TSAN-clean for two concurrent engines and a shared Script. The one real defect this surfaced (stale SourceLocationMapper cache) was fixed under TODO-5340. Threading/lifetime contract documented in docs/Embedding.md.
 
+
+- [x] TODO-5343: iOS-safe embed build - no process spawning, bundled stdlib, cross-compile check
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-ios
+  - scope: make `primec_embed_runtime_lib` (and, as a stretch, the full
+    `primec_embed_lib` for on-device compiling of small scripts) build for
+    iOS: gate `fork`/`exec`/`posix_spawn` users (`src/support/ProcessRunner.cpp`,
+    `ImportResolver` archive roots, `TempPaths`) behind a platform option so
+    iOS builds exclude them; no reliance on `/tmp` or the working
+    directory; provide the stdlib as a bundle path or embedded blob for the
+    full-compile variant; ensure no executable-memory allocation. Add a CMake
+    toolchain recipe (`-DCMAKE_SYSTEM_NAME=iOS`) and an XCFramework packaging
+    script.
+  - implementation_notes: this Linux CI cannot build or run iOS. Verify with
+    a macOS runner (or have the user run the recipe) and record the exact
+    toolchain version; until then acceptance covers the portable parts
+    (a Linux build with the process-spawning sources excluded must pass the
+    embed tests).
+  - acceptance:
+    - Linux build with `PRIMESTRUCT_EMBED_NO_PROCESS=ON` links and passes the
+      runtime-only bytecode test.
+    - documented, reproducible iOS cross-compile recipe; compile of
+      `primec_embed_runtime_lib` for iOS arm64 verified on macOS.
+  - stop_rule: if the full compiler pipeline cannot drop process spawning
+    cleanly, ship runtime-only for iOS and record the gap.
+  - finished_at: 2026-10-01
+  - result: Linux-verifiable half done. `PRIMESTRUCT_EMBED_NO_PROCESS` (auto-on for iOS; `ProcessRunner` returns ENOSYS, `processSpawningAvailable()`, archive-import error explains it) and `PRIMESTRUCT_EMBED_ONLY` (no CLI tools/tests) added; `scripts/check_embed_no_process.sh` builds both configurations on Linux, runs the embed suites with spawning compiled out, scans the libraries for posix_spawn/fork/exec/system/popen/waitpid/mprotect/dlopen (none), and asserts the embed-only build defines no CLI or test targets; `no_process` test suite; `scripts/build_ios_embed.sh` (device + simulator slices, runtime and full XCFrameworks) and an iOS section in docs/Embedding.md. The macOS/Xcode verification moved to TODO-5348 (owner: human).
+

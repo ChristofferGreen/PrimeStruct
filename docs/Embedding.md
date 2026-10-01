@@ -132,6 +132,50 @@ Ship bytecode and runtime built from the same IR version; a version mismatch is
 rejected at load. `tests/unit/embed/embed_fixture_bytecode.h` pins the current
 format and the full-library test fails when it drifts.
 
+## iOS
+
+iOS forbids generating executable code in-process and spawning processes, and
+discourages heavy on-device compilation. The embedding libraries are built for
+that: the VM is a plain interpreter (no JIT, no executable memory), and process
+spawning is compiled out (`PRIMESTRUCT_EMBED_NO_PROCESS`, automatically on for iOS;
+archive import roots then report that they need process spawning, so extract
+archives and pass directories). Recommended shape:
+
+1. **Compile offline** on a desktop: `primec --emit=ir main.prime -o main.psir`
+   (or `ScriptEngine` + `Script::saveBytecode` with exports for a `PSBN` bundle).
+2. **Ship the bytes** in the app bundle.
+3. **Link only `PrimeStructEmbedRuntime.xcframework`** (VM + bytecode loader, ~200 KB
+   of code), `Script::loadBytecode`, `bind` the host functions the script
+   declares, and `run`/`call`.
+
+Compiling scripts on the device is possible with `PrimeStructEmbed.xcframework`,
+which adds the compiler; add the `stdlib` folder to the app bundle as a folder
+reference and call `ScriptEngine::setStdlibPath(<bundle path>/stdlib)`.
+
+Build: on macOS with Xcode 15+ run `scripts/build_ios_embed.sh` (deployment target
+15.0 by default; builds device and simulator slices, combines the static
+libraries with `libtool`, and creates both XCFrameworks under `build-ios/`).
+Equivalent manual configure for one slice:
+
+```sh
+cmake -S . -B build-ios-device -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos \
+      -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+      -DPRIMESTRUCT_EMBED_ONLY=ON -DPRIMESTRUCT_EMBED_NO_PROCESS=ON
+cmake --build build-ios-device --target primec_embed_runtime_lib primec_embed_lib
+```
+
+`PRIMESTRUCT_EMBED_ONLY` skips `primec`/`primevm` and the tests. Link the host with
+`-lc++`. Apple's App Review Guidelines (section 2.5.2) restrict downloading code that
+changes an app's features, so check them before loading scripts from the network.
+
+What is verified where: the Linux build with `PRIMESTRUCT_EMBED_NO_PROCESS=ON` and
+`PRIMESTRUCT_EMBED_ONLY=ON` is checked by `scripts/check_embed_no_process.sh` (builds,
+runs the embed test suites, and scans the libraries for `posix_spawn`, `fork`,
+`exec*`, `system`, `popen`, `waitpid`, `mprotect`, `dlopen`). The iOS cross-compile
+and XCFramework packaging themselves have not been run in this repository's CI
+(it has no macOS runner): run `scripts/build_ios_embed.sh` on a Mac and report any
+toolchain errors.
+
 ## Lifetime and threading
 
 - The embed API does not use the CLI's `ScopedCompileArena`: compiling and running
@@ -158,7 +202,7 @@ format and the full-library test fails when it drifts.
 ## Tests
 
 Suites live in `tests/unit/embed/`: `script_engine`, `diagnostics`, `exports`, `bytecode`
-(round trip, determinism, truncation/corruption fuzzing), `threads`, `lifetime`, `host_calls` (hand-built IR, VM
+(round trip, determinism, truncation/corruption fuzzing), `threads`, `lifetime`, `no_process`, `host_calls` (hand-built IR, VM
 and binding API), `host_language` (`[host]` source declarations, backend rejection, offline bytecode), and
 `runtime_only` (a separate binary linking only `primec_embed_runtime_lib`). The
 fixture programs are in `embed_fixture_programs.h`; their pinned bytecode is

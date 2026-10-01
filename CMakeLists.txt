@@ -2,6 +2,23 @@ cmake_minimum_required(VERSION 3.20)
 project(PrimeStruct LANGUAGES CXX)
 
 option(PRIMESTRUCT_BUILD_TESTS "Build PrimeStruct tests" ON)
+# Embedding-only builds (iOS, or any host that just links the libraries): skip the
+# CLI tools and tests, and exclude process spawning (posix_spawn/waitpid), which
+# iOS does not allow. Both default ON when cross-compiling for iOS.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(_primestruct_embed_default ON)
+else()
+  set(_primestruct_embed_default OFF)
+endif()
+option(PRIMESTRUCT_EMBED_ONLY
+       "Build only the embedding libraries (no primec/primevm, no tests)"
+       ${_primestruct_embed_default})
+option(PRIMESTRUCT_EMBED_NO_PROCESS
+       "Compile out process spawning; archive imports then report that it is unavailable"
+       ${_primestruct_embed_default})
+if(PRIMESTRUCT_EMBED_ONLY)
+  set(PRIMESTRUCT_BUILD_TESTS OFF)
+endif()
 option(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE
        "Enable ThreadSanitizer instrumentation and semantics smoke target"
        OFF)
@@ -614,6 +631,9 @@ add_library(primec_support_lib ${PRIMESTRUCT_SUPPORT_SOURCES})
 target_include_directories(primec_support_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+if(PRIMESTRUCT_EMBED_NO_PROCESS)
+  target_compile_definitions(primec_support_lib PUBLIC PRIMESTRUCT_NO_PROCESS=1)
+endif()
 primestructEnableWarnings(primec_support_lib)
 
 add_library(primec_frontend_lib ${PRIMESTRUCT_FRONTEND_SOURCES})
@@ -721,6 +741,7 @@ add_library(primec_lib INTERFACE)
 target_include_directories(primec_lib INTERFACE include)
 target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)
 
+if(NOT PRIMESTRUCT_EMBED_ONLY)
 add_executable(primec src/bin/main.cpp)
 target_link_libraries(primec PRIVATE primec_backend_registry_lib primec_ir_lib)
 if(PRIMESTRUCT_MIMALLOC_LINKED)
@@ -765,6 +786,7 @@ if(PRIMESTRUCT_MIMALLOC_LINKED)
   target_link_libraries(primevm PRIVATE mimalloc)
 endif()
 primestructEnableWarnings(primevm)
+endif()
 
 if(PRIMESTRUCT_BUILD_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -856,11 +878,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/embed/test_embed_host_language.cpp
     tests/unit/embed/test_embed_exports.cpp
     tests/unit/embed/test_embed_lifetime.cpp
+    tests/unit/embed/test_embed_no_process.cpp
   )
   target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
   target_link_libraries(PrimeStruct_embed_tests PRIVATE primec_embed_lib)
   # CLI-level host call tests shell out to primec (emit rejection, offline bytecode).
-  add_dependencies(PrimeStruct_embed_tests primec)
+  add_dependencies(PrimeStruct_embed_tests primec primevm)
   target_compile_definitions(PrimeStruct_embed_tests PRIVATE
     PRIMESTRUCT_TEST_PRIMEC_PATH="$<TARGET_FILE:primec>")
   primestructEnableWarnings(PrimeStruct_embed_tests)
@@ -920,6 +943,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_lifetime
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_no_process
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.no_process"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_no_process
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_threads
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>

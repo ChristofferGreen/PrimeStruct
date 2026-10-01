@@ -13,4 +13,8 @@ public:
 
 const ProcessRunner &systemProcessRunner();
 
+// False when this build cannot spawn processes (iOS, PRIMESTRUCT_EMBED_NO_PROCESS);
+// the system runner then returns ENOSYS for every command.
+bool processSpawningAvailable();
+
 } // namespace primec
