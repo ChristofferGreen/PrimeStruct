@@ -57236,3 +57236,37 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: Linux-verifiable half done. `PRIMESTRUCT_EMBED_NO_PROCESS` (auto-on for iOS; `ProcessRunner` returns ENOSYS, `processSpawningAvailable()`, archive-import error explains it) and `PRIMESTRUCT_EMBED_ONLY` (no CLI tools/tests) added; `scripts/check_embed_no_process.sh` builds both configurations on Linux, runs the embed suites with spawning compiled out, scans the libraries for posix_spawn/fork/exec/system/popen/waitpid/mprotect/dlopen (none), and asserts the embed-only build defines no CLI or test targets; `no_process` test suite; `scripts/build_ios_embed.sh` (device + simulator slices, runtime and full XCFrameworks) and an iOS section in docs/Embedding.md. The macOS/Xcode verification moved to TODO-5348 (owner: human).
 
+
+- [x] TODO-5349: Collection helper target table: inventory and parity guard
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-resolution
+  - scope: The same collection helper call (count/count_ref, at/at_unsafe, get/ref,
+    to_aos, push/reserve, map access) can resolve to different targets in
+    the AST dump, the semantic product, and the lowerer, depending on
+    receiver spelling (`soa<T>` vs `SoaVector<T>`, bare vs method vs slash-
+    method, same-path and root shadows). Hard-coded `/std/collections/...`
+    paths and `_ref` suffix checks live in about 80 `src/` files, and the
+    lowerer's 'materialized definition or builtin classification' exemptions
+    are spread over six places (TODO-4737 unified two). First step: write
+    the inventory (one table in docs/ listing every helper family x receiver
+    spelling x expected target) and add a parity test that compiles every
+    row and asserts `--dump-stage ast-semantic` spelling == semantic-product
+    `resolved_path` == lowered target.
+  - acceptance:
+    - `docs/CollectionHelperTargets.md` lists every helper family, receiver
+      spelling, and expected resolved target, generated or checked by
+      the test below.
+    - a doctest suite iterates the table, compiles each row, and asserts dump
+      spelling, semantic-product target, and lowering outcome agree; any
+      disagreement is a failing row, not a skipped one.
+    - every currently failing row is filed as its own TODO leaf (or fixed if
+      one-line) before this closes.
+  - stop_rule: do not change resolution behavior in this leaf; it only inventories and pins
+    current behavior. If more than 15 rows disagree, stop after filing them
+    and record the count here.
+  - finished_at: 2026-10-01
+  - result: `tests/unit/collection_parity/` (binary `PrimeStruct_collection_parity_tests`, ctest `PrimeStruct_collection_parity`): 52 rows (vector 18, array 5, string 2, map 10, soa 17 call shapes x spellings) compile in-process and are checked three ways - outcome/exit via the VM, published semantic-product collection targets for /main pinned in a generated header, and an ast-semantic explicit-path vs published-target agreement guard; `docs/CollectionHelperTargets.md` is generated from the same rows and checked up to date. Four disagreements found and filed: TODO-5369 (map method at/at_unsafe), 5370 (map bare contains fails lowering), 5371 (array method at), 5372 (soa<T> method publishes internal soaVector* targets); TODO-5373 extends the matrix to Reference receivers/_ref helpers.
+

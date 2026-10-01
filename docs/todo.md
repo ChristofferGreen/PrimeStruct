@@ -95,8 +95,12 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5349 | Collection helper target table: inventory and parity guard | ready | collection-resolution |
-| TODO-5350 | Route semantics and dump rewrites through one collection target table | blocked | collection-resolution |
+| TODO-5373 | Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers | ready | collection-defects |
+| TODO-5372 | `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper | ready | collection-defects |
+| TODO-5371 | array `.at(i)` method resolves to the vector helper and fails argument type checking | ready | collection-defects |
+| TODO-5370 | map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works | ready | collection-defects |
+| TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | ready | collection-defects |
+| TODO-5350 | Route semantics and dump rewrites through one collection target table | ready | collection-resolution |
 | TODO-5351 | Route lowerer builtin-classification exemptions through the collection target table | blocked | collection-resolution |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
@@ -119,7 +123,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5349 (track: collection-resolution): Collection helper target table: inventory and parity guard.
+- TODO-5350 (track: collection-resolution): Route semantics and dump rewrites through one collection target table.
 - TODO-5352 (track: semantics-structure): Measure and cut semantics header fan-out (SemanticsValidator.h).
 - TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 - TODO-5354 (track: test-infrastructure): Guard test registration: generated shards and an unregistered-test check.
@@ -130,7 +134,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5349 - Collection helper target table: inventory and parity guard.
+1. TODO-5350 - Route semantics and dump rewrites through one collection target table.
 2. TODO-5354 - Guard test registration: generated shards and an unregistered-test check.
 3. TODO-5355 - Ban wall-clock comparisons in tests.
 4. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
@@ -144,7 +148,7 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Collection resolution: TODO-5349 -> 5350 -> 5351
+- Collection resolution: TODO-5350 -> 5351; defects 5369-5373
 - Semantics structure: TODO-5352, TODO-5353
 - Test infrastructure: TODO-5354, TODO-5355, TODO-5357 (after 5354), TODO-5356 (deferred)
 - Compiler state: TODO-5358 -> 5359 -> 5360
@@ -184,41 +188,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
 
-- [ ] TODO-5349: Collection helper target table: inventory and parity guard
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - scope: The same collection helper call (count/count_ref, at/at_unsafe, get/ref,
-    to_aos, push/reserve, map access) can resolve to different targets in
-    the AST dump, the semantic product, and the lowerer, depending on
-    receiver spelling (`soa<T>` vs `SoaVector<T>`, bare vs method vs slash-
-    method, same-path and root shadows). Hard-coded `/std/collections/...`
-    paths and `_ref` suffix checks live in about 80 `src/` files, and the
-    lowerer's 'materialized definition or builtin classification' exemptions
-    are spread over six places (TODO-4737 unified two). First step: write
-    the inventory (one table in docs/ listing every helper family x receiver
-    spelling x expected target) and add a parity test that compiles every
-    row and asserts `--dump-stage ast-semantic` spelling == semantic-product
-    `resolved_path` == lowered target.
-  - acceptance:
-    - `docs/CollectionHelperTargets.md` lists every helper family, receiver
-      spelling, and expected resolved target, generated or checked by
-      the test below.
-    - a doctest suite iterates the table, compiles each row, and asserts dump
-      spelling, semantic-product target, and lowering outcome agree; any
-      disagreement is a failing row, not a skipped one.
-    - every currently failing row is filed as its own TODO leaf (or fixed if
-      one-line) before this closes.
-  - stop_rule: do not change resolution behavior in this leaf; it only inventories and pins
-    current behavior. If more than 15 rows disagree, stop after filing them
-    and record the count here.
-
 - [ ] TODO-5350: Route semantics and dump rewrites through one collection target table
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5349
+  - status: ready
   - created_at: 2026-10-01
   - phase: Compiler structure
   - parallel_track: collection-resolution
@@ -621,3 +593,94 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: no semantic edits to spec text; if a section's classification is unclear,
     leave it in the index file.
 
+- [ ] TODO-5369: map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: docs/PrimeStruct.md (stdlib reference, map section) lists
+    `.at()`/`.at_unsafe()` as supported map methods, but `[map<i32, i32>]
+    m{...}` `m.at(2i32)` fails semantics with `unknown call target: /map/at`
+    while bare `at(m, 2i32)` works. Pinned by the `map at method` and `map
+    at_unsafe method` rows of docs/CollectionHelperTargets.md.
+  - acceptance:
+    - either make the method forms resolve to the same published target as the
+      bare forms (`/std/collections/map/at`,
+      `/std/collections/map/at_unsafe`) and flip the two rows to `ok`,
+      or, if the methods are intentionally unsupported, correct
+      docs/PrimeStruct.md and replace the diagnostic with one that names
+      the supported spelling.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+
+- [ ] TODO-5370: map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: bare `contains(m, 2i32)` publishes `/std/collections/map/contains` yet
+    lowering fails with `only supports arithmetic/comparison/clamp/...`
+    (call=/contains); the method form of the same helper lowers and runs.
+    Pinned by the `map contains bare` row. This is the canonical 'published
+    target has no lowered definition' class from TODO-4737.
+  - acceptance:
+    - `contains(m, k)` returns the same value as `m.contains(k)` in the VM and
+      native backends; row flipped to `ok`.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+
+- [ ] TODO-5371: array `.at(i)` method resolves to the vector helper and fails argument type checking
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: `a.at(1i32)` on `array<i32>` fails with `argument type mismatch for
+    /std/collections/vector/at`, while bare `at(a, 1i32)` publishes
+    `/array/at` and works. The method form on an array should publish
+    `/array/at` like the bare form. Pinned by the `array at method` row.
+  - acceptance:
+    - `a.at(i)` and `a.at_unsafe(i)` on arrays publish and lower `/array/at` /
+      `/array/at_unsafe`; row flipped to `ok`.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+
+- [ ] TODO-5372: `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: for a `soa<Particle>` receiver, `values.count()` and `values.get(i)` publish
+    `/std/collections/soa/soaVectorCount` / `soaVectorGet`, while the bare
+    spelling and the `SoaVector<T>` method spelling publish the public
+    `/std/collections/soa/count` / `get`. Pinned by the `soa count
+    method(soa<T>)` and `soa get method(soa<T>)` rows. Decide whether
+    publishing the internal name is intended (then document it in the
+    matrix) or a defect.
+  - acceptance:
+    - one published target per helper regardless of spelling, or an explicit
+      documented reason in docs/CollectionHelperTargets.md for the
+      difference.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+
+- [ ] TODO-5373: Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: docs/CollectionHelperTargets.md covers by-value receivers only. Add rows for
+    `Reference<vector<T>>`, `Reference<map<K,V>>`,
+    `Reference<soa<T>>`/`SoaVector<T>` receivers and the `*_ref` helpers
+    (`count_ref`, `get_ref`, `ref_ref`, `at_ref`, ...) with their correct
+    borrow syntax (take it from existing compile-run tests; a first probe
+    with `location(v)` was rejected), so TODO-5350/5351 cannot regress them.
+  - acceptance:
+    - the matrix includes at least count/at/get/ref/push per family with
+      borrowed receivers; new disagreements are filed as defects.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: do not change resolution behavior; only add rows and file defects.

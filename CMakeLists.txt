@@ -834,6 +834,27 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
   primestructEnableWarnings(PrimeStruct_misc_tests)
 
+  # Collection helper target parity matrix (TODO-5349): dump spelling vs published
+  # semantic-product targets vs lowering/VM behavior for every helper call shape.
+  add_executable(PrimeStruct_collection_parity_tests
+    tests/unit/test_main.cpp
+    tests/unit/collection_parity/test_collection_helper_parity.cpp
+  )
+  target_include_directories(PrimeStruct_collection_parity_tests PRIVATE third_party ${CMAKE_SOURCE_DIR}
+                             tests/unit/collection_parity)
+  target_compile_definitions(PrimeStruct_collection_parity_tests PRIVATE
+                             PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  target_link_libraries(PrimeStruct_collection_parity_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_runtime_lib)
+  primestructEnableWarnings(PrimeStruct_collection_parity_tests)
+  add_test(
+    NAME PrimeStruct_collection_parity
+    COMMAND $<TARGET_FILE:PrimeStruct_collection_parity_tests>
+            "--test-suite=primestruct.collection_parity"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_collection_parity
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+
   add_executable(PrimeStruct_compile_time_tests
     tests/unit/test_main.cpp
     tests/unit/compile_time/test_compile_time_callable.cpp
