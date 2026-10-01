@@ -209,7 +209,8 @@ ScriptResult Script::run(const std::vector<std::string> &args) const {
 
 bool Script::callRaw(std::string_view name,
                      const std::vector<HostType> &argumentTypes,
-                     const std::vector<uint64_t> &arguments,
+                     const std::vector<uint64_t> &argumentSlots,
+                     const std::vector<std::string> &strings,
                      HostType returnType,
                      uint64_t &result,
                      std::string &error) const {
@@ -234,6 +235,27 @@ bool Script::callRaw(std::string_view name,
     error = "exported function " + describeSignature(entry->name, entry->signature) + " called as " +
             describeTypes(argumentTypes, returnType);
     return false;
+  }
+
+  // String arguments live in a per-call copy of the module whose string table
+  // has them appended; the argument slot becomes the string's index there.
+  std::vector<uint64_t> arguments = argumentSlots;
+  IrModule patched;
+  const IrModule *moduleToRun = &entry->module->ir;
+  for (size_t i = 0; i < argumentTypes.size(); ++i) {
+    if (argumentTypes[i] != HostType::String) {
+      continue;
+    }
+    if (arguments[i] >= strings.size()) {
+      error = "internal error: string argument out of range";
+      return false;
+    }
+    if (moduleToRun != &patched) {
+      patched = entry->module->ir;
+      moduleToRun = &patched;
+    }
+    arguments[i] = patched.stringTable.size();
+    patched.stringTable.push_back(strings[static_cast<size_t>(argumentSlots[i])]);
   }
 
   VmHostFunctions functions = toVmHostFunctions(hostBindings_);
@@ -264,7 +286,7 @@ bool Script::callRaw(std::string_view name,
   Vm vm;
   uint64_t exitValue = 0;
   std::string vmError;
-  if (!vm.execute(entry->module->ir, exitValue, vmError, views, functions)) {
+  if (!vm.execute(*moduleToRun, exitValue, vmError, views, functions)) {
     error = "VM error: " + vmError;
     return false;
   }

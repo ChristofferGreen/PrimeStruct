@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -293,6 +294,159 @@ TEST_CASE("exports work from several threads on one script") {
   for (size_t t = 0; t < results.size(); ++t) {
     CHECK(results[t] == static_cast<int>(t) * 50 + 49 * 50 / 2);
   }
+}
+
+namespace {
+const char *StringLibrary = R"(
+[return<int>]
+count_chars([string] text) {
+  return(text.count())
+}
+
+[host return<void>]
+host_say([string] text) {
+}
+
+[return<void>]
+speak([string] text, [i32] times) {
+  [mut] i{0i32}
+  while(i < times) {
+    host_say(text)
+    i = i + 1i32
+  }
+}
+
+[return<int>]
+mixed([i32] a, [string] left, [f64] scale, [string] right) {
+  return(a + left.count() * 10i32 + right.count() * 100i32 + convert<i32>(scale))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+
+ScriptEngine makeStringEngine() {
+  ScriptEngine engine;
+  engine.exportFunction<int32_t(std::string_view)>("count_chars");
+  engine.exportFunction<void(std::string_view, int32_t)>("speak");
+  engine.exportFunction<int32_t(int32_t, std::string_view, double, std::string_view)>("mixed");
+  return engine;
+}
+
+Script compileStringLibrary() {
+  const auto script = makeStringEngine().compileSource("/exports_strings.prime", StringLibrary);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  return script;
+}
+} // namespace
+
+TEST_CASE("exports accept string arguments of every C++ string type") {
+  const auto script = compileStringLibrary();
+  CHECK(script.call<int32_t>("count_chars", "hello").value == 5);
+  CHECK(script.call<int32_t>("count_chars", std::string("four")).value == 4);
+  CHECK(script.call<int32_t>("count_chars", std::string_view("sixsix")).value == 6);
+  const std::string owned = "heap string";
+  CHECK(script.call<int32_t>("count_chars", owned).value == 11);
+}
+
+TEST_CASE("an exported string argument can be forwarded to a host function") {
+  auto script = compileStringLibrary();
+  std::vector<std::string> said;
+  script.bind("host_say", [&said](std::string_view text) { said.emplace_back(text); });
+  const auto result = script.call<void>("speak", "hi there", 3);
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(said == std::vector<std::string>{"hi there", "hi there", "hi there"});
+  said.clear();
+  CHECK(script.call<void>("speak", std::string("again"), 1).ok);
+  CHECK(said == std::vector<std::string>{"again"});
+  const auto unbound = compileStringLibrary().call<void>("speak", "x", 1);
+  CHECK_FALSE(unbound.ok);
+  CHECK(unbound.diagnostics.find("unbound host function: host_say") != std::string::npos);
+}
+
+TEST_CASE("exports handle empty, binary, unicode and very long strings") {
+  const auto script = compileStringLibrary();
+  CHECK(script.call<int32_t>("count_chars", "").value == 0);
+  const std::string withNul("a\0b\0", 4);
+  CHECK(script.call<int32_t>("count_chars", withNul).value == 4);
+  CHECK(script.call<int32_t>("count_chars", "héllo").value == 6);  // UTF-8 bytes
+  const std::string big(200000, 'x');
+  const auto result = script.call<int32_t>("count_chars", big);
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.value == 200000);
+}
+
+TEST_CASE("exports mix string and numeric arguments") {
+  const auto script = compileStringLibrary();
+  const auto result = script.call<int32_t>("mixed", 1, "ab", 3.9, "xyz");
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.value == 1 + 2 * 10 + 3 * 100 + 3);
+}
+
+TEST_CASE("exports with strings are repeatable and do not retain earlier arguments") {
+  const auto script = compileStringLibrary();
+  for (int i = 0; i < 100; ++i) {
+    const std::string text(static_cast<size_t>(i), 'q');
+    const auto result = script.call<int32_t>("count_chars", text);
+    REQUIRE(result.ok);
+    CHECK(result.value == i);
+  }
+}
+
+TEST_CASE("exports reject a string where a number is declared and the reverse") {
+  const auto script = compileStringLibrary();
+  const auto wrong = script.call<int32_t>("count_chars", 5);
+  CHECK_FALSE(wrong.ok);
+  CHECK(wrong.diagnostics.find("count_chars(string) -> i32 called as (i32) -> i32") != std::string::npos);
+  const auto add = compileLibrary().call<int32_t>("add", "1", "2");
+  CHECK_FALSE(add.ok);
+  CHECK(add.diagnostics.find("called as (string, string) -> i32") != std::string::npos);
+}
+
+TEST_CASE("string exports are listed with their signature") {
+  const auto script = compileStringLibrary();
+  CHECK(script.exportedFunctions()[0] == "count_chars(string) -> i32");
+  CHECK(script.exportedFunctions()[2] == "mixed(i32, string, f64, string) -> i32");
+  CHECK(script.exportedFunctions()[1] == "speak(string, i32) -> void");
+}
+
+TEST_CASE("string exports survive a bundle round trip and run on several threads") {
+  const auto script = compileStringLibrary();
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE_MESSAGE(script.saveBytecode(bytes, error), error);
+  const auto loaded = Script::loadBytecode(bytes);
+  REQUIRE_MESSAGE(loaded.valid(), loaded.diagnostics());
+  std::vector<int> results(6, -1);
+  std::vector<std::thread> threads;
+  for (size_t t = 0; t < results.size(); ++t) {
+    threads.emplace_back([&, t] {
+      int total = 0;
+      for (int i = 0; i < 40; ++i) {
+        total += loaded.call<int32_t>("count_chars", std::string(t + static_cast<size_t>(i), 'z')).value;
+      }
+      results[t] = total;
+    });
+  }
+  for (auto &thread : threads) {
+    thread.join();
+  }
+  for (size_t t = 0; t < results.size(); ++t) {
+    CHECK(results[t] == static_cast<int>(t) * 40 + 39 * 40 / 2);
+  }
+}
+
+TEST_CASE("the original module is untouched by string calls") {
+  const auto script = compileStringLibrary();
+  std::vector<uint8_t> before;
+  std::vector<uint8_t> after;
+  std::string error;
+  REQUIRE(script.saveBytecode(before, error));
+  CHECK(script.call<int32_t>("count_chars", "some text").ok);
+  REQUIRE(script.saveBytecode(after, error));
+  CHECK(before == after);
 }
 
 TEST_SUITE_END();

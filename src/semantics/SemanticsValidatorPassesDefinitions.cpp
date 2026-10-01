@@ -225,6 +225,11 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         case ReturnKind::Bool:
         case ReturnKind::Void:
           break;
+        case ReturnKind::String:
+          if (isEngineArgumentHostName(def.name)) {
+            break;
+          }
+          return failHost("host definition return type must be i32, i64, u64, f32, f64, bool, or void");
         default:
           return failHost("host definition return type must be i32, i64, u64, f32, f64, bool, or void");
       }

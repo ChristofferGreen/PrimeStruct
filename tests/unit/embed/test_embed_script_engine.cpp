@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -49,12 +50,13 @@ TEST_CASE("embed regenerates fixture bytecode when asked") {
   ScriptEngine bundleEngine;
   bundleEngine.exportFunction<int32_t(int32_t, int32_t)>("add");
   bundleEngine.exportFunction<double(int32_t, double)>("scale");
+  bundleEngine.exportFunction<int32_t(std::string_view)>("count_chars");
   const auto bundle = bundleEngine.compileSource("/fixture/bundle.prime", embedBundleSource());
   REQUIRE_MESSAGE(bundle.valid(), bundle.diagnostics());
   std::vector<uint8_t> bundleBytes;
   std::string bundleError;
   REQUIRE(bundle.saveBytecode(bundleBytes, bundleError));
-  out << "\n// Bundle of embedBundleSource() with exports add and scale.\n"
+  out << "\n// Bundle of embedBundleSource() with exports add, scale and count_chars.\n"
          "inline const std::vector<uint8_t> &embedBundleBytecode() {\n"
          "  static const std::vector<uint8_t> bytes = {\n";
   for (size_t i = 0; i < bundleBytes.size(); ++i) {
@@ -108,6 +110,7 @@ TEST_CASE("embed bundle fixture matches a fresh compile") {
   ScriptEngine engine;
   engine.exportFunction<int32_t(int32_t, int32_t)>("add");
   engine.exportFunction<double(int32_t, double)>("scale");
+  engine.exportFunction<int32_t(std::string_view)>("count_chars");
   const auto script = engine.compileSource("/fixture/bundle.prime", embedBundleSource());
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
   std::vector<uint8_t> bytes;

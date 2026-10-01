@@ -3299,7 +3299,8 @@ main() {
 Rules:
 - The return type is explicit (`return<T>`) and, like every parameter, one of
   `i32` (`int`), `i64`, `u64`, `f32` (`float`), `f64`, or `bool` (parameters may
-  also be `string`; `void` is allowed for the return, strings are not). Parameters cannot be `mut` or have defaults, and host definitions cannot
+  also be `string`; `void` is allowed for the return, strings are not except for the
+  engine-reserved `__psarg_*` wrapper functions used by `Script::call`). Parameters cannot be `mut` or have defaults, and host definitions cannot
   be generic, struct members, or have a body.
 - Each call lowers to `CallHost` (arguments on the stack, `imm` = index into the
   module's host import table; the import name is the definition path without the

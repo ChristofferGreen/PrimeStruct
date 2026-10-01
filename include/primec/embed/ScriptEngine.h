@@ -40,7 +40,8 @@ public:
 
 private:
   template <class R, class... A> void exportFunctionTyped(std::string name, R (*)(A...)) {
-    exportFunction(std::move(name), {detail::HostTypeOf<A>::value...}, detail::HostTypeOf<R>::value);
+    exportFunction(std::move(name), {detail::HostTypeOf<std::remove_cvref_t<A>>::value...},
+                   detail::HostTypeOf<R>::value);
   }
 
   struct ExportDecl {

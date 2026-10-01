@@ -100,20 +100,26 @@ std::string exportWrapperSource(const std::string &name, const ExportSignature &
     seen.push_back(type);
     const std::string spelling = detail::hostTypeSpelling(type);
     source += "[host return<" + spelling + ">]\n" + detail::ExportArgPrefix + spelling + "([i32] index) {\n}\n\n";
+    // (string arguments: the host returns the index of a per-call appended string)
   }
   const std::string returnSpelling = detail::hostTypeSpelling(signature.returnType);
   if (signature.returnType != HostType::Void) {
     source += "[host return<void>]\n" + std::string(detail::ExportResultPrefix) + returnSpelling + "([" +
               returnSpelling + "] value) {\n}\n\n";
   }
+  // Arguments go through local bindings: the VM lowering can index into string
+  // bindings but not into the result of a call expression.
+  std::string locals;
   std::string call = name + "(";
   for (size_t i = 0; i < signature.parameters.size(); ++i) {
+    const std::string spelling = detail::hostTypeSpelling(signature.parameters[i]);
+    locals += "  [" + spelling + "] __psa" + std::to_string(i) + "{" + detail::ExportArgPrefix + spelling + "(" +
+              std::to_string(i) + "i32)}\n";
     call += (i == 0 ? "" : ", ");
-    call += std::string(detail::ExportArgPrefix) + detail::hostTypeSpelling(signature.parameters[i]) + "(" +
-            std::to_string(i) + "i32)";
+    call += "__psa" + std::to_string(i);
   }
   call += ")";
-  source += "[return<int>]\n__ps_call_" + std::to_string(index) + "() {\n";
+  source += "[return<int>]\n__ps_call_" + std::to_string(index) + "() {\n" + locals;
   source += signature.returnType == HostType::Void
                 ? "  " + call + "\n"
                 : "  " + std::string(detail::ExportResultPrefix) + returnSpelling + "(" + call + ")\n";

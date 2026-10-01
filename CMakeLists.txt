@@ -855,6 +855,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/embed/test_embed_host_calls.cpp
     tests/unit/embed/test_embed_host_language.cpp
     tests/unit/embed/test_embed_exports.cpp
+    tests/unit/embed/test_embed_lifetime.cpp
   )
   target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
   target_link_libraries(PrimeStruct_embed_tests PRIVATE primec_embed_lib)
@@ -910,6 +911,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_exports
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_lifetime
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.lifetime"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_lifetime
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_threads
@@ -1511,6 +1520,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
     target_include_directories(PrimeStruct_semantics_tsan_smoke PRIVATE third_party ${CMAKE_SOURCE_DIR})
     target_link_libraries(PrimeStruct_semantics_tsan_smoke PRIVATE primec_ir_lib)
     primestructEnableWarnings(PrimeStruct_semantics_tsan_smoke)
+
+    add_executable(PrimeStruct_embed_tsan_smoke
+      tests/unit/test_main.cpp
+      tests/unit/embed/test_embed_tsan_smoke.cpp
+    )
+    target_include_directories(PrimeStruct_embed_tsan_smoke PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
+    target_link_libraries(PrimeStruct_embed_tsan_smoke PRIVATE primec_embed_lib)
+    primestructEnableWarnings(PrimeStruct_embed_tsan_smoke)
+    add_test(
+      NAME PrimeStruct_embed_tsan_smoke
+      COMMAND $<TARGET_FILE:PrimeStruct_embed_tsan_smoke>
+              "--test-suite=primestruct.embed.tsan_smoke"
+              "--order-by=file"
+    )
+    set_tests_properties(
+      PrimeStruct_embed_tsan_smoke
+      PROPERTIES TIMEOUT 600 LABELS "optional-ci;tsan")
 
     add_test(
       NAME PrimeStruct_semantics_tsan_smoke

@@ -28,6 +28,9 @@ template <> struct HostTypeOf<bool> { static constexpr HostType value = HostType
 // Strings are accepted as host function parameters only.
 template <> struct HostTypeOf<std::string_view> { static constexpr HostType value = HostType::String; };
 template <> struct HostTypeOf<std::string> { static constexpr HostType value = HostType::String; };
+template <> struct HostTypeOf<const char *> { static constexpr HostType value = HostType::String; };
+
+template <class T> inline constexpr bool IsStringLike = HostTypeOf<std::remove_cvref_t<T>>::value == HostType::String;
 
 // Raw VM slot <-> C++ value (i32 is sign-extended, floats are bit patterns).
 template <class T> T fromSlot(uint64_t slot) {
@@ -63,6 +66,17 @@ template <class T> uint64_t toSlot(T value) {
     return std::bit_cast<uint64_t>(value);
   } else {
     return value ? 1u : 0u;
+  }
+}
+
+// Slot for one call argument: strings are copied into `strings` and the slot is
+// their index there; everything else uses the normal VM slot encoding.
+template <class T> uint64_t callArgumentSlot(const T &value, std::vector<std::string> &strings) {
+  if constexpr (IsStringLike<T>) {
+    strings.emplace_back(std::string_view(value));
+    return strings.size() - 1;
+  } else {
+    return toSlot<T>(value);
   }
 }
 
@@ -178,6 +192,8 @@ public:
   // double, and bool; the call's types must match the export's declaration.
   //   engine.exportFunction<double(int32_t, double)>("scale");
   //   auto r = script.call<double>("scale", 3, 2.5);   // r.ok, r.value
+  // String arguments (std::string_view, std::string, const char *) are copied
+  // into the call; results cannot be strings.
   template <class R, class... A> CallResult<R> call(std::string_view name, A... args) const;
 
   // Exports available for `call`, rendered like "scale(i32, f64) -> f64".
@@ -215,9 +231,12 @@ public:
 
 private:
   friend class ScriptEngine;
+  // `arguments` holds raw slots; a String argument's slot is an index into
+  // `strings` (the copied text).
   bool callRaw(std::string_view name,
                const std::vector<HostType> &argumentTypes,
                const std::vector<uint64_t> &arguments,
+               const std::vector<std::string> &strings,
                HostType returnType,
                uint64_t &result,
                std::string &error) const;
@@ -230,14 +249,13 @@ private:
 };
 
 template <class R, class... A> CallResult<R> Script::call(std::string_view name, A... args) const {
-  static_assert(((detail::HostTypeOf<A>::value != HostType::String) && ...),
-                "string arguments to exported functions are not supported yet");
   static_assert(detail::HostTypeOf<R>::value != HostType::String, "exported functions cannot return strings");
   CallResult<R> out;
-  const std::vector<HostType> types{detail::HostTypeOf<A>::value...};
-  const std::vector<uint64_t> slots{detail::toSlot<A>(args)...};
+  std::vector<std::string> strings;
+  const std::vector<HostType> types{detail::HostTypeOf<std::remove_cvref_t<A>>::value...};
+  const std::vector<uint64_t> slots{detail::callArgumentSlot(args, strings)...};
   uint64_t result = 0;
-  out.ok = callRaw(name, types, slots, detail::HostTypeOf<R>::value, result, out.diagnostics);
+  out.ok = callRaw(name, types, slots, strings, detail::HostTypeOf<R>::value, result, out.diagnostics);
   if constexpr (!std::is_void_v<R>) {
     if (out.ok) {
       out.value = detail::fromSlot<R>(result);

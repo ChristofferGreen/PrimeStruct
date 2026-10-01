@@ -96,68 +96,24 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5343 | iOS-safe embed build: no process spawning, bundled stdlib, cross-compile check | ready | embedding-ios |
-| TODO-5347 | C++ to script string arguments for exported functions | ready | embedding-values |
-| TODO-5341 | Embedding lifetime: arena scope, reentrancy, compile-once run-many | blocked | embedding-lifetime |
 
 ### Ready Now
 
-- TODO-5347 (track: embedding-values, surface: `src/embed/`, reserved `__psarg_str`): string arguments to exports.
 - TODO-5343 (track: embedding-ios, surface: `src/support/ProcessRunner.cpp`, `ImportResolver`, CMake option, iOS toolchain recipe): iOS-safe build.
 
 ### Immediate Next 10
 
-1. TODO-5347 - strings into exports.
-2. TODO-5341 - lifetime and reuse hardening.
-3. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
+1. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
 
 ### Priority Lanes
 
-- Embedding (top priority, user-set; must support iOS): TODO-5347 -> 5341
+- Embedding (top priority, user-set; must support iOS): TODO-5343
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10; 5340 follows 5345, 5341 follows 5340.
+Run `ready` leaves in the order listed under Immediate Next 10.
 
 ### Task Blocks
-
-- [ ] TODO-5347: C++ to script string arguments for exported functions
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Embedding
-  - parallel_track: embedding-values
-  - depends_on: TODO-5346
-  - scope: pass `std::string_view` arguments into exports (`fn([string]) -> i32`).
-    Per call, run a copy of the export's module whose string table has the
-    arguments appended; the wrapper fetches the index through the reserved
-    `__psarg_str` host function (the only host function allowed to return
-    `string`, reserved by the `__ps` prefix, which user host definitions may
-    not use). String results are not supported.
-  - acceptance:
-    - `Script::call<int32_t>("count_chars", "hello")` style call returns the
-      script's answer; embedded NUL and empty strings work; mismatch diagnosed.
-  - stop_rule: no string returns; if the per-call module copy is too slow for
-    large modules, record the cost and stop.
-
-- [ ] TODO-5341: Embedding lifetime - arena scope, reentrancy, compile-once run-many
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5340
-  - created_at: 2026-10-01
-  - phase: Embedding
-  - parallel_track: embedding-lifetime
-  - scope: the CLI wraps compile+run in a process-wide `ScopedCompileArena`
-    (see TODO-5233/5234/5235 notes in `docs/CompilerArenaAllocator.md`);
-    an embedded engine must own its arena lifetime safely, support several
-    engines and repeated `run`/`call` on one compiled `Script` without
-    recompiling, and document thread-safety (one `Script` per thread, or
-    guarded).
-  - acceptance:
-    - test compiles once and runs 1000 times with stable results and no
-      memory growth (RSS or allocation-counter bound).
-    - two engines alive at once on separate threads pass under TSAN smoke.
-  - stop_rule: if the arena is inherently process-global, document the
-    single-engine-per-process limit and stop rather than rewriting it.
 
 - [ ] TODO-5343: iOS-safe embed build - no process spawning, bundled stdlib, cross-compile check
   - owner: ai

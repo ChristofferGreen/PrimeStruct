@@ -130,6 +130,10 @@ public:
       error = "host function " + import.name + " failed" + (hostError.empty() ? "" : ": " + hostError);
       return false;
     }
+    if (import.returnKind == IrHostValueKind::String && result >= module.stringTable.size()) {
+      error = "host function " + import.name + " returned an invalid string index";
+      return false;
+    }
     stack.resize(base);
     switch (import.returnKind) {
     case IrHostValueKind::Void:

@@ -72,7 +72,15 @@ add compile time but calls are plain VM runs. A script with exports may omit
 `main`. `saveBytecode` then writes a `PSBN` bundle (all modules plus signatures)
 that `loadBytecode` restores in the runtime-only library, which can `call` the
 exports without a compiler. `Script::call` is safe to use from several threads
-on one `Script`. String arguments and results are not supported (TODO-5347).
+on one `Script`.
+
+String arguments (`std::string_view`, `std::string`, `const char *`) are copied into
+the call: the VM cannot create strings, so each call runs against a copy of the
+export's module whose string table has the arguments appended (the original
+module is never modified). The VM represents strings as table indices, so inside
+the script an argument string can be measured (`text.count()`), printed, and
+forwarded to host functions, but not indexed (`text.at(i)` needs a string whose
+bytes are known at compile time). String results are not supported.
 
 ## Calling the host from a script
 
@@ -124,10 +132,33 @@ Ship bytecode and runtime built from the same IR version; a version mismatch is
 rejected at load. `tests/unit/embed/embed_fixture_bytecode.h` pins the current
 format and the full-library test fails when it drifts.
 
+## Lifetime and threading
+
+- The embed API does not use the CLI's `ScopedCompileArena`: compiling and running
+  use the system allocator, so compiled `Script`s own ordinary heap memory and can
+  outlive the engine that produced them (or be copied, moved, and run on another
+  thread). Repeated compiles, failed compiles, `run`, and `call` do not grow
+  memory (`primestruct.embed.lifetime` checks resident-set growth over thousands
+  of iterations).
+- A compiled `Script` shares its immutable modules between copies. `run`,
+  `call`, `requiredHostFunctions`, `checkHostBindings`, and `saveBytecode` are
+  safe to call concurrently on one `Script`. `bind` mutates that `Script`'s own
+  binding table and must not run concurrently with its other methods; bind before
+  sharing, or give each thread its own copy.
+- Independent `ScriptEngine`s may compile on different threads at once, and a
+  compile yields the same bytecode no matter what was compiled before or
+  alongside it. One `ScriptEngine` is not safe to mutate (`addImportPath`,
+  `exportFunction`, `bind`) while another thread compiles with it.
+- Host callbacks run on the thread that called `run`/`call`; the engine adds no
+  locking around them.
+- ThreadSanitizer smoke: configure with `-DPRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE=ON`
+  and run `PrimeStruct_embed_tsan_smoke` (two engines compiling and running
+  concurrently, one script shared by several threads); it is clean.
+
 ## Tests
 
 Suites live in `tests/unit/embed/`: `script_engine`, `diagnostics`, `exports`, `bytecode`
-(round trip, determinism, truncation/corruption fuzzing), `threads`, `host_calls` (hand-built IR, VM
+(round trip, determinism, truncation/corruption fuzzing), `threads`, `lifetime`, `host_calls` (hand-built IR, VM
 and binding API), `host_language` (`[host]` source declarations, backend rejection, offline bytecode), and
 `runtime_only` (a separate binary linking only `primec_embed_runtime_lib`). The
 fixture programs are in `embed_fixture_programs.h`; their pinned bytecode is

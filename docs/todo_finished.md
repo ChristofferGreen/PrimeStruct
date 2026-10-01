@@ -57161,3 +57161,47 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: `ScriptEngine::exportFunction` + `Script::call<R>(name, args...)` (typed primitives, `CallResult`), generated wrapper entries using reserved `__psarg_*`/`__psret_*` host functions, one IR module per export, `PSBN` bytecode bundle (hostile-input hardened; partially decoded bundles never leave a valid script), runtime-only library calls bundle exports, scripts may omit main. 14-case exports suite + runtime-only bundle tests. Found and fixed a real embedding bug: `SourceLocationMapper`'s thread-local cache was keyed only by `ExpandedSource` address, so without a compile-arena scope a later compile at a reused address got stale source units (bytecode differed by compile history); `ExpandedSource` now carries a process-unique generation and the cache also keys on it and on the unit/segment counts. Also made the type-graph dump alias test ignore wall-clock `*_ms` timings (second flake of that class).
 
+
+- [x] TODO-5347: C++ to script string arguments for exported functions
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-values
+  - depends_on: TODO-5346
+  - scope: pass `std::string_view` arguments into exports (`fn([string]) -> i32`).
+    Per call, run a copy of the export's module whose string table has the
+    arguments appended; the wrapper fetches the index through the reserved
+    `__psarg_str` host function (the only host function allowed to return
+    `string`, reserved by the `__ps` prefix, which user host definitions may
+    not use). String results are not supported.
+  - acceptance:
+    - `Script::call<int32_t>("count_chars", "hello")` style call returns the
+      script's answer; embedded NUL and empty strings work; mismatch diagnosed.
+  - stop_rule: no string returns; if the per-call module copy is too slow for
+    large modules, record the cost and stop.
+  - finished_at: 2026-10-01
+  - result: `Script::call` accepts `std::string_view`/`std::string`/`const char *`; per-call module copy with arguments appended to the string table, fetched by the generated wrapper through the reserved `__psarg_string` host function (the only host function allowed to return `string`; the VM bounds-checks the returned index); wrapper binds arguments to locals. Limitation recorded in docs: argument strings can be counted, printed and forwarded to host functions but not indexed (`at` needs compile-time-known strings). Tests: empty/NUL/UTF-8/200k strings, mixed args, forwarding to a host function, signature mismatch, original module untouched, threads, runtime-only bundle fixture with `count_chars`.
+
+
+- [x] TODO-5341: Embedding lifetime - arena scope, reentrancy, compile-once run-many
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-lifetime
+  - scope: the CLI wraps compile+run in a process-wide `ScopedCompileArena`
+    (see TODO-5233/5234/5235 notes in `docs/CompilerArenaAllocator.md`);
+    an embedded engine must own its arena lifetime safely, support several
+    engines and repeated `run`/`call` on one compiled `Script` without
+    recompiling, and document thread-safety (one `Script` per thread, or
+    guarded).
+  - acceptance:
+    - test compiles once and runs 1000 times with stable results and no
+      memory growth (RSS or allocation-counter bound).
+    - two engines alive at once on separate threads pass under TSAN smoke.
+  - stop_rule: if the arena is inherently process-global, document the
+    single-engine-per-process limit and stop rather than rewriting it.
+  - finished_at: 2026-10-01
+  - result: the embed API deliberately does not use `ScopedCompileArena` (compiled Scripts own system-heap memory, survive their engine, move across threads); `primestruct.embed.lifetime` (7 cases): 1000 runs, 1000 string/host exported calls, 200 repeated and 200 failed compiles each stay within an 8 MB resident-set bound, engines/scripts coexist and outlive each other, concurrent engines produce byte-identical bytecode; `PrimeStruct_embed_tsan_smoke` (built with `PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE=ON`) is TSAN-clean for two concurrent engines and a shared Script. The one real defect this surfaced (stale SourceLocationMapper cache) was fixed under TODO-5340. Threading/lifetime contract documented in docs/Embedding.md.
+
