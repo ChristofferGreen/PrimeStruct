@@ -38,6 +38,13 @@ bool appendString(std::vector<uint8_t> &out,
   return true;
 }
 
+// Every serialized element occupies at least one byte, so a count larger than
+// the bytes left is corrupt. Checking before `reserve` keeps hostile counts from
+// forcing huge allocations (std::bad_alloc) while loading untrusted bytecode.
+bool countFitsRemaining(const std::vector<uint8_t> &data, size_t offset, uint64_t count) {
+  return offset <= data.size() && count <= data.size() - offset;
+}
+
 bool readU32(const std::vector<uint8_t> &data, size_t &offset, uint32_t &outValue) {
   if (offset + 4 > data.size()) {
     return false;
@@ -239,6 +246,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     error = "truncated IR string table";
     return false;
   }
+  if (!countFitsRemaining(data, offset, stringCount)) {
+    error = "truncated IR string table";
+    return false;
+  }
   out.stringTable.reserve(stringCount);
   for (uint32_t i = 0; i < stringCount; ++i) {
     std::string text;
@@ -249,6 +260,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
   }
   uint32_t structCount = 0;
   if (!readU32(data, offset, structCount)) {
+    error = "truncated IR struct layout count";
+    return false;
+  }
+  if (!countFitsRemaining(data, offset, structCount)) {
     error = "truncated IR struct layout count";
     return false;
   }
@@ -270,6 +285,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     layout.name = std::move(name);
     layout.totalSizeBytes = totalSize;
     layout.alignmentBytes = alignment;
+    if (!countFitsRemaining(data, offset, fieldCount)) {
+      error = "truncated IR struct field count";
+      return false;
+    }
     layout.fields.reserve(fieldCount);
     for (uint32_t fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex) {
       std::string fieldName;
@@ -321,6 +340,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     }
     out.structLayouts.push_back(std::move(layout));
   }
+  if (!countFitsRemaining(data, offset, funcCount)) {
+    error = "truncated IR function count";
+    return false;
+  }
   out.functions.reserve(funcCount);
   for (uint32_t i = 0; i < funcCount; ++i) {
     std::string name;
@@ -353,6 +376,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     fn.metadata.schedulingScope = static_cast<IrSchedulingScope>(schedulingScope);
     fn.metadata.instrumentationFlags = instrumentationFlags;
     fn.parameterCount = parameterCount;
+    if (!countFitsRemaining(data, offset, localDebugCount)) {
+      error = "truncated IR local debug metadata count";
+      return false;
+    }
     fn.localDebugSlots.reserve(localDebugCount);
     for (uint32_t localIndex = 0; localIndex < localDebugCount; ++localIndex) {
       uint32_t slotIndex = 0;
@@ -390,6 +417,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       error = "truncated IR instruction count";
       return false;
     }
+    if (!countFitsRemaining(data, offset, instCount)) {
+      error = "truncated IR instruction count";
+      return false;
+    }
     fn.instructions.reserve(instCount);
     for (uint32_t instIndex = 0; instIndex < instCount; ++instIndex) {
       if (offset >= data.size()) {
@@ -420,6 +451,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
   }
   uint32_t sourceMapCount = 0;
   if (!readU32(data, offset, sourceMapCount)) {
+    error = "truncated IR instruction source map count";
+    return false;
+  }
+  if (!countFitsRemaining(data, offset, sourceMapCount)) {
     error = "truncated IR instruction source map count";
     return false;
   }

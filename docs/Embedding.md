@@ -49,3 +49,17 @@ Bytecode is the serialized `IrModule` (magic `RISP`, then a format version).
 Ship bytecode and runtime built from the same IR version; a version mismatch is
 rejected at load. `tests/unit/embed/embed_fixture_bytecode.h` pins the current
 format and the full-library test fails when it drifts.
+
+## Tests
+
+Suites live in `tests/unit/embed/`: `script_engine`, `diagnostics`, `bytecode`
+(round trip, determinism, truncation/corruption fuzzing), `threads`, and
+`runtime_only` (a separate binary linking only `primec_embed_runtime_lib`). The
+fixture programs are in `embed_fixture_programs.h`; their pinned bytecode is
+regenerated with
+`PRIMESTRUCT_EMBED_REGEN_FIXTURES=<repo>/tests/unit/embed/embed_fixture_bytecode.h
+build-release/PrimeStruct_embed_tests --test-case="*regenerates*"`.
+
+`loadBytecode` is hardened against corrupt input (counts are bounded by the
+remaining bytes, found by the corruption fuzzing), but it validates structure,
+not behavior: do not run bytecode from an untrusted source.

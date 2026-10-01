@@ -188,10 +188,14 @@ TEST_CASE("ir deserialization rejects unknown opcode") {
   offset += 4;     // struct count
   offset += 4 + nameLen; // function name length + bytes
   offset += 8 + 8 + 4 + 4; // effect mask, capability mask, scheduling, instrumentation
+  offset += 4;          // parameter count
   offset += 4;          // local debug metadata count
   offset += 4;          // instruction count
   REQUIRE(offset < data.size());
 
+  // Previously this skipped the parameter count and so corrupted the
+  // instruction count instead of the opcode; it only passed because an
+  // oversized count happened to hit an unsupported opcode later.
   data[offset] = 0xFF;
 
   primec::IrModule decoded;

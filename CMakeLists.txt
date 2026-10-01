@@ -799,6 +799,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_embed_tests
     tests/unit/test_main.cpp
     tests/unit/embed/test_embed_script_engine.cpp
+    tests/unit/embed/test_embed_diagnostics.cpp
+    tests/unit/embed/test_embed_bytecode.cpp
+    tests/unit/embed/test_embed_threads.cpp
   )
   target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
   target_link_libraries(PrimeStruct_embed_tests PRIVATE primec_embed_lib)
@@ -810,6 +813,30 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_script_engine
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_diagnostics
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.diagnostics"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_diagnostics
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_bytecode
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.bytecode"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_bytecode
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_threads
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.threads"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_threads
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   # Links only the runtime-only embed library: proves precompiled bytecode runs
