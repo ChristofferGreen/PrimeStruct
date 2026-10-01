@@ -341,6 +341,21 @@ inline bool isResolvedPublishedKeyValueConstructorPath(const std::string &rawPat
            normalizedPath == experimentalCollectionConstructorPathLocal("map", "map"));
 }
 
+// Public wrapper constructors (the struct itself plus the single/pair
+// helpers); they allocate like the key/value constructors.
+inline bool isResolvedKeyValueWrapperConstructorPath(const std::string &rawPath) {
+  const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
+  for (std::string_view memberName :
+       {primec::collection_paths::kMapTypeName, std::string_view("mapSingle"),
+        std::string_view("mapPair")}) {
+    if (normalizedPath ==
+        primec::collection_paths::memberPath("map", memberName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 inline bool isResolvedKeyValueConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
   std::string memberName;

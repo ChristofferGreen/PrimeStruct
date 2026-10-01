@@ -814,4 +814,51 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("typed parameter default accepts public Map wrapper constructors") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[return<int> effects(heap_alloc)]
+countEmpty([Map<string, i32> mut] values{Map<string, i32>{}}) {
+  return(values.count())
+}
+
+[return<int> effects(heap_alloc)]
+countPair([Map<string, i32> mut] values{mapPair<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}) {
+  return(values.count())
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(plus(countEmpty(), countPair()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("parameter default still rejects non-constructor allocating calls") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+helper() {
+  return(1i32)
+}
+
+[return<int> effects(heap_alloc)]
+useDefault([i32] value{helper()}) {
+  return(value)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(useDefault())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
+}
+
 TEST_SUITE_END();

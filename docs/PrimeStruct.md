@@ -2514,7 +2514,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     command/value position when no stack value, import alias, or other visible callable makes the name ambiguous.
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`.
     Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms
-    (no name references).
+    (no name references). The key/value collection constructors (`mapNew`, `map<K, V>(...)`) and the public
+    `Map<K, V>` wrapper constructors (`Map<K, V>{}`, `mapSingle`, `mapPair`) are also accepted as defaults even though
+    they allocate; other allocating calls are rejected.
   - `{...}` holds runtime code for definition bodies and value blocks for binding initializers. Binding initializers
     evaluate the block and use its resulting value (last item or `return(value)`); value construction uses brace
     constructor forms, including multi-field construction (e.g., `[T] name{T{arg1, arg2}}`). `Type(...)` is ordinary

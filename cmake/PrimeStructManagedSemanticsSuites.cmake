@@ -157,7 +157,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.core"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 61
+  TOTAL_CASES 63
   SHARD_PREFIX "bindings_core"
 )
 

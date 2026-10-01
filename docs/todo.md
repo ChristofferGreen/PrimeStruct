@@ -99,7 +99,7 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5330 | Decide whether allocating wrapper constructors may be parameter defaults | ready | wrapper-default-parameters |
+| TODO-5336 | Infer the concrete type of `Map<K, V>{}` for an `[auto]` parameter | ready | auto-param-brace-constructor |
 | TODO-5331 | Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>` | ready | canonical-map-count-temporaries |
 | TODO-5332 | Resolve method-style `.at(...)` on a builtin `map<K, V>` temporary | ready | canonical-map-method-at |
 | TODO-5333 | Index a builtin `map<K, V>` temporary | ready | canonical-map-index-temporary |
@@ -110,11 +110,11 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5330 (track: wrapper-default-parameters, surface: parameter-default purity rule and its spec note): decide on allocating wrapper constructors as defaults.
 - TODO-5331 (track: canonical-map-count-temporaries, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`.
 - TODO-5332 (track: canonical-map-method-at, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): resolve method-style `.at(...)` on a builtin `map<K, V>` temporary.
 - TODO-5333 (track: canonical-map-index-temporary, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): index a builtin `map<K, V>` temporary.
 - TODO-5334 (track: canonical-map-temporary-lookup-vector, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): fix the vector `at` argument mismatch inside canonical map temporary lookup.
+- TODO-5336 (track: auto-param-brace-constructor, surface: implicit template inference of brace-constructor arguments for `[auto]` parameters): infer the concrete type of `Map<K, V>{}` for an `[auto]` parameter.
 
 TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325 (closed 2026-10-01; its unrunnable shapes became TODO-5327..5330)/5326 (closed 2026-10-01; its canonical-map gaps became TODO-5331..5335) were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
@@ -292,16 +292,16 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
 
-- [ ] TODO-5330: Decide whether allocating wrapper constructors may be parameter defaults
+- [ ] TODO-5336: Infer the concrete type of `Map<K, V>{}` for an `[auto]` parameter
   - owner: ai
   - status: ready
   - created_at: 2026-10-01
-  - phase: Map wrapper follow-up (split from TODO-5325)
-  - parallel_track: wrapper-default-parameters
+  - phase: Map wrapper follow-up (found while closing TODO-5330)
+  - parallel_track: auto-param-brace-constructor
   - depends_on: (none)
-  - scope: `[Map<string, i32> mut] values{mapSingle<string, i32>(...)}` and `[auto mut] values{mapNew<string, i32>()}` style defaults are rejected with "parameter default must be a literal or pure expression" because the constructors carry `effects(heap_alloc)`. TODO-5325 treated that as by-design and passes the maps explicitly; this leaf records the open question.
+  - scope: `f([auto] m)` called as `f(Map<string, i32>{})`, and `f([auto mut] m{Map<string, i32>{}})` as a default, fail with "template arguments required for /std/collections/map/Map": implicit template inference types the brace-constructor argument as the bare struct path. The same expression works for a typed parameter, a call argument to a typed parameter, and an `[auto]` local.
   - acceptance:
-    - either a documented decision (spec note, diagnostic test) that allocating defaults stay rejected, or a feature that allows them with tests.
+    - both `[auto]` forms run on vm/native/exe and have a semantics or compile-run test.
     - `./scripts/compile.sh --release` at baseline.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.

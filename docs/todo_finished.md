@@ -56466,3 +56466,18 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: monomorphized template bodies carry their enclosing namespace on every expression, so a bare `print_line` inside any namespaced template or `/Type/method` with an `[auto]` parameter read as `/ns/print_line` and failed lowering (not map-specific: `/ns/foo<T>` with `print_line` failed too). `getPrintBuiltin` now also accepts the bare spelling when the expression carries a namespace prefix. The `/Holder/score` method form is back in `expectInferredExperimentalMapParameterConformance` (exit 19).
+
+- [x] TODO-5330: Decide whether allocating wrapper constructors may be parameter defaults
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: wrapper-default-parameters
+  - depends_on: (none)
+  - scope: `[Map<string, i32> mut] values{mapSingle<string, i32>(...)}` and `[auto mut] values{mapNew<string, i32>()}` style defaults are rejected with "parameter default must be a literal or pure expression" because the constructors carry `effects(heap_alloc)`. TODO-5325 treated that as by-design and passes the maps explicitly; this leaf records the open question.
+  - acceptance:
+    - either a documented decision (spec note, diagnostic test) that allocating defaults stay rejected, or a feature that allows them with tests.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: decision: allocating constructors stay acceptable as parameter defaults for the key/value family (`mapNew`, `map<K, V>(...)`) and are now also accepted for the public wrapper constructors `Map<K, V>{}`, `mapSingle` and `mapPair` (`SemanticsValidatorBuildParameters.cpp`); other allocating calls are still rejected. The earlier note that allocating defaults are impure by design was wrong, since `mapNew` was already allowed. Spec note added in `docs/PrimeStruct.md`; two `bindings.core` tests added (accept the wrapper constructors, still reject a plain allocating helper call). `[auto]` parameters with a `Map<K, V>{}` default/argument hit an inference gap, split as TODO-5336.

@@ -177,6 +177,11 @@ bool SemanticsValidator::buildParameters() {
       if (overloadSuffix != std::string::npos) {
         normalizedPath.erase(overloadSuffix);
       }
+      // The public wrapper constructors allocate exactly like the key/value
+      // constructors, so they are accepted as defaults the same way.
+      if (isResolvedKeyValueWrapperConstructorPath(normalizedPath)) {
+        return true;
+      }
       return isResolvedKeyValueConstructorPath(normalizedPath);
     };
     auto isBuiltinResultOkPayloadCall = [](const Expr &candidate) {
