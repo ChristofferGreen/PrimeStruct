@@ -1,7 +1,7 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <string>
@@ -235,10 +235,10 @@ std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::strin
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(collectionArgs, args)) {
       if (collectionBase == "array" && args.size() == 1) {
-        return "/array";
+        return collection_helpers::kRootedArray;
       }
       if (collectionBase == "vector" && args.size() == 1) {
-        return "/vector";
+        return collection_helpers::kRootedVector;
       }
       if (isKeyValueSurfaceTypeName(collectionBase) && args.size() == 2) {
         return specializedExperimentalKeyValueStructReturnPath(args);

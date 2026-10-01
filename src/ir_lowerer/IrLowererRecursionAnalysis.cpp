@@ -5,6 +5,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <unordered_map>
 #include <vector>
@@ -212,7 +213,7 @@ bool hasOnlyScalarParameters(const Definition &def) {
 bool isPackedErrorStructTypeName(const std::string &typeName) {
   return typeName == "FileError" || typeName == "/std/file/FileError" ||
          typeName == "ImageError" || typeName == "/std/image/ImageError" ||
-         typeName == "ContainerError" || typeName == "/std/collections/ContainerError" ||
+         typeName == "ContainerError" || typeName == collection_helpers::kCanonicalContainerErrorType ||
          typeName == "GfxError" || typeName == "/std/gfx/GfxError" ||
          typeName == "/std/gfx/experimental/GfxError";
 }

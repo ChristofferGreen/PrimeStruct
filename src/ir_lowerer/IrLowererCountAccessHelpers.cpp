@@ -23,6 +23,7 @@
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
@@ -255,7 +256,7 @@ bool isSemanticArrayCountMethodTarget(const Expr &expr,
                                       const SemanticProgram *semanticProgram) {
   return semanticProgram != nullptr && expr.kind == Expr::Kind::Call &&
          expr.isMethodCall && expr.semanticNodeId != 0 &&
-         findSemanticProductMethodCallTarget(semanticProgram, expr) == "/array/count";
+         findSemanticProductMethodCallTarget(semanticProgram, expr) == collection_helpers::kRootedArrayCount;
 }
 
 std::string semanticMethodReceiverTypeText(const SemanticProgram *semanticProgram,
@@ -857,8 +858,8 @@ bool isSourceMethodStringKeyValueAccessTarget(
       trimTemplateTypeText(std::string(resolveSemanticProductText(
           *semanticProgram, queryFact->bindingTypeTextId,
           queryFact->bindingTypeText)));
-  if (queryType != "string" && queryType != "/string" &&
-      bindingType != "string" && bindingType != "/string") {
+  if (queryType != "string" && queryType != collection_helpers::kRootedString &&
+      bindingType != "string" && bindingType != collection_helpers::kRootedString) {
     return false;
   }
   if (accessNameOut != nullptr) {
@@ -893,8 +894,8 @@ bool publishedKeyValueAccessHelperReturnsString(const SemanticProgram *semanticP
       resolveSemanticProductText(*semanticProgram,
                                  returnFact->bindingTypeTextId,
                                  returnFact->bindingTypeText)));
-  return structPath == "/string" || structPath == "string" ||
-         bindingType == "/string" || bindingType == "string";
+  return structPath == collection_helpers::kRootedString || structPath == "string" ||
+         bindingType == collection_helpers::kRootedString || bindingType == "string";
 }
 
 bool hasExplicitStdKeyValueSourceSpelling(const Expr &expr) {
@@ -1480,11 +1481,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
           ? findSemanticProductDirectCallTarget(semanticProgram, expr)
           : std::string{};
   const bool canonicalSoaColumnCount =
-      scopedCallPath == "/std/collections/soa_storage/soaColumnCount" ||
+      scopedCallPath == collection_helpers::kCanonicalSoaStorageSoaColumnCount ||
       scopedCallPath.rfind(
-          "/std/collections/soa_storage/soaColumnCount__", 0) == 0 ||
+          collection_helpers::kCanonicalSoaStorageSoaColumnCountSpecialized, 0) == 0 ||
       semanticDirectTarget ==
-          "/std/collections/soa_storage/soaColumnCount";
+          collection_helpers::kCanonicalSoaStorageSoaColumnCount;
   const bool canonicalSoaMethodCount =
       expr.isMethodCall && expr.args.size() == 1 &&
       resolveCallLeafName(expr) == "count" &&
@@ -1493,12 +1494,12 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         auto localIt = localsIn.find(expr.args.front().name);
         return localIt != localsIn.end() && localIt->second.isSoaVector;
       }();
-  if (scopedCallPath == "/std/collections/soa/count" ||
-      scopedCallPath.rfind("/std/collections/soa/count__", 0) == 0 ||
+  if (scopedCallPath == collection_helpers::kCanonicalSoaCount ||
+      scopedCallPath.rfind(collection_helpers::kCanonicalSoaCountSpecialized, 0) == 0 ||
       scopedCallPath == "std/collections/soa/count" ||
       scopedCallPath.rfind("std/collections/soa/count__", 0) == 0 ||
-      semanticMethodTarget == "/std/collections/soa/count" ||
-      semanticDirectTarget == "/std/collections/soa/count" ||
+      semanticMethodTarget == collection_helpers::kCanonicalSoaCount ||
+      semanticDirectTarget == collection_helpers::kCanonicalSoaCount ||
       canonicalSoaColumnCount || canonicalSoaMethodCount) {
     if (expr.args.size() != 1) {
       error = "count requires exactly one argument";
@@ -2212,7 +2213,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         if (getBuiltinCollectionName(accessTarget, collection) && collection == "map" &&
             accessTarget.templateArgs.size() == 2) {
           stringKeyValueAccess =
-              accessTarget.templateArgs[1] == "string" || accessTarget.templateArgs[1] == "/string";
+              accessTarget.templateArgs[1] == "string" || accessTarget.templateArgs[1] == collection_helpers::kRootedString;
         }
       }
       if (stringKeyValueAccess) {

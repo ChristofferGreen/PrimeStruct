@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
 #include <algorithm>
@@ -12,6 +11,7 @@
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -39,7 +39,7 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
   }
   std::string helperName;
   return resolveKeyValueHelperAliasName(callExpr, helperName) &&
-         (helperName == "count" || helperName == "count_ref" || helperName == "contains" ||
+         (helperName == "count" || helperName == collection_helpers::kCountRef || helperName == "contains" ||
           helperName == "tryAt");
 }
 
@@ -724,9 +724,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (isExplicitKeyValueHelperFallbackPath(callExpr)) {
     std::string explicitAccessName;
     if (!getBuiltinArrayAccessName(callExpr, explicitAccessName) ||
-        (explicitAccessName != "at" && explicitAccessName != "at_ref" &&
+        (explicitAccessName != "at" && explicitAccessName != collection_helpers::kAtRef &&
          explicitAccessName != "at_unsafe" &&
-         explicitAccessName != "at_unsafe_ref")) {
+         explicitAccessName != collection_helpers::kAtUnsafeRef)) {
       return false;
     }
   }
@@ -1254,8 +1254,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     // tests, which pin this for every receiver-index candidate, resolved
     // or not).
     if (isAccessCall && isCollectionAccessCall &&
-        (accessName == "at" || accessName == "at_ref" || accessName == "at_unsafe" ||
-         accessName == "at_unsafe_ref")) {
+        (accessName == "at" || accessName == collection_helpers::kAtRef || accessName == "at_unsafe" ||
+         accessName == collection_helpers::kAtUnsafeRef)) {
       continue;
     }
     const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);

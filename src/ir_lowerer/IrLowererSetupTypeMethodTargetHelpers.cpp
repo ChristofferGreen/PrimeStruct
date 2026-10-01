@@ -3,6 +3,7 @@
 
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -108,10 +109,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
             normalizedMethodName == "remove_swap");
   };
   auto isCanonicalSoaWrapperMethodName = [&](const std::string &candidate) {
-    return candidate == "count" || candidate == "count_ref" ||
-           candidate == "get" || candidate == "get_ref" ||
-           candidate == "ref" || candidate == "ref_ref" ||
-           candidate == "to_aos" || candidate == "to_aos_ref" ||
+    return candidate == "count" || candidate == collection_helpers::kCountRef ||
+           candidate == "get" || candidate == collection_helpers::kGetRef ||
+           candidate == "ref" || candidate == collection_helpers::kRefRef ||
+           candidate == "to_aos" || candidate == collection_helpers::kToAosRef ||
            candidate == "push" || candidate == "reserve";
   };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
@@ -125,8 +126,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (defIt != defMap.end()) {
       return defIt->second;
     }
-    if (path.rfind("/array/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/array/").size());
+    if (path.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+      const std::string suffix = path.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string stdlibAlias =
             stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
@@ -184,7 +185,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (normalizedMethodName == "push" || normalizedMethodName == "reserve") {
       if (const Definition *canonicalResolved =
-              findMethodDefinitionByPath("/std/collections/soa/" + normalizedMethodName)) {
+              findMethodDefinitionByPath(collection_helpers::kCanonicalSoaPrefix + normalizedMethodName)) {
         return canonicalResolved;
       }
     }
@@ -241,7 +242,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
   }
   if (isExplicitRemovedVectorMethodAlias && isExplicitArrayVectorMethod) {
-    const std::string explicitPath = "/array/" + normalizedMethodName;
+    const std::string explicitPath = collection_helpers::kRootedArrayPrefix + normalizedMethodName;
     if (const Definition *resolved = findMethodDefinitionByPath(explicitPath)) {
       errorOut.clear();
       return resolved;

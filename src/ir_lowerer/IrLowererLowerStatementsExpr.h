@@ -1,3 +1,4 @@
+#include "primec/support/CollectionHelperNames.h"
         // soa-surface-audit: exempt
         // collection-surface-audit: exempt
         if (!expr.isMethodCall) {
@@ -246,8 +247,8 @@
               std::string helperName;
               if (resolveKeyValueHelperAliasName(candidate, helperName)) {
                 return helperName == "at" || helperName == "at_unsafe" ||
-                helperName == "at_ref" ||
-                helperName == "at_unsafe_ref";
+                helperName == primec::collection_helpers::kAtRef ||
+                helperName == primec::collection_helpers::kAtUnsafeRef;
               }
               auto isAccessHelperPath = [&](std::string path) {
                 path = statementsExprHelpers.stripGeneratedHelperSuffix(
@@ -255,8 +256,8 @@
                 return statementsExprHelpers.isKeyValueHelperMemberPath(path, "at") ||
                 statementsExprHelpers.isKeyValueHelperMemberPath(path, "at_unsafe") ||
                 path == "at" || path == "at_unsafe" ||
-                path == "/std/collections/map/at" ||
-                path == "/std/collections/map/at_unsafe";
+                path == primec::collection_helpers::kCanonicalMapAt ||
+                path == primec::collection_helpers::kCanonicalMapAtUnsafe;
               };
               return isAccessHelperPath(candidate.name) ||
               isAccessHelperPath(statementsExprHelpers.resolveDirectHelperPath(candidate)) ||
@@ -293,9 +294,9 @@
               }
               return true;
             }
-            if ((rawPath.rfind("/array/", 0) == 0 ||
-                resolvedExprPath.rfind("/array/", 0) == 0 ||
-                directCallee->fullPath.rfind("/array/", 0) == 0) &&
+            if ((rawPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0 ||
+                resolvedExprPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0 ||
+                directCallee->fullPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0) &&
               statementsExprHelpers.isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -392,11 +393,11 @@
               if (generatedSuffix != std::string::npos) {
                 helperLeaf.erase(generatedSuffix);
               }
-              if (helperLeaf == "tryAt" || helperLeaf == "tryAt_ref") {
+              if (helperLeaf == "tryAt" || helperLeaf == primec::collection_helpers::kTryAtRef) {
                 helperName = "tryAt";
-              } else if (helperLeaf == "at" || helperLeaf == "at_ref") {
+              } else if (helperLeaf == "at" || helperLeaf == primec::collection_helpers::kAtRef) {
                 helperName = "at";
-              } else if (helperLeaf == "at_unsafe" || helperLeaf == "at_unsafe_ref") {
+              } else if (helperLeaf == "at_unsafe" || helperLeaf == primec::collection_helpers::kAtUnsafeRef) {
                 helperName = "at_unsafe";
               }
               if (helperName.empty() && !expr.args.empty()) {
@@ -412,7 +413,7 @@
               (helperName == "count" || helperName == "contains" ||
                 helperName == "tryAt" || helperName == "at" ||
                 helperName == "at_unsafe" || helperName == "insert" ||
-                helperName == "insert_ref") &&
+                helperName == primec::collection_helpers::kInsertRef) &&
               (hasCanonicalKeyValueHelperFamily ||
                 hasSameFamilyKeyValueHelperAlias) &&
               statementsExprHelpers.isDirectHelperDefinitionFamily(expr, *directCallee)) {
@@ -457,15 +458,15 @@
               statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(rawPath)) ||
             (resolveKeyValueHelperAliasName(expr, explicitKeyValueAccessHelperName) &&
               (explicitKeyValueAccessHelperName == "at" ||
-                explicitKeyValueAccessHelperName == "at_ref" ||
+                explicitKeyValueAccessHelperName == primec::collection_helpers::kAtRef ||
                 explicitKeyValueAccessHelperName == "at_unsafe" ||
-                explicitKeyValueAccessHelperName == "at_unsafe_ref") &&
+                explicitKeyValueAccessHelperName == primec::collection_helpers::kAtUnsafeRef) &&
               expr.args.size() == 2 &&
               statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(rawPath)) ||
             ((canonicalKeyValueAccessLeaf == "at" ||
-                canonicalKeyValueAccessLeaf == "at_ref" ||
+                canonicalKeyValueAccessLeaf == primec::collection_helpers::kAtRef ||
                 canonicalKeyValueAccessLeaf == "at_unsafe" ||
-                canonicalKeyValueAccessLeaf == "at_unsafe_ref") &&
+                canonicalKeyValueAccessLeaf == primec::collection_helpers::kAtUnsafeRef) &&
               expr.args.size() == 2 &&
               statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(rawPath));
             if (isExplicitCanonicalKeyValueAccess &&
@@ -484,9 +485,9 @@
                 if (builtinAccessName.empty()) {
                   builtinAccessName = canonicalKeyValueAccessLeaf;
                 }
-                if (builtinAccessName == "at_ref") {
+                if (builtinAccessName == primec::collection_helpers::kAtRef) {
                   builtinAccessName = "at";
-                } else if (builtinAccessName == "at_unsafe_ref") {
+                } else if (builtinAccessName == primec::collection_helpers::kAtUnsafeRef) {
                   builtinAccessName = "at_unsafe";
                 }
                 Expr rewrittenExpr = expr;
@@ -685,22 +686,22 @@
           const std::string bindingType = resolveSemanticProductTypeText(
             semanticProgram, queryFact->bindingTypeText,
             queryFact->bindingTypeTextId);
-          return queryType == "string" || queryType == "/string" ||
-          bindingType == "string" || bindingType == "/string";
+          return queryType == "string" || queryType == primec::collection_helpers::kRootedString ||
+          bindingType == "string" || bindingType == primec::collection_helpers::kRootedString;
         };
         if (expr.isMethodCall && expr.args.size() == 1 &&
           (findSemanticProductMethodCallTarget(semanticProgram, expr) ==
-            "/string/count" ||
+            primec::collection_helpers::kRootedStringCount ||
             (isSimpleCallName(expr, "count") &&
               semanticQueryExprReturnsString(expr.args.front())))) {
           if (const Definition *stringCountCallee =
-            statementsExprHelpers.findDirectHelperDefinition("/string/count");
+            statementsExprHelpers.findDirectHelperDefinition(primec::collection_helpers::kRootedStringCount);
             stringCountCallee != nullptr) {
             Expr directStringCountExpr = expr;
             directStringCountExpr.isMethodCall = false;
             directStringCountExpr.isFieldAccess = false;
             directStringCountExpr.namespacePrefix.clear();
-            directStringCountExpr.name = "/string/count";
+            directStringCountExpr.name = primec::collection_helpers::kRootedStringCount;
             directStringCountExpr.semanticNodeId = 0;
             if (!emitInlineDefinitionCall(
                 directStringCountExpr, *stringCountCallee, localsIn, true)) {
@@ -711,7 +712,7 @@
         }
 
         if (expr.isMethodCall && expr.args.size() == 1 &&
-          (resolveExprPath(expr) == "/string/count" ||
+          (resolveExprPath(expr) == primec::collection_helpers::kRootedStringCount ||
             isSimpleCallName(expr, "count"))) {
           const Expr &stringCountTarget = expr.args.front();
           std::string stringAccessName;
@@ -773,8 +774,8 @@
               queryFact->queryTypeTextId, queryFact->queryTypeText);
             const std::string bindingType = semanticFactTypeText(
               queryFact->bindingTypeTextId, queryFact->bindingTypeText);
-            return queryType == "string" || queryType == "/string" ||
-            bindingType == "string" || bindingType == "/string";
+            return queryType == "string" || queryType == primec::collection_helpers::kRootedString ||
+            bindingType == "string" || bindingType == primec::collection_helpers::kRootedString;
           };
           const bool hasDirectStringCountTarget =
           ((stringCountTarget.kind == Expr::Kind::Name ||
@@ -787,14 +788,14 @@
             const Definition *stringCountCallee =
             resolveMethodCallDefinition(expr, localsIn);
             if (stringCountCallee == nullptr) {
-              stringCountCallee = statementsExprHelpers.findDirectHelperDefinition("/string/count");
+              stringCountCallee = statementsExprHelpers.findDirectHelperDefinition(primec::collection_helpers::kRootedStringCount);
             }
             if (stringCountCallee != nullptr) {
               Expr directStringCountExpr = expr;
               directStringCountExpr.isMethodCall = false;
               directStringCountExpr.isFieldAccess = false;
               directStringCountExpr.namespacePrefix.clear();
-              directStringCountExpr.name = "/string/count";
+              directStringCountExpr.name = primec::collection_helpers::kRootedStringCount;
               directStringCountExpr.semanticNodeId = 0;
               if (!emitInlineDefinitionCall(
                   directStringCountExpr, *stringCountCallee, localsIn, true)) {
@@ -919,9 +920,9 @@
                 countAccessExpr, vectorMetadataHelperName) &&
               (vectorMetadataHelperName == "count" ||
                 vectorMetadataHelperName == "capacity")) ||
-            (vectorMetadataPath == "/std/collections/vector/count" &&
+            (vectorMetadataPath == primec::collection_helpers::kCanonicalVectorCount &&
               (vectorMetadataHelperName = "count", true)) ||
-            (vectorMetadataPath == "/std/collections/vector/capacity" &&
+            (vectorMetadataPath == primec::collection_helpers::kCanonicalVectorCapacity &&
               (vectorMetadataHelperName = "capacity", true))) {
             if (const Definition *directVectorMetadataCallee =
               statementsExprHelpers.resolveDirectHelperDefinition(countAccessExpr);
@@ -981,8 +982,8 @@
                 const std::string bindingType = resolveFactTypeText(
                   queryFact->bindingTypeTextId,
                   queryFact->bindingTypeText);
-                if (queryType == "string" || queryType == "/string" ||
-                  bindingType == "string" || bindingType == "/string") {
+                if (queryType == "string" || queryType == primec::collection_helpers::kRootedString ||
+                  bindingType == "string" || bindingType == primec::collection_helpers::kRootedString) {
                   return false;
                 }
               }
@@ -1012,9 +1013,9 @@
             const bool isExperimentalSoaVectorTarget =
             structPath == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
             structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
-            return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
-            structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
-            structPath == "/soa" || isCollectionVectorTarget ||
+            return targetInfo.isArrayOrVectorTarget || structPath == primec::collection_helpers::kRootedArray ||
+            structPath == primec::collection_helpers::kRootedVector || structPath == "/Buffer" || structPath == primec::collection_helpers::kRootedMap ||
+            structPath == primec::collection_helpers::kRootedSoa || isCollectionVectorTarget ||
             isExperimentalKeyValueTarget || isSemanticKeyValueTarget ||
             isExperimentalSoaVectorTarget;
           },
@@ -1207,8 +1208,8 @@
               std::string helperName;
               if (resolveKeyValueHelperAliasName(candidate, helperName)) {
                 return helperName == "at" || helperName == "at_unsafe" ||
-                helperName == "at_ref" ||
-                helperName == "at_unsafe_ref";
+                helperName == primec::collection_helpers::kAtRef ||
+                helperName == primec::collection_helpers::kAtUnsafeRef;
               }
               auto isAccessHelperPath = [&](std::string path) {
                 path = statementsExprHelpers.stripGeneratedHelperSuffix(
@@ -1216,8 +1217,8 @@
                 return statementsExprHelpers.isKeyValueHelperMemberPath(path, "at") ||
                 statementsExprHelpers.isKeyValueHelperMemberPath(path, "at_unsafe") ||
                 path == "at" || path == "at_unsafe" ||
-                path == "/std/collections/map/at" ||
-                path == "/std/collections/map/at_unsafe";
+                path == primec::collection_helpers::kCanonicalMapAt ||
+                path == primec::collection_helpers::kCanonicalMapAtUnsafe;
               };
               return isAccessHelperPath(candidate.name) ||
               isAccessHelperPath(statementsExprHelpers.resolveDirectHelperPath(candidate)) ||
@@ -1299,7 +1300,7 @@
           ((statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(exprPath) &&
               statementsExprHelpers.resolveKeyValueHelperMemberName(exprPath, resolvedKeyValueInsertHelperName) &&
               (resolvedKeyValueInsertHelperName == "insert" ||
-                resolvedKeyValueInsertHelperName == "insert_ref")) ||
+                resolvedKeyValueInsertHelperName == primec::collection_helpers::kInsertRef)) ||
             exprPath.rfind(collection_paths::memberPath(collection_paths::kMapFolder, "insert"), 0) == 0)) {
           if (const Definition *directCallee = statementsExprHelpers.resolveDirectHelperDefinition(expr);
             directCallee != nullptr) {
@@ -1426,9 +1427,9 @@
           if (!statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(vectorAccessPath) &&
             (resolveVectorHelperAliasName(expr, vectorAccessName) ||
               getBuiltinArrayAccessName(expr, vectorAccessName) ||
-              (vectorAccessPath == "/std/collections/vector/at" &&
+              (vectorAccessPath == primec::collection_helpers::kCanonicalVectorAt &&
                 (vectorAccessName = "at", true)) ||
-              (vectorAccessPath == "/std/collections/vector/at_unsafe" &&
+              (vectorAccessPath == primec::collection_helpers::kCanonicalVectorAtUnsafe &&
                 (vectorAccessName = "at_unsafe", true))) &&
             (vectorAccessName == "at" || vectorAccessName == "at_unsafe")) {
             // A same-path user definition overriding the canonical
@@ -1495,7 +1496,7 @@
           bareKeyValueAccessLeaf.erase(generatedSuffix);
         }
         const bool isCanonicalBareKeyValueAccess =
-        (bareKeyValueAccessPath.rfind("/std/collections/map/at", 0) == 0 ||
+        (bareKeyValueAccessPath.rfind(primec::collection_helpers::kCanonicalMapAt, 0) == 0 ||
           bareKeyValueAccessPath.rfind("std/collections/map/at", 0) == 0);
         if (!expr.isMethodCall &&
           expr.args.size() == 2 &&
@@ -1505,20 +1506,20 @@
             (resolveKeyValueHelperAliasName(expr, bareKeyValueAccessName) &&
               (bareKeyValueAccessName == "at" ||
                 bareKeyValueAccessName == "at_unsafe" ||
-                bareKeyValueAccessName == "at_ref" ||
-                bareKeyValueAccessName == "at_unsafe_ref")) ||
+                bareKeyValueAccessName == primec::collection_helpers::kAtRef ||
+                bareKeyValueAccessName == primec::collection_helpers::kAtUnsafeRef)) ||
             (isCanonicalBareKeyValueAccess &&
               (bareKeyValueAccessName = bareKeyValueAccessLeaf, true)) ||
             ((isSimpleCallName(expr, "at") ||
                 isSimpleCallName(expr, "at_unsafe")) &&
               (bareKeyValueAccessName = expr.name, true))) &&
           (bareKeyValueAccessName == "at" ||
-            bareKeyValueAccessName == "at_ref" ||
+            bareKeyValueAccessName == primec::collection_helpers::kAtRef ||
             bareKeyValueAccessName == "at_unsafe" ||
-            bareKeyValueAccessName == "at_unsafe_ref")) {
-          if (bareKeyValueAccessName == "at_ref") {
+            bareKeyValueAccessName == primec::collection_helpers::kAtUnsafeRef)) {
+          if (bareKeyValueAccessName == primec::collection_helpers::kAtRef) {
             bareKeyValueAccessName = "at";
-          } else if (bareKeyValueAccessName == "at_unsafe_ref") {
+          } else if (bareKeyValueAccessName == primec::collection_helpers::kAtUnsafeRef) {
             bareKeyValueAccessName = "at_unsafe";
           }
           auto resolveAccessTargetInfo = [&](const Expr &receiverExpr) {
@@ -1670,9 +1671,9 @@
           if (((resolveVectorHelperAliasName(expr, vectorMetadataHelperName) &&
                 (vectorMetadataHelperName == "count" ||
                   vectorMetadataHelperName == "capacity")) ||
-              (vectorMetadataPath == "/std/collections/vector/count" &&
+              (vectorMetadataPath == primec::collection_helpers::kCanonicalVectorCount &&
                 (vectorMetadataHelperName = "count", true)) ||
-              (vectorMetadataPath == "/std/collections/vector/capacity" &&
+              (vectorMetadataPath == primec::collection_helpers::kCanonicalVectorCapacity &&
                 (vectorMetadataHelperName = "capacity", true)))) {
             if (const Definition *directVectorMetadataCallee =
               statementsExprHelpers.resolveDirectHelperDefinition(expr);
@@ -1728,15 +1729,15 @@
               const std::string bindingType = resolveFactTypeText(
                 queryFact->bindingTypeTextId,
                 queryFact->bindingTypeText);
-              return queryType == "string" || queryType == "/string" ||
-              bindingType == "string" || bindingType == "/string";
+              return queryType == "string" || queryType == primec::collection_helpers::kRootedString ||
+              bindingType == "string" || bindingType == primec::collection_helpers::kRootedString;
             };
             if (metadataTargetReturnsString()) {
               if (const Definition *stringCountCallee =
-                statementsExprHelpers.findDirectHelperDefinition("/string/count");
+                statementsExprHelpers.findDirectHelperDefinition(primec::collection_helpers::kRootedStringCount);
                 stringCountCallee != nullptr) {
                 Expr stringCountExpr = expr;
-                stringCountExpr.name = "/string/count";
+                stringCountExpr.name = primec::collection_helpers::kRootedStringCount;
                 stringCountExpr.namespacePrefix.clear();
                 stringCountExpr.semanticNodeId = 0;
                 return emitInlineDefinitionCall(

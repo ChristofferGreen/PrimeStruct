@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <functional>
 #include <string>
@@ -174,8 +175,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return prefix + "/" + callExpr.name;
   };
   auto isRootKeyValueAliasPath = [](const std::string &path) {
-    return path == "/map" ||
-           path.rfind("/map__", 0) == 0;
+    return path == collection_helpers::kRootedMap ||
+           path.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
   };
   auto isLocalRootKeyValueAliasCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
@@ -205,9 +206,9 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (candidate.kind == Expr::Kind::Call) {
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(candidate, params, locals, collectionTypePath) &&
-          (collectionTypePath == "/vector" ||
+          (collectionTypePath == collection_helpers::kRootedVector ||
            isInternalSoaCollectionTypePath(collectionTypePath) ||
-           collectionTypePath == "/map")) {
+           collectionTypePath == collection_helpers::kRootedMap)) {
         return false;
       }
       auto defIt = defMap_.find(resolveCalleePath(candidate));
@@ -254,9 +255,9 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (candidate.kind == Expr::Kind::Call) {
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(candidate, params, locals, collectionTypePath) &&
-          (collectionTypePath == "/vector" ||
+          (collectionTypePath == collection_helpers::kRootedVector ||
            isInternalSoaCollectionTypePath(collectionTypePath) ||
-           collectionTypePath == "/map")) {
+           collectionTypePath == collection_helpers::kRootedMap)) {
         return false;
       }
       auto defIt = defMap_.find(resolveCalleePath(candidate));
@@ -334,13 +335,13 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   };
   auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
     if (helperName == "count") {
-      helperName = "count_ref";
+      helperName = collection_helpers::kCountRef;
     } else if (helperName == "get") {
-      helperName = "get_ref";
+      helperName = collection_helpers::kGetRef;
     } else if (helperName == "ref") {
-      helperName = "ref_ref";
+      helperName = collection_helpers::kRefRef;
     } else if (helperName == "to_aos") {
-      helperName = "to_aos_ref";
+      helperName = collection_helpers::kToAosRef;
     }
     return preferredSoaHelperTargetForCollectionType(
         helperName, internalSoaCollectionTypePath(true));
@@ -350,11 +351,11 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (!isSupportedCompatibilitySoaHelperName(helperName)) {
       return false;
     }
-    if (!usesSamePathSoaHelperTargetForCollectionType(helperName, "/vector")) {
+    if (!usesSamePathSoaHelperTargetForCollectionType(helperName, collection_helpers::kRootedVector)) {
       return false;
     }
     resolvedOut = preferredSoaHelperTargetForCollectionType(helperName,
-                                                            "/vector");
+                                                            collection_helpers::kRootedVector);
     return true;
   };
   auto tryResolvePublishedVectorAccessHelper =
@@ -382,10 +383,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   }
   std::string experimentalSoaElemType;
   if (resolveBorrowedSoaVectorReceiver(receiver, experimentalSoaElemType) &&
-      (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
-       normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
-       normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-       normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref")) {
+      (normalizedHelperName == "count" || normalizedHelperName == collection_helpers::kCountRef ||
+       normalizedHelperName == "get" || normalizedHelperName == collection_helpers::kGetRef ||
+       normalizedHelperName == "ref" || normalizedHelperName == collection_helpers::kRefRef ||
+       normalizedHelperName == "to_aos" || normalizedHelperName == collection_helpers::kToAosRef)) {
     resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedHelperName);
     return true;
   }
@@ -399,7 +400,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return true;
   }
   if (receiver.kind == Expr::Kind::Call &&
-      (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+      (normalizedHelperName == "count" || normalizedHelperName == collection_helpers::kCountRef ||
        normalizedHelperName == "capacity" ||
        normalizedHelperName == "at" || normalizedHelperName == "at_unsafe" ||
        normalizedHelperName == "insert" ||
@@ -408,7 +409,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
        normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
-      if (collectionTypePath == "/vector") {
+      if (collectionTypePath == collection_helpers::kRootedVector) {
         if (tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
           return true;
         }
@@ -416,7 +417,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
       if (isInternalSoaCollectionTypePath(collectionTypePath) &&
-          (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+          (normalizedHelperName == "count" || normalizedHelperName == collection_helpers::kCountRef ||
            normalizedHelperName == "get" || normalizedHelperName == "ref" ||
            normalizedHelperName == "to_aos" ||
            normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
@@ -425,13 +426,13 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
                                                       internalSoaCollectionTypePath(true));
         return true;
       }
-      if (collectionTypePath == "/map" &&
+      if (collectionTypePath == collection_helpers::kRootedMap &&
           !isLocalRootKeyValueAliasCall(receiver) &&
-          (normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
-           normalizedHelperName == "tryAt" || normalizedHelperName == "tryAt_ref" ||
-           normalizedHelperName == "at" || normalizedHelperName == "at_ref" ||
-           normalizedHelperName == "at_unsafe" || normalizedHelperName == "at_unsafe_ref" ||
-           normalizedHelperName == "insert" || normalizedHelperName == "insert_ref")) {
+          (normalizedHelperName == "contains" || normalizedHelperName == collection_helpers::kContainsRef ||
+           normalizedHelperName == "tryAt" || normalizedHelperName == collection_helpers::kTryAtRef ||
+           normalizedHelperName == "at" || normalizedHelperName == collection_helpers::kAtRef ||
+           normalizedHelperName == "at_unsafe" || normalizedHelperName == collection_helpers::kAtUnsafeRef ||
+           normalizedHelperName == "insert" || normalizedHelperName == collection_helpers::kInsertRef)) {
         resolvedOut = preferredBareKeyValueHelperTarget(normalizedHelperName);
         return true;
       }
@@ -500,32 +501,32 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const bool receiverHasKeyValueTrait =
         typeHasCollectionCategoryTrait(typeName, receiver.namespacePrefix,
                                        "KeyValue");
-    if (resolvedType == "/vector" &&
+    if (resolvedType == collection_helpers::kRootedVector &&
         tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
       return true;
     }
-    if ((resolvedType == "/map" || receiverHasKeyValueTrait) &&
-        (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+    if ((resolvedType == collection_helpers::kRootedMap || receiverHasKeyValueTrait) &&
+        (normalizedHelperName == "count" || normalizedHelperName == collection_helpers::kCountRef ||
          normalizedHelperName == "size" ||
-         normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
-         normalizedHelperName == "tryAt" || normalizedHelperName == "tryAt_ref" ||
-         normalizedHelperName == "at" || normalizedHelperName == "at_ref" ||
-         normalizedHelperName == "at_unsafe" || normalizedHelperName == "at_unsafe_ref" ||
-         normalizedHelperName == "insert" || normalizedHelperName == "insert_ref")) {
+         normalizedHelperName == "contains" || normalizedHelperName == collection_helpers::kContainsRef ||
+         normalizedHelperName == "tryAt" || normalizedHelperName == collection_helpers::kTryAtRef ||
+         normalizedHelperName == "at" || normalizedHelperName == collection_helpers::kAtRef ||
+         normalizedHelperName == "at_unsafe" || normalizedHelperName == collection_helpers::kAtUnsafeRef ||
+         normalizedHelperName == "insert" || normalizedHelperName == collection_helpers::kInsertRef)) {
       resolvedOut = preferredBareKeyValueHelperTarget(normalizedHelperName);
       return true;
     }
-    if (resolvedType == "/vector" &&
+    if (resolvedType == collection_helpers::kRootedVector &&
         isVectorCompatibilityHelperName(normalizedHelperName)) {
       resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
       return true;
     }
     if ((isInternalSoaCollectionTypePath(resolvedType) ||
          isInternalSoaCollectionTypeName(normalizedTypeName)) &&
-        (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
-         normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
-         normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-         normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
+        (normalizedHelperName == "count" || normalizedHelperName == collection_helpers::kCountRef ||
+         normalizedHelperName == "get" || normalizedHelperName == collection_helpers::kGetRef ||
+         normalizedHelperName == "ref" || normalizedHelperName == collection_helpers::kRefRef ||
+         normalizedHelperName == "to_aos" || normalizedHelperName == collection_helpers::kToAosRef ||
          normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -542,7 +543,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     // preferredSoaHelperTargetForCurrentImports keeps a genuine user
     // same-path /soa/<helper> shadow first and canonicalizes to the public
     // /std/collections/soa/<helper> surface otherwise.
-    if ((resolvedType == "/soa" || normalizedTypeName == "soa" ||
+    if ((resolvedType == collection_helpers::kRootedSoa || normalizedTypeName == "soa" ||
          normalizedTypeName.rfind("soa<", 0) == 0) &&
         isSupportedCompatibilitySoaHelperName(normalizedHelperName)) {
       resolvedOut =
@@ -562,10 +563,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     if (!resolvedType.empty()) {
       if (isInternalSoaCollectionTypePath(resolvedType) &&
-          (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
-           normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
-           normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-           normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
+          (normalizedHelperName == "count" || normalizedHelperName == collection_helpers::kCountRef ||
+           normalizedHelperName == "get" || normalizedHelperName == collection_helpers::kGetRef ||
+           normalizedHelperName == "ref" || normalizedHelperName == collection_helpers::kRefRef ||
+           normalizedHelperName == "to_aos" || normalizedHelperName == collection_helpers::kToAosRef ||
            normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -593,7 +594,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       // Same public-soa gap as the Name-receiver branch above: a call
       // returning soa<T> otherwise falls into the generic fallback and
       // fabricates a definition-less "/soa/<helper>" path.
-      if (resolvedType == "/soa" &&
+      if (resolvedType == collection_helpers::kRootedSoa &&
           isSupportedCompatibilitySoaHelperName(normalizedHelperName)) {
         resolvedOut =
             preferredSoaHelperTargetForCurrentImports(normalizedHelperName);
@@ -983,7 +984,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   if (resolvedVectorHelperDefinitionMissing) {
     const bool requestsExplicitCollectionHelperNamespace =
         expr.namespacePrefix == "vector" ||
-        expr.namespacePrefix == "/vector" ||
+        expr.namespacePrefix == collection_helpers::kRootedVector ||
         isCompatibilitySoaSurfaceNamespace(expr.namespacePrefix) ||
         isRootedVectorHelperPath(expr.name) ||
         splitSoaSurfaceHelperPath(expr.name, nullptr, nullptr) ||
@@ -1016,7 +1017,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         resolvedPathOut = resolved;
         return true;
       }
-      if (firstArgIsVectorFamily() && (vectorHelper == "count" || vectorHelper == "count_ref")) {
+      if (firstArgIsVectorFamily() && (vectorHelper == "count" || vectorHelper == collection_helpers::kCountRef)) {
         return failVectorHelperDiagnostic(vectorHelper + " requires soa target");
       }
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");

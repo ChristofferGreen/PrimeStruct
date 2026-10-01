@@ -9,6 +9,7 @@
 
 #include "EmitterCollectionSurfaceMetadata.h"
 #include "primec/backend/Emitter.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::emitter {
 
@@ -24,26 +25,26 @@ struct PrintBuiltin {
 };
 
 inline bool isCanonicalKeyValueHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
+  return helperName == "count" || helperName == collection_helpers::kCountRef ||
+         helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+         helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
+         helperName == "insert" || helperName == collection_helpers::kInsertRef;
 }
 
 inline bool isCanonicalKeyValueCountHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref";
+  return helperName == "count" || helperName == collection_helpers::kCountRef;
 }
 
 inline bool isCanonicalKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 inline bool isRemovedKeyValueSlashMethodMetadataHelperName(std::string_view helperName) {
-  return helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref";
+  return helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef;
 }
 
 inline bool isRemovedKeyValueDirectCallResultCompatibilityHelperName(std::string_view helperName) {

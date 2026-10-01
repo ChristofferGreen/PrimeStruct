@@ -1,6 +1,6 @@
 #include "SemanticsValidator.h"
-// soa-surface-audit: exempt
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -114,10 +114,10 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
           return false;
         }
         const std::string receiverPath = targetPath.substr(0, slash);
-        if (receiverPath == "/array" || receiverPath == "/vector" ||
+        if (receiverPath == collection_helpers::kRootedArray || receiverPath == collection_helpers::kRootedVector ||
             receiverPath == canonicalVectorCompatibilityPrefixOrFallback() ||
-            receiverPath == "/soa" || receiverPath == "/map" ||
-            receiverPath == "/string") {
+            receiverPath == collection_helpers::kRootedSoa || receiverPath == collection_helpers::kRootedMap ||
+            receiverPath == collection_helpers::kRootedString) {
           return false;
         }
         return structNames_.count(receiverPath) > 0;

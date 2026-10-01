@@ -4,6 +4,7 @@
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/support/CompileArena.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <array>
 #include <cctype>
@@ -228,21 +229,21 @@ std::string normalizeBindingTypeNameUncached(const std::string &name) {
   if (name == "float") {
     return "f32";
   }
-  if (name == "soa" || name == "/soa" || name == "std/collections/soa" ||
-      name == "/std/collections/soa") {
+  if (name == "soa" || name == collection_helpers::kRootedSoa || name == "std/collections/soa" ||
+      name == collection_helpers::kCanonicalSoa) {
     return "soa";
   }
   if (name.rfind("soa<", 0) == 0) {
     return "soa" + name.substr(std::string("soa").size());
   }
   if (name.rfind("/soa<", 0) == 0) {
-    return "soa" + name.substr(std::string("/soa").size());
+    return "soa" + name.substr(std::string(collection_helpers::kRootedSoa).size());
   }
   if (name.rfind("std/collections/soa<", 0) == 0) {
     return "soa" + name.substr(std::string("std/collections/soa").size());
   }
   if (name.rfind("/std/collections/soa<", 0) == 0) {
-    return "soa" + name.substr(std::string("/std/collections/soa").size());
+    return "soa" + name.substr(std::string(collection_helpers::kCanonicalSoa).size());
   }
   if (name == "array") {
     return "array";

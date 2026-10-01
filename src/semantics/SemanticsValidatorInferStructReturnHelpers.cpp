@@ -1,7 +1,7 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <cctype>
 #include <cstdint>
@@ -90,7 +90,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
   }
 
   if (normalizedTypeName == "string") {
-    return "/string";
+    return collection_helpers::kRootedString;
   }
   if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "soa") &&
       !normalizedTypeTemplateArg.empty()) {
@@ -278,8 +278,8 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
   const std::string normalizedPath = normalizeInferStructReturnHelperPath(path);
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind("/array/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
         suffix != "remove_at" && suffix != "remove_swap") {

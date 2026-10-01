@@ -5,6 +5,7 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/frontend/StringLiteral.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <array>
@@ -138,8 +139,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     if (expr.isMethodCall &&
         (expr.name == "count" || expr.name == "get" ||
-         expr.name == "get_ref" || expr.name == "ref") &&
-        hasVisibleDefinitionPathForCurrentImports("/soa/" + expr.name)) {
+         expr.name == collection_helpers::kGetRef || expr.name == "ref") &&
+        hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix + expr.name)) {
       for (const Expr &arg : expr.args) {
         if (!validateExpr(params, locals, arg, enclosingStatements,
                           statementIndex)) {
@@ -155,8 +156,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string soaGetHelper;
       if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get")) {
         soaGetHelper = "get";
-      } else if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
-        soaGetHelper = "get_ref";
+      } else if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef)) {
+        soaGetHelper = collection_helpers::kGetRef;
       }
       const bool usesCanonicalSoaGetSurface =
           expr.name.rfind(collection_paths::modulePrefix(
@@ -207,9 +208,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           builtinSoaAccessHelperName(expr.args.front(), params, locals);
       if (elementAccessHelper.has_value() &&
           (*elementAccessHelper == "get" ||
-           *elementAccessHelper == "get_ref" ||
+           *elementAccessHelper == collection_helpers::kGetRef ||
            *elementAccessHelper == "ref" ||
-           *elementAccessHelper == "ref_ref")) {
+           *elementAccessHelper == collection_helpers::kRefRef)) {
         if (auto noImportSoaDiagnostic = noImportSoaHelperCallDiagnostic(
                 expr.args.front(), params, locals)) {
           return failExprDiagnostic(expr.args.front(),
@@ -338,7 +339,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             suffix != std::string::npos) {
           fieldViewPath.erase(suffix);
         }
-        if (fieldViewPath == "/std/collections/soa/field_view") {
+        if (fieldViewPath == collection_helpers::kCanonicalSoaFieldView) {
           for (const Expr &arg : expr.args) {
             if (!validateExpr(params, locals, arg, enclosingStatements,
                               statementIndex)) {
@@ -352,9 +353,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               builtinSoaAccessHelperName(expr.args.front(), params, locals);
           if (elementAccessHelper.has_value() &&
               (*elementAccessHelper == "get" ||
-               *elementAccessHelper == "get_ref" ||
+               *elementAccessHelper == collection_helpers::kGetRef ||
                *elementAccessHelper == "ref" ||
-               *elementAccessHelper == "ref_ref")) {
+               *elementAccessHelper == collection_helpers::kRefRef)) {
             for (const Expr &arg : expr.args.front().args) {
               if (!validateExpr(params, locals, arg, enclosingStatements,
                                 statementIndex)) {
@@ -636,16 +637,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           inferQueryExprTypeText(expr.args.front(), params, locals,
                                  receiverTypeText) &&
           inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
-              "/vector";
+              collection_helpers::kRootedVector;
       if (receiverIsVector) {
         const std::string helperName = normalizeCollectionMethodName(expr.name);
         const bool explicitArrayNamespace =
             expr.namespacePrefix == "array" ||
-            expr.namespacePrefix == "/array" ||
-            expr.name.rfind("/array/", 0) == 0;
+            expr.namespacePrefix == collection_helpers::kRootedArray ||
+            expr.name.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0;
         const bool explicitVectorNamespace =
             expr.namespacePrefix == "vector" ||
-            expr.namespacePrefix == "/vector" ||
+            expr.namespacePrefix == collection_helpers::kRootedVector ||
             expr.name.rfind(rootedVectorHelperPathPrefix, 0) == 0;
         if (explicitArrayNamespace) {
           return failExprRootDiagnostic("unknown method: /array/" + helperName);
@@ -700,9 +701,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                    receiverTypeText)) {
           const std::string receiverCollectionType =
               inferMethodCollectionTypePathFromTypeText(receiverTypeText);
-          if (receiverCollectionType == "/array" ||
-              receiverCollectionType == "/string" ||
-              receiverCollectionType == "/map") {
+          if (receiverCollectionType == collection_helpers::kRootedArray ||
+              receiverCollectionType == collection_helpers::kRootedString ||
+              receiverCollectionType == collection_helpers::kRootedMap) {
             return failExprRootDiagnostic(
                 normalizedMutatorMethodName + " requires vector binding");
           }
@@ -757,7 +758,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                     receiverTypeText)) &&
             ([&]() {
               if (inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
-                  "/vector") {
+                  collection_helpers::kRootedVector) {
                 return true;
               }
               BindingInfo receiverBinding;
@@ -891,9 +892,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         shouldBuiltinValidateCurrentMapWrapperHelper("contains");
     const bool shouldBuiltinValidateBareKeyValueAccessCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
-        shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper(collection_helpers::kAtRef) ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe") ||
-        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe_ref");
+        shouldBuiltinValidateCurrentMapWrapperHelper(collection_helpers::kAtUnsafeRef);
     bool handledEarlyPointerBuiltin = false;
     if (!validateExprEarlyPointerBuiltin(
             params, locals, expr, dispatchBootstrap,
@@ -1007,13 +1008,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (slash != std::string::npos) {
         methodName = methodName.substr(slash + 1);
       }
-      return methodName == "count" || methodName == "count_ref" ||
+      return methodName == "count" || methodName == collection_helpers::kCountRef ||
              methodName == "size" ||
-             methodName == "contains" || methodName == "contains_ref" ||
-             methodName == "tryAt" || methodName == "tryAt_ref" ||
-             methodName == "at" || methodName == "at_ref" ||
-             methodName == "at_unsafe" || methodName == "at_unsafe_ref" ||
-             methodName == "insert" || methodName == "insert_ref";
+             methodName == "contains" || methodName == collection_helpers::kContainsRef ||
+             methodName == "tryAt" || methodName == collection_helpers::kTryAtRef ||
+             methodName == "at" || methodName == collection_helpers::kAtRef ||
+             methodName == "at_unsafe" || methodName == collection_helpers::kAtUnsafeRef ||
+             methodName == "insert" || methodName == collection_helpers::kInsertRef;
     }();
     if (expr.isMethodCall && !expr.args.empty() &&
         !isIndexedArgsPackKeyValueMethodReceiver &&
@@ -1379,9 +1380,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                                         helperName)) {
         return true;
       }
-      if (helperName != "tryAt" && helperName != "tryAt_ref" &&
-          helperName != "at" && helperName != "at_ref" &&
-          helperName != "at_unsafe" && helperName != "at_unsafe_ref") {
+      if (helperName != "tryAt" && helperName != collection_helpers::kTryAtRef &&
+          helperName != "at" && helperName != collection_helpers::kAtRef &&
+          helperName != "at_unsafe" && helperName != collection_helpers::kAtUnsafeRef) {
         return true;
       }
       std::string keyValueKeyType;
@@ -1399,7 +1400,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       auto failKeyValueKeyDiagnostic = [&]() {
-        if (helperName == "tryAt" || helperName == "tryAt_ref") {
+        if (helperName == "tryAt" || helperName == collection_helpers::kTryAtRef) {
           if (normalizeBindingTypeName(keyValueKeyType) == "string") {
             return failExprDiagnostic(expr.args[1],
                                       "tryAt requires string map key");
@@ -1595,7 +1596,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool resolvedIsSoaAccess =
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical,
-                                         "get_ref") ||
+                                         collection_helpers::kGetRef) ||
         isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical) ||
         isExperimentalSoaGetLikeHelperPath(resolvedWithoutSpecialization) ||
         isExperimentalSoaRefLikeHelperPath(resolvedWithoutSpecialization);
@@ -1604,25 +1605,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
                                          "to_aos") ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
-                                         "to_aos_ref") ||
+                                         collection_helpers::kToAosRef) ||
         isExperimentalSoaVectorConversionFamilyPath(
             resolvedWithoutSpecialization);
     const bool shouldLateValidateDirectSoaSurface =
         ((isSimpleCallName(expr, "get") ||
-          isSimpleCallName(expr, "get_ref") ||
+          isSimpleCallName(expr, collection_helpers::kGetRef) ||
           isSimpleCallName(expr, "ref") ||
-          isSimpleCallName(expr, "ref_ref")) &&
+          isSimpleCallName(expr, collection_helpers::kRefRef)) &&
          resolvedIsSoaAccess) ||
         ((isSimpleCallName(expr, "to_soa") ||
           isSimpleCallName(expr, "to_aos") ||
-          isSimpleCallName(expr, "to_aos_ref")) &&
+          isSimpleCallName(expr, collection_helpers::kToAosRef)) &&
          resolvedIsSoaConversion);
     const bool shouldLateValidateCanonicalSoaToAos =
         resolvedUsesCanonicalSoaNamespace &&
         isCanonicalStdlibSoaHelperPath(resolved, "to_aos");
     const bool shouldLateValidateCanonicalSoaToAosRef =
         resolvedUsesCanonicalSoaNamespace &&
-        isCanonicalStdlibSoaHelperPath(resolved, "to_aos_ref");
+        isCanonicalStdlibSoaHelperPath(resolved, collection_helpers::kToAosRef);
     if (resolvedDefinition == nullptr || resolvedMethod ||
         shouldLateValidateDirectSoaSurface || shouldLateValidateCanonicalSoaToAos ||
         shouldLateValidateCanonicalSoaToAosRef) {

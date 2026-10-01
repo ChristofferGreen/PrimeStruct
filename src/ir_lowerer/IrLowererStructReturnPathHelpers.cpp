@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererStructReturnPathHelpers.h"
 
 #include "IrLowererHelpers.h"
@@ -6,6 +5,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 
@@ -184,13 +184,13 @@ std::string inferBuiltinCollectionReceiverPath(
       return "/" + typeName;
     }
     if (typeName.rfind("vector<", 0) == 0) {
-      return "/vector";
+      return collection_helpers::kRootedVector;
     }
     if (typeName.rfind("array<", 0) == 0) {
-      return "/array";
+      return collection_helpers::kRootedArray;
     }
     if (typeName.rfind("map<", 0) == 0) {
-      return "/map";
+      return collection_helpers::kRootedMap;
     }
     return "";
   };
@@ -220,17 +220,17 @@ std::string inferBuiltinCollectionReceiverPath(
 std::vector<std::string> collectionMethodPathCandidates(const std::string &receiverStruct,
                                                         const std::string &methodName,
                                                         const std::string &rawMethodName) {
-  if (receiverStruct == "/vector") {
+  if (receiverStruct == collection_helpers::kRootedVector) {
     std::vector<std::string> candidates = {
         stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, methodName)};
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
-      candidates.push_back("/array/" + methodName);
+      candidates.push_back(collection_helpers::kRootedArrayPrefix + methodName);
     }
     return candidates;
   }
-  if (receiverStruct == "/array") {
+  if (receiverStruct == collection_helpers::kRootedArray) {
     std::vector<std::string> candidates = {
-        "/array/" + methodName,
+        collection_helpers::kRootedArrayPrefix + methodName,
     };
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
       candidates.push_back(
@@ -238,7 +238,7 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
     }
     return candidates;
   }
-  if (receiverStruct == "/map") {
+  if (receiverStruct == collection_helpers::kRootedMap) {
     std::string normalizedRawMethodName = rawMethodName;
     if (!normalizedRawMethodName.empty() && normalizedRawMethodName.front() == '/') {
       normalizedRawMethodName.erase(normalizedRawMethodName.begin());
@@ -285,8 +285,8 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind("/array/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(stdlibSurfaceCanonicalHelperPath(
           StdlibSurfaceId::CollectionsManifestSurface0, suffix));
@@ -298,8 +298,8 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 std::string preferCollectionHelperPath(const std::string &path,
                                        const std::unordered_map<std::string, const Definition *> &defMap) {
   std::string preferred = path;
-  if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/array/").size());
+  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias =
           stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
@@ -529,7 +529,7 @@ std::string inferStructReturnPathFromExprInternal(
     }
     const std::string methodName = normalizeCollectionMethodName(expr.name);
     std::vector<std::string> candidates = collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
-    if ((receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") &&
+    if ((receiverStruct == collection_helpers::kRootedVector || receiverStruct == collection_helpers::kRootedArray || receiverStruct == collection_helpers::kRootedString) &&
         (methodName == "at" || methodName == "at_unsafe")) {
       const std::string canonicalCandidate =
           stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, methodName);
@@ -600,7 +600,7 @@ std::string inferStructReturnPathFromExprInternal(
                                                                    defMap,
                                                                    visitedDefs);
           }
-          if (receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") {
+          if (receiverStruct == collection_helpers::kRootedVector || receiverStruct == collection_helpers::kRootedArray || receiverStruct == collection_helpers::kRootedString) {
             const std::string canonicalCandidate =
                 stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
             for (auto it = resolvedCandidates.begin(); it != resolvedCandidates.end();) {

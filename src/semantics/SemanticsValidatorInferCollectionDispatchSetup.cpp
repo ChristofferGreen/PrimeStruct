@@ -1,13 +1,14 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {
@@ -137,8 +138,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
         std::string resolvedKeyValueHelperName;
         if (resolveDispatchSetupKeyValueHelperPath(resolvedPath,
                                                    resolvedKeyValueHelperName) &&
-            (resolvedKeyValueHelperName == "at_ref" ||
-             resolvedKeyValueHelperName == "at_unsafe_ref")) {
+            (resolvedKeyValueHelperName == collection_helpers::kAtRef ||
+             resolvedKeyValueHelperName == collection_helpers::kAtUnsafeRef)) {
           helperNameOut = resolvedKeyValueHelperName;
           return true;
         }

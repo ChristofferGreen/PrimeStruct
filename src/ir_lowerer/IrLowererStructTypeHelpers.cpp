@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererStructTypeHelpers.h"
 
 #include "IrLowererBindingTransformHelpers.h"
@@ -13,6 +12,7 @@
 
 #include <sstream>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -65,7 +65,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
       trimTemplateTypeText(localInfo.structTypeName);
   if (localInfo.isSoaVector) {
     if (normalizedStructTypeName.empty()) {
-      return "/soa";
+      return collection_helpers::kRootedSoa;
     }
 
     std::string normalizedStructPath = normalizedStructTypeName;
@@ -77,7 +77,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
     }
     if (normalizeCollectionBindingTypeName(normalizedStructTypeName) ==
         "soa") {
-      return "/soa";
+      return collection_helpers::kRootedSoa;
     }
 
     std::string elementType = normalizedStructTypeName;
@@ -93,7 +93,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
     if (!elementType.empty()) {
       return specializedCollectionVectorRecordPathForElementType(elementType);
     }
-    return "/vector";
+    return collection_helpers::kRootedVector;
   }
 
   std::string normalizedStructPath = normalizedStructTypeName;
@@ -109,7 +109,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
     if (!elementType.empty()) {
       return specializedCollectionVectorRecordPathForElementType(elementType);
     }
-    return "/vector";
+    return collection_helpers::kRootedVector;
   }
 
   std::string elementType = normalizedStructTypeName;

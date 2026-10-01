@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -32,7 +33,7 @@ bool localImportPathCoversTarget(const std::string &importPath, const std::strin
 }
 
 bool hasVisiblePublicSoaHelperDefinition(const Program &program, std::string_view helperName) {
-  const std::string canonicalPath = "/std/collections/soa/" + std::string(helperName);
+  const std::string canonicalPath = collection_helpers::kCanonicalSoaPrefix + std::string(helperName);
   for (const Definition &def : program.definitions) {
     if (def.fullPath == canonicalPath) {
       return true;
@@ -43,9 +44,9 @@ bool hasVisiblePublicSoaHelperDefinition(const Program &program, std::string_vie
 
 bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName) {
   const std::string rootPath = "/" + std::string(helperName);
-  const std::string samePath = "/soa/" + std::string(helperName);
+  const std::string samePath = collection_helpers::kRootedSoaPrefix + std::string(helperName);
   const std::string canonicalPath =
-      "/std/collections/soa/" + std::string(helperName);
+      collection_helpers::kCanonicalSoaPrefix + std::string(helperName);
   auto matchesSoaReceiverType = [&](const Expr &parameter) {
     return extractBuiltinSoaVectorBinding(parameter).has_value() ||
            extractExperimentalSoaVectorBinding(parameter).has_value();
@@ -73,9 +74,9 @@ bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
                                             std::string_view helperName,
                                             std::string_view receiverTypeName) {
   const std::string rootPath = "/" + std::string(helperName);
-  const std::string samePath = "/soa/" + std::string(helperName);
+  const std::string samePath = collection_helpers::kRootedSoaPrefix + std::string(helperName);
   const std::string canonicalPath =
-      "/std/collections/soa/" + std::string(helperName);
+      collection_helpers::kCanonicalSoaPrefix + std::string(helperName);
   auto matchesReceiverType = [&](const Expr &parameter) {
     if (receiverTypeName == semantics::internalSoaCollectionTypeName()) {
       return extractBuiltinSoaVectorBinding(parameter).has_value() ||
@@ -105,7 +106,7 @@ bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
   // the method-sugar rewrite below fabricate "/soa/<helper>" names with
   // no definition behind them, so soa<T>-returning call receivers died
   // with "unknown method: /std/collections/soa_vector/<helper>".
-  const std::string samePath = "/soa/" + std::string(helperName);
+  const std::string samePath = collection_helpers::kRootedSoaPrefix + std::string(helperName);
   for (const Definition &def : program.definitions) {
     if (def.fullPath != samePath || def.parameters.empty()) {
       continue;
@@ -311,11 +312,11 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
   if (helperName.empty()) {
     return true;
   }
-  if (helperName == "ref" || helperName == "ref_ref") {
+  if (helperName == "ref" || helperName == collection_helpers::kRefRef) {
     return true;
   }
   const bool helperArityMatches =
-      (helperName == "count" || helperName == "count_ref") ? expr.args.size() == 1
+      (helperName == "count" || helperName == collection_helpers::kCountRef) ? expr.args.size() == 1
                                                            : expr.args.size() == 2;
   if (!helperArityMatches || !expr.templateArgs.empty() ||
       semantics::hasNamedArguments(expr.argNames) || expr.hasBodyArguments) {
@@ -485,9 +486,9 @@ std::optional<semantics::BindingInfo> extractParsedOrExperimentalSoaBindingInfo(
         if (generatedSuffix != std::string::npos) {
           initPath.erase(generatedSuffix);
         }
-        if (initPath == "/std/collections/soa/soa" ||
-            initPath == "/std/collections/soa/single" ||
-            initPath == "/std/collections/soa/from_aos" ||
+        if (initPath == collection_helpers::kCanonicalSoaSoa ||
+            initPath == collection_helpers::kCanonicalSoaSingle ||
+            initPath == collection_helpers::kCanonicalSoaFromAos ||
             initPath == collection_paths::memberPath(collection_paths::kInternalSoaVectorFolder, "soaVectorNew") ||
             initPath == collection_paths::memberPath(collection_paths::kInternalSoaVectorFolder, "soaVectorSingle") ||
             initPath == collection_paths::memberPath(collection_paths::kInternalSoaVectorFolder, "soaVectorFromAos") ||
@@ -633,34 +634,34 @@ std::string builtinSoaConversionMethodName(std::string_view methodName) {
 
 std::string builtinSoaAccessHelperName(std::string_view rawName) {
   const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);
-  if (normalized == "get" || normalized == "get_ref" ||
-      normalized == "ref" || normalized == "ref_ref") {
+  if (normalized == "get" || normalized == collection_helpers::kGetRef ||
+      normalized == "ref" || normalized == collection_helpers::kRefRef) {
     return normalized;
   }
   return {};
 }
 
 std::string borrowedBuiltinSoaAccessHelperName(std::string_view helperName) {
-  if (helperName == "get" || helperName == "get_ref") {
-    return "get_ref";
+  if (helperName == "get" || helperName == collection_helpers::kGetRef) {
+    return collection_helpers::kGetRef;
   }
-  if (helperName == "ref" || helperName == "ref_ref") {
-    return "ref_ref";
+  if (helperName == "ref" || helperName == collection_helpers::kRefRef) {
+    return collection_helpers::kRefRef;
   }
   return {};
 }
 
 std::string builtinSoaCountHelperName(std::string_view rawName) {
   const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);
-  if (normalized == "count" || normalized == "count_ref") {
+  if (normalized == "count" || normalized == collection_helpers::kCountRef) {
     return normalized;
   }
   return {};
 }
 
 std::string borrowedBuiltinSoaCountHelperName(std::string_view helperName) {
-  if (helperName == "count" || helperName == "count_ref") {
-    return "count_ref";
+  if (helperName == "count" || helperName == collection_helpers::kCountRef) {
+    return collection_helpers::kCountRef;
   }
   return {};
 }
@@ -671,7 +672,7 @@ bool isOldExplicitSoaCountHelperName(std::string_view rawName) {
   return semantics::splitSoaSurfaceHelperPath(
              rawName, &helperName, &usesPublicSurface) &&
          !usesPublicSurface &&
-         (helperName == "count" || helperName == "count_ref");
+         (helperName == "count" || helperName == collection_helpers::kCountRef);
 }
 
 std::string builtinSoaMutatorHelperName(std::string_view rawName) {

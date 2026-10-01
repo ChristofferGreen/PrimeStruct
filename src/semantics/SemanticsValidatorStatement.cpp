@@ -2,6 +2,7 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorStatementLoopCountStep.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <cctype>
 #include <functional>
@@ -548,7 +549,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   }
   if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
       isExperimentalSoaFieldViewHelperPath(resolveCalleePath(stmt)) &&
-      resolveCalleePath(stmt).rfind("/std/collections/soa/soaVectorFieldView", 0) == 0) {
+      resolveCalleePath(stmt).rfind(collection_helpers::kCanonicalSoaSoaVectorFieldView, 0) == 0) {
     if (hasNamedArguments(stmt.argNames)) {
       return failStatementDiagnostic("named arguments not supported for builtin calls");
     }

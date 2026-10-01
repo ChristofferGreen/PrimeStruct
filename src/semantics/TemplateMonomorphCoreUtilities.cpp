@@ -10,6 +10,7 @@
 #include "primec/support/CompileArena.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -184,15 +185,15 @@ bool isTemplateMonomorphMapEntryConstructorPath(std::string path) {
 
 
 std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
-  if (name == "array" || name == "/array") {
+  if (name == "array" || name == collection_helpers::kRootedArray) {
     return "array";
   }
-  if (name == "vector" || name == "/vector" ||
+  if (name == "vector" || name == collection_helpers::kRootedVector ||
       semantics::trimLeadingSlash(name) ==
           semantics::trimLeadingSlash(semantics::canonicalVectorCompatibilityPrefixOrFallback())) {
     return "vector";
   }
-  if (name == "soa" || name == "/soa" ||
+  if (name == "soa" || name == collection_helpers::kRootedSoa ||
       name == semantics::publicSoaHelperTargetPath("") ||
       name == semantics::trimLeadingSlash(semantics::publicSoaHelperTargetPath(""))) {
     return templateMonomorphSoaReceiverTypeName();

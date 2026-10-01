@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -96,20 +97,20 @@ bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
 bool isMapTryAtResultHelperCall(std::string_view resolvedPath,
                                 const Expr &expr) {
   if (isSimpleCallName(expr, "tryAt") ||
-      isSimpleCallName(expr, "tryAt_ref")) {
+      isSimpleCallName(expr, collection_helpers::kTryAtRef)) {
     return true;
   }
   const std::string canonicalTryAt =
       metadataBackedCanonicalKeyValueHelperPath("tryAt");
   const std::string canonicalTryAtRef =
-      metadataBackedCanonicalKeyValueHelperPath("tryAt_ref");
+      metadataBackedCanonicalKeyValueHelperPath(collection_helpers::kTryAtRef);
   if ((!canonicalTryAt.empty() && resolvedPath == canonicalTryAt) ||
       (!canonicalTryAtRef.empty() && resolvedPath == canonicalTryAtRef)) {
     return true;
   }
   const std::string rootAliasHelper =
       metadataBackedKeyValueHelperRootAliasMethodName(resolvedPath);
-  return rootAliasHelper == "tryAt" || rootAliasHelper == "tryAt_ref";
+  return rootAliasHelper == "tryAt" || rootAliasHelper == collection_helpers::kTryAtRef;
 }
 
 bool isResultTypeBaseName(const std::string &base) {
@@ -720,10 +721,10 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
     };
     auto isCanonicalSoaWrapperMethodName = [](std::string_view methodName) {
-      return methodName == "count" || methodName == "count_ref" ||
-             methodName == "get" || methodName == "get_ref" ||
-             methodName == "ref" || methodName == "ref_ref" ||
-             methodName == "to_aos" || methodName == "to_aos_ref" ||
+      return methodName == "count" || methodName == collection_helpers::kCountRef ||
+             methodName == "get" || methodName == collection_helpers::kGetRef ||
+             methodName == "ref" || methodName == collection_helpers::kRefRef ||
+             methodName == "to_aos" || methodName == collection_helpers::kToAosRef ||
              methodName == "push" || methodName == "reserve";
     };
     const std::string normalizedMethodName =
@@ -781,7 +782,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     if (resolvedType.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 &&
         isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
-      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa");
+      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedSoa);
     }
     return resolvedType + "/" + expr.name;
   };

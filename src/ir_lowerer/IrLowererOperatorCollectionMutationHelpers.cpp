@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -20,6 +19,7 @@
 #include <utility>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 namespace {
@@ -45,7 +45,7 @@ bool matchesGeneratedSpecializedPath(std::string_view text,
 
 bool isVectorStructPath(const std::string &structPath) {
   const std::string vectorTypePath = localExperimentalCollectionTypePath("vector", "Vector");
-  return structPath == "/vector" || structPath == vectorTypePath ||
+  return structPath == collection_helpers::kRootedVector || structPath == vectorTypePath ||
          matchesGeneratedSpecializedPath(structPath, vectorTypePath);
 }
 
@@ -859,9 +859,9 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
       if (!targetInfo.isArrayOrVectorTarget && !hasSemanticArrayVectorFact) {
         const std::string collectionPath = inferStructExprPath(collectionTarget, localsIn);
-        if (collectionPath == "/array" || collectionPath == "/vector") {
+        if (collectionPath == collection_helpers::kRootedArray || collectionPath == collection_helpers::kRootedVector) {
           targetInfo.isArrayOrVectorTarget = true;
-          targetInfo.isVectorTarget = (collectionPath == "/vector");
+          targetInfo.isVectorTarget = (collectionPath == collection_helpers::kRootedVector);
         }
       }
       if (!targetInfo.isArrayOrVectorTarget && !hasSemanticArrayVectorFact &&

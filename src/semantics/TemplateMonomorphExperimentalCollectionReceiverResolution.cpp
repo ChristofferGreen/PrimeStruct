@@ -35,6 +35,7 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -902,18 +903,18 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
       canonicalizeSoaHelperPath(canonicalizeLegacySoaGetHelperPath(path));
   const std::string canonicalSoaRefPath =
       canonicalizeSoaHelperPath(canonicalizeLegacySoaRefHelperPath(path));
-  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count_ref") ||
-      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref") ||
-      isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref")) {
+  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, collection_helpers::kCountRef) ||
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef) ||
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, collection_helpers::kRefRef)) {
     return {};
   }
   auto resolvesToBorrowedSoaHelper = [](const std::string &candidatePath) {
     const std::string canonicalHelperPath = primec::stdlibSurfaceCanonicalHelperPath(
         primec::StdlibSurfaceId::CollectionsColumnarHelpers,
         candidatePath);
-    return canonicalHelperPath == compatibilitySoaHelperTargetPath("count_ref") ||
-           canonicalHelperPath == compatibilitySoaHelperTargetPath("get_ref") ||
-           canonicalHelperPath == compatibilitySoaHelperTargetPath("ref_ref");
+    return canonicalHelperPath == compatibilitySoaHelperTargetPath(collection_helpers::kCountRef) ||
+           canonicalHelperPath == compatibilitySoaHelperTargetPath(collection_helpers::kGetRef) ||
+           canonicalHelperPath == compatibilitySoaHelperTargetPath(collection_helpers::kRefRef);
   };
   if (resolvesToBorrowedSoaHelper(canonicalSoaCountPath) ||
       resolvesToBorrowedSoaHelper(canonicalSoaGetPath) ||

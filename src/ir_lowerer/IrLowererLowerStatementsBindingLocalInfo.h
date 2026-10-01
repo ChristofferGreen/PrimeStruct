@@ -1,4 +1,4 @@
-// soa-surface-audit: exempt
+#include "primec/support/CollectionHelperNames.h"
       if (!semanticLocalAutoBinding && !hasExplicitBindingTypeTransform(stmt) && info.kind == LocalInfo::Kind::Value) {
         ResultExprInfo inferredResultInfo;
         if (resolveResultExprInfoFromLocals(
@@ -144,10 +144,10 @@
             info.errorHelperNamespacePath = "/std/image/ImageError";
             info.structTypeName = "/std/image/ImageError";
           } else if (transform.name == "ContainerError" ||
-                     transform.name == "/std/collections/ContainerError") {
+                     transform.name == primec::collection_helpers::kCanonicalContainerErrorType) {
             info.errorTypeName = "ContainerError";
-            info.errorHelperNamespacePath = "/std/collections/ContainerError";
-            info.structTypeName = "/std/collections/ContainerError";
+            info.errorHelperNamespacePath = primec::collection_helpers::kCanonicalContainerErrorType;
+            info.structTypeName = primec::collection_helpers::kCanonicalContainerErrorType;
           } else if (transform.name == "GfxError" ||
                      transform.name == "/std/gfx/GfxError" ||
                      transform.name == "/std/gfx/experimental/GfxError") {
@@ -293,8 +293,8 @@
           info.isFileHandle = true;
           info.valueKind = LocalInfo::ValueKind::Int64;
         } else if (transform.name == "ContainerError" ||
-                   transform.name == "/std/collections/ContainerError") {
-          info.structTypeName = "/std/collections/ContainerError";
+                   transform.name == primec::collection_helpers::kCanonicalContainerErrorType) {
+          info.structTypeName = primec::collection_helpers::kCanonicalContainerErrorType;
           info.valueKind = LocalInfo::ValueKind::Int64;
         } else if (transform.name == "ImageError" ||
                    transform.name == "/std/image/ImageError") {

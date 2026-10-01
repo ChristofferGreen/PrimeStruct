@@ -16,15 +16,16 @@
 #include "primec/support/CompileArena.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 namespace {
 
 bool isSoaSamePathHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "get" || helperName == "get_ref" ||
-         helperName == "ref" || helperName == "ref_ref" ||
-         helperName == "to_aos" || helperName == "to_aos_ref" ||
+  return helperName == "count" || helperName == collection_helpers::kCountRef ||
+         helperName == "get" || helperName == collection_helpers::kGetRef ||
+         helperName == "ref" || helperName == collection_helpers::kRefRef ||
+         helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
          helperName == "push" || helperName == "reserve";
 }
 
@@ -36,7 +37,7 @@ std::string explicitOldSoaHelperPath(const Expr &candidate) {
   std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
   if (normalizedPrefix == "soa" &&
       isSoaSamePathHelperName(normalizedName)) {
-    return "/soa/" + normalizedName;
+    return collection_helpers::kRootedSoaPrefix + normalizedName;
   }
   constexpr std::string_view kOldExplicitPrefix = "soa/";
   if (normalizedName.rfind(kOldExplicitPrefix, 0) != 0) {
@@ -46,7 +47,7 @@ std::string explicitOldSoaHelperPath(const Expr &candidate) {
   if (!isSoaSamePathHelperName(helperName)) {
     return "";
   }
-  return "/soa/" + std::string(helperName);
+  return collection_helpers::kRootedSoaPrefix + std::string(helperName);
 }
 
 std::string explicitCallPathForCandidate(const Expr &candidate) {
@@ -167,27 +168,27 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
     }
     if (isExperimentalSoaVectorTypePath(base) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
-      return "/soa";
+      return collection_helpers::kRootedSoa;
     }
-    if ((isKeyValueSurfaceTypeName(base) || base == "/map" ||
+    if ((isKeyValueSurfaceTypeName(base) || base == collection_helpers::kRootedMap ||
          isCanonicalMapCollectionTypeRootLocal(base)) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
-      return "/map";
+      return collection_helpers::kRootedMap;
     }
     normalizedType = base;
   }
-  if (normalizedType == "/array" || normalizedType == "array") {
-    return "/array";
+  if (normalizedType == collection_helpers::kRootedArray || normalizedType == "array") {
+    return collection_helpers::kRootedArray;
   }
-  if (normalizedType == "/vector" || normalizedType == "vector" ||
+  if (normalizedType == collection_helpers::kRootedVector || normalizedType == "vector" ||
       trimLeadingSlash(normalizedType) ==
           trimLeadingSlash(canonicalVectorCompatibilityPrefixOrFallback())) {
-    return "/vector";
+    return collection_helpers::kRootedVector;
   }
   if (normalizedType == "Vector" ||
       isLegacyExperimentalVectorCompatibilityTypePath(normalizedType) ||
       isLegacyExperimentalVectorCompatibilityTypePath("/" + normalizedType)) {
-    return "/vector";
+    return collection_helpers::kRootedVector;
   }
   if (normalizedType == "Buffer" || normalizedType == "std/gfx/Buffer" || normalizedType == "/std/gfx/Buffer" ||
       normalizedType == "std/gfx/experimental/Buffer" || normalizedType == "/std/gfx/experimental/Buffer" ||
@@ -196,26 +197,26 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/gfx/experimental/Buffer__", 0) == 0) {
     return "/Buffer";
   }
-  if (normalizedType == "/soa" || normalizedType == "soa" ||
+  if (normalizedType == collection_helpers::kRootedSoa || normalizedType == "soa" ||
       normalizedType == "SoaVector" ||
       normalizedType == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
       normalizedType == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)) {
-    return "/soa";
+    return collection_helpers::kRootedSoa;
   }
   if (normalizedType.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
       normalizedType.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0) {
-    return "/soa";
+    return collection_helpers::kRootedSoa;
   }
   if (isKeyValueSurfaceTypeName(normalizedType) ||
-      normalizedType == "/map" ||
+      normalizedType == collection_helpers::kRootedMap ||
       isCanonicalMapCollectionTypeRootLocal(normalizedType)) {
-    return "/map";
+    return collection_helpers::kRootedMap;
   }
   if (isSpecializedExperimentalKeyValueBackingPath(normalizedType)) {
-    return "/map";
+    return collection_helpers::kRootedMap;
   }
-  if (normalizedType == "/string" || normalizedType == "string") {
-    return "/string";
+  if (normalizedType == collection_helpers::kRootedString || normalizedType == "string") {
+    return collection_helpers::kRootedString;
   }
   return "";
 }
@@ -605,15 +606,15 @@ bool SemanticsValidator::canonicalizeExperimentalKeyValueHelperResolvedPath(
   if (!resolvePublishedKeyValueHelperResolvedPathLocal(resolvedPath, helperName)) {
     return false;
   }
-  if (helperName == "count_ref") {
+  if (helperName == collection_helpers::kCountRef) {
     helperName = "count";
-  } else if (helperName == "contains_ref") {
+  } else if (helperName == collection_helpers::kContainsRef) {
     helperName = "contains";
-  } else if (helperName == "tryAt_ref") {
+  } else if (helperName == collection_helpers::kTryAtRef) {
     helperName = "tryAt";
-  } else if (helperName == "at_ref") {
+  } else if (helperName == collection_helpers::kAtRef) {
     helperName = "at";
-  } else if (helperName == "at_unsafe_ref") {
+  } else if (helperName == collection_helpers::kAtUnsafeRef) {
     helperName = "at_unsafe";
   }
   canonicalPathOut = canonicalKeyValueHelperPathLocal(helperName);
@@ -641,42 +642,42 @@ bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::strin
     return definitionPathContains("/Reference/count") ||
            definitionPathContains("/count_ref");
   }
-  if (helperName == "count_ref") {
+  if (helperName == collection_helpers::kCountRef) {
     return definitionPathContains("/count_ref");
   }
   if (helperName == "contains") {
     return definitionPathContains("/Reference/contains") ||
            definitionPathContains("/contains_ref");
   }
-  if (helperName == "contains_ref") {
+  if (helperName == collection_helpers::kContainsRef) {
     return definitionPathContains("/contains_ref");
   }
   if (helperName == "tryAt") {
     return definitionPathContains("/Reference/tryAt") ||
            definitionPathContains("/tryAt_ref");
   }
-  if (helperName == "tryAt_ref") {
+  if (helperName == collection_helpers::kTryAtRef) {
     return definitionPathContains("/tryAt_ref");
   }
   if (helperName == "at") {
     return definitionPathContains("/Reference/at") ||
            definitionPathContains("/at_ref");
   }
-  if (helperName == "at_ref") {
+  if (helperName == collection_helpers::kAtRef) {
     return definitionPathContains("/at_ref");
   }
   if (helperName == "at_unsafe") {
     return definitionPathContains("/Reference/at_unsafe") ||
            definitionPathContains("/at_unsafe_ref");
   }
-  if (helperName == "at_unsafe_ref") {
+  if (helperName == collection_helpers::kAtUnsafeRef) {
     return definitionPathContains("/at_unsafe_ref");
   }
   if (helperName == "insert") {
     return definitionPathContains("/Reference/insert") ||
            definitionPathContains("/insert_ref");
   }
-  if (helperName == "insert_ref") {
+  if (helperName == collection_helpers::kInsertRef) {
     return definitionPathContains("/insert_ref");
   }
   return false;
@@ -794,7 +795,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
   }
   auto canonicalAccessHelperReturnsStruct = [&]() {
     if (helperName != "at" && helperName != "at_unsafe" &&
-        helperName != "at_ref" && helperName != "at_unsafe_ref") {
+        helperName != collection_helpers::kAtRef && helperName != collection_helpers::kAtUnsafeRef) {
       return false;
     }
     const std::string canonicalPath = canonicalKeyValueHelperPathLocal(helperName);
@@ -994,12 +995,12 @@ bool SemanticsValidator::getVectorMutatorHelperName(const Expr &candidate,
   }
   if (!isCanonicalVectorCompatibilityPath(removedPath) &&
       !isRootedVectorHelperPath(removedPath) &&
-      removedPath.rfind("/array/", 0) != 0) {
+      removedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) != 0) {
     return false;
   }
 
   const std::string helperName = removedPath.substr(removedPath.find_last_of('/') + 1);
-  if (removedPath.rfind("/array/", 0) == 0) {
+  if (removedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
     const std::string canonicalPath = canonicalVectorCompatibilityHelperPathOrFallback(helperName);
     if (hasDefinitionPath(canonicalPath) || hasImportedDefinitionPath(canonicalPath)) {
       return false;

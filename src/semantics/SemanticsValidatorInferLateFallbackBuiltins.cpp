@@ -2,6 +2,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 #include <utility>
@@ -78,25 +79,25 @@ bool resolveLateFallbackCanonicalKeyValueHelperName(
 bool isCanonicalKeyValueContainsHelperPath(const std::string &path) {
   std::string helperName;
   return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
-         (helperName == "contains" || helperName == "contains_ref");
+         (helperName == "contains" || helperName == collection_helpers::kContainsRef);
 }
 
 bool isCanonicalKeyValueTryAtHelperPath(const std::string &path) {
   std::string helperName;
   return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
-         (helperName == "tryAt" || helperName == "tryAt_ref");
+         (helperName == "tryAt" || helperName == collection_helpers::kTryAtRef);
 }
 
 bool isCanonicalKeyValueAccessHelperPath(const std::string &path) {
   std::string helperName;
   return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
-         (helperName == "at" || helperName == "at_ref" ||
-          helperName == "at_unsafe" || helperName == "at_unsafe_ref");
+         (helperName == "at" || helperName == collection_helpers::kAtRef ||
+          helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef);
 }
 
 bool isLateFallbackKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool isCollectionPairImportAliasAccessHelperPath(std::string path) {
@@ -163,14 +164,14 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   };
   auto isCanonicalKeyValueAccessHelperName =
       [&](const std::string &helperName) {
-    return helperName == "at" || helperName == "at_ref" ||
-           helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+    return helperName == "at" || helperName == collection_helpers::kAtRef ||
+           helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
   };
 
   const auto resolvedIt = defMap_.find(context.resolved);
   if (!expr.isMethodCall &&
       (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
-       isSimpleCallName(expr, "to_aos_ref")) &&
+       isSimpleCallName(expr, collection_helpers::kToAosRef)) &&
       expr.args.size() == 1 && resolvedIt == defMap_.end()) {
     std::string elemType;
     if (isSimpleCallName(expr, "to_soa")) {
@@ -198,7 +199,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   }
 
   const bool isBuiltinGet = isSimpleCallName(expr, "get");
-  const bool isBuiltinGetRef = isSimpleCallName(expr, "get_ref");
+  const bool isBuiltinGetRef = isSimpleCallName(expr, collection_helpers::kGetRef);
   const bool isBuiltinRef = isSimpleCallName(expr, "ref");
   if (!expr.isMethodCall &&
       ((inferCollectionDispatchSetup.isBuiltinAccess && !expr.args.empty()) ||
@@ -210,7 +211,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     const std::string helperName =
         inferCollectionDispatchSetup.isBuiltinAccess
             ? inferCollectionDispatchSetup.builtinAccessName
-            : (isBuiltinGet ? "get" : (isBuiltinGetRef ? "get_ref" : "ref"));
+            : (isBuiltinGet ? "get" : (isBuiltinGetRef ? collection_helpers::kGetRef : "ref"));
     auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
       std::string elemType;
       std::string keyType;
@@ -244,18 +245,18 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
             canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       } else if (resolveArrayTarget != nullptr &&
                  resolveArrayTarget(receiverCandidate, elemType)) {
-        methodResolved = "/array/" + helperName;
-      } else if ((helperName == "get" || helperName == "get_ref" ||
+        methodResolved = collection_helpers::kRootedArrayPrefix + helperName;
+      } else if ((helperName == "get" || helperName == collection_helpers::kGetRef ||
                   helperName == "ref" ||
-                  helperName == "ref_ref") &&
+                  helperName == collection_helpers::kRefRef) &&
                  resolveSoaVectorTarget != nullptr &&
                  resolveSoaVectorTarget(receiverCandidate, elemType)) {
         methodResolved =
             preferredSoaHelperTargetForCollectionType(helperName,
-                                                      "/soa");
+                                                      collection_helpers::kRootedSoa);
       } else if (resolveStringTarget != nullptr &&
                  resolveStringTarget(receiverCandidate)) {
-        methodResolved = "/string/" + helperName;
+        methodResolved = collection_helpers::kRootedStringPrefix + helperName;
       } else if (resolveKeyValueTarget != nullptr &&
                  resolveKeyValueTarget(receiverCandidate, keyType, valueType)) {
         methodResolved = lateFallbackCanonicalKeyValueHelperPath(helperName);

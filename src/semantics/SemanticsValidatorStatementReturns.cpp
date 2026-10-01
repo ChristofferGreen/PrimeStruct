@@ -1,8 +1,8 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <array>
 #include <cctype>
@@ -101,7 +101,7 @@ bool isUnknownBorrowedKeyValueAccessMethodDiagnostic(const std::string &message)
     return false;
   }
   static constexpr std::array<std::string_view, 4> KeyValueAccessHelpers = {
-      "at", "at_ref", "at_unsafe", "at_unsafe_ref"};
+      "at", collection_helpers::kAtRef, "at_unsafe", collection_helpers::kAtUnsafeRef};
   for (std::string_view alias : metadata->importAliasSpellings) {
     if (!alias.empty() && alias.front() == '/') {
       alias.remove_prefix(1);
@@ -334,18 +334,18 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           soaAccessHelper.has_value() &&
           (((*soaAccessHelper == "ref" &&
              isSimpleCallName(expr, "ref")) ||
-            (*soaAccessHelper == "ref_ref" &&
-             isSimpleCallName(expr, "ref_ref"))) ||
+            (*soaAccessHelper == collection_helpers::kRefRef &&
+             isSimpleCallName(expr, collection_helpers::kRefRef))) ||
            (expr.isMethodCall && expr.name == *soaAccessHelper) ||
            isLegacyOrCanonicalSoaHelperPath(resolvedPathCanonical,
                                             *soaAccessHelper));
       if (oldSurfaceCallShape &&
-          hasVisibleDefinitionPathForCurrentImports("/soa/" +
+          hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix +
                                                     *soaAccessHelper)) {
         return false;
       }
       if (expr.isMethodCall) {
-        if (expr.name != "ref" && expr.name != "ref_ref" &&
+        if (expr.name != "ref" && expr.name != collection_helpers::kRefRef &&
             !resolvedCanonicalRefLike && !resolvedExperimentalRefLike) {
           return false;
         }
@@ -353,7 +353,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         return true;
       }
       if (!isSimpleCallName(expr, "ref") &&
-          !isSimpleCallName(expr, "ref_ref") &&
+          !isSimpleCallName(expr, collection_helpers::kRefRef) &&
           !resolvedCanonicalRefLike && !resolvedExperimentalRefLike) {
         return false;
       }
@@ -1116,26 +1116,26 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                     normalizedTypePath) ||
                 isLegacyExperimentalVectorCompatibilityTypePath(
                     "/" + normalizedTypePath)) {
-              return "/vector";
+              return collection_helpers::kRootedVector;
             }
-            if (typePath == "/array" || typePath == "array") {
-              return "/array";
+            if (typePath == collection_helpers::kRootedArray || typePath == "array") {
+              return collection_helpers::kRootedArray;
             }
-            if (typePath == "/vector" || typePath == "vector" ||
+            if (typePath == collection_helpers::kRootedVector || typePath == "vector" ||
                 trimLeadingSlash(typePath) ==
                     trimLeadingSlash(
                         canonicalVectorCompatibilityPrefixOrFallback())) {
-              return "/vector";
+              return collection_helpers::kRootedVector;
             }
-            if (typePath == "/soa" || typePath == "soa") {
-              return "/soa";
+            if (typePath == collection_helpers::kRootedSoa || typePath == "soa") {
+              return collection_helpers::kRootedSoa;
             }
             if (isKeyValueSurfaceTypeName(typePath) || typePath == keyValueCollectionMarker ||
                 typePath == collectionTypePathLocal("map")) {
               return keyValueCollectionMarker;
             }
-            if (typePath == "/string" || typePath == "string") {
-              return "/string";
+            if (typePath == collection_helpers::kRootedString || typePath == "string") {
+              return collection_helpers::kRootedString;
             }
               return "";
             };
@@ -1205,9 +1205,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                    (resolvedExpectedStruct.empty() || resolvedExpectedStruct != resolvedActualStruct)) &&
                   (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct)))) {
               std::string expectedType = structIt->second;
-              if (expectedType == "/array" || expectedType == "/vector" ||
+              if (expectedType == collection_helpers::kRootedArray || expectedType == collection_helpers::kRootedVector ||
                   expectedType == keyValueCollectionMarkerPathLocal() ||
-                  expectedType == "/string") {
+                  expectedType == collection_helpers::kRootedString) {
               expectedType.erase(0, 1);
             }
             return failReturnDiagnostic(returnTypeMismatchDiagnostic(structIt->second, actualStruct, expectedType));

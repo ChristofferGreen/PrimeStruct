@@ -1,6 +1,7 @@
 // collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <utility>
@@ -50,7 +51,7 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
   };
   auto isCanonicalSoaCountHelperPath = [](const std::string &candidate) {
     return isCanonicalStdlibSoaHelperPath(candidate, "count") ||
-           isCanonicalStdlibSoaHelperPath(candidate, "count_ref");
+           isCanonicalStdlibSoaHelperPath(candidate, collection_helpers::kCountRef);
   };
   const std::string resolvedSoaCountCanonical =
       canonicalizeSoaCountHelperPath(resolved);
@@ -186,8 +187,8 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
   if (isDirectStdNamespacedSoaCountBuiltinCall) {
     handledOut = true;
     const std::string soaCountHelperName =
-        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count_ref")
-            ? "count_ref"
+        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCountCanonical, collection_helpers::kCountRef)
+            ? collection_helpers::kCountRef
             : "count";
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failCountCapacityBuiltin(soaCountHelperName +
@@ -224,18 +225,18 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
     const std::string normalizedNamespacePrefix =
         canonicalizeSoaCountHelperPath(expr.namespacePrefix);
     if (!expr.isMethodCall) {
-      if (normalizedName == "/soa/count") {
+      if (normalizedName == collection_helpers::kRootedSoaCount) {
         return true;
       }
-      if (normalizedName == "/soa/count_ref") {
+      if (normalizedName == collection_helpers::kRootedSoaCountRef) {
         return true;
       }
-      return (normalizedNamespacePrefix == "/soa" ||
+      return (normalizedNamespacePrefix == collection_helpers::kRootedSoa ||
               normalizedNamespacePrefix == "soa") &&
-             (expr.name == "count" || expr.name == "count_ref");
+             (expr.name == "count" || expr.name == collection_helpers::kCountRef);
     }
-    return normalizedNamespacePrefix == "/soa" &&
-           (expr.name == "count" || expr.name == "count_ref");
+    return normalizedNamespacePrefix == collection_helpers::kRootedSoa &&
+           (expr.name == "count" || expr.name == collection_helpers::kCountRef);
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {
     handledOut = true;
@@ -300,14 +301,14 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
     return *validatedVectorCountBuiltinPath;
   }
 
-  if ((resolvedMethod && (logicalResolvedMethod == "/array/count" ||
+  if ((resolvedMethod && (logicalResolvedMethod == collection_helpers::kRootedArrayCount ||
                           isLegacyOrCanonicalSoaHelperPath(
                               logicalSoaCountCanonical,
                               "count") ||
                           isLegacyOrCanonicalSoaHelperPath(
                               logicalSoaCountCanonical,
-                              "count_ref") ||
-                          logicalResolvedMethod == "/string/count"))) {
+                              collection_helpers::kCountRef) ||
+                          logicalResolvedMethod == collection_helpers::kRootedStringCount))) {
     handledOut = true;
     const std::string countHelperName = "count";
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
@@ -321,21 +322,21 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
                    "count") ||
                isLegacyOrCanonicalSoaHelperPath(
                    logicalSoaCountCanonical,
-                   "count_ref")) {
+                   collection_helpers::kCountRef)) {
       const std::string soaCountHelperName =
-          isLegacyOrCanonicalSoaHelperPath(logicalSoaCountCanonical, "count_ref")
-              ? "count_ref"
+          isLegacyOrCanonicalSoaHelperPath(logicalSoaCountCanonical, collection_helpers::kCountRef)
+              ? collection_helpers::kCountRef
               : "count";
       const bool explicitOldSurfaceSoaCountCall =
           isExplicitOldSurfaceSoaCountCall();
       const bool hasVisibleSamePathSoaCountHelper =
-          hasVisibleDefinitionPathForCurrentImports("/soa/" +
+          hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix +
                                                     soaCountHelperName);
       if (explicitOldSurfaceSoaCountCall &&
-          !hasVisibleDefinitionPathForCurrentImports("/soa/" +
+          !hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix +
                                                     soaCountHelperName)) {
         return failCountCapacityBuiltin(
-            soaUnavailableMethodDiagnostic("/soa/" +
+            soaUnavailableMethodDiagnostic(collection_helpers::kRootedSoaPrefix +
                                            soaCountHelperName));
       }
       std::string argsPackElemType;

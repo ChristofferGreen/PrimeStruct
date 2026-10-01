@@ -1,7 +1,7 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <functional>
 #include <optional>
@@ -216,9 +216,9 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
 
     appendUnique(path);
     appendUnique(normalizedPath);
-    if (normalizedPath.rfind("/array/", 0) == 0) {
+    if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
       const std::string suffix =
-          normalizedPath.substr(std::string("/array/").size());
+          normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
       if (suffix != "count" && suffix != "capacity" && suffix != "at" &&
           suffix != "at_unsafe" && suffix != "push" && suffix != "pop" &&
           suffix != "reserve" && suffix != "clear" &&
@@ -388,7 +388,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           expr, builtinCollectionDispatchResolvers)) {
     std::string elemType;
     if (resolveArgsPackCountTarget(expr.args.front(), elemType)) {
-      const std::string methodPath = preferVectorStdlibHelperPath("/array/count");
+      const std::string methodPath = preferVectorStdlibHelperPath(collection_helpers::kRootedArrayCount);
       if (!hasDefinitionPath(methodPath)) {
         return finish(ReturnKind::Int);
       }
@@ -402,17 +402,17 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       context.resolved = methodPath;
       hasResolvedPath = true;
     } else if (resolveArrayTarget(expr.args.front(), elemType)) {
-      const std::string methodPath = preferVectorStdlibHelperPath("/array/count");
+      const std::string methodPath = preferVectorStdlibHelperPath(collection_helpers::kRootedArrayCount);
       if (!hasDefinitionPath(methodPath)) {
         return finish(ReturnKind::Int);
       }
       context.resolved = methodPath;
       hasResolvedPath = true;
     } else if (resolveStringTarget(expr.args.front())) {
-      if (!hasDefinitionPath("/string/count")) {
+      if (!hasDefinitionPath(collection_helpers::kRootedStringCount)) {
         return finish(ReturnKind::Int);
       }
-      context.resolved = "/string/count";
+      context.resolved = collection_helpers::kRootedStringCount;
       hasResolvedPath = true;
     }
   }
@@ -461,14 +461,14 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
             path, helperNameOut);
       };
       auto isKeyValueMethodWithBuiltinReturn = [&](std::string_view helperName) {
-        return helperName == "contains" || helperName == "contains_ref" ||
-               helperName == "tryAt" || helperName == "tryAt_ref" ||
-               helperName == "at" || helperName == "at_ref" ||
-               helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+        return helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+               helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+               helperName == "at" || helperName == collection_helpers::kAtRef ||
+               helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
       };
       auto isKeyValueMethodNeedingVisibleDefinition = [&](std::string_view helperName) {
         return isKeyValueMethodWithBuiltinReturn(helperName) ||
-               helperName == "insert" || helperName == "insert_ref";
+               helperName == "insert" || helperName == collection_helpers::kInsertRef;
       };
       auto isVisibleStdlibKeyValueMethodWithBuiltinReturn = [&](const std::string &path) {
         std::string helperName;

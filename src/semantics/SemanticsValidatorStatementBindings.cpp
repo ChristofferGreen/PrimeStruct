@@ -8,6 +8,7 @@
 #include <optional>
 #include <unordered_set>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 namespace {
@@ -414,13 +415,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   const Expr &initializer = stmt.args.front();
   if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall) {
     const bool explicitOldGetRef =
-        initializer.name == samePathSoaHelperTargetPath("get_ref") ||
+        initializer.name == samePathSoaHelperTargetPath(collection_helpers::kGetRef) ||
         initializer.name == internalSoaCollectionTypeName() + "/get_ref" ||
         (isCompatibilitySoaSurfaceNamespace(initializer.namespacePrefix) &&
-         initializer.name == "get_ref");
+         initializer.name == collection_helpers::kGetRef);
     if (explicitOldGetRef &&
         !hasVisibleDefinitionPathForCurrentImports(
-            samePathSoaHelperTargetPath("get_ref"))) {
+            samePathSoaHelperTargetPath(collection_helpers::kGetRef))) {
       return failBindingDiagnostic("get_ref is only supported as a statement");
     }
   }
@@ -482,17 +483,17 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         isSoaConversionSurfaceSpelling(normalizedCallPrefix,
                                        normalizedCallName) ||
         isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos") ||
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, collection_helpers::kToAosRef);
     if (!isRootToAosHelper) {
       return false;
     }
     const bool isBorrowedToAosHelper =
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, collection_helpers::kToAosRef);
     const std::string helperPath =
         isBorrowedToAosHelper ? "/to_aos_ref" : "/to_aos";
     const std::string canonicalHelperPath =
         isBorrowedToAosHelper
-            ? compatibilitySoaHelperTargetPath("to_aos_ref")
+            ? compatibilitySoaHelperTargetPath(collection_helpers::kToAosRef)
             : compatibilitySoaHelperTargetPath("to_aos");
     const std::string publicHelperPath = publicSoaHelperTargetPath("to_aos");
     auto hasExplicitSourceImportPath = [&](const std::string &path) {
@@ -1375,15 +1376,15 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         const auto soaAccessHelper = builtinSoaAccessHelperName(expr, params, locals);
         const bool helperResolvedRefLike =
             soaAccessHelper.has_value() &&
-            (*soaAccessHelper == "ref" || *soaAccessHelper == "ref_ref");
+            (*soaAccessHelper == "ref" || *soaAccessHelper == collection_helpers::kRefRef);
         const bool isMethodRefLike =
             expr.isMethodCall &&
-            (normalizedName == "ref" || normalizedName == "ref_ref" ||
+            (normalizedName == "ref" || normalizedName == collection_helpers::kRefRef ||
              helperResolvedRefLike || resolvedCanonicalRefLike ||
              resolvedExperimentalRefLike);
         const bool isHelperRefLike =
             !expr.isMethodCall &&
-            (isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref") ||
+            (isSimpleCallName(expr, "ref") || isSimpleCallName(expr, collection_helpers::kRefRef) ||
              helperResolvedRefLike || resolvedCanonicalRefLike ||
              resolvedExperimentalRefLike);
         if (!isMethodRefLike && !isHelperRefLike) {

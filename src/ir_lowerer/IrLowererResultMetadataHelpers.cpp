@@ -12,6 +12,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -480,7 +481,7 @@ bool inferPackedErrorStructPathText(const std::string &callNameText, std::string
   }
   if (normalized == "ContainerError" || normalized == "std/collections/ContainerError" ||
       baseName == "ContainerError") {
-    pathOut = "/std/collections/ContainerError";
+    pathOut = collection_helpers::kCanonicalContainerErrorType;
     return true;
   }
   if (normalized == "GfxError" || normalized == "std/gfx/GfxError" ||
@@ -544,8 +545,8 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
     return true;
   }
   if (trimmedType == "ContainerError" ||
-      trimmedType == "/std/collections/ContainerError") {
-    out.valueStructType = "/std/collections/ContainerError";
+      trimmedType == collection_helpers::kCanonicalContainerErrorType) {
+    out.valueStructType = collection_helpers::kCanonicalContainerErrorType;
     return true;
   }
   if (trimmedType == "ImageError" ||

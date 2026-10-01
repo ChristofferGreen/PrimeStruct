@@ -6,6 +6,7 @@
 #include "EmitterCollectionSurfaceMetadata.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::emitter {
 
@@ -266,9 +267,9 @@ bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
     return true;
   }
   if (isKeyValueHelperSurface(surfaceId) &&
-      normalizedPath.rfind("/std/collections/Map", 0) == 0) {
+      normalizedPath.rfind(collection_helpers::kCanonicalMapType, 0) == 0) {
     return resolvePublishedCollectionSurfaceMemberToken(
-        normalizedPath.substr(std::string("/std/collections/Map").size()),
+        normalizedPath.substr(std::string(collection_helpers::kCanonicalMapType).size()),
         surfaceId,
         memberNameOut);
   }
@@ -316,8 +317,8 @@ bool removedCollectionAliasNeedsDefinitionPath(std::string_view rawMethodName) {
   const auto *vectorMetadata = findVectorHelperSurfaceMetadata();
   return (!keyValueHelperName.empty() &&
           isCanonicalKeyValueCountHelperName(keyValueHelperName)) ||
-         normalizedPath == "/array/count" ||
-         normalizedPath == "/array/capacity" ||
+         normalizedPath == collection_helpers::kRootedArrayCount ||
+         normalizedPath == collection_helpers::kRootedArrayCapacity ||
          (vectorMetadata != nullptr &&
           resolveCanonicalSurfacePathMemberName(
               *vectorMetadata,
@@ -404,14 +405,14 @@ bool extractCollectionElementTypeFromReturnType(const std::string &typeName, std
 }
 
 std::string normalizeCollectionReceiverType(const std::string &typePath) {
-  if (typePath == "/array" || typePath == "array") {
+  if (typePath == collection_helpers::kRootedArray || typePath == "array") {
     return "array";
   }
-  if (typePath == "/vector" || typePath == "vector") {
+  if (typePath == collection_helpers::kRootedVector || typePath == "vector") {
     return "vector";
   }
   if (typePath == "soa" ||
-      typePath == "/std/collections/soa" ||
+      typePath == collection_helpers::kCanonicalSoa ||
       typePath == "std/collections/soa" ||
       typePath == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
       typePath == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
@@ -437,8 +438,8 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 
   appendUniqueCandidate(candidates, path);
   appendUniqueCandidate(candidates, normalizedPath);
-  if (normalizedPath.rfind("/array/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       if (const auto *metadata = findVectorHelperSurfaceMetadata();
           metadata != nullptr) {

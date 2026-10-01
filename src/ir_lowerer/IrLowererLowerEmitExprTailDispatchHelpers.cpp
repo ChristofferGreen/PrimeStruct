@@ -9,6 +9,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -100,7 +101,7 @@ const Definition * TailDispatchContext::resolveTailDispatchDirectHelperDefinitio
           };
           auto isSamePathSoaHelperPath = [&](std::string helperPath) {
             helperPath = stripGeneratedLeafSuffix(std::move(helperPath));
-            return helperPath.rfind("/soa/", 0) == 0 ||
+            return helperPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
                    helperPath == "/to_aos" ||
                    helperPath == "/to_aos_ref";
           };
@@ -282,7 +283,7 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
             std::string helperName;
             if (hasPublishedSemanticKeyValueSurface(candidate) &&
                 resolvePublishedTailDispatchKeyValueHelperName(candidate, helperName) &&
-                (helperName == "insert" || helperName == "insert_ref")) {
+                (helperName == "insert" || helperName == collection_helpers::kInsertRef)) {
               return true;
             }
             const std::string resolvedPath = resolveExprPath(candidate);
@@ -292,7 +293,7 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
                        resolvedPath, *keyValueSurfaceId) &&
                    ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
                        resolvedPath, *keyValueSurfaceId, helperName) &&
-                   (helperName == "insert" || helperName == "insert_ref");
+                   (helperName == "insert" || helperName == collection_helpers::kInsertRef);
           };
           auto stripGeneratedHelperSuffix = [](std::string helperName) {
             const size_t generatedSuffix = helperName.find("__");
@@ -314,7 +315,7 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
               return false;
             }
             helperName = stripGeneratedHelperSuffix(std::move(helperName));
-            return helperName == "insert" || helperName == "insert_ref" ||
+            return helperName == "insert" || helperName == collection_helpers::kInsertRef ||
                    helperName == "Insert" || helperName == "InsertRef";
           };
 
@@ -322,13 +323,13 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
           if (callExpr.isMethodCall) {
             std::string helperName;
             if (!resolveBuiltinKeyValueHelperName(callExpr, true, helperName) ||
-                (helperName != "insert" && helperName != "insert_ref")) {
+                (helperName != "insert" && helperName != collection_helpers::kInsertRef)) {
               return false;
             }
           } else {
             std::string helperName;
             if ((!ir_lowerer::resolveKeyValueHelperAliasName(callExpr, helperName) ||
-                 (helperName != "insert" && helperName != "insert_ref")) &&
+                 (helperName != "insert" && helperName != collection_helpers::kInsertRef)) &&
                 !isDirectBareKeyValueInsertHelperStem(callExpr)) {
               return false;
             }
@@ -520,7 +521,7 @@ bool TailDispatchContext::rewriteCanonicalKeyValueHelperForExperimentalReceiverE
 bool TailDispatchContext::isVectorStructPath(const std::string &structPath) {
           const std::string vectorTypePath = collection_paths::memberPath(
               collection_paths::kVectorFolder, collection_paths::kVectorTypeName);
-          return structPath == "/vector" ||
+          return structPath == collection_helpers::kRootedVector ||
                  structPath == vectorTypePath ||
                  structPath.rfind(vectorTypePath + "__", 0) == 0;
         };
@@ -562,8 +563,8 @@ bool TailDispatchContext::publishedKeyValueAccessHelperReturnsString(std::string
           const std::string bindingType =
               resolveReturnTypeText(returnFact->bindingTypeText,
                                     returnFact->bindingTypeTextId);
-          return structPath == "string" || structPath == "/string" ||
-                 bindingType == "string" || bindingType == "/string";
+          return structPath == "string" || structPath == collection_helpers::kRootedString ||
+                 bindingType == "string" || bindingType == collection_helpers::kRootedString;
         };
 
 
@@ -636,7 +637,7 @@ bool TailDispatchContext::rewriteExplicitKeyValueHelperBuiltinExpr(const Expr &c
           if ((helperName == "count" || helperName == "contains" ||
                helperName == "tryAt" || helperName == "at" ||
                helperName == "at_unsafe" || helperName == "insert" ||
-               helperName == "insert_ref") &&
+               helperName == collection_helpers::kInsertRef) &&
               resolveDefinitionCall(callExpr) != nullptr &&
               !isCanonicalStdKeyValueHelperPath) {
             return false;
@@ -808,11 +809,11 @@ bool TailDispatchContext::rewriteCanonicalKeyValueHelperDefinitionExpr(const Exp
           std::string helperName;
           if (callExpr.isMethodCall &&
               resolveBuiltinKeyValueHelperName(callExpr, true, helperName)) {
-            if (helperName == "contains_ref") {
+            if (helperName == collection_helpers::kContainsRef) {
               helperName = "contains";
-            } else if (helperName == "tryAt_ref") {
+            } else if (helperName == collection_helpers::kTryAtRef) {
               helperName = "tryAt";
-            } else if (helperName == "count_ref") {
+            } else if (helperName == collection_helpers::kCountRef) {
               helperName = "count";
             }
           } else if (!callExpr.isMethodCall &&
@@ -916,7 +917,7 @@ bool TailDispatchContext::rewriteImplicitBorrowedKeyValueReceiverExpr(const Expr
                    (helperName == "count" || helperName == "contains" ||
                     helperName == "tryAt" || helperName == "at" ||
                     helperName == "at_unsafe" || helperName == "insert" ||
-                    helperName == "insert_ref");
+                    helperName == collection_helpers::kInsertRef);
           };
 
           if (!shouldRewriteReceiver(callExpr) || !isBorrowedOrPointerKeyValueReceiver(callExpr.args.front())) {

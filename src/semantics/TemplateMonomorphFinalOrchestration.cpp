@@ -35,6 +35,7 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -184,8 +185,8 @@ void buildImportAliases(Context &ctx) {
         return targetPath.rfind(templateMonomorphCompatibilitySoaHelperPrefix(),
                                 0) == 0 &&
                (aliasName == "count" || aliasName == "get" ||
-                aliasName == "ref" || aliasName == "count_ref" ||
-                aliasName == "get_ref" || aliasName == "ref_ref" ||
+                aliasName == "ref" || aliasName == collection_helpers::kCountRef ||
+                aliasName == collection_helpers::kGetRef || aliasName == collection_helpers::kRefRef ||
                 aliasName == "reserve" || aliasName == "push" ||
                 aliasName == templateMonomorphSoaToAosHelperName() ||
                 aliasName == templateMonomorphSoaToAosHelperName(true));

@@ -1,6 +1,7 @@
 // collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <optional>
 #include <string_view>
@@ -130,15 +131,15 @@ bool resolvePreDispatchKeyValueHelperMemberToken(std::string_view memberToken,
 
 bool isCanonicalKeyValueAccessReturnStructHelperName(std::string_view helperName) {
   return helperName == "at" || helperName == "at_unsafe" ||
-         helperName == "at_ref" || helperName == "at_unsafe_ref";
+         helperName == collection_helpers::kAtRef || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool isCanonicalMapBuiltinPreDispatchHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
+  return helperName == "count" || helperName == collection_helpers::kCountRef ||
+         helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
          isCanonicalKeyValueAccessReturnStructHelperName(helperName) ||
-         helperName == "insert" || helperName == "insert_ref";
+         helperName == "insert" || helperName == collection_helpers::kInsertRef;
 }
 
 bool isRemovedKeyValueCompatibilityPreDispatchHelperName(
@@ -430,17 +431,17 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     }
     const size_t expectedArgCount =
         (removedKeyValueCompatibilityHelper == "count" ||
-         removedKeyValueCompatibilityHelper == "count_ref" ||
+         removedKeyValueCompatibilityHelper == collection_helpers::kCountRef ||
          removedKeyValueCompatibilityHelper == "size")
             ? 1
             : ((removedKeyValueCompatibilityHelper == "at" ||
-                removedKeyValueCompatibilityHelper == "at_ref" ||
+                removedKeyValueCompatibilityHelper == collection_helpers::kAtRef ||
                 removedKeyValueCompatibilityHelper == "at_unsafe" ||
-                removedKeyValueCompatibilityHelper == "at_unsafe_ref" ||
+                removedKeyValueCompatibilityHelper == collection_helpers::kAtUnsafeRef ||
                 removedKeyValueCompatibilityHelper == "contains" ||
-                removedKeyValueCompatibilityHelper == "contains_ref" ||
+                removedKeyValueCompatibilityHelper == collection_helpers::kContainsRef ||
                 removedKeyValueCompatibilityHelper == "tryAt" ||
-                removedKeyValueCompatibilityHelper == "tryAt_ref")
+                removedKeyValueCompatibilityHelper == collection_helpers::kTryAtRef)
                    ? 2
                    : 3);
     if (expr.args.size() != expectedArgCount) {
@@ -627,13 +628,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     if (!helperName.empty() && helperName.front() == '/') {
       helperName.erase(helperName.begin());
     }
-    if (helperName == "count" || helperName == "count_ref" ||
+    if (helperName == "count" || helperName == collection_helpers::kCountRef ||
         helperName == "size" ||
-        helperName == "contains" || helperName == "contains_ref" ||
-        helperName == "tryAt" || helperName == "tryAt_ref" ||
-        helperName == "at" || helperName == "at_ref" ||
-        helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-        helperName == "insert" || helperName == "insert_ref") {
+        helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+        helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+        helperName == "at" || helperName == collection_helpers::kAtRef ||
+        helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
+        helperName == "insert" || helperName == collection_helpers::kInsertRef) {
       return helperName;
     }
     return {};
@@ -828,7 +829,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     if (expr.args.front().kind == Expr::Kind::Call &&
         resolveCallCollectionTypePath(expr.args.front(), params, locals,
                                       receiverCollectionTypePath) &&
-        receiverCollectionTypePath == "/vector") {
+        receiverCollectionTypePath == collection_helpers::kRootedVector) {
       if ((expr.name == "count" || expr.name == "capacity") &&
           expr.templateArgs.empty() && !expr.hasBodyArguments &&
           expr.bodyArguments.empty()) {

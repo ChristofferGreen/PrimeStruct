@@ -7,6 +7,7 @@
 #include <limits>
 #include <string_view>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -20,14 +21,14 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
 
 bool isVectorStructPath(const std::string &structPath) {
   const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
-  return structPath == "/vector" || structPath == vectorTypePath ||
+  return structPath == collection_helpers::kRootedVector || structPath == vectorTypePath ||
          structPath.rfind(vectorTypePath + "__", 0) == 0;
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {
-  return structPath == "/soa" ||
+  return structPath == collection_helpers::kRootedSoa ||
          structPath == "std/collections/soa" ||
-         structPath == "/std/collections/soa" ||
+         structPath == collection_helpers::kCanonicalSoa ||
          structPath == "SoaVector" ||
          structPath == "/SoaVector" ||
          structPath == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||

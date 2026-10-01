@@ -6,6 +6,7 @@
 
 #include <string_view>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::emitter {
 
@@ -102,25 +103,25 @@ std::string inferSoaReceiverTypeFromBinding(const BindingInfo &binding) {
 
 std::string borrowedSoaMethodName(std::string_view methodName) {
   if (methodName == "count") {
-    return "count_ref";
+    return collection_helpers::kCountRef;
   }
   if (methodName == "get") {
-    return "get_ref";
+    return collection_helpers::kGetRef;
   }
   if (methodName == "ref") {
-    return "ref_ref";
+    return collection_helpers::kRefRef;
   }
   if (methodName == "to_aos") {
-    return "to_aos_ref";
+    return collection_helpers::kToAosRef;
   }
   return std::string(methodName);
 }
 
 bool isCanonicalSoaWrapperMethodName(std::string_view methodName) {
-  return methodName == "count" || methodName == "count_ref" ||
-         methodName == "get" || methodName == "get_ref" ||
-         methodName == "ref" || methodName == "ref_ref" ||
-         methodName == "to_aos" || methodName == "to_aos_ref" ||
+  return methodName == "count" || methodName == collection_helpers::kCountRef ||
+         methodName == "get" || methodName == collection_helpers::kGetRef ||
+         methodName == "ref" || methodName == collection_helpers::kRefRef ||
+         methodName == "to_aos" || methodName == collection_helpers::kToAosRef ||
          methodName == "push" || methodName == "reserve";
 }
 
@@ -393,8 +394,8 @@ bool resolveMethodCallPath(const Expr &call,
   };
   auto preferredContainerErrorHelperTarget = [&](std::string_view helperName) -> std::string {
     if (helperName == "why") {
-      if (defMap.find("/std/collections/ContainerError/why") != defMap.end()) {
-        return "/std/collections/ContainerError/why";
+      if (defMap.find(collection_helpers::kCanonicalContainerErrorTypeWhy) != defMap.end()) {
+        return collection_helpers::kCanonicalContainerErrorTypeWhy;
       }
       if (defMap.find("/ContainerError/why") != defMap.end()) {
         return "/ContainerError/why";
@@ -402,26 +403,26 @@ bool resolveMethodCallPath(const Expr &call,
       return "";
     }
     if (helperName == "status") {
-      if (defMap.find("/std/collections/ContainerError/status") != defMap.end()) {
-        return "/std/collections/ContainerError/status";
+      if (defMap.find(collection_helpers::kCanonicalContainerErrorTypeStatus) != defMap.end()) {
+        return collection_helpers::kCanonicalContainerErrorTypeStatus;
       }
       if (defMap.find("/ContainerError/status") != defMap.end()) {
         return "/ContainerError/status";
       }
-      if (defMap.find("/std/collections/containerErrorStatus") != defMap.end()) {
-        return "/std/collections/containerErrorStatus";
+      if (defMap.find(collection_helpers::kCanonicalContainerErrorStatus) != defMap.end()) {
+        return collection_helpers::kCanonicalContainerErrorStatus;
       }
       return "";
     }
     if (helperName == "result") {
-      if (defMap.find("/std/collections/ContainerError/result") != defMap.end()) {
-        return "/std/collections/ContainerError/result";
+      if (defMap.find(collection_helpers::kCanonicalContainerErrorTypeResult) != defMap.end()) {
+        return collection_helpers::kCanonicalContainerErrorTypeResult;
       }
       if (defMap.find("/ContainerError/result") != defMap.end()) {
         return "/ContainerError/result";
       }
-      if (defMap.find("/std/collections/containerErrorResult") != defMap.end()) {
-        return "/std/collections/containerErrorResult";
+      if (defMap.find(collection_helpers::kCanonicalContainerErrorResult) != defMap.end()) {
+        return collection_helpers::kCanonicalContainerErrorResult;
       }
       return "";
     }
@@ -632,7 +633,7 @@ bool resolveMethodCallPath(const Expr &call,
   const bool isConcreteSoaWrapperReceiver =
       isConcreteExperimentalSoaVectorStructPath(resolvedType) &&
       isCanonicalSoaWrapperMethodName(normalizedMethodName);
-  if (resolvedType == "/vector" || resolvedType == "vector") {
+  if (resolvedType == collection_helpers::kRootedVector || resolvedType == "vector") {
     const bool isCountLikeMethod = normalizedMethodName == "count";
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
     if (isCountLikeMethod || isCapacityLikeMethod) {
@@ -656,12 +657,12 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
   }
-  if (isConcreteSoaWrapperReceiver || resolvedType == "/soa" ||
+  if (isConcreteSoaWrapperReceiver || resolvedType == collection_helpers::kRootedSoa ||
       resolvedType == "soa") {
     const std::string helperName =
         borrowedSoaReceiver ? borrowedSoaMethodName(normalizedMethodName)
                             : normalizedMethodName;
-    const std::string canonicalPath = "/std/collections/soa/" + helperName;
+    const std::string canonicalPath = collection_helpers::kCanonicalSoaPrefix + helperName;
     if (isExplicitStdlibSoaMethod) {
       if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;

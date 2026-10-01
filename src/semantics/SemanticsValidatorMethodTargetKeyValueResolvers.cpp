@@ -1,10 +1,10 @@
-// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsValidatorMethodTargetResolutionDetail.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <cctype>
@@ -141,7 +141,7 @@ bool SemanticsValidator::isCanonicalKeyValueReceiver(
   }
   std::string collectionTypePath;
   if (resolveCallCollectionTypePath(receiverExpr, params, locals, collectionTypePath) &&
-      collectionTypePath == "/map") {
+      collectionTypePath == collection_helpers::kRootedMap) {
     return true;
   }
   const std::string resolvedTarget = resolveCalleePath(receiverExpr);
@@ -209,7 +209,7 @@ std::string SemanticsValidator::borrowedKeyValueHelperNameForReceiver(
   // pre-existing stdlib-map-ownership audit test forbids the
   // "at_unsafe_ref" literal appearing in StdlibSurfaceRegistry.cpp.
   if (helperName == "at_unsafe") {
-    return std::string("at_unsafe_ref");
+    return std::string(collection_helpers::kAtUnsafeRef);
   }
   if (const std::string_view borrowedVariant = findBorrowedVariant(
           StdlibSurfaceId::CollectionsManifestSurface2, helperName);
@@ -283,7 +283,7 @@ bool SemanticsValidator::setPreferredKeyValueMethodTarget(
             : explicitKeyValueHelperPath;
     const bool isBareBareMapCall =
         !receiver.isMethodCall &&
-        (helperName == "count" || helperName == "count_ref");
+        (helperName == "count" || helperName == collection_helpers::kCountRef);
     const std::string errorTargetPath = isBareBareMapCall ? helperName : directPath;
     return failExprDiagnostic(receiver,
         receiver.isMethodCall ? "unknown method: " + directPath
@@ -337,7 +337,7 @@ bool SemanticsValidator::resolveKeyValueTarget(
     }
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == "/map") {
+        collectionTypePath == collection_helpers::kRootedMap) {
       std::vector<std::string> args;
       if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
           args.size() == 2) {
@@ -397,7 +397,7 @@ bool SemanticsValidator::resolveMethodTargetKeyValueValueType(
     }
     std::string collectionTypePath;
     if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
-        collectionTypePath != "/map") {
+        collectionTypePath != collection_helpers::kRootedMap) {
       return false;
     }
     std::vector<std::string> args;

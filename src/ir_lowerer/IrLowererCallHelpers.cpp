@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <algorithm>
@@ -15,6 +14,7 @@
 #include <cstdio>
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -120,9 +120,9 @@ bool resolveKeyValueHelperDefinitionMember(const std::string &path,
 bool isRemovedCountFallbackKeyValueHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "contains" ||
          helperName == "tryAt" || helperName == "at" ||
-         helperName == "at_unsafe" || helperName == "count_ref" ||
-         helperName == "contains_ref" || helperName == "tryAt_ref" ||
-         helperName == "at_ref" || helperName == "at_unsafe_ref";
+         helperName == "at_unsafe" || helperName == collection_helpers::kCountRef ||
+         helperName == collection_helpers::kContainsRef || helperName == collection_helpers::kTryAtRef ||
+         helperName == collection_helpers::kAtRef || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool isArgsPackParam(const Expr &param) {
@@ -377,10 +377,10 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     if (expr.name != "count" || !expr.namespacePrefix.empty() || expr.args.size() != 1) {
       return false;
     }
-    if (callee.fullPath == "/array/count") {
+    if (callee.fullPath == collection_helpers::kRootedArrayCount) {
       return isArrayCountCall(expr);
     }
-    if (callee.fullPath == "/string/count") {
+    if (callee.fullPath == collection_helpers::kRootedStringCount) {
       return isStringCountCall(expr);
     }
     return false;

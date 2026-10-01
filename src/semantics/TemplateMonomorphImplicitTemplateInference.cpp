@@ -36,6 +36,7 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -740,7 +741,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const bool hasVisibleSoaRefHelper =
         hasVisibleSoaBorrowedHelper("ref");
     const bool hasVisibleSoaRefRefHelper =
-        hasVisibleSoaBorrowedHelper("ref_ref");
+        hasVisibleSoaBorrowedHelper(collection_helpers::kRefRef);
     const std::string resolvedSoaCanonical =
         canonicalizeLegacySoaRefHelperPath(resolvedPath);
     const std::string normalizedNameSoaCanonical =
@@ -763,20 +764,20 @@ bool inferImplicitTemplateArgs(const Definition &def,
         isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref");
     const bool normalizedPrefixedNameMatchesSoaRefRef =
         isLegacyOrCanonicalSoaHelperPath(
-            normalizedPrefixedSoaPath, "ref_ref");
+            normalizedPrefixedSoaPath, collection_helpers::kRefRef);
     const bool normalizedCanonicalNameMatchesSoaRef =
         isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, "ref");
     const bool normalizedCanonicalNameMatchesSoaRefRef =
         isLegacyOrCanonicalSoaHelperPath(
-            normalizedNameSoaCanonical, "ref_ref");
+            normalizedNameSoaCanonical, collection_helpers::kRefRef);
     const bool resolvedCanonicalNameMatchesSoaRef =
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref");
     const bool resolvedCanonicalNameMatchesSoaRefRef =
-        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref");
+        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, collection_helpers::kRefRef);
     const bool normalizedNameMatchesSoaRef =
         isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref");
     const bool normalizedNameMatchesSoaRefRef =
-        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref_ref");
+        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, collection_helpers::kRefRef);
     const bool canonicalNamespaceNameMatchesSoaRef =
         normalizedNameUsesCanonicalSoaNamespace &&
         normalizedCanonicalNameMatchesSoaRef;
@@ -802,7 +803,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const bool normalizedMethodNameMatchesSoaRef =
         isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, "ref");
     const bool normalizedMethodNameMatchesSoaRefRef =
-        isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, "ref_ref");
+        isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, collection_helpers::kRefRef);
     const bool isAnyNormalizedMethodNameSoaRefCall =
         normalizedMethodNameMatchesSoaRef || normalizedMethodNameMatchesSoaRefRef;
     const bool isAnyBuiltinSoaRefCall =
@@ -816,7 +817,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           isOldSurfaceBuiltinSoaRefRefCall;
       const std::string missingSoaRefHelperPath =
           compatibilitySoaHelperTargetPath(
-              isAnyBuiltinSoaRefRefCall ? "ref_ref" : "ref");
+              isAnyBuiltinSoaRefRefCall ? collection_helpers::kRefRef : "ref");
       if (isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper
                                     : hasVisibleSoaRefHelper) {
         return {};

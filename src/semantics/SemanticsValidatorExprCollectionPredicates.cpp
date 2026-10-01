@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <unordered_map>
@@ -118,9 +119,9 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
     return false;
   }
   const std::string resolvedCandidatePath = resolveCalleePath(candidate);
-  if ((resolvedCandidatePath == "/map" ||
-       resolvedCandidatePath.rfind("/map__", 0) == 0) &&
-      hasDeclaredDefinitionPath("/map")) {
+  if ((resolvedCandidatePath == collection_helpers::kRootedMap ||
+       resolvedCandidatePath.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0) &&
+      hasDeclaredDefinitionPath(collection_helpers::kRootedMap)) {
     return false;
   }
   auto defIt = defMap_.find(resolvedCandidatePath);
@@ -166,11 +167,11 @@ bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall(
     normalized.erase(normalized.begin());
   }
   const bool spellsArrayCount = (normalized == "array/count");
-  const bool resolvesArrayCount = (resolveCalleePath(candidate) == "/array/count");
+  const bool resolvesArrayCount = (resolveCalleePath(candidate) == collection_helpers::kRootedArrayCount);
   if (!spellsArrayCount && !resolvesArrayCount) {
     return false;
   }
-  if (hasDeclaredDefinitionPath("/array/count") || hasImportedDefinitionPath("/array/count")) {
+  if (hasDeclaredDefinitionPath(collection_helpers::kRootedArrayCount) || hasImportedDefinitionPath(collection_helpers::kRootedArrayCount)) {
     return false;
   }
   if (dispatchResolvers.resolveVectorTarget == nullptr) {
@@ -199,13 +200,13 @@ bool SemanticsValidator::isArrayNamespacedVectorAccessCompatibilityCall(
       normalized == "array/at" || normalized == "array/at_unsafe";
   const std::string resolvedPath = resolveCalleePath(candidate);
   const bool resolvesArrayAccess =
-      resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe";
+      resolvedPath == collection_helpers::kRootedArrayAt || resolvedPath == collection_helpers::kRootedArrayAtUnsafe;
   if (!spellsArrayAccess && !resolvesArrayAccess) {
     return false;
   }
   const std::string helperPath =
-      resolvedPath == "/array/at" || normalized == "array/at" ? "/array/at"
-                                                                : "/array/at_unsafe";
+      resolvedPath == collection_helpers::kRootedArrayAt || normalized == "array/at" ? collection_helpers::kRootedArrayAt
+                                                                : collection_helpers::kRootedArrayAtUnsafe;
   if (hasDeclaredDefinitionPath(helperPath) || hasImportedDefinitionPath(helperPath)) {
     return false;
   }

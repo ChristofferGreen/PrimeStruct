@@ -1,14 +1,15 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+         helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool isStdNamespacedCanonicalKeyValueAccessPath(const std::string &path) {
@@ -213,9 +214,9 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
         vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));
   }
   if (!expr.isMethodCall && expr.args.size() > 1 && !hasNamedArguments(expr.argNames) &&
-      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
+      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, collection_helpers::kAtRef) ||
        isSimpleCallName(expr, "at_unsafe") ||
-       isSimpleCallName(expr, "at_unsafe_ref")) &&
+       isSimpleCallName(expr, collection_helpers::kAtUnsafeRef)) &&
       isCanonicalKeyValueAccessHelperName(expr.name) &&
       defMap_.find("/" + expr.name) == defMap_.end()) {
     std::string shadowedReceiverPath;

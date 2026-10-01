@@ -1,5 +1,6 @@
+#include "primec/support/CollectionHelperNames.h"
     if (isUnqualifiedCollectionBuiltinName(expr, "slice") && expr.args.size() == 3 &&
-        resolvedTypePathForTarget(expr.args.front()) == "/array") {
+        resolvedTypePathForTarget(expr.args.front()) == primec::collection_helpers::kRootedArray) {
       std::ostringstream out;
       out << "ps_array_slice("
           << emitExpr(expr.args.front(),

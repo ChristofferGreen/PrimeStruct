@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "SemanticsValidatorMethodTargetResolutionDetail.h"
 
 #include "SemanticsValidator.h"

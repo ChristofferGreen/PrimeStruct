@@ -9,6 +9,7 @@
 #include <cctype>
 #include <unordered_set>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 namespace {
@@ -66,10 +67,10 @@ std::string resolveStdlibSurfaceImportAliasTarget(const std::string_view importP
 
 bool isCanonicalSoaVectorHelperAliasName(std::string_view aliasName) {
   return aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
-         aliasName == "count_ref" || aliasName == "get_ref" ||
-         aliasName == "ref_ref" || aliasName == "reserve" ||
+         aliasName == collection_helpers::kCountRef || aliasName == collection_helpers::kGetRef ||
+         aliasName == collection_helpers::kRefRef || aliasName == "reserve" ||
          aliasName == "push" || aliasName == "to_aos" ||
-         aliasName == "to_aos_ref";
+         aliasName == collection_helpers::kToAosRef;
 }
 
 std::string genericTypeFamilyNameForInternalName(std::string_view name) {
@@ -267,8 +268,8 @@ bool SemanticsValidator::buildImportAliases() {
           sawAlias = true;
         }
         static const std::array<std::string_view, 10> kHelpers = {
-            "count", "get", "ref", "count_ref", "get_ref",
-            "ref_ref", "reserve", "push", "to_aos", "to_aos_ref"};
+            "count", "get", "ref", collection_helpers::kCountRef, collection_helpers::kGetRef,
+            collection_helpers::kRefRef, "reserve", "push", "to_aos", collection_helpers::kToAosRef};
         for ([[maybe_unused]] const std::string_view helperName : kHelpers) {
           sawAlias = true;
         }
@@ -293,7 +294,7 @@ bool SemanticsValidator::buildImportAliases() {
       };
   auto shouldPublishMergedImportAlias = [&](std::string_view aliasName,
                                             std::string_view targetPath) {
-    return !(targetPath.rfind("/std/collections/soa/", 0) == 0 &&
+    return !(targetPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 &&
              isCanonicalSoaVectorHelperAliasName(aliasName));
   };
   auto isMetadataBackedWildcardAliasDefinition =

@@ -1,3 +1,4 @@
+#include "primec/support/CollectionHelperNames.h"
   emitFileErrorWhy = {};
   if (!ir_lowerer::runLowerReturnCallsSetup(
           {
@@ -152,8 +153,8 @@
           std::string helperName;
           if (resolveKeyValueHelperAliasName(candidate, helperName)) {
             return helperName == "at" || helperName == "at_unsafe" ||
-                   helperName == "at_ref" ||
-                   helperName == "at_unsafe_ref";
+                   helperName == primec::collection_helpers::kAtRef ||
+                   helperName == primec::collection_helpers::kAtUnsafeRef;
           }
           auto accessLeafMatches = [](std::string path) {
             path = normalizeCollectionHelperPath(std::move(path));
@@ -165,7 +166,7 @@
               leaf.erase(generatedSuffix);
             }
             return leaf == "at" || leaf == "at_unsafe" ||
-                   leaf == "at_ref" || leaf == "at_unsafe_ref";
+                   leaf == primec::collection_helpers::kAtRef || leaf == primec::collection_helpers::kAtUnsafeRef;
           };
           // Vector access helpers forwarding a helper-returned vector are
           // only a struct mismatch when the helper actually yields a
@@ -524,7 +525,7 @@
               (canonicalKeyValueHelperName == "count" || canonicalKeyValueHelperName == "contains" ||
                canonicalKeyValueHelperName == "tryAt" ||
                canonicalKeyValueHelperName == "insert" ||
-               canonicalKeyValueHelperName == "insert_ref") &&
+               canonicalKeyValueHelperName == primec::collection_helpers::kInsertRef) &&
               ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
                !expr.templateArgs.empty())) {
             Expr rewrittenExpr = expr;

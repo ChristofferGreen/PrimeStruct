@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "RequirementPredicateFacts.h"
 
 #include "primec/frontend/StringLiteral.h"

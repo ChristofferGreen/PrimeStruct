@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <vector>
@@ -70,8 +71,8 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
   const std::string canonicalPath = canonicalizePath(path);
   appendUnique(path);
   appendUnique(canonicalPath);
-  if (canonicalPath.rfind("/array/", 0) == 0) {
-    const std::string suffix = canonicalPath.substr(std::string("/array/").size());
+  if (canonicalPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    const std::string suffix = canonicalPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
     }

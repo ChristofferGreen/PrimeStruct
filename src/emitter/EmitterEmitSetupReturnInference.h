@@ -18,6 +18,7 @@
                             const std::unordered_map<std::string, std::string> &)>
       inferStructReturnPath;
 #include "EmitterEmitSetupReturnInferenceCollections.h"
+#include "primec/support/CollectionHelperNames.h"
 
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<Expr> &params,
@@ -339,7 +340,7 @@
         }
         const std::string methodName = normalizeCollectionMethodName(receiverStruct, expr.name);
         auto candidates = collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
-        if ((receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") &&
+        if ((receiverStruct == primec::collection_helpers::kRootedVector || receiverStruct == primec::collection_helpers::kRootedArray || receiverStruct == primec::collection_helpers::kRootedString) &&
             (methodName == "at" || methodName == "at_unsafe")) {
           const std::string canonicalCandidate =
               vectorHelperMetadata == nullptr
@@ -403,7 +404,7 @@
           return "/" + collectionName;
         }
         if (collectionName == "map" && expr.templateArgs.size() == 2) {
-          return "/map";
+          return primec::collection_helpers::kRootedMap;
         }
       }
 

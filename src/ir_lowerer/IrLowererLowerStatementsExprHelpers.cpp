@@ -15,6 +15,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -544,7 +545,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
 
         bool StatementsExprContext::isDirectCollectionHelperPath(const std::string &path) {
-          return path.rfind("/array/", 0) == 0 ||
+          return path.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 ||
                  path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
                  path.rfind(vectorBackingMemberRoot(), 0) == 0 ||
                  isCanonicalKeyValueHelperFamilyPath(path);
@@ -599,7 +600,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
         bool StatementsExprContext::isSamePathSoaHelperPath(const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath.rfind("/soa/", 0) == 0 ||
+          return normalizedPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
                  normalizedPath == "/to_aos" ||
                  normalizedPath == "/to_aos_ref";
         }
@@ -607,7 +608,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
         bool StatementsExprContext::isSoaWrapperHelperFamilyPath(const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath.rfind("/std/collections/soa/", 0) == 0 ||
+          return normalizedPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 ||
                  normalizedPath.rfind(collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVector"), 0) == 0 ||
                  normalizedPath.rfind(collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, "soaVector"), 0) == 0;
         }
@@ -639,35 +640,35 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
             return directSoaWrapper;
           }
           auto canonicalSamePathSoaWrapper = [](const std::string &path) {
-            if (path == "/soa/count") {
-              return std::string("/std/collections/soa/count");
+            if (path == collection_helpers::kRootedSoaCount) {
+              return std::string(collection_helpers::kCanonicalSoaCount);
             }
-            if (path == "/soa/count_ref") {
-              return std::string("/std/collections/soa/count_ref");
+            if (path == collection_helpers::kRootedSoaCountRef) {
+              return std::string(collection_helpers::kCanonicalSoaCountRef);
             }
-            if (path == "/soa/get") {
-              return std::string("/std/collections/soa/get");
+            if (path == collection_helpers::kRootedSoaGet) {
+              return std::string(collection_helpers::kCanonicalSoaGet);
             }
-            if (path == "/soa/get_ref") {
-              return std::string("/std/collections/soa/get_ref");
+            if (path == collection_helpers::kRootedSoaGetRef) {
+              return std::string(collection_helpers::kCanonicalSoaGetRef);
             }
-            if (path == "/soa/ref") {
-              return std::string("/std/collections/soa/ref");
+            if (path == collection_helpers::kRootedSoaRef) {
+              return std::string(collection_helpers::kCanonicalSoaRef);
             }
-            if (path == "/soa/ref_ref") {
-              return std::string("/std/collections/soa/ref_ref");
+            if (path == collection_helpers::kRootedSoaRefRef) {
+              return std::string(collection_helpers::kCanonicalSoaRefRef);
             }
-            if (path == "/soa/reserve") {
-              return std::string("/std/collections/soa/reserve");
+            if (path == collection_helpers::kRootedSoaReserve) {
+              return std::string(collection_helpers::kCanonicalSoaReserve);
             }
-            if (path == "/soa/push") {
-              return std::string("/std/collections/soa/push");
+            if (path == collection_helpers::kRootedSoaPush) {
+              return std::string(collection_helpers::kCanonicalSoaPush);
             }
             if (path == "/to_aos") {
-              return std::string("/std/collections/soa/to_aos");
+              return std::string(collection_helpers::kCanonicalSoaToAos);
             }
             if (path == "/to_aos_ref") {
-              return std::string("/std/collections/soa/to_aos_ref");
+              return std::string(collection_helpers::kCanonicalSoaToAosRef);
             }
             return std::string{};
           };
@@ -684,7 +685,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
                 inferStructExprPath(callExpr.args.front(), localsIn);
             if (normalizeCollectionBindingTypeName(receiverStruct) == "soa") {
               if (const Definition *canonicalSoaToAos =
-                      findDirectHelperDefinition("/std/collections/soa/to_aos")) {
+                      findDirectHelperDefinition(collection_helpers::kCanonicalSoaToAos)) {
                 return canonicalSoaToAos;
               }
             }

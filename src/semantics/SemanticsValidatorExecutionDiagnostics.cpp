@@ -2,6 +2,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <string_view>
@@ -12,14 +13,14 @@ namespace {
 
 bool isBuiltinCollectionHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "contains" ||
-         helperName == "count_ref" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" || helperName == "at" ||
-         helperName == "at_ref" || helperName == "at_unsafe" ||
-         helperName == "at_unsafe_ref" || helperName == "insert" ||
-         helperName == "insert_ref" || helperName == "push" || helperName == "pop" ||
+         helperName == collection_helpers::kCountRef || helperName == collection_helpers::kContainsRef ||
+         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef || helperName == "at" ||
+         helperName == collection_helpers::kAtRef || helperName == "at_unsafe" ||
+         helperName == collection_helpers::kAtUnsafeRef || helperName == "insert" ||
+         helperName == collection_helpers::kInsertRef || helperName == "push" || helperName == "pop" ||
          helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
          helperName == "remove_swap" || helperName == "to_soa" ||
-         helperName == "to_aos" || helperName == "to_aos_ref";
+         helperName == "to_aos" || helperName == collection_helpers::kToAosRef;
 }
 
 // TODO-4809: rooted same-path map count/count_ref user shadow. The prefix
@@ -27,7 +28,7 @@ bool isBuiltinCollectionHelperName(std::string_view helperName) {
 // same-path branch in TemplateMonomorphExpressionRewrite.cpp.
 bool isRootedKeyValueCountShadowPath(const std::string &path) {
   static const std::string rootedPrefix = "/" + std::string("map") + "/";
-  return path == rootedPrefix + "count" || path == rootedPrefix + "count_ref";
+  return path == rootedPrefix + "count" || path == rootedPrefix + collection_helpers::kCountRef;
 }
 
 bool isFlowEffectDiagnosticMessage(const std::string &message) {
@@ -108,18 +109,18 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
     const bool isCollectionHelperBuiltin =
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") ||
-        isSimpleCallName(expr, "count_ref") ||
+        isSimpleCallName(expr, collection_helpers::kCountRef) ||
         (!expr.isMethodCall && isSimpleCallName(expr, "contains")) ||
-        (!expr.isMethodCall && isSimpleCallName(expr, "contains_ref")) ||
-        isSimpleCallName(expr, "tryAt") || isSimpleCallName(expr, "tryAt_ref") ||
-        isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
-        isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "at_unsafe_ref") ||
-        isSimpleCallName(expr, "insert") || isSimpleCallName(expr, "insert_ref") ||
+        (!expr.isMethodCall && isSimpleCallName(expr, collection_helpers::kContainsRef)) ||
+        isSimpleCallName(expr, "tryAt") || isSimpleCallName(expr, collection_helpers::kTryAtRef) ||
+        isSimpleCallName(expr, "at") || isSimpleCallName(expr, collection_helpers::kAtRef) ||
+        isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, collection_helpers::kAtUnsafeRef) ||
+        isSimpleCallName(expr, "insert") || isSimpleCallName(expr, collection_helpers::kInsertRef) ||
         isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
         isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
-        isSimpleCallName(expr, "to_aos_ref") ||
+        isSimpleCallName(expr, collection_helpers::kToAosRef) ||
         (isNamespacedCollectionHelper &&
          namespacedCollection != "map" &&
          isBuiltinCollectionHelperName(namespacedHelper));
@@ -312,7 +313,7 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
       const std::string actualStructPath = inferStructReturnPath(arg, executionParams, executionLocals);
       if (!actualStructPath.empty()) {
         if (actualStructPath != expectedStructPath) {
-          if (actualStructPath == "/vector" &&
+          if (actualStructPath == collection_helpers::kRootedVector &&
               isLegacyExperimentalVectorCompatibilityTypePath(expectedStructPath)) {
             return;
           }

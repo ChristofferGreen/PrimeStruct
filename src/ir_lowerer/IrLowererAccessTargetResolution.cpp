@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <string_view>
@@ -12,6 +11,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -88,8 +88,8 @@ const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForAccessTargets(
 }
 
 bool isKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool resolveKeyValueAccessHelperPathMemberName(std::string_view path,

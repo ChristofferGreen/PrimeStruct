@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -193,7 +194,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
         expr.namespacePrefix.empty() || expr.namespacePrefix == "/"
             ? expr.name
             : expr.namespacePrefix + "/" + expr.name;
-    if (!publicSoaSurfaceVisible || rootedPath.rfind("/soa/", 0) != 0 ||
+    if (!publicSoaSurfaceVisible || rootedPath.rfind(collection_helpers::kRootedSoaPrefix, 0) != 0 ||
         !expr.templateArgs.empty() ||
         semantics::hasNamedArguments(expr.argNames)) {
       return;
@@ -214,14 +215,14 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   } else if (helperName.rfind("soa/", 0) == 0) {
     helperName = helperName.substr(std::string("soa/").size());
   }
-  if (helperName != "count" && helperName != "count_ref" &&
-      helperName != "get" && helperName != "get_ref" &&
-      helperName != "ref" && helperName != "ref_ref" &&
+  if (helperName != "count" && helperName != collection_helpers::kCountRef &&
+      helperName != "get" && helperName != collection_helpers::kGetRef &&
+      helperName != "ref" && helperName != collection_helpers::kRefRef &&
       helperName != "push" && helperName != "reserve" &&
-      helperName != "to_aos" && helperName != "to_aos_ref") {
+      helperName != "to_aos" && helperName != collection_helpers::kToAosRef) {
     return;
   }
-  const std::string helperPath = "/soa/" + helperName;
+  const std::string helperPath = collection_helpers::kRootedSoaPrefix + helperName;
   const bool hasVisibleSamePathHelper =
       visibleSoaHelpers.count(helperPath) > 0;
   // When a user program shadows the canonical
@@ -278,7 +279,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
       visibleSoaHelpers.count("/to_aos") > 0;
   expr.name = hasVisibleSamePathHelper ? helperPath
               : hasVisibleRootToAosShadow ? std::string("/to_aos")
-                                          : "/std/collections/soa/" + helperName;
+                                          : collection_helpers::kCanonicalSoaPrefix + helperName;
   expr.namespacePrefix.clear();
   if (canonicalReceiverExpr.has_value()) {
     expr.args.front() = *canonicalReceiverExpr;
@@ -305,17 +306,17 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
   }
   for (std::string_view helperName : {
            std::string_view("count"),
-           std::string_view("count_ref"),
+           std::string_view(collection_helpers::kCountRef),
            std::string_view("get"),
-           std::string_view("get_ref"),
+           std::string_view(collection_helpers::kGetRef),
            std::string_view("ref"),
-           std::string_view("ref_ref"),
+           std::string_view(collection_helpers::kRefRef),
            std::string_view("push"),
            std::string_view("reserve"),
            std::string_view("to_aos"),
-           std::string_view("to_aos_ref")}) {
+           std::string_view(collection_helpers::kToAosRef)}) {
     if (hasVisibleExperimentalSoaSamePathHelper(program, helperName)) {
-      visibleSoaHelpers.insert("/soa/" + std::string(helperName));
+      visibleSoaHelpers.insert(collection_helpers::kRootedSoaPrefix + std::string(helperName));
     }
   }
   if (hasVisibleRootExperimentalSoaHelper(program, "to_aos")) {
@@ -328,7 +329,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
   // retired-binding programs (no soa import at all) into dead-path errors.
   bool publicSoaSurfaceVisible = false;
   for (const Definition &def : program.definitions) {
-    if (def.fullPath.rfind("/std/collections/soa/", 0) == 0) {
+    if (def.fullPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0) {
       publicSoaSurfaceVisible = true;
       break;
     }
@@ -337,7 +338,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
     const auto &importPaths =
         program.sourceImports.empty() ? program.imports : program.sourceImports;
     for (const auto &importPath : importPaths) {
-      if (localImportPathCoversTarget(importPath, "/std/collections/soa/soa")) {
+      if (localImportPathCoversTarget(importPath, collection_helpers::kCanonicalSoaSoa)) {
         publicSoaSurfaceVisible = true;
         break;
       }
@@ -352,7 +353,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
   std::unordered_set<std::string> overloadedCanonicalHelpers;
   {
     std::unordered_map<std::string, int> canonicalDefCounts;
-    constexpr std::string_view kCanonicalPrefix = "/std/collections/soa/";
+    constexpr std::string_view kCanonicalPrefix = collection_helpers::kCanonicalSoaPrefix;
     for (const Definition &def : program.definitions) {
       if (def.fullPath.rfind(kCanonicalPrefix, 0) != 0) {
         continue;
@@ -374,8 +375,8 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
     }
   }
   for (Definition &def : program.definitions) {
-    if (def.fullPath.rfind("/soa/", 0) == 0 ||
-        def.fullPath.rfind("/std/collections/soa/", 0) == 0 ||
+    if (def.fullPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
+        def.fullPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 ||
         def.fullPath.rfind(collection_paths::modulePrefix(collection_paths::kExperimentalSoaVectorFolder), 0) == 0) {
       continue;
     }
@@ -598,7 +599,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   auto isCanonicalSoaToAosDefinitionPath = [&](std::string_view path) {
     const std::string canonicalPath =
         canonicalizeSoaToAosDefinitionPath(std::string(path));
-    return canonicalPath.rfind("/std/collections/soa/", 0) == 0 &&
+    return canonicalPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 &&
            semantics::isLegacyOrCanonicalSoaHelperPath(canonicalPath, "to_aos");
   };
   for (const Definition &def : program.definitions) {
@@ -1102,7 +1103,7 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     return false;
   }
   const bool isCanonicalBorrowedSoaWrapperBodyCall =
-      definitionNamespace == "/std/collections/soa" &&
+      definitionNamespace == collection_helpers::kCanonicalSoa &&
       (normalizedMethodName == "count" || normalizedMethodName == "get" ||
        normalizedMethodName == "ref" || normalizedMethodName == "to_aos") &&
       expr.args.front().kind == Expr::Kind::Call &&
@@ -1116,20 +1117,20 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       borrowedReceiver.has_value()) {
     const auto borrowedElemType = borrowedReceiverElementType(expr.args.front());
     const bool usesPublicSoaPath =
-        expr.namespacePrefix == "/std/collections/soa" ||
+        expr.namespacePrefix == collection_helpers::kCanonicalSoa ||
         expr.namespacePrefix == "std/collections/soa" ||
-        expr.name == "/std/collections/soa/count" ||
-        expr.name == "/std/collections/soa/count_ref" ||
-        expr.name == "/std/collections/soa/get" ||
-        expr.name == "/std/collections/soa/get_ref" ||
-        expr.name == "/std/collections/soa/ref" ||
-        expr.name == "/std/collections/soa/ref_ref" ||
-        expr.name == "/soa/count" ||
-        expr.name == "/soa/count_ref" ||
-        expr.name == "/soa/get" ||
-        expr.name == "/soa/get_ref" ||
-        expr.name == "/soa/ref" ||
-        expr.name == "/soa/ref_ref";
+        expr.name == collection_helpers::kCanonicalSoaCount ||
+        expr.name == collection_helpers::kCanonicalSoaCountRef ||
+        expr.name == collection_helpers::kCanonicalSoaGet ||
+        expr.name == collection_helpers::kCanonicalSoaGetRef ||
+        expr.name == collection_helpers::kCanonicalSoaRef ||
+        expr.name == collection_helpers::kCanonicalSoaRefRef ||
+        expr.name == collection_helpers::kRootedSoaCount ||
+        expr.name == collection_helpers::kRootedSoaCountRef ||
+        expr.name == collection_helpers::kRootedSoaGet ||
+        expr.name == collection_helpers::kRootedSoaGetRef ||
+        expr.name == collection_helpers::kRootedSoaRef ||
+        expr.name == collection_helpers::kRootedSoaRefRef;
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
     expr.namespacePrefix.clear();
@@ -1139,24 +1140,24 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       expr.templateArgs.push_back(*borrowedElemType);
     }
     const std::string borrowedHelperRoot =
-        usesPublicSoaPath ? "/std/collections/soa/"
-                          : "/std/collections/soa/";
+        usesPublicSoaPath ? collection_helpers::kCanonicalSoaPrefix
+                          : collection_helpers::kCanonicalSoaPrefix;
     if (normalizedMethodName == "count" ||
-        normalizedMethodName == "count_ref") {
-      expr.name = borrowedHelperRoot + "count_ref";
+        normalizedMethodName == collection_helpers::kCountRef) {
+      expr.name = borrowedHelperRoot + collection_helpers::kCountRef;
       return true;
     }
     if (normalizedMethodName == "get" ||
-        normalizedMethodName == "get_ref") {
-      expr.name = borrowedHelperRoot + "get_ref";
+        normalizedMethodName == collection_helpers::kGetRef) {
+      expr.name = borrowedHelperRoot + collection_helpers::kGetRef;
       return true;
     }
     if (normalizedMethodName == "ref" ||
-        normalizedMethodName == "ref_ref") {
-      expr.name = borrowedHelperRoot + "ref_ref";
+        normalizedMethodName == collection_helpers::kRefRef) {
+      expr.name = borrowedHelperRoot + collection_helpers::kRefRef;
       return true;
     }
-    expr.name = borrowedHelperRoot + "to_aos_ref";
+    expr.name = borrowedHelperRoot + collection_helpers::kToAosRef;
     return true;
   }
   if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {

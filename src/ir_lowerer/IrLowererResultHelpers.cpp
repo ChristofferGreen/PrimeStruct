@@ -13,6 +13,7 @@
 #include <string_view>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -380,7 +381,7 @@ bool isRootBuiltinCountQueryPath(std::string_view path) {
 }
 
 bool isCoreBuiltinCountTargetPath(std::string_view path) {
-  return path == "/array/count" || path == "/string/count";
+  return path == collection_helpers::kRootedArrayCount || path == collection_helpers::kRootedStringCount;
 }
 
 bool isQueryOwnedBuiltinCountTargetMatch(std::string_view queryCallName,

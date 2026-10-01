@@ -1,10 +1,10 @@
-// soa-surface-audit: exempt
 #include "IrLowererInlineCallContextHelpers.h"
 
 #include <string_view>
 
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -51,8 +51,8 @@ bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
          isSinglePathSegmentWithPrefix(path, vectorBackingMemberRoot() + "vector__") ||
          isSinglePathSegmentWithPrefix(path, collectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("map") + "map__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/soa/soa__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/soa/soa__") ||
+         isSinglePathSegmentWithPrefix(path, collection_helpers::kCanonicalSoaSoaSpecialized) ||
+         isSinglePathSegmentWithPrefix(path, collection_helpers::kCanonicalSoaSoaSpecialized) ||
          isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kExperimentalSoaVectorFolder, "soa"));
 }
 

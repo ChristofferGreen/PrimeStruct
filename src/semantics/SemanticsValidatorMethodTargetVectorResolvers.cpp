@@ -4,6 +4,7 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <cctype>
@@ -333,7 +334,7 @@ bool SemanticsValidator::resolveVectorTarget(
     }
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == "/vector") {
+        collectionTypePath == collection_helpers::kRootedVector) {
       std::vector<std::string> args;
       if (resolveCallCollectionTemplateArgs(target, "vector", params, locals, args) &&
           args.size() == 1) {
@@ -365,9 +366,9 @@ bool SemanticsValidator::resolveVectorTarget(
          (!target.isMethodCall && isSimpleCallName(target, "to_aos"))) ||
         isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
     const bool matchesBorrowedSoaToAosTarget =
-        ((target.isMethodCall && target.name == "to_aos_ref") ||
-         (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref"))) ||
-        isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
+        ((target.isMethodCall && target.name == collection_helpers::kToAosRef) ||
+         (!target.isMethodCall && isSimpleCallName(target, collection_helpers::kToAosRef))) ||
+        isCanonicalStdlibSoaHelperPath(resolvedTarget, collection_helpers::kToAosRef);
     if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
         target.args.size() == 1) {
       std::string sourceElemType;
@@ -646,9 +647,9 @@ bool SemanticsValidator::resolveArrayTarget(
     }
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        (collectionTypePath == "/array" || collectionTypePath == "/vector")) {
+        (collectionTypePath == collection_helpers::kRootedArray || collectionTypePath == collection_helpers::kRootedVector)) {
       std::vector<std::string> args;
-      const std::string expectedBase = collectionTypePath == "/vector" ? "vector" : "array";
+      const std::string expectedBase = collectionTypePath == collection_helpers::kRootedVector ? "vector" : "array";
       if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args) &&
           args.size() == 1) {
         elemType = args.front();

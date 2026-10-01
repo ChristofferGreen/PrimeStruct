@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -146,22 +147,22 @@ std::optional<semantics::BindingInfo> extractExperimentalKeyValueValueReturnBind
 
 std::string borrowedExperimentalKeyValueHelperName(std::string_view methodName) {
   if (methodName == "count") {
-    return "count_ref";
+    return collection_helpers::kCountRef;
   }
   if (methodName == "contains") {
-    return "contains_ref";
+    return collection_helpers::kContainsRef;
   }
   if (methodName == "tryAt") {
-    return "tryAt_ref";
+    return collection_helpers::kTryAtRef;
   }
   if (methodName == "at") {
-    return "at_ref";
+    return collection_helpers::kAtRef;
   }
   if (methodName == "at_unsafe") {
-    return "at_unsafe_ref";
+    return collection_helpers::kAtUnsafeRef;
   }
   if (methodName == "insert") {
-    return "insert_ref";
+    return collection_helpers::kInsertRef;
   }
   return {};
 }

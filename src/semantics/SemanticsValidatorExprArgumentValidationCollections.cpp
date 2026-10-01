@@ -7,6 +7,7 @@
 #include <string_view>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -58,8 +59,8 @@ bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {
   if (!resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName)) {
     return false;
   }
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
@@ -79,8 +80,8 @@ bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
   std::string resolvedKeyValueHelperName;
   if (resolveCanonicalKeyValueHelperNameFromSpelling(
           normalizedName, resolvedKeyValueHelperName) &&
-      (resolvedKeyValueHelperName == "at_ref" ||
-       resolvedKeyValueHelperName == "at_unsafe_ref")) {
+      (resolvedKeyValueHelperName == collection_helpers::kAtRef ||
+       resolvedKeyValueHelperName == collection_helpers::kAtUnsafeRef)) {
     helperOut = resolvedKeyValueHelperName;
     return true;
   }
@@ -90,9 +91,9 @@ bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
 bool isBuiltinSoaVectorTypeBaseForArgumentValidation(const std::string &base) {
   const std::string normalizedBase = normalizeBindingTypeName(base);
   return normalizedBase == "soa" ||
-         normalizedBase == "/soa" ||
+         normalizedBase == collection_helpers::kRootedSoa ||
          normalizedBase == "std/collections/soa" ||
-         normalizedBase == "/std/collections/soa" ||
+         normalizedBase == collection_helpers::kCanonicalSoa ||
          isExperimentalSoaVectorTypePath(normalizedBase);
 }
 

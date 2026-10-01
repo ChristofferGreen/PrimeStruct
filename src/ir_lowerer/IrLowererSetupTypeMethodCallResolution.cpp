@@ -14,6 +14,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -427,13 +428,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     } else if (helperName.rfind(rootedKeyValuePrefix, 0) == 0) {
       helperName.erase(0, rootedKeyValuePrefix.size());
     }
-    if (helperName == "count" || helperName == "count_ref" ||
+    if (helperName == "count" || helperName == collection_helpers::kCountRef ||
         helperName == "size" ||
-        helperName == "contains" || helperName == "contains_ref" ||
-        helperName == "tryAt" || helperName == "tryAt_ref" ||
-        helperName == "at" || helperName == "at_ref" ||
-        helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-        helperName == "insert" || helperName == "insert_ref") {
+        helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+        helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+        helperName == "at" || helperName == collection_helpers::kAtRef ||
+        helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
+        helperName == "insert" || helperName == collection_helpers::kInsertRef) {
       return helperName;
     }
     return {};
@@ -654,7 +655,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     const std::string resolvedPath =
         findSemanticProductMethodCallTarget(semanticProgram, callExpr);
-    if (resolvedPath == "/std/collections/soa/to_aos") {
+    if (resolvedPath == collection_helpers::kCanonicalSoaToAos) {
       errorOut.clear();
       return nullptr;
     }
@@ -718,10 +719,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
               canonicalKeyValueHelperPath("count");
       const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
           requestsExplicitVectorCountMethod &&
-          (resolvedPath == "/string/count" || resolvedPath == "/array/count");
+          (resolvedPath == collection_helpers::kRootedStringCount || resolvedPath == collection_helpers::kRootedArrayCount);
       const bool routesExplicitVectorCountMethodThroughArgsPackCount =
           routesExplicitVectorCountMethodThroughBuiltinScalarTarget &&
-          resolvedPath == "/array/count" &&
+          resolvedPath == collection_helpers::kRootedArrayCount &&
           [&]() {
             std::string receiverTypeText =
                 unwrapSemanticReceiverTypeText(
@@ -788,8 +789,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return nullptr;
       }
       if (!requestsExplicitVectorCountMethod &&
-          (preferredResolvedPath == "/string/count" ||
-           preferredResolvedPath == "/std/collections/soa/to_aos") &&
+          (preferredResolvedPath == collection_helpers::kRootedStringCount ||
+           preferredResolvedPath == collection_helpers::kCanonicalSoaToAos) &&
           isBuiltinClassifiedMethodCallTarget(preferredResolvedPath, callExpr)) {
         errorOut.clear();
         return nullptr;

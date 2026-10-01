@@ -8,6 +8,7 @@
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <array>
 #include <cassert>
@@ -251,7 +252,7 @@ std::string experimentalSoaHelperPathLocal(std::string_view helperName) {
 } // namespace
 
 std::string samePathSoaHelperTargetPath(std::string_view helperName) {
-  if (helperName == "to_aos" || helperName == "to_aos_ref") {
+  if (helperName == "to_aos" || helperName == collection_helpers::kToAosRef) {
     return "/" + std::string(helperName);
   }
   return "/" + soa_paths::publicSoaFolder() + "/" + std::string(helperName);
@@ -297,9 +298,9 @@ bool splitSoaSurfaceHelperPath(std::string_view path,
 }
 
 bool isSoaReadRefHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "get" || helperName == "get_ref" ||
-         helperName == "ref" || helperName == "ref_ref";
+  return helperName == "count" || helperName == collection_helpers::kCountRef ||
+         helperName == "get" || helperName == collection_helpers::kGetRef ||
+         helperName == "ref" || helperName == collection_helpers::kRefRef;
 }
 
 bool isExplicitPublicSoaSurfaceHelperName(std::string_view helperName) {
@@ -310,7 +311,7 @@ bool isExplicitPublicSoaSurfaceHelperName(std::string_view helperName) {
 
 bool isSupportedCompatibilitySoaHelperName(std::string_view helperName) {
   return isSoaReadRefHelperName(helperName) ||
-         helperName == "to_aos" || helperName == "to_aos_ref" ||
+         helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
          helperName == "push" || helperName == "reserve";
 }
 
@@ -337,7 +338,7 @@ bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix,
   std::string helperName;
   bool usesPublicSurface = false;
   if (splitSoaSurfaceHelperPath(normalizedName, &helperName, &usesPublicSurface)) {
-    return helperName == "to_aos" || helperName == "to_aos_ref" ||
+    return helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
            (!usesPublicSurface && helperName == "to_soa");
   }
   if (isPublicSoaSurfaceNamespace(normalizedPrefix) &&
@@ -346,11 +347,11 @@ bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix,
   }
   if (isCompatibilitySoaSurfaceNamespace(normalizedPrefix) &&
       (normalizedName == "to_soa" || normalizedName == "to_aos" ||
-       normalizedName == "to_aos_ref")) {
+       normalizedName == collection_helpers::kToAosRef)) {
     return true;
   }
   return normalizedName == "to_soa" || normalizedName == "to_aos" ||
-         normalizedName == "to_aos_ref";
+         normalizedName == collection_helpers::kToAosRef;
 }
 
 bool isSoaCountOrAccessSurfaceSpelling(std::string_view normalizedPrefix,
@@ -531,7 +532,7 @@ bool isRootBuiltinName(const std::string &name) {
          normalized == "map" || normalized == "Task" || normalized == "File" ||
          normalized == "try" || normalized == "count" || normalized == "capacity" ||
          normalized == "to_soa" || normalized == "to_aos" ||
-         normalized == "to_aos_ref" ||
+         normalized == collection_helpers::kToAosRef ||
          normalized == "push" || normalized == "pop" ||
          normalized == "reserve" || normalized == "clear" || normalized == "remove_at" || normalized == "remove_swap" ||
          normalized == "at" || normalized == "at_unsafe" || normalized == "convert" ||
@@ -628,7 +629,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
     return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
   }
 
-  const bool isVectorFamilyReceiver = receiverPath == "/array" || receiverPath == "/vector";
+  const bool isVectorFamilyReceiver = receiverPath == collection_helpers::kRootedArray || receiverPath == collection_helpers::kRootedVector;
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
@@ -641,7 +642,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
   }
 
-  if (receiverPath != "/map") {
+  if (receiverPath != collection_helpers::kRootedMap) {
     return false;
   }
   std::string resolvedKeyValueHelperName;
@@ -908,7 +909,7 @@ std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path) {
     return compatibilitySoaHelperTargetPath("to_aos");
   }
   if (canonicalPath == "/to_aos_ref") {
-    return compatibilitySoaHelperTargetPath("to_aos_ref");
+    return compatibilitySoaHelperTargetPath(collection_helpers::kToAosRef);
   }
   return canonicalPath;
 }
@@ -1165,7 +1166,7 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
   const std::string canonicalSoaGetPath =
       canonicalizeLegacySoaGetHelperPath(normalizedResolvedPath);
   if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
-      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef)) {
     return canonicalSoaGetPath;
   }
   // TODO-5319: `/soa/count` and `/soa/count_ref` used to be reported under

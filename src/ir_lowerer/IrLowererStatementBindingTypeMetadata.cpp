@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererStatementBindingInternal.h"
 
 #include <algorithm>
@@ -13,6 +12,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -142,7 +142,7 @@ bool applyErrorTypeMetadata(const std::string &typeText, LocalInfo &infoOut) {
   const std::string normalized = trimTemplateTypeText(typeText);
   if (normalized != "FileError" && normalized != "/std/file/FileError" &&
       normalized != "ImageError" && normalized != "/std/image/ImageError" &&
-      normalized != "ContainerError" && normalized != "/std/collections/ContainerError" &&
+      normalized != "ContainerError" && normalized != collection_helpers::kCanonicalContainerErrorType &&
       normalized != "GfxError" && normalized != "/std/gfx/GfxError" &&
       normalized != "/std/gfx/experimental/GfxError") {
     return false;
@@ -156,10 +156,10 @@ bool applyErrorTypeMetadata(const std::string &typeText, LocalInfo &infoOut) {
     infoOut.errorTypeName = "ImageError";
     infoOut.errorHelperNamespacePath = "/std/image/ImageError";
     infoOut.structTypeName = "/std/image/ImageError";
-  } else if (normalized == "ContainerError" || normalized == "/std/collections/ContainerError") {
+  } else if (normalized == "ContainerError" || normalized == collection_helpers::kCanonicalContainerErrorType) {
     infoOut.errorTypeName = "ContainerError";
-    infoOut.errorHelperNamespacePath = "/std/collections/ContainerError";
-    infoOut.structTypeName = "/std/collections/ContainerError";
+    infoOut.errorHelperNamespacePath = collection_helpers::kCanonicalContainerErrorType;
+    infoOut.structTypeName = collection_helpers::kCanonicalContainerErrorType;
   } else {
     infoOut.errorTypeName = "GfxError";
     infoOut.errorHelperNamespacePath =

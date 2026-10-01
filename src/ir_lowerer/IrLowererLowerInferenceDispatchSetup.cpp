@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererLowerInferenceSetup.h"
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -10,6 +9,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <vector>
 
@@ -628,7 +628,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
            canonicalKeyValueHelperName == "tryAt" || canonicalKeyValueHelperName == "at" ||
            canonicalKeyValueHelperName == "at_unsafe" ||
            canonicalKeyValueHelperName == "insert" ||
-           canonicalKeyValueHelperName == "insert_ref") &&
+           canonicalKeyValueHelperName == collection_helpers::kInsertRef) &&
           !(isExplicitKeyValueHelperFallbackPath(expr) &&
             (canonicalKeyValueHelperName == "at" || canonicalKeyValueHelperName == "at_unsafe" ||
              canonicalKeyValueHelperName == "tryAt")) &&

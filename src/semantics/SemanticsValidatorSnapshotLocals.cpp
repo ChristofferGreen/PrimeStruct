@@ -1,6 +1,7 @@
 // collection-surface-audit: exempt
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "SemanticsValidator.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <functional>
@@ -63,7 +64,7 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
       !out.resolvedPath.empty() &&
       (expr.isMethodCall ||
        out.resolvedPath.rfind("/std/collections/", 0) == 0 ||
-       out.resolvedPath.rfind("/array/", 0) == 0);
+       out.resolvedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0);
   if (receiverQueryCandidate) {
     const Expr &receiverExpr = expr.args.front();
     if (receiverExpr.kind == Expr::Kind::Name) {

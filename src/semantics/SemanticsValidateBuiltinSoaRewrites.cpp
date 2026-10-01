@@ -4,6 +4,7 @@
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateBuiltinSoaMetadata.h"
 #include "SemanticsValidateSoaBindingExtraction.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <optional>
@@ -673,9 +674,9 @@ void rewriteBuiltinSoaAccessExpr(
   }
   if (helperName == resolvedHelperName &&
       ((resolvedHelperName == "get" && preserveGetHelper) ||
-       (resolvedHelperName == "get_ref" && preserveGetRefHelper) ||
+       (resolvedHelperName == collection_helpers::kGetRef && preserveGetRefHelper) ||
        (resolvedHelperName == "ref" && preserveRefHelper) ||
-       (resolvedHelperName == "ref_ref" && preserveRefRefHelper))) {
+       (resolvedHelperName == collection_helpers::kRefRef && preserveRefRefHelper))) {
     return;
   }
   const bool hasBuiltinSoaReceiver = receiverBinding.has_value();
@@ -725,11 +726,11 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
     }
   }
   const bool preserveGetHelper = hasVisibleRootSoaHelper(program, "get");
-  const bool preserveGetRefHelper = hasVisibleRootSoaHelper(program, "get_ref");
+  const bool preserveGetRefHelper = hasVisibleRootSoaHelper(program, collection_helpers::kGetRef);
   const bool preserveRefHelper = hasVisibleRootSoaHelper(program, "ref");
-  const bool preserveRefRefHelper = hasVisibleRootSoaHelper(program, "ref_ref");
+  const bool preserveRefRefHelper = hasVisibleRootSoaHelper(program, collection_helpers::kRefRef);
   std::unordered_set<std::string> visiblePublicSoaHelpers;
-  for (std::string_view helperName : {"get_ref", "ref_ref"}) {
+  for (std::string_view helperName : {collection_helpers::kGetRef, collection_helpers::kRefRef}) {
     if (hasVisiblePublicSoaHelperDefinition(program, helperName)) {
       visiblePublicSoaHelpers.insert(std::string(helperName));
     }
@@ -978,7 +979,7 @@ void rewriteBuiltinSoaCountExpr(
   }
   if (helperName == resolvedHelperName &&
       ((resolvedHelperName == "count" && preserveCountHelper) ||
-       (resolvedHelperName == "count_ref" && preserveCountRefHelper))) {
+       (resolvedHelperName == collection_helpers::kCountRef && preserveCountRefHelper))) {
     return;
   }
   const bool explicitOldSoaCount = isOldExplicitSoaCountHelperName(expr.name);
@@ -1025,10 +1026,10 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
     }
   }
   const bool preserveCountHelper = hasVisibleRootSoaHelper(program, "count");
-  const bool preserveCountRefHelper = hasVisibleRootSoaHelper(program, "count_ref");
+  const bool preserveCountRefHelper = hasVisibleRootSoaHelper(program, collection_helpers::kCountRef);
   std::unordered_set<std::string> visiblePublicSoaHelpers;
-  if (hasVisiblePublicSoaHelperDefinition(program, "count_ref")) {
-    visiblePublicSoaHelpers.insert("count_ref");
+  if (hasVisiblePublicSoaHelperDefinition(program, collection_helpers::kCountRef)) {
+    visiblePublicSoaHelpers.insert(collection_helpers::kCountRef);
   }
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;

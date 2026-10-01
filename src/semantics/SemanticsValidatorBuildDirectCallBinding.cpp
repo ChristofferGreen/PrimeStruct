@@ -1,6 +1,6 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 
@@ -37,7 +37,7 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
       }
       const std::string normalizedCollectionType = normalizeCollectionTypePath(base);
       if (((base == "array" || base == "vector" || base == "soa") ||
-           normalizedCollectionType == "/vector") &&
+           normalizedCollectionType == collection_helpers::kRootedVector) &&
           args.size() == 1) {
         bindingOut.typeName = base;
         bindingOut.typeTemplateArg = argText;

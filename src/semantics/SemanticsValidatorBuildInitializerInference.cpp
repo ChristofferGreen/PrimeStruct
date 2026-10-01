@@ -3,6 +3,7 @@
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <limits>
@@ -128,7 +129,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   // that shadow's own declared return, not the canonical helper's
   // (TODO-5307). The classifier canonicalizes bare /soa/ spellings
   // shadow-blind, so short-circuit before consulting it.
-  if (rooted.rfind("/soa/", 0) == 0 && defMap_.count(rooted) > 0) {
+  if (rooted.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 && defMap_.count(rooted) > 0) {
     return {};
   }
   const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
@@ -225,7 +226,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
       isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "ref");
   const bool resolvedCanonicalIsRefRef =
       resolvedCanonicalIsRefLike &&
-      isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "ref_ref");
+      isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, collection_helpers::kRefRef);
   if (resolvedCanonicalIsRef ||
       isExplicitSoaRefCall ||
       isBuiltinSoaRefMethod ||
@@ -233,15 +234,15 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     return std::string("ref");
   }
   const bool isExplicitSoaRefRefCall =
-      explicitSoaHelperCall("ref_ref");
+      explicitSoaHelperCall(collection_helpers::kRefRef);
   const bool isBuiltinSoaRefRefMethod =
-      candidate.isMethodCall && normalizedName == "ref_ref" &&
+      candidate.isMethodCall && normalizedName == collection_helpers::kRefRef &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
   if (resolvedCanonicalIsRefRef ||
       isExplicitSoaRefRefCall ||
       isBuiltinSoaRefRefMethod ||
-      (!candidate.isMethodCall && isSimpleCallName(candidate, "ref_ref"))) {
-    return std::string("ref_ref");
+      (!candidate.isMethodCall && isSimpleCallName(candidate, collection_helpers::kRefRef))) {
+    return std::string(collection_helpers::kRefRef);
   }
 
   const bool isExplicitSoaGetCall =
@@ -258,17 +259,17 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     return std::string("get");
   }
   const bool isExplicitSoaGetRefCall =
-      explicitSoaHelperCall("get_ref");
+      explicitSoaHelperCall(collection_helpers::kGetRef);
   const bool isBuiltinSoaGetRefMethod =
-      candidate.isMethodCall && normalizedName == "get_ref" &&
+      candidate.isMethodCall && normalizedName == collection_helpers::kGetRef &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
   const bool resolvedCanonicalIsGetRef =
-      isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "get_ref");
+      isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, collection_helpers::kGetRef);
   if (resolvedCanonicalIsGetRef ||
       isExplicitSoaGetRefCall ||
       isBuiltinSoaGetRefMethod ||
-      (!candidate.isMethodCall && isSimpleCallName(candidate, "get_ref"))) {
-    return std::string("get_ref");
+      (!candidate.isMethodCall && isSimpleCallName(candidate, collection_helpers::kGetRef))) {
+    return std::string(collection_helpers::kGetRef);
   }
 
   return std::nullopt;
@@ -602,11 +603,11 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       normalizedName.erase(normalizedName.begin());
     }
     if (normalizedName.empty() || normalizedName.find('/') != std::string::npos ||
-        normalizedName == "count" || normalizedName == "count_ref" ||
-        normalizedName == "get" || normalizedName == "get_ref" ||
-        normalizedName == "ref" || normalizedName == "ref_ref" ||
+        normalizedName == "count" || normalizedName == collection_helpers::kCountRef ||
+        normalizedName == "get" || normalizedName == collection_helpers::kGetRef ||
+        normalizedName == "ref" || normalizedName == collection_helpers::kRefRef ||
         normalizedName == "to_soa" || normalizedName == "to_aos" ||
-        normalizedName == "to_aos_ref" ||
+        normalizedName == collection_helpers::kToAosRef ||
         normalizedName == "location" || normalizedName == "dereference") {
       return std::nullopt;
     }
@@ -690,7 +691,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   const auto soaAccessHelper =
       builtinSoaAccessHelperName(candidate, params, locals);
   if (soaAccessHelper.has_value() &&
-      (*soaAccessHelper == "ref" || *soaAccessHelper == "ref_ref") &&
+      (*soaAccessHelper == "ref" || *soaAccessHelper == collection_helpers::kRefRef) &&
       !candidate.args.empty() &&
       !isExperimentalSoaLikeExpr(candidate.args.front()) &&
       !hasVisibleDefinitionPathForCurrentImports(
@@ -702,7 +703,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       return publicSoaHelperTargetPath(*soaAccessHelper);
     }
     return preferredSoaHelperTargetForCollectionType(*soaAccessHelper,
-                                                     "/soa");
+                                                     collection_helpers::kRootedSoa);
   }
   return std::nullopt;
 }
@@ -1230,9 +1231,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       !initializer.isMethodCall &&
       initializer.templateArgs.size() == 1 &&
       (isResolvedExperimentalVectorConstructorPath(canonicalResolvedInitializerPath) ||
-       canonicalResolvedInitializerPath == "/vector" ||
+       canonicalResolvedInitializerPath == collection_helpers::kRootedVector ||
        isBareImportedExperimentalVectorConstructor)) {
-    if (canonicalResolvedInitializerPath == "/vector" &&
+    if (canonicalResolvedInitializerPath == collection_helpers::kRootedVector &&
         !hasDirectExperimentalVectorImport()) {
       bindingOut.typeName = "vector";
       bindingOut.typeTemplateArg = initializer.templateArgs.front();

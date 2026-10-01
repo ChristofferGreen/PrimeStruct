@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <utility>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -1323,13 +1324,13 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       isExperimentalCollectionTypeName(name, "map", "Map")) {
     return "map";
   }
-  if (name == "soa" || name == "/soa" ||
+  if (name == "soa" || name == collection_helpers::kRootedSoa ||
       name.rfind("soa<", 0) == 0 || name.rfind("/soa<", 0) == 0 ||
-      name == "std/collections/soa" || name == "/std/collections/soa" ||
+      name == "std/collections/soa" || name == collection_helpers::kCanonicalSoa ||
       name.rfind("std/collections/soa<", 0) == 0 ||
       name.rfind("/std/collections/soa<", 0) == 0 ||
-      name == "/soa" || name == "std/collections/soa" ||
-      name == "/std/collections/soa" || name == "SoaVector" ||
+      name == collection_helpers::kRootedSoa || name == "std/collections/soa" ||
+      name == collection_helpers::kCanonicalSoa || name == "SoaVector" ||
       name == "/SoaVector" ||
       name == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
       name == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
@@ -1360,9 +1361,9 @@ bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText) {
   std::string arg;
   if (splitTemplateTypeName(normalized, base, arg)) {
     const std::string trimmedBase = trimTemplateTypeText(base);
-    if (trimmedBase == "soa" || trimmedBase == "/soa" ||
+    if (trimmedBase == "soa" || trimmedBase == collection_helpers::kRootedSoa ||
         trimmedBase == "std/collections/soa" ||
-        trimmedBase == "/std/collections/soa") {
+        trimmedBase == collection_helpers::kCanonicalSoa) {
       return true;
     }
     std::vector<std::string> templateArgs;
@@ -1377,9 +1378,9 @@ bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText) {
     }
     return false;
   }
-  return normalized == "soa" || normalized == "/soa" ||
+  return normalized == "soa" || normalized == collection_helpers::kRootedSoa ||
          normalized == "std/collections/soa" ||
-         normalized == "/std/collections/soa";
+         normalized == collection_helpers::kCanonicalSoa;
 }
 
 bool exprUsesRawBuiltinSoaVectorLayout(const Expr &expr) {

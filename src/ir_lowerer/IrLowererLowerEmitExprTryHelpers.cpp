@@ -17,6 +17,7 @@
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/Diagnostics.h"
 #include "primec/support/SourceLocationMapper.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <limits>
 
@@ -125,8 +126,8 @@ std::optional<bool> tryLowerEmitExprTryHelper(
               return true;
             }
             if (trimmedValueType == "ContainerError" ||
-                trimmedValueType == "/std/collections/ContainerError") {
-              resultInfoOut.valueStructType = "/std/collections/ContainerError";
+                trimmedValueType == collection_helpers::kCanonicalContainerErrorType) {
+              resultInfoOut.valueStructType = collection_helpers::kCanonicalContainerErrorType;
               return true;
             }
             if (trimmedValueType == "ImageError" ||
@@ -267,8 +268,8 @@ std::optional<bool> tryLowerEmitExprTryHelper(
             if (valueDef != nullptr && isStructDefinition(*valueDef)) {
               valueStructType = valueDef->fullPath;
             } else if (candidateValuePath == "ContainerError" ||
-                       candidateValuePath == "/std/collections/ContainerError") {
-              valueStructType = "/std/collections/ContainerError";
+                       candidateValuePath == collection_helpers::kCanonicalContainerErrorType) {
+              valueStructType = collection_helpers::kCanonicalContainerErrorType;
             } else if (candidateValuePath == "ImageError" ||
                        candidateValuePath == "/std/image/ImageError") {
               valueStructType = "/std/image/ImageError";

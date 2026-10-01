@@ -8,6 +8,7 @@
 #include <array>
 #include <string_view>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::emitter {
 
@@ -289,9 +290,9 @@ bool resolveStdlibSurfaceExprMemberNameLocal(const Expr &expr,
   }
   if (isEmitterCollectionSurfaceMetadata(
           metadata, EmitterCollectionSurface::KeyValueHelpers) &&
-      normalizedPath.rfind("/std/collections/Map", 0) == 0) {
+      normalizedPath.rfind(collection_helpers::kCanonicalMapType, 0) == 0) {
     const std::string memberToken =
-        normalizedPath.substr(std::string("/std/collections/Map").size());
+        normalizedPath.substr(std::string(collection_helpers::kCanonicalMapType).size());
     if (const std::string_view memberName =
             resolveStdlibSurfaceMemberName(metadata, memberToken);
         !memberName.empty()) {
@@ -647,9 +648,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
-           name == "count" || name == "count_ref" ||
+           name == "count" || name == collection_helpers::kCountRef ||
            name == "capacity" || name == "to_aos" ||
-           name == "to_aos_ref" ||
+           name == collection_helpers::kToAosRef ||
            name == "push" || name == "reserve" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||
@@ -657,8 +658,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "less_than" || name == "equal" || name == "not_equal" ||
            name == "greater_equal" || name == "less_equal" ||
            name == "and" || name == "or" || name == "not" ||
-           name == "get" || name == "get_ref" ||
-           name == "ref" || name == "ref_ref";
+           name == "get" || name == collection_helpers::kGetRef ||
+           name == "ref" || name == collection_helpers::kRefRef;
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {
     // Only a genuinely `/std/...`-namespaced spelling should fall through to
@@ -1049,8 +1050,8 @@ std::string resolveExprPath(const Expr &expr) {
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, std::string> &nameMap) {
   std::string preferred = path;
-  if (preferred.rfind("/array/", 0) == 0 && nameMap.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/array/").size());
+  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && nameMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias = canonicalVectorHelperPathForSuffix(suffix);
       if (nameMap.count(stdlibAlias) > 0) {

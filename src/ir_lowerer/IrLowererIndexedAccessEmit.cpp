@@ -4,6 +4,7 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -18,7 +19,7 @@ bool isCollectionVectorRecordPath(const std::string &structPath) {
 
 bool usesCollectionVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {
   return targetInfo.isVectorTarget &&
-         (targetInfo.structTypeName.empty() || targetInfo.structTypeName == "/vector" ||
+         (targetInfo.structTypeName.empty() || targetInfo.structTypeName == collection_helpers::kRootedVector ||
           isCollectionVectorRecordPath(targetInfo.structTypeName));
 }
 

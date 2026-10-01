@@ -1,5 +1,6 @@
 // soa-surface-audit: exempt
 // collection-surface-audit: exempt
+#include "primec/support/CollectionHelperNames.h"
         const SemanticProductIndex *const tailDispatchSemanticIndexPtr =
             semanticProgram == nullptr ? nullptr
                                        : &callResolutionAdapters.semanticProductTargets.semanticIndex;
@@ -39,11 +40,11 @@
         };
         if (!inlineDispatchExpr.isMethodCall &&
             inlineDispatchExpr.args.size() == 1 &&
-            !hasNonCanonicalSoaDefinition("/std/collections/soa/count") &&
-            (inlineDispatchRawPath == "/std/collections/soa/count" ||
+            !hasNonCanonicalSoaDefinition(primec::collection_helpers::kCanonicalSoaCount) &&
+            (inlineDispatchRawPath == primec::collection_helpers::kCanonicalSoaCount ||
              findSemanticProductDirectCallTarget(
                  semanticProgram, inlineDispatchExpr) ==
-                 "/std/collections/soa/count")) {
+                 primec::collection_helpers::kCanonicalSoaCount)) {
           if (!emitExpr(inlineDispatchExpr.args.front(), localsIn)) {
             return false;
           }
@@ -62,12 +63,12 @@
               return localIt != localsIn.end() &&
                      localIt->second.isSoaVector;
             }() &&
-            !hasNonCanonicalSoaDefinition("/std/collections/soa/count") &&
+            !hasNonCanonicalSoaDefinition(primec::collection_helpers::kCanonicalSoaCount) &&
             (inlineDispatchRawPath == "count" ||
-             inlineDispatchRawPath == "/std/collections/soa/count" ||
+             inlineDispatchRawPath == primec::collection_helpers::kCanonicalSoaCount ||
              findSemanticProductMethodCallTarget(
                  semanticProgram, inlineDispatchExpr) ==
-                 "/std/collections/soa/count")) {
+                 primec::collection_helpers::kCanonicalSoaCount)) {
           if (!emitExpr(inlineDispatchExpr.args.front(), localsIn)) {
             return false;
           }
@@ -79,21 +80,21 @@
         }
         if (!inlineDispatchExpr.isMethodCall &&
             inlineDispatchExpr.args.size() == 2 &&
-            !hasNonCanonicalSoaDefinition("/std/collections/soa/get") &&
-            !hasNonCanonicalSoaDefinition("/std/collections/soa/ref") &&
-            (inlineDispatchRawPath == "/std/collections/soa/get" ||
-             inlineDispatchRawPath == "/std/collections/soa/ref" ||
+            !hasNonCanonicalSoaDefinition(primec::collection_helpers::kCanonicalSoaGet) &&
+            !hasNonCanonicalSoaDefinition(primec::collection_helpers::kCanonicalSoaRef) &&
+            (inlineDispatchRawPath == primec::collection_helpers::kCanonicalSoaGet ||
+             inlineDispatchRawPath == primec::collection_helpers::kCanonicalSoaRef ||
              findSemanticProductDirectCallTarget(
                  semanticProgram, inlineDispatchExpr) ==
-                 "/std/collections/soa/get" ||
+                 primec::collection_helpers::kCanonicalSoaGet ||
              findSemanticProductDirectCallTarget(
                  semanticProgram, inlineDispatchExpr) ==
-                 "/std/collections/soa/ref")) {
+                 primec::collection_helpers::kCanonicalSoaRef)) {
           const bool returnsReference =
-              inlineDispatchRawPath == "/std/collections/soa/ref" ||
+              inlineDispatchRawPath == primec::collection_helpers::kCanonicalSoaRef ||
               findSemanticProductDirectCallTarget(
                   semanticProgram, inlineDispatchExpr) ==
-                  "/std/collections/soa/ref";
+                  primec::collection_helpers::kCanonicalSoaRef;
           const auto targetInfo =
               ir_lowerer::resolveArrayVectorAccessTargetInfo(
                   inlineDispatchExpr.args.front(),
@@ -350,9 +351,9 @@
           const std::string resolvedAccessPath = resolveExprPath(inlineDispatchExpr);
           if (!(getBuiltinArrayAccessName(inlineDispatchExpr, accessName) ||
                 resolveVectorHelperAliasName(inlineDispatchExpr, accessName) ||
-                (resolvedAccessPath == "/std/collections/vector/at" &&
+                (resolvedAccessPath == primec::collection_helpers::kCanonicalVectorAt &&
                  (accessName = "at", true)) ||
-                (resolvedAccessPath == "/std/collections/vector/at_unsafe" &&
+                (resolvedAccessPath == primec::collection_helpers::kCanonicalVectorAtUnsafe &&
                  (accessName = "at_unsafe", true)))) {
             return std::nullopt;
           }
@@ -442,9 +443,9 @@
                    inlineDispatchExpr, vectorMetadataHelperName) &&
                (vectorMetadataHelperName == "count" ||
                 vectorMetadataHelperName == "capacity")) ||
-              (vectorMetadataPath == "/std/collections/vector/count" &&
+              (vectorMetadataPath == primec::collection_helpers::kCanonicalVectorCount &&
                (vectorMetadataHelperName = "count", true)) ||
-              (vectorMetadataPath == "/std/collections/vector/capacity" &&
+              (vectorMetadataPath == primec::collection_helpers::kCanonicalVectorCapacity &&
                (vectorMetadataHelperName = "capacity", true))) {
             const Definition *directVectorMetadataCallee =
                 tailDispatchHelpers.resolveTailDispatchDirectHelperDefinition(inlineDispatchExpr);
@@ -767,7 +768,7 @@
                           wrappedArgs.front(), targetInfo);
                     }
                     const std::string collectionName =
-                        normalizedBase == "/array"
+                        normalizedBase == primec::collection_helpers::kRootedArray
                             ? "array"
                             : ir_lowerer::normalizeCollectionBindingTypeName(
                                   normalizedBase);
@@ -804,7 +805,7 @@
                             collectionFact->collectionFamily,
                             collectionFact->collectionFamilyId);
                     const std::string collectionName =
-                        collectionFamily == "/array"
+                        collectionFamily == primec::collection_helpers::kRootedArray
                             ? "array"
                             : ir_lowerer::normalizeCollectionBindingTypeName(
                                   collectionFamily);
@@ -986,14 +987,14 @@
           const std::string semanticTarget =
               findSemanticProductMethodCallTarget(semanticProgram, expr);
           if (!semanticTarget.empty()) {
-            if (((semanticTarget == "/string/count" ||
-                  semanticTarget == "/std/collections/vector/count") &&
+            if (((semanticTarget == primec::collection_helpers::kRootedStringCount ||
+                  semanticTarget == primec::collection_helpers::kCanonicalVectorCount) &&
                  expr.args.size() == 1 &&
                  isSimpleCallName(expr, "count")) ||
-                (semanticTarget == "/std/collections/vector/capacity" &&
+                (semanticTarget == primec::collection_helpers::kCanonicalVectorCapacity &&
                  expr.args.size() == 1 &&
                  isSimpleCallName(expr, "capacity")) ||
-                (semanticTarget == "/std/collections/soa/to_aos" &&
+                (semanticTarget == primec::collection_helpers::kCanonicalSoaToAos &&
                  expr.args.size() == 1 &&
                  isSimpleCallName(expr, "to_aos"))) {
               // Builtin bridge forms are emitted by fallback paths below.

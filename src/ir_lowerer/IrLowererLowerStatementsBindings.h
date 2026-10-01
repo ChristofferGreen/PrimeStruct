@@ -503,8 +503,8 @@
           info.resultValueStructType = std::move(structPath);
           info.resultValueKind = LocalInfo::ValueKind::Unknown;
         } else if (normalizedTypeText == "ContainerError" ||
-                   normalizedTypeText == "/std/collections/ContainerError") {
-          info.resultValueStructType = "/std/collections/ContainerError";
+                   normalizedTypeText == primec::collection_helpers::kCanonicalContainerErrorType) {
+          info.resultValueStructType = primec::collection_helpers::kCanonicalContainerErrorType;
           info.resultValueKind = LocalInfo::ValueKind::Unknown;
         } else if (normalizedTypeText == "ImageError" ||
                    normalizedTypeText == "/std/image/ImageError") {
@@ -553,6 +553,7 @@
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
       auto applyWrappedStdlibResultSumBindingInfo = [&]() {
         if (info.kind != LocalInfo::Kind::Reference &&
             info.kind != LocalInfo::Kind::Pointer) {
@@ -714,8 +715,8 @@
             } else if (transform.name == "ImageError" || transform.name == "/std/image/ImageError") {
               info.structTypeName = "/std/image/ImageError";
             } else if (transform.name == "ContainerError" ||
-                       transform.name == "/std/collections/ContainerError") {
-              info.structTypeName = "/std/collections/ContainerError";
+                       transform.name == primec::collection_helpers::kCanonicalContainerErrorType) {
+              info.structTypeName = primec::collection_helpers::kCanonicalContainerErrorType;
             } else if (transform.name == "GfxError" ||
                        transform.name == "/std/gfx/GfxError" ||
                        transform.name == "/std/gfx/experimental/GfxError") {

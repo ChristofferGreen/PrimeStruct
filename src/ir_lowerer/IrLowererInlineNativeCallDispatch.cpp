@@ -19,6 +19,7 @@
 #include "primec/ast/AstCallPathHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -148,8 +149,8 @@ bool resolveExplicitSamePathKeyValueCountLikeDefinitionCall(
   }
   helperName = canonicalInlineKeyValueHelperName(std::move(helperName));
   if (helperName != "count" && helperName != "contains" &&
-      helperName != "tryAt" && helperName != "count_ref" &&
-      helperName != "contains_ref" && helperName != "tryAt_ref") {
+      helperName != "tryAt" && helperName != collection_helpers::kCountRef &&
+      helperName != collection_helpers::kContainsRef && helperName != collection_helpers::kTryAtRef) {
     return false;
   }
   if (normalizeCollectionHelperPath(rawPath) !=
@@ -193,7 +194,7 @@ bool isExplicitRemovedKeyValueAccessHelperCall(const Expr &expr) {
   }
   return !isCanonicalPublishedInlineKeyValueHelperPath(originalPath) &&
          (helperName == "at" || helperName == "at_unsafe" ||
-          helperName == "at_ref" || helperName == "at_unsafe_ref");
+          helperName == collection_helpers::kAtRef || helperName == collection_helpers::kAtUnsafeRef);
 }
 
 bool isSemanticBarePreferredKeyValueHelperDefinitionCall(const Expr &expr,
@@ -227,10 +228,10 @@ bool prefersBuiltinCountFallbackOverRemovedShadow(
       !expr.namespacePrefix.empty() || expr.args.size() != 1) {
     return false;
   }
-  if (callee.fullPath == "/array/count") {
+  if (callee.fullPath == collection_helpers::kRootedArrayCount) {
     return isArrayCountCall(expr);
   }
-  if (callee.fullPath == "/string/count") {
+  if (callee.fullPath == collection_helpers::kRootedStringCount) {
     return isStringCountCall(expr);
   }
   return false;
@@ -246,14 +247,14 @@ bool keepsBuiltinInlineReturnForPublishedKeyValueHelper(std::string_view helperN
   if (!declaredReturnType.empty() && declaredReturnType.front() == '/') {
     declaredReturnType.erase(declaredReturnType.begin());
   }
-  if (helperName == "contains" || helperName == "contains_ref") {
+  if (helperName == "contains" || helperName == collection_helpers::kContainsRef) {
     return declaredReturnType == "bool";
   }
-  if (helperName == "tryAt" || helperName == "tryAt_ref") {
+  if (helperName == "tryAt" || helperName == collection_helpers::kTryAtRef) {
     return declaredReturnType == "Result";
   }
-  if (helperName == "at" || helperName == "at_ref" ||
-      helperName == "at_unsafe" || helperName == "at_unsafe_ref") {
+  if (helperName == "at" || helperName == collection_helpers::kAtRef ||
+      helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef) {
     return declaredReturnType == "bool" || declaredReturnType == "int" ||
            declaredReturnType == "i8" || declaredReturnType == "i16" ||
            declaredReturnType == "i32" || declaredReturnType == "i64" ||
@@ -586,18 +587,18 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     }
     if (directCallee != nullptr && expr.args.size() == 2 &&
         isCanonicalPublishedInlineKeyValueHelperPath(directCallPath) &&
-        (directCallLeaf == "at" || directCallLeaf == "at_ref" ||
+        (directCallLeaf == "at" || directCallLeaf == collection_helpers::kAtRef ||
          directCallLeaf == "at_unsafe" ||
-         directCallLeaf == "at_unsafe_ref")) {
+         directCallLeaf == collection_helpers::kAtUnsafeRef)) {
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&
         isSoaVectorReceiverExpr != nullptr &&
         !expr.args.empty() &&
         (normalizedDirectCallPath ==
-             "/std/collections/experimental_soa_conversions/soaVectorToAos" ||
+             collection_helpers::kCanonicalExperimentalSoaConversionsSoaVectorToAos ||
          normalizedDirectCallPath ==
-             "/std/collections/experimental_soa_conversions/soaVectorToAosRef") &&
+             collection_helpers::kCanonicalExperimentalSoaConversionsSoaVectorToAosRef) &&
         isSoaVectorReceiverExpr(expr.args.front())) {
       error = "struct parameter type mismatch: direct experimental soa conversion "
               "helpers require SoaVector receiver";
@@ -710,8 +711,8 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
            isSimpleCallName(expr, "at_unsafe")) &&
           (callee->fullPath == rootCollectionMemberPath("vector", "at") ||
            callee->fullPath == rootCollectionMemberPath("vector", "at_unsafe") ||
-           callee->fullPath == "/std/collections/vector/at" ||
-           callee->fullPath == "/std/collections/vector/at_unsafe") &&
+           callee->fullPath == collection_helpers::kCanonicalVectorAt ||
+           callee->fullPath == collection_helpers::kCanonicalVectorAtUnsafe) &&
           callee->statements.empty() && !callee->hasReturnStatement &&
           !callee->returnExpr.has_value()) {
         return InlineCallDispatchResult::NotHandled;
@@ -1038,19 +1039,19 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         const std::string normalizedArg = trimTemplateTypeText(argText);
         return normalizedArg == "soa" ||
-               normalizedArg == "/soa" ||
+               normalizedArg == collection_helpers::kRootedSoa ||
                normalizedArg == "std/collections/soa" ||
-               normalizedArg == "/std/collections/soa";
+               normalizedArg == collection_helpers::kCanonicalSoa;
       }
       return normalizedBase == "soa" ||
-             normalizedBase == "/soa" ||
+             normalizedBase == collection_helpers::kRootedSoa ||
              normalizedBase == "std/collections/soa" ||
-             normalizedBase == "/std/collections/soa";
+             normalizedBase == collection_helpers::kCanonicalSoa;
     }
     return normalizedTypeText == "soa" ||
-           normalizedTypeText == "/soa" ||
+           normalizedTypeText == collection_helpers::kRootedSoa ||
            normalizedTypeText == "std/collections/soa" ||
-           normalizedTypeText == "/std/collections/soa";
+           normalizedTypeText == collection_helpers::kCanonicalSoa;
   };
   std::function<bool(const Expr &)> isRawBuiltinSoaVectorTarget;
   isRawBuiltinSoaVectorTarget = [&](const Expr &targetExpr) {
@@ -1126,7 +1127,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       expr.isMethodCall && expr.args.size() == 1 &&
       semanticProgram != nullptr &&
       findSemanticProductMethodCallTarget(semanticProgram, expr) ==
-          "/string/count";
+          collection_helpers::kRootedStringCount;
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (isStringCountCallFn(expr, localsIn) || isSemanticStringCountMethod)) {
     const Definition *stringCountCallee =
@@ -1136,17 +1137,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       directStringCountExpr.isMethodCall = false;
       directStringCountExpr.isFieldAccess = false;
       directStringCountExpr.namespacePrefix.clear();
-      directStringCountExpr.name = "/string/count";
+      directStringCountExpr.name = collection_helpers::kRootedStringCount;
       directStringCountExpr.semanticNodeId = 0;
       stringCountCallee = resolveDefinitionCallFn(directStringCountExpr);
     }
     if (stringCountCallee != nullptr &&
-        stringCountCallee->fullPath == "/string/count") {
+        stringCountCallee->fullPath == collection_helpers::kRootedStringCount) {
       Expr directStringCountExpr = expr;
       directStringCountExpr.isMethodCall = false;
       directStringCountExpr.isFieldAccess = false;
       directStringCountExpr.namespacePrefix.clear();
-      directStringCountExpr.name = "/string/count";
+      directStringCountExpr.name = collection_helpers::kRootedStringCount;
       directStringCountExpr.semanticNodeId = 0;
       return emitCanonicalInlineDefinitionCall(directStringCountExpr, *stringCountCallee)
                  ? InlineCallDispatchResult::Emitted
@@ -1189,17 +1190,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         return isInlineCollectionAccessTypeText(argText);
       }
-      return normalizedBase == "array" || normalizedBase == "/array" ||
-             normalizedBase == "vector" || normalizedBase == "/vector" ||
+      return normalizedBase == "array" || normalizedBase == collection_helpers::kRootedArray ||
+             normalizedBase == "vector" || normalizedBase == collection_helpers::kRootedVector ||
              normalizedBase == "Array" || normalizedBase == "/Array" ||
              matchesCollectionTypeText(normalizedBase, "vector") ||
              isInlineExperimentalVectorTypeName(normalizedBase);
     }
     const std::string normalizedTypeText = trimTemplateTypeText(typeText);
-    return normalizedTypeText == "string" || normalizedTypeText == "/string" ||
+    return normalizedTypeText == "string" || normalizedTypeText == collection_helpers::kRootedString ||
            normalizedTypeText == "String" || normalizedTypeText == "/String" ||
-           normalizedTypeText == "array" || normalizedTypeText == "/array" ||
-           normalizedTypeText == "vector" || normalizedTypeText == "/vector" ||
+           normalizedTypeText == "array" || normalizedTypeText == collection_helpers::kRootedArray ||
+           normalizedTypeText == "vector" || normalizedTypeText == collection_helpers::kRootedVector ||
            normalizedTypeText == "Array" || normalizedTypeText == "/Array" ||
            matchesCollectionTypeText(normalizedTypeText, "vector") ||
            isInlineExperimentalVectorTypeName(normalizedTypeText);
@@ -1236,9 +1237,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       const std::string collectionFamily =
           resolveInlineSemanticTypeText(collectionFact->collectionFamilyId,
                                         collectionFact->collectionFamily);
-      return collectionFamily == "array" || collectionFamily == "/array" ||
-             collectionFamily == "vector" || collectionFamily == "/vector" ||
-             collectionFamily == "string" || collectionFamily == "/string" ||
+      return collectionFamily == "array" || collectionFamily == collection_helpers::kRootedArray ||
+             collectionFamily == "vector" || collectionFamily == collection_helpers::kRootedVector ||
+             collectionFamily == "string" || collectionFamily == collection_helpers::kRootedString ||
              matchesCollectionTypeText(collectionFamily, "vector") ||
              isInlineExperimentalVectorTypeName(collectionFamily)
                  ? InlineCollectionAccessTargetFact::CollectionAccess
@@ -1511,8 +1512,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         const std::string bindingType =
             trimTemplateTypeText(resolveInlineSemanticTypeText(
                 queryFact->bindingTypeTextId, queryFact->bindingTypeText));
-        return queryType == "string" || queryType == "/string" ||
-               bindingType == "string" || bindingType == "/string";
+        return queryType == "string" || queryType == collection_helpers::kRootedString ||
+               bindingType == "string" || bindingType == collection_helpers::kRootedString;
       };
       if (keyValueTargetInfo.isKeyValueTarget && !isCanonicalStdKeyValueHelperCall &&
           (expr.sourceIsMethodCall || isRewrittenSlashMethodKeyValueAccess() ||
@@ -1685,7 +1686,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           const std::string semanticTarget =
               findSemanticProductMethodCallTarget(semanticProgram, methodExpr);
           if (!semanticTarget.empty()) {
-            if (semanticTarget == "/string/count" &&
+            if (semanticTarget == collection_helpers::kRootedStringCount &&
                 methodExpr.args.size() == 1 &&
                 isSimpleCallName(methodExpr, "count")) {
               Expr directCall = methodExpr;
@@ -1862,13 +1863,13 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const bool isKeyValueAccessHelper =
         (resolveKeyValueHelperAliasName(expr, keyValueAccessHelperName) &&
          (keyValueAccessHelperName == "at" ||
-          keyValueAccessHelperName == "at_ref" ||
+          keyValueAccessHelperName == collection_helpers::kAtRef ||
           keyValueAccessHelperName == "at_unsafe" ||
-          keyValueAccessHelperName == "at_unsafe_ref")) ||
+          keyValueAccessHelperName == collection_helpers::kAtUnsafeRef)) ||
         (isCanonicalPublishedInlineKeyValueHelperPath(inlineCallPath) &&
-         (inlineCallLeaf == "at" || inlineCallLeaf == "at_ref" ||
+         (inlineCallLeaf == "at" || inlineCallLeaf == collection_helpers::kAtRef ||
           inlineCallLeaf == "at_unsafe" ||
-          inlineCallLeaf == "at_unsafe_ref"));
+          inlineCallLeaf == collection_helpers::kAtUnsafeRef));
     if (isKeyValueAccessHelper) {
       return InlineCallDispatchResult::NotHandled;
     }
@@ -1996,7 +1997,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             semanticProgram != nullptr) {
           const std::string semanticTarget =
               findSemanticProductMethodCallTarget(semanticProgram, callExpr);
-          if (semanticTarget == "/string/count") {
+          if (semanticTarget == collection_helpers::kRootedStringCount) {
             Expr directCall = callExpr;
             directCall.isMethodCall = false;
             directCall.isFieldAccess = false;

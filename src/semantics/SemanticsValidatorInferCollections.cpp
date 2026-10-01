@@ -13,6 +13,7 @@
 
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -415,9 +416,9 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          (collectionTypePath == "/array" || collectionTypePath == "/vector")) {
+          (collectionTypePath == collection_helpers::kRootedArray || collectionTypePath == collection_helpers::kRootedVector)) {
         std::vector<std::string> args;
-        const std::string expectedBase = collectionTypePath == "/vector" ? "vector" : "array";
+        const std::string expectedBase = collectionTypePath == collection_helpers::kRootedVector ? "vector" : "array";
         if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args) && args.size() == 1) {
           elemType = args.front();
           return true;
@@ -471,7 +472,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          collectionTypePath == "/vector") {
+          collectionTypePath == collection_helpers::kRootedVector) {
         std::vector<std::string> args;
         if (resolveCallCollectionTemplateArgs(target, "vector", params, locals, args) && args.size() == 1) {
           elemType = args.front();
@@ -492,9 +493,9 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
            (!target.isMethodCall && isSimpleCallName(target, "to_aos"))) ||
           isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
       const bool matchesBorrowedSoaToAosTarget =
-          ((target.isMethodCall && target.name == "to_aos_ref") ||
-           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref"))) ||
-          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
+          ((target.isMethodCall && target.name == collection_helpers::kToAosRef) ||
+           (!target.isMethodCall && isSimpleCallName(target, collection_helpers::kToAosRef))) ||
+          isCanonicalStdlibSoaHelperPath(resolvedTarget, collection_helpers::kToAosRef);
       if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
           target.args.size() == 1) {
         return lockedState->resolveSoaVectorTarget(target.args.front(), elemType);
@@ -629,7 +630,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          collectionTypePath == "/soa") {
+          collectionTypePath == collection_helpers::kRootedSoa) {
         std::vector<std::string> args;
         if (resolveCallCollectionTemplateArgs(target, "soa", params, locals, args) && args.size() == 1) {
           elemType = args.front();

@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <cctype>
 #include <sstream>
@@ -218,11 +219,11 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
     }
     std::string collectionTypePath;
     if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
-        (collectionTypePath != "/array" && collectionTypePath != "/vector")) {
+        (collectionTypePath != collection_helpers::kRootedArray && collectionTypePath != collection_helpers::kRootedVector)) {
       return false;
     }
     std::vector<std::string> args;
-    const std::string expectedBase = collectionTypePath == "/vector" ? "vector" : "array";
+    const std::string expectedBase = collectionTypePath == collection_helpers::kRootedVector ? "vector" : "array";
     if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args) &&
         args.size() == 1) {
       elemType = args.front();
@@ -257,7 +258,7 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
     }
     std::string collectionTypePath;
     if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
-        collectionTypePath != "/vector") {
+        collectionTypePath != collection_helpers::kRootedVector) {
       return false;
     }
     std::vector<std::string> args;
@@ -332,9 +333,9 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
         }
         return helperName;
       }();
-      if (mapAccessHelperName == "at" || mapAccessHelperName == "at_ref" ||
+      if (mapAccessHelperName == "at" || mapAccessHelperName == collection_helpers::kAtRef ||
           mapAccessHelperName == "at_unsafe" ||
-          mapAccessHelperName == "at_unsafe_ref") {
+          mapAccessHelperName == collection_helpers::kAtUnsafeRef) {
         const BuiltinCollectionDispatchResolvers dispatchResolvers =
             makeBuiltinCollectionDispatchResolvers(params, locals);
         std::string keyType;

@@ -62,7 +62,10 @@ _EXEMPT_MARKERS = (
 # src/support/BuiltinArrayAccessNameClassifier.cpp,
 # src/support/ReceiverElementFamilyClassifier.cpp) was added by a TODO-5293/
 # TODO-5294 commit, not by unrelated new code.
-BASELINE_EXEMPT_FILE_COUNT = 134
+# TODO-5350: moving the helper spellings into include/primec/support/
+# CollectionHelperNames.h made 52 files literal-free, so their exemption markers
+# were dropped and the baseline ratcheted down from 134 to 83.
+BASELINE_EXEMPT_FILE_COUNT = 83
 
 
 def _is_exempt(text: str) -> bool:

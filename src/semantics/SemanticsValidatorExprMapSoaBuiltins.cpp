@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <string_view>
@@ -49,16 +50,16 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   const auto isExplicitOldSurfaceSoaAccessCall =
       [&](std::string_view helperName) {
         const std::string helper(helperName);
-        const std::string samePath = "/soa/" + helper;
+        const std::string samePath = collection_helpers::kRootedSoaPrefix + helper;
         if (!expr.isMethodCall) {
           if (expr.name == samePath || expr.name == "soa/" + helper) {
             return true;
           }
-          return (expr.namespacePrefix == "/soa" ||
+          return (expr.namespacePrefix == collection_helpers::kRootedSoa ||
                   expr.namespacePrefix == "soa") &&
                  expr.name == helper;
         }
-        return (expr.namespacePrefix == "/soa" ||
+        return (expr.namespacePrefix == collection_helpers::kRootedSoa ||
                 expr.namespacePrefix == "soa") &&
                expr.name == helper;
       };
@@ -82,9 +83,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
            hasDeclaredDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
            hasImportedDefinitionPath(
-               canonicalKeyValueHelperPathLocal("contains_ref")) ||
+               canonicalKeyValueHelperPathLocal(collection_helpers::kContainsRef)) ||
            hasDeclaredDefinitionPath(
-               canonicalKeyValueHelperPathLocal("contains_ref")) ||
+               canonicalKeyValueHelperPathLocal(collection_helpers::kContainsRef)) ||
            hasImportedDefinitionPath("/contains") ||
            hasDeclaredDefinitionPath("/contains");
   };
@@ -367,11 +368,11 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   if (resolvedMethod &&
       (isCanonicalKeyValueHelperResolvedPath(resolved, "contains") ||
-       isCanonicalKeyValueHelperResolvedPath(resolved, "contains_ref"))) {
+       isCanonicalKeyValueHelperResolvedPath(resolved, collection_helpers::kContainsRef))) {
     handledOut = true;
     return validateContainsBuiltin(
-        isCanonicalKeyValueHelperResolvedPath(resolved, "contains_ref")
-            ? "contains_ref"
+        isCanonicalKeyValueHelperResolvedPath(resolved, collection_helpers::kContainsRef)
+            ? collection_helpers::kContainsRef
             : "contains");
   }
 
@@ -385,7 +386,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       isExplicitOldSurfaceSoaConversionCall("to_aos") &&
       !hasVisibleSamePathToAosHelper;
   const bool rejectExplicitOldSurfaceToAosRefCall =
-      isExplicitOldSurfaceSoaConversionCall("to_aos_ref") &&
+      isExplicitOldSurfaceSoaConversionCall(collection_helpers::kToAosRef) &&
       !hasVisibleSamePathToAosRefHelper;
   const bool matchesSoaToAosResolved =
       resolved != "/to_aos" &&
@@ -394,7 +395,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   const bool matchesBorrowedSoaToAosResolved =
       resolved != "/to_aos_ref" &&
       isLegacyOrCanonicalSoaHelperPath(
-          resolvedSoaToAosCanonical, "to_aos_ref");
+          resolvedSoaToAosCanonical, collection_helpers::kToAosRef);
 
   if (rejectExplicitOldSurfaceToAosCall ||
       rejectExplicitOldSurfaceToAosRefCall) {
@@ -405,7 +406,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   if ((!resolvedMethod &&
        (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
-        isSimpleCallName(expr, "to_aos_ref")) &&
+        isSimpleCallName(expr, collection_helpers::kToAosRef)) &&
        resolvedMissing) ||
       (resolvedMethod &&
        (resolved == "/to_soa" ||
@@ -424,13 +425,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           "named arguments not supported for builtin calls");
     }
     const bool isBorrowedToAosHelper =
-        isSimpleCallName(expr, "to_aos_ref") ||
+        isSimpleCallName(expr, collection_helpers::kToAosRef) ||
         resolved == "/to_aos_ref" ||
         matchesBorrowedSoaToAosResolved;
     const std::string helperName =
         (isSimpleCallName(expr, "to_soa") || resolved == "/to_soa")
             ? "to_soa"
-            : (isBorrowedToAosHelper ? "to_aos_ref" : "to_aos");
+            : (isBorrowedToAosHelper ? collection_helpers::kToAosRef : "to_aos");
     if (!expr.templateArgs.empty()) {
       return failKeyValueSoaBuiltinDiagnostic(helperName +
                                         " does not accept template arguments");
@@ -458,7 +459,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       if (helperName == "to_aos" && matchesSoaToAosResolved) {
         return failKeyValueSoaBuiltinDiagnostic(
             "argument type mismatch for /std/collections/soa/to_aos parameter values");
-      } else if (helperName == "to_aos_ref" &&
+      } else if (helperName == collection_helpers::kToAosRef &&
                  matchesBorrowedSoaToAosResolved) {
         return failKeyValueSoaBuiltinDiagnostic(
             "argument type mismatch for /std/collections/soa/to_aos_ref parameter values");
@@ -489,14 +490,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       builtinSoaAccessHelperName(expr, params, locals);
   const bool hasExplicitSoaAccessSpelling =
       !expr.isMethodCall &&
-      (expr.name.rfind("/soa/", 0) == 0 ||
+      (expr.name.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
        expr.name.rfind("soa/", 0) == 0 ||
-       expr.namespacePrefix == "/soa" ||
+       expr.namespacePrefix == collection_helpers::kRootedSoa ||
        expr.namespacePrefix == "soa");
   if ((resolvedMethod || resolvedMissing ||
        hasExplicitSoaAccessSpelling ||
        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get") ||
-       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get_ref") ||
+       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, collection_helpers::kGetRef) ||
        isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
        isExperimentalSoaBorrowedHelperPath(resolvedNoTemplate)) &&
       soaAccessHelperName.has_value()) {
@@ -507,23 +508,23 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
          (isSimpleCallName(expr, "get") ||
           (expr.isMethodCall && expr.name == "get") ||
           isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get"))) ||
-        (helperName == "get_ref" &&
-         (isSimpleCallName(expr, "get_ref") ||
-          (expr.isMethodCall && expr.name == "get_ref") ||
+        (helperName == collection_helpers::kGetRef &&
+         (isSimpleCallName(expr, collection_helpers::kGetRef) ||
+          (expr.isMethodCall && expr.name == collection_helpers::kGetRef) ||
           isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
-                                           "get_ref"))) ||
+                                           collection_helpers::kGetRef))) ||
         (helperName == "ref" &&
          (isSimpleCallName(expr, "ref") ||
           (expr.isMethodCall && expr.name == "ref") ||
           isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref"))) ||
-        (helperName == "ref_ref" &&
-         (isSimpleCallName(expr, "ref_ref") ||
-          (expr.isMethodCall && expr.name == "ref_ref") ||
-          isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref")));
+        (helperName == collection_helpers::kRefRef &&
+         (isSimpleCallName(expr, collection_helpers::kRefRef) ||
+          (expr.isMethodCall && expr.name == collection_helpers::kRefRef) ||
+          isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, collection_helpers::kRefRef)));
     const bool explicitOldSurfaceAccessCall =
         isExplicitOldSurfaceSoaAccessCall(helperName);
     const bool hasVisibleSamePathHelper =
-        hasVisibleDefinitionPathForCurrentImports("/soa/" + helperName);
+        hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix + helperName);
     if (oldSurfaceCallShape && hasVisibleSamePathHelper) {
       handledOut = false;
       return true;
@@ -535,7 +536,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
       if (explicitOldSurfaceAccessCall) {
         return failKeyValueSoaBuiltinDiagnostic(
-            soaUnavailableMethodDiagnostic("/soa/" + helperName));
+            soaUnavailableMethodDiagnostic(collection_helpers::kRootedSoaPrefix + helperName));
       }
       return failKeyValueSoaBuiltinDiagnostic(
           "named arguments not supported for builtin calls");
@@ -558,7 +559,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     std::string elemType;
     if (explicitOldSurfaceAccessCall &&
-        hasVisibleDefinitionPathForCurrentImports("/soa/" + helperName)) {
+        hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix + helperName)) {
       handledOut = false;
       return true;
     }
@@ -580,9 +581,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     if (isExplicitOldSurfaceSoaAccessCall(helperName) &&
-        !hasVisibleDefinitionPathForCurrentImports("/soa/" + helperName)) {
+        !hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix + helperName)) {
       return failKeyValueSoaBuiltinDiagnostic(
-          soaUnavailableMethodDiagnostic("/soa/" + helperName));
+          soaUnavailableMethodDiagnostic(collection_helpers::kRootedSoaPrefix + helperName));
     }
     for (const auto &arg : expr.args) {
       if (!validateExpr(params, locals, arg)) {

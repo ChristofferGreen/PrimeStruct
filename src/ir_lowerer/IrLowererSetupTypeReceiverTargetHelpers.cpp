@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
 #include "IrLowererCallHelpers.h"
@@ -6,6 +5,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -533,7 +533,7 @@ bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
     }
     if (receiverNameExpr.name == "ContainerError") {
       typeNameOut = "ContainerError";
-      resolvedTypePathOut = "/std/collections/ContainerError";
+      resolvedTypePathOut = collection_helpers::kCanonicalContainerErrorType;
       return true;
     }
     if (receiverNameExpr.name == "GfxError") {

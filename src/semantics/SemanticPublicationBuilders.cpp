@@ -5,6 +5,7 @@
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <cctype>
@@ -571,7 +572,7 @@ bool isUnspecializedExperimentalKeyValueBackingTypeForPublication(std::string ty
 
 std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
-  if (typeName == "/vector" ||
+  if (typeName == collection_helpers::kRootedVector ||
       typeName == collectionTypeRootForPublication("vector") ||
       typeName == collectionTypeRootForPublication("vector", true) ||
       typeName == "Vector" ||
@@ -584,7 +585,7 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
       isUnspecializedExperimentalKeyValueBackingTypeForPublication(typeName)) {
     return "map";
   }
-  if (typeName == "/soa" ||
+  if (typeName == collection_helpers::kRootedSoa ||
       typeName == collection_paths::moduleRootBare(collection_paths::kLegacySoaVectorFolder) ||
       typeName == collection_paths::moduleRoot(collection_paths::kLegacySoaVectorFolder) ||
       typeName == collection_paths::kSoaVectorTypeName || typeName == "/SoaVector" ||

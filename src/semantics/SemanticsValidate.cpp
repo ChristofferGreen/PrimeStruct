@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include <cstdio>
 #include "primec/support/CompileArena.h"
 #include "primec/semantics/Semantics.h"
@@ -44,6 +43,7 @@
 #include <utility>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -227,7 +227,7 @@ void rewriteBorrowedExperimentalKeyValueMethodExpr(
   }
   std::optional<semantics::BindingInfo> receiverBinding;
   const Expr &receiver = expr.args.front();
-  if ((helperName == "at_ref" || helperName == "at_unsafe_ref") &&
+  if ((helperName == collection_helpers::kAtRef || helperName == collection_helpers::kAtUnsafeRef) &&
       receiver.kind == Expr::Kind::Call) {
     return;
   }
@@ -497,11 +497,11 @@ std::string_view resolveBuiltinKeyValueInsertSurfaceMemberName(std::string_view 
     return {};
   }
   const std::string_view memberName = resolveStdlibSurfaceMemberName(*metadata, name);
-  if (memberName != "insert" && memberName != "insert_ref") {
+  if (memberName != "insert" && memberName != collection_helpers::kInsertRef) {
     return {};
   }
   if (name.find('/') == std::string_view::npos) {
-    if (name == "insert" || name == "insert_ref") {
+    if (name == "insert" || name == collection_helpers::kInsertRef) {
       return memberName;
     }
     return {};
@@ -520,7 +520,7 @@ std::string canonicalBuiltinKeyValueInsertSurfacePath(bool receiverIsReference) 
   }
   return stdlibSurfaceCanonicalHelperPath(
       metadata->id,
-      receiverIsReference ? "insert_ref" : "insert");
+      receiverIsReference ? collection_helpers::kInsertRef : "insert");
 }
 
 std::string resolveBuiltinKeyValueReadSurfaceMemberName(std::string_view name) {
@@ -537,11 +537,11 @@ std::string resolveBuiltinKeyValueReadSurfaceMemberName(std::string_view name) {
   }
   const std::string memberName =
       metadataBackedKeyValueHelperMethodName(normalizedName);
-  if (memberName == "count" || memberName == "count_ref" ||
-      memberName == "contains" || memberName == "contains_ref" ||
-      memberName == "tryAt" || memberName == "tryAt_ref" ||
-      memberName == "at" || memberName == "at_ref" ||
-      memberName == "at_unsafe" || memberName == "at_unsafe_ref") {
+  if (memberName == "count" || memberName == collection_helpers::kCountRef ||
+      memberName == "contains" || memberName == collection_helpers::kContainsRef ||
+      memberName == "tryAt" || memberName == collection_helpers::kTryAtRef ||
+      memberName == "at" || memberName == collection_helpers::kAtRef ||
+      memberName == "at_unsafe" || memberName == collection_helpers::kAtUnsafeRef) {
     return memberName;
   }
   return {};
@@ -552,9 +552,9 @@ bool isBuiltinKeyValueReadHelperName(std::string_view name) {
 }
 
 bool isCanonicalBuiltinKeyValueReadHelperName(std::string_view name) {
-  return name == "count" || name == "count_ref" ||
-         name == "contains" || name == "contains_ref" ||
-         name == "tryAt" || name == "tryAt_ref";
+  return name == "count" || name == collection_helpers::kCountRef ||
+         name == "contains" || name == collection_helpers::kContainsRef ||
+         name == "tryAt" || name == collection_helpers::kTryAtRef;
 }
 
 bool isBuiltinKeyValueInsertValueHelperName(std::string_view name) {
@@ -562,7 +562,7 @@ bool isBuiltinKeyValueInsertValueHelperName(std::string_view name) {
 }
 
 bool isBuiltinKeyValueInsertReferenceHelperName(std::string_view name) {
-  return resolveBuiltinKeyValueInsertSurfaceMemberName(name) == "insert_ref";
+  return resolveBuiltinKeyValueInsertSurfaceMemberName(name) == collection_helpers::kInsertRef;
 }
 
 bool isBuiltinKeyValueInsertHelperName(std::string_view name) {
@@ -766,7 +766,7 @@ void rewriteBuiltinKeyValueInsertExpr(
       return {};
     }
     if (helperName != "at" && helperName != "at_unsafe" &&
-        helperName != "at_ref" && helperName != "at_unsafe_ref") {
+        helperName != collection_helpers::kAtRef && helperName != collection_helpers::kAtUnsafeRef) {
       return {};
     }
     const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
@@ -807,15 +807,15 @@ void rewriteBuiltinKeyValueInsertExpr(
     }
     const bool isCanonicalKeyValueReadHelper =
         isCanonicalBuiltinKeyValueReadHelperName(helperName);
-    if (helperName == "count_ref") {
+    if (helperName == collection_helpers::kCountRef) {
       helperName = "count";
-    } else if (helperName == "contains_ref") {
+    } else if (helperName == collection_helpers::kContainsRef) {
       helperName = "contains";
-    } else if (helperName == "tryAt_ref") {
+    } else if (helperName == collection_helpers::kTryAtRef) {
       helperName = "tryAt";
-    } else if (helperName == "at_ref") {
+    } else if (helperName == collection_helpers::kAtRef) {
       helperName = "at";
-    } else if (helperName == "at_unsafe_ref") {
+    } else if (helperName == collection_helpers::kAtUnsafeRef) {
       helperName = "at_unsafe";
     }
     std::string keyType;

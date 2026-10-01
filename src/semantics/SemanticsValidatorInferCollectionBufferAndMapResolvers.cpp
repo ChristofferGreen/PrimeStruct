@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -20,13 +21,13 @@ bool isNonMapSoaConversionCall(const Expr &candidate,
   }
   if (isSimpleCallName(candidate, "to_soa") ||
       isSimpleCallName(candidate, "to_aos") ||
-      isSimpleCallName(candidate, "to_aos_ref")) {
+      isSimpleCallName(candidate, collection_helpers::kToAosRef)) {
     return true;
   }
   const std::string resolvedPath =
       canonicalizeLegacySoaToAosHelperPath(resolveCalleePathFn(candidate));
   return isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to_aos") ||
-         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to_aos_ref");
+         isLegacyOrCanonicalSoaHelperPath(resolvedPath, collection_helpers::kToAosRef);
 }
 
 } // namespace

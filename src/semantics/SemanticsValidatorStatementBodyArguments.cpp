@@ -3,6 +3,7 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <string>
@@ -101,7 +102,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       return candidate.substr(prefixLen);
     };
 
-    std::string_view helper = helperSuffix(path, "/array/");
+    std::string_view helper = helperSuffix(path, collection_helpers::kRootedArrayPrefix);
     if (helper.empty()) {
       const std::string canonicalVectorPrefix =
           canonicalVectorCompatibilityPrefixOrFallback() + "/";

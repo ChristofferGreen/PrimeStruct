@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+#include "primec/support/CollectionHelperNames.h"
   auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
     return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
            suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
@@ -79,8 +80,8 @@
   };
   auto preferCollectionHelperPath = [&](const std::string &path) -> std::string {
     std::string preferred = path;
-    if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
-      const std::string suffix = preferred.substr(std::string("/array/").size());
+    if (preferred.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0 && defMap.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string(primec::collection_helpers::kRootedArrayPrefix).size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string stdlibAlias = vectorHelperPath(suffix);
         if (defMap.count(stdlibAlias) > 0) {
@@ -95,7 +96,7 @@
     if (!methodName.empty() && methodName.front() == '/') {
       methodName.erase(methodName.begin());
     }
-    if (receiverStruct == "/vector" || receiverStruct == "/array") {
+    if (receiverStruct == primec::collection_helpers::kRootedVector || receiverStruct == primec::collection_helpers::kRootedArray) {
       const std::string arrayPrefix = "array/";
       if (methodName.rfind(arrayPrefix, 0) == 0) {
         return methodName.substr(arrayPrefix.size());
@@ -127,18 +128,18 @@
                                             const std::string &methodName,
                                             const std::string &rawMethodName)
       -> std::vector<std::string> {
-    if (receiverStruct == "/vector") {
+    if (receiverStruct == primec::collection_helpers::kRootedVector) {
       std::vector<std::string> candidates = {
           vectorHelperPath(methodName),
       };
       if (allowsArrayVectorCompatibilitySuffix(methodName)) {
-        candidates.push_back("/array/" + methodName);
+        candidates.push_back(primec::collection_helpers::kRootedArrayPrefix + methodName);
       }
       return candidates;
     }
-    if (receiverStruct == "/array") {
+    if (receiverStruct == primec::collection_helpers::kRootedArray) {
       std::vector<std::string> candidates = {
-          "/array/" + methodName,
+          primec::collection_helpers::kRootedArrayPrefix + methodName,
       };
       if (allowsArrayVectorCompatibilitySuffix(methodName)) {
         candidates.push_back(vectorHelperPath(methodName));
@@ -193,8 +194,8 @@
 
     appendUnique(path);
     appendUnique(normalizedPath);
-    if (normalizedPath.rfind("/array/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+    if (normalizedPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string(primec::collection_helpers::kRootedArrayPrefix).size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique(vectorHelperPath(suffix));
       }
@@ -241,8 +242,8 @@
         }
         const std::string receiverStruct =
             inferStructReturnPath(candidate.args[receiverIndex], params, locals);
-        if (receiverStruct != "/vector" && receiverStruct != "/array" &&
-            receiverStruct != "/string") {
+        if (receiverStruct != primec::collection_helpers::kRootedVector && receiverStruct != primec::collection_helpers::kRootedArray &&
+            receiverStruct != primec::collection_helpers::kRootedString) {
           return;
         }
         const std::string samePathCandidate = vectorHelperPath(vectorMemberName);

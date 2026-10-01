@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <string_view>
@@ -10,9 +11,9 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+         helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
@@ -190,7 +191,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   auto failCollectionAccessKeyValueKeyMismatch = [&](const std::string &helperName,
                                                      const std::string &keyValueKeyType) {
     const bool isTryAtHelper =
-        helperName == "tryAt" || helperName == "tryAt_ref";
+        helperName == "tryAt" || helperName == collection_helpers::kTryAtRef;
     if (isTryAtHelper) {
       if (normalizeBindingTypeName(keyValueKeyType) == "string") {
         return failCollectionAccessDiagnostic("tryAt requires string map key");
@@ -440,7 +441,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     std::string experimentalKeyValueKeyType;
     std::string experimentalKeyValueValueType;
     auto isRootKeyValueAliasPath = [](const std::string &path) {
-      return path == "/map" || path.rfind("/map__", 0) == 0;
+      return path == collection_helpers::kRootedMap || path.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
     };
     auto explicitCallPath = [](const Expr &candidate) {
       if (candidate.name.empty() || candidate.name.front() == '/') {

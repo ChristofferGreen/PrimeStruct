@@ -1,7 +1,7 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <optional>
 #include <string>
@@ -258,7 +258,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       return false;
     }
     if (arg.isMethodCall) {
-      if (arg.name != "ref" && arg.name != "ref_ref") {
+      if (arg.name != "ref" && arg.name != collection_helpers::kRefRef) {
         return false;
       }
       receiverOut = &arg.args.front();
@@ -272,7 +272,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     const bool matchesExperimentalSoaRefHelperPath =
         isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical);
     if (!isSimpleCallName(arg, "ref") &&
-        !isSimpleCallName(arg, "ref_ref") &&
+        !isSimpleCallName(arg, collection_helpers::kRefRef) &&
         !matchesCanonicalSoaRefHelperPath &&
         !matchesExperimentalSoaRefHelperPath) {
       return false;
@@ -318,8 +318,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                                           const ParameterInfo &param) -> bool {
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(arg, params, locals)) {
-      if (pendingPath->find("/std/collections/soa/ref") == 0 ||
-          pendingPath->find("/std/collections/soa/ref") == 0) {
+      if (pendingPath->find(collection_helpers::kCanonicalSoaRef) == 0 ||
+          pendingPath->find(collection_helpers::kCanonicalSoaRef) == 0) {
         return failResolvedCallArgumentDiagnostic(
             soaUnavailableMethodDiagnostic(*pendingPath));
       }

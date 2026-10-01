@@ -846,14 +846,27 @@ if(PRIMESTRUCT_BUILD_TESTS)
                              PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_link_libraries(PrimeStruct_collection_parity_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_runtime_lib)
   primestructEnableWarnings(PrimeStruct_collection_parity_tests)
+  # One shard per helper family (each row costs two pipeline runs, so a family
+  # takes tens of seconds; running them in parallel keeps the gate short), plus
+  # the structure/doc checks.
+  foreach(parityFamily vector array string map soa)
+    add_test(
+      NAME PrimeStruct_collection_parity_${parityFamily}
+      COMMAND $<TARGET_FILE:PrimeStruct_collection_parity_tests>
+              "--test-suite=primestruct.collection_parity"
+              "--test-case=collection parity ${parityFamily} rows"
+    )
+    set_tests_properties(PrimeStruct_collection_parity_${parityFamily}
+                         PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  endforeach()
   add_test(
-    NAME PrimeStruct_collection_parity
+    NAME PrimeStruct_collection_parity_matrix
     COMMAND $<TARGET_FILE:PrimeStruct_collection_parity_tests>
             "--test-suite=primestruct.collection_parity"
-            "--order-by=file"
+            "--test-case=every helper family*,docs/CollectionHelperTargets.md*"
   )
-  set_tests_properties(PrimeStruct_collection_parity
-                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  set_tests_properties(PrimeStruct_collection_parity_matrix
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   add_executable(PrimeStruct_compile_time_tests
     tests/unit/test_main.cpp
@@ -2097,6 +2110,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
   )
   set_tests_properties(PrimeStruct_soa_surface_trace_zero_audit_self_test PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_collection_helper_literals
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_collection_helper_literals.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_collection_helper_literals PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_collection_helper_literals_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_collection_helper_literals.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_collection_helper_literals_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
     NAME PrimeStruct_collection_audit_exemption_count_ratchet

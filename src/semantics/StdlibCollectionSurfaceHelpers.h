@@ -9,6 +9,7 @@
 #include <string_view>
 #include <utility>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 inline std::string stripCollectionConstructorSuffixes(std::string resolvedPath) {
   const size_t specializationSuffix = resolvedPath.find("__t");
@@ -139,16 +140,16 @@ inline const primec::StdlibSurfaceMetadata *collectionConstructorSurfaceMetadata
 }
 
 inline const primec::StdlibSurfaceMetadata *vectorHelperSurfaceMetadataLocal() {
-  return collectionHelperSurfaceMetadataLocal("/std/collections/vector");
+  return collectionHelperSurfaceMetadataLocal(primec::collection_helpers::kCanonicalVector);
 }
 
 inline const primec::StdlibSurfaceMetadata *vectorConstructorSurfaceMetadataLocal() {
   return collectionConstructorSurfaceMetadataLocal(
-      "/std/collections/vector/vector");
+      primec::collection_helpers::kCanonicalVectorVector);
 }
 
 inline const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return collectionHelperSurfaceMetadataLocal("/std/collections/map");
+  return collectionHelperSurfaceMetadataLocal(primec::collection_helpers::kCanonicalMap);
 }
 
 inline std::string keyValueBackingTypePathLocal() {
@@ -159,7 +160,7 @@ inline std::string keyValueBackingTypePathLocal() {
 
 inline const primec::StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
   return collectionConstructorSurfaceMetadataLocal(
-      "/std/collections/map/map");
+      primec::collection_helpers::kCanonicalMapMap);
 }
 
 inline bool stripStdlibSurfaceRootedMemberName(std::string_view rawPath,

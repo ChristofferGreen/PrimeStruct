@@ -1,8 +1,7 @@
-// soa-surface-audit: exempt
-// collection-surface-audit: exempt
 #pragma once
 
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 
@@ -19,13 +18,13 @@ inline std::string_view emitterCollectionSurfaceCanonicalPath(
     EmitterCollectionSurface surface) {
   switch (surface) {
   case EmitterCollectionSurface::VectorHelpers:
-    return "/std/collections/vector";
+    return collection_helpers::kCanonicalVector;
   case EmitterCollectionSurface::VectorConstructors:
-    return "/std/collections/vector/vector";
+    return collection_helpers::kCanonicalVectorVector;
   case EmitterCollectionSurface::KeyValueHelpers:
-    return "/std/collections/map";
+    return collection_helpers::kCanonicalMap;
   case EmitterCollectionSurface::KeyValueConstructors:
-    return "/std/collections/map/map";
+    return collection_helpers::kCanonicalMapMap;
   }
   return {};
 }

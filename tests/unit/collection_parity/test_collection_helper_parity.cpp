@@ -19,7 +19,9 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <map>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -111,7 +113,7 @@ std::string extractMainAst(const std::string &ast) {
   return ast.substr(start, end == std::string::npos ? std::string::npos : end - start);
 }
 
-Observed observe(const CollectionRow &row) {
+Observed observeUncached(const CollectionRow &row) {
   Observed observed;
   const std::string source = programFor(row);
   primec::testing::detail::PreparedCompilePipelineIrState prepared;
@@ -137,11 +139,34 @@ Observed observe(const CollectionRow &row) {
     return observed;
   }
   observed.exitCode = static_cast<int>(static_cast<int32_t>(result));
-  primec::testing::CompilePipelineBoundaryDumps dumps;
-  if (primec::testing::captureSemanticBoundaryDumpsForTesting(source, "/main", dumps, error)) {
-    observed.mainAst = extractMainAst(dumps.astSemantic);
+  // One extra pipeline run for the ast-semantic spelling (the semantic product is
+  // skipped for that dump stage, so it cannot come from the run above).
+  const std::filesystem::path sourcePath = primec::testing::detail::makeCompilePipelineDumpSourcePath();
+  {
+    std::ofstream file(sourcePath);
+    file << source;
   }
+  std::string ast;
+  if (primec::testing::detail::captureCompilePipelineDumpStageFromPath(
+          sourcePath, "/main", "ast-semantic",
+          primec::testing::detail::CompilePipelineSemanticProductIntent::SkipForNonConsumingPath, ast, error)) {
+    observed.mainAst = extractMainAst(ast);
+  }
+  std::error_code removeError;
+  std::filesystem::remove(sourcePath, removeError);
   return observed;
+}
+
+// Each row costs two pipeline runs (stdlib import dominates), so observations are
+// computed once per process and shared by the checks below. The suite is sharded
+// by family in CTest; a family shard takes roughly 20-40 seconds in release.
+const Observed &observe(const CollectionRow &row) {
+  static std::map<const CollectionRow *, Observed> cache;
+  const auto it = cache.find(&row);
+  if (it != cache.end()) {
+    return it->second;
+  }
+  return cache.emplace(&row, observeUncached(row)).first->second;
 }
 
 const char *outcomeName(CollectionRowOutcome outcome) {
@@ -257,12 +282,23 @@ TEST_CASE("collection parity regenerates pins and doc when asked") {
   std::ofstream(std::string(root) + "/docs/CollectionHelperTargets.md") << doc.str();
 }
 
-TEST_CASE("collection rows behave as pinned") {
-  for (const CollectionRow &row : collectionRows()) {
+void checkFamily(const std::string &family) {
+  const std::regex explicitPath(R"((/std/collections/[a-z_]+/[A-Za-z_]+)(__[A-Za-z0-9_]+)?\()");
+  const auto &rows = collectionRows();
+  const auto &pinned = collectionRowPublishedTargets();
+  REQUIRE_MESSAGE(pinned.size() == rows.size(), "regenerate the pins (see the file header)");
+  size_t checked = 0;
+  for (size_t i = 0; i < rows.size(); ++i) {
+    const CollectionRow &row = rows[i];
+    if (family != row.family) {
+      continue;
+    }
+    ++checked;
     CAPTURE(row.family);
     CAPTURE(row.helper);
     CAPTURE(row.form);
-    const Observed observed = observe(row);
+    const Observed &observed = observe(row);
+    // 1. outcome / VM result is as pinned
     CHECK_MESSAGE(observed.outcome == row.outcome,
                   "expected " << outcomeName(row.outcome) << " but saw " << outcomeName(observed.outcome) << ": "
                               << observed.message);
@@ -271,33 +307,9 @@ TEST_CASE("collection rows behave as pinned") {
     } else if (row.outcome != CollectionRowOutcome::Ok) {
       CHECK_MESSAGE(observed.message.find(row.messageContains) != std::string::npos, observed.message);
     }
-  }
-}
-
-TEST_CASE("published collection targets match the pinned table") {
-  const auto &rows = collectionRows();
-  const auto &pinned = collectionRowPublishedTargets();
-  REQUIRE_MESSAGE(pinned.size() == rows.size(), "regenerate the pins (see the file header)");
-  for (size_t i = 0; i < rows.size(); ++i) {
-    CAPTURE(rows[i].family);
-    CAPTURE(rows[i].helper);
-    CAPTURE(rows[i].form);
-    CHECK(observe(rows[i]).targets == pinned[i]);
-  }
-}
-
-TEST_CASE("explicit helper paths in the dump agree with the published targets") {
-  // Parity guard: when ast-semantic spells a call with an explicit collection path,
-  // the semantic product must publish that same target for the call.
-  const std::regex explicitPath(R"((/std/collections/[a-z_]+/[A-Za-z_]+)(__[A-Za-z0-9_]+)?\()");
-  for (const CollectionRow &row : collectionRows()) {
-    if (row.outcome != CollectionRowOutcome::Ok) {
-      continue;
-    }
-    CAPTURE(row.family);
-    CAPTURE(row.helper);
-    CAPTURE(row.form);
-    const Observed observed = observe(row);
+    // 2. the semantic product publishes the pinned targets
+    CHECK(observed.targets == pinned[i]);
+    // 3. explicit helper paths in the dump agree with the published targets
     const std::set<std::string> published(observed.targets.begin(), observed.targets.end());
     for (auto it = std::sregex_iterator(observed.mainAst.begin(), observed.mainAst.end(), explicitPath);
          it != std::sregex_iterator(); ++it) {
@@ -306,7 +318,14 @@ TEST_CASE("explicit helper paths in the dump agree with the published targets") 
                     "dump spells " << spelled << " but the semantic product does not publish it");
     }
   }
+  CHECK_MESSAGE(checked > 0, "no rows for family " << family);
 }
+
+TEST_CASE("collection parity vector rows") { checkFamily("vector"); }
+TEST_CASE("collection parity array rows") { checkFamily("array"); }
+TEST_CASE("collection parity string rows") { checkFamily("string"); }
+TEST_CASE("collection parity map rows") { checkFamily("map"); }
+TEST_CASE("collection parity soa rows") { checkFamily("soa"); }
 
 TEST_CASE("every helper family and call form is represented in the matrix") {
   std::set<std::string> families;

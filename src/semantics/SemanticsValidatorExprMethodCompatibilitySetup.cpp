@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 
@@ -124,8 +125,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     }
     const std::string receiverPath =
         resolvedPath.substr(0, resolvedPath.size() - suffix.size());
-    if (receiverPath == "/array" || receiverPath == "/vector" ||
-        receiverPath == "/map" || receiverPath == "/string") {
+    if (receiverPath == collection_helpers::kRootedArray || receiverPath == collection_helpers::kRootedVector ||
+        receiverPath == collection_helpers::kRootedMap || receiverPath == collection_helpers::kRootedString) {
       return false;
     }
     return structNames_.count(receiverPath) > 0;

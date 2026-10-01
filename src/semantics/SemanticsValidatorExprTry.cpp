@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -57,13 +58,13 @@ bool SemanticsValidator::validateExprTryBuiltin(
     const bool allowCurrentKeyValueWrapperTryAt =
         shouldBuiltinValidateCurrentMapWrapperHelper("tryAt") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
-        shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper(collection_helpers::kAtRef) ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe") ||
-        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe_ref");
+        shouldBuiltinValidateCurrentMapWrapperHelper(collection_helpers::kAtUnsafeRef);
     const std::string canonicalTryAtPath =
         metadataBackedCanonicalKeyValueHelperPath("tryAt");
     const std::string canonicalTryAtRefPath =
-        metadataBackedCanonicalKeyValueHelperPath("tryAt_ref");
+        metadataBackedCanonicalKeyValueHelperPath(collection_helpers::kTryAtRef);
     const bool isCanonicalTryAtTarget =
         tryTargetPath == canonicalTryAtPath || tryTargetPath == canonicalTryAtRefPath;
     const std::string canonicalTryAtDiagnosticPath =

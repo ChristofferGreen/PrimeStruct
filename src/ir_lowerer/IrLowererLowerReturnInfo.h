@@ -1,3 +1,4 @@
+#include "primec/support/CollectionHelperNames.h"
   allocTempLocal = [&]() -> int32_t {
     return nextLocal++;
   };
@@ -128,8 +129,8 @@
               callResolutionAdapters.semanticProgram,
               queryFact->bindingTypeText,
               queryFact->bindingTypeTextId);
-          return queryType == "string" || queryType == "/string" ||
-                 bindingType == "string" || bindingType == "/string";
+          return queryType == "string" || queryType == primec::collection_helpers::kRootedString ||
+                 bindingType == "string" || bindingType == primec::collection_helpers::kRootedString;
         },
         [&](const Expr &valueExpr) { return inferExprKind(valueExpr, callerLocals); },
         [&]() { return allocTempLocal(); },

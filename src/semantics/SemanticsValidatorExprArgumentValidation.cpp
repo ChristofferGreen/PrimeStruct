@@ -3,6 +3,7 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <optional>
 #include <string>
@@ -51,9 +52,9 @@ bool resolveCanonicalArgumentValidationKeyValueAccessHelper(
   }
   const std::string_view helperName =
       resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
-  if (helperName != "tryAt" && helperName != "tryAt_ref" &&
-      helperName != "at" && helperName != "at_ref" &&
-      helperName != "at_unsafe" && helperName != "at_unsafe_ref") {
+  if (helperName != "tryAt" && helperName != collection_helpers::kTryAtRef &&
+      helperName != "at" && helperName != collection_helpers::kAtRef &&
+      helperName != "at_unsafe" && helperName != collection_helpers::kAtUnsafeRef) {
     return false;
   }
   helperNameOut.assign(helperName);
@@ -304,7 +305,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     }
     auto failKeyArgument = [&]() {
       if (canonicalKeyValueAccessHelperName == "tryAt" ||
-          canonicalKeyValueAccessHelperName == "tryAt_ref") {
+          canonicalKeyValueAccessHelperName == collection_helpers::kTryAtRef) {
         if (normalizeBindingTypeName(receiverKeyType) == "string") {
           return failArgumentValidation(arg, "tryAt requires string map key");
         }
@@ -900,17 +901,17 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
       return path;
     };
     if (param.name == "entries" &&
-        stripGeneratedSuffix(diagnosticResolved) == "/std/collections/map/contains" &&
-        (actualStructPath == "/map" ||
-         actualStructPath == "/std/collections/map" ||
+        stripGeneratedSuffix(diagnosticResolved) == collection_helpers::kCanonicalMapContains &&
+        (actualStructPath == collection_helpers::kRootedMap ||
+         actualStructPath == collection_helpers::kCanonicalMap ||
          actualStructPath.rfind("/std/collections/map<", 0) == 0)) {
       return failArgumentValidation(
           arg, "unknown call target: /std/collections/map/contains");
     }
     if (param.name == "entries" &&
-        stripGeneratedSuffix(diagnosticResolved) == "/std/collections/map/tryAt" &&
-        (actualStructPath == "/map" ||
-         actualStructPath == "/std/collections/map" ||
+        stripGeneratedSuffix(diagnosticResolved) == collection_helpers::kCanonicalMapTryAt &&
+        (actualStructPath == collection_helpers::kRootedMap ||
+         actualStructPath == collection_helpers::kCanonicalMap ||
          actualStructPath.rfind("/std/collections/map<", 0) == 0)) {
       return true;
     }

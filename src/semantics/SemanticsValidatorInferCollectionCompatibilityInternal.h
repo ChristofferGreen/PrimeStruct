@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 namespace {
@@ -716,10 +717,10 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
             importPath.rfind(root, 0) == 0 &&
             importPath[root.size()] == '/');
   };
-  return matchesRoot("/std/collections/experimental_soa") ||
-         matchesRoot("/std/collections/experimental_soa_conversions") ||
-         matchesRoot("/std/collections/internal_soa") ||
-         matchesRoot("/std/collections/internal_soa_conversions");
+  return matchesRoot(collection_helpers::kCanonicalExperimentalSoa) ||
+         matchesRoot(collection_helpers::kCanonicalExperimentalSoaConversions) ||
+         matchesRoot(collection_helpers::kCanonicalInternalSoa) ||
+         matchesRoot(collection_helpers::kCanonicalInternalSoaConversions);
 }
 
 [[maybe_unused]] std::string directRemovedSoaCompatibilityImportDiagnostic() {
@@ -822,7 +823,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
       return "";
     }
     if (preserveArrayPath) {
-      return "/array/" + std::string(helperName);
+      return collection_helpers::kRootedArrayPrefix + std::string(helperName);
     }
     const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
     return metadata == nullptr

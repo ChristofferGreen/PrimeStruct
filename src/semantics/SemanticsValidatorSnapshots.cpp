@@ -4,6 +4,7 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsWorkerSymbolMerge.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <cctype>
@@ -374,19 +375,19 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
           return "count";
         }
         if (helperName == "soaVectorCountRef") {
-          return "count_ref";
+          return collection_helpers::kCountRef;
         }
         if (helperName == "soaVectorGet") {
           return "get";
         }
         if (helperName == "soaVectorGetRef") {
-          return "get_ref";
+          return collection_helpers::kGetRef;
         }
         if (helperName == "soaVectorRef") {
           return "ref";
         }
         if (helperName == "soaVectorRefRef") {
-          return "ref_ref";
+          return collection_helpers::kRefRef;
         }
         if (helperName == "soaVectorPush") {
           return "push";
@@ -405,7 +406,7 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
           return "to_aos";
         }
         if (helperName == "soaVectorToAosRef") {
-          return "to_aos_ref";
+          return collection_helpers::kToAosRef;
         }
       }
       return {};

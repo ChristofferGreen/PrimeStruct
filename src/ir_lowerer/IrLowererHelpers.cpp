@@ -8,6 +8,7 @@
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -39,8 +40,8 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "block" || alias == "loop" || alias == "for" ||
          alias == "repeat" || alias == "try" || alias == "location" ||
          alias == "dereference" || alias == "count" ||
-         alias == "count_ref" || alias == "capacity" ||
-         alias == "to_aos" || alias == "to_aos_ref" ||
+         alias == collection_helpers::kCountRef || alias == "capacity" ||
+         alias == "to_aos" || alias == collection_helpers::kToAosRef ||
          alias == "push" || alias == "pop" || alias == "reserve" ||
          alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap" || alias == "move" ||
@@ -50,8 +51,8 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "equal" || alias == "not_equal" ||
          alias == "greater_equal" || alias == "less_equal" ||
          alias == "and" || alias == "or" || alias == "not" ||
-         alias == "get" || alias == "get_ref" || alias == "ref" ||
-         alias == "ref_ref" || alias == "at" ||
+         alias == "get" || alias == collection_helpers::kGetRef || alias == "ref" ||
+         alias == collection_helpers::kRefRef || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || alias == "map" ||
          alias == "convert" ||
@@ -222,9 +223,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
-           name == "count" || name == "count_ref" ||
+           name == "count" || name == collection_helpers::kCountRef ||
            name == "capacity" || name == "to_aos" ||
-           name == "to_aos_ref" ||
+           name == collection_helpers::kToAosRef ||
            name == "push" || name == "reserve" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||
@@ -232,8 +233,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "less_than" || name == "equal" || name == "not_equal" ||
            name == "greater_equal" || name == "less_equal" ||
            name == "and" || name == "or" || name == "not" ||
-           name == "get" || name == "get_ref" ||
-           name == "ref" || name == "ref_ref";
+           name == "get" || name == collection_helpers::kGetRef ||
+           name == "ref" || name == collection_helpers::kRefRef;
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {
     std::string alias = candidate;
@@ -335,7 +336,7 @@ bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, cons
       canonicalCollectionHelperLeaf(semanticTarget, collection_paths::kVectorFolder);
   const std::string_view soaLeaf =
       canonicalCollectionHelperLeaf(semanticTarget, collection_paths::kSoaFolder);
-  if ((semanticTarget == "/string/count" || vectorLeaf == "count") &&
+  if ((semanticTarget == collection_helpers::kRootedStringCount || vectorLeaf == "count") &&
       callExpr.args.size() == 1 &&
       isSimpleCallName(callExpr, "count")) {
     return true;
@@ -357,7 +358,7 @@ bool isBuiltinClassifiedMethodCallTarget(const std::string &semanticTarget, cons
   // method-call target for `.at(N)` / `.at_unsafe(N)` on builtin array and
   // `args<T>` variadic-pack receivers. Neither has a lowered definition; the
   // access is emitted by the builtin indexed-access path, same as `pack[N]`.
-  if ((semanticTarget == "/array/at" || semanticTarget == "/array/at_unsafe") &&
+  if ((semanticTarget == collection_helpers::kRootedArrayAt || semanticTarget == collection_helpers::kRootedArrayAtUnsafe) &&
       callExpr.args.size() == 2 &&
       (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe"))) {
     return true;

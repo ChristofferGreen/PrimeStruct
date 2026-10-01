@@ -7,6 +7,7 @@
 #include <string_view>
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 namespace {
@@ -16,18 +17,18 @@ bool isValueSurfaceAccessHelperName(const std::string &helperName) {
 }
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool isSoaAccessHelperName(const std::string &helperName) {
-  return helperName == "get" || helperName == "get_ref" ||
-         helperName == "ref" || helperName == "ref_ref";
+  return helperName == "get" || helperName == collection_helpers::kGetRef ||
+         helperName == "ref" || helperName == collection_helpers::kRefRef;
 }
 
 bool isSoaReceiverStructPath(const std::string &structPath) {
-  return structPath == "/soa" ||
-         structPath == "/std/collections/soa" ||
+  return structPath == collection_helpers::kRootedSoa ||
+         structPath == collection_helpers::kCanonicalSoa ||
          structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
@@ -87,8 +88,8 @@ bool resolveCanonicalKeyValueHelperNameFromSpelling(
 
 std::string canonicalStdlibKeyValueAccessPathForHelper(
     const std::string &helperName) {
-  if (helperName == "at" || helperName == "at_ref" ||
-      helperName == "at_unsafe" || helperName == "at_unsafe_ref") {
+  if (helperName == "at" || helperName == collection_helpers::kAtRef ||
+      helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef) {
     return canonicalKeyValueHelperPathLocal(helperName);
   }
   return "";
@@ -97,7 +98,7 @@ std::string canonicalStdlibKeyValueAccessPathForHelper(
 bool isCanonicalKeyValueContainsResolvedPath(const std::string &path) {
   std::string helperName;
   return resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName) &&
-         (helperName == "contains" || helperName == "contains_ref");
+         (helperName == "contains" || helperName == collection_helpers::kContainsRef);
 }
 
 bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {
@@ -110,7 +111,7 @@ std::string canonicalStdlibKeyValueContainsPathForResolvedMethod(
     const std::string &methodResolved) {
   std::string helperName;
   if (resolveCanonicalKeyValueHelperNameFromSpelling(methodResolved, helperName) &&
-      (helperName == "contains" || helperName == "contains_ref")) {
+      (helperName == "contains" || helperName == collection_helpers::kContainsRef)) {
     return canonicalKeyValueHelperPathLocal(helperName);
   }
   return canonicalKeyValueHelperPathLocal("contains");
@@ -156,13 +157,13 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       return false;
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
-    if (resolvedCandidate == "/map" ||
-        resolvedCandidate.rfind("/map__", 0) == 0) {
+    if (resolvedCandidate == collection_helpers::kRootedMap ||
+        resolvedCandidate.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0) {
       return true;
     }
     const std::string explicitCandidate = explicitCallPath(candidate);
-    return explicitCandidate == "/map" ||
-           explicitCandidate.rfind("/map__", 0) == 0;
+    return explicitCandidate == collection_helpers::kRootedMap ||
+           explicitCandidate.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
   };
 
   std::string accessHelperName;
@@ -180,8 +181,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         std::string resolvedKeyValueHelperName;
         if (resolveCanonicalKeyValueHelperNameFromSpelling(
                 resolvedPath, resolvedKeyValueHelperName) &&
-            (resolvedKeyValueHelperName == "at_ref" ||
-             resolvedKeyValueHelperName == "at_unsafe_ref")) {
+            (resolvedKeyValueHelperName == collection_helpers::kAtRef ||
+             resolvedKeyValueHelperName == collection_helpers::kAtUnsafeRef)) {
           helperNameOut = resolvedKeyValueHelperName;
           return true;
         }
@@ -255,7 +256,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const std::string explicitRemovedMethodPath =
       explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
   const bool preservesExplicitRemovedArrayAccessMethod =
-      explicitRemovedMethodPath.rfind("/array/", 0) == 0 &&
+      explicitRemovedMethodPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 &&
       hasDefinitionPath(explicitRemovedMethodPath);
   auto resolveDirectSoaReceiver = [&](const Expr &target,
                                       std::string &elemTypeOut) -> bool {
@@ -660,7 +661,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             methodReceiverIndex = 0;
             resolved =
                 preferredSoaHelperTargetForCollectionType(accessHelperName,
-                                                          "/soa");
+                                                          collection_helpers::kRootedSoa);
             resolvedMethod = true;
             return true;
           }
@@ -688,8 +689,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     return true;
   }
 
-  if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "get_ref") ||
-       isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref")) &&
+  if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, collection_helpers::kGetRef) ||
+       isSimpleCallName(expr, "ref") || isSimpleCallName(expr, collection_helpers::kRefRef)) &&
       expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end()) {
     handledOut = true;
     bool failedReceiverProbe = false;
@@ -716,7 +717,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             canonicalizeLegacySoaGetHelperPath(expr.name);
         if (receiverCandidate.kind == Expr::Kind::Call &&
             (isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get") ||
-             isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get_ref"))) {
+             isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, collection_helpers::kGetRef))) {
           usedMethodTarget = true;
           resolved = canonicalGetPath;
           resolvedMethod = false;
@@ -742,7 +743,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             canonicalizeLegacySoaRefHelperPath(methodResolved);
         const bool isCanonicalSoaAccessHelper =
             isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get") ||
-            isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get_ref") ||
+            isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, collection_helpers::kGetRef) ||
             isCanonicalSoaRefLikeHelperPath(canonicalRefPath);
         if (isCanonicalSoaAccessHelper) {
           resolved = methodResolved;
@@ -798,7 +799,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   if (!expr.isMethodCall && !expr.args.empty() &&
       defMap_.find(resolved) == defMap_.end() &&
       !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to_aos") &&
-      !isSimpleCallName(expr, "to_aos_ref") &&
+      !isSimpleCallName(expr, collection_helpers::kToAosRef) &&
       !isSimpleCallName(expr, "contains") &&
       !getBuiltinArrayAccessName(expr, accessHelperName)) {
     handledOut = true;
@@ -860,7 +861,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       if (expr.name == "contains" &&
           resolvedCanonicalKeyValueHelper &&
           (canonicalKeyValueMethodHelperName == "contains" ||
-           canonicalKeyValueMethodHelperName == "contains_ref") &&
+           canonicalKeyValueMethodHelperName == collection_helpers::kContainsRef) &&
           !hasImportedDefinitionPath("/contains") &&
           !hasDeclaredDefinitionPath("/contains") &&
           !hasImportedDefinitionPath(
@@ -879,7 +880,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         const bool resolvedCanonicalContainsHelper =
             resolvedCanonicalKeyValueHelper &&
             (canonicalKeyValueMethodHelperName == "contains" ||
-             canonicalKeyValueMethodHelperName == "contains_ref");
+             canonicalKeyValueMethodHelperName == collection_helpers::kContainsRef);
         const bool resolvedCanonicalAccessHelper =
             resolvedCanonicalKeyValueHelper &&
             isCanonicalKeyValueAccessHelperName(canonicalKeyValueMethodHelperName);

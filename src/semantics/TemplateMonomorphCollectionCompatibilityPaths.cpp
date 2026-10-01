@@ -10,6 +10,7 @@
 #include "TemplateMonomorphCoreUtilities.h"
 #include "TemplateMonomorphSetupUtilities.h"
 #include "primec/support/CollectionSpellingClassifier.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -115,8 +116,8 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   // neither direction of the rewrite could ever fire (see
   // docs/CompatPathResolutionConsolidation.md, Step 0 findings).
   std::string preferred = path;
-  if (preferred.rfind("/array/", 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/array/").size());
+  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && defs.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
       const std::string stdlibAlias =
           canonicalVectorCompatibilityHelperPathOrFallback(suffix);
@@ -131,8 +132,8 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
 std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
   // The soa_vector aliasing branches that used to live here were dead
   // code for the same reason as in preferVectorStdlibHelperPath above.
-  if (path.rfind("/array/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/array/").size());
+  if (path.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    const std::string suffix = path.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
       const std::string stdlibPath =
           canonicalVectorCompatibilityHelperPathOrFallback(suffix);
@@ -203,8 +204,8 @@ bool isExplicitCollectionCompatibilityAliasPath(std::string path) {
   if (path.front() != '/' && path.rfind("array/", 0) == 0) {
     path.insert(path.begin(), '/');
   }
-  return path == "/array/count" || path == "/array/capacity" ||
-         path == "/array/at" || path == "/array/at_unsafe";
+  return path == collection_helpers::kRootedArrayCount || path == collection_helpers::kRootedArrayCapacity ||
+         path == collection_helpers::kRootedArrayAt || path == collection_helpers::kRootedArrayAtUnsafe;
 }
 
 bool shouldPreserveCompatibilityTemplatePath(const std::string &path, const Context &ctx) {

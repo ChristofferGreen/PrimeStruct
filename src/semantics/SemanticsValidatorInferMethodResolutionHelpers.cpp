@@ -1,8 +1,8 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <string_view>
@@ -171,10 +171,10 @@ std::string SemanticsValidator::inferMethodCollectionTypePathFromTypeText(
     return "/" + base;
   }
   if (isExperimentalSoaVectorTypePath(base) && args.size() == 1) {
-    return "/soa";
+    return collection_helpers::kRootedSoa;
   }
   if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
-    return "/map";
+    return collection_helpers::kRootedMap;
   }
   return {};
 }
@@ -553,22 +553,22 @@ std::string SemanticsValidator::preferredKeyValueMethodTargetForCall(
       return selectedHelperName;
     }
     if (selectedHelperName == "count") {
-      return std::string("count_ref");
+      return std::string(collection_helpers::kCountRef);
     }
     if (selectedHelperName == "contains") {
-      return std::string("contains_ref");
+      return std::string(collection_helpers::kContainsRef);
     }
     if (selectedHelperName == "tryAt") {
-      return std::string("tryAt_ref");
+      return std::string(collection_helpers::kTryAtRef);
     }
     if (selectedHelperName == "at") {
-      return std::string("at_ref");
+      return std::string(collection_helpers::kAtRef);
     }
     if (selectedHelperName == "at_unsafe") {
-      return std::string("at_unsafe_ref");
+      return std::string(collection_helpers::kAtUnsafeRef);
     }
     if (selectedHelperName == "insert") {
-      return std::string("insert_ref");
+      return std::string(collection_helpers::kInsertRef);
     }
     return selectedHelperName;
   };

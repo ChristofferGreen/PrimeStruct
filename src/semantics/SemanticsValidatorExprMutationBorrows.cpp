@@ -2,6 +2,7 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include <algorithm>
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <array>
 #include <functional>
@@ -94,7 +95,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     std::string collectionTypePath;
     return resolveCallCollectionTypePath(target, params, locals,
                                          collectionTypePath) &&
-           (collectionTypePath == "/vector" || collectionTypePath == "/array");
+           (collectionTypePath == collection_helpers::kRootedVector || collectionTypePath == collection_helpers::kRootedArray);
   };
 
   auto hasActiveBorrowForBinding =
@@ -385,7 +386,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     if (refExpr.isMethodCall) {
       const std::string resolvedMethodPath = resolveCalleePath(refExpr);
-      if (refExpr.name != "ref" && refExpr.name != "ref_ref" &&
+      if (refExpr.name != "ref" && refExpr.name != collection_helpers::kRefRef &&
           !isBuiltinSoaRefPath(resolvedMethodPath, true)) {
         return false;
       }
@@ -398,7 +399,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
 
     const bool isBareRefCall =
         isSimpleCallName(refExpr, "ref") ||
-        isSimpleCallName(refExpr, "ref_ref");
+        isSimpleCallName(refExpr, collection_helpers::kRefRef);
     const bool isCanonicalRefCall =
         isExperimentalSoaRefLikeHelperPath(refExpr.name);
     const std::string resolvedCallPath = !refExpr.resolvedCallPath.empty()

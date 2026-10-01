@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidateReflectionMetadataInternal.h"
 
 #include "SemanticsHelpers.h"

@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererUninitializedTypeHelpers.h"
 
 #include <algorithm>
@@ -14,6 +13,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -823,10 +823,10 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           soa_paths::canonicalizeLegacySoaRefHelperPath(scopedCallPath);
       const bool isSoaGetLikeHelper =
           soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
-          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref");
+          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef);
       const bool isSoaRefLikeHelper =
           soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref") ||
-          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref");
+          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, collection_helpers::kRefRef);
       if ((isBareOrInternalSoaHelper("get") || isBareOrInternalSoaHelper("ref") ||
            isSoaGetLikeHelper || isSoaRefLikeHelper) &&
           exprIn.args.size() == 2) {

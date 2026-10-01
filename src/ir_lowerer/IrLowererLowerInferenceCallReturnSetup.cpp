@@ -1,6 +1,7 @@
 #include "IrLowererLowerInferenceSetup.h"
 
 #include "IrLowererSetupTypeHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -64,7 +65,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
     if (helperName == "at" || helperName == "at_unsafe") {
       return candidate.args.size() == 2;
     }
-    if (helperName == "count" || helperName == "count_ref") {
+    if (helperName == "count" || helperName == collection_helpers::kCountRef) {
       return candidate.args.size() == 1;
     }
     return false;

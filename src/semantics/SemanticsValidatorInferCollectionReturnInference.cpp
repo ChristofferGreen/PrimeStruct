@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -361,21 +362,21 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     const std::string resolvedCandidate = resolveCalleePath(candidate);
     const bool isBareToAosCall =
         isSimpleCallName(candidate, "to_aos") ||
-        isSimpleCallName(candidate, "to_aos_ref");
+        isSimpleCallName(candidate, collection_helpers::kToAosRef);
     const bool isRootToAosDirectCall =
         resolvedCandidate == "/to_aos" ||
         resolvedCandidate == "/to_aos_ref";
     const bool isRootToAosMethodCall =
         candidate.isMethodCall &&
-        (candidate.name == "to_aos" || candidate.name == "to_aos_ref" ||
+        (candidate.name == "to_aos" || candidate.name == collection_helpers::kToAosRef ||
          candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
     if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
       return false;
     }
     const std::string samePathHelper =
         (resolvedCandidate == "/to_aos_ref" ||
-         isSimpleCallName(candidate, "to_aos_ref") ||
-         candidate.name == "to_aos_ref" ||
+         isSimpleCallName(candidate, collection_helpers::kToAosRef) ||
+         candidate.name == collection_helpers::kToAosRef ||
          candidate.name == "/to_aos_ref")
             ? "/to_aos_ref"
             : "/to_aos";
@@ -619,21 +620,21 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       const bool isBareToAosCall =
           isSimpleCallName(candidate, "to_aos") ||
-          isSimpleCallName(candidate, "to_aos_ref");
+          isSimpleCallName(candidate, collection_helpers::kToAosRef);
       const bool isRootToAosDirectCall =
           resolvedCandidate == "/to_aos" ||
           resolvedCandidate == "/to_aos_ref";
       const bool isRootToAosMethodCall =
           candidate.isMethodCall &&
-          (candidate.name == "to_aos" || candidate.name == "to_aos_ref" ||
+          (candidate.name == "to_aos" || candidate.name == collection_helpers::kToAosRef ||
            candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
       if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
         return false;
       }
       const std::string samePathHelper =
           (resolvedCandidate == "/to_aos_ref" ||
-           isSimpleCallName(candidate, "to_aos_ref") ||
-           candidate.name == "to_aos_ref" ||
+           isSimpleCallName(candidate, collection_helpers::kToAosRef) ||
+           candidate.name == collection_helpers::kToAosRef ||
            candidate.name == "/to_aos_ref")
               ? "/to_aos_ref"
               : "/to_aos";
@@ -682,20 +683,20 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
            (isSimpleCallName(candidate, "get") ||
             (candidate.isMethodCall && candidate.name == "get") ||
             isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get"))) ||
-          (*soaAccessHelper == "get_ref" &&
-           (isSimpleCallName(candidate, "get_ref") ||
-            (candidate.isMethodCall && candidate.name == "get_ref") ||
+          (*soaAccessHelper == collection_helpers::kGetRef &&
+           (isSimpleCallName(candidate, collection_helpers::kGetRef) ||
+            (candidate.isMethodCall && candidate.name == collection_helpers::kGetRef) ||
             isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
-                                             "get_ref"))) ||
-          ((*soaAccessHelper == "ref" || *soaAccessHelper == "ref_ref") &&
+                                             collection_helpers::kGetRef))) ||
+          ((*soaAccessHelper == "ref" || *soaAccessHelper == collection_helpers::kRefRef) &&
            (((*soaAccessHelper == "ref" &&
               isSimpleCallName(candidate, "ref")) ||
-             (*soaAccessHelper == "ref_ref" &&
-              isSimpleCallName(candidate, "ref_ref"))) ||
+             (*soaAccessHelper == collection_helpers::kRefRef &&
+              isSimpleCallName(candidate, collection_helpers::kRefRef))) ||
             (candidate.isMethodCall && candidate.name == *soaAccessHelper) ||
             isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
                                              *soaAccessHelper)));
-      if (!(hasVisibleDefinitionPathForCurrentImports("/soa/" +
+      if (!(hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix +
                                                       *soaAccessHelper) &&
             oldSurfaceCallShape)) {
         std::string elemType;
@@ -865,7 +866,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
           return resolvedPath ==
                      legacyExperimentalVectorCompatibilityConstructorPath() ||
-                 (resolvedPath == "/vector" &&
+                 (resolvedPath == collection_helpers::kRootedVector &&
                   hasDirectExperimentalVectorImport());
         };
     const bool prefersImportedExperimentalVectorConstructor =
@@ -903,13 +904,13 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (!helperName.empty() && helperName.front() == '/') {
         helperName.erase(helperName.begin());
       }
-      if (helperName != "count" && helperName != "count_ref" &&
+      if (helperName != "count" && helperName != collection_helpers::kCountRef &&
           helperName != "size" &&
-          helperName != "contains" && helperName != "contains_ref" &&
-          helperName != "tryAt" && helperName != "tryAt_ref" &&
-          helperName != "at" && helperName != "at_ref" &&
-          helperName != "at_unsafe" && helperName != "at_unsafe_ref" &&
-          helperName != "insert" && helperName != "insert_ref") {
+          helperName != "contains" && helperName != collection_helpers::kContainsRef &&
+          helperName != "tryAt" && helperName != collection_helpers::kTryAtRef &&
+          helperName != "at" && helperName != collection_helpers::kAtRef &&
+          helperName != "at_unsafe" && helperName != collection_helpers::kAtUnsafeRef &&
+          helperName != "insert" && helperName != collection_helpers::kInsertRef) {
         return {};
       }
       const size_t receiverIndex =
@@ -934,7 +935,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       return preferredBareKeyValueHelperTarget(helperName);
     };
-    if (canonicalResolvedCandidate == "/vector" &&
+    if (canonicalResolvedCandidate == collection_helpers::kRootedVector &&
         !hasDirectExperimentalVectorImport() &&
         candidate.templateArgs.size() == 1) {
       currentTypeTextOut = "vector<" + candidate.templateArgs.front() + ">";
@@ -981,10 +982,10 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       auto explicitLegacyOrCanonicalSoaHelperName = [&]() -> std::string {
         auto isSupportedSoaHelper = [](std::string_view helperName) {
-          return helperName == "count" || helperName == "count_ref" ||
-                 helperName == "get" || helperName == "get_ref" ||
-                 helperName == "ref" || helperName == "ref_ref" ||
-                 helperName == "to_aos" || helperName == "to_aos_ref" ||
+          return helperName == "count" || helperName == collection_helpers::kCountRef ||
+                 helperName == "get" || helperName == collection_helpers::kGetRef ||
+                 helperName == "ref" || helperName == collection_helpers::kRefRef ||
+                 helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
                  helperName == "push" || helperName == "reserve";
         };
         if ((normalizedPrefix == "soa" ||
@@ -1012,7 +1013,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (const std::string helperName = explicitLegacyOrCanonicalSoaHelperName();
           !helperName.empty()) {
         return preferredSoaHelperTargetForCollectionType(helperName,
-                                                         "/soa");
+                                                         collection_helpers::kRootedSoa);
       }
       return {};
     };

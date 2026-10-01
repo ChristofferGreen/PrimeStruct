@@ -16,6 +16,7 @@
 #include <vector>
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CompileArena.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -123,7 +124,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     return;
   }
 
-  if (visibleSoaFieldHelpers.count("/soa/" + fieldViewExpr.name) > 0) {
+  if (visibleSoaFieldHelpers.count(collection_helpers::kRootedSoaPrefix + fieldViewExpr.name) > 0) {
     return;
   }
 
@@ -309,7 +310,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   Expr getCall;
   getCall.kind = Expr::Kind::Call;
   const bool useBorrowedGetHelper = receiverNeedsDereference;
-  const std::string getHelperName = useBorrowedGetHelper ? "get_ref" : "get";
+  const std::string getHelperName = useBorrowedGetHelper ? collection_helpers::kGetRef : "get";
   getCall.name = receiverUsesCanonicalSoaVector
                      ? semantics::publicSoaHelperTargetPath(getHelperName)
                      : semantics::compatibilitySoaHelperTargetPath(getHelperName);
@@ -355,13 +356,13 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
       buildSpecializedExperimentalSoaVectorElementTypes(program);
 
   for (const Definition &def : program.definitions) {
-    if (def.fullPath.rfind("/soa/", 0) == 0) {
+    if (def.fullPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
-    } else if (def.fullPath.rfind("/std/collections/soa/", 0) == 0) {
+    } else if (def.fullPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
       const std::string helperSuffix =
-          def.fullPath.substr(std::string("/std/collections/soa/").size());
-      visibleSoaFieldHelpers.insert("/soa/" + helperSuffix);
+          def.fullPath.substr(std::string(collection_helpers::kCanonicalSoaPrefix).size());
+      visibleSoaFieldHelpers.insert(collection_helpers::kRootedSoaPrefix + helperSuffix);
     }
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
@@ -549,16 +550,16 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
       fieldName.erase(fieldName.begin());
     }
     if (fieldName.empty() || fieldName.find('/') != std::string::npos ||
-        fieldName == "count" || fieldName == "count_ref" ||
-        fieldName == "get" || fieldName == "get_ref" ||
-        fieldName == "ref" || fieldName == "ref_ref" ||
+        fieldName == "count" || fieldName == collection_helpers::kCountRef ||
+        fieldName == "get" || fieldName == collection_helpers::kGetRef ||
+        fieldName == "ref" || fieldName == collection_helpers::kRefRef ||
         fieldName == "to_soa" || fieldName == "to_aos" ||
-        fieldName == "to_aos_ref") {
+        fieldName == collection_helpers::kToAosRef) {
       return;
     }
   }
 
-  if (visibleSoaFieldHelpers.count("/soa/" + fieldName) > 0) {
+  if (visibleSoaFieldHelpers.count(collection_helpers::kRootedSoaPrefix + fieldName) > 0) {
     return;
   }
   if (expr.args.size() != 1) {
@@ -750,7 +751,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
   Expr fieldViewCall;
   fieldViewCall.kind = Expr::Kind::Call;
   fieldViewCall.name = receiverUsesCanonicalSoaVector
-                           ? "/std/collections/soa/field_view"
+                           ? collection_helpers::kCanonicalSoaFieldView
                            : collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVectorFieldView");
   fieldViewCall.templateArgs = {receiverElemType, fieldIt->second.typeText};
   auto appendReceiverValueExpr = [&](Expr &callExpr) {
@@ -799,13 +800,13 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
       buildSpecializedExperimentalSoaVectorElementTypes(program);
 
   for (const Definition &def : program.definitions) {
-    if (def.fullPath.rfind("/soa/", 0) == 0) {
+    if (def.fullPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
-    } else if (def.fullPath.rfind("/std/collections/soa/", 0) == 0) {
+    } else if (def.fullPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
       const std::string helperSuffix =
-          def.fullPath.substr(std::string("/std/collections/soa/").size());
-      visibleSoaFieldHelpers.insert("/soa/" + helperSuffix);
+          def.fullPath.substr(std::string(collection_helpers::kCanonicalSoaPrefix).size());
+      visibleSoaFieldHelpers.insert(collection_helpers::kRootedSoaPrefix + helperSuffix);
     }
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
@@ -1004,7 +1005,7 @@ void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
     if (!callPath.empty() && callPath.front() != '/') {
       callPath.insert(callPath.begin(), '/');
     }
-    if (callPath == "/std/collections/soa/field_view" &&
+    if (callPath == collection_helpers::kCanonicalSoaFieldView &&
         fieldViewExpr.templateArgs.size() >= 2 &&
         fieldViewExpr.args.size() == 2 &&
         !semantics::hasNamedArguments(fieldViewExpr.argNames)) {
@@ -1017,7 +1018,7 @@ void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
           *fieldIndex < fieldsIt->second.size()) {
         Expr getCall;
         getCall.kind = Expr::Kind::Call;
-        getCall.name = "/std/collections/soa/get";
+        getCall.name = collection_helpers::kCanonicalSoaGet;
         getCall.templateArgs = {fieldViewExpr.templateArgs.front()};
         getCall.args.push_back(fieldViewExpr.args.front());
         getCall.args.push_back(expr.args[1]);
@@ -1210,25 +1211,25 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
             : path.substr(0, specializationSuffix);
     const std::string canonicalGetPath =
         semantics::canonicalizeLegacySoaGetHelperPath(basePath);
-    if (canonicalGetPath == "/std/collections/soa/get") {
-      path = (basePath.rfind("/soa/", 0) == 0 ? "/soa/ref"
-                                                     : "/std/collections/soa/ref") +
+    if (canonicalGetPath == collection_helpers::kCanonicalSoaGet) {
+      path = (basePath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ? collection_helpers::kRootedSoaRef
+                                                     : collection_helpers::kCanonicalSoaRef) +
              specializationText;
       return true;
     }
-    if (canonicalGetPath == "/std/collections/soa/get") {
-      path = "/std/collections/soa/ref" + specializationText;
+    if (canonicalGetPath == collection_helpers::kCanonicalSoaGet) {
+      path = collection_helpers::kCanonicalSoaRef + specializationText;
       return true;
     }
-    if (canonicalGetPath == "/std/collections/soa/get_ref") {
+    if (canonicalGetPath == collection_helpers::kCanonicalSoaGetRef) {
       path =
-          (basePath.rfind("/soa/", 0) == 0 ? "/soa/ref_ref"
-                                                  : "/std/collections/soa/ref_ref") +
+          (basePath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ? collection_helpers::kRootedSoaRefRef
+                                                  : collection_helpers::kCanonicalSoaRefRef) +
           specializationText;
       return true;
     }
-    if (canonicalGetPath == "/std/collections/soa/get_ref") {
-      path = "/std/collections/soa/ref_ref" + specializationText;
+    if (canonicalGetPath == collection_helpers::kCanonicalSoaGetRef) {
+      path = collection_helpers::kCanonicalSoaRefRef + specializationText;
       return true;
     }
     return false;

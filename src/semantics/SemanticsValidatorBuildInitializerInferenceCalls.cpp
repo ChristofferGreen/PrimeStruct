@@ -2,6 +2,7 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <functional>
 #include <optional>
@@ -58,7 +59,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       [&](std::string resolvedPath) {
         resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
         return isResolvedExperimentalVectorConstructorPath(resolvedPath) ||
-               (resolvedPath == "/vector" &&
+               (resolvedPath == collection_helpers::kRootedVector &&
                 hasDirectExperimentalVectorImport());
       };
   auto copyNamedBinding = [&](const std::string &name) -> bool {
@@ -273,10 +274,10 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
   const bool isCountLike =
       expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") ||
-       isSimpleCallName(expr, "count_ref") ||
+       isSimpleCallName(expr, collection_helpers::kCountRef) ||
        isSimpleCallName(expr, "capacity") ||
        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "count") ||
-       isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "count_ref") ||
+       isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, collection_helpers::kCountRef) ||
        (isVectorCompatibilityResolvedCall &&
         (vectorCompatibilityHelperName == "count" ||
          vectorCompatibilityHelperName == "capacity")));
@@ -573,7 +574,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     const std::string resolvedCanonical =
         canonicalizeLegacySoaToAosHelperPath(resolvedPath);
     if (!isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to_aos") &&
-        !isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to_aos_ref")) {
+        !isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, collection_helpers::kToAosRef)) {
       return false;
     }
     std::string receiverTypeText;

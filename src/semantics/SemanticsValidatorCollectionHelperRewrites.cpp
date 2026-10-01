@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <cctype>
 #include <cstdint>
@@ -30,8 +31,8 @@ std::string explicitCallPathForCandidate(const Expr &candidate) {
 }
 
 bool isBareKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
@@ -320,8 +321,8 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
            defMap_.count(candidate) > 0;
   };
   std::string preferred = path;
-  if (preferred.rfind("/array/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/array/").size());
+  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias = canonicalPublishedVectorHelperTarget(suffix);
       if (hasVisibleDefinitionPath(stdlibAlias)) {
@@ -329,21 +330,21 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
       }
     }
   }
-  if (preferred.rfind("/soa/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/soa/").size());
-    const std::string stdlibAlias = "/std/collections/soa/" + suffix;
+  if (preferred.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedSoaPrefix).size());
+    const std::string stdlibAlias = collection_helpers::kCanonicalSoaPrefix + suffix;
     if (hasVisibleDefinitionPath(stdlibAlias)) {
       preferred = stdlibAlias;
     }
   }
-  if (preferred.rfind("/std/collections/soa/", 0) == 0 &&
+  if (preferred.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 &&
       !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix =
-        preferred.substr(std::string("/std/collections/soa/").size());
+        preferred.substr(std::string(collection_helpers::kCanonicalSoaPrefix).size());
     const std::string samePath =
-        (suffix == "to_aos" || suffix == "to_aos_ref")
+        (suffix == "to_aos" || suffix == collection_helpers::kToAosRef)
             ? "/" + suffix
-            : "/soa/" + suffix;
+            : collection_helpers::kRootedSoaPrefix + suffix;
     if (hasVisibleDefinitionPath(samePath)) {
       preferred = samePath;
     }
@@ -520,10 +521,10 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
   const std::string resolvedCandidatePath =
       canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(candidate));
   if (isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to_aos") ||
-      isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to_aos_ref") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, collection_helpers::kToAosRef) ||
       isSimpleCallName(candidate, "to_soa") ||
       isSimpleCallName(candidate, "to_aos") ||
-      isSimpleCallName(candidate, "to_aos_ref")) {
+      isSimpleCallName(candidate, collection_helpers::kToAosRef)) {
     return false;
   }
 
@@ -677,9 +678,9 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
       rewrittenOut.isMethodCall = false;
       rewrittenOut.isFieldAccess = false;
       rewrittenOut.name = preferredKeyValueHelperLoweringPathForRewrite(
-          "insert_ref", experimentalCollectionConstructorRootLocal("map"));
+          collection_helpers::kInsertRef, experimentalCollectionConstructorRootLocal("map"));
       if (rewrittenOut.name.empty()) {
-        rewrittenOut.name = canonicalKeyValueHelperPathForRewrite("insert_ref");
+        rewrittenOut.name = canonicalKeyValueHelperPathForRewrite(collection_helpers::kInsertRef);
       }
       if (rewrittenOut.name.empty()) {
         return false;

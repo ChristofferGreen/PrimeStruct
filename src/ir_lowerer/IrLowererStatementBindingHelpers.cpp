@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererStatementBindingHelpers.h"
 
 #include <algorithm>
@@ -15,6 +14,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -352,10 +352,10 @@ bool populateBindingTypeInfoFromTypeText(
   std::string argText;
   if (!splitTemplateTypeName(normalizedTypeText, base, argText)) {
     if (normalizedTypeText == "ContainerError" ||
-        normalizedTypeText == "/std/collections/ContainerError") {
+        normalizedTypeText == collection_helpers::kCanonicalContainerErrorType) {
       infoOut.kind = LocalInfo::Kind::Value;
       infoOut.valueKind = LocalInfo::ValueKind::Int64;
-      infoOut.structTypeName = "/std/collections/ContainerError";
+      infoOut.structTypeName = collection_helpers::kCanonicalContainerErrorType;
       return true;
     }
     if (normalizedTypeText == "ImageError" ||
@@ -1681,7 +1681,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
         (!infoOut.isSoaVector &&
          isSpecializedExperimentalVectorTypeText(infoOut.structTypeName));
     if (!preserveSpecializedCollectionStruct) {
-      infoOut.structTypeName = infoOut.isSoaVector ? "/soa" : "/vector";
+      infoOut.structTypeName = infoOut.isSoaVector ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector;
     }
   }
   if (infoOut.kind == LocalInfo::Kind::Value && !infoOut.structTypeName.empty()) {

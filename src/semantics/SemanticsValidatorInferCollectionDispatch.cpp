@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 namespace {
@@ -72,13 +73,13 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
   const bool resolvedSoaCanonicalIsCount =
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "count");
   const bool resolvedSoaCanonicalIsCountRef =
-      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "count_ref");
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, collection_helpers::kCountRef);
   const bool resolvedVectorCount =
       isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "count");
   const bool resolvedVectorCapacity =
       isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "capacity");
-  if (resolvedPath == "/array/count" ||
-      resolvedVectorCount || resolvedPath == "/string/count" ||
+  if (resolvedPath == collection_helpers::kRootedArrayCount ||
+      resolvedVectorCount || resolvedPath == collection_helpers::kRootedStringCount ||
       resolvedSoaCanonicalIsCount || resolvedSoaCanonicalIsCountRef ||
       isExperimentalSoaCountLikeHelperPath(resolvedSoaCanonical) ||
       resolvedVectorCapacity) {
@@ -86,15 +87,15 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     return true;
   }
   if (resolvedKeyValueHelperName == "contains" ||
-      resolvedKeyValueHelperName == "contains_ref") {
+      resolvedKeyValueHelperName == collection_helpers::kContainsRef) {
     kindOut = ReturnKind::Bool;
     return true;
   }
-  if (resolvedPath == "/string/at" || resolvedPath == "/string/at_unsafe") {
+  if (resolvedPath == collection_helpers::kRootedStringAt || resolvedPath == collection_helpers::kRootedStringAtUnsafe) {
     kindOut = ReturnKind::Int;
     return true;
   }
-  if (resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe") {
+  if (resolvedPath == collection_helpers::kRootedArrayAt || resolvedPath == collection_helpers::kRootedArrayAtUnsafe) {
     std::string elemType;
     if (resolvers.resolveArgsPackAccessTarget(receiverExpr, elemType) ||
         resolvers.resolveArrayTarget(receiverExpr, elemType)) {
@@ -125,7 +126,7 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
   const bool resolvedSoaCanonicalIsGet =
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get");
   const bool resolvedSoaCanonicalIsGetRef =
-      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get_ref");
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, collection_helpers::kGetRef);
   if (resolvedSoaCanonicalIsGet ||
       resolvedSoaCanonicalIsGetRef ||
       isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
@@ -142,8 +143,8 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
   }
   if (resolvedKeyValueHelperName == "at" ||
       resolvedKeyValueHelperName == "at_unsafe" ||
-      resolvedKeyValueHelperName == "at_ref" ||
-      resolvedKeyValueHelperName == "at_unsafe_ref") {
+      resolvedKeyValueHelperName == collection_helpers::kAtRef ||
+      resolvedKeyValueHelperName == collection_helpers::kAtUnsafeRef) {
     std::string keyType;
     std::string valueType;
     if ((resolvers.resolveMapTarget != nullptr &&
@@ -177,10 +178,10 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
             resolvedPath, resolvedKeyValueHelperName)) {
       return false;
     }
-    if (resolvedKeyValueHelperName == "at_ref") {
-      builtinName = "at_ref";
-    } else if (resolvedKeyValueHelperName == "at_unsafe_ref") {
-      builtinName = "at_unsafe_ref";
+    if (resolvedKeyValueHelperName == collection_helpers::kAtRef) {
+      builtinName = collection_helpers::kAtRef;
+    } else if (resolvedKeyValueHelperName == collection_helpers::kAtUnsafeRef) {
+      builtinName = collection_helpers::kAtUnsafeRef;
     } else {
       return false;
     }

@@ -1,6 +1,7 @@
 // collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <string_view>
@@ -65,7 +66,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       [&](std::string_view helperName) {
     return isValueSurfaceAccessMethodName(helperName) ||
            helperName == "size" ||
-           helperName == "at_ref" || helperName == "at_unsafe_ref";
+           helperName == collection_helpers::kAtRef || helperName == collection_helpers::kAtUnsafeRef;
   };
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
@@ -163,7 +164,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   auto rejectBuiltinStringCountShadowOnKeyValueAccessReceiver = [&](const std::string &resolvedPath) -> bool {
-    if (resolvedPath != "/string/count" || expr.args.empty()) {
+    if (resolvedPath != collection_helpers::kRootedStringCount || expr.args.empty()) {
       return false;
     }
     const Expr &receiverExpr = expr.args.front();
@@ -180,7 +181,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     auto canonicalKeyValueAccessReturnsString = [&](std::string helperName) {
       if (helperName != "at" && helperName != "at_unsafe" &&
-          helperName != "at_ref" && helperName != "at_unsafe_ref") {
+          helperName != collection_helpers::kAtRef && helperName != collection_helpers::kAtUnsafeRef) {
         return false;
       }
       const std::string helperPath =
@@ -271,18 +272,18 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
   auto resolveIndexedArgsPackKeyValueMethod = [&]() -> bool {
     if (!(normalizedMethodName == "count" ||
-          normalizedMethodName == "count_ref" ||
+          normalizedMethodName == collection_helpers::kCountRef ||
           normalizedMethodName == "size" ||
           normalizedMethodName == "contains" ||
-          normalizedMethodName == "contains_ref" ||
+          normalizedMethodName == collection_helpers::kContainsRef ||
           normalizedMethodName == "tryAt" ||
-          normalizedMethodName == "tryAt_ref" ||
+          normalizedMethodName == collection_helpers::kTryAtRef ||
           normalizedMethodName == "at" ||
-          normalizedMethodName == "at_ref" ||
+          normalizedMethodName == collection_helpers::kAtRef ||
           normalizedMethodName == "at_unsafe" ||
-          normalizedMethodName == "at_unsafe_ref" ||
+          normalizedMethodName == collection_helpers::kAtUnsafeRef ||
           normalizedMethodName == "insert" ||
-          normalizedMethodName == "insert_ref")) {
+          normalizedMethodName == collection_helpers::kInsertRef)) {
       return false;
     }
     const Expr &receiverExpr = expr.args.front();
@@ -315,17 +316,17 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     std::string helperName = normalizedMethodName;
     if (borrowedReceiver) {
       if (helperName == "count") {
-        helperName = "count_ref";
+        helperName = collection_helpers::kCountRef;
       } else if (helperName == "contains") {
-        helperName = "contains_ref";
+        helperName = collection_helpers::kContainsRef;
       } else if (helperName == "tryAt") {
-        helperName = "tryAt_ref";
+        helperName = collection_helpers::kTryAtRef;
       } else if (helperName == "at") {
-        helperName = "at_ref";
+        helperName = collection_helpers::kAtRef;
       } else if (helperName == "at_unsafe") {
-        helperName = "at_unsafe_ref";
+        helperName = collection_helpers::kAtUnsafeRef;
       } else if (helperName == "insert") {
-        helperName = "insert_ref";
+        helperName = collection_helpers::kInsertRef;
       }
     }
     resolved = preferredKeyValueMethodTargetForCall(params, locals, receiverExpr,
@@ -360,7 +361,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (hasIndexedArgsPackKeyValueMethodTarget) {
   } else if (isVectorCompatibilityMethod &&
       expr.namespacePrefix != "vector" &&
-      expr.namespacePrefix != "/vector" &&
+      expr.namespacePrefix != collection_helpers::kRootedVector &&
       !isCanonicalVectorCompatibilityNamespace(expr.namespacePrefix) &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), normalizedMethodName,
                                       vectorMethodTarget)) {
@@ -411,9 +412,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                                   isBuiltinMethod)) {
     std::string collectionMethodTarget;
     const bool resolvedVisibleCollectionMethod =
-        (expr.name == "get" || expr.name == "get_ref" ||
-         expr.name == "ref" || expr.name == "ref_ref" ||
-         expr.name == "to_aos" || expr.name == "to_aos_ref") &&
+        (expr.name == "get" || expr.name == collection_helpers::kGetRef ||
+         expr.name == "ref" || expr.name == collection_helpers::kRefRef ||
+         expr.name == "to_aos" || expr.name == collection_helpers::kToAosRef) &&
         resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                         collectionMethodTarget) &&
         hasImportedDefinitionPath(collectionMethodTarget);
@@ -522,20 +523,20 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     auto resolveInferredKeyValueMethodFallback = [&]() -> bool {
       const std::string helperName = expr.name;
       const bool requestsExplicitVectorHelperNamespace =
-          expr.namespacePrefix == "vector" || expr.namespacePrefix == "/vector" ||
+          expr.namespacePrefix == "vector" || expr.namespacePrefix == collection_helpers::kRootedVector ||
           isCanonicalVectorCompatibilityNamespace(expr.namespacePrefix) ||
           isRootedVectorHelperPath(helperName) ||
           isCanonicalVectorCompatibilityPath(helperName);
       if (requestsExplicitVectorHelperNamespace) {
         return false;
       }
-      if (!(helperName == "count" || helperName == "count_ref" ||
+      if (!(helperName == "count" || helperName == collection_helpers::kCountRef ||
             helperName == "size" ||
-            helperName == "contains" || helperName == "contains_ref" ||
-            helperName == "tryAt" || helperName == "tryAt_ref" ||
-            helperName == "at" || helperName == "at_ref" ||
-            helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-            helperName == "insert" || helperName == "insert_ref") ||
+            helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+            helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+            helperName == "at" || helperName == collection_helpers::kAtRef ||
+            helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
+            helperName == "insert" || helperName == collection_helpers::kInsertRef) ||
           !resolveKeyValueTarget(expr.args.front())) {
         return false;
       }
@@ -685,7 +686,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
              !expr.args.empty()) {
     std::string elemType;
     if (resolveCurrentArgsPackCountReceiver(expr.args.front(), elemType)) {
-      resolved = "/array/count";
+      resolved = collection_helpers::kRootedArrayCount;
       isBuiltinMethod = true;
     } else if (resolveVectorTarget(expr.args.front(), elemType)) {
       isBuiltinMethod = !explicitCanonicalPathHasRootedAliasRival("count");
@@ -783,7 +784,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     const std::string canonicalSoaGetPath =
         canonicalizeLegacySoaGetHelperPath(resolved);
     if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
-        isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
+        isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef)) {
       isBuiltinMethod = true;
     }
     std::string canonicalSoaMutatorPath = resolved;

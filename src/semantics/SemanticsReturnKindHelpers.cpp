@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "SemanticsHelpers.h"
 
 #include <cctype>

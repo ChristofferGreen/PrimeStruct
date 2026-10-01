@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 
 namespace primec {

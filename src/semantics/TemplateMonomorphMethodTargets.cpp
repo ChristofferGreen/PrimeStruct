@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -629,13 +630,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   };
   auto borrowedSoaWrapperMethodName = [](std::string_view helperName) {
     if (helperName == "count") {
-      return std::string("count_ref");
+      return std::string(collection_helpers::kCountRef);
     }
     if (helperName == "get") {
-      return std::string("get_ref");
+      return std::string(collection_helpers::kGetRef);
     }
     if (helperName == "ref") {
-      return std::string("ref_ref");
+      return std::string(collection_helpers::kRefRef);
     }
     if (helperName == templateMonomorphSoaToAosHelperName()) {
       return templateMonomorphSoaToAosHelperName(true);
@@ -677,17 +678,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
          normalizeBindingTypeName(base) == "Pointer");
     if (receiverIsWrapped) {
       if (helperName == "count") {
-        helperName = "count_ref";
+        helperName = collection_helpers::kCountRef;
       } else if (helperName == "contains") {
-        helperName = "contains_ref";
+        helperName = collection_helpers::kContainsRef;
       } else if (helperName == "tryAt") {
-        helperName = "tryAt_ref";
+        helperName = collection_helpers::kTryAtRef;
       } else if (helperName == "at") {
-        helperName = "at_ref";
+        helperName = collection_helpers::kAtRef;
       } else if (helperName == "at_unsafe") {
-        helperName = "at_unsafe_ref";
+        helperName = collection_helpers::kAtUnsafeRef;
       } else if (helperName == "insert") {
-        helperName = "insert_ref";
+        helperName = collection_helpers::kInsertRef;
       }
     }
     pathOut = selectHelperOverloadPath(
@@ -904,7 +905,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         normalizeCollectionMethodName("array", methodName);
     if (argsPackMethodName == "count" || argsPackMethodName == "at" ||
         argsPackMethodName == "at_unsafe") {
-      pathOut = "/array/" + argsPackMethodName;
+      pathOut = collection_helpers::kRootedArrayPrefix + argsPackMethodName;
       return true;
     }
     return false;
@@ -963,7 +964,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (normalizedReceiverLeafName == "ContainerError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
        normalizedMethodName == "result")) {
-    pathOut = selectStaticHelperOverloadPath("/std/collections/ContainerError/" + normalizedMethodName);
+    pathOut = selectStaticHelperOverloadPath(collection_helpers::kCanonicalContainerErrorTypePrefix + normalizedMethodName);
     return true;
   }
   if (normalizedReceiverLeafName == "GfxError" &&
@@ -1034,7 +1035,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
            ReceiverElementFamily::Soa;
   }();
   if (isGenericSoaReceiver &&
-      (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
+      (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef)) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
                               : normalizedMethodName;
@@ -1053,7 +1054,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   if (isGenericSoaReceiver &&
-      (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
+      (normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef)) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
                               : normalizedMethodName;
@@ -1068,7 +1069,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   if (isGenericSoaReceiver &&
-      (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
+      (normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef)) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
                               : normalizedMethodName;
@@ -1135,7 +1136,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       return true;
     }
     if (typeName == "string") {
-      pathOut = selectHelperOverloadPath(expr, "/string/" + normalizedMethodName, ctx);
+      pathOut = selectHelperOverloadPath(expr, collection_helpers::kRootedStringPrefix + normalizedMethodName, ctx);
       return true;
     }
     return false;

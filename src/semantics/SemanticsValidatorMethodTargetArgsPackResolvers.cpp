@@ -6,6 +6,7 @@
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/ReceiverElementFamilyClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <cassert>
@@ -204,7 +205,7 @@ bool SemanticsValidator::resolveArgsPackElementMethodTarget(
 
   switch (classified.family) {
     case primec::ReceiverElementFamily::String:
-      return setCollectionMethodTarget("/string/" + normalizedMethodName);
+      return setCollectionMethodTarget(collection_helpers::kRootedStringPrefix + normalizedMethodName);
     case primec::ReceiverElementFamily::FileError:
       resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
       isBuiltinOut = resolvedOut == "/file_error/why";

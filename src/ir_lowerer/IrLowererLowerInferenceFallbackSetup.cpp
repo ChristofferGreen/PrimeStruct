@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererLowerInferenceSetup.h"
 
 #include "IrLowererHelpers.h"

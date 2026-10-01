@@ -1,9 +1,9 @@
-// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <cctype>
@@ -34,7 +34,7 @@ bool SemanticsValidator::resolveStringTarget(
   if (target.kind == Expr::Kind::Call) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == "/string") {
+        collectionTypePath == collection_helpers::kRootedString) {
       return true;
     }
     if (target.isMethodCall && target.name == "why" && !target.args.empty()) {

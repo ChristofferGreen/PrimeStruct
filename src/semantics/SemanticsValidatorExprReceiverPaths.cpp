@@ -1,6 +1,6 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <string_view>
@@ -137,8 +137,8 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
     return false;
   }
   const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
-  if (resolvedReceiverPath == "/array" || resolvedReceiverPath == "/vector" ||
-      isRootMapCollectionReceiverPath(resolvedReceiverPath) || resolvedReceiverPath == "/soa") {
+  if (resolvedReceiverPath == collection_helpers::kRootedArray || resolvedReceiverPath == collection_helpers::kRootedVector ||
+      isRootMapCollectionReceiverPath(resolvedReceiverPath) || resolvedReceiverPath == collection_helpers::kRootedSoa) {
     return false;
   }
   auto defIt = defMap_.find(resolvedReceiverPath);
@@ -239,9 +239,9 @@ bool SemanticsValidator::resolveUserStructOwnAccessHelperCallPath(
   pathOut.clear();
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
       expr.args.size() < 2 || hasNamedArguments(expr.argNames) ||
-      !(isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
+      !(isSimpleCallName(expr, "at") || isSimpleCallName(expr, collection_helpers::kAtRef) ||
         isSimpleCallName(expr, "at_unsafe") ||
-        isSimpleCallName(expr, "at_unsafe_ref")) ||
+        isSimpleCallName(expr, collection_helpers::kAtUnsafeRef)) ||
       defMap_.count("/" + expr.name) > 0) {
     return false;
   }

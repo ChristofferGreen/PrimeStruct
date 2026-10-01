@@ -1,5 +1,6 @@
 // collection-surface-audit: exempt
 #include "primec/support/BuiltinArrayAccessNameClassifier.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
 
@@ -25,8 +26,8 @@ std::string stripGeneratedSuffixLocal(std::string value) {
 
 std::optional<std::string> classifyAccessAliasToken(std::string memberName, AccessAliasSpellingMode mode) {
   memberName = stripGeneratedSuffixLocal(stripTemplateSpecializationSuffixLocal(std::move(memberName)));
-  const bool bareAt = memberName == "at" || memberName == "at_ref";
-  const bool bareAtUnsafe = memberName == "at_unsafe" || memberName == "at_unsafe_ref";
+  const bool bareAt = memberName == "at" || memberName == collection_helpers::kAtRef;
+  const bool bareAtUnsafe = memberName == "at_unsafe" || memberName == collection_helpers::kAtUnsafeRef;
   const bool concatAt = memberName == "vectorAt";
   const bool concatAtUnsafe = memberName == "vectorAtUnsafe";
 

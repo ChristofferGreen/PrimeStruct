@@ -13,6 +13,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -23,8 +24,8 @@ bool isBuiltinVectorTypeName(const std::string &typeName) {
 }
 
 bool isBuiltinSoaVectorTypeName(const std::string &typeName) {
-  return typeName == "soa" || typeName == "/soa" ||
-         typeName == "std/collections/soa" || typeName == "/std/collections/soa";
+  return typeName == "soa" || typeName == collection_helpers::kRootedSoa ||
+         typeName == "std/collections/soa" || typeName == collection_helpers::kCanonicalSoa;
 }
 
 bool isExperimentalSoaVectorTypeName(const std::string &typeName) {
@@ -73,7 +74,7 @@ std::string normalizeVectorStructPath(const std::string &typeName) {
     return vectorBuiltinStructNormalizedPath();
   }
   if (isBuiltinSoaVectorTypeName(typeName)) {
-    return "/soa";
+    return collection_helpers::kRootedSoa;
   }
   return typeName;
 }
@@ -1028,10 +1029,10 @@ std::string inferStructPathFromCallTarget(
   std::string collectionName;
   if (getBuiltinCollectionName(expr, collectionName) && expr.templateArgs.size() == 1) {
     if (collectionName == "vector") {
-      return "/vector";
+      return collection_helpers::kRootedVector;
     }
     if (collectionName == "soa") {
-      return "/soa";
+      return collection_helpers::kRootedSoa;
     }
   }
 

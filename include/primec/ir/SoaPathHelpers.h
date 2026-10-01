@@ -3,6 +3,7 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <string_view>
@@ -94,7 +95,7 @@ inline std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
     return collectionPath(legacySoaFolder(), "ref");
   }
   if (canonicalPath == refRefPath) {
-    return collectionPath(legacySoaFolder(), "ref_ref");
+    return collectionPath(legacySoaFolder(), collection_helpers::kRefRef);
   }
   return canonicalPath;
 }
@@ -109,7 +110,7 @@ inline std::string canonicalizeLegacySoaGetHelperPath(std::string_view path) {
     return collectionPath(legacySoaFolder(), "get");
   }
   if (canonicalPath == getRefPath) {
-    return collectionPath(legacySoaFolder(), "get_ref");
+    return collectionPath(legacySoaFolder(), collection_helpers::kGetRef);
   }
   return canonicalPath;
 }
@@ -157,11 +158,11 @@ inline bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
   static const std::string legacyRef =
       primec::systemHeapValue([] { return collectionPath(legacySoaFolder(), "ref"); });
   static const std::string legacyRefRef =
-      primec::systemHeapValue([] { return collectionPath(legacySoaFolder(), "ref_ref"); });
+      primec::systemHeapValue([] { return collectionPath(legacySoaFolder(), collection_helpers::kRefRef); });
   static const std::string publicRef =
       primec::systemHeapValue([] { return collectionPath(publicSoaFolder(), "ref"); });
   static const std::string publicRefRef =
-      primec::systemHeapValue([] { return collectionPath(publicSoaFolder(), "ref_ref"); });
+      primec::systemHeapValue([] { return collectionPath(publicSoaFolder(), collection_helpers::kRefRef); });
   return path == legacyRef || path == legacyRefRef || path == publicRef ||
          path == publicRefRef;
 }

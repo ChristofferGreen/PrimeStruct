@@ -7,6 +7,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 #include <vector>
@@ -122,17 +123,17 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
           return nullptr;
         };
         auto normalizeLateCollectionHelperName = [&](std::string &helperName) {
-          if (helperName == "count_ref") {
+          if (helperName == collection_helpers::kCountRef) {
             helperName = "count";
-          } else if (helperName == "contains_ref") {
+          } else if (helperName == collection_helpers::kContainsRef) {
             helperName = "contains";
-          } else if (helperName == "tryAt_ref") {
+          } else if (helperName == collection_helpers::kTryAtRef) {
             helperName = "tryAt";
-          } else if (helperName == "at_ref") {
+          } else if (helperName == collection_helpers::kAtRef) {
             helperName = "at";
-          } else if (helperName == "at_unsafe_ref") {
+          } else if (helperName == collection_helpers::kAtUnsafeRef) {
             helperName = "at_unsafe";
-          } else if (helperName == "insert_ref") {
+          } else if (helperName == collection_helpers::kInsertRef) {
             helperName = "insert";
           }
         };
@@ -452,17 +453,17 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
               if (generatedSuffix != std::string::npos) {
                 helperName.erase(generatedSuffix);
               }
-              if (helperName == "count_ref") {
+              if (helperName == collection_helpers::kCountRef) {
                 helperName = "count";
-              } else if (helperName == "contains_ref") {
+              } else if (helperName == collection_helpers::kContainsRef) {
                 helperName = "contains";
-              } else if (helperName == "tryAt_ref") {
+              } else if (helperName == collection_helpers::kTryAtRef) {
                 helperName = "tryAt";
-              } else if (helperName == "at_ref") {
+              } else if (helperName == collection_helpers::kAtRef) {
                 helperName = "at";
-              } else if (helperName == "at_unsafe_ref") {
+              } else if (helperName == collection_helpers::kAtUnsafeRef) {
                 helperName = "at_unsafe";
-              } else if (helperName == "insert_ref") {
+              } else if (helperName == collection_helpers::kInsertRef) {
                 helperName = "insert";
               }
             }
@@ -779,9 +780,9 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
             if (!resolveKeyValueHelperAliasName(callExpr, accessName)) {
               return false;
             }
-            if (accessName == "at_ref") {
+            if (accessName == collection_helpers::kAtRef) {
               accessName = "at";
-            } else if (accessName == "at_unsafe_ref") {
+            } else if (accessName == collection_helpers::kAtUnsafeRef) {
               accessName = "at_unsafe";
             }
           }

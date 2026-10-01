@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
 #include "IrLowererCallHelpers.h"

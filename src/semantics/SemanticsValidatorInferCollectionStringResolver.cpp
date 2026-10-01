@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <memory>
 #include <string>
@@ -33,7 +34,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
 
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == "/string") {
+        collectionTypePath == collection_helpers::kRootedString) {
       return true;
     }
     if (target.isMethodCall && target.name == "why" && !target.args.empty()) {

@@ -9,6 +9,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <optional>
@@ -185,9 +186,9 @@ bool isExplicitDirectKeyValueCountContainsTryAtCall(const SemanticProgram *seman
 }
 
 bool isKeyValueReadHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref";
+  return helperName == "count" || helperName == collection_helpers::kCountRef ||
+         helperName == "contains" || helperName == collection_helpers::kContainsRef ||
+         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef;
 }
 
 bool importPathCoversNativeTailTarget(const std::string &importPath,
@@ -233,12 +234,12 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
     return false;
   }
   const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  return rawPath == "/soa/get" ||
-         rawPath == "/std/collections/soa/get" ||
-         rawPath == "/std/collections/soa/get" ||
-         rawPath == "/soa/get_ref" ||
-         rawPath == "/std/collections/soa/get_ref" ||
-         rawPath == "/std/collections/soa/get_ref";
+  return rawPath == collection_helpers::kRootedSoaGet ||
+         rawPath == collection_helpers::kCanonicalSoaGet ||
+         rawPath == collection_helpers::kCanonicalSoaGet ||
+         rawPath == collection_helpers::kRootedSoaGetRef ||
+         rawPath == collection_helpers::kCanonicalSoaGetRef ||
+         rawPath == collection_helpers::kCanonicalSoaGetRef;
 }
 
 bool hasSemanticKeyValueAccessHelperDefinition(
@@ -332,8 +333,8 @@ bool isStringReturningKeyValueAccessAlias(
           ? semanticProgramResolveCallTargetString(*semanticProgram,
                                                    queryFact->bindingTypeTextId)
           : std::string_view(queryFact->bindingTypeText)));
-  return queryType == "string" || queryType == "/string" ||
-         bindingType == "string" || bindingType == "/string";
+  return queryType == "string" || queryType == collection_helpers::kRootedString ||
+         bindingType == "string" || bindingType == collection_helpers::kRootedString;
 }
 
 bool hasExplicitStdKeyValueSourceSpelling(const Expr &expr) {
@@ -666,13 +667,13 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::string directHelperPath =
         resolveNativeTailCallPathWithoutFallbackProbes(expr);
     const bool isExplicitVectorMetadataCall =
-        directHelperPath == "/std/collections/vector/count" ||
+        directHelperPath == collection_helpers::kCanonicalVectorCount ||
         directHelperPath == "std/collections/vector/count" ||
-        directHelperPath == "/std/collections/vector/capacity" ||
+        directHelperPath == collection_helpers::kCanonicalVectorCapacity ||
         directHelperPath == "std/collections/vector/capacity" ||
-        directHelperPath == "/vector/count" ||
+        directHelperPath == collection_helpers::kRootedVectorCount ||
         directHelperPath == "vector/count" ||
-        directHelperPath == "/vector/capacity" ||
+        directHelperPath == collection_helpers::kRootedVectorCapacity ||
         directHelperPath == "vector/capacity";
     if (isExplicitVectorMetadataCall &&
         (expr.args.front().kind == Expr::Kind::Call ||
@@ -725,7 +726,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
 
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") ||
-       resolveNativeTailCallPathWithoutFallbackProbes(expr) == "/string/count")) {
+       resolveNativeTailCallPathWithoutFallbackProbes(expr) == collection_helpers::kRootedStringCount)) {
     const Expr &target = expr.args.front();
     if ((target.kind == Expr::Kind::Name ||
          target.kind == Expr::Kind::StringLiteral) &&
@@ -741,7 +742,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   if (expr.args.size() == 1 &&
       (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
        isSimpleCallName(expr, "count") ||
-       resolveNativeTailCallPathWithoutFallbackProbes(expr) == "/string/count")) {
+       resolveNativeTailCallPathWithoutFallbackProbes(expr) == collection_helpers::kRootedStringCount)) {
     const Expr &target = expr.args.front();
     std::string accessName;
     if (target.kind == Expr::Kind::Call && target.sourceIsMethodCall &&
@@ -813,8 +814,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
   if (hasBuiltinArrayAccessName || hasPublishedVectorAccessName) {
     const bool isCollectionPairAccessName =
-        accessName == "at" || accessName == "at_ref" ||
-        accessName == "at_unsafe" || accessName == "at_unsafe_ref";
+        accessName == "at" || accessName == collection_helpers::kAtRef ||
+        accessName == "at_unsafe" || accessName == collection_helpers::kAtUnsafeRef;
     if (expr.isMethodCall && isCollectionPairAccessName && !expr.args.empty() &&
         accessName != "at" && accessName != "at_unsafe" &&
         resolveCollectionPairTypeInfo(
@@ -864,7 +865,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
     if ((isExplicitDirectSoaAccessCall(expr) ||
          (expr.isMethodCall &&
-          (accessName == "get" || accessName == "get_ref"))) &&
+          (accessName == "get" || accessName == collection_helpers::kGetRef))) &&
         arrayVectorTargetInfo.isSoaVector) {
       return NativeCallTailDispatchResult::NotHandled;
     }
@@ -872,16 +873,16 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         !expr.isMethodCall &&
         resolvePublishedNativeTailKeyValueHelperName(
             semanticProgram, expr, explicitHelperName) &&
-        (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
+        (explicitHelperName == "at" || explicitHelperName == collection_helpers::kAtRef ||
          explicitHelperName == "at_unsafe" ||
-         explicitHelperName == "at_unsafe_ref");
+         explicitHelperName == collection_helpers::kAtUnsafeRef);
     const bool isExplicitKeyValueAccessMethodCall =
         expr.isMethodCall &&
         resolvePublishedNativeTailKeyValueHelperName(
             semanticProgram, expr, explicitHelperName) &&
-        (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
+        (explicitHelperName == "at" || explicitHelperName == collection_helpers::kAtRef ||
          explicitHelperName == "at_unsafe" ||
-         explicitHelperName == "at_unsafe_ref");
+         explicitHelperName == collection_helpers::kAtUnsafeRef);
     const std::string explicitKeyValueAccessMethodPath =
         isCanonicalPublishedNativeTailKeyValueHelperPath(directHelperPath)
             ? directHelperPath

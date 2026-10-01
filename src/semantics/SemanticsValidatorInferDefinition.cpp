@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -20,8 +21,8 @@ bool isInferDefinitionCanonicalKeyValueAccessHelperPath(std::string_view path) {
   }
   const std::string_view helperName =
       resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  return helperName == "at" || helperName == collection_helpers::kAtRef ||
+         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
 }
 
 } // namespace
@@ -78,10 +79,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (!helperName.empty() && helperName.front() == '/') {
       helperName.erase(helperName.begin());
     }
-    if (helperName.empty() || helperName == "count" || helperName == "count_ref" ||
-        helperName == "get" || helperName == "get_ref" || helperName == "ref" ||
-        helperName == "ref_ref" || helperName == "to_soa" ||
-        helperName == "to_aos" || helperName == "to_aos_ref") {
+    if (helperName.empty() || helperName == "count" || helperName == collection_helpers::kCountRef ||
+        helperName == "get" || helperName == collection_helpers::kGetRef || helperName == "ref" ||
+        helperName == collection_helpers::kRefRef || helperName == "to_soa" ||
+        helperName == "to_aos" || helperName == collection_helpers::kToAosRef) {
       return false;
     }
     if (!hasVisibleSoaHelperTargetForCurrentImports(helperName)) {

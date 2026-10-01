@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include <array>
@@ -15,6 +14,7 @@
 #include <algorithm>
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -72,7 +72,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       return "/" + base;
     }
     if (isExperimentalSoaVectorTypePath(base) && args.size() == 1) {
-      return "/soa";
+      return collection_helpers::kRootedSoa;
     }
     if (base == "Buffer" && args.size() == 1) {
       return "/Buffer";
@@ -80,10 +80,10 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     if ((base == "Vector" ||
          isLegacyExperimentalVectorCompatibilityPath("/" + base)) &&
         args.size() == 1) {
-      return "/vector";
+      return collection_helpers::kRootedVector;
     }
     if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
-      return "/map";
+      return collection_helpers::kRootedMap;
     }
     return {};
   };
@@ -123,7 +123,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       (isResolvedVectorConstructorHelperPath(resolvedTarget) ||
        isResolvedVectorConstructorHelperPath(explicitTarget));
   if (matchesVectorCtorFamily) {
-    typePathOut = "/vector";
+    typePathOut = collection_helpers::kRootedVector;
     return true;
   }
   auto inferCallArgumentTypeText = [&](const Expr &arg, std::string &typeTextOut) {
@@ -170,7 +170,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       if (!validateExplicitMapTemplateArgs(target.templateArgs)) {
         return false;
       }
-      typePathOut = "/map";
+      typePathOut = collection_helpers::kRootedMap;
       return true;
     }
   }
@@ -211,7 +211,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       }
       std::string inferredVectorElemType;
       if (extractCollectionVectorElementType(inferredReturn, inferredVectorElemType)) {
-        typePathOut = "/vector";
+        typePathOut = collection_helpers::kRootedVector;
         return true;
       }
       const std::string normalizedReturnType = normalizeBindingTypeName(inferredReturn.typeName);
@@ -229,11 +229,11 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
   auto kindIt = returnKinds_.find(resolvedTarget);
   if (kindIt != returnKinds_.end()) {
     if (kindIt->second == ReturnKind::Array) {
-      typePathOut = "/array";
+      typePathOut = collection_helpers::kRootedArray;
       return true;
     }
     if (kindIt->second == ReturnKind::String) {
-      typePathOut = "/string";
+      typePathOut = collection_helpers::kRootedString;
       return true;
     }
   }
@@ -364,9 +364,9 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     return true;
   };
   auto isRootKeyValueAliasPath = [](const std::string &path) {
-    return path == "/map" ||
-           path.rfind("/map__t", 0) == 0 ||
-           path.rfind("/map__ov", 0) == 0;
+    return path == collection_helpers::kRootedMap ||
+           path.rfind(collection_helpers::kRootedMapTemplateSpecialized, 0) == 0 ||
+           path.rfind(collection_helpers::kRootedMapOverloadSpecialized, 0) == 0;
   };
 
   std::string targetTypeText;

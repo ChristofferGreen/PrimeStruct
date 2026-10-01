@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 #include <string_view>
@@ -95,7 +96,7 @@ bool SemanticsValidator::validateExprNamedArguments(
       canonicalizeLegacySoaToAosHelperPath(resolvedWithoutSpecialization);
   const bool resolvedIsSoaAccess =
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
-      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get_ref") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, collection_helpers::kGetRef) ||
       isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical) ||
       isExperimentalSoaGetLikeHelperPath(resolvedWithoutSpecialization) ||
       isExperimentalSoaRefLikeHelperPath(resolvedWithoutSpecialization);
@@ -104,15 +105,15 @@ bool SemanticsValidator::validateExprNamedArguments(
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
                                        "to_aos") ||
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
-                                       "to_aos_ref") ||
+                                       collection_helpers::kToAosRef) ||
       isExperimentalSoaVectorConversionFamilyPath(resolvedWithoutSpecialization);
   const bool shouldValidateDirectSoaSurface =
-      ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "get_ref") ||
-        isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref")) &&
+      ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, collection_helpers::kGetRef) ||
+        isSimpleCallName(expr, "ref") || isSimpleCallName(expr, collection_helpers::kRefRef)) &&
        resolvedIsSoaAccess) ||
       ((isSimpleCallName(expr, "to_soa") ||
         isSimpleCallName(expr, "to_aos") ||
-        isSimpleCallName(expr, "to_aos_ref")) &&
+        isSimpleCallName(expr, collection_helpers::kToAosRef)) &&
        resolvedIsSoaConversion);
   if (defMap_.find(resolved) == defMap_.end() || resolvedMethod ||
       shouldValidateDirectSoaSurface) {
@@ -161,7 +162,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       canonicalizeLegacySoaRefHelperPath(resolvedWithoutSpecialization);
   const bool resolvedIsSoaAccess =
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
-      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get_ref") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, collection_helpers::kGetRef) ||
       isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical) ||
       isExperimentalSoaGetLikeHelperPath(resolvedWithoutSpecialization) ||
       isExperimentalSoaRefLikeHelperPath(resolvedWithoutSpecialization);
@@ -229,14 +230,14 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     return isLegacyCountLikeBuiltinCall("count");
   };
   auto isLegacyCountRefBuiltinCall = [&]() {
-    return isLegacyCountLikeBuiltinCall("count_ref");
+    return isLegacyCountLikeBuiltinCall(collection_helpers::kCountRef);
   };
   auto isLegacyCapacityBuiltinCall = [&]() {
     return isLegacyCountLikeBuiltinCall("capacity");
   };
   auto isLegacySoaAccessBuiltinCall = [&]() {
-    if (!(expr.name == "get" || expr.name == "get_ref" ||
-          expr.name == "ref" || expr.name == "ref_ref")) {
+    if (!(expr.name == "get" || expr.name == collection_helpers::kGetRef ||
+          expr.name == "ref" || expr.name == collection_helpers::kRefRef)) {
       return false;
     }
     if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
@@ -278,8 +279,8 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
         }
       }
     }
-    return ((expr.name == "get" || expr.name == "get_ref" ||
-             expr.name == "ref" || expr.name == "ref_ref") &&
+    return ((expr.name == "get" || expr.name == collection_helpers::kGetRef ||
+             expr.name == "ref" || expr.name == collection_helpers::kRefRef) &&
             resolvedIsSoaAccess) ||
            defMap_.find(resolved) == defMap_.end();
   };
@@ -379,7 +380,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       isLegacyCapacityBuiltinCall() ||
       isLegacySoaAccessBuiltinCall() || isLegacyVectorHelperBuiltin ||
       isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
-      isSimpleCallName(expr, "to_aos_ref") ||
+      isSimpleCallName(expr, collection_helpers::kToAosRef) ||
       isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
       isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
       isSimpleCallName(expr, "buffer_load") ||

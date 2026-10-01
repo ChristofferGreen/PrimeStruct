@@ -11,6 +11,7 @@
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 
@@ -23,23 +24,23 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
     return calleePath == path ||
            calleePath.rfind(std::string(path) + "__", 0) == 0;
   };
-  return matchesPath("/std/collections/soa/count") ||
-         matchesPath("/std/collections/soa/count") ||
-         matchesPath("/std/collections/soa/count_ref") ||
-         matchesPath("/std/collections/soa/get") ||
-         matchesPath("/std/collections/soa/get") ||
-         matchesPath("/std/collections/soa/get_ref") ||
-         matchesPath("/std/collections/soa/get_ref") ||
-         matchesPath("/std/collections/soa/ref") ||
-         matchesPath("/std/collections/soa/ref") ||
-         matchesPath("/std/collections/soa/ref_ref") ||
-         matchesPath("/std/collections/soa/ref_ref") ||
-         matchesPath("/std/collections/soa/push") ||
-         matchesPath("/std/collections/soa/reserve") ||
-         matchesPath("/std/collections/soa/field_view") ||
-         matchesPath("/std/collections/soa/to_aos") ||
-         matchesPath("/std/collections/soa/to_aos") ||
-         matchesPath("/std/collections/soa/to_aos_ref");
+  return matchesPath(collection_helpers::kCanonicalSoaCount) ||
+         matchesPath(collection_helpers::kCanonicalSoaCount) ||
+         matchesPath(collection_helpers::kCanonicalSoaCountRef) ||
+         matchesPath(collection_helpers::kCanonicalSoaGet) ||
+         matchesPath(collection_helpers::kCanonicalSoaGet) ||
+         matchesPath(collection_helpers::kCanonicalSoaGetRef) ||
+         matchesPath(collection_helpers::kCanonicalSoaGetRef) ||
+         matchesPath(collection_helpers::kCanonicalSoaRef) ||
+         matchesPath(collection_helpers::kCanonicalSoaRef) ||
+         matchesPath(collection_helpers::kCanonicalSoaRefRef) ||
+         matchesPath(collection_helpers::kCanonicalSoaRefRef) ||
+         matchesPath(collection_helpers::kCanonicalSoaPush) ||
+         matchesPath(collection_helpers::kCanonicalSoaReserve) ||
+         matchesPath(collection_helpers::kCanonicalSoaFieldView) ||
+         matchesPath(collection_helpers::kCanonicalSoaToAos) ||
+         matchesPath(collection_helpers::kCanonicalSoaToAos) ||
+         matchesPath(collection_helpers::kCanonicalSoaToAosRef);
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {

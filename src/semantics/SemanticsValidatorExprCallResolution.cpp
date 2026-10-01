@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
 #include <cctype>
@@ -360,15 +361,15 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     const std::string canonicalToAosPath =
         canonicalizeLegacySoaToAosHelperPath(strippedPath);
     if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos") ||
-        isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos_ref")) {
+        isCanonicalStdlibSoaHelperPath(canonicalToAosPath, collection_helpers::kToAosRef)) {
       return canonicalToAosPath;
     }
     const std::string canonicalGetPath =
         canonicalizeLegacySoaGetHelperPath(strippedPath);
     if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, "count") ||
-        isCanonicalStdlibSoaHelperPath(canonicalGetPath, "count_ref") ||
+        isCanonicalStdlibSoaHelperPath(canonicalGetPath, collection_helpers::kCountRef) ||
         isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get") ||
-        isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get_ref")) {
+        isCanonicalStdlibSoaHelperPath(canonicalGetPath, collection_helpers::kGetRef)) {
       return canonicalGetPath;
     }
     const std::string canonicalRefPath =
@@ -448,7 +449,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       }
       const std::string collectionPath =
           inferMethodCollectionTypePathFromTypeText(collectionTypeText);
-      if ((collectionPath == "/array" || collectionPath == "/string") &&
+      if ((collectionPath == collection_helpers::kRootedArray || collectionPath == collection_helpers::kRootedString) &&
           (expr.name == "count" || expr.name == "capacity" ||
            expr.name == "at" || expr.name == "at_unsafe")) {
         const std::string collectionHelperPath = collectionPath + "/" + expr.name;
@@ -551,16 +552,16 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       }
       if (canonicalCountPath == samePathSoaHelperTargetPath("count")) {
         canonicalCountPath = compatibilitySoaHelperTargetPath("count");
-      } else if (canonicalCountPath == samePathSoaHelperTargetPath("count_ref")) {
-        canonicalCountPath = compatibilitySoaHelperTargetPath("count_ref");
+      } else if (canonicalCountPath == samePathSoaHelperTargetPath(collection_helpers::kCountRef)) {
+        canonicalCountPath = compatibilitySoaHelperTargetPath(collection_helpers::kCountRef);
       }
       if (isCanonicalStdlibSoaHelperPath(canonicalCountPath, "count") &&
           hasDefinitionFamilyPath(samePathSoaHelperTargetPath("count"))) {
         return samePathSoaHelperTargetPath("count");
       }
-      if (isCanonicalStdlibSoaHelperPath(canonicalCountPath, "count_ref") &&
-          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("count_ref"))) {
-        return samePathSoaHelperTargetPath("count_ref");
+      if (isCanonicalStdlibSoaHelperPath(canonicalCountPath, collection_helpers::kCountRef) &&
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath(collection_helpers::kCountRef))) {
+        return samePathSoaHelperTargetPath(collection_helpers::kCountRef);
       }
       const std::string canonicalGetPath =
           canonicalizeLegacySoaGetHelperPath(candidatePath);
@@ -568,9 +569,9 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
           hasDefinitionFamilyPath(samePathSoaHelperTargetPath("get"))) {
         return samePathSoaHelperTargetPath("get");
       }
-      if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get_ref") &&
-          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("get_ref"))) {
-        return samePathSoaHelperTargetPath("get_ref");
+      if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, collection_helpers::kGetRef) &&
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath(collection_helpers::kGetRef))) {
+        return samePathSoaHelperTargetPath(collection_helpers::kGetRef);
       }
       const std::string canonicalRefPath =
           canonicalizeLegacySoaRefHelperPath(candidatePath);
@@ -578,9 +579,9 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
           hasDefinitionFamilyPath(samePathSoaHelperTargetPath("ref"))) {
         return samePathSoaHelperTargetPath("ref");
       }
-      if (isCanonicalStdlibSoaHelperPath(canonicalRefPath, "ref_ref") &&
-          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("ref_ref"))) {
-        return samePathSoaHelperTargetPath("ref_ref");
+      if (isCanonicalStdlibSoaHelperPath(canonicalRefPath, collection_helpers::kRefRef) &&
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath(collection_helpers::kRefRef))) {
+        return samePathSoaHelperTargetPath(collection_helpers::kRefRef);
       }
       const std::string canonicalToAosPath =
           canonicalizeLegacySoaToAosHelperPath(candidatePath);
@@ -588,7 +589,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
           hasDefinitionFamilyPath("/to_aos")) {
         return "/to_aos";
       }
-      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos_ref") &&
+      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, collection_helpers::kToAosRef) &&
           hasDefinitionFamilyPath("/to_aos_ref")) {
         return "/to_aos_ref";
       }

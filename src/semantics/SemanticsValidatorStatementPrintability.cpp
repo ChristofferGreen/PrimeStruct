@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <functional>
 #include <optional>
@@ -107,9 +108,9 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
     if (target.kind == Expr::Kind::Call) {
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          (collectionTypePath == "/array" || collectionTypePath == "/vector")) {
+          (collectionTypePath == collection_helpers::kRootedArray || collectionTypePath == collection_helpers::kRootedVector)) {
         std::vector<std::string> templateArgs;
-        const std::string expectedBase = collectionTypePath == "/array" ? "array" : "vector";
+        const std::string expectedBase = collectionTypePath == collection_helpers::kRootedArray ? "array" : "vector";
         if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, templateArgs) &&
             templateArgs.size() == 1) {
           elemTypeOut = templateArgs.front();

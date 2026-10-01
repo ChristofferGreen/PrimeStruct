@@ -1,6 +1,6 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
 #include <vector>
@@ -43,7 +43,7 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
-  if (receiverPath == "/vector" || receiverPath == "/array") {
+  if (receiverPath == collection_helpers::kRootedVector || receiverPath == collection_helpers::kRootedArray) {
     const std::string arrayPrefix = "array/";
     const std::string stdVectorPrefix =
         unrootedCanonicalVectorCompatibilityPrefixOrFallback() + "/";
@@ -57,7 +57,7 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(
       return methodName.substr(stdVectorPrefix.size());
     }
   }
-  if (receiverPath == "/map") {
+  if (receiverPath == collection_helpers::kRootedMap) {
     const std::string stdKeyValueHelperPrefix =
         unrootedCanonicalKeyValueHelperPrefixLocal();
     if (!stdKeyValueHelperPrefix.empty() &&
@@ -71,21 +71,21 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(
 std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForReceiver(
     const std::string &receiverPath,
     const std::string &methodName) const {
-  if (receiverPath == "/vector") {
+  if (receiverPath == collection_helpers::kRootedVector) {
     if (methodName == "count") {
       return {canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
     }
     return {canonicalVectorCompatibilityHelperPathOrFallback(methodName),
-            "/array/" + methodName};
+            collection_helpers::kRootedArrayPrefix + methodName};
   }
-  if (receiverPath == "/array") {
+  if (receiverPath == collection_helpers::kRootedArray) {
     if (methodName == "count") {
-      return {"/array/" + methodName};
+      return {collection_helpers::kRootedArrayPrefix + methodName};
     }
-    return {"/array/" + methodName,
+    return {collection_helpers::kRootedArrayPrefix + methodName,
             canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
   }
-  if (receiverPath == "/map") {
+  if (receiverPath == collection_helpers::kRootedMap) {
     return {canonicalKeyValueHelperPathLocal(methodName)};
   }
   return {receiverPath + "/" + methodName};
@@ -98,8 +98,8 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
            suffix != "remove_at" && suffix != "remove_swap";
   };
   std::string preferred = path;
-  if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/array/").size());
+  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && defMap_.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias =
           canonicalVectorCompatibilityHelperPathOrFallback(suffix);
@@ -145,8 +145,8 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
 
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind("/array/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
     }
@@ -157,13 +157,13 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
 std::string SemanticsValidator::effectFreeCollectionPathFromType(const std::string &typeName,
                                                                  const std::string &typeTemplateArg) const {
   if (typeName == "string") {
-    return "/string";
+    return collection_helpers::kRootedString;
   }
   if ((typeName == "array" || typeName == "vector" || typeName == "soa") && !typeTemplateArg.empty()) {
     return "/" + typeName;
   }
   if (isKeyValueSurfaceTypeName(typeName) && !typeTemplateArg.empty()) {
-    return "/map";
+    return collection_helpers::kRootedMap;
   }
   std::string base;
   std::string argsText;
@@ -178,7 +178,7 @@ std::string SemanticsValidator::effectFreeCollectionPathFromType(const std::stri
     return "/" + base;
   }
   if (isKeyValueSurfaceTypeName(base) && args.size() == 2) {
-    return "/map";
+    return collection_helpers::kRootedMap;
   }
   if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
     return effectFreeCollectionPathFromType(normalizeBindingTypeName(args.front()), "");
@@ -200,14 +200,14 @@ std::string SemanticsValidator::effectFreeCollectionPathFromCallExpr(const Expr 
   std::string builtinCollection;
   if (getBuiltinCollectionName(callExpr, builtinCollection)) {
     if (builtinCollection == "string") {
-      return "/string";
+      return collection_helpers::kRootedString;
     }
     if ((builtinCollection == "array" || builtinCollection == "vector" || builtinCollection == "soa") &&
         callExpr.templateArgs.size() == 1) {
       return "/" + builtinCollection;
     }
     if (builtinCollection == "map" && callExpr.templateArgs.size() == 2) {
-      return "/map";
+      return collection_helpers::kRootedMap;
     }
   }
 
@@ -272,11 +272,11 @@ std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(const Expr &cal
     const Expr &receiver = callExpr.args[index];
     if (receiver.kind == Expr::Kind::Name) {
       auto it = ctx.locals.find(receiver.name);
-      if (it != ctx.locals.end() && effectFreeCollectionPathFromBinding(it->second) == "/map") {
+      if (it != ctx.locals.end() && effectFreeCollectionPathFromBinding(it->second) == collection_helpers::kRootedMap) {
         return true;
       }
     }
-    return effectFreeCollectionPathFromCallExpr(receiver) == "/map";
+    return effectFreeCollectionPathFromCallExpr(receiver) == collection_helpers::kRootedMap;
   };
   if (hasNamedArguments(callExpr.argNames)) {
     bool foundValues = false;

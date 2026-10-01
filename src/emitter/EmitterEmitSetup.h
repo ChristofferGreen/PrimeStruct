@@ -1,3 +1,4 @@
+#include "primec/support/CollectionHelperNames.h"
 std::string Emitter::emitCpp(const Program &program, const std::string &entryPath) const {
   std::unordered_map<std::string, std::string> nameMap;
   std::unordered_map<std::string, std::string> structTypeMap;
@@ -253,7 +254,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         return "/" + base;
       }
       if (base == "map" && args.size() == 2) {
-        return "/map";
+        return primec::collection_helpers::kRootedMap;
       }
       if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
         currentType = normalizeBindingTypeName(args.front());

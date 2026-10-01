@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -185,7 +186,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
            isPointerLikeBinding(inferredReturn);
   };
   auto isRootKeyValueAliasPath = [](const std::string &path) {
-    return path == "/map" || path.rfind("/map__", 0) == 0;
+    return path == collection_helpers::kRootedMap || path.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
   };
   auto explicitCallPath = [&](const Expr &candidate) {
     if (candidate.name.empty() || candidate.name.front() == '/') {

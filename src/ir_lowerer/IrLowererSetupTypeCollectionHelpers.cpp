@@ -9,6 +9,7 @@
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -327,8 +328,8 @@ std::string preferredContainerErrorHelperTarget(
     const std::unordered_map<std::string, const Definition *> &defMap) {
   auto hasPath = [&](std::string_view path) { return defMap.find(std::string(path)) != defMap.end(); };
   if (helperName == "why") {
-    if (hasPath("/std/collections/ContainerError/why")) {
-      return "/std/collections/ContainerError/why";
+    if (hasPath(collection_helpers::kCanonicalContainerErrorTypeWhy)) {
+      return collection_helpers::kCanonicalContainerErrorTypeWhy;
     }
     if (hasPath("/ContainerError/why")) {
       return "/ContainerError/why";
@@ -336,26 +337,26 @@ std::string preferredContainerErrorHelperTarget(
     return "";
   }
   if (helperName == "status") {
-    if (hasPath("/std/collections/ContainerError/status")) {
-      return "/std/collections/ContainerError/status";
+    if (hasPath(collection_helpers::kCanonicalContainerErrorTypeStatus)) {
+      return collection_helpers::kCanonicalContainerErrorTypeStatus;
     }
     if (hasPath("/ContainerError/status")) {
       return "/ContainerError/status";
     }
-    if (hasPath("/std/collections/containerErrorStatus")) {
-      return "/std/collections/containerErrorStatus";
+    if (hasPath(collection_helpers::kCanonicalContainerErrorStatus)) {
+      return collection_helpers::kCanonicalContainerErrorStatus;
     }
     return "";
   }
   if (helperName == "result") {
-    if (hasPath("/std/collections/ContainerError/result")) {
-      return "/std/collections/ContainerError/result";
+    if (hasPath(collection_helpers::kCanonicalContainerErrorTypeResult)) {
+      return collection_helpers::kCanonicalContainerErrorTypeResult;
     }
     if (hasPath("/ContainerError/result")) {
       return "/ContainerError/result";
     }
-    if (hasPath("/std/collections/containerErrorResult")) {
-      return "/std/collections/containerErrorResult";
+    if (hasPath(collection_helpers::kCanonicalContainerErrorResult)) {
+      return collection_helpers::kCanonicalContainerErrorResult;
     }
     return "";
   }
@@ -439,14 +440,14 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     if (helperNameOut == "soaVectorCount") {
       helperNameOut = "count";
     } else if (helperNameOut == "soaVectorCountRef") {
-      helperNameOut = "count_ref";
+      helperNameOut = collection_helpers::kCountRef;
     }
     return helperNameOut == "count" ||
-           helperNameOut == "count_ref" ||
+           helperNameOut == collection_helpers::kCountRef ||
            helperNameOut == "get" ||
-           helperNameOut == "get_ref" ||
+           helperNameOut == collection_helpers::kGetRef ||
            helperNameOut == "ref" ||
-           helperNameOut == "ref_ref";
+           helperNameOut == collection_helpers::kRefRef;
   }
   if (normalized.rfind(experimentalSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
@@ -456,7 +457,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
       return true;
     }
     if (helperNameOut == "soaVectorCountRef") {
-      helperNameOut = "count_ref";
+      helperNameOut = collection_helpers::kCountRef;
       return true;
     }
     return false;
@@ -469,7 +470,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
       return true;
     }
     if (helperNameOut == "soaVectorCountRef") {
-      helperNameOut = "count_ref";
+      helperNameOut = collection_helpers::kCountRef;
       return true;
     }
     return false;
@@ -517,7 +518,7 @@ std::string canonicalKeyValueHelperPath(std::string_view memberName,
                                         bool leadingSlash) {
   const auto *metadata =
       keyValueHelperSurfaceMetadata();
-  std::string path = metadata == nullptr ? "/std/collections/map"
+  std::string path = metadata == nullptr ? collection_helpers::kCanonicalMap
                                          : std::string(metadata->canonicalPath);
   path += "/";
   path += std::string(memberName);
@@ -530,7 +531,7 @@ std::string canonicalKeyValueHelperPath(std::string_view memberName,
 std::string canonicalKeyValueConstructorPath(bool leadingSlash) {
   const auto *metadata =
       keyValueConstructorSurfaceMetadata();
-  std::string path = metadata == nullptr ? "/std/collections/map/map"
+  std::string path = metadata == nullptr ? collection_helpers::kCanonicalMapMap
                                          : std::string(metadata->canonicalPath);
   if (!leadingSlash && !path.empty() && path.front() == '/') {
     path.erase(path.begin());
@@ -893,9 +894,9 @@ bool resolvePublishedStdlibSurfaceExprMemberName(const Expr &expr,
   }
 
   if (isKeyValueHelperSurfaceId(surfaceId) &&
-      normalizedPath.rfind("/std/collections/Map", 0) == 0) {
+      normalizedPath.rfind(collection_helpers::kCanonicalMapType, 0) == 0) {
     return resolvePublishedStdlibSurfaceMemberToken(
-        normalizedPath.substr(std::string("/std/collections/Map").size()),
+        normalizedPath.substr(std::string(collection_helpers::kCanonicalMapType).size()),
         surfaceId,
         memberNameOut);
   }
@@ -1111,8 +1112,8 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind("/array/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string vectorCandidate =
           stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);

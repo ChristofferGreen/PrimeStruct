@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/CollectionHelperNames.h"
 
 #include <string>
 
@@ -66,7 +67,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     std::string collectionTypePath;
     return arg.kind == Expr::Kind::Call &&
            resolveCallCollectionTypePath(arg, params, locals, collectionTypePath) &&
-           collectionTypePath == "/string";
+           collectionTypePath == collection_helpers::kRootedString;
   };
   auto isStringExpr = [&](const Expr &arg) -> bool {
     return context.isStringExpr != nullptr ? context.isStringExpr(arg)

@@ -1,15 +1,16 @@
+#include "primec/support/CollectionHelperNames.h"
   auto normalizedTypePath = [](const std::string &typePath) -> std::string {
-    if (typePath == "/array" || typePath == "array") {
-      return "/array";
+    if (typePath == primec::collection_helpers::kRootedArray || typePath == "array") {
+      return primec::collection_helpers::kRootedArray;
     }
-    if (typePath == "/vector" || typePath == "vector") {
-      return "/vector";
+    if (typePath == primec::collection_helpers::kRootedVector || typePath == "vector") {
+      return primec::collection_helpers::kRootedVector;
     }
-    if (typePath == "/map" || typePath == "map") {
-      return "/map";
+    if (typePath == primec::collection_helpers::kRootedMap || typePath == "map") {
+      return primec::collection_helpers::kRootedMap;
     }
-    if (typePath == "/string" || typePath == "string") {
-      return "/string";
+    if (typePath == primec::collection_helpers::kRootedString || typePath == "string") {
+      return primec::collection_helpers::kRootedString;
     }
     return "";
   };
@@ -138,10 +139,10 @@
         continue;
       }
       if (kindIt->second == ReturnKind::String) {
-        return "/string";
+        return primec::collection_helpers::kRootedString;
       }
       if (kindIt->second == ReturnKind::Array) {
-        return "/array";
+        return primec::collection_helpers::kRootedArray;
       }
     }
     return "";
@@ -177,13 +178,13 @@
     }
     const Expr &receiver = candidate.args[receiverIndex];
     if (receiver.kind == Expr::Kind::StringLiteral || isStringValue(receiver, localTypes)) {
-      return "/string";
+      return primec::collection_helpers::kRootedString;
     }
     if (isCollectionVectorValue(receiver, localTypes)) {
-      return "/vector";
+      return primec::collection_helpers::kRootedVector;
     }
     if (isArrayValue(receiver, localTypes)) {
-      return "/array";
+      return primec::collection_helpers::kRootedArray;
     }
     if (receiver.kind == Expr::Kind::Call) {
       std::string collectionName;
@@ -193,7 +194,7 @@
         }
       }
       const std::string receiverTypePath = resolvedTypePathForResolvedCall(resolveExprPath(receiver));
-      if (receiverTypePath == "/vector" || receiverTypePath == "/array" || receiverTypePath == "/string") {
+      if (receiverTypePath == primec::collection_helpers::kRootedVector || receiverTypePath == primec::collection_helpers::kRootedArray || receiverTypePath == primec::collection_helpers::kRootedString) {
         return receiverTypePath;
       }
     }
@@ -230,15 +231,15 @@
     }
     const Expr &receiver = candidate.args[receiverIndex];
     if (isKeyValueSurfaceValue(receiver, localTypes)) {
-      return "/map";
+      return primec::collection_helpers::kRootedMap;
     }
     if (receiver.kind == Expr::Kind::Call) {
       std::string collectionName;
       if (getBuiltinCollectionName(receiver, collectionName) && collectionName == "map") {
-        return "/map";
+        return primec::collection_helpers::kRootedMap;
       }
       const std::string receiverTypePath = resolvedTypePathForResolvedCall(resolveExprPath(receiver));
-      if (receiverTypePath == "/map") {
+      if (receiverTypePath == primec::collection_helpers::kRootedMap) {
         return receiverTypePath;
       }
     }
@@ -266,13 +267,13 @@
     }
     const Expr &receiver = candidate.args.front();
     if (receiver.kind == Expr::Kind::StringLiteral || isStringValue(receiver, localTypes)) {
-      return "/string";
+      return primec::collection_helpers::kRootedString;
     }
     if (isCollectionVectorValue(receiver, localTypes)) {
-      return "/vector";
+      return primec::collection_helpers::kRootedVector;
     }
     if (isArrayValue(receiver, localTypes)) {
-      return "/array";
+      return primec::collection_helpers::kRootedArray;
     }
     if (receiver.kind == Expr::Kind::Call) {
       std::string collectionName;
@@ -282,7 +283,7 @@
         }
       }
       const std::string receiverTypePath = resolvedTypePathForResolvedCall(resolveExprPath(receiver));
-      if (receiverTypePath == "/vector" || receiverTypePath == "/array" || receiverTypePath == "/string") {
+      if (receiverTypePath == primec::collection_helpers::kRootedVector || receiverTypePath == primec::collection_helpers::kRootedArray || receiverTypePath == primec::collection_helpers::kRootedString) {
         return receiverTypePath;
       }
     }
@@ -302,15 +303,15 @@
     }
     const Expr &receiver = candidate.args.front();
     if (isKeyValueSurfaceValue(receiver, localTypes)) {
-      return "/map";
+      return primec::collection_helpers::kRootedMap;
     }
     if (receiver.kind == Expr::Kind::Call) {
       std::string collectionName;
       if (getBuiltinCollectionName(receiver, collectionName) && collectionName == "map") {
-        return "/map";
+        return primec::collection_helpers::kRootedMap;
       }
       const std::string receiverTypePath = resolvedTypePathForResolvedCall(resolveExprPath(receiver));
-      if (receiverTypePath == "/map") {
+      if (receiverTypePath == primec::collection_helpers::kRootedMap) {
         return receiverTypePath;
       }
     }
@@ -328,16 +329,16 @@
   };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {
-      return "/string";
+      return primec::collection_helpers::kRootedString;
     }
     if (isKeyValueSurfaceValue(targetExpr, localTypes)) {
-      return "/map";
+      return primec::collection_helpers::kRootedMap;
     }
     if (isCollectionVectorValue(targetExpr, localTypes)) {
-      return "/vector";
+      return primec::collection_helpers::kRootedVector;
     }
     if (isArrayValue(targetExpr, localTypes)) {
-      return "/array";
+      return primec::collection_helpers::kRootedArray;
     }
     if (targetExpr.kind != Expr::Kind::Call) {
       return "";
@@ -361,8 +362,8 @@
           !builtinCanonicalKeyValueAccessReceiverTypePath(targetExpr).empty();
       if (shouldProbeBuiltinVectorAccessType || shouldProbeBuiltinKeyValueAccessType) {
         const std::string probedTypePath = probedTypePathForTarget(targetExpr);
-        if (probedTypePath == "/string" || probedTypePath == "/array" || probedTypePath == "/vector" ||
-            probedTypePath == "/map") {
+        if (probedTypePath == primec::collection_helpers::kRootedString || probedTypePath == primec::collection_helpers::kRootedArray || probedTypePath == primec::collection_helpers::kRootedVector ||
+            probedTypePath == primec::collection_helpers::kRootedMap) {
           return probedTypePath;
         }
         if (!probedTypePath.empty()) {
@@ -379,7 +380,7 @@
     }
     if (!builtinKeyValueAccessMethodReceiverTypePath(targetExpr).empty()) {
       const std::string probedTypePath = probedTypePathForTarget(targetExpr);
-      if (probedTypePath == "/map" || probedTypePath == "/string") {
+      if (probedTypePath == primec::collection_helpers::kRootedMap || probedTypePath == primec::collection_helpers::kRootedString) {
         return probedTypePath;
       }
       if (!probedTypePath.empty()) {
@@ -388,8 +389,8 @@
     }
     if (!builtinVectorAccessMethodReceiverTypePath(targetExpr).empty()) {
       const std::string probedTypePath = probedTypePathForTarget(targetExpr);
-      if (probedTypePath == "/string" || probedTypePath == "/array" || probedTypePath == "/vector" ||
-          probedTypePath == "/map") {
+      if (probedTypePath == primec::collection_helpers::kRootedString || probedTypePath == primec::collection_helpers::kRootedArray || probedTypePath == primec::collection_helpers::kRootedVector ||
+          probedTypePath == primec::collection_helpers::kRootedMap) {
         return probedTypePath;
       }
       if (!probedTypePath.empty()) {
@@ -404,15 +405,15 @@
     return resolvedTypePathForResolvedCall(methodPath);
   };
   auto isResolvedMapTarget = [&](const Expr &targetExpr) -> bool {
-    return resolvedTypePathForTarget(targetExpr) == "/map";
+    return resolvedTypePathForTarget(targetExpr) == primec::collection_helpers::kRootedMap;
   };
   auto isResolvedStringTarget = [&](const Expr &targetExpr) -> bool {
-    return resolvedTypePathForTarget(targetExpr) == "/string";
+    return resolvedTypePathForTarget(targetExpr) == primec::collection_helpers::kRootedString;
   };
   auto isResolvedArrayLikeTarget = [&](const Expr &targetExpr) -> bool {
     const std::string typePath = resolvedTypePathForTarget(targetExpr);
-    return typePath == "/array" || typePath == "/vector";
+    return typePath == primec::collection_helpers::kRootedArray || typePath == primec::collection_helpers::kRootedVector;
   };
   auto isResolvedVectorTarget = [&](const Expr &targetExpr) -> bool {
-    return resolvedTypePathForTarget(targetExpr) == "/vector";
+    return resolvedTypePathForTarget(targetExpr) == primec::collection_helpers::kRootedVector;
   };

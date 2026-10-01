@@ -7,6 +7,7 @@
 
 #include <string_view>
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -202,7 +203,7 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     return leaf;
   };
 
-  if (structPath.rfind("/std/collections/vector/Vector", 0) == 0) {
+  if (structPath.rfind(collection_helpers::kCanonicalVectorVectorType, 0) == 0) {
     emitStoreFalseAtOffset(4ull * IrSlotBytes);
     return;
   }
@@ -242,7 +243,7 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     return;
   }
 
-  if (structPath.rfind("/std/collections/map/MapValue", 0) == 0) {
+  if (structPath.rfind(collection_helpers::kCanonicalMapMapValueType, 0) == 0) {
     emitStoreFalseAtOffset(5ull * IrSlotBytes);
     emitStoreFalseAtOffset(10ull * IrSlotBytes);
     return;
