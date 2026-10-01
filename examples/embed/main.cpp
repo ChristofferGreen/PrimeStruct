@@ -1,5 +1,9 @@
 // Minimal C++ host embedding PrimeStruct.
 //
+//   embed_example                  built-in demo (below)
+//   embed_example script.prime ... compile and run a script file with args
+//
+// Demo steps:
 //   1. compile a script from a string,
 //   2. run it with arguments,
 //   3. save it as bytecode and run the bytecode (what an iOS app would ship),
@@ -25,8 +29,24 @@ main([array<string>] args) {
 )";
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
   primec::embed::ScriptEngine engine;
+
+  // File mode: behaves like a tiny `primevm`.
+  if (argc > 1) {
+    const primec::embed::Script file = engine.compileFile(argv[1]);
+    if (!file.valid()) {
+      std::cerr << file.diagnostics();
+      return 1;
+    }
+    const primec::embed::ScriptResult fileResult = file.run(std::vector<std::string>(argv + 2, argv + argc));
+    if (!fileResult.ok) {
+      std::cerr << fileResult.diagnostics << "\n";
+      return 1;
+    }
+    std::cout << "exit code " << fileResult.exitCode << "\n";
+    return 0;
+  }
 
   // 1. Compile.
   primec::embed::Script script = engine.compileSource("/example.prime", Source);

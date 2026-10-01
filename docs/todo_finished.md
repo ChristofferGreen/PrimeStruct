@@ -57032,3 +57032,27 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: added `Script::saveBytecode` / `Script::loadBytecode` (validated for VM, bad bytes rejected as data), split `primec_embed_runtime_lib` (VM + new `primec_ir_core_lib` = IrSerializer/IrValidation, no frontend) from `primec_embed_lib`; `PrimeStruct_embed_runtime_tests` links only the runtime lib (435 KB, zero parser/semantics/lowerer symbols) and runs fixture bytecode `tests/unit/embed/embed_fixture_bytecode.h`, which the full-library test keeps in sync. `primec --emit=ir -o` already emits loadable bytecode (verified), so no new CLI flag. Documented in docs/Embedding.md. Dependency edge found: the VM needed only support + IR core, so no wide refactor was required.
 
+
+- [x] TODO-5338: Installable `primec_embed` library, CMake package, and example host
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-packaging
+  - scope: add `primec_embed` as a single static library target bundling the
+    facade plus its subsystem libs, `install(TARGETS/EXPORT)` rules with
+    `PrimeStructConfig.cmake` so a host project can
+    `find_package(PrimeStruct)` and link `PrimeStruct::embed`, install the
+    stdlib `.prime` tree and have `ScriptEngine` locate it relative to the
+    installed prefix. Add `examples/embed/` with a minimal host C++ program
+    and its own CMakeLists consuming the installed package.
+  - acceptance:
+    - CTest case installs to a scratch prefix, configures and builds
+      `examples/embed` against it, and runs it, printing the script result.
+    - `./scripts/compile.sh --release` still passes; no change to its
+      options.
+  - stop_rule: do not alter `scripts/compile.sh`; if install-prefix stdlib
+    discovery needs a runtime option, add it to `ScriptEngine`, not the CLI.
+  - finished_at: 2026-10-01
+  - result: install/export rules for the embed libs (`PrimeStruct::embed`, `PrimeStruct::embed_runtime`), installed stdlib at share/primestruct/stdlib, `ScriptEngine::setStdlibPath` plus $PRIMESTRUCT_STDLIB/installed/source-tree discovery, `examples/embed/` (CMake consumer, full host with file mode, 198 KB runtime-only bytecode runner), CTest `PrimeStruct_embed_install_package` (install -> configure -> build -> run). compile.sh untouched.
+

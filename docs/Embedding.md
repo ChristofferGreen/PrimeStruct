@@ -10,6 +10,27 @@ Two libraries, one API (`primec/embed/Script.h`):
 The runtime-only test binary is ~435 KB (release, unstripped) and contains no
 parser, semantics, or lowerer symbols.
 
+## Using it from CMake
+
+```sh
+cmake --install build-release --prefix /opt/primestruct
+cmake -S examples/embed -B build -DCMAKE_PREFIX_PATH=/opt/primestruct
+```
+
+```cmake
+find_package(PrimeStruct REQUIRED)
+target_link_libraries(host PRIVATE PrimeStruct::embed)          # compile + run
+target_link_libraries(host PRIVATE PrimeStruct::embed_runtime)  # bytecode only
+```
+
+The install carries the stdlib at `<prefix>/share/primestruct/stdlib`. The engine
+finds it via `ScriptEngine::setStdlibPath`, then `$PRIMESTRUCT_STDLIB`, then the
+prefix baked in at configure time, then the source tree it was built from. If
+you relocate the install, call `setStdlibPath` or set the environment variable.
+`examples/embed/` has a full-compile host (`embed_example`) and a runtime-only
+host (`embed_bytecode_runner`, ~200 KB); CTest `PrimeStruct_embed_install_package`
+installs, builds and runs both against the installed package.
+
 ## Compile and run
 
 ```cpp

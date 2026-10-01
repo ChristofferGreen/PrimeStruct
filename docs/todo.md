@@ -95,7 +95,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5338 | Installable `primec_embed` library, CMake package, and example host | ready | embedding-packaging |
 | TODO-5339 | Host function binding: call C++ callbacks from script | ready | embedding-host-calls |
 | TODO-5343 | iOS-safe embed build: no process spawning, bundled stdlib, cross-compile check | ready | embedding-ios |
 | TODO-5340 | Typed entry arguments and return values across the embed boundary | blocked | embedding-values |
@@ -104,47 +103,24 @@ of sync with them.
 ### Ready Now
 
 - TODO-5343 (track: embedding-ios, surface: `src/support/ProcessRunner.cpp`, `ImportResolver`, CMake option, iOS toolchain recipe): iOS-safe build.
-- TODO-5338 (track: embedding-packaging, surface: `CMakeLists.txt` install rules, `examples/embed/`): installable library + example host.
 - TODO-5339 (track: embedding-host-calls, surface: host-call IR opcode, VM, `src/embed/`): host function binding.
 
 ### Immediate Next 10
 
-1. TODO-5338 - packaging plus a real example host proves the API from outside the repo.
-2. TODO-5339 - host calls make scripts useful (the point of embedding).
-3. TODO-5340 - typed values in/out.
-4. TODO-5341 - lifetime and reuse hardening.
-5. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
+1. TODO-5339 - host calls make scripts useful (the point of embedding).
+2. TODO-5340 - typed values in/out.
+3. TODO-5341 - lifetime and reuse hardening.
+4. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
 
 ### Priority Lanes
 
-- Embedding (top priority, user-set; must support iOS): TODO-5338 -> 5339 -> 5340 -> 5341
+- Embedding (top priority, user-set; must support iOS): TODO-5339 -> 5340 -> 5341
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10; 5338 and 5339 touch disjoint surfaces and may run in parallel; 5340 follows 5339, 5341 follows 5340.
+Run `ready` leaves in the order listed under Immediate Next 10; 5340 follows 5339, 5341 follows 5340.
 
 ### Task Blocks
-
-- [ ] TODO-5338: Installable `primec_embed` library, CMake package, and example host
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Embedding
-  - parallel_track: embedding-packaging
-  - scope: add `primec_embed` as a single static library target bundling the
-    facade plus its subsystem libs, `install(TARGETS/EXPORT)` rules with
-    `PrimeStructConfig.cmake` so a host project can
-    `find_package(PrimeStruct)` and link `PrimeStruct::embed`, install the
-    stdlib `.prime` tree and have `ScriptEngine` locate it relative to the
-    installed prefix. Add `examples/embed/` with a minimal host C++ program
-    and its own CMakeLists consuming the installed package.
-  - acceptance:
-    - CTest case installs to a scratch prefix, configures and builds
-      `examples/embed` against it, and runs it, printing the script result.
-    - `./scripts/compile.sh --release` still passes; no change to its
-      options.
-  - stop_rule: do not alter `scripts/compile.sh`; if install-prefix stdlib
-    discovery needs a runtime option, add it to `ScriptEngine`, not the CLI.
 
 - [ ] TODO-5339: Host function binding - call C++ callbacks from script
   - owner: ai

@@ -610,23 +610,31 @@ set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES
 )
 
 add_library(primec_support_lib ${PRIMESTRUCT_SUPPORT_SOURCES})
-target_include_directories(primec_support_lib PUBLIC include)
+target_include_directories(primec_support_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 primestructEnableWarnings(primec_support_lib)
 
 add_library(primec_frontend_lib ${PRIMESTRUCT_FRONTEND_SOURCES})
-target_include_directories(primec_frontend_lib PUBLIC include)
+target_include_directories(primec_frontend_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)
 primestructEnableWarnings(primec_frontend_lib)
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.
 add_library(primec_ir_core_lib src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
-target_include_directories(primec_ir_core_lib PUBLIC include)
+target_include_directories(primec_ir_core_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_link_libraries(primec_ir_core_lib PUBLIC primec_support_lib)
 primestructEnableWarnings(primec_ir_core_lib)
 
 add_library(primec_runtime_lib ${PRIMESTRUCT_RUNTIME_SOURCES})
-target_include_directories(primec_runtime_lib PUBLIC include)
+target_include_directories(primec_runtime_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_link_libraries(primec_runtime_lib PUBLIC primec_ir_core_lib primec_support_lib)
 primestructEnableWarnings(primec_runtime_lib)
 
@@ -640,7 +648,9 @@ target_include_directories(primec_codegen_lib INTERFACE include)
 target_link_libraries(primec_codegen_lib INTERFACE primec_backend_emitters_lib)
 
 add_library(primec_ir_lib ${PRIMESTRUCT_IR_SOURCES})
-target_include_directories(primec_ir_lib PUBLIC include)
+target_include_directories(primec_ir_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_link_libraries(primec_ir_lib PUBLIC primec_ir_core_lib primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_ir_lib)
 
@@ -648,15 +658,54 @@ primestructEnableWarnings(primec_ir_lib)
 # bytecode and links only the VM plus IR (de)serialization/validation - no
 # parser, semantics, or lowerer - which is the iOS-friendly path.
 add_library(primec_embed_runtime_lib src/embed/Script.cpp)
-target_include_directories(primec_embed_runtime_lib PUBLIC include)
+target_include_directories(primec_embed_runtime_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_link_libraries(primec_embed_runtime_lib PUBLIC primec_runtime_lib primec_ir_core_lib)
 primestructEnableWarnings(primec_embed_runtime_lib)
 
 # Full embedding facade: also compiles source text/files.
 add_library(primec_embed_lib src/embed/ScriptEngine.cpp)
-target_include_directories(primec_embed_lib PUBLIC include)
+target_include_directories(primec_embed_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_link_libraries(primec_embed_lib PUBLIC primec_embed_runtime_lib primec_ir_lib)
+# Where ScriptEngine looks for the stdlib when the caller does not say: the
+# installed copy first, then the source tree this library was built from.
+target_compile_definitions(primec_embed_lib PRIVATE
+  PRIMESTRUCT_EMBED_INSTALLED_STDLIB_DIR="${CMAKE_INSTALL_PREFIX}/share/primestruct/stdlib"
+  PRIMESTRUCT_EMBED_SOURCE_STDLIB_DIR="${CMAKE_CURRENT_SOURCE_DIR}/stdlib")
 primestructEnableWarnings(primec_embed_lib)
+
+# Install rules + CMake package so a host project can
+#   find_package(PrimeStruct REQUIRED)
+#   target_link_libraries(host PRIVATE PrimeStruct::embed)         # compile + run
+#   target_link_libraries(host PRIVATE PrimeStruct::embed_runtime) # bytecode only
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+install(TARGETS primec_support_lib primec_frontend_lib primec_ir_core_lib primec_ir_lib
+                primec_runtime_lib primec_embed_runtime_lib primec_embed_lib
+        EXPORT PrimeStructTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(DIRECTORY include/primec/embed DESTINATION include/primec FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY stdlib/ DESTINATION share/primestruct/stdlib)
+install(EXPORT PrimeStructTargets
+        NAMESPACE PrimeStruct::
+        FILE PrimeStructTargets.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/PrimeStruct)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/PrimeStructConfig.cmake" [=[
+include("${CMAKE_CURRENT_LIST_DIR}/PrimeStructTargets.cmake")
+if(NOT TARGET PrimeStruct::embed)
+  add_library(PrimeStruct::embed INTERFACE IMPORTED)
+  set_target_properties(PrimeStruct::embed PROPERTIES INTERFACE_LINK_LIBRARIES PrimeStruct::primec_embed_lib)
+endif()
+if(NOT TARGET PrimeStruct::embed_runtime)
+  add_library(PrimeStruct::embed_runtime INTERFACE IMPORTED)
+  set_target_properties(PrimeStruct::embed_runtime PROPERTIES INTERFACE_LINK_LIBRARIES PrimeStruct::primec_embed_runtime_lib)
+endif()
+]=])
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/PrimeStructConfig.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/PrimeStruct)
 
 add_library(primec_backend_registry_lib ${PRIMESTRUCT_BACKEND_REGISTRY_SOURCES})
 target_include_directories(primec_backend_registry_lib PUBLIC include)
@@ -838,6 +887,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_threads
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+
+  # Installs to a scratch prefix and builds/runs examples/embed against the
+  # installed package (TODO-5338).
+  add_test(
+    NAME PrimeStruct_embed_install_package
+    COMMAND ${CMAKE_COMMAND}
+            -DBUILD_DIR=${CMAKE_BINARY_DIR}
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -DPRIMEC=$<TARGET_FILE:primec>
+            -DWORK_DIR=${CMAKE_BINARY_DIR}/embed_package_test
+            -P ${CMAKE_SOURCE_DIR}/cmake/EmbedPackageTest.cmake
+  )
+  set_tests_properties(PrimeStruct_embed_install_package
+                       PROPERTIES TIMEOUT 600 RESOURCE_LOCK embed_package_test)
 
   # Links only the runtime-only embed library: proves precompiled bytecode runs
   # without any compiler code in the binary.
