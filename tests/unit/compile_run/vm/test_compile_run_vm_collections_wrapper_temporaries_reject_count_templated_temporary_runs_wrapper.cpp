@@ -85,7 +85,7 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)
 }
 
@@ -100,11 +100,11 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_index_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
-  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
-  // imported here; respell with /std/collections/map/map<K, V>(...).
+  // TODO-5333: indexing a canonical map<K, V> temporary hits a MapValue/Vector mismatch in VM lowering.
+  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
+  // the diagnostic below is the current result, not the intended behavior.
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary syntax parity") {
@@ -118,7 +118,7 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)
 }
 
@@ -141,11 +141,11 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
-  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
-  // imported here; respell with /std/collections/map/map<K, V>(...).
+  // TODO-5334: canonical map<K, V> temporary lookup passes a builtin vector to the stdlib vector at.
+  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
+  // the diagnostic below is the current result, not the intended behavior.
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: mapSingle") != std::string::npos);
+  CHECK(readFile(outPath).find("argument type mismatch for /std/collections/vector/at parameter values") != std::string::npos);
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary unsafe parity") {
@@ -196,7 +196,7 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)
 }
 
@@ -217,11 +217,11 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_count_capacity_parity_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
-  // TODO-5326: this canonical map<K, V> source names mapSingle, which only
-  // exists as the public Map<K, V> wrapper constructor (TODO-4751) and is not
-  // imported here; respell with /std/collections/map/map<K, V>(...).
+  // TODO-5331: templated count on a canonical map<K, V> temporary fails its parameter type check.
+  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
+  // the diagnostic below is the current result, not the intended behavior.
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count") != std::string::npos);
 }
 
 

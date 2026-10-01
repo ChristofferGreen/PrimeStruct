@@ -103,7 +103,11 @@ of sync with them.
 | TODO-5328 | Keep the Result type for `tryAt` on a block-inferred wrapper call receiver | ready | inferred-call-receiver-try |
 | TODO-5329 | Resolve calls inside an `[auto]`-parameter `/Type/method` correctly | ready | auto-param-method-resolution |
 | TODO-5330 | Decide whether allocating wrapper constructors may be parameter defaults | ready | wrapper-default-parameters |
-| TODO-5326 | Restore canonical `map<K, V>` wrapper-temporary compile-run pins | ready | canonical-map-wrapper-temporaries |
+| TODO-5331 | Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>` | ready | canonical-map-count-temporaries |
+| TODO-5332 | Resolve method-style `.at(...)` on a builtin `map<K, V>` temporary | ready | canonical-map-method-at |
+| TODO-5333 | Index a builtin `map<K, V>` temporary | ready | canonical-map-index-temporary |
+| TODO-5334 | Fix the vector `at` argument mismatch inside canonical map temporary lookup | ready | canonical-map-temporary-lookup-vector |
+| TODO-5335 | Reject a value-type mismatch in `at<K, V>` on a builtin `map<K, V>` temporary | blocked | canonical-map-at-value-mismatch |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
@@ -113,9 +117,12 @@ of sync with them.
 - TODO-5328 (track: inferred-call-receiver-try, surface: semantics `try` Result inference for `return<auto>` wrapper calls): keep the `Result` type for `tryAt` on an inferred wrapper call receiver.
 - TODO-5329 (track: auto-param-method-resolution, surface: lowering of `[auto]`-parameter `/Type/method` bodies): stop resolving `print_line` as `/Holder/print_line`.
 - TODO-5330 (track: wrapper-default-parameters, surface: parameter-default purity rule and its spec note): decide on allocating wrapper constructors as defaults.
-- TODO-5326 (track: canonical-map-wrapper-temporaries, surface: `tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_*.cpp` canonical-map cases): restore the canonical `map<K, V>` wrapper-temporary pins.
+- TODO-5331 (track: canonical-map-count-temporaries, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`.
+- TODO-5332 (track: canonical-map-method-at, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): resolve method-style `.at(...)` on a builtin `map<K, V>` temporary.
+- TODO-5333 (track: canonical-map-index-temporary, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): index a builtin `map<K, V>` temporary.
+- TODO-5334 (track: canonical-map-temporary-lookup-vector, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): fix the vector `at` argument mismatch inside canonical map temporary lookup.
 
-TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325 (closed 2026-10-01; its unrunnable shapes became TODO-5327..5330)/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325 (closed 2026-10-01; its unrunnable shapes became TODO-5327..5330)/5326 (closed 2026-10-01; its canonical-map gaps became TODO-5331..5335) were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -347,39 +354,75 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
 
-- [ ] TODO-5326: Restore canonical `map<K, V>` wrapper-temporary compile-run pins
+- [ ] TODO-5331: Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`
   - owner: ai
   - status: ready
-  - created_at: 2026-09-29
-  - phase: Canonical map follow-up (split from TODO-4751)
-  - parallel_track: canonical-map-wrapper-temporaries
+  - created_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-count-temporaries
   - depends_on: (none)
-  - scope: several `primestruct.compile.run.vm.collections` cases build a
-    lowercase `map<K, V>` with a `mapSingle<K, V>(key, value)` that never
-    existed for canonical maps (only `/std/collections/*` is imported), so
-    they stay pinned to "unknown call target: mapSingle" with `TODO-4741`
-    comments. With the canonical `/std/collections/map/map<K, V>(key,
-    value)` spelled out they hit separate canonical-map gaps: "runs vm
-    templated stdlib return wrapper temporaries in expressions" and the
-    method-arity rejects ("unknown call target: /map/at"), "runs vm with
-    templated stdlib wrapper temporary call forms" and "... count
-    capacity parity" ("argument type mismatch for
-    /std/collections/map/count" on a templated temporary), "... index
-    forms" (VM "struct parameter type mismatch" MapValue vs Vector),
-    "... syntax parity" (vector `at` argument mismatch inside
-    `map.prime`) in
-    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_*`
-    files. Several `rejects vm templated stdlib ... mismatch` cases in
-    `test_compile_run_vm_collections_wrapper_temporaries_templated.cpp`
-    only check exit code 2, which the unknown `mapSingle` also produces
-    (one value-mismatch case would run and exit 4 once respelled).
+  - scope: `/std/collections/map/count<string, i32>(wrapMap<string, i32>(...))` where `wrapMap` returns a builtin `map<K, V>` built with `/std/collections/map/map<K, V>(key, value)` fails with "argument type mismatch for /std/collections/map/count... parameter entries: expected .../MapValue__t... got /map". Pinned by "runs vm with templated stdlib wrapper temporary call forms", "...count capacity parity" and the `count key/value mismatch` rejects in `test_compile_run_vm_collections_wrapper_temporaries_*.cpp`.
   - acceptance:
-    - each listed case uses the canonical constructor and pins its real
-      runtime result or specific diagnostic (checking stderr, not only
-      exit code 2).
+    - the canonical count call and `.count()` method run on the temporary (vm) and the pins move to the real result; the key/value mismatch rejects check their intended mismatch diagnostics.
     - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: split any underlying canonical-map lowering bug into its
-    own leaf instead of fixing it here.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+
+- [ ] TODO-5332: Resolve method-style `.at(...)` on a builtin `map<K, V>` temporary
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-method-at
+  - depends_on: (none)
+  - scope: `wrapMap<string, i32>(...).at("only"raw_utf8)` (and `.at_unsafe`) on a builtin `map<K, V>` temporary fails with "unknown call target: /map/at". Pinned by "runs vm templated stdlib return wrapper temporaries in expressions", the `method arity/missing key` rejects and the unsafe-parity reject.
+  - acceptance:
+    - method-style `at`/`at_unsafe` run on the temporary and the pins move to real results or intended arity diagnostics.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+
+- [ ] TODO-5333: Index a builtin `map<K, V>` temporary
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-index-temporary
+  - depends_on: (none)
+  - scope: `wrapMap<string, i32>(...)["only"raw_utf8]` fails VM lowering with "struct parameter type mismatch: expected .../MapValue__t... got .../Vector__t...". Pinned by "runs vm with templated stdlib wrapper temporary index forms".
+  - acceptance:
+    - indexing a builtin `map<K, V>` temporary runs on the vm and the pin moves to the real result.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+
+- [ ] TODO-5334: Fix the vector `at` argument mismatch inside canonical map temporary lookup
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-temporary-lookup-vector
+  - depends_on: (none)
+  - scope: `/std/collections/map/at<string, i32>(wrapMap<string, i32>(...), "only"raw_utf8)` mixed with vector/index forms fails semantics inside `stdlib/std/collections/map.prime` (`findIndex`): "argument type mismatch for /std/collections/vector/at parameter values: expected .../Vector__t... got vector<string>". Pinned by "runs vm with templated stdlib wrapper temporary syntax parity".
+  - acceptance:
+    - the syntax-parity source runs on the vm and the pin moves to the real result.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+
+- [ ] TODO-5335: Reject a value-type mismatch in `at<K, V>` on a builtin `map<K, V>` temporary
+  - owner: ai
+  - status: blocked
+  - created_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-at-value-mismatch
+  - depends_on: TODO-5331
+  - scope: `/std/collections/map/at<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)` is accepted and exits 4 on the vm instead of being rejected as a value-type mismatch (`map<string, i32>` vs `<string, bool>`). Pinned by "rejects vm templated stdlib map wrapper temporary call value mismatch" at exit 4.
+  - acceptance:
+    - the call is rejected in semantics with a specific type-mismatch diagnostic and the pin checks it. Sequenced after TODO-5331 (same canonical map call type-check path).
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
 
 - [ ] TODO-5320: Make ast-semantic `.to_aos()` spelling match the resolved root `/to_aos` shadow
   - owner: ai

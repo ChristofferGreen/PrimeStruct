@@ -56376,3 +56376,48 @@ crashes) - see `docs/todo_finished.md`.
     TODO-5328 (`try` on `tryAt` of a `return<auto>` call receiver, still
     pinned), TODO-5329 (`[auto]` parameter on a `/Holder/score` method),
     TODO-5330 (allocating defaults decision).
+
+- [x] TODO-5326: Restore canonical `map<K, V>` wrapper-temporary compile-run pins
+  - owner: ai
+  - created_at: 2026-09-29
+  - finished_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-4751)
+  - parallel_track: canonical-map-wrapper-temporaries
+  - depends_on: (none)
+  - scope: several `primestruct.compile.run.vm.collections` cases build a
+    lowercase `map<K, V>` with a `mapSingle<K, V>(key, value)` that never
+    existed for canonical maps (only `/std/collections/*` is imported), so
+    they stay pinned to "unknown call target: mapSingle" with `TODO-4741`
+    comments. With the canonical `/std/collections/map/map<K, V>(key,
+    value)` spelled out they hit separate canonical-map gaps: "runs vm
+    templated stdlib return wrapper temporaries in expressions" and the
+    method-arity rejects ("unknown call target: /map/at"), "runs vm with
+    templated stdlib wrapper temporary call forms" and "... count
+    capacity parity" ("argument type mismatch for
+    /std/collections/map/count" on a templated temporary), "... index
+    forms" (VM "struct parameter type mismatch" MapValue vs Vector),
+    "... syntax parity" (vector `at` argument mismatch inside
+    `map.prime`) in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_*`
+    files. Several `rejects vm templated stdlib ... mismatch` cases in
+    `test_compile_run_vm_collections_wrapper_temporaries_templated.cpp`
+    only check exit code 2, which the unknown `mapSingle` also produces
+    (one value-mismatch case would run and exit 4 once respelled).
+  - acceptance:
+    - each listed case uses the canonical constructor and pins its real
+      runtime result or specific diagnostic (checking stderr, not only
+      exit code 2).
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: split any underlying canonical-map lowering bug into its
+    own leaf instead of fixing it here.
+  - result: the seven `mapSingle` cases in
+    `test_compile_run_vm_collections_wrapper_temporaries_reject_count_*`
+    and the eleven exit-code-only rejects in
+    `..._templated.cpp` now use the canonical
+    `/std/collections/map/map<K, V>(key, value)` and check stderr (the
+    key-mismatch case was already respelled by TODO-4751). None of the
+    canonical shapes runs yet, so each pins its real current result and
+    the underlying gap was split out: TODO-5331 (templated `count` on a
+    `map<K, V>` temporary), TODO-5332 (method-style `.at`), TODO-5333
+    (indexing), TODO-5334 (vector `at` mismatch inside `map.prime`) and
+    TODO-5335 (`at<K, bool>` value mismatch accepted, exits 4).
