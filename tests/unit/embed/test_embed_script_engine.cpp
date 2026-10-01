@@ -1,8 +1,11 @@
+#include "embed_fixture_bytecode.h"
 #include "primec/embed/ScriptEngine.h"
 
 #include "third_party/doctest.h"
 
-#include <fstream>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 TEST_SUITE_BEGIN("primestruct.embed.script_engine");
 
@@ -65,6 +68,34 @@ main() {
   const auto result = script.run();
   CHECK(result.ok);
   CHECK(result.exitCode == 4);
+}
+
+TEST_CASE("embed bytecode round trips through save and load") {
+  primec::embed::ScriptEngine engine;
+  // Source and name must match the fixture in embed_fixture_bytecode.h exactly.
+  const auto script = engine.compileSource("/x.prime", "[return<int>]\nmain() {\n  return(11i32)\n}\n");
+  REQUIRE(script.valid());
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(script.saveBytecode(bytes, error));
+  CHECK_FALSE(bytes.empty());
+  // Keeps tests/unit/embed/embed_fixture_bytecode.h in sync with the IR format.
+  CHECK_MESSAGE(bytes == embedReturnElevenBytecode(),
+                "refresh embed_fixture_bytecode.h from this script's saveBytecode output");
+  const auto loaded = primec::embed::Script::loadBytecode(bytes);
+  REQUIRE_MESSAGE(loaded.valid(), loaded.diagnostics());
+  const auto result = loaded.run();
+  CHECK(result.ok);
+  CHECK(result.exitCode == 11);
+}
+
+TEST_CASE("embed save bytecode rejects an invalid script") {
+  primec::embed::ScriptEngine engine;
+  const auto script = engine.compileSource("/embed_bytecode_bad.prime", "main() { return(nope()) }");
+  std::vector<uint8_t> bytes;
+  std::string error;
+  CHECK_FALSE(script.saveBytecode(bytes, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_SUITE_END();

@@ -386,8 +386,6 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir/IrPrinterHelpers.cpp
   src/ir/IrPreparation.cpp
   src/ir/IrPrinter.cpp
-  src/ir/IrSerializer.cpp
-  src/ir/IrValidation.cpp
   src/ir/IrVirtualRegisterAllocator.cpp
   src/ir/IrVirtualRegisterLiveness.cpp
   src/ir/IrVirtualRegisterLowering.cpp
@@ -620,9 +618,16 @@ target_include_directories(primec_frontend_lib PUBLIC include)
 target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)
 primestructEnableWarnings(primec_frontend_lib)
 
+# IR container pieces a runtime-only host needs: bytecode (de)serialization and
+# VM-target validation. Deliberately free of parser/semantics/lowerer code.
+add_library(primec_ir_core_lib src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
+target_include_directories(primec_ir_core_lib PUBLIC include)
+target_link_libraries(primec_ir_core_lib PUBLIC primec_support_lib)
+primestructEnableWarnings(primec_ir_core_lib)
+
 add_library(primec_runtime_lib ${PRIMESTRUCT_RUNTIME_SOURCES})
 target_include_directories(primec_runtime_lib PUBLIC include)
-target_link_libraries(primec_runtime_lib PUBLIC primec_frontend_lib primec_support_lib)
+target_link_libraries(primec_runtime_lib PUBLIC primec_ir_core_lib primec_support_lib)
 primestructEnableWarnings(primec_runtime_lib)
 
 add_library(primec_backend_emitters_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
@@ -636,13 +641,21 @@ target_link_libraries(primec_codegen_lib INTERFACE primec_backend_emitters_lib)
 
 add_library(primec_ir_lib ${PRIMESTRUCT_IR_SOURCES})
 target_include_directories(primec_ir_lib PUBLIC include)
-target_link_libraries(primec_ir_lib PUBLIC primec_frontend_lib primec_support_lib)
+target_link_libraries(primec_ir_lib PUBLIC primec_ir_core_lib primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_ir_lib)
 
-# Embedding facade: compile and run scripts from a C++ host (TODO-5337).
+# Embedding (TODO-5337/5342). The runtime-only library runs precompiled
+# bytecode and links only the VM plus IR (de)serialization/validation - no
+# parser, semantics, or lowerer - which is the iOS-friendly path.
+add_library(primec_embed_runtime_lib src/embed/Script.cpp)
+target_include_directories(primec_embed_runtime_lib PUBLIC include)
+target_link_libraries(primec_embed_runtime_lib PUBLIC primec_runtime_lib primec_ir_core_lib)
+primestructEnableWarnings(primec_embed_runtime_lib)
+
+# Full embedding facade: also compiles source text/files.
 add_library(primec_embed_lib src/embed/ScriptEngine.cpp)
 target_include_directories(primec_embed_lib PUBLIC include)
-target_link_libraries(primec_embed_lib PUBLIC primec_ir_lib primec_runtime_lib)
+target_link_libraries(primec_embed_lib PUBLIC primec_embed_runtime_lib primec_ir_lib)
 primestructEnableWarnings(primec_embed_lib)
 
 add_library(primec_backend_registry_lib ${PRIMESTRUCT_BACKEND_REGISTRY_SOURCES})
@@ -787,7 +800,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/embed/test_embed_script_engine.cpp
   )
-  target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
   target_link_libraries(PrimeStruct_embed_tests PRIVATE primec_embed_lib)
   primestructEnableWarnings(PrimeStruct_embed_tests)
   add_test(
@@ -797,6 +810,24 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_script_engine
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+
+  # Links only the runtime-only embed library: proves precompiled bytecode runs
+  # without any compiler code in the binary.
+  add_executable(PrimeStruct_embed_runtime_tests
+    tests/unit/test_main.cpp
+    tests/unit/embed/test_embed_runtime_only.cpp
+  )
+  target_include_directories(PrimeStruct_embed_runtime_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
+  target_link_libraries(PrimeStruct_embed_runtime_tests PRIVATE primec_embed_runtime_lib)
+  primestructEnableWarnings(PrimeStruct_embed_runtime_tests)
+  add_test(
+    NAME PrimeStruct_embed_runtime_only
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_runtime_tests>
+            "--test-suite=primestruct.embed.runtime_only"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_runtime_only
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   set(PrimeStructBackendAllTestSources

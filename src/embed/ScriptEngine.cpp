@@ -1,23 +1,18 @@
 #include "primec/embed/ScriptEngine.h"
 
+#include "ScriptModule.h"
 #include "primec/backend/IrBackendProfiles.h"
 #include "primec/ir/Ir.h"
 #include "primec/ir/IrPreparation.h"
 #include "primec/pipeline/CliDriver.h"
 #include "primec/pipeline/CompilePipeline.h"
-#include "primec/runtime/Vm.h"
 #include "primec/support/Options.h"
 
 #include <sstream>
-#include <string_view>
 #include <utility>
 #include <variant>
 
 namespace primec::embed {
-
-struct Script::Module {
-  IrModule ir;
-};
 
 namespace {
 std::string renderFailure(const Options &options, const CliFailure &failure) {
@@ -79,30 +74,6 @@ Script ScriptEngine::compile(const std::string &path, const std::string *text) c
   }
   script.module_ = std::move(module);
   return script;
-}
-
-ScriptResult Script::run(const std::vector<std::string> &args) const {
-  ScriptResult result;
-  if (!valid()) {
-    result.diagnostics = diagnostics_.empty() ? "script was not compiled successfully" : diagnostics_;
-    return result;
-  }
-  std::vector<std::string_view> views;
-  views.reserve(args.size() + 1);
-  views.push_back(name_);
-  for (const auto &arg : args) {
-    views.push_back(arg);
-  }
-  Vm vm;
-  uint64_t value = 0;
-  std::string error;
-  if (!vm.execute(module_->ir, value, error, views)) {
-    result.diagnostics = "VM error: " + error;
-    return result;
-  }
-  result.ok = true;
-  result.exitCode = static_cast<int>(static_cast<int32_t>(value));
-  return result;
 }
 
 } // namespace primec::embed

@@ -56994,3 +56994,41 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: added `include/primec/embed/ScriptEngine.h`, `src/embed/ScriptEngine.cpp` (library `primec_embed_lib`), `Options::inMemorySource` plus `ImportResolver::expandImportsFromSource`, and `PrimeStruct_embed_tests` (suite primestruct.embed.script_engine: in-memory run, re-run, semantic error as data, stdlib import). No ScopedCompileArena is used; lifetime hardening is TODO-5341.
 
+
+- [x] TODO-5342: Precompiled bytecode - save/load scripts and a runtime-only embed library
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-bytecode
+  - depends_on: TODO-5337 (closed)
+  - scope: iOS forbids generating executable native code in-process (no JIT)
+    and discourages heavy on-device compilation, but a bytecode interpreter
+    is allowed - and the VM already interprets `IrModule`. Add
+    `Script::saveBytecode()` / `ScriptEngine::loadBytecode(bytes)` using the
+    existing `serializeIr` / `deserializeIr`, validating the loaded module
+    for the VM target (`IrValidationTarget::Vm`) and rejecting a version
+    mismatch with a diagnostic. Split the build so a host can link a
+    `primec_embed_runtime_lib` (VM + IR deserializer + validation only, no
+    parser/semantics/lowerer/stdlib) and compile scripts offline with
+    `primec`/the full `primec_embed_lib`. Add a CLI path to emit the
+    bytecode (check whether `primec --emit=ir` already produces the
+    serialized form before adding a flag).
+  - implementation_notes: check that `Vm` and `IrValidation` do not
+    transitively require frontend sources; `primec_runtime_lib` currently
+    links `primec_frontend_lib`, so the runtime-only target may need that
+    link narrowed. Document the IR version/migration policy for shipped
+    bytecode (AGENTS IR-stability rule).
+  - acceptance:
+    - test compiles a script, saves bytes, loads them through a binary that
+      links only the runtime-only library, and gets the same exit code.
+    - corrupt or wrong-version bytes return `ok=false` with a diagnostic,
+      never UB.
+    - size of the runtime-only library vs full embed library recorded in
+      the result note.
+  - stop_rule: if the VM cannot be separated from frontend sources without a
+    wide refactor, stop and record the exact dependency edges as a new
+    leaf instead of widening this one.
+  - finished_at: 2026-10-01
+  - result: added `Script::saveBytecode` / `Script::loadBytecode` (validated for VM, bad bytes rejected as data), split `primec_embed_runtime_lib` (VM + new `primec_ir_core_lib` = IrSerializer/IrValidation, no frontend) from `primec_embed_lib`; `PrimeStruct_embed_runtime_tests` links only the runtime lib (435 KB, zero parser/semantics/lowerer symbols) and runs fixture bytecode `tests/unit/embed/embed_fixture_bytecode.h`, which the full-library test keeps in sync. `primec --emit=ir -o` already emits loadable bytecode (verified), so no new CLI flag. Documented in docs/Embedding.md. Dependency edge found: the VM needed only support + IR core, so no wide refactor was required.
+
