@@ -4464,6 +4464,13 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
   count/get/ref, push/reserve, field-view, conversion helper names, import
   aliases, and compatibility spelling rejection belong in stdlib wrapper
   modules or focused diagnostics, not in compiler-owned policy.
+- **Accessor naming rule:** the soa accessor family composes two axes:
+  the base name says what is returned (`get` = value, `ref` =
+  `Reference<T>`), and the `_ref` suffix says the receiver is borrowed
+  (`Reference<SoaVector<T>>`). `ref_ref` is therefore `ref` on a borrowed
+  receiver, the same `<accessor>_ref` form as `count_ref`/`get_ref`; the
+  suffix is the language-wide borrowed-receiver convention (vector and
+  map use it too), so the name is intentionally not special-cased.
 - **No-import helper rule:** the public helpers (`count`/`count_ref`,
   `get`/`get_ref`, `ref`/`ref_ref`, `to_aos`/`to_aos_ref`, `push`,
   `reserve`) exist only as `/std/collections/soa/*` wrappers. When a call

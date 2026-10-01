@@ -95,27 +95,23 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | ready | soa-accessor-naming |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | ready | lowered-module-invariant |
 
 ### Ready Now
 
-- TODO-5309 (track: soa-accessor-naming, surface: `stdlib/std/collections/soa.prime` `ref_ref` plus its call sites in `tests/unit/` and `docs/PrimeStruct.md`): rename `ref_ref` to `ref_borrowed`.
 - TODO-4737 (track: lowered-module-invariant, surface: `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp` and the shared `isBuiltinClassifiedMethodCallTarget` helper in `IrLowererHelpers.{h,cpp}`): share one builtin-classification predicate across all method-call-target sites, then add the lowered-module invariant pass.
 
 ### Immediate Next 10
 
-1. TODO-5309 - public stdlib rename with wide but mechanical test churn; do it while no other soa work is in flight.
-2. TODO-4737 - largest; needs a before/after diff of the full `ir.pipeline.validation` suite, so take it last.
+1. TODO-4737 - largest; needs a before/after diff of the full `ir.pipeline.validation` suite, so take it last.
 
 ### Priority Lanes
 
-- Stdlib naming: TODO-5309
 - Lowering correctness tooling: TODO-4737
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10; all three are on disjoint tracks and surfaces, so they may also run in parallel.
+Run `ready` leaves in the order listed under Immediate Next 10; only TODO-4737 remains.
 
 ### Task Blocks
 
@@ -186,54 +182,3 @@ Run `ready` leaves in the order listed under Immediate Next 10; all three are on
     wrong re-derivation would silently narrow or widen which method-call
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
-
-- [ ] TODO-5309: Rename the soa `ref_ref` builtin to `ref_borrowed`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-24
-  - phase: Naming/API clarity
-  - parallel_track: soa-accessor-naming
-  - depends_on: (none)
-  - scope: `/std/collections/soa/ref_ref<T>([Reference<SoaVector<T>>] values,
-    [i32] index)` (`stdlib/std/collections/soa.prime:230-233`) is the one
-    member of the soa accessor family (`count`/`count_ref`/`get`/`get_ref`/
-    `ref`/`ref_ref`) whose name doubles a suffix instead of composing two
-    distinct axes: which value it returns (`get` = value, `ref` =
-    `Reference<T>`) and whether the receiver is borrowed (bare name = by
-    value `SoaVector<T>`, `_ref` suffix = `Reference<SoaVector<T>>`).
-    `ref_ref` collapses "returns a reference" and "receiver is borrowed"
-    into one doubled token, which reads like a typo and was genuinely
-    confusing enough to prompt a user question outside any specific bug
-    investigation. Rename to `ref_borrowed` (or another name that keeps
-    `ref`'s existing "returns a reference" meaning and makes "receiver is
-    borrowed" explicit rather than doubling the suffix - confirm exact
-    spelling before implementing, this scope intentionally doesn't lock it
-    in). TODO-5295/5307/5308 (closed 2026-09-23/24)
-    finished the fixes in this accessor's same-path-shadow resolution, so the
-    code has settled.
-  - implementation_notes: this is a public stdlib rename, not a local
-    refactor - `/std/collections/soa/ref_ref` is `[public]` and callable
-    by name from user `.prime` code, and its rooted spelling
-    (`/std/collections/soa/ref_ref`) plus the same-path-shadow spelling
-    (`/soa/ref_ref`) both appear throughout `tests/unit/` (several dozen
-    sites, many added/touched by TODO-5295/5307/5308's fixes literally
-    today). A safe migration needs: (1) add the new name as the real
-    implementation, (2) decide whether the old name stays as a
-    deprecated/compatibility alias or is deleted outright (check this
-    repo's usual policy for renaming public stdlib symbols - search
-    `docs/PrimeStruct.md`/`docs/CompatPathResolutionConsolidation.md` for
-    precedent), (3) update every call site across `stdlib/`, `tests/`, and
-    any docs that reference `ref_ref` by name.
-  - acceptance:
-    - The soa accessor family's naming consistently encodes "returns a
-      reference" and "receiver is borrowed" as two separable axes, not a
-      doubled suffix.
-    - Every test and stdlib call site is updated to the new name (or the
-      old name is kept working as a documented compatibility alias, per
-      whatever migration policy step (2) above settles on).
-    - `docs/PrimeStruct.md` (or wherever this accessor family is
-      documented) reflects the new name.
-  - stop_rule: if a compatibility alias for the old name would be needed in
-    more than the stdlib and `tests/unit/`, stop and record the migration
-    policy decision here instead of widening the rename.
-

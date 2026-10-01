@@ -56839,3 +56839,56 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     shadow resolution earlier in `semanticValidationPassManifest()`, stop
     and document the pass-order constraint instead of reordering passes.
   - result: the `[SoaVector<T>]`/helper-return half was already fixed; the remaining gap was `soa<T>`-typed locals: `hasVisibleRootExperimentalSoaHelper` only accepted a root `/to_aos` whose parameter parsed as an experimental binding, and `[soa<T>]` only parses once the program's struct names are known, so the same-path-helper pass rewrote `values.to_aos()` to the canonical helper while the semantic product resolved it to `/to_aos`. The check now parses the parameter with struct names, and the pass prefers a visible root shadow. The ast-semantic dump spells `/to_aos(values)` for locals and helper-return receivers; both pinned cases were re-pinned with corrected comments and a soa-local case was added. While doing this I found that the whole `test_compile_run_text_filters_dumps.cpp` file (59 cases), `..._runtime_if.cpp` (19) and the `..._diagnostics_*.cpp` files (227) plus one native-backend case were compiled but never registered with CTest, so they had silently stopped running; all are now registered (the three failing dump cases, including the stale `ref_ref` pin, were re-pinned).
+
+- [x] TODO-5309: Rename the soa `ref_ref` builtin to `ref_borrowed`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-09-24
+  - phase: Naming/API clarity
+  - parallel_track: soa-accessor-naming
+  - depends_on: (none)
+  - scope: `/std/collections/soa/ref_ref<T>([Reference<SoaVector<T>>] values,
+    [i32] index)` (`stdlib/std/collections/soa.prime:230-233`) is the one
+    member of the soa accessor family (`count`/`count_ref`/`get`/`get_ref`/
+    `ref`/`ref_ref`) whose name doubles a suffix instead of composing two
+    distinct axes: which value it returns (`get` = value, `ref` =
+    `Reference<T>`) and whether the receiver is borrowed (bare name = by
+    value `SoaVector<T>`, `_ref` suffix = `Reference<SoaVector<T>>`).
+    `ref_ref` collapses "returns a reference" and "receiver is borrowed"
+    into one doubled token, which reads like a typo and was genuinely
+    confusing enough to prompt a user question outside any specific bug
+    investigation. Rename to `ref_borrowed` (or another name that keeps
+    `ref`'s existing "returns a reference" meaning and makes "receiver is
+    borrowed" explicit rather than doubling the suffix - confirm exact
+    spelling before implementing, this scope intentionally doesn't lock it
+    in). TODO-5295/5307/5308 (closed 2026-09-23/24)
+    finished the fixes in this accessor's same-path-shadow resolution, so the
+    code has settled.
+  - implementation_notes: this is a public stdlib rename, not a local
+    refactor - `/std/collections/soa/ref_ref` is `[public]` and callable
+    by name from user `.prime` code, and its rooted spelling
+    (`/std/collections/soa/ref_ref`) plus the same-path-shadow spelling
+    (`/soa/ref_ref`) both appear throughout `tests/unit/` (several dozen
+    sites, many added/touched by TODO-5295/5307/5308's fixes literally
+    today). A safe migration needs: (1) add the new name as the real
+    implementation, (2) decide whether the old name stays as a
+    deprecated/compatibility alias or is deleted outright (check this
+    repo's usual policy for renaming public stdlib symbols - search
+    `docs/PrimeStruct.md`/`docs/CompatPathResolutionConsolidation.md` for
+    precedent), (3) update every call site across `stdlib/`, `tests/`, and
+    any docs that reference `ref_ref` by name.
+  - acceptance:
+    - The soa accessor family's naming consistently encodes "returns a
+      reference" and "receiver is borrowed" as two separable axes, not a
+      doubled suffix.
+    - Every test and stdlib call site is updated to the new name (or the
+      old name is kept working as a documented compatibility alias, per
+      whatever migration policy step (2) above settles on).
+    - `docs/PrimeStruct.md` (or wherever this accessor family is
+      documented) reflects the new name.
+  - stop_rule: if a compatibility alias for the old name would be needed in
+    more than the stdlib and `tests/unit/`, stop and record the migration
+    policy decision here instead of widening the rename.
+  - finished_at: 2026-10-01
+  - result: closed without renaming. `_ref` is the generic borrowed-receiver suffix (count_ref, get_ref, at_ref, vector/map equivalents) and is matched by suffix logic across semantics, monomorph and lowerer; `ref_borrowed` would need a special case in every one of those sites and break the convention. Documented the two-axis reading in docs/PrimeStruct.md (Accessor naming rule) instead.
+
