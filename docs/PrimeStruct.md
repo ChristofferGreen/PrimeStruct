@@ -3274,6 +3274,47 @@ or a semicolon if you intended to index.
 The lists above reflect the built-in transforms recognized by the compiler today; future additions will extend them
 here.
 
+### Host functions (embedding)
+
+A script can call functions its embedding application provides. Declare each one
+as a `host` definition: a primitive signature with an empty body.
+
+```prime
+[host return<int>]
+host_add([i32] a, [i32] b) {
+}
+
+[host return<void>]
+host_log([i32] value) {
+}
+
+[return<int>]
+main() {
+  [i32] total{host_add(40i32, 2i32)}
+  host_log(total)
+  return(total)
+}
+```
+
+Rules:
+- The return type is explicit (`return<T>`) and, like every parameter, one of
+  `i32` (`int`), `i64`, `u64`, `f32` (`float`), `f64`, `bool`, or `void` for the
+  return. Parameters cannot be `mut` or have defaults, and host definitions cannot
+  be generic, struct members, or have a body.
+- Each call lowers to `CallHost` (arguments on the stack, `imm` = index into the
+  module's host import table; the import name is the definition path without the
+  leading `/`). Expected IR for `host_add(40i32, 2i32)`:
+  `PushI32 40`, `PushI32 2`, `CallHost 0`, with `host_imports[0] = host_add(i32, i32) -> i32`.
+- Only the VM target (and `--emit=ir` serialized bytecode) accepts host calls;
+  native, C++, wasm, and GLSL emission reject them with
+  `host calls are only supported by the vm target and serialized bytecode`.
+- The embedder binds every declared function, by name, with a matching signature
+  (`Script::bind` in `docs/Embedding.md`). A missing or mismatched binding fails
+  before any instruction runs. A declared host function that is never called adds
+  no requirement.
+- `primevm` has no bindings, so running a script that calls a host function there
+  reports `unbound host function: <name>`.
+
 ### Core library surface (draft)
 - **Standard math (draft):** the core math set lives under `/std/math/*` (e.g., `/std/math/sin`, `/std/math/pi`).
   `import /std/math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification.

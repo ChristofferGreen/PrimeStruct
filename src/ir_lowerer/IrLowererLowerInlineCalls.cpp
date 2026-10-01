@@ -12,6 +12,7 @@
 #include "IrLowererLowerInlineCallGpuLocalsStep.h"
 #include "IrLowererLowerInlineCallReturnValueStep.h"
 #include "IrLowererLowerInlineCallStatementStep.h"
+#include "IrLowererRecursionAnalysis.h"
 #include "IrLowererRequirementContractHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -19,6 +20,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererVectorRecordLayoutHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/semantics/HostDefinitions.h"
 #include "primec/support/SourceLocationMapper.h"
 
 #include <limits>
@@ -118,6 +120,100 @@ bool emitInlineDefinitionCallImpl(
     // emitExpr path and left on the shared operand stack - the callee's own
     // prologue is responsible for popping them into its locals, matching the
     // calling convention already used by every existing Call/CallVoid site.
+    // Host definitions ([host] f(...) {}) lower to CallHost: arguments on the
+    // stack, import index in imm. The import table lives on the module.
+    if (isHostDefinition(callee)) {
+      const auto hostKind = [](std::string_view typeName) -> std::optional<IrHostValueKind> {
+        const auto canonical = canonicalHostTypeName(typeName);
+        if (!canonical.has_value()) {
+          return std::nullopt;
+        }
+        if (*canonical == "i32") return IrHostValueKind::I32;
+        if (*canonical == "i64") return IrHostValueKind::I64;
+        if (*canonical == "u64") return IrHostValueKind::U64;
+        if (*canonical == "f32") return IrHostValueKind::F32;
+        if (*canonical == "f64") return IrHostValueKind::F64;
+        return IrHostValueKind::Bool;
+      };
+      if (setupStage.outModule == nullptr) {
+        error = "internal error: host call lowering has no module for " + callee.fullPath;
+        return false;
+      }
+      IrHostImport import;
+      import.name = callee.fullPath.size() > 1 && callee.fullPath.front() == '/' ? callee.fullPath.substr(1)
+                                                                              : callee.fullPath;
+      for (const Expr &param : callee.parameters) {
+        const auto kind = hostKind(extractParameterTypeNameStatic(param));
+        if (!kind.has_value()) {
+          error = "host definition parameter is not a primitive: " + callee.fullPath;
+          return false;
+        }
+        import.parameters.push_back(*kind);
+      }
+      ReturnInfo hostReturnInfo;
+      if (!getReturnInfo(callee.fullPath, hostReturnInfo)) {
+        error = "internal error: missing return info for host definition " + callee.fullPath;
+        return false;
+      }
+      import.returnKind = IrHostValueKind::Void;
+      if (!hostReturnInfo.returnsVoid) {
+        std::optional<IrHostValueKind> returnKind;
+        for (const auto &transform : callee.transforms) {
+          if (transform.name == "return" && transform.templateArgs.size() == 1) {
+            returnKind = hostKind(transform.templateArgs.front());
+          }
+        }
+        if (!returnKind.has_value()) {
+          error = "host definition return type is not a primitive: " + callee.fullPath;
+          return false;
+        }
+        import.returnKind = *returnKind;
+      }
+      std::vector<Expr> hostParams;
+      std::vector<const Expr *> hostOrderedArgs;
+      std::vector<const Expr *> hostPackedArgs;
+      size_t hostPackedParamIndex = 0;
+      if (!ir_lowerer::buildInlineCallOrderedArguments(callExpr,
+                                                       callee,
+                                                       structNames,
+                                                       callerLocals,
+                                                       hostParams,
+                                                       hostOrderedArgs,
+                                                       hostPackedArgs,
+                                                       hostPackedParamIndex,
+                                                       error)) {
+        return false;
+      }
+      if (!hostPackedArgs.empty() || hostOrderedArgs.size() != import.parameters.size()) {
+        error = "host call argument mismatch for " + callee.fullPath;
+        return false;
+      }
+      for (const Expr *argExpr : hostOrderedArgs) {
+        if (argExpr == nullptr) {
+          error = "internal error: missing argument for host call " + callee.fullPath;
+          return false;
+        }
+        if (!emitExpr(*argExpr, callerLocals)) {
+          return false;
+        }
+      }
+      auto &imports = setupStage.outModule->hostImports;
+      uint64_t importIndex = imports.size();
+      for (size_t i = 0; i < imports.size(); ++i) {
+        if (imports[i].name == import.name) {
+          importIndex = i;
+          break;
+        }
+      }
+      if (importIndex == imports.size()) {
+        imports.push_back(std::move(import));
+      }
+      function.instructions.push_back({IrOpcode::CallHost, importIndex});
+      if (imports[importIndex].returnKind != IrHostValueKind::Void && !requireValue) {
+        function.instructions.push_back({IrOpcode::Pop, 0});
+      }
+      return true;
+    }
     if (const auto realCallIt = realCallReservationIndex.find(callee.fullPath);
         realCallIt != realCallReservationIndex.end()) {
       ReturnInfo calleeReturnInfo;

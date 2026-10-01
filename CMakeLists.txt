@@ -853,9 +853,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/embed/test_embed_bytecode.cpp
     tests/unit/embed/test_embed_threads.cpp
     tests/unit/embed/test_embed_host_calls.cpp
+    tests/unit/embed/test_embed_host_language.cpp
   )
   target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
   target_link_libraries(PrimeStruct_embed_tests PRIVATE primec_embed_lib)
+  # CLI-level host call tests shell out to primec (emit rejection, offline bytecode).
+  add_dependencies(PrimeStruct_embed_tests primec)
+  target_compile_definitions(PrimeStruct_embed_tests PRIVATE
+    PRIMESTRUCT_TEST_PRIMEC_PATH="$<TARGET_FILE:primec>")
   primestructEnableWarnings(PrimeStruct_embed_tests)
   add_test(
     NAME PrimeStruct_embed_script_engine
@@ -888,6 +893,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_host_calls
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_host_language
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.host_language"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_host_language
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_threads

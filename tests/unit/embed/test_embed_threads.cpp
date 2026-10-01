@@ -40,6 +40,7 @@ TEST_CASE("embed keeps several compiled scripts alive and interleaved") {
   for (const auto &program : embedPrograms()) {
     scripts.push_back(engine.compileSource("/fixture/" + program.name + ".prime", program.source));
     REQUIRE_MESSAGE(scripts.back().valid(), scripts.back().diagnostics());
+    bindEmbedFixtureHosts(scripts.back());
   }
   for (int round = 0; round < 5; ++round) {
     for (size_t i = scripts.size(); i-- > 0;) {
@@ -65,7 +66,10 @@ TEST_CASE("embed compiles independent scripts on separate threads") {
     threads.emplace_back([&, t] {
       ScriptEngine engine;
       const auto &program = embedPrograms()[static_cast<size_t>(t) % embedPrograms().size()];
-      const auto script = engine.compileSource("/fixture/" + program.name + ".prime", program.source);
+      auto script = engine.compileSource("/fixture/" + program.name + ".prime", program.source);
+      if (script.valid()) {
+        bindEmbedFixtureHosts(script);
+      }
       if (!script.valid() || script.run(program.args).exitCode != program.expectedExit) {
         ++failures;
       }

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "primec/embed/Script.h"
+
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -33,6 +36,17 @@ inline const std::vector<EmbedProgram> &embedPrograms() {
        "import /std/math/*\n\n[return<int>]\nmain() {\n  return(convert<i32>(abs(-4.0f)))\n}\n",
        {},
        4},
+      // Needs the host function from bindEmbedFixtureHosts: 40 + 2 + 1.
+      {"host_call",
+       "[host return<int>]\nhost_add([i32] a, [i32] b) {\n}\n\n[return<int>]\nmain() {\n  return(host_add(40i32, 2i32) + 1i32)\n}\n",
+       {},
+       43},
   };
   return programs;
+}
+
+// Binds the host functions the fixture programs declare. Safe to call on any
+// fixture: bindings a script does not declare are ignored.
+inline void bindEmbedFixtureHosts(primec::embed::Script &script) {
+  script.bind("host_add", [](int32_t a, int32_t b) { return a + b; });
 }

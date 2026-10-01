@@ -27,10 +27,12 @@ TEST_CASE("bytecode of every fixture program runs like the compiled script") {
   ScriptEngine engine;
   for (const auto &program : embedPrograms()) {
     CAPTURE(program.name);
-    const auto compiled = engine.compileSource("/fixture/" + program.name + ".prime", program.source);
+    auto compiled = engine.compileSource("/fixture/" + program.name + ".prime", program.source);
     REQUIRE_MESSAGE(compiled.valid(), compiled.diagnostics());
-    const auto loaded = Script::loadBytecode(saveOrFail(compiled), program.name);
+    auto loaded = Script::loadBytecode(saveOrFail(compiled), program.name);
     REQUIRE_MESSAGE(loaded.valid(), loaded.diagnostics());
+    bindEmbedFixtureHosts(compiled);
+    bindEmbedFixtureHosts(loaded);
     const auto direct = compiled.run(program.args);
     const auto viaBytecode = loaded.run(program.args);
     CHECK(viaBytecode.ok);
@@ -103,8 +105,9 @@ TEST_CASE("bytecode with trailing garbage never crashes the loader") {
   for (const auto &bytes : embedProgramBytecode()) {
     auto extended = bytes;
     extended.insert(extended.end(), {0xde, 0xad, 0xbe, 0xef});
-    const auto script = Script::loadBytecode(extended);
+    auto script = Script::loadBytecode(extended);
     if (script.valid()) {
+      bindEmbedFixtureHosts(script);
       CHECK(script.run().ok);
     } else {
       CHECK_FALSE(script.diagnostics().empty());

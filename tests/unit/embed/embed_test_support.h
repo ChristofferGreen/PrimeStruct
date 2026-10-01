@@ -7,6 +7,9 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <cstdlib>
+#include <iterator>
+#include <sys/wait.h>
 #include <unistd.h>
 
 inline std::filesystem::path embedTestDir(std::string_view name) {
@@ -62,3 +65,23 @@ private:
   int savedOut_ = -1;
   int savedErr_ = -1;
 };
+
+#ifdef PRIMESTRUCT_TEST_PRIMEC_PATH
+struct EmbedProcessResult {
+  int exitCode = -1;
+  std::string output;  // stdout and stderr combined
+};
+
+// Runs the primec binary under test with a shell command line suffix.
+inline EmbedProcessResult embedRunPrimec(const std::string &arguments) {
+  const auto outPath = embedTestDir("primec_run") / "output.txt";
+  const std::string command =
+      std::string("\"") + PRIMESTRUCT_TEST_PRIMEC_PATH + "\" " + arguments + " > \"" + outPath.string() + "\" 2>&1";
+  EmbedProcessResult result;
+  const int status = std::system(command.c_str());
+  result.exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+  std::ifstream in(outPath);
+  result.output.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+  return result;
+}
+#endif

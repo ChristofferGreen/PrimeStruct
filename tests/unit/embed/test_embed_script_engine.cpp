@@ -61,8 +61,9 @@ TEST_CASE("embed every fixture program runs with its expected exit code") {
   ScriptEngine engine;
   for (const auto &program : embedPrograms()) {
     CAPTURE(program.name);
-    const auto script = engine.compileSource("/fixture/" + program.name + ".prime", program.source);
+    auto script = engine.compileSource("/fixture/" + program.name + ".prime", program.source);
     REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+    bindEmbedFixtureHosts(script);
     const auto result = script.run(program.args);
     CHECK(result.ok);
     CHECK(result.exitCode == program.expectedExit);

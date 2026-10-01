@@ -394,6 +394,9 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       continue;
     }
     const Definition &def = *defIt->second;
+    if (definitionHasTransform(def, "host")) {
+      continue;  // lowered to CallHost at each call site, never as a function
+    }
     if (definitionHasTransform(def, "struct") || definitionHasTransform(def, "sum") ||
         definitionHasTransform(def, "compute") || definitionHasTransform(def, "on_error")) {
       continue;

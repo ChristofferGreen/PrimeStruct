@@ -49,6 +49,9 @@ struct LowerSetupStageState {
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
   bool hasMathImport = false;
+  // Module being lowered; set by lowerer so call-site emitters can register
+  // module-level tables (host imports) as they are discovered.
+  IrModule *outModule = nullptr;
 
   SetupLocalsOrchestration setupLocalsOrchestration{};
   LowerInferenceSetupBootstrapState inferenceSetupBootstrap{};

@@ -218,7 +218,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Any;
+    return IrValidationTarget::Serialized;
   }
 
   bool requiresOutputPath() const override {

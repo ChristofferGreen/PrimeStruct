@@ -57089,3 +57089,27 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: `IrOpcode::CallHost` + `IrModule::hostImports` (PSIR v24, serialized, VM-target-only validation, debug sessions fault with a diagnostic), `VmHostFunctions` (include/primec/runtime/VmHost.h) verified before execution, `Vm::execute(..., hostFunctions)`, and `embed::HostBindings`/`Script::bind`/`ScriptEngine::bind` with signatures deduced from C++ callables (i32/i64/u64/f32/f64/bool). 20-case primestruct.embed.host_calls suite (hand-built IR). Found and fixed a pre-existing deserializer bug: the opcode upper bound stopped at HeapRealloc so FileWriteStringDynamic could not be loaded. Golden fixture, version checks and docs/PrimeStruct.md updated for v24.
 
+
+- [x] TODO-5345: Host function declaration surface - `[host]` definitions lower to `CallHost`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-host-calls
+  - scope: let a script declare a host-provided function, e.g.
+    `[host return<int>] host_add([i32] a, [i32] b) {}` (exact spelling decided
+    in docs/PrimeStruct.md first): the parser must allow the empty body for
+    `host` definitions, semantics validates the signature (primitive params and
+    return only) and skips return-path checks, and the lowerer emits the
+    arguments then `CallHost` instead of inlining or real-calling, registering
+    the import in `IrModule::hostImports`. Native/wasm/C++ backends reject host
+    definitions with a clear diagnostic.
+  - acceptance:
+    - script above plus `ScriptEngine`/`Script::bind` returns the host value.
+    - positive parse+IR test, negative diagnostics (non-primitive param, called
+      with wrong arity, `host` on a struct), docs and IR snippet in
+      docs/PrimeStruct.md.
+  - stop_rule: do not add general FFI; primitives only.
+  - finished_at: 2026-10-01
+  - result: `[host return<T>] f([T] ...) {}` declarations: parser allows the empty body (and rejects generics), semantics validates primitive signature/empty body/free function, lowerer emits args + `CallHost` and records the import (host defs excluded from real-call eligibility), `--emit=ir` validates with new `IrValidationTarget::Serialized` so offline bytecode can carry host imports while native/C++/wasm/GLSL reject them. 20-case host_language suite incl. CLI backend rejection and offline bytecode; host_call fixture added to the shared fixture table; example and docs updated (docs/PrimeStruct.md "Host functions (embedding)").
+

@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsWorkerSymbolMerge.h"
+#include "primec/semantics/HostDefinitions.h"
 #include "primec/semantics/SemanticsDefinitionPartitioner.h"
 
 #include <algorithm>
@@ -193,6 +194,52 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       return true;
     }
     const auto &defParams = *definitionContext.params;
+    if (isHostDefinition(def)) {
+      // Host declarations are signatures only: they lower to CallHost and have
+      // no body to validate. Keep the signature to primitives the VM can pass.
+      auto failHost = [&](const std::string &detail) {
+        return failPassesDefinitionsDiagnostic(nullptr, detail + ": " + def.fullPath);
+      };
+      if (!def.templateArgs.empty()) {
+        return failHost("host definition cannot be generic");
+      }
+      if (!def.statements.empty() || def.returnExpr.has_value()) {
+        return failHost("host definition must have an empty body");
+      }
+      if (structNames_.count(def.fullPath) > 0 || structNames_.count(def.namespacePrefix) > 0) {
+        return failHost("host definition must be a free function");
+      }
+      bool hasExplicitReturn = false;
+      for (const auto &transform : def.transforms) {
+        hasExplicitReturn = hasExplicitReturn || transform.name == "return";
+      }
+      if (!hasExplicitReturn) {
+        return failHost("host definition requires an explicit return type");
+      }
+      switch (definitionContext.returnKind) {
+        case ReturnKind::Int:
+        case ReturnKind::Int64:
+        case ReturnKind::UInt64:
+        case ReturnKind::Float32:
+        case ReturnKind::Float64:
+        case ReturnKind::Bool:
+        case ReturnKind::Void:
+          break;
+        default:
+          return failHost("host definition return type must be i32, i64, u64, f32, f64, bool, or void");
+      }
+      for (const auto &param : defParams) {
+        if (param.defaultExpr != nullptr) {
+          return failHost("host definition parameter cannot have a default: " + param.name);
+        }
+        if (param.binding.isMutable ||
+            !canonicalHostTypeName(param.binding.typeName).has_value() ||
+            !param.binding.typeTemplateArg.empty()) {
+          return failHost("host definition parameter must be i32, i64, u64, f32, f64, or bool: " + param.name);
+        }
+      }
+      return true;
+    }
     if (structNames_.count(def.fullPath) == 0) {
       std::vector<const Definition *> localGeneratedStructs;
       for (const Definition &candidate : program_.definitions) {

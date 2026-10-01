@@ -137,6 +137,7 @@ bool IrLowerer::lower(const Program &program,
   }
 
   ir_lowerer::LowerSetupStageState setupStage{};
+  setupStage.outModule = &out;
   if (!ir_lowerer::runLowerSetupStage(
           {
               .program = &program,

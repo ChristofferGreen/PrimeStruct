@@ -61,14 +61,23 @@ script.bind("host_add", [](int32_t a, int32_t b) { return a + b; });
 engine.bind("log_value", [](int32_t v) { /* ... */ });   // applies to every compiled script
 ```
 
-Scripts reach host functions through the `CallHost` IR opcode and the module's
-host import table. `Script::requiredHostFunctions()` lists what a script needs
+Scripts declare the host functions they call with `[host]` definitions (see
+"Host functions (embedding)" in `docs/PrimeStruct.md`):
+
+```prime
+[host return<int>]
+host_add([i32] a, [i32] b) {
+}
+```
+
+These lower to the `CallHost` IR opcode and the module's host import table. `Script::requiredHostFunctions()` lists what a script needs
 and `checkHostBindings()` reports anything missing or mismatched; `run()` does
 the same check first and returns a diagnostic without executing anything.
-Host functions that throw are reported as errors. The `[host]` source
-declaration that lowers to `CallHost` is TODO-5345; today host calls come from
-hand-built or tool-generated IR (see `tests/unit/embed/test_embed_host_calls.cpp`).
-VM debug sessions do not support host calls.
+Host functions that throw are reported as errors. Only the VM and `--emit=ir`
+bytecode support host calls (native/C++/wasm/GLSL emission rejects them); VM
+debug sessions and `primevm` have no bindings. Offline bytecode that declares
+host functions loads in the runtime-only library, which then needs the same
+`bind` calls before `run`.
 
 ## Precompiled bytecode
 
@@ -94,7 +103,8 @@ format and the full-library test fails when it drifts.
 ## Tests
 
 Suites live in `tests/unit/embed/`: `script_engine`, `diagnostics`, `bytecode`
-(round trip, determinism, truncation/corruption fuzzing), `threads`, and
+(round trip, determinism, truncation/corruption fuzzing), `threads`, `host_calls` (hand-built IR, VM
+and binding API), `host_language` (`[host]` source declarations, backend rejection, offline bytecode), and
 `runtime_only` (a separate binary linking only `primec_embed_runtime_lib`). The
 fixture programs are in `embed_fixture_programs.h`; their pinned bytecode is
 regenerated with

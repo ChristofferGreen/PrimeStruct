@@ -23,12 +23,23 @@ TEST_CASE("runtime-only library runs every precompiled fixture") {
   for (size_t i = 0; i < embedPrograms().size(); ++i) {
     const auto &program = embedPrograms()[i];
     CAPTURE(program.name);
-    const auto script = Script::loadBytecode(embedProgramBytecode()[i], program.name);
+    auto script = Script::loadBytecode(embedProgramBytecode()[i], program.name);
     REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+    bindEmbedFixtureHosts(script);
     const auto result = script.run(program.args);
     CHECK(result.ok);
     CHECK(result.exitCode == program.expectedExit);
   }
+}
+
+TEST_CASE("runtime-only library reports a missing host binding without running") {
+  const size_t hostIndex = embedPrograms().size() - 1;
+  REQUIRE(embedPrograms()[hostIndex].name == "host_call");
+  const auto script = Script::loadBytecode(embedProgramBytecode()[hostIndex]);
+  REQUIRE(script.valid());
+  const auto result = script.run();
+  CHECK_FALSE(result.ok);
+  CHECK(result.diagnostics.find("unbound host function: host_add") != std::string::npos);
 }
 
 TEST_CASE("runtime-only library rejects empty input") {

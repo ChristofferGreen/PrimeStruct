@@ -8,6 +8,9 @@ namespace primec {
 
 enum class IrValidationTarget {
   Any,
+  // Serialized PSIR (`--emit=ir`): backend-neutral like Any, but host calls are
+  // allowed because the bytecode is meant to be loaded by a VM embedder.
+  Serialized,
   Vm,
   Native,
   Glsl,

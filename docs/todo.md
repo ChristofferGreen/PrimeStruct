@@ -95,26 +95,24 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5345 | Host function declaration surface: `[host]` definitions lower to CallHost | ready | embedding-host-calls |
 | TODO-5343 | iOS-safe embed build: no process spawning, bundled stdlib, cross-compile check | ready | embedding-ios |
-| TODO-5340 | Typed entry arguments and return values across the embed boundary | blocked | embedding-values |
+| TODO-5340 | Typed entry arguments and return values across the embed boundary | ready | embedding-values |
 | TODO-5341 | Embedding lifetime: arena scope, reentrancy, compile-once run-many | blocked | embedding-lifetime |
 
 ### Ready Now
 
-- TODO-5345 (track: embedding-host-calls, surface: parser, semantics, IR lowerer, docs/PrimeStruct.md): `[host]` declaration surface.
+- TODO-5340 (track: embedding-values, surface: `src/embed/`, `include/primec/embed/Script.h`, host string table in the VM): named function calls and strings across the boundary.
 - TODO-5343 (track: embedding-ios, surface: `src/support/ProcessRunner.cpp`, `ImportResolver`, CMake option, iOS toolchain recipe): iOS-safe build.
 
 ### Immediate Next 10
 
-1. TODO-5345 - `[host]` declaration surface (needs 5339).
-2. TODO-5340 - typed values in/out.
-3. TODO-5341 - lifetime and reuse hardening.
-4. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
+1. TODO-5340 - typed values in/out.
+2. TODO-5341 - lifetime and reuse hardening.
+3. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
 
 ### Priority Lanes
 
-- Embedding (top priority, user-set; must support iOS): TODO-5345 -> 5340 -> 5341
+- Embedding (top priority, user-set; must support iOS): TODO-5340 -> 5341
 
 ### Execution Queue
 
@@ -122,31 +120,9 @@ Run `ready` leaves in the order listed under Immediate Next 10; 5340 follows 534
 
 ### Task Blocks
 
-- [ ] TODO-5345: Host function declaration surface - `[host]` definitions lower to `CallHost`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Embedding
-  - parallel_track: embedding-host-calls
-  - scope: let a script declare a host-provided function, e.g.
-    `[host return<int>] host_add([i32] a, [i32] b) {}` (exact spelling decided
-    in docs/PrimeStruct.md first): the parser must allow the empty body for
-    `host` definitions, semantics validates the signature (primitive params and
-    return only) and skips return-path checks, and the lowerer emits the
-    arguments then `CallHost` instead of inlining or real-calling, registering
-    the import in `IrModule::hostImports`. Native/wasm/C++ backends reject host
-    definitions with a clear diagnostic.
-  - acceptance:
-    - script above plus `ScriptEngine`/`Script::bind` returns the host value.
-    - positive parse+IR test, negative diagnostics (non-primitive param, called
-      with wrong arity, `host` on a struct), docs and IR snippet in
-      docs/PrimeStruct.md.
-  - stop_rule: do not add general FFI; primitives only.
-
 - [ ] TODO-5340: Typed entry arguments and return values across the embed boundary
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5339
+  - status: ready
   - created_at: 2026-10-01
   - phase: Embedding
   - parallel_track: embedding-values

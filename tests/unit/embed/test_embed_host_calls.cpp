@@ -162,6 +162,7 @@ TEST_CASE("validation only allows host calls for the vm target") {
   const IrModule module = addModule();
   std::string error;
   CHECK(validateIrModule(module, IrValidationTarget::Vm, error));
+  CHECK(validateIrModule(module, IrValidationTarget::Serialized, error));
   for (const auto target : {IrValidationTarget::Any, IrValidationTarget::Native, IrValidationTarget::Glsl,
                             IrValidationTarget::Wasm, IrValidationTarget::WasmBrowser}) {
     CHECK_FALSE(validateIrModule(module, target, error));

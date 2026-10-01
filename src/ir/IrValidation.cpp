@@ -414,11 +414,11 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
     if (inst.op == IrOpcode::CallHost) {
-      if (target != IrValidationTarget::Vm) {
+      if (target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized) {
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,
-                               "host calls are only supported by the vm target",
+                               "host calls are only supported by the vm target and serialized bytecode",
                                error);
       }
       if (inst.imm >= module.hostImports.size()) {
