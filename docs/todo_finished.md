@@ -56322,3 +56322,57 @@ crashes) - see `docs/todo_finished.md`.
     (`TOTAL_CASES` 56 -> 61). Release gate 1905/1905 after giving
     `spinning_cube_argument_validation` case 52 a 120s timeout (15s alone,
     timed out at 30s when scheduled first under full-suite load).
+
+- [x] TODO-5325: Run the remaining pinned `Map<K, V>` wrapper conformance shapes
+  - owner: ai
+  - created_at: 2026-09-29
+  - finished_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-4751)
+  - parallel_track: map-wrapper-conformance
+  - depends_on: (none)
+  - scope: TODO-4751 moved 33 map-conformance helpers to runtime
+    expectations; nine still compile-reject and are pinned with
+    `TODO-5325` comments in
+    `tests/unit/compile_run/map_conformance/*expectations.h`, each with
+    its current diagnostic:
+    `expectExperimentalMapHelperReceiverConformance` (untemplated
+    `/std/collections/map/count(...)` on a temporary wrapper receiver),
+    `expectWrappedExperimentalMapHelperReceiverConformance` ("unknown
+    method" on a generic-helper-returned wrapper),
+    `expectExperimentalMapReferenceMethodConformance` (borrowed wrapper
+    method with a non-trivial value: "struct parameter type mismatch"),
+    `expectExperimentalMapVariadicConstructorConformance` (no variadic
+    entry constructor returns the wrapper),
+    `expectInferredExperimentalMapCallReceiverConformance` (`try` on
+    `tryAt` of a block-inferred wrapper call receiver),
+    `expectInferredExperimentalMapParameterConformance` and
+    `expectInferredExperimentalMapDefaultParameterConformance` (`[auto]`
+    wrapper parameters/defaults),
+    `expectWrappedInferredExperimentalMapDefaultParameterConformance` and
+    `expectWrappedInferredExperimentalMapStructFieldConformance` (inferred
+    `MapValue` initializers flowing into wrapper slots).
+  - acceptance:
+    - each listed helper either runs on vm/native/exe with the value its
+      source computes, or its source is respelled to the wrapper surface
+      (`mapSingle`/`mapPair`/`Map<K, V>{}`) with a note why the old shape
+      is invalid under TODO-4751's design.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: do not add `Map`/`MapValue` overloads to the canonical
+    helper family (see TODO-4751); split any shape needing a new
+    inference feature into its own leaf.
+  - result: seven of the nine helpers now run on vm/native/exe, respelled
+    to the wrapper surface: untemplated `/std/collections/map/count(...)`
+    style helper calls became method calls on `mapPair(...)` receivers
+    (`expectExperimentalMapHelperReceiverConformance`,
+    `expectWrappedExperimentalMapHelperReceiverConformance`); the
+    variadic `map<K, V>(entry(...)...)` shape (returns the internal
+    `MapValue`, so it cannot initialize a `Map`) became `Map<K, V>{}` plus
+    `insert`; `[auto]` parameters run as a free function; allocating
+    defaults (not pure by design) became explicit arguments; wrapped
+    struct fields use `wrapValues(mapSingle<...>(...))`; and the borrowed
+    reference-method shape runs (it also exercises the TODO-5323 overwrite
+    fix, giving 33). Shapes that need new features were split out:
+    TODO-5327 (chained field access on a borrowed-call method result),
+    TODO-5328 (`try` on `tryAt` of a `return<auto>` call receiver, still
+    pinned), TODO-5329 (`[auto]` parameter on a `/Holder/score` method),
+    TODO-5330 (allocating defaults decision).

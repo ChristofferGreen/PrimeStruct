@@ -232,8 +232,7 @@ inline void expectWrappedInferredExperimentalMapReturnConformance(const std::str
 }
 
 inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {
-  // TODO-5325: tryAt on block-inferred wrapper call receivers loses its Result type; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
+  // TODO-5328: tryAt on block-inferred wrapper call receivers loses its Result type.
   expectMapConformanceCompileReject(makeInferredExperimentalMapCallReceiverConformanceSource(),
                                     "map_inferred_experimental_call_receiver_" + emitMode,
                                     emitMode,
@@ -259,12 +258,13 @@ inline void expectInferredExperimentalMapStructFieldConformance(const std::strin
 }
 
 inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
-  // TODO-5325: inferred struct fields from wrapped MapValue initializers; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
-                                    "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
-                                    emitMode,
-                                    "argument type mismatch for /Holder parameter primary");
+  // TODO-5325: struct fields inferred from wrapped Map<K, V> constructors; a
+  // MapValue initializer is rejected for a Map slot (TODO-5324).
+  expectMapConformanceProgramRunsWithOutput(makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
+                                            "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "");
 }
 
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
@@ -277,48 +277,55 @@ inline void expectExperimentalMapMethodParameterConformance(const std::string &e
 }
 
 inline void expectInferredExperimentalMapParameterConformance(const std::string &emitMode) {
-  // TODO-5325: auto-typed wrapper parameters fail in lowering; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeInferredExperimentalMapParameterConformanceSource(),
-                                    "map_experimental_inferred_parameter_" + emitMode,
-                                    emitMode,
-                                    "backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions");
+  // TODO-5325: [auto] wrapper parameters run with method-call spelling on a free
+  // function; the /Holder/score method form is TODO-5329.
+  expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapParameterConformanceSource(),
+                                            "map_experimental_inferred_parameter_" + emitMode,
+                                            emitMode,
+                                            11,
+                                            "3\n4\n2\n2\n7\n4\n");
 }
 
 inline void expectInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  // TODO-5325: auto parameter defaults built from wrapper constructors are not pure; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeInferredExperimentalMapDefaultParameterConformanceSource(),
-                                    "map_experimental_inferred_default_parameter_" + emitMode,
-                                    emitMode,
-                                    "parameter default must be a literal or pure expression: values");
+  // TODO-5325: wrapper constructors allocate (heap_alloc), so they are not pure
+  // parameter defaults by design; the maps are passed explicitly instead.
+  expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapDefaultParameterConformanceSource(),
+                                            "map_experimental_inferred_default_parameter_" + emitMode,
+                                            emitMode,
+                                            19,
+                                            "2\n4\n1\n4\n3\n5\n6\n5\n8\n");
 }
 
 inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  // TODO-5325: inferred wrapper defaults mix MapValue and Map; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
-                                    "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
-                                    emitMode,
-                                    "argument type mismatch for /wrapValues parameter values");
+  // TODO-5325: wrapped wrapper values flow into [auto] parameters; allocating
+  // defaults are not pure by design, so the maps are passed explicitly.
+  expectMapConformanceProgramRunsWithOutput(makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
+                                            "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
+                                            emitMode,
+                                            21,
+                                            "3\n4\n3\n4\n3\n4\n7\n7\n7\n");
 }
 
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  // TODO-5325: untemplated canonical helper calls on temporary wrapper receivers; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeExperimentalMapHelperReceiverConformanceSource(),
-                                    "map_experimental_helper_receiver_" + emitMode,
-                                    emitMode,
-                                    "unknown call target: /std/collections/map/count");
+  // TODO-5325: method-call spelling on temporary wrapper receivers; the
+  // untemplated canonical helper spelling is not part of the wrapper design
+  // (TODO-4751).
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapHelperReceiverConformanceSource(),
+                                            "map_experimental_helper_receiver_" + emitMode,
+                                            emitMode,
+                                            21,
+                                            "2\n4\n9\n5\n1\n");
 }
 
 inline void expectWrappedExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  // TODO-5325: helper calls on generic-wrapper-returned wrapper receivers; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
-                                    "map_wrapped_experimental_helper_receiver_" + emitMode,
-                                    emitMode,
-                                    "unknown method: /std/collections/map/Map__t");
+  // TODO-5325: method-call spelling on generic-helper-returned wrapper
+  // receivers; the untemplated canonical helper spelling is not part of the
+  // wrapper design (TODO-4751).
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
+                                            "map_wrapped_experimental_helper_receiver_" + emitMode,
+                                            emitMode,
+                                            16,
+                                            "");
 }
 
 inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {

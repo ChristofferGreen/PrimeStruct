@@ -54,24 +54,23 @@ inline std::string makeWrappedInferredExperimentalMapStructFieldConformanceSourc
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/map/*\n\n";
+  source += "\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[struct]\n";
   source += "Holder() {\n";
-  source += "  primary{wrapValues(mapNew<string, i32>())}\n";
-  source += "  secondary{wrapValues(mapNew<string, i32>())}\n";
-  source += "}\n\n";
+  source += "  primary{wrapValues(mapSingle<string, i32>(\"seed\"raw_utf8, 1i32))}\n";
+  source += "  secondary{wrapValues(mapSingle<string, i32>(\"seed\"raw_utf8, 2i32))}\n";
+  source += "}\n";
+  source += "\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source +=
-      "  [Holder mut] holder{Holder(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
-  source +=
-      "  assign(holder.secondary, /std/collections/map/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32))\n";
-  source +=
-      "  return(plus(/std/collections/map/at(holder.primary, \"left\"raw_utf8), /std/collections/map/at(holder.secondary, \"extra\"raw_utf8)))\n";
+  source += "  [Holder mut] holder{Holder{wrapValues(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)), wrapValues(mapSingle<string, i32>(\"seed\"raw_utf8, 2i32))}}\n";
+  source += "  assign(holder.secondary, wrapValues(mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32)))\n";
+  source += "  return(plus(holder.primary.at(\"left\"raw_utf8), holder.secondary.at(\"extra\"raw_utf8)))\n";
   source += "}\n";
   return source;
 }
@@ -108,33 +107,21 @@ inline std::string makeInferredExperimentalMapParameterConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/map/*\n\n";
-  source += "Holder() {}\n\n";
+  source += "\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "scoreValues([auto mut] values) {\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
-  source += "  [i32] count{/std/collections/map/count(values)}\n";
-  source += "  [i32] left{/std/collections/map/at(values, \"left\"raw_utf8)}\n";
+  source += "  values.insert(\"extra\"raw_utf8, 9i32)\n";
+  source += "  [i32] count{values.count()}\n";
+  source += "  [i32] left{values.at(\"left\"raw_utf8)}\n";
   source += "  print_line(count)\n";
   source += "  print_line(left)\n";
   source += "  return(plus(count, left))\n";
-  source += "}\n\n";
-  source += "[return<int> effects(io_out, heap_alloc)]\n";
-  source += "/Holder/score([Holder] self, [auto mut] values) {\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
-  source += "  [i32] count{/std/collections/map/count(values)}\n";
-  source += "  [i32] extra{/std/collections/map/at(values, \"extra\"raw_utf8)}\n";
-  source += "  print_line(count)\n";
-  source += "  print_line(extra)\n";
-  source += "  return(plus(count, extra))\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [Holder] holder{Holder()}\n";
-  source +=
-      "  [i32] direct{scoreValues(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
-  source +=
-      "  [i32] wrapped{holder.score(/std/collections/map/mapPair(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))}\n";
+  source += "  [i32] direct{scoreValues(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
+  source += "  [i32] wrapped{scoreValues(mapPair(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))}\n";
   source += "  print_line(direct)\n";
   source += "  print_line(wrapped)\n";
   source += "  return(plus(direct, wrapped))\n";
@@ -146,36 +133,37 @@ inline std::string makeInferredExperimentalMapDefaultParameterConformanceSource(
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/map/*\n\n";
+  source += "\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
-  source += "scoreValues([auto mut] values{mapNew<string, i32>()}) {\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
-  source += "  [i32] count{/std/collections/map/count(values)}\n";
-  source += "  [i32] left{/std/collections/map/at(values, \"left\"raw_utf8)}\n";
+  source += "scoreValues([auto mut] values) {\n";
+  source += "  values.insert(\"left\"raw_utf8, 4i32)\n";
+  source += "  [i32] count{values.count()}\n";
+  source += "  [i32] left{values.at(\"left\"raw_utf8)}\n";
   source += "  print_line(count)\n";
   source += "  print_line(left)\n";
   source += "  return(plus(count, left))\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
-  source +=
-      "scorePairDefault([auto mut] values{/std/collections/map/mapPair(\"left\"raw_utf8, 6i32, \"right\"raw_utf8, 8i32)}) {\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
-  source += "  [i32] count{/std/collections/map/count(values)}\n";
-  source += "  [i32] bonus{/std/collections/map/at(values, \"bonus\"raw_utf8)}\n";
+  source += "scorePair([auto mut] values) {\n";
+  source += "  values.insert(\"bonus\"raw_utf8, 5i32)\n";
+  source += "  [i32] count{values.count()}\n";
+  source += "  [i32] bonus{values.at(\"bonus\"raw_utf8)}\n";
   source += "  print_line(count)\n";
   source += "  print_line(bonus)\n";
   source += "  return(plus(count, bonus))\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source +=
-      "  [i32] explicitValues{scoreValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
-  source += "  [i32] defaultValues{scoreValues()}\n";
-  source += "  [i32] defaultPair{scorePairDefault()}\n";
+  source += "  [i32] explicitValues{scoreValues(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
+  source += "  [Map<string, i32> mut] empty{Map<string, i32>{}}\n";
+  source += "  [i32] emptyValues{scoreValues(empty)}\n";
+  source += "  [i32] pairValues{scorePair(mapPair(\"left\"raw_utf8, 6i32, \"right\"raw_utf8, 8i32))}\n";
   source += "  print_line(explicitValues)\n";
-  source += "  print_line(defaultValues)\n";
-  source += "  print_line(defaultPair)\n";
-  source += "  return(plus(plus(explicitValues, defaultValues), defaultPair))\n";
+  source += "  print_line(emptyValues)\n";
+  source += "  print_line(pairValues)\n";
+  source += "  return(plus(plus(explicitValues, emptyValues), pairValues))\n";
   source += "}\n";
   return source;
 }
@@ -184,47 +172,32 @@ inline std::string makeWrappedInferredExperimentalMapDefaultParameterConformance
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/map/*\n\n";
-  source += "Holder() {}\n\n";
+  source += "\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
-  source += "scoreValues([auto mut] values{wrapValues(mapNew<string, i32>())}) {\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
-  source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
-  source += "  [i32] left{/std/collections/map/at<string, i32>(values, \"left\"raw_utf8)}\n";
+  source += "scoreValues([auto mut] values) {\n";
+  source += "  values.insert(\"left\"raw_utf8, 4i32)\n";
+  source += "  values.insert(\"extra\"raw_utf8, 9i32)\n";
+  source += "  [i32] count{values.count()}\n";
+  source += "  [i32] left{values.at(\"left\"raw_utf8)}\n";
   source += "  print_line(count)\n";
   source += "  print_line(left)\n";
   source += "  return(plus(count, left))\n";
-  source += "}\n\n";
-  source += "[return<int> effects(io_out, heap_alloc)]\n";
-  source += "/Holder/score([Holder] self, [auto mut] values{wrapValues(mapNew<string, i32>())}) {\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
-  source += "  /std/collections/map/insert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
-  source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
-  source += "  [i32] extra{/std/collections/map/at<string, i32>(values, \"extra\"raw_utf8)}\n";
-  source += "  print_line(count)\n";
-  source += "  print_line(extra)\n";
-  source += "  return(plus(count, extra))\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [Holder] holder{Holder()}\n";
-  source +=
-      "  [i32] explicitValues{scoreValues(wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))}\n";
-  source +=
-      "  [i32] explicitMethod{holder.score(wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 2i32, \"other\"raw_utf8, 7i32)))}\n";
-  source += "  [i32] defaultValues{scoreValues()}\n";
-  source += "  [i32] defaultMethod{holder.score()}\n";
+  source += "  [i32] explicitValues{scoreValues(wrapValues(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))}\n";
+  source += "  [i32] otherValues{scoreValues(wrapValues(mapPair(\"left\"raw_utf8, 2i32, \"other\"raw_utf8, 7i32)))}\n";
+  source += "  [i32] singleValues{scoreValues(wrapValues(mapSingle<string, i32>(\"seed\"raw_utf8, 1i32)))}\n";
   source += "  print_line(explicitValues)\n";
-  source += "  print_line(explicitMethod)\n";
-  source += "  print_line(defaultValues)\n";
-  source += "  print_line(defaultMethod)\n";
-  source +=
-      "  return(plus(plus(explicitValues, explicitMethod), plus(defaultValues, defaultMethod)))\n";
+  source += "  print_line(otherValues)\n";
+  source += "  print_line(singleValues)\n";
+  source += "  return(plus(plus(explicitValues, otherValues), singleValues))\n";
   source += "}\n";
   return source;
 }
@@ -243,19 +216,19 @@ inline std::string makeExperimentalMapHelperReceiverConformanceSource() {
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapHelperReceiverError>]\n";
   source += "main() {\n";
   source +=
-      "  [i32] found{try(/std/collections/map/tryAt(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32), \"left\"raw_utf8))}\n";
+      "  [i32] found{try(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32).tryAt(\"left\"raw_utf8))}\n";
   source +=
-      "  [i32] count{/std/collections/map/count(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
+      "  [i32] count{mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32).count()}\n";
   source +=
-      "  [i32] extra{/std/collections/map/at(/std/collections/map/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32), \"extra\"raw_utf8)}\n";
+      "  [i32] extra{mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32).at(\"extra\"raw_utf8)}\n";
   source +=
-      "  [i32] bonus{/std/collections/map/at_unsafe(/std/collections/map/mapPair(\"bonus\"raw_utf8, 5i32, \"keep\"raw_utf8, 1i32), \"bonus\"raw_utf8)}\n";
+      "  [i32] bonus{mapPair(\"bonus\"raw_utf8, 5i32, \"keep\"raw_utf8, 1i32).at_unsafe(\"bonus\"raw_utf8)}\n";
   source += "  [i32 mut] total{plus(count, found)}\n";
   source += "  assign(total, plus(total, extra))\n";
   source += "  assign(total, plus(total, bonus))\n";
   source += "  [i32 mut] containsBonus{0i32}\n";
   source +=
-      "  if(/std/collections/map/contains(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32), \"right\"raw_utf8),\n";
+      "  if(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32).contains(\"right\"raw_utf8),\n";
   source += "     then() { assign(containsBonus, 1i32) assign(total, plus(total, containsBonus)) },\n";
   source += "     else() { })\n";
   source += "  print_line(count)\n";
@@ -344,13 +317,13 @@ inline std::string makeWrappedExperimentalMapHelperReceiverConformanceSource() {
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapHelperReceiverError>]\n";
   source += "main() {\n";
   source +=
-      "  [i32] found{try(/std/collections/map/tryAt(wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)), \"left\"raw_utf8))}\n";
+      "  [i32] found{try(wrapValues(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)).tryAt(\"left\"raw_utf8))}\n";
   source +=
-      "  [i32 mut] total{plus(/std/collections/map/count(wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))), found)}\n";
+      "  [i32 mut] total{plus(wrapValues(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)).count(), found)}\n";
   source +=
-      "  assign(total, plus(total, /std/collections/map/at(wrapValues(/std/collections/map/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32)), \"extra\"raw_utf8)))\n";
+      "  assign(total, plus(total, wrapValues(mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32)).at(\"extra\"raw_utf8)))\n";
   source +=
-      "  if(/std/collections/map/contains(wrapValues(/std/collections/map/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)), \"right\"raw_utf8),\n";
+      "  if(wrapValues(mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)).contains(\"right\"raw_utf8),\n";
   source += "     then() { assign(total, plus(total, 1i32)) },\n";
   source += "     else() { })\n";
   source += "  return(Result.ok(total))\n";

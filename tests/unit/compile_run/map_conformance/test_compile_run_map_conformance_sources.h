@@ -233,24 +233,30 @@ inline std::string makeMapOverwriteConformanceSource(const std::string &importPa
 
 inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
   std::string source;
-  source += "import /std/collections/map/*\n\n";
+  source += "import /std/collections/map/*\n";
+  source += "\n";
   source += "[effects(heap_alloc), return<Map<K, V>> Comparable<K>]\n";
-  source += "wrapMap<K, V>([args<Entry<K, V>>] entries) {\n";
-  source += "  [Map<K, V>] values{map<K, V>([spread] entries)}\n";
-  source += "  return(values)\n";
-  source += "}\n\n";
+  source += "wrapMap<K, V>([Map<K, V>] source) {\n";
+  source += "  return(source)\n";
+  source += "}\n";
+  source += "\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [Map<string, i32>] empty{map<string, i32>()}\n";
-  source +=
-      "  [Map<string, i32>] direct{map<string, i32>(entry(\"left\"raw_utf8, 4i32), entry(\"right\"raw_utf8, 7i32), entry(\"bonus\"raw_utf8, 9i32))}\n";
-  source +=
-      "  [Map<string, i32>] wrapped{wrapMap<string, i32>(entry(\"alpha\"raw_utf8, 2i32), entry(\"beta\"raw_utf8, 5i32), entry(\"gamma\"raw_utf8, 6i32))}\n";
-  source += "  [i32 mut] total{plus(/std/collections/map/count<string, i32>(empty), /std/collections/map/count<string, i32>(direct))}\n";
-  source += "  assign(total, plus(total, /std/collections/map/at<string, i32>(direct, \"right\"raw_utf8)))\n";
-  source += "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(wrapped, \"beta\"raw_utf8)))\n";
-  source += "  if(/std/collections/map/contains<string, i32>(direct, \"bonus\"raw_utf8),\n";
-  source += "     then() { assign(total, plus(total, /std/collections/map/count<string, i32>(wrapped))) },\n";
+  source += "  [Map<string, i32>] empty{Map<string, i32>{}}\n";
+  source += "  [Map<string, i32> mut] direct{Map<string, i32>{}}\n";
+  source += "  direct.insert(\"left\"raw_utf8, 4i32)\n";
+  source += "  direct.insert(\"right\"raw_utf8, 7i32)\n";
+  source += "  direct.insert(\"bonus\"raw_utf8, 9i32)\n";
+  source += "  [Map<string, i32> mut] source{Map<string, i32>{}}\n";
+  source += "  source.insert(\"alpha\"raw_utf8, 2i32)\n";
+  source += "  source.insert(\"beta\"raw_utf8, 5i32)\n";
+  source += "  source.insert(\"gamma\"raw_utf8, 6i32)\n";
+  source += "  [Map<string, i32>] wrapped{wrapMap<string, i32>(source)}\n";
+  source += "  [i32 mut] total{plus(empty.count(), direct.count())}\n";
+  source += "  assign(total, plus(total, direct.at(\"right\"raw_utf8)))\n";
+  source += "  assign(total, plus(total, wrapped.at_unsafe(\"beta\"raw_utf8)))\n";
+  source += "  if(direct.contains(\"bonus\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, wrapped.count())) },\n";
   source += "     else() { })\n";
   source += "  return(total)\n";
   source += "}\n";
@@ -409,43 +415,45 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/map/*\n\n";
+  source += "\n";
   source += "[struct]\n";
   source += "Owned() {\n";
-  source += "  [i32 mut] value{0i32}\n\n";
+  source += "  [i32 mut] value{0i32}\n";
+  source += "\n";
   source += "  [mut]\n";
   source += "  Move([Reference<Self>] other) {\n";
   source += "    assign(this.value, other.value)\n";
   source += "    assign(other.value, 0i32)\n";
-  source += "  }\n\n";
+  source += "  }\n";
+  source += "\n";
   source += "  Destroy() {\n";
   source += "  }\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[return<Reference<Map<string, Owned>>>]\n";
   source += "borrowExperimentalMap([Reference<Map<string, Owned>>] values) {\n";
   source += "  return(values)\n";
-  source += "}\n\n";
+  source += "}\n";
+  source += "\n";
   source += "[effects(io_err)]\n";
-  source += "unexpectedExperimentalMapReferenceMethodError([ContainerError] err) {\n";
+  source += "unexpectedError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
   source += "  print_line_error(Result.why(status))\n";
-  source += "}\n\n";
-  source +=
-      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapReferenceMethodError>]\n";
+  source += "}\n";
+  source += "\n";
+  source += "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedError>]\n";
   source += "main() {\n";
-  source +=
-      "  [Map<string, Owned> mut] values{mapSingle<string, Owned>(\"left\"raw_utf8, Owned(4i32))}\n";
-  source += "  borrowExperimentalMap(location(values)).insert(\"right\"raw_utf8, Owned(7i32))\n";
-  source += "  borrowExperimentalMap(location(values)).insert(\"left\"raw_utf8, Owned(9i32))\n";
-  source += "  borrowExperimentalMap(location(values)).insert(\"third\"raw_utf8, Owned(11i32))\n";
+  source += "  [Map<string, Owned> mut] values{mapSingle<string, Owned>(\"left\"raw_utf8, Owned{4i32})}\n";
+  source += "  borrowExperimentalMap(location(values)).insert(\"right\"raw_utf8, Owned{7i32})\n";
+  source += "  borrowExperimentalMap(location(values)).insert(\"left\"raw_utf8, Owned{9i32})\n";
+  source += "  borrowExperimentalMap(location(values)).insert(\"third\"raw_utf8, Owned{11i32})\n";
   source += "  [Owned] found{try(borrowExperimentalMap(location(values)).tryAt(\"left\"raw_utf8))}\n";
-  source +=
-      "  [Result<Owned, ContainerError>] missing{borrowExperimentalMap(location(values)).tryAt(\"missing\"raw_utf8)}\n";
+  source += "  [Result<Owned, ContainerError>] missing{borrowExperimentalMap(location(values)).tryAt(\"missing\"raw_utf8)}\n";
+  source += "  [Owned] right{borrowExperimentalMap(location(values)).at(\"right\"raw_utf8)}\n";
+  source += "  [Owned] third{borrowExperimentalMap(location(values)).at_unsafe(\"third\"raw_utf8)}\n";
   source += "  [i32 mut] total{plus(borrowExperimentalMap(location(values)).count(), found.value)}\n";
-  source +=
-      "  assign(total, plus(total, borrowExperimentalMap(location(values)).at(\"right\"raw_utf8).value))\n";
-  source +=
-      "  assign(total, plus(total, borrowExperimentalMap(location(values)).at_unsafe(\"third\"raw_utf8).value))\n";
+  source += "  assign(total, plus(total, right.value))\n";
+  source += "  assign(total, plus(total, third.value))\n";
   source += "  if(borrowExperimentalMap(location(values)).contains(\"right\"raw_utf8),\n";
   source += "     then() { assign(total, plus(total, 1i32)) },\n";
   source += "     else() { })\n";

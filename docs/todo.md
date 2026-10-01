@@ -99,17 +99,23 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5325 | Run the remaining pinned `Map<K, V>` wrapper conformance shapes | ready | map-wrapper-conformance |
+| TODO-5327 | Allow field access on a method result whose receiver is a borrowed call | ready | borrowed-receiver-field-access |
+| TODO-5328 | Keep the Result type for `tryAt` on a block-inferred wrapper call receiver | ready | inferred-call-receiver-try |
+| TODO-5329 | Resolve calls inside an `[auto]`-parameter `/Type/method` correctly | ready | auto-param-method-resolution |
+| TODO-5330 | Decide whether allocating wrapper constructors may be parameter defaults | ready | wrapper-default-parameters |
 | TODO-5326 | Restore canonical `map<K, V>` wrapper-temporary compile-run pins | ready | canonical-map-wrapper-temporaries |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
 ### Ready Now
 
-- TODO-5325 (track: map-wrapper-conformance, surface: the nine `TODO-5325` helpers in `tests/unit/compile_run/map_conformance/*expectations.h` plus the monomorph wrapper-routing rewrite): run the remaining `Map<K, V>` wrapper shapes.
+- TODO-5327 (track: borrowed-receiver-field-access, surface: VM lowering of field access on a borrowed-call method result): allow chained field access on `borrow(location(v)).at(k).value`.
+- TODO-5328 (track: inferred-call-receiver-try, surface: semantics `try` Result inference for `return<auto>` wrapper calls): keep the `Result` type for `tryAt` on an inferred wrapper call receiver.
+- TODO-5329 (track: auto-param-method-resolution, surface: lowering of `[auto]`-parameter `/Type/method` bodies): stop resolving `print_line` as `/Holder/print_line`.
+- TODO-5330 (track: wrapper-default-parameters, surface: parameter-default purity rule and its spec note): decide on allocating wrapper constructors as defaults.
 - TODO-5326 (track: canonical-map-wrapper-temporaries, surface: `tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_*.cpp` canonical-map cases): restore the canonical `map<K, V>` wrapper-temporary pins.
 
-TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325 (closed 2026-10-01; its unrunnable shapes became TODO-5327..5330)/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -285,43 +291,61 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
 
-- [ ] TODO-5325: Run the remaining pinned `Map<K, V>` wrapper conformance shapes
+- [ ] TODO-5327: Allow field access on a method result whose receiver is a borrowed call
   - owner: ai
   - status: ready
-  - created_at: 2026-09-29
-  - phase: Map wrapper follow-up (split from TODO-4751)
-  - parallel_track: map-wrapper-conformance
+  - created_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: borrowed-receiver-field-access
   - depends_on: (none)
-  - scope: TODO-4751 moved 33 map-conformance helpers to runtime
-    expectations; nine still compile-reject and are pinned with
-    `TODO-5325` comments in
-    `tests/unit/compile_run/map_conformance/*expectations.h`, each with
-    its current diagnostic:
-    `expectExperimentalMapHelperReceiverConformance` (untemplated
-    `/std/collections/map/count(...)` on a temporary wrapper receiver),
-    `expectWrappedExperimentalMapHelperReceiverConformance` ("unknown
-    method" on a generic-helper-returned wrapper),
-    `expectExperimentalMapReferenceMethodConformance` (borrowed wrapper
-    method with a non-trivial value: "struct parameter type mismatch"),
-    `expectExperimentalMapVariadicConstructorConformance` (no variadic
-    entry constructor returns the wrapper),
-    `expectInferredExperimentalMapCallReceiverConformance` (`try` on
-    `tryAt` of a block-inferred wrapper call receiver),
-    `expectInferredExperimentalMapParameterConformance` and
-    `expectInferredExperimentalMapDefaultParameterConformance` (`[auto]`
-    wrapper parameters/defaults),
-    `expectWrappedInferredExperimentalMapDefaultParameterConformance` and
-    `expectWrappedInferredExperimentalMapStructFieldConformance` (inferred
-    `MapValue` initializers flowing into wrapper slots).
+  - scope: `borrowExperimentalMap(location(values)).at("left"raw_utf8).value` (and `.at_unsafe(...)`) on a `Map<string, Owned>` fails VM lowering with "struct parameter type mismatch"; binding the result to a local first (`[Owned] x{borrow(...).at(...)}`) then `x.value` works, as does `values.at(...).value` on a plain receiver. Pinned by `expectExperimentalMapReferenceMethodConformance`, which binds intermediates today.
   - acceptance:
-    - each listed helper either runs on vm/native/exe with the value its
-      source computes, or its source is respelled to the wrapper surface
-      (`mapSingle`/`mapPair`/`Map<K, V>{}`) with a note why the old shape
-      is invalid under TODO-4751's design.
+    - the chained form runs on vm/native/exe and the conformance source is respelled back to chained access.
     - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: do not add `Map`/`MapValue` overloads to the canonical
-    helper family (see TODO-4751); split any shape needing a new
-    inference feature into its own leaf.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+
+- [ ] TODO-5328: Keep the Result type for `tryAt` on a block-inferred wrapper call receiver
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: inferred-call-receiver-try
+  - depends_on: (none)
+  - scope: `[return<auto>] buildValues(...)` returning a `Map<string, i32>` from `if` branches, then `try(buildValues(true).tryAt("left"raw_utf8))`, fails semantics with "try requires Result argument". Pinned by `expectInferredExperimentalMapCallReceiverConformance`.
+  - acceptance:
+    - the shape runs on vm/native/exe and the pin moves from reject to run.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+
+- [ ] TODO-5329: Resolve calls inside an `[auto]`-parameter `/Type/method` correctly
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: auto-param-method-resolution
+  - depends_on: (none)
+  - scope: `/Holder/score([Holder] self, [auto mut] values)` calling `print_line(...)` lowers `print_line` as `/Holder/print_line` ("vm backend only supports ... calls in expressions (call=/Holder/print_line ...)"). The same body as a free `[auto]` function runs. The method form was part of the original `expectInferredExperimentalMapParameterConformance` source.
+  - acceptance:
+    - a `/Holder/score` method with an `[auto mut]` wrapper parameter runs on vm/native/exe and is added back to the conformance source.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+
+- [ ] TODO-5330: Decide whether allocating wrapper constructors may be parameter defaults
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: wrapper-default-parameters
+  - depends_on: (none)
+  - scope: `[Map<string, i32> mut] values{mapSingle<string, i32>(...)}` and `[auto mut] values{mapNew<string, i32>()}` style defaults are rejected with "parameter default must be a literal or pure expression" because the constructors carry `effects(heap_alloc)`. TODO-5325 treated that as by-design and passes the maps explicitly; this leaf records the open question.
+  - acceptance:
+    - either a documented decision (spec note, diagnostic test) that allocating defaults stay rejected, or a feature that allows them with tests.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
 
 - [ ] TODO-5326: Restore canonical `map<K, V>` wrapper-temporary compile-run pins
   - owner: ai

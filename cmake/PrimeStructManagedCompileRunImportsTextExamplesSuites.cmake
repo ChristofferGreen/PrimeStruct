@@ -18,8 +18,11 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   SOURCE_FILE "*test_compile_run_imports_blocks.cpp"
                                   TOTAL_CASES 25
                                   CASES_PER_SHARD 1)
+# The map conformance shards (roughly 83-132) compile and run real programs on
+# vm/native/exe; a 2-case shard takes up to ~30s alone and doubles under
+# full-suite load, so allow 120s.
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
-                                  TIMEOUT 60
+                                  TIMEOUT 120
                                   SHARD_PREFIX "operations_and_collections"
                                   SOURCE_FILE "*test_compile_run_imports_operations.cpp"
                                   TOTAL_CASES 201

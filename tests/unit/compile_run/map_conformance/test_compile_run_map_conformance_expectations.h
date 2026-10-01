@@ -217,21 +217,23 @@ inline void expectPublicMapReferenceWrapperConformance(const std::string &emitMo
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  // TODO-5325: borrowed wrapper methods returning non-trivial values fail in lowering; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeExperimentalMapReferenceMethodConformanceSource(),
-                                    "experimental_map_reference_methods_" + emitMode,
-                                    emitMode,
-                                    "struct parameter type mismatch");
+  // TODO-5325: runs through the public Map<K, V> wrapper. Field access is applied to
+  // bound locals; chaining it onto a borrowed-receiver method result is TODO-5327.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapReferenceMethodConformanceSource(),
+                                            "experimental_map_reference_methods_" + emitMode,
+                                            emitMode,
+                                            33,
+                                            "container missing key\n");
 }
 
 inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
-  // TODO-5325: no variadic entry constructor returns the wrapper; the public Map<K, V> wrapper
-  // (TODO-4751) does not run this shape yet.
-  expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorConformanceSource(),
-                                    "experimental_map_variadic_ctor_" + emitMode,
-                                    emitMode,
-                                    "argument count mismatch for /std/collections/map/map__ov1");
+  // TODO-5325: the canonical variadic map<K, V>(entries...) returns the internal
+  // MapValue, so a Map<K, V> wrapper is built with Map<K, V>{} plus insert.
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapVariadicConstructorConformanceSource(),
+                                            "experimental_map_variadic_ctor_" + emitMode,
+                                            emitMode,
+                                            18,
+                                            "");
 }
 
 inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::string &emitMode) {
