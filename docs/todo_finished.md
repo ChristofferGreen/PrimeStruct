@@ -56571,3 +56571,230 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: monomorph binding inference (`TemplateMonomorphBindingCallInference.cpp`) typed a struct brace-constructor call as the bare struct path, dropping explicit template arguments, so implicit template inference for an `[auto]` parameter produced `.../Map` and failed with 'template arguments required'. It now keeps the explicit arguments when they match the struct's parameters. Both `f([auto] m)` with a `Map<K, V>{}` argument and an `[auto]` parameter with a `Map<K, V>{}` default work on vm/native/exe; two `bindings.core` tests added (`TOTAL_CASES` 63 -> 65).
+
+**Todo Archive (October 1, 2026)**
+
+- [x] TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-stdlib-cache
+  - depends_on: (none)
+  - scope: Determine whether `validateProgramThroughCompilePipeline`-style
+    test helpers (and the underlying `ImportResolver`/`runCompilePipeline`
+    machinery) re-read and re-parse the same unchanging stdlib `.prime`
+    files from disk for every single test case that imports them. If so,
+    add a process-local cache keyed on file path + mtime so repeated
+    imports of the same stdlib module within one test binary process reuse
+    already-parsed content.
+  - implementation_notes: Confirm with a read syscall count or simple
+    instrumentation before assuming this is real; don't add caching
+    speculatively. Any cache must not change behavior for tests that
+    intentionally write and import a modified stdlib file mid-run, if any
+    exist.
+  - acceptance:
+    - Before/after wall-clock timing for one representative `compile_run`
+      CTest shard is recorded in `docs/TestRuntimeOptimization.md`.
+    - No test behavior changes (full affected suite still passes
+      identically before and after).
+  - stop_rule: Stop once caching is implemented and measured for one
+    representative shard; broader rollout or cache-invalidation edge cases
+    are follow-up work if the measured win is significant.
+  - archived_at: 2026-10-01
+  - resolution: superseded / premise moot: every compile_run test spawns a fresh primec process, so a cross-run parse cache has nothing to persist in; the real cost was within one compile and was addressed by TODO-5230 (closed).
+  - investigation_log: |
+    - 2026-08-13: this TODO's entire premise was moot. Every `compile_run`
+      test spawns a fresh `./primec` subprocess (confirmed by TODO-4709's
+      audit), so there is no shared process for a cross-test-run parse
+      cache to live in - "process-local cache keyed on file path + mtime"
+      has nothing to persist across, since each test gets a brand new
+      process. While measuring this premise directly (`--dump-stage`
+      breakdown on a minimal vector-importing compile), found the real,
+      much bigger cost this TODO was gesturing at from the wrong angle: a
+      SINGLE compile invocation that imports `/std/collections/vector/*`
+      and uses it takes ~2.0-2.2s vs ~7-10ms for an otherwise-identical
+      no-import compile - a ~250-300x difference, all CPU-bound (confirmed
+      with `valgrind --tool=callgrind`), not I/O or cold-cache. The
+      redundant work isn't stdlib text re-read across test PROCESSES, it's
+      binding-type-name string parsing (`normalizeBindingTypeName`,
+      `splitTemplateTypeName`, `splitTopLevelTemplateArgs`) re-deriving
+      the same answers from scratch millions of times WITHIN a single
+      process's one compile, with zero memoization. Real tracking entry
+      is now TODO-5230 (closed), which fixed the memoizable part of this
+      (verified: 99.99% cache hit rate, ~5.8% total retired-instruction
+      reduction) and documented why the call-VOLUME itself (not the
+      per-call string-parse cost) is the larger remaining piece, requiring
+      deeper restructuring out of scope for a leaf-sized fix. Left open
+      but pointing at TODO-5230 as the actual tracking entry, per the
+      same superseded-but-not-duplicated pattern as TODO-4740 -> TODO-4804.
+
+- [x] TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
+  - owner: ai
+  - created_at: 2026-07-15
+  - phase: Test runtime optimization
+  - parallel_track: test-runtime-shard-consolidation
+  - depends_on: TODO-4707, TODO-4708
+  - scope: Managed doctest suites are currently sharded into small 10-case
+    `add_test` chunks (`addPrimeStructManagedDoctestSuite`,
+    `cmake/PrimeStructManagedSemanticsSuites.cmake`), which was necessary to
+    dodge cross-test-case pollution (see TODO-4707) but means every one of
+    the resulting hundreds of shards separately pays fixed binary-launch
+    and doctest-registration overhead (see TODO-4708's measurement). Once
+    TODO-4707 proves a suite pollution-free running as one process, raise
+    that suite's `CASES_PER_SHARD` (or equivalent) toward the largest chunk
+    size that still finishes comfortably under the 30s ceiling from
+    `docs/TestRuntimeOptimization.md`, so the fixed per-shard cost stops
+    being paid hundreds of times over for the same total case count.
+  - implementation_notes: Shard size is a tradeoff, not a monotonic win:
+    bigger shards amortize fixed overhead better but increase blast radius
+    (one bad case can no longer be isolated as easily) and reduce
+    parallelism granularity under `ctest --parallel N`. Pick a size using
+    TODO-4708's measured overhead number and real per-case runtime, not a
+    round number. Start with `calls_flow.collections` (the suite already
+    under investigation) before generalizing to other managed suites.
+  - acceptance:
+    - `calls_flow.collections`'s shard count is reduced (larger
+      `CASES_PER_SHARD`) with total wall-clock time for the full suite
+      measurably lower than the current 10-case-shard baseline, and no
+      shard exceeds the 30s ceiling.
+    - The change is proven safe by confirming pass/fail results are
+      identical to the pre-change baseline (no reintroduced pollution).
+  - stop_rule: Stop once `calls_flow.collections` is re-sharded and
+    verified; rolling the same change out to every other managed suite is
+    follow-up work, not part of this leaf.
+  - archived_at: 2026-10-01
+  - resolution: archived low-value: per-shard fixed overhead measured at ~5-9ms (TODO-4708), so even eliminating all of it across ~1950 shards saves ~15-20s of a ~4748s suite; its prerequisites TODO-4707/4708 are closed but the value case never materialized.
+  - investigation_log: |
+    - 2026-08-08: TODO-4708's measurement (now resolved) found per-shard
+      fixed overhead is ~5-9ms - negligible against the measured ~4748s
+      total suite time. This TODO's whole premise (grow shard size to
+      amortize that fixed cost) is real but now known to be **low-value**:
+      even eliminating all fixed overhead from all 1954 shards entirely
+      would save on the order of ~15-20s, not a meaningful fraction of
+      runtime. Deprioritized relative to the real cost drivers identified
+      in `docs/TestRuntimeOptimization.md`'s 2026-08-08 log entry (a
+      handful of pathologically slow tests dominate total time; see
+      TODO-5220/5221/5222 for the higher-ROI follow-up chain). At the
+      time, not closed outright since TODO-4707 (cross-test-case
+      pollution) was still open and independently worth fixing for
+      correctness reasons even without the perf motivation.
+    - 2026-09-23 (docs/todo.md cleanup pass): both `depends_on` entries
+      (TODO-4707, TODO-4708) are now closed - `blocked` would be
+      inaccurate. Reclassified `deferred`: unblocked, but the 2026-08-08
+      low-value finding above still stands, so this isn't worth picking up
+      ahead of the `ready` items in Queue Summary without a reason to
+      revisit the value case.
+
+- [x] TODO-4732: Cut compile-run test runtimes with semantic-product golden comparisons
+  - owner: ai
+  - created_at: 2026-07-20
+  - phase: Test infrastructure
+  - scope: many compile-run tests pay the full primec semantics + IR
+    lowering + clang + link + run cost (~40-60s/case in Debug) only to
+    assert an exit code that is a proxy for a routing decision. Idea
+    (from the project owner): compare a stored artifact instead of
+    running the full pipeline. Design sketch agreed in-session:
+    prefer storing the SEMANTIC PRODUCT routing tables
+    (direct_call_targets / method_call_targets) over lowest-level IR
+    or generated C++ - it is tiny, stable across lowering refactors,
+    available before clang, and pins exactly the decision under test;
+    generated C++ churns cosmetically and IR goldens churn on slot or
+    ordering refactors. Guard rails: goldens enshrine
+    recording-day bugs (this session spent its bulk un-pinning ~200
+    rotted contracts), so the refresh workflow must force human diff
+    review, and a thin end-to-end tier that actually runs binaries
+    must remain (only real runs catch miscompiles and VM/native
+    divergence). Execution order across the test-runtime track: take
+    the independent quick wins FIRST - TODO-4734 (RelWithDebInfo
+    runner), TODO-4733 (vm-mode migration), TODO-4736 (runtime
+    preamble prebuild), TODO-4735 (shared stdlib product) - plus the
+    TODO-4737 lowering invariant and TODO-4738 duration telemetry;
+    THIS golden-comparison item comes last, scoped to whatever is
+    still slow once those land. Note the goldens also cannot see
+    lowering-stage failures (the gap (c) class) - that is TODO-4737's
+    job, not this item's.
+  - acceptance: combined with the track's other items, emitters-suite
+    wall time drops by an order of magnitude without losing the
+    end-to-end miscompile net.
+  - stop_rule: do not migrate a case without first timing it (in-process
+    helper vs. current subprocess form) - the 2026-07-23 log entry already
+    found most "obvious" reject-only candidates have no measurable win, so
+    a blanket migration risks touching ~292 call sites for near-zero
+    benefit; migrate only cases individually confirmed to save real time.
+  - archived_at: 2026-10-01
+  - resolution: archived low-value: its quick-win prerequisites (TODO-4733/4734/4736/4738) are closed, the in-process golden helpers it envisioned already exist, and per-case timing showed reject-only candidates already short-circuit before clang (~10ms either way), so a blanket migration risks ~292 call sites for near-zero benefit.
+  - investigation_log: |
+    - 2026-07-23: investigated with real measurements before attempting a
+      migration, rather than guessing at candidates. Two findings, one
+      very good and one that narrows the win:
+    1. The infrastructure this TODO envisions ALREADY EXISTS and is
+       proven at scale - it doesn't need to be built from scratch.
+       `include/primec/testing/CompilePipelineDumpHelpers.h` provides
+       `runCompilePipelineBackendConformanceForTesting`/
+       `prepareCompilePipelineIr` (drives `primec::runCompilePipeline`
+       IN-PROCESS, no subprocess, no clang) plus
+       `CompilePipelineBackendConformance::findDirectCallTarget`/
+       `findMethodCallTarget`/`resolvedDirectCallPath`/
+       `resolvedMethodCallPath` for asserting directly on the semantic
+       product's routing tables, and
+       `captureSemanticBoundaryDumpsForTesting` for in-process
+       ast-semantic/semantic-product/ir dump-stage text capture. This
+       exact pattern is already load-bearing at scale in
+       `tests/unit/semantics/test_semantics_type_resolution_graph_snapshots.cpp`
+       (8722 lines). So "combine a stored artifact" doesn't need new
+       golden-file tooling - it needs `compile_run` cases that are
+       really routing-decision checks moved onto this existing
+       in-process helper surface instead of shelling out to
+       `./primec --emit=... ` + optionally running the binary.
+    2. The "obvious" migration candidates (compile-time REJECT cases -
+       diagnostic-only, no execution) mostly don't have cost left to
+       save. Verified directly on
+       `test_compile_run_emitters_wrapper_map_count_sugar.cpp`'s
+       "C++ emitter keeps canonical map count diagnostics on wrapper
+       slash return method sugar" case: its diagnostic ("argument type
+       mismatch for /std/collections/map/count parameter marker")
+       fires at the `semantic` stage (confirmed via matching
+       `--dump-stage semantic-product` output, including exit code 2
+       and the identical diagnostic text, against the full `--emit=exe`
+       invocation) - i.e. the current subprocess already fails BEFORE
+       reaching clang/link, same as a golden-comparison version would.
+       Timed both forms directly: ~10-11ms either way, no measurable
+       win. A `grep`-based sweep for the `compileCmd`-but-no-`exePath`
+       shape (reject-only tests with no execution) found ~292 matches
+       across `tests/unit/compile_run/*.cpp` - a large candidate pool,
+       but this timing result means most of them likely have the same
+       "already short-circuits before the expensive part" property and
+       would need per-case verification (not a blanket migration) to
+       confirm which ones are worth moving.
+    - what still needs doing before a real migration: the ACCEPT-and-
+       run cases are where the real clang+link+execute cost lives, but
+       distinguishing "exit code is only a routing-decision proxy"
+       from "exit code encodes real computed program output" (e.g.
+       `bare map count through canonical helper in C++ emitter"`
+       asserts the executed binary returns exactly 92, i.e. genuine
+       runtime-behavior verification, not just routing) requires
+       working through TODO-4709's audit output
+       (`docs/TODO4709CompileRunAudit.md`) case by case to classify each
+       candidate - TODO-4709 itself is closed (it was scoped audit-only,
+       no migrations, and delivered exactly that); the classification
+       pass is this task's own remaining scope, not a blocker on another
+       open TODO. Also flagging a fidelity
+       trap for whoever does the migration: the existing in-process
+       helpers default to `emitKind = "native"`
+       (`detail::captureCompilePipelineDumpStageFromPath`) while the
+       `compile_run/*emitters*` test files are specifically exercising
+       the C++ ("cpp"/exe) emitter by name - a migration must pass the
+       matching `emitKind` explicitly rather than accept the default,
+       or it silently tests a different backend than the original
+       case intended (the same class of regression this session hit
+       for real during TODO-4733's exe->vm migration, caught there via
+       a before/after diff rather than assumed away).
+    - 2026-09-23 (docs/todo.md cleanup pass): corrected the stale
+      "TODO-4709 already scoped and left undone" framing above -
+      TODO-4709 is closed and did exactly what it scoped (audit only).
+      `status` stays `deferred`, not `blocked`, since nothing open is
+      stopping this task; it just needs the classification pass above
+      done before a real migration can start.
+
+**Queue history note (moved from docs/todo.md, October 1, 2026)**
+TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325 (closed 2026-10-01; its unrunnable shapes became TODO-5327..5330)/5326 (closed 2026-10-01; its canonical-map gaps became TODO-5331..5335) were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.

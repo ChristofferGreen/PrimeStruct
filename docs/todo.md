@@ -95,133 +95,43 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-4710 | Cache stdlib parse results across compile-pipeline test runs | deferred | test-runtime-stdlib-cache |
-| TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
-| TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
-| TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
-| TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
+| TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | ready | ast-semantic-to-aos-spelling |
+| TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | ready | soa-accessor-naming |
+| TODO-4737 | Add a lowered-module invariant for method-call targets | ready | lowered-module-invariant |
 
 ### Ready Now
 
-
-TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325 (closed 2026-10-01; its unrunnable shapes became TODO-5327..5330)/5326 (closed 2026-10-01; its canonical-map gaps became TODO-5331..5335) were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+- TODO-5320 (track: ast-semantic-to-aos-spelling, surface: ast-semantic `.to_aos()` rewrite in `src/semantics/` plus the two pinned dump cases in `tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp`): make the dump spell the call the way the semantic product resolves it.
+- TODO-5309 (track: soa-accessor-naming, surface: `stdlib/std/collections/soa.prime` `ref_ref` plus its call sites in `tests/unit/` and `docs/PrimeStruct.md`): rename `ref_ref` to `ref_borrowed`.
+- TODO-4737 (track: lowered-module-invariant, surface: `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp` and the shared `isBuiltinClassifiedMethodCallTarget` helper in `IrLowererHelpers.{h,cpp}`): share one builtin-classification predicate across all method-call-target sites, then add the lowered-module invariant pass.
 
 ### Immediate Next 10
 
+1. TODO-5320 - smallest and fully scoped; removes a latent wrong-target risk between the AST and the semantic product.
+2. TODO-5309 - public stdlib rename with wide but mechanical test churn; do it while no other soa work is in flight.
+3. TODO-4737 - largest; needs a before/after diff of the full `ir.pipeline.validation` suite, so take it last.
+
 ### Priority Lanes
+
+- Semantics/dump fidelity: TODO-5320
+- Stdlib naming: TODO-5309
+- Lowering correctness tooling: TODO-4737
 
 ### Execution Queue
 
+Run `ready` leaves in the order listed under Immediate Next 10; all three are on disjoint tracks and surfaces, so they may also run in parallel.
+
 ### Task Blocks
 
-- [ ] TODO-4710: Cache stdlib .prime parse results across compile-pipeline test runs
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-07-15
-  - phase: Test runtime optimization
-  - parallel_track: test-runtime-stdlib-cache
-  - depends_on: (none)
-  - scope: Determine whether `validateProgramThroughCompilePipeline`-style
-    test helpers (and the underlying `ImportResolver`/`runCompilePipeline`
-    machinery) re-read and re-parse the same unchanging stdlib `.prime`
-    files from disk for every single test case that imports them. If so,
-    add a process-local cache keyed on file path + mtime so repeated
-    imports of the same stdlib module within one test binary process reuse
-    already-parsed content.
-  - implementation_notes: Confirm with a read syscall count or simple
-    instrumentation before assuming this is real; don't add caching
-    speculatively. Any cache must not change behavior for tests that
-    intentionally write and import a modified stdlib file mid-run, if any
-    exist.
-  - acceptance:
-    - Before/after wall-clock timing for one representative `compile_run`
-      CTest shard is recorded in `docs/TestRuntimeOptimization.md`.
-    - No test behavior changes (full affected suite still passes
-      identically before and after).
-  - stop_rule: Stop once caching is implemented and measured for one
-    representative shard; broader rollout or cache-invalidation edge cases
-    are follow-up work if the measured win is significant.
 
-- [ ] TODO-4712: Grow CTest shard size once cross-test-case pollution is fixed
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-07-15
-  - phase: Test runtime optimization
-  - parallel_track: test-runtime-shard-consolidation
-  - depends_on: TODO-4707, TODO-4708
-  - scope: Managed doctest suites are currently sharded into small 10-case
-    `add_test` chunks (`addPrimeStructManagedDoctestSuite`,
-    `cmake/PrimeStructManagedSemanticsSuites.cmake`), which was necessary to
-    dodge cross-test-case pollution (see TODO-4707) but means every one of
-    the resulting hundreds of shards separately pays fixed binary-launch
-    and doctest-registration overhead (see TODO-4708's measurement). Once
-    TODO-4707 proves a suite pollution-free running as one process, raise
-    that suite's `CASES_PER_SHARD` (or equivalent) toward the largest chunk
-    size that still finishes comfortably under the 30s ceiling from
-    `docs/TestRuntimeOptimization.md`, so the fixed per-shard cost stops
-    being paid hundreds of times over for the same total case count.
-  - implementation_notes: Shard size is a tradeoff, not a monotonic win:
-    bigger shards amortize fixed overhead better but increase blast radius
-    (one bad case can no longer be isolated as easily) and reduce
-    parallelism granularity under `ctest --parallel N`. Pick a size using
-    TODO-4708's measured overhead number and real per-case runtime, not a
-    round number. Start with `calls_flow.collections` (the suite already
-    under investigation) before generalizing to other managed suites.
-  - acceptance:
-    - `calls_flow.collections`'s shard count is reduced (larger
-      `CASES_PER_SHARD`) with total wall-clock time for the full suite
-      measurably lower than the current 10-case-shard baseline, and no
-      shard exceeds the 30s ceiling.
-    - The change is proven safe by confirming pass/fail results are
-      identical to the pre-change baseline (no reintroduced pollution).
-  - stop_rule: Stop once `calls_flow.collections` is re-sharded and
-    verified; rolling the same change out to every other managed suite is
-    follow-up work, not part of this leaf.
 
-- [ ] TODO-4732: Cut compile-run test runtimes with semantic-product golden comparisons
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-07-20
-  - phase: Test infrastructure
-  - scope: many compile-run tests pay the full primec semantics + IR
-    lowering + clang + link + run cost (~40-60s/case in Debug) only to
-    assert an exit code that is a proxy for a routing decision. Idea
-    (from the project owner): compare a stored artifact instead of
-    running the full pipeline. Design sketch agreed in-session:
-    prefer storing the SEMANTIC PRODUCT routing tables
-    (direct_call_targets / method_call_targets) over lowest-level IR
-    or generated C++ - it is tiny, stable across lowering refactors,
-    available before clang, and pins exactly the decision under test;
-    generated C++ churns cosmetically and IR goldens churn on slot or
-    ordering refactors. Guard rails: goldens enshrine
-    recording-day bugs (this session spent its bulk un-pinning ~200
-    rotted contracts), so the refresh workflow must force human diff
-    review, and a thin end-to-end tier that actually runs binaries
-    must remain (only real runs catch miscompiles and VM/native
-    divergence). Execution order across the test-runtime track: take
-    the independent quick wins FIRST - TODO-4734 (RelWithDebInfo
-    runner), TODO-4733 (vm-mode migration), TODO-4736 (runtime
-    preamble prebuild), TODO-4735 (shared stdlib product) - plus the
-    TODO-4737 lowering invariant and TODO-4738 duration telemetry;
-    THIS golden-comparison item comes last, scoped to whatever is
-    still slow once those land. Note the goldens also cannot see
-    lowering-stage failures (the gap (c) class) - that is TODO-4737's
-    job, not this item's.
-  - acceptance: combined with the track's other items, emitters-suite
-    wall time drops by an order of magnitude without losing the
-    end-to-end miscompile net.
-  - stop_rule: do not migrate a case without first timing it (in-process
-    helper vs. current subprocess form) - the 2026-07-23 log entry already
-    found most "obvious" reject-only candidates have no measurable win, so
-    a blanket migration risks touching ~292 call sites for near-zero
-    benefit; migrate only cases individually confirmed to save real time.
 
 - [ ] TODO-4737: Add a lowered-module invariant - no published method-call target without a materialized definition or builtin classification
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-07-20
   - phase: Test infrastructure
+  - parallel_track: lowered-module-invariant
   - scope: the TODO-4731 gap (c) class (semantic product publishes a
     method-call target the lowerer has no definition for) is invisible
     to semantic-product goldens and only surfaced case-by-case. A
@@ -283,10 +193,10 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
 
 - [ ] TODO-5320: Make ast-semantic `.to_aos()` spelling match the resolved root `/to_aos` shadow
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-09-25
   - phase: Hidden test failure remediation
-  - parallel_track: hidden-test-failures-text-filters
+  - parallel_track: ast-semantic-to-aos-spelling
   - depends_on: (none)
   - scope: split from TODO-4812 finding (2). Behaviour is correct: a root
     `/to_aos([soa<Particle>] values)` (or `[SoaVector<Particle>]`) user
@@ -324,10 +234,10 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
 
 - [ ] TODO-5309: Rename the soa `ref_ref` builtin to `ref_borrowed`
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-09-24
   - phase: Naming/API clarity
-  - parallel_track: (none)
+  - parallel_track: soa-accessor-naming
   - depends_on: (none)
   - scope: `/std/collections/soa/ref_ref<T>([Reference<SoaVector<T>>] values,
     [i32] index)` (`stdlib/std/collections/soa.prime:230-233`) is the one
@@ -343,11 +253,9 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     `ref`'s existing "returns a reference" meaning and makes "receiver is
     borrowed" explicit rather than doubling the suffix - confirm exact
     spelling before implementing, this scope intentionally doesn't lock it
-    in). This TODO was filed immediately after TODO-5295/5307/5308 (closed
-    2026-09-23/24) all landed real bug fixes in this exact accessor's
-    same-path-shadow resolution - deliberately deferred rather than
-    started immediately, to let that code settle first and avoid
-    colliding with any follow-up fixes in the same area.
+    in). TODO-5295/5307/5308 (closed 2026-09-23/24)
+    finished the fixes in this accessor's same-path-shadow resolution, so the
+    code has settled.
   - implementation_notes: this is a public stdlib rename, not a local
     refactor - `/std/collections/soa/ref_ref` is `[public]` and callable
     by name from user `.prime` code, and its rooted spelling
@@ -370,10 +278,7 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
       whatever migration policy step (2) above settles on).
     - `docs/PrimeStruct.md` (or wherever this accessor family is
       documented) reflects the new name.
-  - stop_rule: do not start this while any of TODO-5295/5307/5308's
-    immediate follow-up work is still active in this same file
-    (`src/semantics/TemplateMonomorphExpressionRewrite.cpp`,
-    `stdlib/std/collections/soa.prime`) - confirm no other in-flight task
-    touches soa same-path-shadow resolution first, to avoid a rename
-    landing on top of a still-moving target.
+  - stop_rule: if a compatibility alias for the old name would be needed in
+    more than the stdlib and `tests/unit/`, stop and record the migration
+    policy decision here instead of widening the rename.
 
