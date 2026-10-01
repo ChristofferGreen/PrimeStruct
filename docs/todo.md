@@ -99,7 +99,6 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5329 | Resolve calls inside an `[auto]`-parameter `/Type/method` correctly | ready | auto-param-method-resolution |
 | TODO-5330 | Decide whether allocating wrapper constructors may be parameter defaults | ready | wrapper-default-parameters |
 | TODO-5331 | Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>` | ready | canonical-map-count-temporaries |
 | TODO-5332 | Resolve method-style `.at(...)` on a builtin `map<K, V>` temporary | ready | canonical-map-method-at |
@@ -111,7 +110,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5329 (track: auto-param-method-resolution, surface: lowering of `[auto]`-parameter `/Type/method` bodies): stop resolving `print_line` as `/Holder/print_line`.
 - TODO-5330 (track: wrapper-default-parameters, surface: parameter-default purity rule and its spec note): decide on allocating wrapper constructors as defaults.
 - TODO-5331 (track: canonical-map-count-temporaries, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`.
 - TODO-5332 (track: canonical-map-method-at, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): resolve method-style `.at(...)` on a builtin `map<K, V>` temporary.
@@ -293,20 +291,6 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     wrong re-derivation would silently narrow or widen which method-call
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
-
-- [ ] TODO-5329: Resolve calls inside an `[auto]`-parameter `/Type/method` correctly
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Map wrapper follow-up (split from TODO-5325)
-  - parallel_track: auto-param-method-resolution
-  - depends_on: (none)
-  - scope: `/Holder/score([Holder] self, [auto mut] values)` calling `print_line(...)` lowers `print_line` as `/Holder/print_line` ("vm backend only supports ... calls in expressions (call=/Holder/print_line ...)"). The same body as a free `[auto]` function runs. The method form was part of the original `expectInferredExperimentalMapParameterConformance` source.
-  - acceptance:
-    - a `/Holder/score` method with an `[auto mut]` wrapper parameter runs on vm/native/exe and is added back to the conformance source.
-    - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: if the fix needs a design decision beyond this shape, stop and
-    record it here instead of widening the change.
 
 - [ ] TODO-5330: Decide whether allocating wrapper constructors may be parameter defaults
   - owner: ai

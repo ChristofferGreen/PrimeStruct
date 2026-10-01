@@ -279,12 +279,12 @@ inline void expectExperimentalMapMethodParameterConformance(const std::string &e
 
 inline void expectInferredExperimentalMapParameterConformance(const std::string &emitMode) {
   // TODO-5325: [auto] wrapper parameters run with method-call spelling on a free
-  // function; the /Holder/score method form is TODO-5329.
+  // function and on a /Holder/score method (TODO-5329).
   expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapParameterConformanceSource(),
                                             "map_experimental_inferred_parameter_" + emitMode,
                                             emitMode,
-                                            11,
-                                            "3\n4\n2\n2\n7\n4\n");
+                                            19,
+                                            "3\n4\n3\n9\n7\n12\n");
 }
 
 inline void expectInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {

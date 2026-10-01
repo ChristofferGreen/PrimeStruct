@@ -56451,3 +56451,18 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: receiver-path resolution in `SemanticsValidatorExprReceiverPaths.cpp` read the declared `return<auto>` template argument as a type name and produced `/auto/tryAt`, so `try` saw no Result. It now skips `auto` return declarations and falls through to the inferred receiver type. `try(buildValues(true).tryAt(...))` runs; `expectInferredExperimentalMapCallReceiverConformance` pins exit 7 with output 2/4/1.
+
+- [x] TODO-5329: Resolve calls inside an `[auto]`-parameter `/Type/method` correctly
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: auto-param-method-resolution
+  - depends_on: (none)
+  - scope: `/Holder/score([Holder] self, [auto mut] values)` calling `print_line(...)` lowers `print_line` as `/Holder/print_line` ("vm backend only supports ... calls in expressions (call=/Holder/print_line ...)"). The same body as a free `[auto]` function runs. The method form was part of the original `expectInferredExperimentalMapParameterConformance` source.
+  - acceptance:
+    - a `/Holder/score` method with an `[auto mut]` wrapper parameter runs on vm/native/exe and is added back to the conformance source.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: monomorphized template bodies carry their enclosing namespace on every expression, so a bare `print_line` inside any namespaced template or `/Type/method` with an `[auto]` parameter read as `/ns/print_line` and failed lowering (not map-specific: `/ns/foo<T>` with `print_line` failed too). `getPrintBuiltin` now also accepts the bare spelling when the expression carries a namespace prefix. The `/Holder/score` method form is back in `expectInferredExperimentalMapParameterConformance` (exit 19).

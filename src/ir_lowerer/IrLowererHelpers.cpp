@@ -563,25 +563,32 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
 }
 
 bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
-  if (isSimpleCallName(expr, "print")) {
+  // Monomorphized template bodies carry their enclosing namespace on every
+  // expression, so a bare `print_line` there reads as `/ns/print_line`; the
+  // bare spelling is still the builtin.
+  auto isPrintName = [&](const char *name) {
+    return isSimpleCallName(expr, name) ||
+           (expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == name);
+  };
+  if (isPrintName("print")) {
     out.target = PrintTarget::Out;
     out.newline = false;
     out.name = "print";
     return true;
   }
-  if (isSimpleCallName(expr, "print_line")) {
+  if (isPrintName("print_line")) {
     out.target = PrintTarget::Out;
     out.newline = true;
     out.name = "print_line";
     return true;
   }
-  if (isSimpleCallName(expr, "print_error")) {
+  if (isPrintName("print_error")) {
     out.target = PrintTarget::Err;
     out.newline = false;
     out.name = "print_error";
     return true;
   }
-  if (isSimpleCallName(expr, "print_line_error")) {
+  if (isPrintName("print_line_error")) {
     out.target = PrintTarget::Err;
     out.newline = true;
     out.name = "print_line_error";
