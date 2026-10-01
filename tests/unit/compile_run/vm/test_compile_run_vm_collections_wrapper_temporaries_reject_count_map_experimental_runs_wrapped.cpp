@@ -133,6 +133,7 @@ main() {
 TEST_CASE("runs vm templated stdlib return wrapper temporaries in expressions") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
@@ -161,11 +162,8 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  // TODO-5332: method-style at on a canonical map<K, V> temporary is not resolved.
-  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
-  // the diagnostic below is the current result, not the intended behavior.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /map/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 10);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary call forms") {
@@ -190,11 +188,8 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_call_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5331: templated count on a canonical map<K, V> temporary fails its parameter type check.
-  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
-  // the diagnostic below is the current result, not the intended behavior.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count") != std::string::npos);
+  CHECK(runCommand(runCmd) == 9);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("runs vm shared stdlib map conformance harness") {

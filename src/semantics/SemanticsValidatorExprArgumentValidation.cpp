@@ -786,7 +786,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   std::string actualSoaVectorElemType;
   const bool isCompatibleExperimentalKeyValueReceiver =
       extractExperimentalKeyValueFieldTypesFromStructPath(
-          expectedStructPath, expectedKeyValueKeyType, expectedKeyValueValueType) &&
+          expectedStructPath, expectedKeyValueKeyType, expectedKeyValueValueType,
+          /*includeCanonicalMapValue=*/true) &&
       ((resolveKeyValueKeyType(arg, dispatchResolvers, actualKeyValueKeyType) &&
         resolveKeyValueValueType(arg, dispatchResolvers, actualKeyValueValueType) &&
         normalizeBindingTypeName(expectedKeyValueKeyType) ==

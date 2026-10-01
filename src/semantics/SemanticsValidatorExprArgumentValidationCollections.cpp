@@ -314,10 +314,21 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
 bool SemanticsValidator::extractExperimentalKeyValueFieldTypesFromStructPath(
     const std::string &structPath,
     std::string &keyTypeOut,
-    std::string &valueTypeOut) const {
+    std::string &valueTypeOut,
+    bool includeCanonicalMapValue) const {
   keyTypeOut.clear();
   valueTypeOut.clear();
-  if (!isSpecializedExperimentalMapBackingStructPath(structPath)) {
+  // The canonical value-storage struct has the same keys/payloads layout as
+  // the retired rooted struct; only argument validation opts into it, so
+  // storage init checks keep rejecting it.
+  const bool isCanonicalMapValuePath =
+      includeCanonicalMapValue &&
+      structPath.rfind(primec::collection_paths::specializedTypePrefix(
+                           primec::collection_paths::kMapFolder,
+                           primec::collection_paths::kMapValueTypeName),
+                       0) == 0;
+  if (!isCanonicalMapValuePath &&
+      !isSpecializedExperimentalMapBackingStructPath(structPath)) {
     return false;
   }
   auto defIt = defMap_.find(structPath);

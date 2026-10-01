@@ -217,11 +217,8 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_count_capacity_parity_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
-  // TODO-5331: templated count on a canonical map<K, V> temporary fails its parameter type check.
-  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
-  // the diagnostic below is the current result, not the intended behavior.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count") != std::string::npos);
+  CHECK(runCommand(runCmd) == 6);
+  CHECK(readFile(errPath).empty());
 }
 
 

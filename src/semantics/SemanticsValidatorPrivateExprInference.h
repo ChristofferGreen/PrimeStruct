@@ -300,7 +300,8 @@
       std::string &elemTypeOut);
   bool extractExperimentalKeyValueFieldTypesFromStructPath(const std::string &structPath,
                                                       std::string &keyTypeOut,
-                                                      std::string &valueTypeOut) const;
+                                                      std::string &valueTypeOut,
+                                                      bool includeCanonicalMapValue = false) const;
   bool validateArgumentTypeAgainstParam(const Expr &arg,
                                         const ParameterInfo &param,
                                         const std::string &expectedTypeName,

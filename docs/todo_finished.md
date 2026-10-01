@@ -56481,3 +56481,33 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: decision: allocating constructors stay acceptable as parameter defaults for the key/value family (`mapNew`, `map<K, V>(...)`) and are now also accepted for the public wrapper constructors `Map<K, V>{}`, `mapSingle` and `mapPair` (`SemanticsValidatorBuildParameters.cpp`); other allocating calls are still rejected. The earlier note that allocating defaults are impure by design was wrong, since `mapNew` was already allowed. Spec note added in `docs/PrimeStruct.md`; two `bindings.core` tests added (accept the wrapper constructors, still reject a plain allocating helper call). `[auto]` parameters with a `Map<K, V>{}` default/argument hit an inference gap, split as TODO-5336.
+
+- [x] TODO-5331: Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-count-temporaries
+  - depends_on: (none)
+  - scope: `/std/collections/map/count<string, i32>(wrapMap<string, i32>(...))` where `wrapMap` returns a builtin `map<K, V>` built with `/std/collections/map/map<K, V>(key, value)` fails with "argument type mismatch for /std/collections/map/count... parameter entries: expected .../MapValue__t... got /map". Pinned by "runs vm with templated stdlib wrapper temporary call forms", "...count capacity parity" and the `count key/value mismatch` rejects in `test_compile_run_vm_collections_wrapper_temporaries_*.cpp`.
+  - acceptance:
+    - the canonical count call and `.count()` method run on the temporary (vm) and the pins move to the real result; the key/value mismatch rejects check their intended mismatch diagnostics.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: the canonical-key/value compatibility check for map-typed arguments never recognized the canonical `MapValue` storage struct (only the retired rooted backing struct), so a builtin `map<K, V>` call temporary was rejected for `count<K, V>(entries)`; locals worked through another path. `isSpecializedExperimentalMapBackingStructPath` now also accepts the specialized `MapValue` path. The two 'runs' pins now run (call forms exit 9, count/capacity parity exit 6) and the three `count` mismatch rejects pin the intended MapValue type mismatch.
+
+- [x] TODO-5332: Resolve method-style `.at(...)` on a builtin `map<K, V>` temporary
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-method-at
+  - depends_on: (none)
+  - scope: `wrapMap<string, i32>(...).at("only"raw_utf8)` (and `.at_unsafe`) on a builtin `map<K, V>` temporary fails with "unknown call target: /map/at". Pinned by "runs vm templated stdlib return wrapper temporaries in expressions", the `method arity/missing key` rejects and the unsafe-parity reject.
+  - acceptance:
+    - method-style `at`/`at_unsafe` run on the temporary and the pins move to real results or intended arity diagnostics.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: no compiler change: the spec requires imported canonical `/std/collections/map/at*` wrappers (or explicit `/map/at*` definitions) for `values.at(...)` sugar on a builtin `map<K, V>`, and the pinned sources only imported `/std/collections/*`, so `unknown call target: /map/at` was the correct result (`.count()` happened to resolve). The sources now also `import /std/collections/map/*`; the return-wrapper-temporaries case runs (exit 10) and the method arity / missing-key rejects report `argument count mismatch for /std/collections/map/at`.

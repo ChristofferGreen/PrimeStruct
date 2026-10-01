@@ -36,7 +36,6 @@ main() {
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_unsafe_parity_missing_arguments.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-5332: canonical map<K, V> temporary gap pinned at its current result.
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("argument count mismatch for /std/collections/map/at_unsafe") != std::string::npos);
 }
@@ -70,7 +69,7 @@ main() {
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_count_capacity_parity_mismatch.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-5331: canonical map<K, V> temporary gap pinned at its current result.
+  // The key/value type arguments do not match the temporary, so the MapValue parameter rejects it.
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count") != std::string::npos);
 }
@@ -164,7 +163,7 @@ main() {
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_count_key_mismatch.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-5331: canonical map<K, V> temporary gap pinned at its current result.
+  // The key/value type arguments do not match the temporary, so the MapValue parameter rejects it.
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count") != std::string::npos);
 }
@@ -189,7 +188,7 @@ main() {
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_count_value_mismatch.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-5331: canonical map<K, V> temporary gap pinned at its current result.
+  // The key/value type arguments do not match the temporary, so the MapValue parameter rejects it.
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count") != std::string::npos);
 }
@@ -293,6 +292,7 @@ main() {
 TEST_CASE("rejects vm templated stdlib map wrapper temporary method arity mismatch") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
@@ -310,14 +310,14 @@ main() {
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_method_arity.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-5332: canonical map<K, V> temporary gap pinned at its current result.
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("argument count mismatch for /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map wrapper temporary method missing key argument") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
@@ -335,9 +335,8 @@ main() {
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_method_missing_key.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-5332: canonical map<K, V> temporary gap pinned at its current result.
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("argument count mismatch for /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib vector wrapper temporary call type mismatch") {

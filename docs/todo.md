@@ -100,8 +100,6 @@ of sync with them.
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
 | TODO-5336 | Infer the concrete type of `Map<K, V>{}` for an `[auto]` parameter | ready | auto-param-brace-constructor |
-| TODO-5331 | Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>` | ready | canonical-map-count-temporaries |
-| TODO-5332 | Resolve method-style `.at(...)` on a builtin `map<K, V>` temporary | ready | canonical-map-method-at |
 | TODO-5333 | Index a builtin `map<K, V>` temporary | ready | canonical-map-index-temporary |
 | TODO-5334 | Fix the vector `at` argument mismatch inside canonical map temporary lookup | ready | canonical-map-temporary-lookup-vector |
 | TODO-5335 | Reject a value-type mismatch in `at<K, V>` on a builtin `map<K, V>` temporary | blocked | canonical-map-at-value-mismatch |
@@ -110,8 +108,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5331 (track: canonical-map-count-temporaries, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`.
-- TODO-5332 (track: canonical-map-method-at, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): resolve method-style `.at(...)` on a builtin `map<K, V>` temporary.
 - TODO-5333 (track: canonical-map-index-temporary, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): index a builtin `map<K, V>` temporary.
 - TODO-5334 (track: canonical-map-temporary-lookup-vector, surface: canonical `map<K, V>` temporary handling in semantics/VM lowering): fix the vector `at` argument mismatch inside canonical map temporary lookup.
 - TODO-5336 (track: auto-param-brace-constructor, surface: implicit template inference of brace-constructor arguments for `[auto]` parameters): infer the concrete type of `Map<K, V>{}` for an `[auto]` parameter.
@@ -302,34 +298,6 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - scope: `f([auto] m)` called as `f(Map<string, i32>{})`, and `f([auto mut] m{Map<string, i32>{}})` as a default, fail with "template arguments required for /std/collections/map/Map": implicit template inference types the brace-constructor argument as the bare struct path. The same expression works for a typed parameter, a call argument to a typed parameter, and an `[auto]` local.
   - acceptance:
     - both `[auto]` forms run on vm/native/exe and have a semantics or compile-run test.
-    - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: if the fix needs a design decision beyond this shape, stop and
-    record it here instead of widening the change.
-
-- [ ] TODO-5331: Accept a builtin `map<K, V>` temporary in templated canonical `count<K, V>`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Canonical map follow-up (split from TODO-5326)
-  - parallel_track: canonical-map-count-temporaries
-  - depends_on: (none)
-  - scope: `/std/collections/map/count<string, i32>(wrapMap<string, i32>(...))` where `wrapMap` returns a builtin `map<K, V>` built with `/std/collections/map/map<K, V>(key, value)` fails with "argument type mismatch for /std/collections/map/count... parameter entries: expected .../MapValue__t... got /map". Pinned by "runs vm with templated stdlib wrapper temporary call forms", "...count capacity parity" and the `count key/value mismatch` rejects in `test_compile_run_vm_collections_wrapper_temporaries_*.cpp`.
-  - acceptance:
-    - the canonical count call and `.count()` method run on the temporary (vm) and the pins move to the real result; the key/value mismatch rejects check their intended mismatch diagnostics.
-    - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: if the fix needs a design decision beyond this shape, stop and
-    record it here instead of widening the change.
-
-- [ ] TODO-5332: Resolve method-style `.at(...)` on a builtin `map<K, V>` temporary
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Canonical map follow-up (split from TODO-5326)
-  - parallel_track: canonical-map-method-at
-  - depends_on: (none)
-  - scope: `wrapMap<string, i32>(...).at("only"raw_utf8)` (and `.at_unsafe`) on a builtin `map<K, V>` temporary fails with "unknown call target: /map/at". Pinned by "runs vm templated stdlib return wrapper temporaries in expressions", the `method arity/missing key` rejects and the unsafe-parity reject.
-  - acceptance:
-    - method-style `at`/`at_unsafe` run on the temporary and the pins move to real results or intended arity diagnostics.
     - `./scripts/compile.sh --release` at baseline.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
