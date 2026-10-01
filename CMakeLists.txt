@@ -2367,23 +2367,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
   endforeach()
 
-  if(NOT (APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$"))
-    get_property(PrimeStructRegisteredTests DIRECTORY PROPERTY TESTS)
-    foreach(testName IN LISTS PrimeStructRegisteredTests)
-      if(testName MATCHES "^PrimeStruct_primestruct_compile_run_generic_requirements_.*_(1_1|2_2|3_3)$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_smoke_core_paths_foundation_(5_5|6_6|7_7|8_8|9_9|10_10|11_11|12_12|18_18)$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_(38_38|39_39|42_42|45_45|46_46|47_47|48_48|49_49|50_50|51_51|52_52|53_53|54_54|58_58|59_59)$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_smoke_collective_paths_(core_(1_1|3_3|4_4|5_5|6_6|7_7|8_8|9_9|10_10|11_11)|extended_(12_12|13_13|14_14|15_15|16_16|17_17|20_20))$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_(1_1|2_2|3_3|4_4)$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_reflection_codegen_reflection_codegen_(15_15|16_16|17_17|18_18|19_19|20_20|21_21)$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_imports_versioned_import_resolution_(1_1|2_2|5_5|6_6|7_7|8_8|9_9|10_10|11_11|14_14)$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_imports_block_and_operator_rewrites_(1_1|2_2|3_3|4_4|5_5|6_6)$" OR
-         testName MATCHES "^PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_(2_2|22_22|23_23)$")
-        set_tests_properties("${testName}" PROPERTIES DISABLED TRUE)
-      endif()
-    endforeach()
-  endif()
-
   # VM compile-run coverage is broader than the current VM runtime surface.
   # Keep the unsupported shards disabled until image IO, GPU dispatch fallback,
   # and the stdlib/experimental map shim paths are implemented for the VM.
