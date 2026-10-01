@@ -100,7 +100,6 @@ of sync with them.
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
 | TODO-5336 | Infer the concrete type of `Map<K, V>{}` for an `[auto]` parameter | ready | auto-param-brace-constructor |
-| TODO-5335 | Reject a value-type mismatch in `at<K, V>` on a builtin `map<K, V>` temporary | blocked | canonical-map-at-value-mismatch |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
 | TODO-5309 | Rename the soa `ref_ref` builtin to `ref_borrowed` | deferred | (none) |
 
@@ -294,20 +293,6 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - scope: `f([auto] m)` called as `f(Map<string, i32>{})`, and `f([auto mut] m{Map<string, i32>{}})` as a default, fail with "template arguments required for /std/collections/map/Map": implicit template inference types the brace-constructor argument as the bare struct path. The same expression works for a typed parameter, a call argument to a typed parameter, and an `[auto]` local.
   - acceptance:
     - both `[auto]` forms run on vm/native/exe and have a semantics or compile-run test.
-    - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: if the fix needs a design decision beyond this shape, stop and
-    record it here instead of widening the change.
-
-- [ ] TODO-5335: Reject a value-type mismatch in `at<K, V>` on a builtin `map<K, V>` temporary
-  - owner: ai
-  - status: blocked
-  - created_at: 2026-10-01
-  - phase: Canonical map follow-up (split from TODO-5326)
-  - parallel_track: canonical-map-at-value-mismatch
-  - depends_on: TODO-5331
-  - scope: `/std/collections/map/at<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)` is accepted and exits 4 on the vm instead of being rejected as a value-type mismatch (`map<string, i32>` vs `<string, bool>`). Pinned by "rejects vm templated stdlib map wrapper temporary call value mismatch" at exit 4.
-  - acceptance:
-    - the call is rejected in semantics with a specific type-mismatch diagnostic and the pin checks it. Sequenced after TODO-5331 (same canonical map call type-check path).
     - `./scripts/compile.sh --release` at baseline.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.

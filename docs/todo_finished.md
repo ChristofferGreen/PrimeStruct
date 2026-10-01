@@ -56541,3 +56541,18 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: the stdlib's own `vectorAt<T>` calls are an access alias, so `vectorAt__t<hash>(keys, index)` inside `findIndex` was canonicalized onto the `/std/collections/vector/at` family and the family fallback then took the first instantiated specialization (the user's `at<i32>`), giving "expected Vector<i32> got vector<string>" whenever a program used a vector `at<T>` with a different T than a map key. `resolveExprCollectionAccessTarget` now leaves a call that already names an existing concrete specialization alone. The syntax-parity case runs (exit 27).
+
+- [x] TODO-5335: Reject a value-type mismatch in `at<K, V>` on a builtin `map<K, V>` temporary
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-at-value-mismatch
+  - depends_on: TODO-5331
+  - scope: `/std/collections/map/at<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)` is accepted and exits 4 on the vm instead of being rejected as a value-type mismatch (`map<string, i32>` vs `<string, bool>`). Pinned by "rejects vm templated stdlib map wrapper temporary call value mismatch" at exit 4.
+  - acceptance:
+    - the call is rejected in semantics with a specific type-mismatch diagnostic and the pin checks it. Sequenced after TODO-5331 (same canonical map call type-check path).
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: two layers hid the mismatch: the builtin-map access rewrite in `SemanticsValidate.cpp` cleared explicit template arguments unconditionally (so `at<string, bool>` on a `map<string, i32>` silently became the `(string, i32)` specialization and ran, exit 4), and nothing compared an explicit canonical map access call's `MapValue<K, V>` parameter with the receiver's key/value types. The rewrite now leaves mismatching explicit arguments alone, `validateExpr` rejects the call with `argument type mismatch for /std/collections/map/at... parameter entries`, and the pin checks that diagnostic.

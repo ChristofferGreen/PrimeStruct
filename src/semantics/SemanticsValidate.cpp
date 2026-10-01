@@ -824,6 +824,16 @@ void rewriteBuiltinKeyValueInsertExpr(
             bindingTypeText(*receiverBinding), keyType, valueType)) {
       return;
     }
+    // Explicit template arguments that disagree with the receiver's key/value
+    // types stay on the call so validation rejects the mismatch instead of
+    // the rewrite silently replacing them with the receiver's types.
+    if (matchesBuiltinAccessCall && expr.templateArgs.size() == 2 &&
+        (semantics::normalizeBindingTypeName(expr.templateArgs[0]) !=
+             semantics::normalizeBindingTypeName(keyType) ||
+         semantics::normalizeBindingTypeName(expr.templateArgs[1]) !=
+             semantics::normalizeBindingTypeName(valueType))) {
+      return;
+    }
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
     if (matchesBuiltinReadMethod && isCanonicalKeyValueReadHelper &&

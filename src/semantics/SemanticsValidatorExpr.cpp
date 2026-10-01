@@ -927,6 +927,37 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (rewrittenPreDispatchDirectCall.has_value()) {
       return validateExpr(params, locals, *rewrittenPreDispatchDirectCall);
     }
+    // An explicit canonical key/value access call (`.../at<K, V>(map, key)`)
+    // whose specialization expects a different MapValue<K, V> than the
+    // map receiver's own key/value types is an argument type mismatch.
+    if (!expr.isMethodCall && expr.args.size() == 2 && !expr.name.empty() &&
+        expr.name.front() == '/' &&
+        expr.name.rfind(primec::collection_paths::modulePrefix(
+                            primec::collection_paths::kMapFolder),
+                        0) == 0) {
+      auto calleeParamsIt = paramsByDef_.find(expr.name);
+      if (calleeParamsIt != paramsByDef_.end() && !calleeParamsIt->second.empty()) {
+        const BindingInfo &entriesBinding = calleeParamsIt->second.front().binding;
+        std::string expectedKeyType;
+        std::string expectedValueType;
+        std::string actualKeyType;
+        std::string actualValueType;
+        if (extractExperimentalKeyValueFieldTypesFromStructPath(
+                normalizeBindingTypeName(entriesBinding.typeName), expectedKeyType,
+                expectedValueType, /*includeCanonicalMapValue=*/true) &&
+            dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr &&
+            dispatchBootstrap.dispatchResolvers.resolveMapTarget(
+                expr.args.front(), actualKeyType, actualValueType) &&
+            (normalizeBindingTypeName(expectedKeyType) !=
+                 normalizeBindingTypeName(actualKeyType) ||
+             normalizeBindingTypeName(expectedValueType) !=
+                 normalizeBindingTypeName(actualValueType))) {
+          return failExprRootDiagnostic("argument type mismatch for " + expr.name +
+                                        " parameter " +
+                                        calleeParamsIt->second.front().name);
+        }
+      }
+    }
     if (handledPreDispatchDirectCall) {
       return true;
     }

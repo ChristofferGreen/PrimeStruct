@@ -785,6 +785,16 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
       !resolvesExperimentalKeyValueValue && !isBorrowedCanonicalHelper) {
     return false;
   }
+  // Explicit template arguments that disagree with the receiver's key/value
+  // types must stay on the call so the argument type check rejects them,
+  // rather than being overwritten by the receiver's specialization.
+  if (!candidate.isMethodCall && candidate.templateArgs.size() == 2 &&
+      (normalizeBindingTypeName(candidate.templateArgs[0]) !=
+           normalizeBindingTypeName(keyType) ||
+       normalizeBindingTypeName(candidate.templateArgs[1]) !=
+           normalizeBindingTypeName(valueType))) {
+    return false;
+  }
   rewrittenOut = canonicalCandidate;
   if (!candidate.isMethodCall && isBorrowedCanonicalHelper) {
     return false;

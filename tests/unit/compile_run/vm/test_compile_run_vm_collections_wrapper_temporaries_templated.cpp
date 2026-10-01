@@ -139,8 +139,8 @@ main() {
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_call_value_mismatch.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
-  // TODO-5335: canonical map<K, V> temporary gap pinned at its current result.
-  CHECK(runCommand(runCmd) == 4);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map wrapper temporary count key mismatch") {
