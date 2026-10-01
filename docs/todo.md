@@ -97,24 +97,29 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5338 | Installable `primec_embed` library, CMake package, and example host | ready | embedding-packaging |
 | TODO-5339 | Host function binding: call C++ callbacks from script | ready | embedding-host-calls |
+| TODO-5342 | Precompiled bytecode: save/load scripts and a runtime-only embed library | ready | embedding-bytecode |
+| TODO-5343 | iOS-safe embed build: no process spawning, bundled stdlib, cross-compile check | blocked | embedding-ios |
 | TODO-5340 | Typed entry arguments and return values across the embed boundary | blocked | embedding-values |
 | TODO-5341 | Embedding lifetime: arena scope, reentrancy, compile-once run-many | blocked | embedding-lifetime |
 
 ### Ready Now
 
+- TODO-5342 (track: embedding-bytecode, surface: `src/embed/`, `include/primec/ir/IrSerializer.h`, new `primec_embed_runtime_lib`): precompiled bytecode + runtime-only library (iOS path: compile on desktop, ship IR).
 - TODO-5338 (track: embedding-packaging, surface: `CMakeLists.txt` install rules, `examples/embed/`): installable library + example host.
 - TODO-5339 (track: embedding-host-calls, surface: host-call IR opcode, VM, `src/embed/`): host function binding.
 
 ### Immediate Next 10
 
-1. TODO-5338 - packaging plus a real example host proves the API from outside the repo.
-2. TODO-5339 - host calls make scripts useful (the point of embedding).
-3. TODO-5340 - typed values in/out.
-4. TODO-5341 - lifetime and reuse hardening.
+1. TODO-5342 - iOS-critical: lets a host ship precompiled IR and link only the VM.
+2. TODO-5338 - packaging plus a real example host proves the API from outside the repo.
+3. TODO-5339 - host calls make scripts useful (the point of embedding).
+4. TODO-5340 - typed values in/out.
+5. TODO-5341 - lifetime and reuse hardening.
+6. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
 
 ### Priority Lanes
 
-- Embedding (top priority, user-set): TODO-5338 -> 5339 -> 5340 -> 5341
+- Embedding (top priority, user-set; must support iOS): TODO-5342, TODO-5338 -> 5339 -> 5340 -> 5341
 
 ### Execution Queue
 
@@ -204,3 +209,68 @@ Run `ready` leaves in the order listed under Immediate Next 10; 5338 and 5339 to
     - two engines alive at once on separate threads pass under TSAN smoke.
   - stop_rule: if the arena is inherently process-global, document the
     single-engine-per-process limit and stop rather than rewriting it.
+
+- [ ] TODO-5342: Precompiled bytecode - save/load scripts and a runtime-only embed library
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-bytecode
+  - depends_on: TODO-5337 (closed)
+  - scope: iOS forbids generating executable native code in-process (no JIT)
+    and discourages heavy on-device compilation, but a bytecode interpreter
+    is allowed - and the VM already interprets `IrModule`. Add
+    `Script::saveBytecode()` / `ScriptEngine::loadBytecode(bytes)` using the
+    existing `serializeIr` / `deserializeIr`, validating the loaded module
+    for the VM target (`IrValidationTarget::Vm`) and rejecting a version
+    mismatch with a diagnostic. Split the build so a host can link a
+    `primec_embed_runtime_lib` (VM + IR deserializer + validation only, no
+    parser/semantics/lowerer/stdlib) and compile scripts offline with
+    `primec`/the full `primec_embed_lib`. Add a CLI path to emit the
+    bytecode (check whether `primec --emit=ir` already produces the
+    serialized form before adding a flag).
+  - implementation_notes: check that `Vm` and `IrValidation` do not
+    transitively require frontend sources; `primec_runtime_lib` currently
+    links `primec_frontend_lib`, so the runtime-only target may need that
+    link narrowed. Document the IR version/migration policy for shipped
+    bytecode (AGENTS IR-stability rule).
+  - acceptance:
+    - test compiles a script, saves bytes, loads them through a binary that
+      links only the runtime-only library, and gets the same exit code.
+    - corrupt or wrong-version bytes return `ok=false` with a diagnostic,
+      never UB.
+    - size of the runtime-only library vs full embed library recorded in
+      the result note.
+  - stop_rule: if the VM cannot be separated from frontend sources without a
+    wide refactor, stop and record the exact dependency edges as a new
+    leaf instead of widening this one.
+
+- [ ] TODO-5343: iOS-safe embed build - no process spawning, bundled stdlib, cross-compile check
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5342
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-ios
+  - scope: make `primec_embed_runtime_lib` (and, as a stretch, the full
+    `primec_embed_lib` for on-device compiling of small scripts) build for
+    iOS: gate `fork`/`exec`/`posix_spawn` users (`src/support/ProcessRunner.cpp`,
+    `ImportResolver` archive roots, `TempPaths`) behind a platform option so
+    iOS builds exclude them; no reliance on `/tmp` or the working
+    directory; provide the stdlib as a bundle path or embedded blob for the
+    full-compile variant; ensure no executable-memory allocation. Add a CMake
+    toolchain recipe (`-DCMAKE_SYSTEM_NAME=iOS`) and an XCFramework packaging
+    script.
+  - implementation_notes: this Linux CI cannot build or run iOS. Verify with
+    a macOS runner (or have the user run the recipe) and record the exact
+    toolchain version; until then acceptance covers the portable parts
+    (a Linux build with the process-spawning sources excluded must pass the
+    embed tests).
+  - acceptance:
+    - Linux build with `PRIMESTRUCT_EMBED_NO_PROCESS=ON` links and passes the
+      runtime-only bytecode test.
+    - documented, reproducible iOS cross-compile recipe; compile of
+      `primec_embed_runtime_lib` for iOS arm64 verified on macOS.
+  - stop_rule: if the full compiler pipeline cannot drop process spawning
+    cleanly, ship runtime-only for iOS and record the gap.
+
