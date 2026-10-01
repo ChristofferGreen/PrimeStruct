@@ -140,12 +140,30 @@ bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
 bool hasVisibleRootExperimentalSoaHelper(const Program &program,
                                          std::string_view helperName) {
   const std::string rootPath = "/" + std::string(helperName);
+  std::unordered_set<std::string> structPaths;
+  for (const Definition &def : program.definitions) {
+    if (semantics::isStructLikeDefinition(def)) {
+      structPaths.insert(def.fullPath);
+    }
+  }
   for (const Definition &def : program.definitions) {
     if (def.fullPath != rootPath || def.parameters.empty()) {
       continue;
     }
     if (extractExperimentalSoaVectorBinding(def.parameters.front()).has_value()) {
       return true;
+    }
+    // A root shadow may also take the public `soa<T>` spelling, which only
+    // parses once the program's struct names are known.
+    if (auto publicBinding =
+            extractParsedOrExperimentalSoaBindingInfo(def.parameters.front(), &structPaths);
+        publicBinding.has_value()) {
+      const std::string normalizedType =
+          semantics::normalizeBindingTypeName(publicBinding->typeName);
+      if ((normalizedType == "soa" || normalizedType.rfind("soa<", 0) == 0) &&
+          !publicBinding->typeTemplateArg.empty()) {
+        return true;
+      }
     }
   }
   return false;

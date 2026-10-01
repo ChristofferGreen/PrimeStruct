@@ -271,8 +271,14 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
+  // A visible root `/to_aos` shadow wins over the canonical helper, like the
+  // /soa/<helper> same-path shadows do for their siblings.
+  const bool hasVisibleRootToAosShadow =
+      helperName == "to_aos" && !hasVisibleSamePathHelper &&
+      visibleSoaHelpers.count("/to_aos") > 0;
   expr.name = hasVisibleSamePathHelper ? helperPath
-                                       : "/std/collections/soa/" + helperName;
+              : hasVisibleRootToAosShadow ? std::string("/to_aos")
+                                          : "/std/collections/soa/" + helperName;
   expr.namespacePrefix.clear();
   if (canonicalReceiverExpr.has_value()) {
     expr.args.front() = *canonicalReceiverExpr;
@@ -311,6 +317,9 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
     if (hasVisibleExperimentalSoaSamePathHelper(program, helperName)) {
       visibleSoaHelpers.insert("/soa/" + std::string(helperName));
     }
+  }
+  if (hasVisibleRootExperimentalSoaHelper(program, "to_aos")) {
+    visibleSoaHelpers.insert("/to_aos");
   }
   // Public soa<T> name receivers are rewritten to the canonical
   // /std/collections/soa/<helper> spelling only when that surface is

@@ -56798,3 +56798,44 @@ crashes) - see `docs/todo_finished.md`.
 
 **Queue history note (moved from docs/todo.md, October 1, 2026)**
 TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325 (closed 2026-10-01; its unrunnable shapes became TODO-5327..5330)/5326 (closed 2026-10-01; its canonical-map gaps became TODO-5331..5335) were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+
+- [x] TODO-5320: Make ast-semantic `.to_aos()` spelling match the resolved root `/to_aos` shadow
+  - owner: ai
+  - created_at: 2026-09-25
+  - phase: Hidden test failure remediation
+  - parallel_track: ast-semantic-to-aos-spelling
+  - depends_on: (none)
+  - scope: split from TODO-4812 finding (2). Behaviour is correct: a root
+    `/to_aos([soa<Particle>] values)` (or `[SoaVector<Particle>]`) user
+    definition returning 7 is what `values.to_aos()` runs on vm and native
+    (exit 7), including the helper-return receiver
+    `holder.cloneValues().to_aos()` case. But for a `soa<Particle>`-typed
+    local or a helper-return receiver, the ast-semantic dump spells the
+    call as `/std/collections/soa/to_aos__t<hash>(values)` while the
+    semantic product's `direct_call_targets` entry for it has
+    `call_name=/std/collections/soa/to_aos__t<hash>`
+    `resolved_path=/to_aos`. An explicit `[SoaVector<Particle>]` local
+    dumps `/to_aos(values)` correctly. An AST call name that disagrees with
+    the semantic-product target is the same shape as TODO-4756's root
+    cause (a lowerer fast path trusting one over the other), so it is a
+    latent wrong-target risk plus misleading dump output. A `/soa/to_aos`
+    shadow is honoured and dumped correctly for method sugar, like its
+    `/soa/count|get|ref|push|reserve` siblings (bare `to_aos(values)`
+    does not route to `/soa/to_aos`, like bare get/ref/push/reserve).
+  - implementation_notes: the pinned sites are "dump ast-semantic
+    rewrites nested struct body soa method shadows" and "dump ast-semantic
+    keeps helper-return experimental soa to_aos with same-path helper" in
+    `test_compile_run_text_filters_dumps.cpp`; their `TODO-4756 (extends)`
+    comments say the shadow is not honoured, which is wrong about
+    behaviour - fix those comments when re-pinning.
+  - acceptance:
+    - the ast-semantic dump shows `/to_aos(values)` (not
+      `/std/collections/soa/to_aos__...`) whenever the semantic product
+      resolves the call to `/to_aos`, for `soa<T>` locals and helper-return
+      receivers.
+    - both pinned cases re-pinned with corrected comments;
+      `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if the AST rewrite cannot see the shadow without moving
+    shadow resolution earlier in `semanticValidationPassManifest()`, stop
+    and document the pass-order constraint instead of reordering passes.
+  - result: the `[SoaVector<T>]`/helper-return half was already fixed; the remaining gap was `soa<T>`-typed locals: `hasVisibleRootExperimentalSoaHelper` only accepted a root `/to_aos` whose parameter parsed as an experimental binding, and `[soa<T>]` only parses once the program's struct names are known, so the same-path-helper pass rewrote `values.to_aos()` to the canonical helper while the semantic product resolved it to `/to_aos`. The check now parses the parameter with struct names, and the pass prefers a visible root shadow. The ast-semantic dump spells `/to_aos(values)` for locals and helper-return receivers; both pinned cases were re-pinned with corrected comments and a soa-local case was added. While doing this I found that the whole `test_compile_run_text_filters_dumps.cpp` file (59 cases), `..._runtime_if.cpp` (19) and the `..._diagnostics_*.cpp` files (227) plus one native-backend case were compiled but never registered with CTest, so they had silently stopped running; all are now registered (the three failing dump cases, including the stale `ref_ref` pin, were re-pinned).

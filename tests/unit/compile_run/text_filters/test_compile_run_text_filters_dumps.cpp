@@ -483,12 +483,11 @@ main() {
   CHECK(ast.find("/soa/ref(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
   CHECK(ast.find("/soa/push(/Holder/cloneValues(holder), Particle(1))", mainPos) != std::string::npos);
   CHECK(ast.find("/soa/reserve(/Holder/cloneValues(holder), 4)", mainPos) != std::string::npos);
-  // TODO-4756 (extends): unlike count/get/ref/push/reserve above, the
-  // root-level /to_aos same-path shadow is NOT honored here - the call
-  // resolves straight to the canonical /std/collections/soa/to_aos__
-  // builtin instead, an asymmetry with its sibling helpers. Re-pinned to
-  // the verified current (builtin-dispatched) form.
-  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) != std::string::npos);
+  // TODO-5320: like its count/get/ref/push/reserve siblings, the root-level
+  // /to_aos shadow is honored, so the dump spells the call the way the
+  // semantic product resolves it.
+  CHECK(ast.find("/to_aos(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) == std::string::npos);
   CHECK(ast.find(".count(", mainPos) == std::string::npos);
   CHECK(ast.find(".get(", mainPos) == std::string::npos);
   CHECK(ast.find(".ref(", mainPos) == std::string::npos);
@@ -1881,12 +1880,9 @@ main() {
        "primec_dump_ast_semantic_helper_return_experimental_soa_to_aos_shadow.txt")
           .string();
 
-  // TODO-4756 (extends): like the nested-struct-body case above, the
-  // root-level /to_aos same-path shadow is not honored for a
-  // SoaVector<Particle>-returning helper-return receiver either - it
-  // resolves straight to the canonical /std/collections/soa/to_aos__
-  // builtin instead. Re-pinned to the verified current (builtin-dispatched)
-  // form.
+  // TODO-5320: the root-level /to_aos shadow is honored for a
+  // SoaVector<Particle>-returning helper-return receiver, so the dump
+  // spells the call as the semantic product resolves it.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
   CHECK(runCommand(dumpCmd) == 0);
@@ -1895,8 +1891,51 @@ main() {
   CHECK(mainPos != std::string::npos);
   CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/to_aos(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) == std::string::npos);
   CHECK(ast.find("holder.cloneValues().to_aos()", mainPos) == std::string::npos);
+}
+
+TEST_CASE("dump ast-semantic keeps soa local to_aos with root same-path helper") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_aos([soa<Particle>] values) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [soa<Particle>] values{soaVectorNew<Particle>()}
+  [auto] item{values.to_aos()}
+  return(item)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_soa_local_to_aos_root_shadow.prime", source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_soa_local_to_aos_root_shadow.txt")
+          .string();
+
+  // TODO-5320: a soa<T>-typed local resolves .to_aos() to the root shadow in
+  // the semantic product, and the dump now spells it the same way.
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("[auto] item{/to_aos(values)}", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) == std::string::npos);
+  CHECK(ast.find("values.to_aos()", mainPos) == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic keeps borrowed soa ref_ref same-path helper shadows compatibility") {
@@ -1991,17 +2030,20 @@ main() {
        "primec_dump_ast_semantic_builtin_soa_ref_ref_same_path_err.txt")
           .string();
 
-  // TODO-4756 (extends): bare/method ref_ref calls on a public soa<Particle>
-  // receiver no longer resolve to the user's same-path /soa/ref_ref shadow -
-  // they now get routed to the canonical templated
-  // /std/collections/soa/ref_ref<T> builtin, which then rejects for missing
-  // template arguments. Re-pinned to the verified current rejection.
+  // Bare/method ref_ref calls on a public soa<Particle> receiver resolve to
+  // the user's same-path /soa/ref_ref shadow, like the other soa helpers.
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath) + " 2> " +
       quoteShellArg(errPath);
-  CHECK(runCommand(dumpCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "Semantic error: template arguments required for /std/collections/soa/ref_ref") != std::string::npos);
+  CHECK(runCommand(dumpCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("[auto] direct{/soa/ref_ref(values, idx)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[auto] method{/soa/ref_ref(values, idx)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[auto] helperReturn{/soa/ref_ref(cloneValues(), idx)}", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/ref_ref", mainPos) == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites inline location experimental soa read-only methods") {
@@ -2322,7 +2364,36 @@ main() {
       "./primevm " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(primevmOut);
   CHECK(runCommand(primecCmd) == 0);
   CHECK(runCommand(primevmCmd) == 0);
-  CHECK(readFile(primecOut) == readFile(primevmOut));
+  // The metrics line carries wall-clock *_ms timings that differ per run.
+  const auto stripTimings = [](std::string text) {
+    std::string out;
+    size_t i = 0;
+    while (i < text.size()) {
+      const size_t eq = text.find("_ms", i);
+      if (eq == std::string::npos) {
+        out.append(text, i, std::string::npos);
+        break;
+      }
+      size_t j = eq + 3;
+      if (text.compare(j, 4, "_max") == 0) {
+        j += 4;
+      }
+      if (j < text.size() && text[j] == '=') {
+        out.append(text, i, j + 1 - i);
+        ++j;
+        while (j < text.size() && text[j] >= '0' && text[j] <= '9') {
+          ++j;
+        }
+        out += "N";
+        i = j;
+      } else {
+        out.append(text, i, j - i);
+        i = j;
+      }
+    }
+    return out;
+  };
+  CHECK(stripTimings(readFile(primecOut)) == stripTimings(readFile(primevmOut)));
 }
 
 TEST_CASE("primec and primevm dump semantic-product match") {

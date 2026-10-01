@@ -48,6 +48,12 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_n
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
                                   TIMEOUT 30
+                                  SHARD_PREFIX "array_slice"
+                                  SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
+                                  TOTAL_CASES 1)
+
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
+                                  TIMEOUT 30
                                   SHARD_PREFIX "core_aliases_and_wrappers"
                                   SOURCE_FILE "*test_compile_run_native_backend_collections_*.cpp"
                                   RANGE_FIRST 1

@@ -60,6 +60,28 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   RANGE_LAST 35
                                   CASES_PER_SHARD 2)
 
+# These text_filters files were compiled into the compile-run binary but never
+# registered with CTest, so their cases silently stopped running. Keep one
+# registration per file family; TOTAL_CASES must match the file's case count.
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 60
+                                  SHARD_PREFIX "dumps"
+                                  SOURCE_FILE "*test_compile_run_text_filters_dumps.cpp"
+                                  TOTAL_CASES 59
+                                  CASES_PER_SHARD 10)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 30
+                                  SHARD_PREFIX "runtime_if"
+                                  SOURCE_FILE "*test_compile_run_text_filters_runtime_if.cpp"
+                                  TOTAL_CASES 19
+                                  CASES_PER_SHARD 10)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 30
+                                  SHARD_PREFIX "diagnostics"
+                                  SOURCE_FILE "*test_compile_run_text_filters_diagnostics_*.cpp"
+                                  TOTAL_CASES 227
+                                  CASES_PER_SHARD 25)
+
 # TODO-4711: reverted to the original 900s -
 # test_compile_run_bindings_and_examples.cpp uses the same
 # .primec_test_cache/ content-addressed native-compile cache as
