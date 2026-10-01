@@ -217,6 +217,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const bool hasBuiltinAccessSpelling =
       !expr.isMethodCall &&
       getCanonicalKeyValueAccessHelperNameForDispatch(expr, accessHelperName);
+  // A call that already names a concrete specialization (the stdlib's own
+  // `vectorAt__t...` calls) must not be canonicalized onto the `at` family:
+  // the family fallback would pick an unrelated specialization.
+  if (hasBuiltinAccessSpelling && !expr.isMethodCall &&
+      expr.name.find("__t") != std::string::npos &&
+      defMap_.find(expr.name) != defMap_.end()) {
+    return true;
+  }
   const bool isStdNamespacedVectorAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
       isValueSurfaceAccessHelperName(accessHelperName) &&

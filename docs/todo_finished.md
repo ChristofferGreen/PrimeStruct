@@ -56511,3 +56511,33 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: no compiler change: the spec requires imported canonical `/std/collections/map/at*` wrappers (or explicit `/map/at*` definitions) for `values.at(...)` sugar on a builtin `map<K, V>`, and the pinned sources only imported `/std/collections/*`, so `unknown call target: /map/at` was the correct result (`.count()` happened to resolve). The sources now also `import /std/collections/map/*`; the return-wrapper-temporaries case runs (exit 10) and the method arity / missing-key rejects report `argument count mismatch for /std/collections/map/at`.
+
+- [x] TODO-5333: Index a builtin `map<K, V>` temporary
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-index-temporary
+  - depends_on: (none)
+  - scope: `wrapMap<string, i32>(...)["only"raw_utf8]` fails VM lowering with "struct parameter type mismatch: expected .../MapValue__t... got .../Vector__t...". Pinned by "runs vm with templated stdlib wrapper temporary index forms".
+  - acceptance:
+    - indexing a builtin `map<K, V>` temporary runs on the vm and the pin moves to the real result.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: root cause shared with TODO-5334, not map indexing: a bare `at(vectorValue, index)` (including `vector[index]`) was published against the key/value `at` helper by spelling alone, so once that helper was instantiated anywhere in the program the lowerer inlined it for a vector receiver ("struct parameter type mismatch ... MapValue ... Vector"). `inferCallSnapshotData` now re-resolves a bare `at`/`at_unsafe` with a vector receiver to the vector access path. The index-forms case runs (exit 9).
+
+- [x] TODO-5334: Fix the vector `at` argument mismatch inside canonical map temporary lookup
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Canonical map follow-up (split from TODO-5326)
+  - parallel_track: canonical-map-temporary-lookup-vector
+  - depends_on: (none)
+  - scope: `/std/collections/map/at<string, i32>(wrapMap<string, i32>(...), "only"raw_utf8)` mixed with vector/index forms fails semantics inside `stdlib/std/collections/map.prime` (`findIndex`): "argument type mismatch for /std/collections/vector/at parameter values: expected .../Vector__t... got vector<string>". Pinned by "runs vm with templated stdlib wrapper temporary syntax parity".
+  - acceptance:
+    - the syntax-parity source runs on the vm and the pin moves to the real result.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: the stdlib's own `vectorAt<T>` calls are an access alias, so `vectorAt__t<hash>(keys, index)` inside `findIndex` was canonicalized onto the `/std/collections/vector/at` family and the family fallback then took the first instantiated specialization (the user's `at<i32>`), giving "expected Vector<i32> got vector<string>" whenever a program used a vector `at<T>` with a different T than a map key. `resolveExprCollectionAccessTarget` now leaves a call that already names an existing concrete specialization alone. The syntax-parity case runs (exit 27).

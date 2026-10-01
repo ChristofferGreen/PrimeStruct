@@ -100,11 +100,8 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_stdlib_collection_shim_templated_return_temp_index_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  // TODO-5333: indexing a canonical map<K, V> temporary hits a MapValue/Vector mismatch in VM lowering.
-  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
-  // the diagnostic below is the current result, not the intended behavior.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
+  CHECK(runCommand(runCmd) == 9);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary syntax parity") {
@@ -141,11 +138,8 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  // TODO-5334: canonical map<K, V> temporary lookup passes a builtin vector to the stdlib vector at.
-  // The source uses the canonical /std/collections/map/map<K, V>(...) constructor;
-  // the diagnostic below is the current result, not the intended behavior.
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("argument type mismatch for /std/collections/vector/at parameter values") != std::string::npos);
+  CHECK(runCommand(runCmd) == 27);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary unsafe parity") {

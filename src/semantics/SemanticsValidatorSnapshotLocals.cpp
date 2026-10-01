@@ -1,4 +1,5 @@
 // collection-surface-audit: exempt
+#include "primec/ir/StdlibCollectionPaths.h"
 #include "SemanticsValidator.h"
 
 #include <algorithm>
@@ -195,6 +196,29 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     }
     if (!canonicalResolvedPath.empty()) {
       out.resolvedPath = std::move(canonicalResolvedPath);
+    }
+  }
+  // A bare `at`/`at_unsafe` is published against the key/value helper family
+  // by spelling alone; a vector receiver makes it a vector access instead.
+  if (expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 2 &&
+      (expr.name == "at" || expr.name == "at_unsafe")) {
+    std::string basePath = out.resolvedPath;
+    if (const size_t suffix = basePath.find("__t"); suffix != std::string::npos) {
+      basePath.erase(suffix);
+    }
+    if (basePath ==
+        primec::collection_paths::memberPath(primec::collection_paths::kMapFolder, expr.name)) {
+      std::string vectorAccessPath;
+      if (withPreservedError([&]() {
+            return resolveVectorHelperMethodTarget(defParams,
+                                                   activeLocals,
+                                                   expr.args.front(),
+                                                   expr.name,
+                                                   vectorAccessPath);
+          }) &&
+          !vectorAccessPath.empty()) {
+        out.resolvedPath = std::move(vectorAccessPath);
+      }
     }
   }
   if (!out.resolvedPath.empty()) {
