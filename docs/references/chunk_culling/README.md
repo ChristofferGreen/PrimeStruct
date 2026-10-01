@@ -2,8 +2,8 @@
 
 Reading notes for rejecting voxel/terrain chunks from rendering (and, where
 possible, from generation). Notes are written for PrimeStruct contributors;
-each ends with a "Mapping" section. Two open-access PDFs are vendored in
-`pdfs/` (~19 MB each): `msoc_hpg2016.pdf` and `aokana_2505.02017.pdf`.
+each ends with a "Mapping" section. Three open-access PDFs are vendored in
+`pdfs/` (~19 MB each): `msoc_hpg2016.pdf`, `aokana_2505.02017.pdf`, and `gigavoxels_dp.pdf`.
 Everything else is linked.
 
 Status legend: **read** = full text read, **summary** = read via a web
@@ -17,6 +17,7 @@ summary only, so details may be incomplete.
 | [cave_culling.md](cave_culling.md) | Checchi, Advanced Cave Culling parts 1 and 2 | summary | Cheap connectivity-graph culling, no rasterizer |
 | [hiz_two_pass.md](hiz_two_pass.md) | Nanite two-pass HZB, Darnell Hi-Z | summary | Reference for a future compute/GPU path |
 | [terrain_horizon_and_generation.md](terrain_horizon_and_generation.md) | Horizon culling, Cinevva terrain post, generation-time search | summary | Only material bearing on pre-generation rejection |
+| [gigavoxels_dp.md](gigavoxels_dp.md) | GigaVoxels DP (HPG 2024) | read | Visibility-driven on-demand brick production: closest match to rejecting chunks from generation |
 | [citation_leads.md](citation_leads.md) | Google Scholar "cited by" sweep | titles/abstracts | Newer papers to read next (voxel two-pass HZB, GigaVoxels DP, work graphs) |
 
 ## Link-only further reading
