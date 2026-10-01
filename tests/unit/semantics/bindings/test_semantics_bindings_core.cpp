@@ -861,4 +861,47 @@ main() {
   CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
 }
 
+TEST_CASE("auto parameter infers the concrete Map wrapper from a brace constructor argument") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[return<int> effects(heap_alloc)]
+countAuto([auto mut] values) {
+  values.insert("a"raw_utf8, 3i32)
+  return(values.count())
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Map<string, i32> mut] seed{Map<string, i32>{}}
+  return(countAuto(seed))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("auto parameter default accepts a Map wrapper brace constructor") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[return<int> effects(heap_alloc)]
+countDefault([auto mut] values{Map<string, i32>{}}) {
+  values.insert("b"raw_utf8, 4i32)
+  return(values.count())
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(countDefault())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

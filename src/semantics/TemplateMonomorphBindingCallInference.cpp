@@ -273,6 +273,13 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
   if (isStructDefinition(defIt->second)) {
     infoOut.typeName = resolved;
     infoOut.typeTemplateArg.clear();
+    // A templated struct constructor keeps its explicit template arguments
+    // so a consumer (such as an [auto] parameter) sees the concrete
+    // specialization.
+    if (!initializer.isMethodCall && !defIt->second.templateArgs.empty() &&
+        initializer.templateArgs.size() == defIt->second.templateArgs.size()) {
+      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+    }
     return true;
   }
 

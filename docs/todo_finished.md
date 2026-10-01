@@ -56556,3 +56556,18 @@ crashes) - see `docs/todo_finished.md`.
   - stop_rule: if the fix needs a design decision beyond this shape, stop and
     record it here instead of widening the change.
   - result: two layers hid the mismatch: the builtin-map access rewrite in `SemanticsValidate.cpp` cleared explicit template arguments unconditionally (so `at<string, bool>` on a `map<string, i32>` silently became the `(string, i32)` specialization and ran, exit 4), and nothing compared an explicit canonical map access call's `MapValue<K, V>` parameter with the receiver's key/value types. The rewrite now leaves mismatching explicit arguments alone, `validateExpr` rejects the call with `argument type mismatch for /std/collections/map/at... parameter entries`, and the pin checks that diagnostic.
+
+- [x] TODO-5336: Infer the concrete type of `Map<K, V>{}` for an `[auto]` parameter
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Map wrapper follow-up (found while closing TODO-5330)
+  - parallel_track: auto-param-brace-constructor
+  - depends_on: (none)
+  - scope: `f([auto] m)` called as `f(Map<string, i32>{})`, and `f([auto mut] m{Map<string, i32>{}})` as a default, fail with "template arguments required for /std/collections/map/Map": implicit template inference types the brace-constructor argument as the bare struct path. The same expression works for a typed parameter, a call argument to a typed parameter, and an `[auto]` local.
+  - acceptance:
+    - both `[auto]` forms run on vm/native/exe and have a semantics or compile-run test.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: monomorph binding inference (`TemplateMonomorphBindingCallInference.cpp`) typed a struct brace-constructor call as the bare struct path, dropping explicit template arguments, so implicit template inference for an `[auto]` parameter produced `.../Map` and failed with 'template arguments required'. It now keeps the explicit arguments when they match the struct's parameters. Both `f([auto] m)` with a `Map<K, V>{}` argument and an `[auto]` parameter with a `Map<K, V>{}` default work on vm/native/exe; two `bindings.core` tests added (`TOTAL_CASES` 63 -> 65).
