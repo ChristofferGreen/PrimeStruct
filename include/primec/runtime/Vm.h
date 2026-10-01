@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "primec/runtime/VmHost.h"
 
 namespace primec {
 
@@ -186,6 +187,14 @@ public:
                uint64_t &result,
                std::string &error,
                const std::vector<std::string_view> &args) const;
+  // Runs with host functions bound for IrOpcode::CallHost. Every host import of
+  // `module` must be bound with a matching signature or execution fails before
+  // the first instruction.
+  bool execute(const IrModule &module,
+               uint64_t &result,
+               std::string &error,
+               const std::vector<std::string_view> &args,
+               const VmHostFunctions &hostFunctions) const;
 };
 
 class VmDebugSession {

@@ -20,6 +20,10 @@ public:
   // (<prefix>/share/primestruct/stdlib), then the source tree it was built from.
   void setStdlibPath(std::string path);
 
+  // Host functions applied to every script this engine compiles (a script can
+  // still add or override bindings with `Script::bind`).
+  template <class F> void bind(std::string name, F callable) { hostBindings_.bind(std::move(name), std::move(callable)); }
+
   Script compileFile(const std::string &path) const;
   // Compiles in-memory text. `name` is used in diagnostics and as the base
   // for relative imports.
@@ -31,6 +35,7 @@ private:
   std::vector<std::string> importPaths_;
   std::string entryPath_ = "/main";
   std::string stdlibPath_;
+  HostBindings hostBindings_;
 };
 
 } // namespace primec::embed

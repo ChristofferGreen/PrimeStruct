@@ -50,6 +50,26 @@ auto result = script.run();   // result.ok, result.exitCode == 7
 Errors are returned as data (`ScriptResult::diagnostics`); the API never exits
 the process or writes to stdout/stderr.
 
+## Calling the host from a script
+
+Bind C++ callables by name; signatures come from the callable's primitive
+parameter types (`int32_t`, `int64_t`, `uint64_t`, `float`, `double`, `bool`;
+`void` or one of those as the result):
+
+```cpp
+script.bind("host_add", [](int32_t a, int32_t b) { return a + b; });
+engine.bind("log_value", [](int32_t v) { /* ... */ });   // applies to every compiled script
+```
+
+Scripts reach host functions through the `CallHost` IR opcode and the module's
+host import table. `Script::requiredHostFunctions()` lists what a script needs
+and `checkHostBindings()` reports anything missing or mismatched; `run()` does
+the same check first and returns a diagnostic without executing anything.
+Host functions that throw are reported as errors. The `[host]` source
+declaration that lowers to `CallHost` is TODO-5345; today host calls come from
+hand-built or tool-generated IR (see `tests/unit/embed/test_embed_host_calls.cpp`).
+VM debug sessions do not support host calls.
+
 ## Precompiled bytecode
 
 ```cpp

@@ -15,4 +15,12 @@ bool Vm::execute(const IrModule &module,
   return vm_detail::executeVmModule(module, result, error, static_cast<uint64_t>(args.size()), &args);
 }
 
+bool Vm::execute(const IrModule &module,
+                 uint64_t &result,
+                 std::string &error,
+                 const std::vector<std::string_view> &args,
+                 const VmHostFunctions &hostFunctions) const {
+  return vm_detail::executeVmModule(module, result, error, static_cast<uint64_t>(args.size()), &args, &hostFunctions);
+}
+
 } // namespace primec

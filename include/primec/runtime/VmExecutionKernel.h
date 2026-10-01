@@ -39,6 +39,18 @@ public:
                                      std::vector<uint64_t> &stack,
                                      std::vector<uint64_t> &locals,
                                      std::string &error) = 0;
+  // Executes IrOpcode::CallHost. Hosts that cannot serve host calls keep this
+  // default, which faults with a diagnostic.
+  virtual bool handleHostCall(const IrModule &module,
+                              const IrInstruction &inst,
+                              std::vector<uint64_t> &stack,
+                              std::string &error) {
+    (void)module;
+    (void)inst;
+    (void)stack;
+    error = "host calls are not supported by this VM host";
+    return false;
+  }
 };
 
 bool executeVmKernel(const IrModule &module,

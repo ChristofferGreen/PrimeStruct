@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 23u;
+constexpr uint32_t IrSchemaVersion = 24u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -124,6 +124,9 @@ enum class IrOpcode : uint8_t {
   HeapFree,
   HeapRealloc,
   FileWriteStringDynamic,
+  // Calls host import `imm` (an index into IrModule::hostImports). Pops the
+  // import's parameters, pushes its result unless it returns void. VM only.
+  CallHost,
 };
 
 enum class IrStructFieldCategory : uint8_t {
@@ -251,6 +254,25 @@ struct IrFunction {
   std::vector<IrInstruction> instructions;
 };
 
+// Primitive value kinds that can cross the host boundary of a CallHost.
+enum class IrHostValueKind : uint8_t {
+  Void = 0,
+  I32,
+  I64,
+  U64,
+  F32,
+  F64,
+  Bool,
+};
+
+constexpr uint8_t IrHostValueKindMax = static_cast<uint8_t>(IrHostValueKind::Bool);
+
+struct IrHostImport {
+  std::string name;
+  std::vector<IrHostValueKind> parameters;
+  IrHostValueKind returnKind = IrHostValueKind::Void;
+};
+
 struct IrModule {
   uint32_t schemaVersion = IrSchemaVersion;
   std::vector<IrFunction> functions;
@@ -258,6 +280,8 @@ struct IrModule {
   std::vector<std::string> stringTable;
   std::vector<IrStructLayout> structLayouts;
   std::vector<IrInstructionSourceMapEntry> instructionSourceMap;
+  // Host functions a VM embedder must bind before running (see CallHost).
+  std::vector<IrHostImport> hostImports;
 };
 
 } // namespace primec

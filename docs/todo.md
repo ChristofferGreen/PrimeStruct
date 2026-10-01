@@ -95,55 +95,53 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5339 | Host function binding: call C++ callbacks from script | ready | embedding-host-calls |
+| TODO-5345 | Host function declaration surface: `[host]` definitions lower to CallHost | ready | embedding-host-calls |
 | TODO-5343 | iOS-safe embed build: no process spawning, bundled stdlib, cross-compile check | ready | embedding-ios |
 | TODO-5340 | Typed entry arguments and return values across the embed boundary | blocked | embedding-values |
 | TODO-5341 | Embedding lifetime: arena scope, reentrancy, compile-once run-many | blocked | embedding-lifetime |
 
 ### Ready Now
 
+- TODO-5345 (track: embedding-host-calls, surface: parser, semantics, IR lowerer, docs/PrimeStruct.md): `[host]` declaration surface.
 - TODO-5343 (track: embedding-ios, surface: `src/support/ProcessRunner.cpp`, `ImportResolver`, CMake option, iOS toolchain recipe): iOS-safe build.
-- TODO-5339 (track: embedding-host-calls, surface: host-call IR opcode, VM, `src/embed/`): host function binding.
 
 ### Immediate Next 10
 
-1. TODO-5339 - host calls make scripts useful (the point of embedding).
+1. TODO-5345 - `[host]` declaration surface (needs 5339).
 2. TODO-5340 - typed values in/out.
 3. TODO-5341 - lifetime and reuse hardening.
 4. TODO-5343 - iOS build recipe; needs a macOS runner to fully verify.
 
 ### Priority Lanes
 
-- Embedding (top priority, user-set; must support iOS): TODO-5339 -> 5340 -> 5341
+- Embedding (top priority, user-set; must support iOS): TODO-5345 -> 5340 -> 5341
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10; 5340 follows 5339, 5341 follows 5340.
+Run `ready` leaves in the order listed under Immediate Next 10; 5340 follows 5345, 5341 follows 5340.
 
 ### Task Blocks
 
-- [ ] TODO-5339: Host function binding - call C++ callbacks from script
+- [ ] TODO-5345: Host function declaration surface - `[host]` definitions lower to `CallHost`
   - owner: ai
   - status: ready
   - created_at: 2026-10-01
   - phase: Embedding
   - parallel_track: embedding-host-calls
-  - scope: scripts cannot currently call back into the host. Define the
-    surface (a declaration form for host-provided functions gated by an
-    effect such as `[effects(host)]`, documented first in
-    `docs/PrimeStruct.md`), add an IR call opcode for host calls with
-    validation for the VM target, and `ScriptEngine::bind(name, fn)` for
-    primitive signatures (i32/i64/f32/f64/bool). Unbound host functions fail
-    at compile/link time of the script, not at run time. Native/wasm
-    backends reject host calls with a clear diagnostic.
+  - scope: let a script declare a host-provided function, e.g.
+    `[host return<int>] host_add([i32] a, [i32] b) {}` (exact spelling decided
+    in docs/PrimeStruct.md first): the parser must allow the empty body for
+    `host` definitions, semantics validates the signature (primitive params and
+    return only) and skips return-path checks, and the lowerer emits the
+    arguments then `CallHost` instead of inlining or real-calling, registering
+    the import in `IrModule::hostImports`. Native/wasm/C++ backends reject host
+    definitions with a clear diagnostic.
   - acceptance:
-    - script calls a bound `add(i32,i32)` and a bound void callback that
-      mutates host state; both observed from C++.
-    - unbound or signature-mismatched binding yields a diagnostic.
-    - IR format change carries a version/migration note (IR stability rule).
-    - positive parse+IR test and negative diagnostic test added.
-  - stop_rule: strings, structs and collections across the boundary are out
-    of scope (TODO-5340); stop at primitives.
+    - script above plus `ScriptEngine`/`Script::bind` returns the host value.
+    - positive parse+IR test, negative diagnostics (non-primitive param, called
+      with wrong arity, `host` on a struct), docs and IR snippet in
+      docs/PrimeStruct.md.
+  - stop_rule: do not add general FFI; primitives only.
 
 - [ ] TODO-5340: Typed entry arguments and return values across the embed boundary
   - owner: ai

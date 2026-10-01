@@ -57056,3 +57056,36 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: install/export rules for the embed libs (`PrimeStruct::embed`, `PrimeStruct::embed_runtime`), installed stdlib at share/primestruct/stdlib, `ScriptEngine::setStdlibPath` plus $PRIMESTRUCT_STDLIB/installed/source-tree discovery, `examples/embed/` (CMake consumer, full host with file mode, 198 KB runtime-only bytecode runner), CTest `PrimeStruct_embed_install_package` (install -> configure -> build -> run). compile.sh untouched.
 
+
+- [x] TODO-5339: Host function binding, runtime half - `CallHost` opcode, VM dispatch, C++ bind API
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-host-calls
+  - scope: split from the original TODO-5339 (too large for one commit; the
+    language half is TODO-5345). Add `IrOpcode::CallHost` (appended to the
+    enum) whose `imm` indexes a new `IrModule::hostImports` table (`name`,
+    parameter `IrHostValueKind` list, return kind: i32/i64/u64/f32/f64/bool/
+    void), bump `IrSchemaVersion`, serialize/print/validate it (VM target
+    only; every other `IrValidationTarget` rejects it with a clear message;
+    each switch over `IrOpcode` gets the new case). The VM pops the declared
+    arguments, calls a registered host function, pushes the result. Debug
+    sessions either support it or fail with a diagnostic. Embedding API:
+    `HostBindings`/`Script::bind(name, callable)` with signatures deduced from
+    the C++ callable's primitive parameter types; `Script::run` verifies every
+    import is bound with a matching signature before executing and returns a
+    diagnostic otherwise (no UB, no partial run). Tests build `IrModule`s by
+    hand, so this leaf needs no language change.
+  - acceptance:
+    - hand-built module calling a bound `add(i32,i32)->i32` and a bound void
+      callback that mutates host state, observed from C++.
+    - unbound, wrong-arity and wrong-type bindings give diagnostics before any
+      instruction runs; non-VM validation targets reject `CallHost`.
+    - serializer round trip keeps imports; old-version bytecode is rejected.
+    - IR version bump documented (IR stability rule).
+  - stop_rule: strings, structs and collections across the boundary are out of
+    scope (TODO-5340); stop at primitives.
+  - finished_at: 2026-10-01
+  - result: `IrOpcode::CallHost` + `IrModule::hostImports` (PSIR v24, serialized, VM-target-only validation, debug sessions fault with a diagnostic), `VmHostFunctions` (include/primec/runtime/VmHost.h) verified before execution, `Vm::execute(..., hostFunctions)`, and `embed::HostBindings`/`Script::bind`/`ScriptEngine::bind` with signatures deduced from C++ callables (i32/i64/u64/f32/f64/bool). 20-case primestruct.embed.host_calls suite (hand-built IR). Found and fixed a pre-existing deserializer bug: the opcode upper bound stopped at HeapRealloc so FileWriteStringDynamic could not be loaded. Golden fixture, version checks and docs/PrimeStruct.md updated for v24.
+

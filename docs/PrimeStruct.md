@@ -2366,8 +2366,8 @@ module {
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
   concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
   widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
-- **IR definition (stable, PSIR v23):**
-  - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
+- **IR definition (stable, PSIR v24):**
+  - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, host_imports, entry_index, version }`.
     The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,
     `IrSchemaVersion`, and the supported-version range; serializer implementations
     must use those constants rather than private version literals.
@@ -2385,6 +2385,11 @@ module {
     provenance tags (`canonical_ast` for direct statement/expression mappings, `synthetic_ir` for compiler-generated
     instructions). Instructions with no direct AST origin currently fall back to definition coordinates and omit
     `source_unit` only when no source-unit ledger was supplied.
+  - **Host import:** `{ name, parameter_kinds, return_kind }` with kinds `void|i32|i64|u64|f32|f64|bool`. `CallHost`
+    (`imm` = index into `host_imports`) pops the declared parameters, calls the host function an embedder bound to that
+    name, and pushes the result unless it returns void. Only the VM target accepts `CallHost`; validation rejects it for
+    native, wasm, GLSL, and C++ targets, and VM debug sessions fault with a diagnostic. An embedder must bind every
+    import with a matching signature or execution fails before the first instruction (see `docs/Embedding.md`).
   - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
   - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR
     versioning).
@@ -2403,6 +2408,8 @@ module {
       `u32 instruction_count` and `instruction_count` entries: `u8 opcode` + `u64 imm` + `u32 debug_id`.
     - `u32 instruction_source_map_count`, then `instruction_source_map_count` entries:
       `u32 debug_id`, `u32 line`, `u32 column`, `u8 provenance`, `u32 source_unit_len` + source-unit bytes.
+    - `u32 host_import_count`, then `host_import_count` entries: `u32 name_len` + name bytes, `u32 parameter_count`,
+      `parameter_count` x `u8 kind`, `u8 return_kind`.
   - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v22, VM/native)” section below.
 - **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and
   `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native
@@ -2421,7 +2428,10 @@ module {
   source-map metadata so VM debug lookup can disambiguate identical line/column positions across source units; v23
   adds a per-function `parameter_count` field so static-analysis passes can reason about a callee's expected argument
   count without executing it, in preparation for lowering to emit real `Call`/`CallVoid` targets instead of always
-  inlining (TODO-4747); it is a pure schema/no-op addition, always 0 until that lowering work lands.
+  inlining (TODO-4747); it is a pure schema/no-op addition, always 0 until that lowering work lands; v24 adds the
+  `CallHost` opcode and the module `host_imports` table (VM-only host function calls for embedding; v23 bytecode is
+  rejected and must be recompiled). The same change fixed the deserializer's opcode upper bound, which previously
+  stopped at `HeapRealloc` and could not load `FileWriteStringDynamic`.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support
     `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.

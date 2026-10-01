@@ -209,6 +209,25 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
       return false;
     }
   }
+  if (module.hostImports.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+    error = "too many IR host imports";
+    return false;
+  }
+  appendU32(out, static_cast<uint32_t>(module.hostImports.size()));
+  for (const auto &import : module.hostImports) {
+    if (!appendString(out, import.name, "host import name", error)) {
+      return false;
+    }
+    if (import.parameters.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+      error = "too many IR host import parameters";
+      return false;
+    }
+    appendU32(out, static_cast<uint32_t>(import.parameters.size()));
+    for (const IrHostValueKind kind : import.parameters) {
+      out.push_back(static_cast<uint8_t>(kind));
+    }
+    out.push_back(static_cast<uint8_t>(import.returnKind));
+  }
   return true;
 }
 
@@ -430,7 +449,7 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       IrInstruction inst;
       const uint8_t opcodeValue = data[offset];
       const uint8_t minOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::HeapRealloc);
+      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::CallHost);
       if (opcodeValue < minOpcode || opcodeValue > maxOpcode) {
         error = "unsupported IR opcode";
         return false;
@@ -481,6 +500,48 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       return false;
     }
     out.instructionSourceMap.push_back(entry);
+  }
+  uint32_t hostImportCount = 0;
+  if (!readU32(data, offset, hostImportCount)) {
+    error = "truncated IR host import count";
+    return false;
+  }
+  if (!countFitsRemaining(data, offset, hostImportCount)) {
+    error = "truncated IR host import count";
+    return false;
+  }
+  out.hostImports.reserve(hostImportCount);
+  for (uint32_t importIndex = 0; importIndex < hostImportCount; ++importIndex) {
+    IrHostImport import;
+    if (!readString(data,
+                    offset,
+                    import.name,
+                    "truncated IR host import name",
+                    "truncated IR host import name",
+                    error)) {
+      return false;
+    }
+    uint32_t parameterCount = 0;
+    if (!readU32(data, offset, parameterCount) || !countFitsRemaining(data, offset, parameterCount)) {
+      error = "truncated IR host import parameters";
+      return false;
+    }
+    import.parameters.reserve(parameterCount);
+    for (uint32_t parameterIndex = 0; parameterIndex < parameterCount; ++parameterIndex) {
+      uint8_t kind = 0;
+      if (!readU8(data, offset, kind) || kind > IrHostValueKindMax) {
+        error = "invalid IR host import parameter kind";
+        return false;
+      }
+      import.parameters.push_back(static_cast<IrHostValueKind>(kind));
+    }
+    uint8_t returnKind = 0;
+    if (!readU8(data, offset, returnKind) || returnKind > IrHostValueKindMax) {
+      error = "invalid IR host import return kind";
+      return false;
+    }
+    import.returnKind = static_cast<IrHostValueKind>(returnKind);
+    out.hostImports.push_back(std::move(import));
   }
   if (entryIndex >= out.functions.size()) {
     error = "invalid IR entry index";

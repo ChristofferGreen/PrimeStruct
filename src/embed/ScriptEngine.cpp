@@ -106,6 +106,7 @@ Script ScriptEngine::compile(const std::string &path, const std::string *text) c
     return script;
   }
   script.module_ = std::move(module);
+  script.hostBindings_ = hostBindings_;
   return script;
 }
 

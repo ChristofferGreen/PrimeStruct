@@ -457,6 +457,9 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
+    case IrOpcode::CallHost:
+      error = "host calls are not supported in VM debug sessions";
+      return finishFault();
     default:
       error = "unknown IR opcode";
       return finishFault();

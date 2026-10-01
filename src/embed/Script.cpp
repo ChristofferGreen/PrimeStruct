@@ -10,6 +10,79 @@
 
 namespace primec::embed {
 
+void HostBindings::bindRaw(std::string name, std::vector<HostType> parameters, HostType returnType, RawInvoke invoke) {
+  for (Entry &entry : entries_) {
+    if (entry.name == name) {
+      entry = Entry{std::move(name), std::move(parameters), returnType, std::move(invoke)};
+      return;
+    }
+  }
+  entries_.push_back(Entry{std::move(name), std::move(parameters), returnType, std::move(invoke)});
+}
+
+namespace {
+IrHostValueKind toIrKind(HostType type) {
+  switch (type) {
+  case HostType::Void:
+    return IrHostValueKind::Void;
+  case HostType::I32:
+    return IrHostValueKind::I32;
+  case HostType::I64:
+    return IrHostValueKind::I64;
+  case HostType::U64:
+    return IrHostValueKind::U64;
+  case HostType::F32:
+    return IrHostValueKind::F32;
+  case HostType::F64:
+    return IrHostValueKind::F64;
+  case HostType::Bool:
+    return IrHostValueKind::Bool;
+  }
+  return IrHostValueKind::Void;
+}
+
+VmHostFunctions toVmHostFunctions(const HostBindings &bindings) {
+  VmHostFunctions functions;
+  for (const HostBindings::Entry &entry : bindings.entries()) {
+    VmHostBinding binding;
+    for (const HostType type : entry.parameters) {
+      binding.parameters.push_back(toIrKind(type));
+    }
+    binding.returnKind = toIrKind(entry.returnType);
+    binding.invoke = entry.invoke;
+    functions.bind(entry.name, std::move(binding));
+  }
+  return functions;
+}
+
+std::string describeImport(const IrHostImport &import) {
+  std::string text = import.name + "(";
+  for (size_t i = 0; i < import.parameters.size(); ++i) {
+    text += (i == 0 ? "" : ", ");
+    text += irHostValueKindName(import.parameters[i]);
+  }
+  return text + ") -> " + irHostValueKindName(import.returnKind);
+}
+} // namespace
+
+std::vector<std::string> Script::requiredHostFunctions() const {
+  std::vector<std::string> names;
+  if (valid()) {
+    for (const IrHostImport &import : module_->ir.hostImports) {
+      names.push_back(describeImport(import));
+    }
+  }
+  return names;
+}
+
+bool Script::checkHostBindings(std::string &error) const {
+  if (!valid()) {
+    error = diagnostics_.empty() ? "script was not compiled successfully" : diagnostics_;
+    return false;
+  }
+  return toVmHostFunctions(hostBindings_).verify(module_->ir, error);
+}
+
 ScriptResult Script::run(const std::vector<std::string> &args) const {
   ScriptResult result;
   if (!valid()) {
@@ -25,7 +98,8 @@ ScriptResult Script::run(const std::vector<std::string> &args) const {
   Vm vm;
   uint64_t value = 0;
   std::string error;
-  if (!vm.execute(module_->ir, value, error, views)) {
+  const VmHostFunctions hostFunctions = toVmHostFunctions(hostBindings_);
+  if (!vm.execute(module_->ir, value, error, views, hostFunctions)) {
     result.diagnostics = "VM error: " + error;
     return result;
   }

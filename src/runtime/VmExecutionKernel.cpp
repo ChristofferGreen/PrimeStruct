@@ -358,6 +358,13 @@ bool executeVmKernel(const IrModule &module,
         ip += 1;
         break;
       }
+      if (inst.op == IrOpcode::CallHost) {
+        if (!host.handleHostCall(module, inst, stack, error)) {
+          return false;
+        }
+        ip += 1;
+        break;
+      }
       error = "unknown IR opcode";
       return false;
     }

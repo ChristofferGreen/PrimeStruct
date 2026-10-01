@@ -10,7 +10,7 @@ namespace primec {
 namespace {
 
 constexpr uint8_t MinOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::FileWriteStringDynamic);
+constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::CallHost);
 constexpr uint64_t MaxGlslLocalIndex = 1023;
 constexpr uint32_t MaxCallParameterCount = 4096;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
@@ -413,6 +413,22 @@ bool validateFunction(const IrModule &module,
     if (opcodeValue < MinOpcode || opcodeValue > MaxOpcode) {
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
+    if (inst.op == IrOpcode::CallHost) {
+      if (target != IrValidationTarget::Vm) {
+        return failInstruction(functionIndex,
+                               function.name,
+                               instructionIndex,
+                               "host calls are only supported by the vm target",
+                               error);
+      }
+      if (inst.imm >= module.hostImports.size()) {
+        return failInstruction(functionIndex, function.name, instructionIndex, "invalid host import index", error);
+      }
+      if (module.hostImports[static_cast<size_t>(inst.imm)].parameters.size() > MaxCallParameterCount) {
+        return failInstruction(
+            functionIndex, function.name, instructionIndex, "host import parameter count exceeds supported limit", error);
+      }
+    }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {
       return failInstruction(functionIndex,
                              function.name,
@@ -569,6 +585,18 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
       module.stringTable.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
     error = "native string table exceeds 32-bit limit";
     return false;
+  }
+
+  std::unordered_set<std::string> importNames;
+  for (const IrHostImport &import : module.hostImports) {
+    if (import.name.empty()) {
+      error = "empty IR host import name";
+      return false;
+    }
+    if (!importNames.insert(import.name).second) {
+      error = "duplicate IR host import name: " + import.name;
+      return false;
+    }
   }
 
   std::unordered_set<std::string> functionNames;
