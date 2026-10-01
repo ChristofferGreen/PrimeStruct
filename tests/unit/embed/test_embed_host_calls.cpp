@@ -212,7 +212,7 @@ TEST_CASE("deserialization rejects invalid host kinds and old versions") {
   CHECK_FALSE(deserializeIr(badKind, decoded, error));
   CHECK(error.find("host import return kind") != std::string::npos);
   auto oldVersion = bytes;
-  oldVersion[4] = 23;
+  oldVersion[4] = 24;
   CHECK_FALSE(deserializeIr(oldVersion, decoded, error));
 }
 
@@ -230,6 +230,31 @@ TEST_CASE("deserialization accepts every defined opcode value") {
     CAPTURE(value);
     CHECK_MESSAGE(deserializeIr(bytes, decoded, error), error);
   }
+}
+
+TEST_CASE("vm passes string parameters as pointers into the module string table") {
+  IrModule module;
+  module.stringTable = {"alpha", "beta"};
+  module.hostImports.push_back({"measure", {IrHostValueKind::String}, IrHostValueKind::I32});
+  IrFunction main;
+  main.name = "/main";
+  main.instructions = {{IrOpcode::PushI64, 1}, {IrOpcode::CallHost, 0}, {IrOpcode::ReturnI32, 0}};
+  module.functions.push_back(main);
+  module.entryIndex = 0;
+  VmHostFunctions hosts;
+  hosts.bind("measure", {{IrHostValueKind::String}, IrHostValueKind::I32,
+                         [](const uint64_t *args, uint64_t &result, std::string &) {
+                           const auto *text = reinterpret_cast<const std::string *>(static_cast<uintptr_t>(args[0]));
+                           result = text->size();
+                           return true;
+                         }});
+  uint64_t result = 0;
+  std::string error;
+  REQUIRE_MESSAGE(runVm(module, hosts, result, error), error);
+  CHECK(static_cast<int32_t>(result) == 4);  // "beta"
+  module.functions[0].instructions[0].imm = 9;
+  CHECK_FALSE(runVm(module, hosts, result, error));
+  CHECK(error.find("invalid string index passed to host function measure") != std::string::npos);
 }
 
 TEST_CASE("debug sessions refuse host calls with a diagnostic") {

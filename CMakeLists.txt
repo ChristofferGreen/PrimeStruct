@@ -854,6 +854,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/embed/test_embed_threads.cpp
     tests/unit/embed/test_embed_host_calls.cpp
     tests/unit/embed/test_embed_host_language.cpp
+    tests/unit/embed/test_embed_exports.cpp
   )
   target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
   target_link_libraries(PrimeStruct_embed_tests PRIVATE primec_embed_lib)
@@ -902,6 +903,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_host_language
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_exports
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.exports"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_exports
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_threads
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>

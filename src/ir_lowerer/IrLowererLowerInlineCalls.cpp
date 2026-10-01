@@ -133,6 +133,7 @@ bool emitInlineDefinitionCallImpl(
         if (*canonical == "u64") return IrHostValueKind::U64;
         if (*canonical == "f32") return IrHostValueKind::F32;
         if (*canonical == "f64") return IrHostValueKind::F64;
+        if (*canonical == "string") return IrHostValueKind::String;
         return IrHostValueKind::Bool;
       };
       if (setupStage.outModule == nullptr) {
@@ -165,6 +166,10 @@ bool emitInlineDefinitionCallImpl(
         }
         if (!returnKind.has_value()) {
           error = "host definition return type is not a primitive: " + callee.fullPath;
+          return false;
+        }
+        if (*returnKind == IrHostValueKind::String) {
+          error = "host definition cannot return string: " + callee.fullPath;
           return false;
         }
         import.returnKind = *returnKind;

@@ -20,6 +20,8 @@ const char *irHostValueKindName(IrHostValueKind kind) {
     return "f64";
   case IrHostValueKind::Bool:
     return "bool";
+  case IrHostValueKind::String:
+    return "string";
   }
   return "unknown";
 }

@@ -186,7 +186,7 @@ TEST_CASE("host declaration rejects a body") {
 }
 
 TEST_CASE("host declaration rejects non primitive parameters") {
-  for (const char *type : {"string", "array<i32>", "vector<i32>"}) {
+  for (const char *type : {"array<i32>", "vector<i32>"}) {
     CAPTURE(type);
     const std::string error = compileError(std::string("[host return<int>]\nhost_f([") + type +
                                            "] a) {\n}\n\n[return<int>]\nmain() {\n  return(1i32)\n}\n");
@@ -247,6 +247,76 @@ TEST_CASE("declared but never called host function adds no requirement") {
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
   CHECK(script.requiredHostFunctions().empty());
   CHECK(script.run().exitCode == 5);
+}
+
+namespace {
+const char *StringSource = R"(
+[host return<void>]
+host_say([string] text) {
+}
+
+[host return<int>]
+host_len([string] text) {
+}
+
+[return<int>]
+main() {
+  [string] greeting{"hello"}
+  host_say("literal")
+  host_say(greeting)
+  host_say("")
+  host_say("with spaces and é")
+  return(host_len("four"))
+}
+)";
+} // namespace
+
+TEST_CASE("script passes literal and local strings to a bound host function") {
+  ScriptEngine engine;
+  auto script = engine.compileSource("/host_strings.prime", StringSource);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  CHECK(script.requiredHostFunctions() ==
+        std::vector<std::string>{"host_say(string) -> void", "host_len(string) -> i32"});
+  std::vector<std::string> said;
+  script.bind("host_say", [&said](std::string_view text) { said.emplace_back(text); });
+  script.bind("host_len", [](const std::string &text) { return static_cast<int32_t>(text.size()); });
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.exitCode == 4);
+  REQUIRE(said.size() == 4);
+  CHECK(said[0] == "literal");
+  CHECK(said[1] == "hello");
+  CHECK(said[2].empty());
+  CHECK(said[3].rfind("with spaces and ", 0) == 0);
+}
+
+TEST_CASE("host string parameter accepts std::string by value too") {
+  ScriptEngine engine;
+  auto script = engine.compileSource("/host_strings_value.prime", StringSource);
+  REQUIRE(script.valid());
+  std::string last;
+  script.bind("host_say", [&last](std::string text) { last = text; });
+  script.bind("host_len", [](std::string_view text) { return static_cast<int32_t>(text.size()); });
+  CHECK(script.run().exitCode == 4);
+  CHECK(last.rfind("with spaces", 0) == 0);
+}
+
+TEST_CASE("host string versus integer signature mismatch is diagnosed") {
+  ScriptEngine engine;
+  auto script = engine.compileSource("/host_strings_mismatch.prime", StringSource);
+  REQUIRE(script.valid());
+  script.bind("host_say", [](int32_t) {});
+  script.bind("host_len", [](std::string_view text) { return static_cast<int32_t>(text.size()); });
+  const auto result = script.run();
+  CHECK_FALSE(result.ok);
+  CHECK(result.diagnostics.find("script declares (string) -> void") != std::string::npos);
+  CHECK(result.diagnostics.find("host bound (i32) -> void") != std::string::npos);
+}
+
+TEST_CASE("host definitions cannot return strings") {
+  const std::string error =
+      compileError("[host return<string>]\nhost_name([i32] a) {\n}\n\n[return<int>]\nmain() {\n  return(1i32)\n}\n");
+  CHECK(error.find("host definition return type must be") != std::string::npos);
 }
 
 #ifdef PRIMESTRUCT_TEST_PRIMEC_PATH

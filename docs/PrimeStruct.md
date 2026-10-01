@@ -2366,7 +2366,7 @@ module {
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
   concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
   widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
-- **IR definition (stable, PSIR v24):**
+- **IR definition (stable, PSIR v25):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, host_imports, entry_index, version }`.
     The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,
     `IrSchemaVersion`, and the supported-version range; serializer implementations
@@ -2385,7 +2385,7 @@ module {
     provenance tags (`canonical_ast` for direct statement/expression mappings, `synthetic_ir` for compiler-generated
     instructions). Instructions with no direct AST origin currently fall back to definition coordinates and omit
     `source_unit` only when no source-unit ledger was supplied.
-  - **Host import:** `{ name, parameter_kinds, return_kind }` with kinds `void|i32|i64|u64|f32|f64|bool`. `CallHost`
+  - **Host import:** `{ name, parameter_kinds, return_kind }` with kinds `void|i32|i64|u64|f32|f64|bool|string` (`string` for parameters only; the VM hands the host a pointer to the module's string). `CallHost`
     (`imm` = index into `host_imports`) pops the declared parameters, calls the host function an embedder bound to that
     name, and pushes the result unless it returns void. Only the VM target accepts `CallHost`; validation rejects it for
     native, wasm, GLSL, and C++ targets, and VM debug sessions fault with a diagnostic. An embedder must bind every
@@ -2430,7 +2430,7 @@ module {
   count without executing it, in preparation for lowering to emit real `Call`/`CallVoid` targets instead of always
   inlining (TODO-4747); it is a pure schema/no-op addition, always 0 until that lowering work lands; v24 adds the
   `CallHost` opcode and the module `host_imports` table (VM-only host function calls for embedding; v23 bytecode is
-  rejected and must be recompiled). The same change fixed the deserializer's opcode upper bound, which previously
+  rejected and must be recompiled); v25 adds the `string` host value kind for host function parameters. The same change fixed the deserializer's opcode upper bound, which previously
   stopped at `HeapRealloc` and could not load `FileWriteStringDynamic`.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support
     `location`/`dereference`.
@@ -3298,8 +3298,8 @@ main() {
 
 Rules:
 - The return type is explicit (`return<T>`) and, like every parameter, one of
-  `i32` (`int`), `i64`, `u64`, `f32` (`float`), `f64`, `bool`, or `void` for the
-  return. Parameters cannot be `mut` or have defaults, and host definitions cannot
+  `i32` (`int`), `i64`, `u64`, `f32` (`float`), `f64`, or `bool` (parameters may
+  also be `string`; `void` is allowed for the return, strings are not). Parameters cannot be `mut` or have defaults, and host definitions cannot
   be generic, struct members, or have a body.
 - Each call lowers to `CallHost` (arguments on the stack, `imm` = index into the
   module's host import table; the import name is the definition path without the

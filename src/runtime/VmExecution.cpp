@@ -106,6 +106,16 @@ public:
       return false;
     }
     const size_t base = stack.size() - argCount;
+    for (size_t i = 0; i < argCount; ++i) {
+      if (import.parameters[i] == IrHostValueKind::String) {
+        uint64_t &slot = stack[base + i];
+        if (slot >= module.stringTable.size()) {
+          error = "invalid string index passed to host function " + import.name;
+          return false;
+        }
+        slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&module.stringTable[static_cast<size_t>(slot)]));
+      }
+    }
     uint64_t result = 0;
     std::string hostError;
     bool ok = false;
@@ -133,6 +143,7 @@ public:
     case IrHostValueKind::I64:
     case IrHostValueKind::U64:
     case IrHostValueKind::F64:
+    case IrHostValueKind::String:
       stack.push_back(result);
       break;
     case IrHostValueKind::F32:

@@ -45,6 +45,24 @@ TEST_CASE("embed regenerates fixture bytecode when asked") {
     out << "      },\n";
   }
   out << "  };\n  return bytes;\n}\n";
+
+  ScriptEngine bundleEngine;
+  bundleEngine.exportFunction<int32_t(int32_t, int32_t)>("add");
+  bundleEngine.exportFunction<double(int32_t, double)>("scale");
+  const auto bundle = bundleEngine.compileSource("/fixture/bundle.prime", embedBundleSource());
+  REQUIRE_MESSAGE(bundle.valid(), bundle.diagnostics());
+  std::vector<uint8_t> bundleBytes;
+  std::string bundleError;
+  REQUIRE(bundle.saveBytecode(bundleBytes, bundleError));
+  out << "\n// Bundle of embedBundleSource() with exports add and scale.\n"
+         "inline const std::vector<uint8_t> &embedBundleBytecode() {\n"
+         "  static const std::vector<uint8_t> bytes = {\n";
+  for (size_t i = 0; i < bundleBytes.size(); ++i) {
+    out << (i % 16 == 0 ? "      " : "") << "0x" << std::hex << (bundleBytes[i] < 16 ? "0" : "") << int(bundleBytes[i])
+        << std::dec << ",";
+    out << (i % 16 == 15 || i + 1 == bundleBytes.size() ? "\n" : " ");
+  }
+  out << "  };\n  return bytes;\n}\n";
 }
 
 TEST_CASE("embed runs main from in-memory source") {
@@ -84,6 +102,19 @@ TEST_CASE("embed fixture bytecode matches a fresh compile") {
     CHECK_MESSAGE(bytes == embedProgramBytecode()[i],
                   "refresh with PRIMESTRUCT_EMBED_REGEN_FIXTURES=<path>/embed_fixture_bytecode.h");
   }
+}
+
+TEST_CASE("embed bundle fixture matches a fresh compile") {
+  ScriptEngine engine;
+  engine.exportFunction<int32_t(int32_t, int32_t)>("add");
+  engine.exportFunction<double(int32_t, double)>("scale");
+  const auto script = engine.compileSource("/fixture/bundle.prime", embedBundleSource());
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(script.saveBytecode(bytes, error));
+  CHECK_MESSAGE(bytes == embedBundleBytecode(),
+                "refresh with PRIMESTRUCT_EMBED_REGEN_FIXTURES=<path>/embed_fixture_bytecode.h)");
 }
 
 TEST_CASE("embed reruns one compiled script with identical results") {

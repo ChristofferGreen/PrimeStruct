@@ -1,6 +1,8 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -56,10 +58,19 @@ struct SourceUnit {
   int originalStartColumn = 0;
 };
 
+// Process-unique id for each ExpandedSource instance. Caches keyed by the
+// source (see SourceLocationMapper) use it so a new source allocated at the
+// address of a destroyed one can never produce a stale hit.
+inline std::uint64_t nextExpandedSourceGeneration() {
+  static std::atomic<std::uint64_t> counter{0};
+  return counter.fetch_add(1, std::memory_order_relaxed) + 1u;
+}
+
 struct ExpandedSource {
   std::string text;
   std::vector<SourceUnit> units = {};
   std::vector<SourceSegment> segments = {};
+  std::uint64_t generation = nextExpandedSourceGeneration();
 };
 
 } // namespace primec

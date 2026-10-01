@@ -8,8 +8,11 @@
 #include "primec/pipeline/CompilePipeline.h"
 #include "primec/support/Options.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <sstream>
 #include <utility>
 #include <variant>
@@ -58,24 +61,78 @@ void ScriptEngine::setEntryPath(std::string entryPath) { entryPath_ = std::move(
 
 void ScriptEngine::setStdlibPath(std::string path) { stdlibPath_ = std::move(path); }
 
-Script ScriptEngine::compileFile(const std::string &path) const { return compile(path, nullptr); }
+void ScriptEngine::exportFunction(std::string name, std::vector<HostType> parameters, HostType returnType) {
+  for (ExportDecl &decl : exports_) {
+    if (decl.name == name) {
+      decl.signature = ExportSignature{std::move(parameters), returnType};
+      return;
+    }
+  }
+  exports_.push_back(ExportDecl{std::move(name), ExportSignature{std::move(parameters), returnType}});
+}
+
+Script ScriptEngine::compileFile(const std::string &path) const {
+  std::ifstream file(path, std::ios::binary);
+  if (!file) {
+    Script script;
+    script.name_ = path;
+    script.diagnostics_ = "failed to read input: " + std::filesystem::absolute(path).string() + "\n";
+    return script;
+  }
+  const std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  return compile(path, &text);
+}
 
 Script ScriptEngine::compileSource(const std::string &name, const std::string &text) const {
   return compile(name, &text);
 }
 
-Script ScriptEngine::compile(const std::string &path, const std::string *text) const {
-  Script script;
-  script.name_ = path;
+namespace {
+// Generated entry that calls export `name`, fetching arguments through the
+// reserved __psarg_<type> host functions and reporting through __psret_<type>.
+std::string exportWrapperSource(const std::string &name, const ExportSignature &signature, size_t index) {
+  std::string source = "\n";
+  std::vector<HostType> seen;
+  for (const HostType type : signature.parameters) {
+    if (std::find(seen.begin(), seen.end(), type) != seen.end()) {
+      continue;
+    }
+    seen.push_back(type);
+    const std::string spelling = detail::hostTypeSpelling(type);
+    source += "[host return<" + spelling + ">]\n" + detail::ExportArgPrefix + spelling + "([i32] index) {\n}\n\n";
+  }
+  const std::string returnSpelling = detail::hostTypeSpelling(signature.returnType);
+  if (signature.returnType != HostType::Void) {
+    source += "[host return<void>]\n" + std::string(detail::ExportResultPrefix) + returnSpelling + "([" +
+              returnSpelling + "] value) {\n}\n\n";
+  }
+  std::string call = name + "(";
+  for (size_t i = 0; i < signature.parameters.size(); ++i) {
+    call += (i == 0 ? "" : ", ");
+    call += std::string(detail::ExportArgPrefix) + detail::hostTypeSpelling(signature.parameters[i]) + "(" +
+            std::to_string(i) + "i32)";
+  }
+  call += ")";
+  source += "[return<int>]\n__ps_call_" + std::to_string(index) + "() {\n";
+  source += signature.returnType == HostType::Void
+                ? "  " + call + "\n"
+                : "  " + std::string(detail::ExportResultPrefix) + returnSpelling + "(" + call + ")\n";
+  source += "  return(0i32)\n}\n";
+  return source;
+}
+} // namespace
 
+bool ScriptEngine::compileEntry(const std::string &path,
+                                const std::string &text,
+                                const std::string &entryPath,
+                                std::shared_ptr<Script::Module> &module,
+                                std::string &diagnostics) const {
   Options options;
   options.emitKind = "vm";
   options.inputPath = path;
-  options.entryPath = entryPath_;
+  options.entryPath = entryPath;
   options.importPaths = importPaths_;
-  if (text != nullptr) {
-    options.inMemorySource = *text;
-  }
+  options.inMemorySource = text;
   if (const std::string stdlibDir = resolveStdlibDir(stdlibPath_); !stdlibDir.empty()) {
     options.importPaths.push_back(stdlibDir);
   }
@@ -86,12 +143,12 @@ Script ScriptEngine::compile(const std::string &path, const std::string *text) c
   CompilePipelineDiagnosticInfo diagnosticInfo;
   CompilePipelineResult result = runCompilePipelineResult(options, stage, error, &diagnosticInfo);
   if (const auto *failure = std::get_if<CompilePipelineFailureResult>(&result)) {
-    script.diagnostics_ = renderFailure(options, describeCompilePipelineFailure(*failure));
-    return script;
+    diagnostics = renderFailure(options, describeCompilePipelineFailure(*failure));
+    return false;
   }
   CompilePipelineOutput output = std::move(std::get<CompilePipelineSuccessResult>(result).output);
 
-  auto module = std::make_shared<Script::Module>();
+  module = std::make_shared<Script::Module>();
   IrPreparationFailure irFailure;
   const SemanticProgram *semanticProgram = output.hasSemanticProgram ? &output.semanticProgram : nullptr;
   if (!prepareIrModule(output.program,
@@ -101,11 +158,50 @@ Script ScriptEngine::compile(const std::string &path, const std::string *text) c
                        module->ir,
                        irFailure,
                        &output.expandedSource)) {
-    script.diagnostics_ = renderFailure(
+    diagnostics = renderFailure(
         options, describeIrPreparationFailure(irFailure, vmIrBackendDiagnostics(), &normalizeVmLoweringError));
+    module.reset();
+    return false;
+  }
+  return true;
+}
+
+Script ScriptEngine::compile(const std::string &path, const std::string *text) const {
+  Script script;
+  script.name_ = path;
+  const std::string source = text != nullptr ? *text : std::string();
+
+  std::shared_ptr<Script::Module> mainModule;
+  std::string diagnostics;
+  const bool mainOk = compileEntry(path, source, entryPath_, mainModule, diagnostics);
+  const bool missingMain = !mainOk && diagnostics.find("missing entry definition " + entryPath_) != std::string::npos;
+  if (!mainOk && !(missingMain && !exports_.empty())) {
+    script.diagnostics_ = diagnostics;
     return script;
   }
-  script.module_ = std::move(module);
+
+  if (!exports_.empty()) {
+    auto table = std::make_shared<Script::ExportTable>();
+    for (size_t i = 0; i < exports_.size(); ++i) {
+      Script::ExportTable::Entry entry;
+      entry.name = exports_[i].name;
+      entry.signature = exports_[i].signature;
+      std::shared_ptr<Script::Module> module;
+      std::string exportDiagnostics;
+      const std::string entryName = "/__ps_call_" + std::to_string(i);
+      if (!compileEntry(path, source + exportWrapperSource(entry.name, entry.signature, i), entryName, module,
+                        exportDiagnostics)) {
+        script.diagnostics_ = "export '" + entry.name + "': " + exportDiagnostics;
+        return script;
+      }
+      entry.module = std::move(module);
+      table->entries.push_back(std::move(entry));
+    }
+    script.exports_ = std::move(table);
+  }
+  if (mainOk) {
+    script.module_ = std::move(mainModule);
+  }
   script.hostBindings_ = hostBindings_;
   return script;
 }

@@ -14,7 +14,9 @@ namespace primec {
 // A host function the VM can call through IrOpcode::CallHost. Arguments arrive
 // as raw 64-bit VM slots in declaration order: i32 sign-extended to 64 bits,
 // i64/u64 as-is, f32 as the float bit pattern, f64 as the double bit pattern,
-// bool as 0 or 1. The result uses the same encoding (ignored for void).
+// bool as 0 or 1, string as a `const std::string *` into the module's string
+// table (valid for the duration of the call). The result uses the same encoding
+// (ignored for void); string results are not supported.
 using VmHostInvoke = std::function<bool(const uint64_t *args, uint64_t &result, std::string &error)>;
 
 struct VmHostBinding {

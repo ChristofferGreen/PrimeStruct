@@ -57113,3 +57113,51 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: `[host return<T>] f([T] ...) {}` declarations: parser allows the empty body (and rejects generics), semantics validates primitive signature/empty body/free function, lowerer emits args + `CallHost` and records the import (host defs excluded from real-call eligibility), `--emit=ir` validates with new `IrValidationTarget::Serialized` so offline bytecode can carry host imports while native/C++/wasm/GLSL reject them. 20-case host_language suite incl. CLI backend rejection and offline bytecode; host_call fixture added to the shared fixture table; example and docs updated (docs/PrimeStruct.md "Host functions (embedding)").
 
+
+- [x] TODO-5346: Strings across the host boundary - script-to-host `[string]` parameters
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-values
+  - scope: split from TODO-5340. VM strings are string-table indices with no
+    dynamic construction, so only script-to-host strings are expressible:
+    allow `[string]` parameters in `[host]` definitions (add
+    `IrHostValueKind::String`, bump PSIR to v25), have the VM hand the host a
+    pointer to the module's string, and let `HostBindings::bind` accept
+    `std::string_view` / `const std::string&` / `std::string` parameters.
+    String returns from host functions stay unsupported (reserved for the
+    engine-generated wrappers in TODO-5347).
+  - acceptance:
+    - script passes a literal and a string local to a bound host function and
+      the host sees the text; signature mismatch (string vs i32) diagnosed.
+    - golden fixture, version checks, docs/PrimeStruct.md updated for v25.
+  - stop_rule: no dynamic strings, no string returns beyond TODO-5347.
+  - finished_at: 2026-10-01
+  - result: `IrHostValueKind::String` (PSIR v25; parameters only), semantics/lowerer accept `[string]` host parameters and reject string returns, the VM validates the index and hands the host a pointer to the module string, `HostBindings::bind` accepts `std::string_view`/`std::string` parameters (static_assert rejects string returns). 4 new host_language cases + a VM-level case; golden/version tests and docs updated for v25.
+
+
+- [x] TODO-5340: Named function calls - `Script::call` with typed primitive arguments and results
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-values
+  - scope: let the host call named script functions (not just `main`).
+    `ScriptEngine::exportFunction(name, paramTypes, returnType)` declares an
+    export; compilation runs the frontend once on the source plus a generated
+    wrapper entry per export (`__ps_call_<n>()` fetching arguments through
+    reserved `__psarg_*` host functions and reporting the result through
+    `__psret_*`), then lowers one IR module per entry. `Script::call<R>(name,
+    args...)` returns `CallResult<R>{ok, value, diagnostics}`; unknown export,
+    arity or type mismatch is an error value, never UB. Bytecode save/load
+    carries every export module in an embed-level bundle.
+  - acceptance:
+    - call `fn(i32, f64) -> f64` and a void export from C++; repeated calls.
+    - arity/type mismatch and unknown name return errors.
+    - bundle round trip loads in the runtime-only library and still calls.
+  - stop_rule: struct/array marshalling and string arguments are out of scope
+    here (TODO-5347).
+  - finished_at: 2026-10-01
+  - result: `ScriptEngine::exportFunction` + `Script::call<R>(name, args...)` (typed primitives, `CallResult`), generated wrapper entries using reserved `__psarg_*`/`__psret_*` host functions, one IR module per export, `PSBN` bytecode bundle (hostile-input hardened; partially decoded bundles never leave a valid script), runtime-only library calls bundle exports, scripts may omit main. 14-case exports suite + runtime-only bundle tests. Found and fixed a real embedding bug: `SourceLocationMapper`'s thread-local cache was keyed only by `ExpandedSource` address, so without a compile-arena scope a later compile at a reused address got stale source units (bytecode differed by compile history); `ExpandedSource` now carries a process-unique generation and the cache also keys on it and on the unit/segment counts. Also made the type-graph dump alias test ignore wall-clock `*_ms` timings (second flake of that class).
+

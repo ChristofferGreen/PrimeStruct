@@ -50,3 +50,11 @@ inline const std::vector<EmbedProgram> &embedPrograms() {
 inline void bindEmbedFixtureHosts(primec::embed::Script &script) {
   script.bind("host_add", [](int32_t a, int32_t b) { return a + b; });
 }
+
+// Library with exports for the bundle fixture: add(i32, i32) -> i32,
+// scale(i32, f64) -> f64, plus a main that returns 7.
+inline const char *embedBundleSource() {
+  return "[return<int>]\nadd([i32] a, [i32] b) {\n  return(a + b)\n}\n\n"
+         "[return<f64>]\nscale([i32] count, [f64] factor) {\n  return(convert<f64>(count) * factor)\n}\n\n"
+         "[return<int>]\nmain() {\n  return(7i32)\n}\n";
+}

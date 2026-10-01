@@ -3,6 +3,7 @@
 #include "primec/support/CompileArena.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <tuple>
 #include <utility>
@@ -428,6 +429,12 @@ namespace {
 // through the whole compile - so a mapper cached by that address is safe to
 // reuse across calls within one compilation.
 thread_local const ExpandedSource *g_cachedSource = nullptr;
+// Also keyed by the source's generation and size: without a compile arena scope
+// (embedding hosts), a new ExpandedSource can be allocated at the address of a
+// destroyed one, and an address-only key would then serve the old mapper.
+thread_local std::uint64_t g_cachedGeneration = 0;
+thread_local std::size_t g_cachedUnitCount = 0;
+thread_local std::size_t g_cachedSegmentCount = 0;
 thread_local std::optional<SourceLocationMapper> g_cachedMapper;
 
 // TODO-5235: this cache is thread_local and intentionally persists across
@@ -444,13 +451,16 @@ thread_local std::optional<SourceLocationMapper> g_cachedMapper;
 void clearSourceLocationMapperCache() {
   g_cachedMapper.reset();
   g_cachedSource = nullptr;
+  g_cachedGeneration = 0;
 }
 
 [[maybe_unused]] const bool kSourceLocationMapperCacheRegistered =
     (registerArenaResetCallback(&clearSourceLocationMapperCache), true);
 
 const SourceLocationMapper &cachedMapperFor(const ExpandedSource &source) {
-  if (g_cachedSource != &source || !g_cachedMapper.has_value()) {
+  if (g_cachedSource != &source || g_cachedGeneration != source.generation ||
+      g_cachedUnitCount != source.units.size() || g_cachedSegmentCount != source.segments.size() ||
+      !g_cachedMapper.has_value()) {
     // TODO-5235: SystemHeapScope around the mutation, not just at
     // declaration - the cached mapper's own internal buffers must never be
     // arena memory, since this cache intentionally survives across many
@@ -459,6 +469,9 @@ const SourceLocationMapper &cachedMapperFor(const ExpandedSource &source) {
     SystemHeapScope systemHeapGuard;
     g_cachedMapper.emplace(source);
     g_cachedSource = &source;
+    g_cachedGeneration = source.generation;
+    g_cachedUnitCount = source.units.size();
+    g_cachedSegmentCount = source.segments.size();
   }
   return *g_cachedMapper;
 }

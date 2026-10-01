@@ -91,4 +91,28 @@ TEST_CASE("runtime-only library runs a loaded script from several threads") {
   }
 }
 
+TEST_CASE("runtime-only library calls exported functions from a precompiled bundle") {
+  const auto script = Script::loadBytecode(embedBundleBytecode(), "bundle");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  CHECK(script.exportedFunctions() ==
+        std::vector<std::string>{"add(i32, i32) -> i32", "scale(i32, f64) -> f64"});
+  const auto sum = script.call<int32_t>("add", 40, 2);
+  REQUIRE_MESSAGE(sum.ok, sum.diagnostics);
+  CHECK(sum.value == 42);
+  const auto scaled = script.call<double>("scale", 3, 2.5);
+  REQUIRE_MESSAGE(scaled.ok, scaled.diagnostics);
+  CHECK(scaled.value == 7.5);
+  CHECK(script.run().exitCode == 7);
+  CHECK_FALSE(script.call<int32_t>("add", 1.0, 2).ok);
+  CHECK_FALSE(script.call<int32_t>("missing", 1).ok);
+}
+
+TEST_CASE("runtime-only library rejects every truncation of a bundle") {
+  const auto &bytes = embedBundleBytecode();
+  for (size_t length = 0; length < bytes.size(); ++length) {
+    const std::vector<uint8_t> prefix(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(length));
+    CHECK_FALSE(Script::loadBytecode(prefix).valid());
+  }
+}
+
 TEST_SUITE_END();

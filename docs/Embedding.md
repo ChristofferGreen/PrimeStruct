@@ -50,6 +50,30 @@ auto result = script.run();   // result.ok, result.exitCode == 7
 Errors are returned as data (`ScriptResult::diagnostics`); the API never exits
 the process or writes to stdout/stderr.
 
+## Calling script functions from the host
+
+Declare the functions the host will call, then call them by name:
+
+```cpp
+engine.exportFunction<double(int32_t, double)>("scale");
+engine.exportFunction<int32_t(int32_t, int32_t)>("add");
+auto script = engine.compileSource("/lib.prime", source);
+
+auto r = script.call<double>("scale", 3, 2.5);   // r.ok, r.value == 7.5, r.diagnostics
+auto s = script.call<int32_t>("add", 40, 2);
+```
+
+Types are `int32_t`, `int64_t`, `uint64_t`, `float`, `double`, `bool` (and `void`
+results). A mismatch with the declaration, an unknown name, or a missing host
+binding is an error value in `CallResult`, never undefined behavior. Each export
+compiles its own entry (a generated wrapper that fetches arguments and reports
+the result through reserved `__psarg_*` / `__psret_*` host functions), so exports
+add compile time but calls are plain VM runs. A script with exports may omit
+`main`. `saveBytecode` then writes a `PSBN` bundle (all modules plus signatures)
+that `loadBytecode` restores in the runtime-only library, which can `call` the
+exports without a compiler. `Script::call` is safe to use from several threads
+on one `Script`. String arguments and results are not supported (TODO-5347).
+
 ## Calling the host from a script
 
 Bind C++ callables by name; signatures come from the callable's primitive
@@ -102,7 +126,7 @@ format and the full-library test fails when it drifts.
 
 ## Tests
 
-Suites live in `tests/unit/embed/`: `script_engine`, `diagnostics`, `bytecode`
+Suites live in `tests/unit/embed/`: `script_engine`, `diagnostics`, `exports`, `bytecode`
 (round trip, determinism, truncation/corruption fuzzing), `threads`, `host_calls` (hand-built IR, VM
 and binding API), `host_language` (`[host]` source declarations, backend rejection, offline bytecode), and
 `runtime_only` (a separate binary linking only `primec_embed_runtime_lib`). The

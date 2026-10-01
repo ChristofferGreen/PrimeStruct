@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -13,7 +14,7 @@
 namespace primec::embed {
 
 // Primitive types that can cross the host boundary.
-enum class HostType : uint8_t { Void, I32, I64, U64, F32, F64, Bool };
+enum class HostType : uint8_t { Void, I32, I64, U64, F32, F64, Bool, String };
 
 namespace detail {
 template <class T> struct HostTypeOf;
@@ -24,6 +25,9 @@ template <> struct HostTypeOf<uint64_t> { static constexpr HostType value = Host
 template <> struct HostTypeOf<float> { static constexpr HostType value = HostType::F32; };
 template <> struct HostTypeOf<double> { static constexpr HostType value = HostType::F64; };
 template <> struct HostTypeOf<bool> { static constexpr HostType value = HostType::Bool; };
+// Strings are accepted as host function parameters only.
+template <> struct HostTypeOf<std::string_view> { static constexpr HostType value = HostType::String; };
+template <> struct HostTypeOf<std::string> { static constexpr HostType value = HostType::String; };
 
 // Raw VM slot <-> C++ value (i32 is sign-extended, floats are bit patterns).
 template <class T> T fromSlot(uint64_t slot) {
@@ -37,6 +41,10 @@ template <class T> T fromSlot(uint64_t slot) {
     return std::bit_cast<float>(static_cast<uint32_t>(slot));
   } else if constexpr (std::is_same_v<T, double>) {
     return std::bit_cast<double>(slot);
+  } else if constexpr (std::is_same_v<T, std::string_view>) {
+    return std::string_view(*reinterpret_cast<const std::string *>(static_cast<uintptr_t>(slot)));
+  } else if constexpr (std::is_same_v<T, std::string>) {
+    return *reinterpret_cast<const std::string *>(static_cast<uintptr_t>(slot));
   } else {
     return slot != 0;
   }
@@ -99,6 +107,8 @@ public:
 private:
   template <class F, class... A, class R>
   void bindTyped(std::string name, F callable, std::tuple<A...> *, R *) {
+    static_assert(detail::HostTypeOf<R>::value != HostType::String,
+                  "host functions cannot return strings; the VM cannot create strings at run time");
     RawInvoke invoke = [callable = std::move(callable)](const uint64_t *args, uint64_t &result, std::string &) mutable {
       return call<R, A...>(callable, args, result, std::index_sequence_for<A...>{});
     };
@@ -120,6 +130,25 @@ private:
   std::vector<Entry> entries_;
 };
 
+// Signature of a function a script exports to the host (see
+// ScriptEngine::exportFunction / Script::call).
+struct ExportSignature {
+  std::vector<HostType> parameters;
+  HostType returnType = HostType::Void;
+};
+
+// Result of `Script::call`. Failures (unknown function, signature mismatch,
+// missing host binding, VM error) are data, never exceptions.
+template <class R> struct CallResult {
+  bool ok = false;
+  R value{};
+  std::string diagnostics;
+};
+template <> struct CallResult<void> {
+  bool ok = false;
+  std::string diagnostics;
+};
+
 // Outcome of compiling or running a script. Failures are reported as data:
 // the embed API never exits the process or writes to stdout/stderr itself.
 struct ScriptResult {
@@ -137,12 +166,22 @@ public:
   Script() = default;
 
   // False when compilation failed; `diagnostics()` then says why.
-  bool valid() const { return module_ != nullptr; }
+  bool valid() const { return module_ != nullptr || exports_ != nullptr; }
   const std::string &diagnostics() const { return diagnostics_; }
 
   // Runs the entry definition. `args` become the script's argv after the
   // leading program name.
   ScriptResult run(const std::vector<std::string> &args = {}) const;
+
+  // Calls a function exported with ScriptEngine::exportFunction. Arguments and
+  // the result are the primitive types int32_t, int64_t, uint64_t, float,
+  // double, and bool; the call's types must match the export's declaration.
+  //   engine.exportFunction<double(int32_t, double)>("scale");
+  //   auto r = script.call<double>("scale", 3, 2.5);   // r.ok, r.value
+  template <class R, class... A> CallResult<R> call(std::string_view name, A... args) const;
+
+  // Exports available for `call`, rendered like "scale(i32, f64) -> f64".
+  std::vector<std::string> exportedFunctions() const;
 
   // Registers a host function for this script (replacing any earlier binding of
   // the same name). Every host function the script declares must be bound with
@@ -170,13 +209,41 @@ public:
   // whose `diagnostics()` explains why.
   static Script loadBytecode(const std::vector<uint8_t> &bytes, const std::string &name = "script");
 
+  // Implementation details, exposed only so the library's own helpers can name them.
+  struct Module;
+  struct ExportTable;
+
 private:
   friend class ScriptEngine;
-  struct Module;
+  bool callRaw(std::string_view name,
+               const std::vector<HostType> &argumentTypes,
+               const std::vector<uint64_t> &arguments,
+               HostType returnType,
+               uint64_t &result,
+               std::string &error) const;
+
   std::shared_ptr<const Module> module_;
+  std::shared_ptr<const ExportTable> exports_;
   std::string name_;
   std::string diagnostics_;
   HostBindings hostBindings_;
 };
+
+template <class R, class... A> CallResult<R> Script::call(std::string_view name, A... args) const {
+  static_assert(((detail::HostTypeOf<A>::value != HostType::String) && ...),
+                "string arguments to exported functions are not supported yet");
+  static_assert(detail::HostTypeOf<R>::value != HostType::String, "exported functions cannot return strings");
+  CallResult<R> out;
+  const std::vector<HostType> types{detail::HostTypeOf<A>::value...};
+  const std::vector<uint64_t> slots{detail::toSlot<A>(args)...};
+  uint64_t result = 0;
+  out.ok = callRaw(name, types, slots, detail::HostTypeOf<R>::value, result, out.diagnostics);
+  if constexpr (!std::is_void_v<R>) {
+    if (out.ok) {
+      out.value = detail::fromSlot<R>(result);
+    }
+  }
+  return out;
+}
 
 } // namespace primec::embed

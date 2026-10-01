@@ -235,7 +235,7 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         if (param.binding.isMutable ||
             !canonicalHostTypeName(param.binding.typeName).has_value() ||
             !param.binding.typeTemplateArg.empty()) {
-          return failHost("host definition parameter must be i32, i64, u64, f32, f64, or bool: " + param.name);
+          return failHost("host definition parameter must be i32, i64, u64, f32, f64, bool, or string: " + param.name);
         }
       }
       return true;

@@ -54,6 +54,27 @@ TEST_CASE("bytecode saving is deterministic") {
   }
 }
 
+TEST_CASE("compiling many scripts never changes the bytecode of another") {
+  // Regression: a thread-local source-location cache keyed only by the address
+  // of the expanded source served stale mappings when a new compile reused the
+  // address, so source units went missing depending on prior compiles.
+  const auto &programs = embedPrograms();
+  std::vector<std::vector<uint8_t>> alone;
+  for (const auto &program : programs) {
+    ScriptEngine engine;
+    alone.push_back(saveOrFail(engine.compileSource("/fixture/" + program.name + ".prime", program.source)));
+  }
+  ScriptEngine shared;
+  for (int round = 0; round < 3; ++round) {
+    for (size_t i = 0; i < programs.size(); ++i) {
+      const size_t index = round % 2 == 0 ? i : programs.size() - 1 - i;
+      CAPTURE(programs[index].name);
+      const auto script = shared.compileSource("/fixture/" + programs[index].name + ".prime", programs[index].source);
+      CHECK(saveOrFail(script) == alone[index]);
+    }
+  }
+}
+
 TEST_CASE("bytecode survives a save load save cycle byte for byte") {
   ScriptEngine engine;
   for (const auto &program : embedPrograms()) {
