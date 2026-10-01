@@ -13,13 +13,13 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalKeyValueMethodHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == collection_helpers::kCountRef ||
+  return collection_helpers::isCountHelperName(helperName) ||
          helperName == "size" ||
-         helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-         helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
-         helperName == "insert" || helperName == collection_helpers::kInsertRef;
+         collection_helpers::isContainsHelperName(helperName) ||
+         collection_helpers::isTryAtHelperName(helperName) ||
+         collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName) ||
+         collection_helpers::isInsertHelperName(helperName);
 }
 
 std::string canonicalKeyValueMethodHelperTarget(std::string_view helperName) {
@@ -41,7 +41,7 @@ bool isExplicitVectorCompatibilityMethodNamespace(std::string_view namespacePref
 }
 
 bool isVectorFamilyHelperPath(const std::string &path) {
-  return path.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
+  return collection_helpers::isRootedSoaPath(path) ||
          path.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 ||
          isCanonicalVectorCompatibilityPath(path) ||
          path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0;
@@ -223,10 +223,9 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
 
   if (expr.isMethodCall &&
       !requestsExplicitVectorCompatibilityMethod &&
-      (normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef ||
-       normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef ||
-       normalizedMethodName == "to_aos" ||
-       normalizedMethodName == collection_helpers::kToAosRef) &&
+      (collection_helpers::isGetHelperName(normalizedMethodName) ||
+       collection_helpers::isRefHelperName(normalizedMethodName) ||
+       collection_helpers::isToAosHelperName(normalizedMethodName)) &&
       !expr.args.empty()) {
     std::string collectionMethodTarget;
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
@@ -266,8 +265,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
 
   if (!expr.isMethodCall && expr.args.size() == 2 &&
       expr.name.find('/') == std::string::npos &&
-      (normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef ||
-       normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef)) {
+      (collection_helpers::isGetHelperName(normalizedMethodName) ||
+       collection_helpers::isRefHelperName(normalizedMethodName))) {
     const std::string samePathHelper = collection_helpers::kRootedSoaPrefix + normalizedMethodName;
     if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
       std::function<bool(const Expr &)> isVectorOrSoaLikeReceiver =

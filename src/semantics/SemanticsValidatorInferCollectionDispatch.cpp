@@ -86,8 +86,7 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     kindOut = ReturnKind::Int;
     return true;
   }
-  if (resolvedKeyValueHelperName == "contains" ||
-      resolvedKeyValueHelperName == collection_helpers::kContainsRef) {
+  if (collection_helpers::isContainsHelperName(resolvedKeyValueHelperName)) {
     kindOut = ReturnKind::Bool;
     return true;
   }

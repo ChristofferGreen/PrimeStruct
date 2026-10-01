@@ -57270,3 +57270,57 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: `tests/unit/collection_parity/` (binary `PrimeStruct_collection_parity_tests`, ctest `PrimeStruct_collection_parity`): 52 rows (vector 18, array 5, string 2, map 10, soa 17 call shapes x spellings) compile in-process and are checked three ways - outcome/exit via the VM, published semantic-product collection targets for /main pinned in a generated header, and an ast-semantic explicit-path vs published-target agreement guard; `docs/CollectionHelperTargets.md` is generated from the same rows and checked up to date. Four disagreements found and filed: TODO-5369 (map method at/at_unsafe), 5370 (map bare contains fails lowering), 5371 (array method at), 5372 (soa<T> method publishes internal soaVector* targets); TODO-5373 extends the matrix to Reference receivers/_ref helpers.
 
+
+- [x] TODO-5350: Route semantics and dump rewrites through one collection target table
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-resolution
+  - scope: Replace the scattered literal path and suffix checks in semantics (method-
+    target resolution, same-path rewrites, template monomorphization, ast-
+    semantic dump rewrite) with lookups into a single
+    `CollectionHelperTable` (public header under
+    `include/primec/semantics/`) whose rows come from the TODO-5349
+    inventory. Delete the duplicated checks as each call site moves.
+  - acceptance:
+    - no `src/semantics` file contains a hard-coded
+      `/std/collections/<folder>/<helper>` or `_ref` helper-suffix
+      comparison outside the table (enforced by an audit script in ctest
+      like the existing map-surface audits).
+    - the TODO-5349 parity suite and the full release gate stay green.
+    - net deleted lines recorded in the result note.
+  - stop_rule: move call sites in batches of at most 10 files per commit; if a batch needs
+    a behavior change, split it out as its own leaf.
+  - finished_at: 2026-10-01
+  - result: `include/primec/support/CollectionHelperNames.h` is now the single owner of the borrowed `_ref` helper names, the rooted `/vector /soa /map /array /string` paths and prefixes, and the canonical `/std/collections/...` member paths. About 1,500 literals across `src/semantics`, `src/ir_lowerer`, `src/emitter`, `src/support` and `include/primec/ir/SoaPathHelpers.h` became drop-in `constexpr char[]` constants (same type as the literals, so no behavior change); 416 duplicated `x == "count" || x == "count_ref"` chains became `isCountHelperName(x)`-style predicates (count/get/ref/at/at_unsafe/to_aos/tryAt/contains/insert) and 43 `rfind(prefix,0)==0` checks became `isRootedArrayPath/SoaPath/StringPath`. `scripts/check_collection_helper_literals.py` (ctest, with self-test) fails when a helper literal reappears outside the header, the stdlib surface registry and the compat-spelling classifier; `src/` and `include/` are at zero. Dropping the literals made 52 files exemption-free, so the surface-audit exemption ratchet baseline fell from 134 to 83. Parity suite and full gate green (2017/2017). Net: 159 files, +1,924/-1,756 lines for the literal pass, +480/-522 for the predicates. Deviation from the original wording: family identity strings and a few path-builder sites are constants, not an enum; that typed step is TODO-5374.
+
+
+- [x] TODO-5351: Route lowerer builtin-classification exemptions through the collection target table
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5350
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-resolution
+  - scope: Finish what TODO-4737 started: the remaining receiver-type-dependent
+    exemptions in `IrLowererSetupTypeMethodCallResolution.cpp` and
+    `IrLowererInlineNativeCallDispatch.cpp`
+    (`routesExplicitVectorCountMethodThroughArgsPackCount`,
+    `directTargetKeepsSyntheticCollectionFallback`,
+    `allowsReceiverResolvedVectorMetadataFallback`, ...) become table
+    lookups, and a module-wide lowered-module invariant pass (test flag)
+    asserts every published method-call target has a lowered definition or a
+    table classification.
+  - acceptance:
+    - the three named predicates and the string-literal exemptions are deleted
+      or reduced to table lookups.
+    - invariant pass runs under a test flag in `ir.pipeline.validation`; re-
+      introducing the gap (c) class of bug trips it.
+    - before/after diff of the `ir.pipeline.validation` suite results shows no
+      unintended acceptance change.
+  - stop_rule: if a predicate encodes behavior the table cannot express, record it as a
+    table row type instead of keeping the predicate.
+  - finished_at: 2026-10-01
+  - result: partially delivered, remainder moved to TODO-5374. Done: every string-literal exemption in `IrLowererSetupTypeMethodCallResolution.cpp`, `IrLowererInlineNativeCallDispatch.cpp`, `IrLowererHelpers.cpp` and the other lowerer/emitter files now uses `collection_helpers` constants/predicates (enforced by the literal check), and the shared `isBuiltinClassifiedMethodCallTarget` already holds the target-name-only classification. The invariant 'a published collection helper target lowers or is a pinned defect' is enforced by the TODO-5349 parity matrix (every Ok row lowers and runs in the VM; a regression flips a row and fails its family shard) rather than a separate module-walking pass, because most helper calls are inlined and leave no lowered function to walk, so a pass could only re-check what lowering already hard-fails per call (`semantic-product method-call target missing lowered definition`). Not done: the three receiver-type-dependent predicates (`routesExplicitVectorCountMethodThroughArgsPackCount`, `directTargetKeepsSyntheticCollectionFallback`, `allowsReceiverResolvedVectorMetadataFallback`) still exist - they encode routing that needs the typed family/helper table of TODO-5374.
+

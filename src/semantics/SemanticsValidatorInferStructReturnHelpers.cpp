@@ -278,7 +278,7 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
   const std::string normalizedPath = normalizeInferStructReturnHelperPath(path);
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(normalizedPath)) {
     const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&

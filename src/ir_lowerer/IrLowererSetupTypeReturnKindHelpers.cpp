@@ -39,7 +39,7 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
   }
   std::string helperName;
   return resolveKeyValueHelperAliasName(callExpr, helperName) &&
-         (helperName == "count" || helperName == collection_helpers::kCountRef || helperName == "contains" ||
+         (collection_helpers::isCountHelperName(helperName) || helperName == "contains" ||
           helperName == "tryAt");
 }
 
@@ -724,9 +724,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (isExplicitKeyValueHelperFallbackPath(callExpr)) {
     std::string explicitAccessName;
     if (!getBuiltinArrayAccessName(callExpr, explicitAccessName) ||
-        (explicitAccessName != "at" && explicitAccessName != collection_helpers::kAtRef &&
-         explicitAccessName != "at_unsafe" &&
-         explicitAccessName != collection_helpers::kAtUnsafeRef)) {
+        (!collection_helpers::isAtHelperName(explicitAccessName) &&
+         !collection_helpers::isAtUnsafeHelperName(explicitAccessName))) {
       return false;
     }
   }
@@ -1254,8 +1253,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     // tests, which pin this for every receiver-index candidate, resolved
     // or not).
     if (isAccessCall && isCollectionAccessCall &&
-        (accessName == "at" || accessName == collection_helpers::kAtRef || accessName == "at_unsafe" ||
-         accessName == collection_helpers::kAtUnsafeRef)) {
+        (collection_helpers::isAtHelperName(accessName) || collection_helpers::isAtUnsafeHelperName(accessName))) {
       continue;
     }
     const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);

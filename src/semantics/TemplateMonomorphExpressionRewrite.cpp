@@ -1795,13 +1795,11 @@ bool rewriteExpr(Expr &expr,
       return path;
     }
     helperName = canonicalizeSoaHelperPath(helperName);
-    if (helperName != "count" && helperName != collection_helpers::kCountRef &&
+    if (!collection_helpers::isCountHelperName(helperName) &&
         helperName != "capacity" && helperName != "push" &&
         helperName != "pop" && helperName != "reserve" &&
         helperName != "clear" && helperName != "remove_at" &&
-        helperName != "remove_swap" && helperName != "get" &&
-        helperName != collection_helpers::kGetRef && helperName != "ref" &&
-        helperName != collection_helpers::kRefRef &&
+        helperName != "remove_swap" && !collection_helpers::isGetHelperName(helperName) && !collection_helpers::isRefHelperName(helperName) &&
         helperName != templateMonomorphSoaToAosHelperName() &&
         helperName != templateMonomorphSoaToAosHelperName(true)) {
       return path;
@@ -1840,7 +1838,7 @@ bool rewriteExpr(Expr &expr,
       return path;
     }
     if (receiverFamily == "vector" &&
-        (helperName == "count" || helperName == collection_helpers::kCountRef ||
+        (collection_helpers::isCountHelperName(helperName) ||
          helperName == "capacity")) {
       const std::string samePathVectorHelper =
           "/" + std::string("vector") + "/" + helperName;
@@ -1853,7 +1851,7 @@ bool rewriteExpr(Expr &expr,
     // `count(m)` / `count_ref(m)` on a map receiver, exactly like
     // `/vector/count` / `/vector/capacity` do for vector receivers.
     if (receiverFamily == "map" &&
-        (helperName == "count" || helperName == collection_helpers::kCountRef)) {
+        (collection_helpers::isCountHelperName(helperName))) {
       const std::string samePathMapHelper =
           "/" + std::string("map") + "/" + helperName;
       if (hasDefinitionFamilyPath(samePathMapHelper)) {
@@ -1868,7 +1866,7 @@ bool rewriteExpr(Expr &expr,
                  hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
                  ctx.sourceDefs.count(preferred) > 0;
         };
-    if (helperName == "count" || helperName == collection_helpers::kCountRef ||
+    if (collection_helpers::isCountHelperName(helperName) ||
         helperName == "push" || helperName == "reserve") {
       const std::string samePathSoaNonRefHelper =
           templateMonomorphSamePathSoaHelperPrefix() + helperName;
@@ -1876,7 +1874,7 @@ bool rewriteExpr(Expr &expr,
           isTemplateMonomorphSoaReceiverType(receiverFamily) ||
           receiverResolvesBorrowedExperimentalSoaVector ||
            receiverResolvesExperimentalSoaVector ||
-          ((helperName == "count" || helperName == collection_helpers::kCountRef) &&
+          ((collection_helpers::isCountHelperName(helperName)) &&
            receiverFamily == "vector" &&
            !receiverHasVisibleCanonicalCollectionHelper(helperName));
       if (receiverEligibleForSamePathSoaHelper &&
@@ -1888,7 +1886,7 @@ bool rewriteExpr(Expr &expr,
     // internal soa_vector name; it must still reach a same-path
     // /soa/<helper> shadow for the access helpers (TODO-5295).
     const bool receiverIsPublicSoa = receiverFamily == "soa";
-    if (helperName == "get" || helperName == collection_helpers::kGetRef) {
+    if (collection_helpers::isGetHelperName(helperName)) {
       const std::string samePathGetHelper =
           templateMonomorphSamePathSoaHelperPrefix() + helperName;
       if (hasDefinitionFamilyPath(samePathGetHelper) &&
@@ -1900,7 +1898,7 @@ bool rewriteExpr(Expr &expr,
         return samePathGetHelper;
       }
     }
-    if (helperName == "ref" || helperName == collection_helpers::kRefRef) {
+    if (collection_helpers::isRefHelperName(helperName)) {
       const std::string samePathRefHelper =
           templateMonomorphSamePathSoaHelperPrefix() + helperName;
       if (hasDefinitionFamilyPath(samePathRefHelper) &&
@@ -1931,9 +1929,9 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (!resolvesVectorFamilyPath && receiverFamily == "map" &&
-        (helperName == "count" || helperName == collection_helpers::kCountRef ||
-         helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef)) {
+        (collection_helpers::isCountHelperName(helperName) ||
+         collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName))) {
       const std::string preferred =
           templateMonomorphCanonicalKeyValueHelperPath(helperName);
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
@@ -2192,8 +2190,8 @@ bool rewriteExpr(Expr &expr,
       if (!usesCanonicalSoaSurface) {
         return std::string{};
       }
-      if (normalizedName == "get" || normalizedName == collection_helpers::kGetRef ||
-          normalizedName == "ref" || normalizedName == collection_helpers::kRefRef) {
+      if (collection_helpers::isGetHelperName(normalizedName) ||
+          collection_helpers::isRefHelperName(normalizedName)) {
         return normalizedName;
       }
       if (normalizedName == templateMonomorphSamePathSoaHelperPrefix(false) + "get" ||
@@ -2224,8 +2222,8 @@ bool rewriteExpr(Expr &expr,
            normalizedPrefix == trimLeadingSlash(compatibilitySoaHelperTargetPath("")) ||
            normalizedPrefix == "soa" ||
            normalizedPrefix == trimLeadingSlash(publicSoaHelperTargetPath(""))) &&
-          (normalizedName == "get" || normalizedName == collection_helpers::kGetRef ||
-           normalizedName == "ref" || normalizedName == collection_helpers::kRefRef)) {
+          (collection_helpers::isGetHelperName(normalizedName) ||
+           collection_helpers::isRefHelperName(normalizedName))) {
         return normalizedName;
       }
       return std::string{};
@@ -2248,8 +2246,7 @@ bool rewriteExpr(Expr &expr,
         return false;
       }
       const std::string unavailablePath =
-          (helperReturnSoaRefHelper == "get" ||
-           helperReturnSoaRefHelper == collection_helpers::kGetRef)
+          (collection_helpers::isGetHelperName(helperReturnSoaRefHelper))
               ? compatibilitySoaHelperTargetPath(helperReturnSoaRefHelper)
               : templateMonomorphSamePathSoaHelperPrefix() +
                     helperReturnSoaRefHelper;
@@ -2773,8 +2770,7 @@ bool rewriteExpr(Expr &expr,
         keyValueCompatibilityHelperBase(removedKeyValueCompatibilityHelper);
     if (isRemovedKeyValueCompatibilityPath &&
         isRemovedKeyValueCompatibilityHelper(removedKeyValueCompatibilityHelperBase) &&
-        (removedKeyValueCompatibilityHelperBase == "count" ||
-         removedKeyValueCompatibilityHelperBase == collection_helpers::kCountRef ||
+        (collection_helpers::isCountHelperName(removedKeyValueCompatibilityHelperBase) ||
          removedKeyValueCompatibilityHelperBase == "size") &&
         ctx.sourceDefs.count(removedKeyValueCompatibilityPath) == 0 &&
         ctx.templateDefs.count(removedKeyValueCompatibilityPath) == 0 &&
@@ -2786,16 +2782,13 @@ bool rewriteExpr(Expr &expr,
         return false;
       }
       const size_t expectedArgCount =
-          (helperName == "count" || helperName == collection_helpers::kCountRef ||
+          (collection_helpers::isCountHelperName(helperName) ||
            helperName == "size")
               ? 1
-              : ((helperName == "at" || helperName == collection_helpers::kAtRef ||
-                  helperName == "at_unsafe" ||
-                  helperName == collection_helpers::kAtUnsafeRef ||
-                  helperName == "contains" ||
-                  helperName == collection_helpers::kContainsRef ||
-                  helperName == "tryAt" ||
-                  helperName == collection_helpers::kTryAtRef)
+              : ((collection_helpers::isAtHelperName(helperName) ||
+                  collection_helpers::isAtUnsafeHelperName(helperName) ||
+                  collection_helpers::isContainsHelperName(helperName) ||
+                  collection_helpers::isTryAtHelperName(helperName))
                      ? 2
                      : 3);
       if (expr.args.size() != expectedArgCount) {
@@ -3073,9 +3066,9 @@ bool rewriteExpr(Expr &expr,
       if (helperName.empty()) {
         return std::string{};
       }
-      if (helperName != "count" && helperName != collection_helpers::kCountRef &&
-          helperName != "get" && helperName != collection_helpers::kGetRef &&
-          helperName != "ref" && helperName != collection_helpers::kRefRef &&
+      if (!collection_helpers::isCountHelperName(helperName) &&
+          !collection_helpers::isGetHelperName(helperName) &&
+          !collection_helpers::isRefHelperName(helperName) &&
           helperName != templateMonomorphSoaToAosHelperName() &&
           helperName != templateMonomorphSoaToAosHelperName(true) &&
           helperName != "push" && helperName != "reserve") {

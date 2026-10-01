@@ -497,11 +497,11 @@ std::string_view resolveBuiltinKeyValueInsertSurfaceMemberName(std::string_view 
     return {};
   }
   const std::string_view memberName = resolveStdlibSurfaceMemberName(*metadata, name);
-  if (memberName != "insert" && memberName != collection_helpers::kInsertRef) {
+  if (!collection_helpers::isInsertHelperName(memberName)) {
     return {};
   }
   if (name.find('/') == std::string_view::npos) {
-    if (name == "insert" || name == collection_helpers::kInsertRef) {
+    if (collection_helpers::isInsertHelperName(name)) {
       return memberName;
     }
     return {};
@@ -537,11 +537,11 @@ std::string resolveBuiltinKeyValueReadSurfaceMemberName(std::string_view name) {
   }
   const std::string memberName =
       metadataBackedKeyValueHelperMethodName(normalizedName);
-  if (memberName == "count" || memberName == collection_helpers::kCountRef ||
-      memberName == "contains" || memberName == collection_helpers::kContainsRef ||
-      memberName == "tryAt" || memberName == collection_helpers::kTryAtRef ||
-      memberName == "at" || memberName == collection_helpers::kAtRef ||
-      memberName == "at_unsafe" || memberName == collection_helpers::kAtUnsafeRef) {
+  if (collection_helpers::isCountHelperName(memberName) ||
+      collection_helpers::isContainsHelperName(memberName) ||
+      collection_helpers::isTryAtHelperName(memberName) ||
+      collection_helpers::isAtHelperName(memberName) ||
+      collection_helpers::isAtUnsafeHelperName(memberName)) {
     return memberName;
   }
   return {};
@@ -552,9 +552,9 @@ bool isBuiltinKeyValueReadHelperName(std::string_view name) {
 }
 
 bool isCanonicalBuiltinKeyValueReadHelperName(std::string_view name) {
-  return name == "count" || name == collection_helpers::kCountRef ||
-         name == "contains" || name == collection_helpers::kContainsRef ||
-         name == "tryAt" || name == collection_helpers::kTryAtRef;
+  return collection_helpers::isCountHelperName(name) ||
+         collection_helpers::isContainsHelperName(name) ||
+         collection_helpers::isTryAtHelperName(name);
 }
 
 bool isBuiltinKeyValueInsertValueHelperName(std::string_view name) {

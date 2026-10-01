@@ -524,8 +524,7 @@
               resolveDefinitionCall(expr) == nullptr &&
               (canonicalKeyValueHelperName == "count" || canonicalKeyValueHelperName == "contains" ||
                canonicalKeyValueHelperName == "tryAt" ||
-               canonicalKeyValueHelperName == "insert" ||
-               canonicalKeyValueHelperName == primec::collection_helpers::kInsertRef) &&
+               primec::collection_helpers::isInsertHelperName(canonicalKeyValueHelperName)) &&
               ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
                !expr.templateArgs.empty())) {
             Expr rewrittenExpr = expr;

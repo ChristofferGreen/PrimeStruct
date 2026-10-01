@@ -31,8 +31,8 @@ std::string explicitCallPathForCandidate(const Expr &candidate) {
 }
 
 bool isBareKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
@@ -321,7 +321,7 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
            defMap_.count(candidate) > 0;
   };
   std::string preferred = path;
-  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+  if (collection_helpers::isRootedArrayPath(preferred) && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias = canonicalPublishedVectorHelperTarget(suffix);
@@ -330,7 +330,7 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
       }
     }
   }
-  if (preferred.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+  if (collection_helpers::isRootedSoaPath(preferred) && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedSoaPrefix).size());
     const std::string stdlibAlias = collection_helpers::kCanonicalSoaPrefix + suffix;
     if (hasVisibleDefinitionPath(stdlibAlias)) {
@@ -342,7 +342,7 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
     const std::string suffix =
         preferred.substr(std::string(collection_helpers::kCanonicalSoaPrefix).size());
     const std::string samePath =
-        (suffix == "to_aos" || suffix == collection_helpers::kToAosRef)
+        (collection_helpers::isToAosHelperName(suffix))
             ? "/" + suffix
             : collection_helpers::kRootedSoaPrefix + suffix;
     if (hasVisibleDefinitionPath(samePath)) {

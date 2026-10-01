@@ -95,13 +95,12 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5373 | Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers | ready | collection-defects |
 | TODO-5372 | `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper | ready | collection-defects |
 | TODO-5371 | array `.at(i)` method resolves to the vector helper and fails argument type checking | ready | collection-defects |
 | TODO-5370 | map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works | ready | collection-defects |
 | TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | ready | collection-defects |
-| TODO-5350 | Route semantics and dump rewrites through one collection target table | ready | collection-resolution |
-| TODO-5351 | Route lowerer builtin-classification exemptions through the collection target table | blocked | collection-resolution |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
 | TODO-5354 | Guard test registration: generated shards and an unregistered-test check | ready | test-infrastructure |
@@ -123,7 +122,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5350 (track: collection-resolution): Route semantics and dump rewrites through one collection target table.
 - TODO-5352 (track: semantics-structure): Measure and cut semantics header fan-out (SemanticsValidator.h).
 - TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 - TODO-5354 (track: test-infrastructure): Guard test registration: generated shards and an unregistered-test check.
@@ -134,21 +132,20 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5350 - Route semantics and dump rewrites through one collection target table.
-2. TODO-5354 - Guard test registration: generated shards and an unregistered-test check.
-3. TODO-5355 - Ban wall-clock comparisons in tests.
-4. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
-5. TODO-5358 - Inventory compiler global state and design a per-compilation context.
-6. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
-7. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
-8. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
-9. TODO-5366 - Archive docs/todo_finished.md and keep a greppable index.
-10. TODO-5367 - Trim docs/failing_tests.md to current failures only.
+1. TODO-5354 - Guard test registration: generated shards and an unregistered-test check.
+2. TODO-5355 - Ban wall-clock comparisons in tests.
+3. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
+4. TODO-5358 - Inventory compiler global state and design a per-compilation context.
+5. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
+6. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
+7. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
+8. TODO-5366 - Archive docs/todo_finished.md and keep a greppable index.
+9. TODO-5367 - Trim docs/failing_tests.md to current failures only.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Collection resolution: TODO-5350 -> 5351; defects 5369-5373
+- Collection resolution: defects 5369-5373; typed family enum TODO-5374 (deferred)
 - Semantics structure: TODO-5352, TODO-5353
 - Test infrastructure: TODO-5354, TODO-5355, TODO-5357 (after 5354), TODO-5356 (deferred)
 - Compiler state: TODO-5358 -> 5359 -> 5360
@@ -187,54 +184,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: if an API used by the full compiler is unavailable on iOS, ship
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
-
-- [ ] TODO-5350: Route semantics and dump rewrites through one collection target table
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - scope: Replace the scattered literal path and suffix checks in semantics (method-
-    target resolution, same-path rewrites, template monomorphization, ast-
-    semantic dump rewrite) with lookups into a single
-    `CollectionHelperTable` (public header under
-    `include/primec/semantics/`) whose rows come from the TODO-5349
-    inventory. Delete the duplicated checks as each call site moves.
-  - acceptance:
-    - no `src/semantics` file contains a hard-coded
-      `/std/collections/<folder>/<helper>` or `_ref` helper-suffix
-      comparison outside the table (enforced by an audit script in ctest
-      like the existing map-surface audits).
-    - the TODO-5349 parity suite and the full release gate stay green.
-    - net deleted lines recorded in the result note.
-  - stop_rule: move call sites in batches of at most 10 files per commit; if a batch needs
-    a behavior change, split it out as its own leaf.
-
-- [ ] TODO-5351: Route lowerer builtin-classification exemptions through the collection target table
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5350
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - scope: Finish what TODO-4737 started: the remaining receiver-type-dependent
-    exemptions in `IrLowererSetupTypeMethodCallResolution.cpp` and
-    `IrLowererInlineNativeCallDispatch.cpp`
-    (`routesExplicitVectorCountMethodThroughArgsPackCount`,
-    `directTargetKeepsSyntheticCollectionFallback`,
-    `allowsReceiverResolvedVectorMetadataFallback`, ...) become table
-    lookups, and a module-wide lowered-module invariant pass (test flag)
-    asserts every published method-call target has a lowered definition or a
-    table classification.
-  - acceptance:
-    - the three named predicates and the string-literal exemptions are deleted
-      or reduced to table lookups.
-    - invariant pass runs under a test flag in `ir.pipeline.validation`; re-
-      introducing the gap (c) class of bug trips it.
-    - before/after diff of the `ir.pipeline.validation` suite results shows no
-      unintended acceptance change.
-  - stop_rule: if a predicate encodes behavior the table cannot express, record it as a
-    table row type instead of keeping the predicate.
 
 - [ ] TODO-5352: Measure and cut semantics header fan-out (SemanticsValidator.h)
   - owner: ai
@@ -684,3 +633,32 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
       borrowed receivers; new disagreements are filed as defects.
     - the parity suite and the full release gate stay green.
   - stop_rule: do not change resolution behavior; only add rows and file defects.
+
+- [ ] TODO-5374: Typed collection family/helper enum replacing string-tagged family checks
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-resolution
+  - depends_on: TODO-5350
+  - scope: TODO-5350 centralized every collection helper spelling and replaced
+    the duplicated base-or-borrowed and rooted-prefix chains with named
+    predicates (`include/primec/support/CollectionHelperNames.h`), but family
+    identity is still a string tag compared in about 200 places
+    (`x == collection_helpers::kRootedVector`, `/map`, `/soa`, `/array`,
+    `/string`) and the receiver-type-dependent lowerer predicates in
+    `IrLowererSetupTypeMethodCallResolution.cpp`
+    (`routesExplicitVectorCountMethodThroughArgsPackCount`,
+    `directTargetKeepsSyntheticCollectionFallback`,
+    `allowsReceiverResolvedVectorMetadataFallback`) encode behavior that a
+    string table cannot express. Needs scoping: introduce
+    `enum class CollectionFamily` and `CollectionHelper` with a registry-backed
+    parse/format API, migrate function signatures that pass family strings
+    (start with `src/semantics` receiver-family helpers), and express the three
+    lowerer predicates as rows (family x helper x receiver kind -> routing).
+  - acceptance:
+    - family tags are an enum in semantics and the lowerer; no `== kRooted<Family>` string comparisons remain outside the enum's parse/format functions (ctest audit).
+    - the three named lowerer predicates are deleted or reduced to lookups into the family/helper table.
+    - collection parity matrix and the full release gate unchanged.
+  - stop_rule: if a predicate depends on state the table cannot carry, record it as a documented routing exception in docs/CollectionHelperTargets.md instead of keeping an undocumented predicate.
+

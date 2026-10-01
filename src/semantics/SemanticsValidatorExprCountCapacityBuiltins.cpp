@@ -233,10 +233,10 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
       }
       return (normalizedNamespacePrefix == collection_helpers::kRootedSoa ||
               normalizedNamespacePrefix == "soa") &&
-             (expr.name == "count" || expr.name == collection_helpers::kCountRef);
+             (collection_helpers::isCountHelperName(expr.name));
     }
     return normalizedNamespacePrefix == collection_helpers::kRootedSoa &&
-           (expr.name == "count" || expr.name == collection_helpers::kCountRef);
+           (collection_helpers::isCountHelperName(expr.name));
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {
     handledOut = true;

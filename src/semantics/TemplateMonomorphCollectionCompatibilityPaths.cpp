@@ -116,7 +116,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   // neither direction of the rewrite could ever fire (see
   // docs/CompatPathResolutionConsolidation.md, Step 0 findings).
   std::string preferred = path;
-  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && defs.count(preferred) == 0) {
+  if (collection_helpers::isRootedArrayPath(preferred) && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
       const std::string stdlibAlias =
@@ -132,7 +132,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
 std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
   // The soa_vector aliasing branches that used to live here were dead
   // code for the same reason as in preferVectorStdlibHelperPath above.
-  if (path.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(path)) {
     const std::string suffix = path.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
       const std::string stdlibPath =

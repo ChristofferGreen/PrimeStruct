@@ -428,13 +428,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     } else if (helperName.rfind(rootedKeyValuePrefix, 0) == 0) {
       helperName.erase(0, rootedKeyValuePrefix.size());
     }
-    if (helperName == "count" || helperName == collection_helpers::kCountRef ||
+    if (collection_helpers::isCountHelperName(helperName) ||
         helperName == "size" ||
-        helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-        helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-        helperName == "at" || helperName == collection_helpers::kAtRef ||
-        helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
-        helperName == "insert" || helperName == collection_helpers::kInsertRef) {
+        collection_helpers::isContainsHelperName(helperName) ||
+        collection_helpers::isTryAtHelperName(helperName) ||
+        collection_helpers::isAtHelperName(helperName) ||
+        collection_helpers::isAtUnsafeHelperName(helperName) ||
+        collection_helpers::isInsertHelperName(helperName)) {
       return helperName;
     }
     return {};

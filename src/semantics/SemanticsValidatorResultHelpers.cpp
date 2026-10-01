@@ -110,7 +110,7 @@ bool isMapTryAtResultHelperCall(std::string_view resolvedPath,
   }
   const std::string rootAliasHelper =
       metadataBackedKeyValueHelperRootAliasMethodName(resolvedPath);
-  return rootAliasHelper == "tryAt" || rootAliasHelper == collection_helpers::kTryAtRef;
+  return collection_helpers::isTryAtHelperName(rootAliasHelper);
 }
 
 bool isResultTypeBaseName(const std::string &base) {
@@ -721,10 +721,10 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
     };
     auto isCanonicalSoaWrapperMethodName = [](std::string_view methodName) {
-      return methodName == "count" || methodName == collection_helpers::kCountRef ||
-             methodName == "get" || methodName == collection_helpers::kGetRef ||
-             methodName == "ref" || methodName == collection_helpers::kRefRef ||
-             methodName == "to_aos" || methodName == collection_helpers::kToAosRef ||
+      return collection_helpers::isCountHelperName(methodName) ||
+             collection_helpers::isGetHelperName(methodName) ||
+             collection_helpers::isRefHelperName(methodName) ||
+             collection_helpers::isToAosHelperName(methodName) ||
              methodName == "push" || methodName == "reserve";
     };
     const std::string normalizedMethodName =

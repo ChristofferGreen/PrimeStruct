@@ -101,7 +101,7 @@ const Definition * TailDispatchContext::resolveTailDispatchDirectHelperDefinitio
           };
           auto isSamePathSoaHelperPath = [&](std::string helperPath) {
             helperPath = stripGeneratedLeafSuffix(std::move(helperPath));
-            return helperPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
+            return collection_helpers::isRootedSoaPath(helperPath) ||
                    helperPath == "/to_aos" ||
                    helperPath == "/to_aos_ref";
           };
@@ -283,7 +283,7 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
             std::string helperName;
             if (hasPublishedSemanticKeyValueSurface(candidate) &&
                 resolvePublishedTailDispatchKeyValueHelperName(candidate, helperName) &&
-                (helperName == "insert" || helperName == collection_helpers::kInsertRef)) {
+                (collection_helpers::isInsertHelperName(helperName))) {
               return true;
             }
             const std::string resolvedPath = resolveExprPath(candidate);
@@ -293,7 +293,7 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
                        resolvedPath, *keyValueSurfaceId) &&
                    ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
                        resolvedPath, *keyValueSurfaceId, helperName) &&
-                   (helperName == "insert" || helperName == collection_helpers::kInsertRef);
+                   (collection_helpers::isInsertHelperName(helperName));
           };
           auto stripGeneratedHelperSuffix = [](std::string helperName) {
             const size_t generatedSuffix = helperName.find("__");
@@ -315,7 +315,7 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
               return false;
             }
             helperName = stripGeneratedHelperSuffix(std::move(helperName));
-            return helperName == "insert" || helperName == collection_helpers::kInsertRef ||
+            return collection_helpers::isInsertHelperName(helperName) ||
                    helperName == "Insert" || helperName == "InsertRef";
           };
 
@@ -323,13 +323,13 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
           if (callExpr.isMethodCall) {
             std::string helperName;
             if (!resolveBuiltinKeyValueHelperName(callExpr, true, helperName) ||
-                (helperName != "insert" && helperName != collection_helpers::kInsertRef)) {
+                (!collection_helpers::isInsertHelperName(helperName))) {
               return false;
             }
           } else {
             std::string helperName;
             if ((!ir_lowerer::resolveKeyValueHelperAliasName(callExpr, helperName) ||
-                 (helperName != "insert" && helperName != collection_helpers::kInsertRef)) &&
+                 (!collection_helpers::isInsertHelperName(helperName))) &&
                 !isDirectBareKeyValueInsertHelperStem(callExpr)) {
               return false;
             }
@@ -636,8 +636,7 @@ bool TailDispatchContext::rewriteExplicitKeyValueHelperBuiltinExpr(const Expr &c
           }
           if ((helperName == "count" || helperName == "contains" ||
                helperName == "tryAt" || helperName == "at" ||
-               helperName == "at_unsafe" || helperName == "insert" ||
-               helperName == collection_helpers::kInsertRef) &&
+               helperName == "at_unsafe" || collection_helpers::isInsertHelperName(helperName)) &&
               resolveDefinitionCall(callExpr) != nullptr &&
               !isCanonicalStdKeyValueHelperPath) {
             return false;
@@ -916,8 +915,7 @@ bool TailDispatchContext::rewriteImplicitBorrowedKeyValueReceiverExpr(const Expr
             return resolveBuiltinKeyValueHelperName(candidate, false, helperName) &&
                    (helperName == "count" || helperName == "contains" ||
                     helperName == "tryAt" || helperName == "at" ||
-                    helperName == "at_unsafe" || helperName == "insert" ||
-                    helperName == collection_helpers::kInsertRef);
+                    helperName == "at_unsafe" || collection_helpers::isInsertHelperName(helperName));
           };
 
           if (!shouldRewriteReceiver(callExpr) || !isBorrowedOrPointerKeyValueReceiver(callExpr.args.front())) {

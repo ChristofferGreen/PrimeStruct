@@ -1379,7 +1379,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             (*soaAccessHelper == "ref" || *soaAccessHelper == collection_helpers::kRefRef);
         const bool isMethodRefLike =
             expr.isMethodCall &&
-            (normalizedName == "ref" || normalizedName == collection_helpers::kRefRef ||
+            (collection_helpers::isRefHelperName(normalizedName) ||
              helperResolvedRefLike || resolvedCanonicalRefLike ||
              resolvedExperimentalRefLike);
         const bool isHelperRefLike =

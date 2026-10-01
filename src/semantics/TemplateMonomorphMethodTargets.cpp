@@ -1035,7 +1035,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
            ReceiverElementFamily::Soa;
   }();
   if (isGenericSoaReceiver &&
-      (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef)) {
+      (collection_helpers::isCountHelperName(normalizedMethodName))) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
                               : normalizedMethodName;
@@ -1054,7 +1054,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   if (isGenericSoaReceiver &&
-      (normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef)) {
+      (collection_helpers::isGetHelperName(normalizedMethodName))) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
                               : normalizedMethodName;
@@ -1069,7 +1069,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   if (isGenericSoaReceiver &&
-      (normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef)) {
+      (collection_helpers::isRefHelperName(normalizedMethodName))) {
     const std::string helperName =
         isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
                               : normalizedMethodName;

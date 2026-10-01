@@ -368,7 +368,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         resolvedCandidate == "/to_aos_ref";
     const bool isRootToAosMethodCall =
         candidate.isMethodCall &&
-        (candidate.name == "to_aos" || candidate.name == collection_helpers::kToAosRef ||
+        (collection_helpers::isToAosHelperName(candidate.name) ||
          candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
     if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
       return false;
@@ -626,7 +626,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           resolvedCandidate == "/to_aos_ref";
       const bool isRootToAosMethodCall =
           candidate.isMethodCall &&
-          (candidate.name == "to_aos" || candidate.name == collection_helpers::kToAosRef ||
+          (collection_helpers::isToAosHelperName(candidate.name) ||
            candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
       if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
         return false;
@@ -904,13 +904,13 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (!helperName.empty() && helperName.front() == '/') {
         helperName.erase(helperName.begin());
       }
-      if (helperName != "count" && helperName != collection_helpers::kCountRef &&
+      if (!collection_helpers::isCountHelperName(helperName) &&
           helperName != "size" &&
-          helperName != "contains" && helperName != collection_helpers::kContainsRef &&
-          helperName != "tryAt" && helperName != collection_helpers::kTryAtRef &&
-          helperName != "at" && helperName != collection_helpers::kAtRef &&
-          helperName != "at_unsafe" && helperName != collection_helpers::kAtUnsafeRef &&
-          helperName != "insert" && helperName != collection_helpers::kInsertRef) {
+          !collection_helpers::isContainsHelperName(helperName) &&
+          !collection_helpers::isTryAtHelperName(helperName) &&
+          !collection_helpers::isAtHelperName(helperName) &&
+          !collection_helpers::isAtUnsafeHelperName(helperName) &&
+          !collection_helpers::isInsertHelperName(helperName)) {
         return {};
       }
       const size_t receiverIndex =
@@ -982,10 +982,10 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       auto explicitLegacyOrCanonicalSoaHelperName = [&]() -> std::string {
         auto isSupportedSoaHelper = [](std::string_view helperName) {
-          return helperName == "count" || helperName == collection_helpers::kCountRef ||
-                 helperName == "get" || helperName == collection_helpers::kGetRef ||
-                 helperName == "ref" || helperName == collection_helpers::kRefRef ||
-                 helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
+          return collection_helpers::isCountHelperName(helperName) ||
+                 collection_helpers::isGetHelperName(helperName) ||
+                 collection_helpers::isRefHelperName(helperName) ||
+                 collection_helpers::isToAosHelperName(helperName) ||
                  helperName == "push" || helperName == "reserve";
         };
         if ((normalizedPrefix == "soa" ||

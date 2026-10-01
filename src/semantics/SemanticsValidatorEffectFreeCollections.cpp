@@ -98,7 +98,7 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
            suffix != "remove_at" && suffix != "remove_swap";
   };
   std::string preferred = path;
-  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && defMap_.count(preferred) == 0) {
+  if (collection_helpers::isRootedArrayPath(preferred) && defMap_.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias =
@@ -145,7 +145,7 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
 
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(normalizedPath)) {
     const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));

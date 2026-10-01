@@ -490,7 +490,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       builtinSoaAccessHelperName(expr, params, locals);
   const bool hasExplicitSoaAccessSpelling =
       !expr.isMethodCall &&
-      (expr.name.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
+      (collection_helpers::isRootedSoaPath(expr.name) ||
        expr.name.rfind("soa/", 0) == 0 ||
        expr.namespacePrefix == collection_helpers::kRootedSoa ||
        expr.namespacePrefix == "soa");

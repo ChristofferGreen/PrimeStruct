@@ -118,10 +118,10 @@ std::string borrowedSoaMethodName(std::string_view methodName) {
 }
 
 bool isCanonicalSoaWrapperMethodName(std::string_view methodName) {
-  return methodName == "count" || methodName == collection_helpers::kCountRef ||
-         methodName == "get" || methodName == collection_helpers::kGetRef ||
-         methodName == "ref" || methodName == collection_helpers::kRefRef ||
-         methodName == "to_aos" || methodName == collection_helpers::kToAosRef ||
+  return collection_helpers::isCountHelperName(methodName) ||
+         collection_helpers::isGetHelperName(methodName) ||
+         collection_helpers::isRefHelperName(methodName) ||
+         collection_helpers::isToAosHelperName(methodName) ||
          methodName == "push" || methodName == "reserve";
 }
 

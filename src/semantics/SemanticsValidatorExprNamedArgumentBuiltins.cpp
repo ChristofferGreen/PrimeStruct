@@ -236,8 +236,8 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     return isLegacyCountLikeBuiltinCall("capacity");
   };
   auto isLegacySoaAccessBuiltinCall = [&]() {
-    if (!(expr.name == "get" || expr.name == collection_helpers::kGetRef ||
-          expr.name == "ref" || expr.name == collection_helpers::kRefRef)) {
+    if (!(collection_helpers::isGetHelperName(expr.name) ||
+          collection_helpers::isRefHelperName(expr.name))) {
       return false;
     }
     if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
@@ -279,8 +279,8 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
         }
       }
     }
-    return ((expr.name == "get" || expr.name == collection_helpers::kGetRef ||
-             expr.name == "ref" || expr.name == collection_helpers::kRefRef) &&
+    return ((collection_helpers::isGetHelperName(expr.name) ||
+             collection_helpers::isRefHelperName(expr.name)) &&
             resolvedIsSoaAccess) ||
            defMap_.find(resolved) == defMap_.end();
   };

@@ -71,7 +71,7 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
   const std::string canonicalPath = canonicalizePath(path);
   appendUnique(path);
   appendUnique(canonicalPath);
-  if (canonicalPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(canonicalPath)) {
     const std::string suffix = canonicalPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));

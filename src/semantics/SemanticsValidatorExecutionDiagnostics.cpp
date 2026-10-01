@@ -14,13 +14,10 @@ namespace {
 bool isBuiltinCollectionHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "contains" ||
          helperName == collection_helpers::kCountRef || helperName == collection_helpers::kContainsRef ||
-         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef || helperName == "at" ||
-         helperName == collection_helpers::kAtRef || helperName == "at_unsafe" ||
-         helperName == collection_helpers::kAtUnsafeRef || helperName == "insert" ||
-         helperName == collection_helpers::kInsertRef || helperName == "push" || helperName == "pop" ||
+         collection_helpers::isTryAtHelperName(helperName) || collection_helpers::isAtHelperName(helperName) || collection_helpers::isAtUnsafeHelperName(helperName) || collection_helpers::isInsertHelperName(helperName) || helperName == "push" || helperName == "pop" ||
          helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
          helperName == "remove_swap" || helperName == "to_soa" ||
-         helperName == "to_aos" || helperName == collection_helpers::kToAosRef;
+         collection_helpers::isToAosHelperName(helperName);
 }
 
 // TODO-4809: rooted same-path map count/count_ref user shadow. The prefix

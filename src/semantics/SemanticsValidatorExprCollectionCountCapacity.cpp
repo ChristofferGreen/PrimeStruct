@@ -156,12 +156,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       };
   const auto isCountOrCapacityHelperName =
       [](const std::string &helperName) {
-        return helperName == "count" || helperName == collection_helpers::kCountRef ||
+        return collection_helpers::isCountHelperName(helperName) ||
                helperName == "capacity";
       };
   const auto isCountLikeHelperName =
       [](const std::string &helperName) {
-        return helperName == "count" || helperName == collection_helpers::kCountRef;
+        return collection_helpers::isCountHelperName(helperName);
       };
   auto isRetiredPublicMapPairCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {

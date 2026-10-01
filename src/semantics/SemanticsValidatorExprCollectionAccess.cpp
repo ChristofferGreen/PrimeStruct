@@ -17,13 +17,13 @@ bool isValueSurfaceAccessHelperName(const std::string &helperName) {
 }
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 bool isSoaAccessHelperName(const std::string &helperName) {
-  return helperName == "get" || helperName == collection_helpers::kGetRef ||
-         helperName == "ref" || helperName == collection_helpers::kRefRef;
+  return collection_helpers::isGetHelperName(helperName) ||
+         collection_helpers::isRefHelperName(helperName);
 }
 
 bool isSoaReceiverStructPath(const std::string &structPath) {
@@ -88,8 +88,8 @@ bool resolveCanonicalKeyValueHelperNameFromSpelling(
 
 std::string canonicalStdlibKeyValueAccessPathForHelper(
     const std::string &helperName) {
-  if (helperName == "at" || helperName == collection_helpers::kAtRef ||
-      helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef) {
+  if (collection_helpers::isAtHelperName(helperName) ||
+      collection_helpers::isAtUnsafeHelperName(helperName)) {
     return canonicalKeyValueHelperPathLocal(helperName);
   }
   return "";
@@ -98,7 +98,7 @@ std::string canonicalStdlibKeyValueAccessPathForHelper(
 bool isCanonicalKeyValueContainsResolvedPath(const std::string &path) {
   std::string helperName;
   return resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName) &&
-         (helperName == "contains" || helperName == collection_helpers::kContainsRef);
+         (collection_helpers::isContainsHelperName(helperName));
 }
 
 bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {
@@ -111,7 +111,7 @@ std::string canonicalStdlibKeyValueContainsPathForResolvedMethod(
     const std::string &methodResolved) {
   std::string helperName;
   if (resolveCanonicalKeyValueHelperNameFromSpelling(methodResolved, helperName) &&
-      (helperName == "contains" || helperName == collection_helpers::kContainsRef)) {
+      (collection_helpers::isContainsHelperName(helperName))) {
     return canonicalKeyValueHelperPathLocal(helperName);
   }
   return canonicalKeyValueHelperPathLocal("contains");
@@ -256,7 +256,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const std::string explicitRemovedMethodPath =
       explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
   const bool preservesExplicitRemovedArrayAccessMethod =
-      explicitRemovedMethodPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 &&
+      collection_helpers::isRootedArrayPath(explicitRemovedMethodPath) &&
       hasDefinitionPath(explicitRemovedMethodPath);
   auto resolveDirectSoaReceiver = [&](const Expr &target,
                                       std::string &elemTypeOut) -> bool {
@@ -860,8 +860,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               methodResolved, canonicalKeyValueMethodHelperName);
       if (expr.name == "contains" &&
           resolvedCanonicalKeyValueHelper &&
-          (canonicalKeyValueMethodHelperName == "contains" ||
-           canonicalKeyValueMethodHelperName == collection_helpers::kContainsRef) &&
+          (collection_helpers::isContainsHelperName(canonicalKeyValueMethodHelperName)) &&
           !hasImportedDefinitionPath("/contains") &&
           !hasDeclaredDefinitionPath("/contains") &&
           !hasImportedDefinitionPath(
@@ -879,8 +878,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
                 canonicalKeyValueHelperPathLocal(canonicalKeyValueMethodHelperName));
         const bool resolvedCanonicalContainsHelper =
             resolvedCanonicalKeyValueHelper &&
-            (canonicalKeyValueMethodHelperName == "contains" ||
-             canonicalKeyValueMethodHelperName == collection_helpers::kContainsRef);
+            (collection_helpers::isContainsHelperName(canonicalKeyValueMethodHelperName));
         const bool resolvedCanonicalAccessHelper =
             resolvedCanonicalKeyValueHelper &&
             isCanonicalKeyValueAccessHelperName(canonicalKeyValueMethodHelperName);

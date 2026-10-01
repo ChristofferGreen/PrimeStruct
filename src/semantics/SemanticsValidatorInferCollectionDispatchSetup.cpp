@@ -7,8 +7,8 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {

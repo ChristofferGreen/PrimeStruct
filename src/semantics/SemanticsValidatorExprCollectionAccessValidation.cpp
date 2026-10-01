@@ -11,9 +11,9 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-         helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isTryAtHelperName(helperName) ||
+         collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
@@ -191,7 +191,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   auto failCollectionAccessKeyValueKeyMismatch = [&](const std::string &helperName,
                                                      const std::string &keyValueKeyType) {
     const bool isTryAtHelper =
-        helperName == "tryAt" || helperName == collection_helpers::kTryAtRef;
+        collection_helpers::isTryAtHelperName(helperName);
     if (isTryAtHelper) {
       if (normalizeBindingTypeName(keyValueKeyType) == "string") {
         return failCollectionAccessDiagnostic("tryAt requires string map key");

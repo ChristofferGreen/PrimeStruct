@@ -545,7 +545,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
 
         bool StatementsExprContext::isDirectCollectionHelperPath(const std::string &path) {
-          return path.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 ||
+          return collection_helpers::isRootedArrayPath(path) ||
                  path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
                  path.rfind(vectorBackingMemberRoot(), 0) == 0 ||
                  isCanonicalKeyValueHelperFamilyPath(path);
@@ -600,7 +600,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
         bool StatementsExprContext::isSamePathSoaHelperPath(const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
+          return collection_helpers::isRootedSoaPath(normalizedPath) ||
                  normalizedPath == "/to_aos" ||
                  normalizedPath == "/to_aos_ref";
         }

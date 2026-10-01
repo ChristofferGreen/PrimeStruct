@@ -247,14 +247,14 @@ bool keepsBuiltinInlineReturnForPublishedKeyValueHelper(std::string_view helperN
   if (!declaredReturnType.empty() && declaredReturnType.front() == '/') {
     declaredReturnType.erase(declaredReturnType.begin());
   }
-  if (helperName == "contains" || helperName == collection_helpers::kContainsRef) {
+  if (collection_helpers::isContainsHelperName(helperName)) {
     return declaredReturnType == "bool";
   }
-  if (helperName == "tryAt" || helperName == collection_helpers::kTryAtRef) {
+  if (collection_helpers::isTryAtHelperName(helperName)) {
     return declaredReturnType == "Result";
   }
-  if (helperName == "at" || helperName == collection_helpers::kAtRef ||
-      helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef) {
+  if (collection_helpers::isAtHelperName(helperName) ||
+      collection_helpers::isAtUnsafeHelperName(helperName)) {
     return declaredReturnType == "bool" || declaredReturnType == "int" ||
            declaredReturnType == "i8" || declaredReturnType == "i16" ||
            declaredReturnType == "i32" || declaredReturnType == "i64" ||
@@ -587,9 +587,8 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     }
     if (directCallee != nullptr && expr.args.size() == 2 &&
         isCanonicalPublishedInlineKeyValueHelperPath(directCallPath) &&
-        (directCallLeaf == "at" || directCallLeaf == collection_helpers::kAtRef ||
-         directCallLeaf == "at_unsafe" ||
-         directCallLeaf == collection_helpers::kAtUnsafeRef)) {
+        (collection_helpers::isAtHelperName(directCallLeaf) ||
+         collection_helpers::isAtUnsafeHelperName(directCallLeaf))) {
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&
@@ -1862,14 +1861,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     const bool isKeyValueAccessHelper =
         (resolveKeyValueHelperAliasName(expr, keyValueAccessHelperName) &&
-         (keyValueAccessHelperName == "at" ||
-          keyValueAccessHelperName == collection_helpers::kAtRef ||
-          keyValueAccessHelperName == "at_unsafe" ||
-          keyValueAccessHelperName == collection_helpers::kAtUnsafeRef)) ||
+         (collection_helpers::isAtHelperName(keyValueAccessHelperName) ||
+          collection_helpers::isAtUnsafeHelperName(keyValueAccessHelperName))) ||
         (isCanonicalPublishedInlineKeyValueHelperPath(inlineCallPath) &&
-         (inlineCallLeaf == "at" || inlineCallLeaf == collection_helpers::kAtRef ||
-          inlineCallLeaf == "at_unsafe" ||
-          inlineCallLeaf == collection_helpers::kAtUnsafeRef));
+         (collection_helpers::isAtHelperName(inlineCallLeaf) ||
+          collection_helpers::isAtUnsafeHelperName(inlineCallLeaf)));
     if (isKeyValueAccessHelper) {
       return InlineCallDispatchResult::NotHandled;
     }

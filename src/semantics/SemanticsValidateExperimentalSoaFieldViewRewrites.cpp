@@ -356,7 +356,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
       buildSpecializedExperimentalSoaVectorElementTypes(program);
 
   for (const Definition &def : program.definitions) {
-    if (def.fullPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0) {
+    if (collection_helpers::isRootedSoaPath(def.fullPath)) {
       visibleSoaFieldHelpers.insert(def.fullPath);
     } else if (def.fullPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
@@ -550,11 +550,10 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
       fieldName.erase(fieldName.begin());
     }
     if (fieldName.empty() || fieldName.find('/') != std::string::npos ||
-        fieldName == "count" || fieldName == collection_helpers::kCountRef ||
-        fieldName == "get" || fieldName == collection_helpers::kGetRef ||
-        fieldName == "ref" || fieldName == collection_helpers::kRefRef ||
-        fieldName == "to_soa" || fieldName == "to_aos" ||
-        fieldName == collection_helpers::kToAosRef) {
+        collection_helpers::isCountHelperName(fieldName) ||
+        collection_helpers::isGetHelperName(fieldName) ||
+        collection_helpers::isRefHelperName(fieldName) ||
+        fieldName == "to_soa" || collection_helpers::isToAosHelperName(fieldName)) {
       return;
     }
   }
@@ -800,7 +799,7 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
       buildSpecializedExperimentalSoaVectorElementTypes(program);
 
   for (const Definition &def : program.definitions) {
-    if (def.fullPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0) {
+    if (collection_helpers::isRootedSoaPath(def.fullPath)) {
       visibleSoaFieldHelpers.insert(def.fullPath);
     } else if (def.fullPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
@@ -1212,7 +1211,7 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
     const std::string canonicalGetPath =
         semantics::canonicalizeLegacySoaGetHelperPath(basePath);
     if (canonicalGetPath == collection_helpers::kCanonicalSoaGet) {
-      path = (basePath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ? collection_helpers::kRootedSoaRef
+      path = (collection_helpers::isRootedSoaPath(basePath) ? collection_helpers::kRootedSoaRef
                                                      : collection_helpers::kCanonicalSoaRef) +
              specializationText;
       return true;
@@ -1223,7 +1222,7 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
     }
     if (canonicalGetPath == collection_helpers::kCanonicalSoaGetRef) {
       path =
-          (basePath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ? collection_helpers::kRootedSoaRefRef
+          (collection_helpers::isRootedSoaPath(basePath) ? collection_helpers::kRootedSoaRefRef
                                                   : collection_helpers::kCanonicalSoaRefRef) +
           specializationText;
       return true;

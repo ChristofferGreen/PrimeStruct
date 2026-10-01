@@ -386,7 +386,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     if (refExpr.isMethodCall) {
       const std::string resolvedMethodPath = resolveCalleePath(refExpr);
-      if (refExpr.name != "ref" && refExpr.name != collection_helpers::kRefRef &&
+      if (!collection_helpers::isRefHelperName(refExpr.name) &&
           !isBuiltinSoaRefPath(resolvedMethodPath, true)) {
         return false;
       }

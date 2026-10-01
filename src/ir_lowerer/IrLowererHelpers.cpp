@@ -39,9 +39,8 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "then" || alias == "else" || alias == "do" ||
          alias == "block" || alias == "loop" || alias == "for" ||
          alias == "repeat" || alias == "try" || alias == "location" ||
-         alias == "dereference" || alias == "count" ||
-         alias == collection_helpers::kCountRef || alias == "capacity" ||
-         alias == "to_aos" || alias == collection_helpers::kToAosRef ||
+         alias == "dereference" || collection_helpers::isCountHelperName(alias) || alias == "capacity" ||
+         collection_helpers::isToAosHelperName(alias) ||
          alias == "push" || alias == "pop" || alias == "reserve" ||
          alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap" || alias == "move" ||
@@ -51,8 +50,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "equal" || alias == "not_equal" ||
          alias == "greater_equal" || alias == "less_equal" ||
          alias == "and" || alias == "or" || alias == "not" ||
-         alias == "get" || alias == collection_helpers::kGetRef || alias == "ref" ||
-         alias == collection_helpers::kRefRef || alias == "at" ||
+         collection_helpers::isGetHelperName(alias) || collection_helpers::isRefHelperName(alias) || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || alias == "map" ||
          alias == "convert" ||
@@ -223,9 +221,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
-           name == "count" || name == collection_helpers::kCountRef ||
-           name == "capacity" || name == "to_aos" ||
-           name == collection_helpers::kToAosRef ||
+           collection_helpers::isCountHelperName(name) ||
+           name == "capacity" || collection_helpers::isToAosHelperName(name) ||
            name == "push" || name == "reserve" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||
@@ -233,8 +230,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "less_than" || name == "equal" || name == "not_equal" ||
            name == "greater_equal" || name == "less_equal" ||
            name == "and" || name == "or" || name == "not" ||
-           name == "get" || name == collection_helpers::kGetRef ||
-           name == "ref" || name == collection_helpers::kRefRef;
+           collection_helpers::isGetHelperName(name) ||
+           collection_helpers::isRefHelperName(name);
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {
     std::string alias = candidate;

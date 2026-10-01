@@ -285,7 +285,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(normalizedPath)) {
     const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(stdlibSurfaceCanonicalHelperPath(
@@ -298,7 +298,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 std::string preferCollectionHelperPath(const std::string &path,
                                        const std::unordered_map<std::string, const Definition *> &defMap) {
   std::string preferred = path;
-  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && defMap.count(preferred) == 0) {
+  if (collection_helpers::isRootedArrayPath(preferred) && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias =

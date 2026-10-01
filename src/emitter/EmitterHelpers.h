@@ -25,26 +25,26 @@ struct PrintBuiltin {
 };
 
 inline bool isCanonicalKeyValueHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == collection_helpers::kCountRef ||
-         helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-         helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
-         helperName == "insert" || helperName == collection_helpers::kInsertRef;
+  return collection_helpers::isCountHelperName(helperName) ||
+         collection_helpers::isContainsHelperName(helperName) ||
+         collection_helpers::isTryAtHelperName(helperName) ||
+         collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName) ||
+         collection_helpers::isInsertHelperName(helperName);
 }
 
 inline bool isCanonicalKeyValueCountHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == collection_helpers::kCountRef;
+  return collection_helpers::isCountHelperName(helperName);
 }
 
 inline bool isCanonicalKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 inline bool isRemovedKeyValueSlashMethodMetadataHelperName(std::string_view helperName) {
-  return helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef;
+  return collection_helpers::isContainsHelperName(helperName) ||
+         collection_helpers::isTryAtHelperName(helperName);
 }
 
 inline bool isRemovedKeyValueDirectCallResultCompatibilityHelperName(std::string_view helperName) {

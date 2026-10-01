@@ -69,8 +69,7 @@ bool isCanonicalSoaVectorHelperAliasName(std::string_view aliasName) {
   return aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
          aliasName == collection_helpers::kCountRef || aliasName == collection_helpers::kGetRef ||
          aliasName == collection_helpers::kRefRef || aliasName == "reserve" ||
-         aliasName == "push" || aliasName == "to_aos" ||
-         aliasName == collection_helpers::kToAosRef;
+         aliasName == "push" || collection_helpers::isToAosHelperName(aliasName);
 }
 
 std::string genericTypeFamilyNameForInternalName(std::string_view name) {

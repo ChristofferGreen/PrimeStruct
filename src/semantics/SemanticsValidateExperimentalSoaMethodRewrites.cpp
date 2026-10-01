@@ -194,7 +194,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
         expr.namespacePrefix.empty() || expr.namespacePrefix == "/"
             ? expr.name
             : expr.namespacePrefix + "/" + expr.name;
-    if (!publicSoaSurfaceVisible || rootedPath.rfind(collection_helpers::kRootedSoaPrefix, 0) != 0 ||
+    if (!publicSoaSurfaceVisible || !collection_helpers::isRootedSoaPath(rootedPath) ||
         !expr.templateArgs.empty() ||
         semantics::hasNamedArguments(expr.argNames)) {
       return;
@@ -215,11 +215,11 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   } else if (helperName.rfind("soa/", 0) == 0) {
     helperName = helperName.substr(std::string("soa/").size());
   }
-  if (helperName != "count" && helperName != collection_helpers::kCountRef &&
-      helperName != "get" && helperName != collection_helpers::kGetRef &&
-      helperName != "ref" && helperName != collection_helpers::kRefRef &&
+  if (!collection_helpers::isCountHelperName(helperName) &&
+      !collection_helpers::isGetHelperName(helperName) &&
+      !collection_helpers::isRefHelperName(helperName) &&
       helperName != "push" && helperName != "reserve" &&
-      helperName != "to_aos" && helperName != collection_helpers::kToAosRef) {
+      !collection_helpers::isToAosHelperName(helperName)) {
     return;
   }
   const std::string helperPath = collection_helpers::kRootedSoaPrefix + helperName;
@@ -375,7 +375,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
     }
   }
   for (Definition &def : program.definitions) {
-    if (def.fullPath.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 ||
+    if (collection_helpers::isRootedSoaPath(def.fullPath) ||
         def.fullPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 ||
         def.fullPath.rfind(collection_paths::modulePrefix(collection_paths::kExperimentalSoaVectorFolder), 0) == 0) {
       continue;
@@ -1142,18 +1142,15 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     const std::string borrowedHelperRoot =
         usesPublicSoaPath ? collection_helpers::kCanonicalSoaPrefix
                           : collection_helpers::kCanonicalSoaPrefix;
-    if (normalizedMethodName == "count" ||
-        normalizedMethodName == collection_helpers::kCountRef) {
+    if (collection_helpers::isCountHelperName(normalizedMethodName)) {
       expr.name = borrowedHelperRoot + collection_helpers::kCountRef;
       return true;
     }
-    if (normalizedMethodName == "get" ||
-        normalizedMethodName == collection_helpers::kGetRef) {
+    if (collection_helpers::isGetHelperName(normalizedMethodName)) {
       expr.name = borrowedHelperRoot + collection_helpers::kGetRef;
       return true;
     }
-    if (normalizedMethodName == "ref" ||
-        normalizedMethodName == collection_helpers::kRefRef) {
+    if (collection_helpers::isRefHelperName(normalizedMethodName)) {
       expr.name = borrowedHelperRoot + collection_helpers::kRefRef;
       return true;
     }

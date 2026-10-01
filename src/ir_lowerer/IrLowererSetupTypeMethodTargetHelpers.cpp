@@ -109,10 +109,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
             normalizedMethodName == "remove_swap");
   };
   auto isCanonicalSoaWrapperMethodName = [&](const std::string &candidate) {
-    return candidate == "count" || candidate == collection_helpers::kCountRef ||
-           candidate == "get" || candidate == collection_helpers::kGetRef ||
-           candidate == "ref" || candidate == collection_helpers::kRefRef ||
-           candidate == "to_aos" || candidate == collection_helpers::kToAosRef ||
+    return collection_helpers::isCountHelperName(candidate) ||
+           collection_helpers::isGetHelperName(candidate) ||
+           collection_helpers::isRefHelperName(candidate) ||
+           collection_helpers::isToAosHelperName(candidate) ||
            candidate == "push" || candidate == "reserve";
   };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
@@ -126,7 +126,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (defIt != defMap.end()) {
       return defIt->second;
     }
-    if (path.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    if (collection_helpers::isRootedArrayPath(path)) {
       const std::string suffix = path.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string stdlibAlias =

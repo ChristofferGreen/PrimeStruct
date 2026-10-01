@@ -26,8 +26,8 @@ std::string stripGeneratedSuffixLocal(std::string value) {
 
 std::optional<std::string> classifyAccessAliasToken(std::string memberName, AccessAliasSpellingMode mode) {
   memberName = stripGeneratedSuffixLocal(stripTemplateSpecializationSuffixLocal(std::move(memberName)));
-  const bool bareAt = memberName == "at" || memberName == collection_helpers::kAtRef;
-  const bool bareAtUnsafe = memberName == "at_unsafe" || memberName == collection_helpers::kAtUnsafeRef;
+  const bool bareAt = collection_helpers::isAtHelperName(memberName);
+  const bool bareAtUnsafe = collection_helpers::isAtUnsafeHelperName(memberName);
   const bool concatAt = memberName == "vectorAt";
   const bool concatAtUnsafe = memberName == "vectorAtUnsafe";
 

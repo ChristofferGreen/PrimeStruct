@@ -88,8 +88,8 @@ const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForAccessTargets(
 }
 
 bool isKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 bool resolveKeyValueAccessHelperPathMemberName(std::string_view path,

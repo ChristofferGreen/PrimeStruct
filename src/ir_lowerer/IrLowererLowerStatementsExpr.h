@@ -294,9 +294,9 @@
               }
               return true;
             }
-            if ((rawPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0 ||
-                resolvedExprPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0 ||
-                directCallee->fullPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0) &&
+            if ((primec::collection_helpers::isRootedArrayPath(rawPath) ||
+                primec::collection_helpers::isRootedArrayPath(resolvedExprPath) ||
+                primec::collection_helpers::isRootedArrayPath(directCallee->fullPath)) &&
               statementsExprHelpers.isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -393,11 +393,11 @@
               if (generatedSuffix != std::string::npos) {
                 helperLeaf.erase(generatedSuffix);
               }
-              if (helperLeaf == "tryAt" || helperLeaf == primec::collection_helpers::kTryAtRef) {
+              if (primec::collection_helpers::isTryAtHelperName(helperLeaf)) {
                 helperName = "tryAt";
-              } else if (helperLeaf == "at" || helperLeaf == primec::collection_helpers::kAtRef) {
+              } else if (primec::collection_helpers::isAtHelperName(helperLeaf)) {
                 helperName = "at";
-              } else if (helperLeaf == "at_unsafe" || helperLeaf == primec::collection_helpers::kAtUnsafeRef) {
+              } else if (primec::collection_helpers::isAtUnsafeHelperName(helperLeaf)) {
                 helperName = "at_unsafe";
               }
               if (helperName.empty() && !expr.args.empty()) {
@@ -412,8 +412,7 @@
             if (!helperName.empty() &&
               (helperName == "count" || helperName == "contains" ||
                 helperName == "tryAt" || helperName == "at" ||
-                helperName == "at_unsafe" || helperName == "insert" ||
-                helperName == primec::collection_helpers::kInsertRef) &&
+                helperName == "at_unsafe" || primec::collection_helpers::isInsertHelperName(helperName)) &&
               (hasCanonicalKeyValueHelperFamily ||
                 hasSameFamilyKeyValueHelperAlias) &&
               statementsExprHelpers.isDirectHelperDefinitionFamily(expr, *directCallee)) {
@@ -457,16 +456,12 @@
               expr.args.size() == 2 &&
               statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(rawPath)) ||
             (resolveKeyValueHelperAliasName(expr, explicitKeyValueAccessHelperName) &&
-              (explicitKeyValueAccessHelperName == "at" ||
-                explicitKeyValueAccessHelperName == primec::collection_helpers::kAtRef ||
-                explicitKeyValueAccessHelperName == "at_unsafe" ||
-                explicitKeyValueAccessHelperName == primec::collection_helpers::kAtUnsafeRef) &&
+              (primec::collection_helpers::isAtHelperName(explicitKeyValueAccessHelperName) ||
+                primec::collection_helpers::isAtUnsafeHelperName(explicitKeyValueAccessHelperName)) &&
               expr.args.size() == 2 &&
               statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(rawPath)) ||
-            ((canonicalKeyValueAccessLeaf == "at" ||
-                canonicalKeyValueAccessLeaf == primec::collection_helpers::kAtRef ||
-                canonicalKeyValueAccessLeaf == "at_unsafe" ||
-                canonicalKeyValueAccessLeaf == primec::collection_helpers::kAtUnsafeRef) &&
+            ((primec::collection_helpers::isAtHelperName(canonicalKeyValueAccessLeaf) ||
+                primec::collection_helpers::isAtUnsafeHelperName(canonicalKeyValueAccessLeaf)) &&
               expr.args.size() == 2 &&
               statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(rawPath));
             if (isExplicitCanonicalKeyValueAccess &&
@@ -1299,8 +1294,7 @@
         if (!expr.isMethodCall &&
           ((statementsExprHelpers.isCanonicalKeyValueHelperFamilyPath(exprPath) &&
               statementsExprHelpers.resolveKeyValueHelperMemberName(exprPath, resolvedKeyValueInsertHelperName) &&
-              (resolvedKeyValueInsertHelperName == "insert" ||
-                resolvedKeyValueInsertHelperName == primec::collection_helpers::kInsertRef)) ||
+              (primec::collection_helpers::isInsertHelperName(resolvedKeyValueInsertHelperName))) ||
             exprPath.rfind(collection_paths::memberPath(collection_paths::kMapFolder, "insert"), 0) == 0)) {
           if (const Definition *directCallee = statementsExprHelpers.resolveDirectHelperDefinition(expr);
             directCallee != nullptr) {
@@ -1513,10 +1507,8 @@
             ((isSimpleCallName(expr, "at") ||
                 isSimpleCallName(expr, "at_unsafe")) &&
               (bareKeyValueAccessName = expr.name, true))) &&
-          (bareKeyValueAccessName == "at" ||
-            bareKeyValueAccessName == primec::collection_helpers::kAtRef ||
-            bareKeyValueAccessName == "at_unsafe" ||
-            bareKeyValueAccessName == primec::collection_helpers::kAtUnsafeRef)) {
+          (primec::collection_helpers::isAtHelperName(bareKeyValueAccessName) ||
+            primec::collection_helpers::isAtUnsafeHelperName(bareKeyValueAccessName))) {
           if (bareKeyValueAccessName == primec::collection_helpers::kAtRef) {
             bareKeyValueAccessName = "at";
           } else if (bareKeyValueAccessName == primec::collection_helpers::kAtUnsafeRef) {

@@ -271,19 +271,13 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     return false;
   };
   auto resolveIndexedArgsPackKeyValueMethod = [&]() -> bool {
-    if (!(normalizedMethodName == "count" ||
-          normalizedMethodName == collection_helpers::kCountRef ||
+    if (!(collection_helpers::isCountHelperName(normalizedMethodName) ||
           normalizedMethodName == "size" ||
-          normalizedMethodName == "contains" ||
-          normalizedMethodName == collection_helpers::kContainsRef ||
-          normalizedMethodName == "tryAt" ||
-          normalizedMethodName == collection_helpers::kTryAtRef ||
-          normalizedMethodName == "at" ||
-          normalizedMethodName == collection_helpers::kAtRef ||
-          normalizedMethodName == "at_unsafe" ||
-          normalizedMethodName == collection_helpers::kAtUnsafeRef ||
-          normalizedMethodName == "insert" ||
-          normalizedMethodName == collection_helpers::kInsertRef)) {
+          collection_helpers::isContainsHelperName(normalizedMethodName) ||
+          collection_helpers::isTryAtHelperName(normalizedMethodName) ||
+          collection_helpers::isAtHelperName(normalizedMethodName) ||
+          collection_helpers::isAtUnsafeHelperName(normalizedMethodName) ||
+          collection_helpers::isInsertHelperName(normalizedMethodName))) {
       return false;
     }
     const Expr &receiverExpr = expr.args.front();
@@ -412,9 +406,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                                   isBuiltinMethod)) {
     std::string collectionMethodTarget;
     const bool resolvedVisibleCollectionMethod =
-        (expr.name == "get" || expr.name == collection_helpers::kGetRef ||
-         expr.name == "ref" || expr.name == collection_helpers::kRefRef ||
-         expr.name == "to_aos" || expr.name == collection_helpers::kToAosRef) &&
+        (collection_helpers::isGetHelperName(expr.name) ||
+         collection_helpers::isRefHelperName(expr.name) ||
+         collection_helpers::isToAosHelperName(expr.name)) &&
         resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                         collectionMethodTarget) &&
         hasImportedDefinitionPath(collectionMethodTarget);
@@ -530,13 +524,13 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       if (requestsExplicitVectorHelperNamespace) {
         return false;
       }
-      if (!(helperName == "count" || helperName == collection_helpers::kCountRef ||
+      if (!(collection_helpers::isCountHelperName(helperName) ||
             helperName == "size" ||
-            helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-            helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-            helperName == "at" || helperName == collection_helpers::kAtRef ||
-            helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
-            helperName == "insert" || helperName == collection_helpers::kInsertRef) ||
+            collection_helpers::isContainsHelperName(helperName) ||
+            collection_helpers::isTryAtHelperName(helperName) ||
+            collection_helpers::isAtHelperName(helperName) ||
+            collection_helpers::isAtUnsafeHelperName(helperName) ||
+            collection_helpers::isInsertHelperName(helperName)) ||
           !resolveKeyValueTarget(expr.args.front())) {
         return false;
       }

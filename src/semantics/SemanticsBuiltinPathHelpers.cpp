@@ -252,7 +252,7 @@ std::string experimentalSoaHelperPathLocal(std::string_view helperName) {
 } // namespace
 
 std::string samePathSoaHelperTargetPath(std::string_view helperName) {
-  if (helperName == "to_aos" || helperName == collection_helpers::kToAosRef) {
+  if (collection_helpers::isToAosHelperName(helperName)) {
     return "/" + std::string(helperName);
   }
   return "/" + soa_paths::publicSoaFolder() + "/" + std::string(helperName);
@@ -298,9 +298,9 @@ bool splitSoaSurfaceHelperPath(std::string_view path,
 }
 
 bool isSoaReadRefHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == collection_helpers::kCountRef ||
-         helperName == "get" || helperName == collection_helpers::kGetRef ||
-         helperName == "ref" || helperName == collection_helpers::kRefRef;
+  return collection_helpers::isCountHelperName(helperName) ||
+         collection_helpers::isGetHelperName(helperName) ||
+         collection_helpers::isRefHelperName(helperName);
 }
 
 bool isExplicitPublicSoaSurfaceHelperName(std::string_view helperName) {
@@ -311,7 +311,7 @@ bool isExplicitPublicSoaSurfaceHelperName(std::string_view helperName) {
 
 bool isSupportedCompatibilitySoaHelperName(std::string_view helperName) {
   return isSoaReadRefHelperName(helperName) ||
-         helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
+         collection_helpers::isToAosHelperName(helperName) ||
          helperName == "push" || helperName == "reserve";
 }
 
@@ -338,7 +338,7 @@ bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix,
   std::string helperName;
   bool usesPublicSurface = false;
   if (splitSoaSurfaceHelperPath(normalizedName, &helperName, &usesPublicSurface)) {
-    return helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
+    return collection_helpers::isToAosHelperName(helperName) ||
            (!usesPublicSurface && helperName == "to_soa");
   }
   if (isPublicSoaSurfaceNamespace(normalizedPrefix) &&
@@ -346,12 +346,10 @@ bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix,
     return true;
   }
   if (isCompatibilitySoaSurfaceNamespace(normalizedPrefix) &&
-      (normalizedName == "to_soa" || normalizedName == "to_aos" ||
-       normalizedName == collection_helpers::kToAosRef)) {
+      (normalizedName == "to_soa" || collection_helpers::isToAosHelperName(normalizedName))) {
     return true;
   }
-  return normalizedName == "to_soa" || normalizedName == "to_aos" ||
-         normalizedName == collection_helpers::kToAosRef;
+  return normalizedName == "to_soa" || collection_helpers::isToAosHelperName(normalizedName);
 }
 
 bool isSoaCountOrAccessSurfaceSpelling(std::string_view normalizedPrefix,
@@ -531,8 +529,7 @@ bool isRootBuiltinName(const std::string &name) {
          normalized == "return" || normalized == "array" || normalized == "vector" ||
          normalized == "map" || normalized == "Task" || normalized == "File" ||
          normalized == "try" || normalized == "count" || normalized == "capacity" ||
-         normalized == "to_soa" || normalized == "to_aos" ||
-         normalized == collection_helpers::kToAosRef ||
+         normalized == "to_soa" || collection_helpers::isToAosHelperName(normalized) ||
          normalized == "push" || normalized == "pop" ||
          normalized == "reserve" || normalized == "clear" || normalized == "remove_at" || normalized == "remove_swap" ||
          normalized == "at" || normalized == "at_unsafe" || normalized == "convert" ||

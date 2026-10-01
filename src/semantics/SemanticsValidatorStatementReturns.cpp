@@ -345,7 +345,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         return false;
       }
       if (expr.isMethodCall) {
-        if (expr.name != "ref" && expr.name != collection_helpers::kRefRef &&
+        if (!collection_helpers::isRefHelperName(expr.name) &&
             !resolvedCanonicalRefLike && !resolvedExperimentalRefLike) {
           return false;
         }

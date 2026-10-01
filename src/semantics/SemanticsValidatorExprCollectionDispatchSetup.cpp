@@ -7,9 +7,9 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-         helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isTryAtHelperName(helperName) ||
+         collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 bool isStdNamespacedCanonicalKeyValueAccessPath(const std::string &path) {

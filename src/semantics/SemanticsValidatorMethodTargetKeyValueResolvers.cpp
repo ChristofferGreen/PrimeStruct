@@ -283,7 +283,7 @@ bool SemanticsValidator::setPreferredKeyValueMethodTarget(
             : explicitKeyValueHelperPath;
     const bool isBareBareMapCall =
         !receiver.isMethodCall &&
-        (helperName == "count" || helperName == collection_helpers::kCountRef);
+        (collection_helpers::isCountHelperName(helperName));
     const std::string errorTargetPath = isBareBareMapCall ? helperName : directPath;
     return failExprDiagnostic(receiver,
         receiver.isMethodCall ? "unknown method: " + directPath

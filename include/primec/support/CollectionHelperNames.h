@@ -16,6 +16,8 @@
 // const char *, concatenation).
 #pragma once
 
+#include <string_view>
+
 namespace primec::collection_helpers {
 
 // --- Borrowed helper names (receiver passed as Reference<...>) ---
@@ -126,5 +128,33 @@ inline constexpr char kCanonicalVectorCapacity[] = "/std/collections/vector/capa
 inline constexpr char kCanonicalVectorCount[] = "/std/collections/vector/count";
 inline constexpr char kCanonicalVectorRemoveAt[] = "/std/collections/vector/remove_at";
 inline constexpr char kCanonicalVectorVector[] = "/std/collections/vector/vector";
+
+
+// --- Base-or-borrowed helper name predicates --------------------------------
+// `name` is the helper (`count`) or its borrowed `_ref` variant (`count_ref`).
+
+constexpr bool isCountHelperName(std::string_view name) { return name == "count" || name == kCountRef; }
+constexpr bool isGetHelperName(std::string_view name) { return name == "get" || name == kGetRef; }
+constexpr bool isRefHelperName(std::string_view name) { return name == "ref" || name == kRefRef; }
+constexpr bool isAtHelperName(std::string_view name) { return name == "at" || name == kAtRef; }
+constexpr bool isAtUnsafeHelperName(std::string_view name) { return name == "at_unsafe" || name == kAtUnsafeRef; }
+constexpr bool isToAosHelperName(std::string_view name) { return name == "to_aos" || name == kToAosRef; }
+constexpr bool isTryAtHelperName(std::string_view name) { return name == "tryAt" || name == kTryAtRef; }
+constexpr bool isContainsHelperName(std::string_view name) { return name == "contains" || name == kContainsRef; }
+constexpr bool isInsertHelperName(std::string_view name) { return name == "insert" || name == kInsertRef; }
+
+// --- Rooted namespace path predicates ----------------------------------------
+// `path` lives under the rooted same-namespace folder (`/array/...`, `/soa/...`,
+// `/string/...`); the folder itself (`/array`) does not count.
+
+constexpr bool isRootedArrayPath(std::string_view path) { return path.starts_with(kRootedArrayPrefix); }
+constexpr bool isRootedSoaPath(std::string_view path) { return path.starts_with(kRootedSoaPrefix); }
+constexpr bool isRootedStringPath(std::string_view path) { return path.starts_with(kRootedStringPrefix); }
+
+// True for any borrowed `_ref` helper name.
+constexpr bool isBorrowedHelperName(std::string_view name) {
+  return name == kCountRef || name == kGetRef || name == kRefRef || name == kAtRef || name == kAtUnsafeRef ||
+         name == kToAosRef || name == kTryAtRef || name == kContainsRef || name == kInsertRef;
+}
 
 } // namespace primec::collection_helpers

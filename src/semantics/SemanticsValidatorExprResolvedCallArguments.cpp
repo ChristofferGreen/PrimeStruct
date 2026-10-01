@@ -258,7 +258,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       return false;
     }
     if (arg.isMethodCall) {
-      if (arg.name != "ref" && arg.name != collection_helpers::kRefRef) {
+      if (!collection_helpers::isRefHelperName(arg.name)) {
         return false;
       }
       receiverOut = &arg.args.front();

@@ -129,7 +129,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   // that shadow's own declared return, not the canonical helper's
   // (TODO-5307). The classifier canonicalizes bare /soa/ spellings
   // shadow-blind, so short-circuit before consulting it.
-  if (rooted.rfind(collection_helpers::kRootedSoaPrefix, 0) == 0 && defMap_.count(rooted) > 0) {
+  if (collection_helpers::isRootedSoaPath(rooted) && defMap_.count(rooted) > 0) {
     return {};
   }
   const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
@@ -603,11 +603,10 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       normalizedName.erase(normalizedName.begin());
     }
     if (normalizedName.empty() || normalizedName.find('/') != std::string::npos ||
-        normalizedName == "count" || normalizedName == collection_helpers::kCountRef ||
-        normalizedName == "get" || normalizedName == collection_helpers::kGetRef ||
-        normalizedName == "ref" || normalizedName == collection_helpers::kRefRef ||
-        normalizedName == "to_soa" || normalizedName == "to_aos" ||
-        normalizedName == collection_helpers::kToAosRef ||
+        collection_helpers::isCountHelperName(normalizedName) ||
+        collection_helpers::isGetHelperName(normalizedName) ||
+        collection_helpers::isRefHelperName(normalizedName) ||
+        normalizedName == "to_soa" || collection_helpers::isToAosHelperName(normalizedName) ||
         normalizedName == "location" || normalizedName == "dereference") {
       return std::nullopt;
     }

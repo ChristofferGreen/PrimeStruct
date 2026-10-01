@@ -216,7 +216,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
 
     appendUnique(path);
     appendUnique(normalizedPath);
-    if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    if (collection_helpers::isRootedArrayPath(normalizedPath)) {
       const std::string suffix =
           normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
       if (suffix != "count" && suffix != "capacity" && suffix != "at" &&
@@ -461,14 +461,14 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
             path, helperNameOut);
       };
       auto isKeyValueMethodWithBuiltinReturn = [&](std::string_view helperName) {
-        return helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-               helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-               helperName == "at" || helperName == collection_helpers::kAtRef ||
-               helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+        return collection_helpers::isContainsHelperName(helperName) ||
+               collection_helpers::isTryAtHelperName(helperName) ||
+               collection_helpers::isAtHelperName(helperName) ||
+               collection_helpers::isAtUnsafeHelperName(helperName);
       };
       auto isKeyValueMethodNeedingVisibleDefinition = [&](std::string_view helperName) {
         return isKeyValueMethodWithBuiltinReturn(helperName) ||
-               helperName == "insert" || helperName == collection_helpers::kInsertRef;
+               collection_helpers::isInsertHelperName(helperName);
       };
       auto isVisibleStdlibKeyValueMethodWithBuiltinReturn = [&](const std::string &path) {
         std::string helperName;

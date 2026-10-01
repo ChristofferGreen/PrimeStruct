@@ -138,8 +138,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     if (expr.isMethodCall &&
-        (expr.name == "count" || expr.name == "get" ||
-         expr.name == collection_helpers::kGetRef || expr.name == "ref") &&
+        (expr.name == "count" || collection_helpers::isGetHelperName(expr.name) || expr.name == "ref") &&
         hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix + expr.name)) {
       for (const Expr &arg : expr.args) {
         if (!validateExpr(params, locals, arg, enclosingStatements,
@@ -643,7 +642,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const bool explicitArrayNamespace =
             expr.namespacePrefix == "array" ||
             expr.namespacePrefix == collection_helpers::kRootedArray ||
-            expr.name.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0;
+            collection_helpers::isRootedArrayPath(expr.name);
         const bool explicitVectorNamespace =
             expr.namespacePrefix == "vector" ||
             expr.namespacePrefix == collection_helpers::kRootedVector ||
@@ -1008,13 +1007,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (slash != std::string::npos) {
         methodName = methodName.substr(slash + 1);
       }
-      return methodName == "count" || methodName == collection_helpers::kCountRef ||
+      return collection_helpers::isCountHelperName(methodName) ||
              methodName == "size" ||
-             methodName == "contains" || methodName == collection_helpers::kContainsRef ||
-             methodName == "tryAt" || methodName == collection_helpers::kTryAtRef ||
-             methodName == "at" || methodName == collection_helpers::kAtRef ||
-             methodName == "at_unsafe" || methodName == collection_helpers::kAtUnsafeRef ||
-             methodName == "insert" || methodName == collection_helpers::kInsertRef;
+             collection_helpers::isContainsHelperName(methodName) ||
+             collection_helpers::isTryAtHelperName(methodName) ||
+             collection_helpers::isAtHelperName(methodName) ||
+             collection_helpers::isAtUnsafeHelperName(methodName) ||
+             collection_helpers::isInsertHelperName(methodName);
     }();
     if (expr.isMethodCall && !expr.args.empty() &&
         !isIndexedArgsPackKeyValueMethodReceiver &&
@@ -1380,9 +1379,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                                         helperName)) {
         return true;
       }
-      if (helperName != "tryAt" && helperName != collection_helpers::kTryAtRef &&
-          helperName != "at" && helperName != collection_helpers::kAtRef &&
-          helperName != "at_unsafe" && helperName != collection_helpers::kAtUnsafeRef) {
+      if (!collection_helpers::isTryAtHelperName(helperName) &&
+          !collection_helpers::isAtHelperName(helperName) &&
+          !collection_helpers::isAtUnsafeHelperName(helperName)) {
         return true;
       }
       std::string keyValueKeyType;
@@ -1400,7 +1399,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       auto failKeyValueKeyDiagnostic = [&]() {
-        if (helperName == "tryAt" || helperName == collection_helpers::kTryAtRef) {
+        if (collection_helpers::isTryAtHelperName(helperName)) {
           if (normalizeBindingTypeName(keyValueKeyType) == "string") {
             return failExprDiagnostic(expr.args[1],
                                       "tryAt requires string map key");

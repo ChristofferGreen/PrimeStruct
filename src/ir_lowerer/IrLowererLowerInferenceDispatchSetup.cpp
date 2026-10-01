@@ -627,8 +627,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           (canonicalKeyValueHelperName == "count" || canonicalKeyValueHelperName == "contains" ||
            canonicalKeyValueHelperName == "tryAt" || canonicalKeyValueHelperName == "at" ||
            canonicalKeyValueHelperName == "at_unsafe" ||
-           canonicalKeyValueHelperName == "insert" ||
-           canonicalKeyValueHelperName == collection_helpers::kInsertRef) &&
+           collection_helpers::isInsertHelperName(canonicalKeyValueHelperName)) &&
           !(isExplicitKeyValueHelperFallbackPath(expr) &&
             (canonicalKeyValueHelperName == "at" || canonicalKeyValueHelperName == "at_unsafe" ||
              canonicalKeyValueHelperName == "tryAt")) &&

@@ -479,13 +479,13 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       if (!helperName.empty() && helperName.front() == '/') {
         helperName.erase(helperName.begin());
       }
-      if (helperName != "count" && helperName != collection_helpers::kCountRef &&
+      if (!collection_helpers::isCountHelperName(helperName) &&
           helperName != "size" &&
-          helperName != "contains" && helperName != collection_helpers::kContainsRef &&
-          helperName != "tryAt" && helperName != collection_helpers::kTryAtRef &&
-          helperName != "at" && helperName != collection_helpers::kAtRef &&
-          helperName != "at_unsafe" && helperName != collection_helpers::kAtUnsafeRef &&
-          helperName != "insert" && helperName != collection_helpers::kInsertRef) {
+          !collection_helpers::isContainsHelperName(helperName) &&
+          !collection_helpers::isTryAtHelperName(helperName) &&
+          !collection_helpers::isAtHelperName(helperName) &&
+          !collection_helpers::isAtUnsafeHelperName(helperName) &&
+          !collection_helpers::isInsertHelperName(helperName)) {
         return {};
       }
       const size_t receiverIndex =
@@ -588,7 +588,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         const std::string explicitRemovedMethodPath =
             explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
         const bool preservesExplicitRemovedArrayAccessMethod =
-            explicitRemovedMethodPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 &&
+            collection_helpers::isRootedArrayPath(explicitRemovedMethodPath) &&
             hasDefinitionPath(explicitRemovedMethodPath);
         const bool preservesExplicitCanonicalVectorAccessMethod =
             isCanonicalVectorCompatibilityPath(explicitRemovedMethodPath) &&

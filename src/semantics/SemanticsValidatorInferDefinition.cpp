@@ -21,8 +21,8 @@ bool isInferDefinitionCanonicalKeyValueAccessHelperPath(std::string_view path) {
   }
   const std::string_view helperName =
       resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
-  return helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 } // namespace
@@ -79,10 +79,9 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (!helperName.empty() && helperName.front() == '/') {
       helperName.erase(helperName.begin());
     }
-    if (helperName.empty() || helperName == "count" || helperName == collection_helpers::kCountRef ||
-        helperName == "get" || helperName == collection_helpers::kGetRef || helperName == "ref" ||
-        helperName == collection_helpers::kRefRef || helperName == "to_soa" ||
-        helperName == "to_aos" || helperName == collection_helpers::kToAosRef) {
+    if (helperName.empty() || collection_helpers::isCountHelperName(helperName) ||
+        collection_helpers::isGetHelperName(helperName) || collection_helpers::isRefHelperName(helperName) || helperName == "to_soa" ||
+        collection_helpers::isToAosHelperName(helperName)) {
       return false;
     }
     if (!hasVisibleSoaHelperTargetForCurrentImports(helperName)) {

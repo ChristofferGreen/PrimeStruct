@@ -333,9 +333,8 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
         }
         return helperName;
       }();
-      if (mapAccessHelperName == "at" || mapAccessHelperName == collection_helpers::kAtRef ||
-          mapAccessHelperName == "at_unsafe" ||
-          mapAccessHelperName == collection_helpers::kAtUnsafeRef) {
+      if (collection_helpers::isAtHelperName(mapAccessHelperName) ||
+          collection_helpers::isAtUnsafeHelperName(mapAccessHelperName)) {
         const BuiltinCollectionDispatchResolvers dispatchResolvers =
             makeBuiltinCollectionDispatchResolvers(params, locals);
         std::string keyType;

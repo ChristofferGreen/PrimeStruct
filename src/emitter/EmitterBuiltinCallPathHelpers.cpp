@@ -648,9 +648,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
-           name == "count" || name == collection_helpers::kCountRef ||
-           name == "capacity" || name == "to_aos" ||
-           name == collection_helpers::kToAosRef ||
+           collection_helpers::isCountHelperName(name) ||
+           name == "capacity" || collection_helpers::isToAosHelperName(name) ||
            name == "push" || name == "reserve" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||
@@ -658,8 +657,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "less_than" || name == "equal" || name == "not_equal" ||
            name == "greater_equal" || name == "less_equal" ||
            name == "and" || name == "or" || name == "not" ||
-           name == "get" || name == collection_helpers::kGetRef ||
-           name == "ref" || name == collection_helpers::kRefRef;
+           collection_helpers::isGetHelperName(name) ||
+           collection_helpers::isRefHelperName(name);
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {
     // Only a genuinely `/std/...`-namespaced spelling should fall through to
@@ -1050,7 +1049,7 @@ std::string resolveExprPath(const Expr &expr) {
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, std::string> &nameMap) {
   std::string preferred = path;
-  if (preferred.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 && nameMap.count(preferred) == 0) {
+  if (collection_helpers::isRootedArrayPath(preferred) && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string stdlibAlias = canonicalVectorHelperPathForSuffix(suffix);

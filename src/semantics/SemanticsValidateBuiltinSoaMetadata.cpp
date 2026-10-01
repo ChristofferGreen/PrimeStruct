@@ -312,11 +312,11 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
   if (helperName.empty()) {
     return true;
   }
-  if (helperName == "ref" || helperName == collection_helpers::kRefRef) {
+  if (collection_helpers::isRefHelperName(helperName)) {
     return true;
   }
   const bool helperArityMatches =
-      (helperName == "count" || helperName == collection_helpers::kCountRef) ? expr.args.size() == 1
+      (collection_helpers::isCountHelperName(helperName)) ? expr.args.size() == 1
                                                            : expr.args.size() == 2;
   if (!helperArityMatches || !expr.templateArgs.empty() ||
       semantics::hasNamedArguments(expr.argNames) || expr.hasBodyArguments) {
@@ -634,18 +634,18 @@ std::string builtinSoaConversionMethodName(std::string_view methodName) {
 
 std::string builtinSoaAccessHelperName(std::string_view rawName) {
   const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);
-  if (normalized == "get" || normalized == collection_helpers::kGetRef ||
-      normalized == "ref" || normalized == collection_helpers::kRefRef) {
+  if (collection_helpers::isGetHelperName(normalized) ||
+      collection_helpers::isRefHelperName(normalized)) {
     return normalized;
   }
   return {};
 }
 
 std::string borrowedBuiltinSoaAccessHelperName(std::string_view helperName) {
-  if (helperName == "get" || helperName == collection_helpers::kGetRef) {
+  if (collection_helpers::isGetHelperName(helperName)) {
     return collection_helpers::kGetRef;
   }
-  if (helperName == "ref" || helperName == collection_helpers::kRefRef) {
+  if (collection_helpers::isRefHelperName(helperName)) {
     return collection_helpers::kRefRef;
   }
   return {};
@@ -653,14 +653,14 @@ std::string borrowedBuiltinSoaAccessHelperName(std::string_view helperName) {
 
 std::string builtinSoaCountHelperName(std::string_view rawName) {
   const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);
-  if (normalized == "count" || normalized == collection_helpers::kCountRef) {
+  if (collection_helpers::isCountHelperName(normalized)) {
     return normalized;
   }
   return {};
 }
 
 std::string borrowedBuiltinSoaCountHelperName(std::string_view helperName) {
-  if (helperName == "count" || helperName == collection_helpers::kCountRef) {
+  if (collection_helpers::isCountHelperName(helperName)) {
     return collection_helpers::kCountRef;
   }
   return {};
@@ -672,7 +672,7 @@ bool isOldExplicitSoaCountHelperName(std::string_view rawName) {
   return semantics::splitSoaSurfaceHelperPath(
              rawName, &helperName, &usesPublicSurface) &&
          !usesPublicSurface &&
-         (helperName == "count" || helperName == collection_helpers::kCountRef);
+         (collection_helpers::isCountHelperName(helperName));
 }
 
 std::string builtinSoaMutatorHelperName(std::string_view rawName) {

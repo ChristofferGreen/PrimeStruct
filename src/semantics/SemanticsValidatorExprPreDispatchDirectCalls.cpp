@@ -135,11 +135,11 @@ bool isCanonicalKeyValueAccessReturnStructHelperName(std::string_view helperName
 }
 
 bool isCanonicalMapBuiltinPreDispatchHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == collection_helpers::kCountRef ||
-         helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-         helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
+  return collection_helpers::isCountHelperName(helperName) ||
+         collection_helpers::isContainsHelperName(helperName) ||
+         collection_helpers::isTryAtHelperName(helperName) ||
          isCanonicalKeyValueAccessReturnStructHelperName(helperName) ||
-         helperName == "insert" || helperName == collection_helpers::kInsertRef;
+         collection_helpers::isInsertHelperName(helperName);
 }
 
 bool isRemovedKeyValueCompatibilityPreDispatchHelperName(
@@ -430,18 +430,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           "block arguments require a definition target: " + removedPath);
     }
     const size_t expectedArgCount =
-        (removedKeyValueCompatibilityHelper == "count" ||
-         removedKeyValueCompatibilityHelper == collection_helpers::kCountRef ||
+        (collection_helpers::isCountHelperName(removedKeyValueCompatibilityHelper) ||
          removedKeyValueCompatibilityHelper == "size")
             ? 1
-            : ((removedKeyValueCompatibilityHelper == "at" ||
-                removedKeyValueCompatibilityHelper == collection_helpers::kAtRef ||
-                removedKeyValueCompatibilityHelper == "at_unsafe" ||
-                removedKeyValueCompatibilityHelper == collection_helpers::kAtUnsafeRef ||
-                removedKeyValueCompatibilityHelper == "contains" ||
-                removedKeyValueCompatibilityHelper == collection_helpers::kContainsRef ||
-                removedKeyValueCompatibilityHelper == "tryAt" ||
-                removedKeyValueCompatibilityHelper == collection_helpers::kTryAtRef)
+            : ((collection_helpers::isAtHelperName(removedKeyValueCompatibilityHelper) ||
+                collection_helpers::isAtUnsafeHelperName(removedKeyValueCompatibilityHelper) ||
+                collection_helpers::isContainsHelperName(removedKeyValueCompatibilityHelper) ||
+                collection_helpers::isTryAtHelperName(removedKeyValueCompatibilityHelper))
                    ? 2
                    : 3);
     if (expr.args.size() != expectedArgCount) {
@@ -628,13 +623,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     if (!helperName.empty() && helperName.front() == '/') {
       helperName.erase(helperName.begin());
     }
-    if (helperName == "count" || helperName == collection_helpers::kCountRef ||
+    if (collection_helpers::isCountHelperName(helperName) ||
         helperName == "size" ||
-        helperName == "contains" || helperName == collection_helpers::kContainsRef ||
-        helperName == "tryAt" || helperName == collection_helpers::kTryAtRef ||
-        helperName == "at" || helperName == collection_helpers::kAtRef ||
-        helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef ||
-        helperName == "insert" || helperName == collection_helpers::kInsertRef) {
+        collection_helpers::isContainsHelperName(helperName) ||
+        collection_helpers::isTryAtHelperName(helperName) ||
+        collection_helpers::isAtHelperName(helperName) ||
+        collection_helpers::isAtUnsafeHelperName(helperName) ||
+        collection_helpers::isInsertHelperName(helperName)) {
       return helperName;
     }
     return {};

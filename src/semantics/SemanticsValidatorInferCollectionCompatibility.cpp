@@ -22,10 +22,10 @@ namespace primec::semantics {
 namespace {
 
 bool isSoaSamePathHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == collection_helpers::kCountRef ||
-         helperName == "get" || helperName == collection_helpers::kGetRef ||
-         helperName == "ref" || helperName == collection_helpers::kRefRef ||
-         helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
+  return collection_helpers::isCountHelperName(helperName) ||
+         collection_helpers::isGetHelperName(helperName) ||
+         collection_helpers::isRefHelperName(helperName) ||
+         collection_helpers::isToAosHelperName(helperName) ||
          helperName == "push" || helperName == "reserve";
 }
 
@@ -995,12 +995,12 @@ bool SemanticsValidator::getVectorMutatorHelperName(const Expr &candidate,
   }
   if (!isCanonicalVectorCompatibilityPath(removedPath) &&
       !isRootedVectorHelperPath(removedPath) &&
-      removedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) != 0) {
+      !collection_helpers::isRootedArrayPath(removedPath)) {
     return false;
   }
 
   const std::string helperName = removedPath.substr(removedPath.find_last_of('/') + 1);
-  if (removedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(removedPath)) {
     const std::string canonicalPath = canonicalVectorCompatibilityHelperPathOrFallback(helperName);
     if (hasDefinitionPath(canonicalPath) || hasImportedDefinitionPath(canonicalPath)) {
       return false;

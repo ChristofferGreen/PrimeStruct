@@ -438,7 +438,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 
   appendUniqueCandidate(candidates, path);
   appendUniqueCandidate(candidates, normalizedPath);
-  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(normalizedPath)) {
     const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       if (const auto *metadata = findVectorHelperSurfaceMetadata();

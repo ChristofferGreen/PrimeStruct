@@ -337,7 +337,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
     }
-    if (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) {
+    if (collection_helpers::isCountHelperName(normalizedMethodName)) {
       if (collectionTypePath == collection_helpers::kRootedArray) {
         if (normalizedMethodName == collection_helpers::kCountRef) {
           return false;
@@ -365,7 +365,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == collection_helpers::kRootedMap &&
-          (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef)) {
+          (collection_helpers::isCountHelperName(normalizedMethodName))) {
         resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
                                                       normalizedMethodName);
         return true;
@@ -445,7 +445,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredBufferMethodTargetForCall(params, locals, receiver, "store");
       return !resolvedOut.empty();
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+    if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
         (collectionTypePath == collection_helpers::kRootedSoa ||
          (collectionTypePath == collection_helpers::kRootedVector &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)))) {
@@ -454,7 +454,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           collectionTypePath == collection_helpers::kRootedSoa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
       return true;
     }
-    if ((normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef) &&
+    if ((collection_helpers::isRefHelperName(normalizedMethodName)) &&
         (collectionTypePath == collection_helpers::kRootedSoa ||
          (collectionTypePath == collection_helpers::kRootedVector &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)))) {
@@ -477,7 +477,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = "/to_soa";
       return true;
     }
-    if ((normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef) &&
+    if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
         (collectionTypePath == collection_helpers::kRootedSoa || collectionTypePath == collection_helpers::kRootedVector)) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
@@ -579,10 +579,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
                                                     collection_helpers::kRootedSoa);
   };
   auto isCanonicalSoaWrapperMethod = [&](std::string_view helperName) {
-    return helperName == "count" || helperName == collection_helpers::kCountRef ||
-           helperName == "get" || helperName == collection_helpers::kGetRef ||
-           helperName == "ref" || helperName == collection_helpers::kRefRef ||
-           helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
+    return collection_helpers::isCountHelperName(helperName) ||
+           collection_helpers::isGetHelperName(helperName) ||
+           collection_helpers::isRefHelperName(helperName) ||
+           collection_helpers::isToAosHelperName(helperName) ||
            helperName == "push" || helperName == "reserve";
   };
   auto redirectConcreteExperimentalSoaMethodTarget = [&](const std::string &resolvedType) -> bool {
@@ -806,7 +806,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string elemType;
     std::string keyType;
     std::string valueType;
-    if (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) {
+    if (collection_helpers::isCountHelperName(normalizedMethodName)) {
       if (normalizedMethodName == "count" &&
           resolveArgsPackCountTarget(receiver, elemType)) {
         resolvedOut = preferVectorStdlibHelperPath(collection_helpers::kRootedArrayCount);
@@ -845,7 +845,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           canonicalVectorCompatibilityHelperPathOrFallback("capacity");
       return true;
     }
-    if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
+    if ((collection_helpers::isCountHelperName(normalizedMethodName) ||
          normalizedMethodName == "size") &&
         resolveKeyValueTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
@@ -898,71 +898,71 @@ bool SemanticsValidator::resolveInferMethodCallPath(
                                                          normalizedMethodName);
       return true;
     }
-    if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) &&
+    if ((collection_helpers::isCountHelperName(normalizedMethodName)) &&
         resolveVectorTarget(receiver, elemType) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector);
       return true;
     }
-    if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) &&
+    if ((collection_helpers::isCountHelperName(normalizedMethodName)) &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedSoa);
       return true;
     }
-    if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) &&
+    if ((collection_helpers::isCountHelperName(normalizedMethodName)) &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+    if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
         resolveVectorTarget(receiver, elemType) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector);
       return true;
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+    if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
         resolveBorrowedVectorReceiver(receiver, elemType) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector);
       return true;
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+    if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedSoa);
       return true;
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+    if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
-    if ((normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef) &&
+    if ((collection_helpers::isRefHelperName(normalizedMethodName)) &&
         resolveVectorTarget(receiver, elemType) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector);
       return true;
     }
-    if ((normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef) &&
+    if ((collection_helpers::isRefHelperName(normalizedMethodName)) &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedSoa);
       return true;
     }
-    if ((normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef) &&
+    if ((collection_helpers::isRefHelperName(normalizedMethodName)) &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
-    if ((normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef) &&
+    if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
         resolveVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector);
@@ -975,13 +975,13 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     // the borrowed to_aos target, so checking it first would route an
     // owned receiver to the borrowed helper. get/ref above already use
     // this same ordering (direct soa check before the OR-combined check).
-    if ((normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef) &&
+    if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedSoa);
       return true;
     }
-    if ((normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef) &&
+    if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredSoaToAosHelperTargetForReceiver(receiver);

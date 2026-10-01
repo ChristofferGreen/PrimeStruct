@@ -68,7 +68,7 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
       return false;
     }
     const bool isExplicitArrayCompatibilityPath =
-        explicitRemovedMethodPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0;
+        collection_helpers::isRootedArrayPath(explicitRemovedMethodPath);
     std::string ignoredElemType;
     const bool isCanonicalStdVectorPath =
         isCanonicalVectorCompatibilityPath(explicitRemovedMethodPath);
@@ -124,14 +124,14 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
     return true;
   }
   if (!explicitRemovedMethodPath.empty() &&
-      path.rfind(collection_helpers::kRootedStringPrefix, 0) == 0 &&
+      collection_helpers::isRootedStringPath(path) &&
       isValueSurfaceAccessMethodName(normalizedMethodName)) {
     resolvedOut = explicitRemovedMethodPath;
     isBuiltinOut = false;
     return true;
   }
   if (!explicitRemovedMethodPath.empty() &&
-      path.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+      collection_helpers::isRootedArrayPath(path)) {
     std::string ignoredElemType;
     const bool isArgsPackArrayBuiltin =
         (normalizedMethodName == "count" &&
@@ -144,7 +144,7 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
       return true;
     }
   }
-  if (!explicitRemovedMethodPath.empty() && path.rfind(collection_helpers::kRootedStringPrefix, 0) != 0) {
+  if (!explicitRemovedMethodPath.empty() && !collection_helpers::isRootedStringPath(path)) {
     if (shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod()) {
       resolvedOut = explicitRemovedMethodPath;
       isBuiltinOut = true;
@@ -155,7 +155,7 @@ bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(
     return true;
   }
   resolvedOut = preferVectorStdlibHelperPath(path);
-  if (resolvedOut.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0 &&
+  if (collection_helpers::isRootedArrayPath(resolvedOut) &&
       defMap_.count(resolvedOut) == 0 &&
       !hasDeclaredDefinitionPath(resolvedOut)) {
     isBuiltinOut = true;
@@ -268,10 +268,10 @@ std::optional<std::string> SemanticsValidator::noImportSoaHelperCallDiagnostic(
     return std::nullopt;
   }
   const bool isPublicSoaHelper =
-      helperName == "count" || helperName == collection_helpers::kCountRef ||
-      helperName == "get" || helperName == collection_helpers::kGetRef ||
-      helperName == "ref" || helperName == collection_helpers::kRefRef ||
-      helperName == "to_aos" || helperName == collection_helpers::kToAosRef ||
+      collection_helpers::isCountHelperName(helperName) ||
+      collection_helpers::isGetHelperName(helperName) ||
+      collection_helpers::isRefHelperName(helperName) ||
+      collection_helpers::isToAosHelperName(helperName) ||
       helperName == "push" || helperName == "reserve";
   if (!isPublicSoaHelper) {
     return std::nullopt;
@@ -441,10 +441,10 @@ bool SemanticsValidator::resolveExplicitDirectCallReturnMethodTarget(
       const std::string normalizedReturnCollectionType =
           normalizeCollectionTypePath(normalizedReturnArgText);
       const bool isBorrowedSoaWrapperMethod =
-          normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
-          normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef ||
-          normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef ||
-          normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef;
+          collection_helpers::isCountHelperName(normalizedMethodName) ||
+          collection_helpers::isGetHelperName(normalizedMethodName) ||
+          collection_helpers::isRefHelperName(normalizedMethodName) ||
+          collection_helpers::isToAosHelperName(normalizedMethodName);
       if (isInternalSoaCollectionTypePath(normalizedReturnCollectionType) &&
           isBorrowedSoaWrapperMethod) {
         return resolveExplicitOrCanonicalCollectionMethodTarget(
@@ -563,7 +563,7 @@ bool SemanticsValidator::resolveCollectionMethodFromTypePath(
                                             normalizedMethodName, params, locals,
                                             resolvedOut, isBuiltinOut);
   };
-  if (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) {
+  if (collection_helpers::isCountHelperName(normalizedMethodName)) {
     if (normalizedMethodName == "count" && collectionTypePath == collection_helpers::kRootedArray) {
       return setCollectionMethodTargetLocal(collection_helpers::kRootedArrayCount);
     }
@@ -646,7 +646,7 @@ bool SemanticsValidator::resolveCollectionMethodFromTypePath(
       collectionTypePath == collection_helpers::kRootedMap) {
     return setPreferredKeyValueMethodTargetLocal(receiver, normalizedMethodName);
   }
-  if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+  if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
       (isInternalSoaCollectionTypePath(collectionTypePath) ||
        (collectionTypePath == collection_helpers::kRootedVector &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)))) {
@@ -657,7 +657,7 @@ bool SemanticsValidator::resolveCollectionMethodFromTypePath(
                 ? internalSoaCollectionTypePath(true)
                 : collection_helpers::kRootedVector));
   }
-  if ((normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef) &&
+  if ((collection_helpers::isRefHelperName(normalizedMethodName)) &&
       (isInternalSoaCollectionTypePath(collectionTypePath) ||
        (collectionTypePath == collection_helpers::kRootedVector &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)))) {
@@ -683,7 +683,7 @@ bool SemanticsValidator::resolveCollectionMethodFromTypePath(
   if (normalizedMethodName == "to_soa" && collectionTypePath == collection_helpers::kRootedVector) {
     return setCollectionMethodTargetLocal("/to_soa");
   }
-  if ((normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef) &&
+  if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
       (isInternalSoaCollectionTypePath(collectionTypePath) ||
        collectionTypePath == collection_helpers::kRootedVector)) {
     return setCollectionMethodTargetLocal(
@@ -795,7 +795,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
       normalizedCollectionTypePath == collection_helpers::kRootedVector) {
     return setCollectionMethodTarget("/to_soa");
   }
-  if ((normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef) &&
+  if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
       (isInternalSoaCollectionTypePath(normalizedCollectionTypePath) ||
        normalizedCollectionTypePath == collection_helpers::kRootedVector)) {
     return setCollectionMethodTarget(
@@ -806,12 +806,12 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
                 : collection_helpers::kRootedVector));
   }
   if (isKeyValueSurfaceTypeName(normalizeBindingTypeName(typeName)) &&
-      (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
+      (collection_helpers::isCountHelperName(normalizedMethodName) ||
        normalizedMethodName == "size" ||
-       normalizedMethodName == "contains" || normalizedMethodName == collection_helpers::kContainsRef ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == collection_helpers::kTryAtRef ||
+       collection_helpers::isContainsHelperName(normalizedMethodName) ||
+       collection_helpers::isTryAtHelperName(normalizedMethodName) ||
        isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
-       normalizedMethodName == "insert" || normalizedMethodName == collection_helpers::kInsertRef)) {
+       collection_helpers::isInsertHelperName(normalizedMethodName))) {
     if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
       return resolveExplicitRootKeyValueMethodPath(explicitKeyValueHelperPath, receiver,
                                                     resolvedOut, isBuiltinOut);
@@ -829,11 +829,11 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
                                             params, locals, resolvedOut, isBuiltinOut);
   }
   if (typeName == "Reference" &&
-      (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
-       normalizedMethodName == "contains" || normalizedMethodName == collection_helpers::kContainsRef ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == collection_helpers::kTryAtRef ||
+      (collection_helpers::isCountHelperName(normalizedMethodName) ||
+       collection_helpers::isContainsHelperName(normalizedMethodName) ||
+       collection_helpers::isTryAtHelperName(normalizedMethodName) ||
        isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
-       normalizedMethodName == "insert" || normalizedMethodName == collection_helpers::kInsertRef)) {
+       collection_helpers::isInsertHelperName(normalizedMethodName))) {
     std::string keyType;
     std::string valueType;
     if (resolveExperimentalKeyValueTarget(receiver, keyType, valueType, params, locals)) {
@@ -877,14 +877,10 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
     const std::string normalizedPointeeCollectionTypePath =
         normalizeCollectionTypePath(normalizedPointeeType);
     const bool isCanonicalBorrowedSoaWrapperMethod =
-        canonicalCollectionHelperName == "count" ||
-        canonicalCollectionHelperName == collection_helpers::kCountRef ||
-        canonicalCollectionHelperName == "get" ||
-        canonicalCollectionHelperName == collection_helpers::kGetRef ||
-        canonicalCollectionHelperName == "ref" ||
-        canonicalCollectionHelperName == collection_helpers::kRefRef ||
-        canonicalCollectionHelperName == "to_aos" ||
-        canonicalCollectionHelperName == collection_helpers::kToAosRef;
+        collection_helpers::isCountHelperName(canonicalCollectionHelperName) ||
+        collection_helpers::isGetHelperName(canonicalCollectionHelperName) ||
+        collection_helpers::isRefHelperName(canonicalCollectionHelperName) ||
+        collection_helpers::isToAosHelperName(canonicalCollectionHelperName);
     if (normalizedPointeeCollectionTypePath == collection_helpers::kRootedMap &&
         (normalizedMethodName == "count" ||
          normalizedMethodName == "contains" ||
@@ -1500,12 +1496,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return isResolvedPublishedKeyValueConstructorPath(resolveCalleePath(receiverExpr));
   };
-  if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
+  if ((collection_helpers::isCountHelperName(normalizedMethodName) ||
        normalizedMethodName == "size" ||
-       normalizedMethodName == "contains" || normalizedMethodName == collection_helpers::kContainsRef ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == collection_helpers::kTryAtRef ||
+       collection_helpers::isContainsHelperName(normalizedMethodName) ||
+       collection_helpers::isTryAtHelperName(normalizedMethodName) ||
        isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
-       normalizedMethodName == "insert" || normalizedMethodName == collection_helpers::kInsertRef) &&
+       collection_helpers::isInsertHelperName(normalizedMethodName)) &&
       setIndexedArgsPackKeyValueMethodTarget(
           receiver, normalizedMethodName, explicitKeyValueHelperPath, receiver, explicitRemovedMethodPath,
             normalizedMethodName, params, locals,
@@ -1562,11 +1558,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
       if (isKeyValueSurfaceTypeName(base) &&
-          (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
-           normalizedMethodName == "contains" || normalizedMethodName == collection_helpers::kContainsRef ||
-           normalizedMethodName == "tryAt" || normalizedMethodName == collection_helpers::kTryAtRef ||
+          (collection_helpers::isCountHelperName(normalizedMethodName) ||
+           collection_helpers::isContainsHelperName(normalizedMethodName) ||
+           collection_helpers::isTryAtHelperName(normalizedMethodName) ||
            isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
-           normalizedMethodName == "insert" || normalizedMethodName == collection_helpers::kInsertRef)) {
+           collection_helpers::isInsertHelperName(normalizedMethodName))) {
         return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
       }
     }
@@ -1594,12 +1590,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   };
 
-  if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
+  if ((collection_helpers::isCountHelperName(normalizedMethodName) ||
        normalizedMethodName == "size" ||
-       normalizedMethodName == "contains" || normalizedMethodName == collection_helpers::kContainsRef ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == collection_helpers::kTryAtRef ||
+       collection_helpers::isContainsHelperName(normalizedMethodName) ||
+       collection_helpers::isTryAtHelperName(normalizedMethodName) ||
        isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
-       normalizedMethodName == "insert" || normalizedMethodName == collection_helpers::kInsertRef) &&
+       collection_helpers::isInsertHelperName(normalizedMethodName)) &&
       isDirectKeyValueConstructorReceiverCall(receiver)) {
     std::string keyType;
     std::string valueType;
@@ -1667,7 +1663,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = false;
     return true;
   }
-  if (normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef ||
+  if (collection_helpers::isCountHelperName(normalizedMethodName) ||
       normalizedMethodName == "size") {
     if (normalizedMethodName == "count" &&
         this->resolveArgsPackCountTarget(receiver, elemType, params, locals)) {
@@ -1691,7 +1687,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedSoa));
     }
-    if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) &&
+    if ((collection_helpers::isCountHelperName(normalizedMethodName)) &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       return setCollectionMethodTarget(
@@ -1795,7 +1791,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       this->resolveKeyValueTarget(receiver, params, locals, resolveArgsPackAccessTarget)) {
     return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
-  if (normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) {
+  if (collection_helpers::isGetHelperName(normalizedMethodName)) {
     if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName,
                                                      collection_helpers::kRootedVector)) {
@@ -1803,7 +1799,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                     collection_helpers::kRootedVector));
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+    if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
         resolveBorrowedVectorReceiver(receiver, elemType, params, locals) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName,
                                                      collection_helpers::kRootedVector)) {
@@ -1816,14 +1812,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                     internalSoaCollectionTypePath(true)));
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == collection_helpers::kGetRef) &&
+    if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       return setCollectionMethodTarget(
           preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
     }
   }
-  if (normalizedMethodName == "ref" || normalizedMethodName == collection_helpers::kRefRef) {
+  if (collection_helpers::isRefHelperName(normalizedMethodName)) {
     if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) {
       return setCollectionMethodTarget(
@@ -1840,7 +1836,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           preferredSoaToAosHelperTargetForReceiver(receiver));
     }
   }
-  if (normalizedMethodName == "to_aos" || normalizedMethodName == collection_helpers::kToAosRef) {
+  if (collection_helpers::isToAosHelperName(normalizedMethodName)) {
     if (this->resolveVectorTarget(receiver, elemType, params, locals, resolveArgsPackAccessTarget)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector));
@@ -2227,12 +2223,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
                                                       internalSoaCollectionTypePath(true)));
       }
-      if ((((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) &&
+      if ((((collection_helpers::isCountHelperName(normalizedMethodName)) &&
             usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) ||
            normalizedMethodName == "capacity" ||
            normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
           extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
-        if ((normalizedMethodName == "count" || normalizedMethodName == collection_helpers::kCountRef) &&
+        if ((collection_helpers::isCountHelperName(normalizedMethodName)) &&
             usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) {
           return setCollectionMethodTarget(
               preferredSoaHelperTargetForCollectionType(normalizedMethodName,

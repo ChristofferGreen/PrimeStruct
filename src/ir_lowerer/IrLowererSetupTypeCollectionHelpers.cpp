@@ -442,12 +442,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     } else if (helperNameOut == "soaVectorCountRef") {
       helperNameOut = collection_helpers::kCountRef;
     }
-    return helperNameOut == "count" ||
-           helperNameOut == collection_helpers::kCountRef ||
-           helperNameOut == "get" ||
-           helperNameOut == collection_helpers::kGetRef ||
-           helperNameOut == "ref" ||
-           helperNameOut == collection_helpers::kRefRef;
+    return collection_helpers::isCountHelperName(helperNameOut) ||
+           collection_helpers::isGetHelperName(helperNameOut) ||
+           collection_helpers::isRefHelperName(helperNameOut);
   }
   if (normalized.rfind(experimentalSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
@@ -1112,7 +1109,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 
   appendUnique(path);
   appendUnique(normalizedPath);
-  if (normalizedPath.rfind(collection_helpers::kRootedArrayPrefix, 0) == 0) {
+  if (collection_helpers::isRootedArrayPath(normalizedPath)) {
     const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string vectorCandidate =

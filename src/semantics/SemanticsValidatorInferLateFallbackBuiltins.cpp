@@ -79,25 +79,25 @@ bool resolveLateFallbackCanonicalKeyValueHelperName(
 bool isCanonicalKeyValueContainsHelperPath(const std::string &path) {
   std::string helperName;
   return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
-         (helperName == "contains" || helperName == collection_helpers::kContainsRef);
+         (collection_helpers::isContainsHelperName(helperName));
 }
 
 bool isCanonicalKeyValueTryAtHelperPath(const std::string &path) {
   std::string helperName;
   return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
-         (helperName == "tryAt" || helperName == collection_helpers::kTryAtRef);
+         (collection_helpers::isTryAtHelperName(helperName));
 }
 
 bool isCanonicalKeyValueAccessHelperPath(const std::string &path) {
   std::string helperName;
   return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
-         (helperName == "at" || helperName == collection_helpers::kAtRef ||
-          helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef);
+         (collection_helpers::isAtHelperName(helperName) ||
+          collection_helpers::isAtUnsafeHelperName(helperName));
 }
 
 bool isLateFallbackKeyValueAccessHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == collection_helpers::kAtRef ||
-         helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+  return collection_helpers::isAtHelperName(helperName) ||
+         collection_helpers::isAtUnsafeHelperName(helperName);
 }
 
 bool isCollectionPairImportAliasAccessHelperPath(std::string path) {
@@ -164,8 +164,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   };
   auto isCanonicalKeyValueAccessHelperName =
       [&](const std::string &helperName) {
-    return helperName == "at" || helperName == collection_helpers::kAtRef ||
-           helperName == "at_unsafe" || helperName == collection_helpers::kAtUnsafeRef;
+    return collection_helpers::isAtHelperName(helperName) ||
+           collection_helpers::isAtUnsafeHelperName(helperName);
   };
 
   const auto resolvedIt = defMap_.find(context.resolved);
@@ -246,9 +246,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       } else if (resolveArrayTarget != nullptr &&
                  resolveArrayTarget(receiverCandidate, elemType)) {
         methodResolved = collection_helpers::kRootedArrayPrefix + helperName;
-      } else if ((helperName == "get" || helperName == collection_helpers::kGetRef ||
-                  helperName == "ref" ||
-                  helperName == collection_helpers::kRefRef) &&
+      } else if ((collection_helpers::isGetHelperName(helperName) ||
+                  collection_helpers::isRefHelperName(helperName)) &&
                  resolveSoaVectorTarget != nullptr &&
                  resolveSoaVectorTarget(receiverCandidate, elemType)) {
         methodResolved =

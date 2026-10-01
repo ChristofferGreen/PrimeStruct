@@ -80,7 +80,7 @@
   };
   auto preferCollectionHelperPath = [&](const std::string &path) -> std::string {
     std::string preferred = path;
-    if (preferred.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0 && defMap.count(preferred) == 0) {
+    if (primec::collection_helpers::isRootedArrayPath(preferred) && defMap.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string(primec::collection_helpers::kRootedArrayPrefix).size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string stdlibAlias = vectorHelperPath(suffix);
@@ -194,7 +194,7 @@
 
     appendUnique(path);
     appendUnique(normalizedPath);
-    if (normalizedPath.rfind(primec::collection_helpers::kRootedArrayPrefix, 0) == 0) {
+    if (primec::collection_helpers::isRootedArrayPath(normalizedPath)) {
       const std::string suffix = normalizedPath.substr(std::string(primec::collection_helpers::kRootedArrayPrefix).size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique(vectorHelperPath(suffix));
