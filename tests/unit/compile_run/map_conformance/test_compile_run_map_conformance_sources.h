@@ -449,11 +449,9 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   source += "  borrowExperimentalMap(location(values)).insert(\"third\"raw_utf8, Owned{11i32})\n";
   source += "  [Owned] found{try(borrowExperimentalMap(location(values)).tryAt(\"left\"raw_utf8))}\n";
   source += "  [Result<Owned, ContainerError>] missing{borrowExperimentalMap(location(values)).tryAt(\"missing\"raw_utf8)}\n";
-  source += "  [Owned] right{borrowExperimentalMap(location(values)).at(\"right\"raw_utf8)}\n";
-  source += "  [Owned] third{borrowExperimentalMap(location(values)).at_unsafe(\"third\"raw_utf8)}\n";
   source += "  [i32 mut] total{plus(borrowExperimentalMap(location(values)).count(), found.value)}\n";
-  source += "  assign(total, plus(total, right.value))\n";
-  source += "  assign(total, plus(total, third.value))\n";
+  source += "  assign(total, plus(total, borrowExperimentalMap(location(values)).at(\"right\"raw_utf8).value))\n";
+  source += "  assign(total, plus(total, borrowExperimentalMap(location(values)).at_unsafe(\"third\"raw_utf8).value))\n";
   source += "  if(borrowExperimentalMap(location(values)).contains(\"right\"raw_utf8),\n";
   source += "     then() { assign(total, plus(total, 1i32)) },\n";
   source += "     else() { })\n";

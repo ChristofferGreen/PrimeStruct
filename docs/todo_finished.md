@@ -56421,3 +56421,18 @@ crashes) - see `docs/todo_finished.md`.
     `map<K, V>` temporary), TODO-5332 (method-style `.at`), TODO-5333
     (indexing), TODO-5334 (vector `at` mismatch inside `map.prime`) and
     TODO-5335 (`at<K, bool>` value mismatch accepted, exits 4).
+
+- [x] TODO-5327: Allow field access on a method result whose receiver is a borrowed call
+  - owner: ai
+  - created_at: 2026-10-01
+  - finished_at: 2026-10-01
+  - phase: Map wrapper follow-up (split from TODO-5325)
+  - parallel_track: borrowed-receiver-field-access
+  - depends_on: (none)
+  - scope: `borrowExperimentalMap(location(values)).at("left"raw_utf8).value` (and `.at_unsafe(...)`) on a `Map<string, Owned>` fails VM lowering with "struct parameter type mismatch"; binding the result to a local first (`[Owned] x{borrow(...).at(...)}`) then `x.value` works, as does `values.at(...).value` on a plain receiver. Pinned by `expectExperimentalMapReferenceMethodConformance`, which binds intermediates today.
+  - acceptance:
+    - the chained form runs on vm/native/exe and the conformance source is respelled back to chained access.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if the fix needs a design decision beyond this shape, stop and
+    record it here instead of widening the change.
+  - result: the VM lowering guard in `IrLowererLowerEmitExpr.h` that rejected a one-argument expression over a wrapper-returned key/value `at` call (meant for `count(at(...))`-style struct mismatches) also caught field access such as `.value`; it now skips field accesses. The chained `borrowExperimentalMap(location(values)).at("right"raw_utf8).value` form runs on vm/native/exe and the conformance source uses it again.

@@ -217,7 +217,7 @@
           }
           return false;
         };
-        if (expr.args.size() == 1 &&
+        if (expr.args.size() == 1 && !expr.isFieldAccess &&
             isWrapperReturnedKeyValueAccessCall(expr.args.front())) {
           error = "struct parameter type mismatch";
           return false;

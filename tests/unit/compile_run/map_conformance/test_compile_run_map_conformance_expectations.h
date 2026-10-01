@@ -217,8 +217,8 @@ inline void expectPublicMapReferenceWrapperConformance(const std::string &emitMo
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  // TODO-5325: runs through the public Map<K, V> wrapper. Field access is applied to
-  // bound locals; chaining it onto a borrowed-receiver method result is TODO-5327.
+  // TODO-5325: runs through the public Map<K, V> wrapper, including field access
+  // chained onto a borrowed-receiver method result (TODO-5327).
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapReferenceMethodConformanceSource(),
                                             "experimental_map_reference_methods_" + emitMode,
                                             emitMode,
