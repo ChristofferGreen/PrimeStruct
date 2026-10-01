@@ -639,6 +639,12 @@ target_include_directories(primec_ir_lib PUBLIC include)
 target_link_libraries(primec_ir_lib PUBLIC primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_ir_lib)
 
+# Embedding facade: compile and run scripts from a C++ host (TODO-5337).
+add_library(primec_embed_lib src/embed/ScriptEngine.cpp)
+target_include_directories(primec_embed_lib PUBLIC include)
+target_link_libraries(primec_embed_lib PUBLIC primec_ir_lib primec_runtime_lib)
+primestructEnableWarnings(primec_embed_lib)
+
 add_library(primec_backend_registry_lib ${PRIMESTRUCT_BACKEND_REGISTRY_SOURCES})
 target_include_directories(primec_backend_registry_lib PUBLIC include)
 target_link_libraries(primec_backend_registry_lib PRIVATE primec_backend_emitters_lib primec_runtime_lib)
@@ -775,6 +781,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_compile_time_value
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+
+  add_executable(PrimeStruct_embed_tests
+    tests/unit/test_main.cpp
+    tests/unit/embed/test_embed_script_engine.cpp
+  )
+  target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_embed_tests PRIVATE primec_embed_lib)
+  primestructEnableWarnings(PrimeStruct_embed_tests)
+  add_test(
+    NAME PrimeStruct_embed_script_engine
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.script_engine"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_script_engine
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   set(PrimeStructBackendAllTestSources

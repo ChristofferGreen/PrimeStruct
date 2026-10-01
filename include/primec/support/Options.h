@@ -23,6 +23,9 @@ struct Options {
   DebugJsonSnapshotMode debugJsonSnapshotMode = DebugJsonSnapshotMode::None;
   bool collectDiagnostics = false;
   std::string inputPath;
+  // When set, the pipeline compiles this text instead of reading `inputPath`;
+  // `inputPath` then only names the primary unit (diagnostics, relative imports).
+  std::optional<std::string> inMemorySource;
   std::string outputPath;
   std::string outDir = ".";
   std::string entryPath = "/main";

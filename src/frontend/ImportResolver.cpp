@@ -439,13 +439,23 @@ bool ImportResolver::expandImports(const std::string &inputPath,
                                      ExpandedSource &expandedSource,
                                      std::string &error,
                                      const std::vector<std::string> &importPaths) {
-  expandedSource = {};
   std::filesystem::path input = std::filesystem::absolute(inputPath);
   std::string content;
   if (!readFile(input.string(), content)) {
+    expandedSource = {};
     error = "failed to read input: " + input.string();
     return false;
   }
+  return expandImportsFromSource(inputPath, content, expandedSource, error, importPaths);
+}
+
+bool ImportResolver::expandImportsFromSource(const std::string &displayPath,
+                                             const std::string &content,
+                                             ExpandedSource &expandedSource,
+                                             std::string &error,
+                                             const std::vector<std::string> &importPaths) {
+  expandedSource = {};
+  std::filesystem::path input = std::filesystem::absolute(displayPath);
   std::string baseDir = input.parent_path().string();
   std::vector<std::filesystem::path> importRoots;
   importRoots.reserve(importPaths.size());

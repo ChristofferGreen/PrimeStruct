@@ -1219,10 +1219,18 @@ bool runCompilePipelineImportStage(const Options &options,
                                    std::string &error,
                                    DiagnosticSink &diagnosticSink) {
   ImportResolver importResolver;
-  if (!importResolver.expandImports(options.inputPath,
-                                    out.expandedSource,
-                                    error,
-                                    options.importPaths)) {
+  const bool imported =
+      options.inMemorySource.has_value()
+          ? importResolver.expandImportsFromSource(options.inputPath,
+                                                   *options.inMemorySource,
+                                                   out.expandedSource,
+                                                   error,
+                                                   options.importPaths)
+          : importResolver.expandImports(options.inputPath,
+                                         out.expandedSource,
+                                         error,
+                                         options.importPaths);
+  if (!imported) {
     diagnosticSink.setSummary(error);
     return false;
   }

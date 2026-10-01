@@ -56960,3 +56960,37 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: the last target-string-only exemptions in IrLowererSetupTypeMethodCallResolution.cpp (/string/count, soa to_aos) now call the shared isBuiltinClassifiedMethodCallTarget; full gate 1924/1924. The remaining exemptions are receiver-type-dependent and stay local. A separate module-wide invariant pass was not added: every published method-call target already hard-fails lowering with 'semantic-product method-call target missing lowered definition' unless a definition or the shared builtin classification covers it, pinned by the ir.pipeline.validation cases (classifies_builtin_method_call_targets, keeps_reject_diagnostics_*), so re-introducing the gap (c) bug trips that diagnostic.
 
+
+- [x] TODO-5337: Embedding facade - compile and run a PrimeStruct script from a C++ host
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-01
+  - phase: Embedding
+  - parallel_track: embedding-core
+  - scope: today the only way to run a script is the `primevm` CLI, whose
+    `main` chains `runCompilePipelineResult` -> `prepareIrModule(...,
+    IrValidationTarget::Vm)` -> `Vm::execute`. Add a small public header
+    `include/primec/embed/ScriptEngine.h` (implementation under
+    `src/embed/`) exposing: `ScriptEngine` (import paths, stdlib include
+    default via `addDefaultStdlibInclude`), `Script compileFile(path)` and
+    `Script compileSource(name, text)` (in-memory source, no temp file from
+    the caller), and `ScriptResult Script::run(args)` returning
+    `{ok, exitCode, diagnostics-text}`. No `exit()`/`std::cout`/`std::cerr`
+    writes on failure paths; all errors come back as data.
+  - implementation_notes: in-memory source needs a virtual file entry in the
+    import/`ExpandedSource` path; if the pipeline only reads from disk,
+    add the narrowest in-memory source hook rather than writing temp files.
+    Use `Expected`-style returns per AGENTS.md. Link `primec_frontend_lib` +
+    `primec_ir_lib` + `primec_runtime_lib` directly, not umbrellas.
+  - acceptance:
+    - a doctest binary links only the embed library and runs
+      `main(){ return(7i32) }` from a string, asserting exit code 7.
+    - a script with a semantic error returns `ok=false` with the same
+      diagnostic text the CLI prints; no process exit, no stdout writes.
+    - a script importing `/std/...` resolves it without caller setup.
+  - stop_rule: if in-memory source requires changes across more than the
+    import resolver and `ExpandedSource` construction, stop and split the
+    in-memory-source hook into its own leaf.
+  - finished_at: 2026-10-01
+  - result: added `include/primec/embed/ScriptEngine.h`, `src/embed/ScriptEngine.cpp` (library `primec_embed_lib`), `Options::inMemorySource` plus `ImportResolver::expandImportsFromSource`, and `PrimeStruct_embed_tests` (suite primestruct.embed.script_engine: in-memory run, re-run, semantic error as data, stdlib import). No ScopedCompileArena is used; lifetime hardening is TODO-5341.
+
