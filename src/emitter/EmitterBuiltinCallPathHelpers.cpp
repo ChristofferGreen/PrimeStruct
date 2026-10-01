@@ -154,7 +154,7 @@ bool isKeyValueCollectionTypeNameLocal(const std::string &name) {
   }
   const std::string experimentalMapType =
       experimentalCollectionMemberRootLocal(keyValueConstructorAliasToken()) + "Map";
-  return matchesMapImportAlias || normalized == "Map" ||
+  return matchesMapImportAlias ||
          normalized == experimentalMapType;
 }
 

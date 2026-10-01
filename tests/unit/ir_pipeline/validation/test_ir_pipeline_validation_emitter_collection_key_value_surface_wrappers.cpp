@@ -72,13 +72,13 @@ std::vector<WrapperCase> buildCollectionKeyValueSurfaceCases() {
     info.typeTemplateArg = "i32";
     cases.push_back({"vector-bound name", nameExprFor("values"), {{"values", info}}, false});
   }
-  // Name-bound local with a key-value/map-family binding: known-true for
-  // the key-value classifier.
+  // Name-bound local with a bare `Map` binding: a user/public wrapper type,
+  // no longer classified as key-value backing storage.
   {
     BindingInfo info;
     info.typeName = "Map";
     info.typeTemplateArg = "i32, string";
-    cases.push_back({"map-bound name", nameExprFor("lookup"), {{"lookup", info}}, true});
+    cases.push_back({"bare-Map-bound name", nameExprFor("lookup"), {{"lookup", info}}, false});
   }
   // Name-bound local with an unrelated scalar binding: known-false.
   {

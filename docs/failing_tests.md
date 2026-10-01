@@ -2074,16 +2074,15 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-09-29T23:05:31Z`
+- Last updated: `2026-10-01T05:06:30Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
   - `1746`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
-- Note (TODO-4751): known load-dependent Timeout flake; a focused release
-  rerun (`ctest -R spinning_cube_argument_validation_51_55`) passed in
-  19.4s, so no active failure.
+- Note (TODO-5314): known load-dependent flake; focused rerun passed
+  (27.9s), so no active failure.
 <!-- compile.sh:failing-tests:end -->
 
 ### TODO-5304 stop-rule note (2026-09-22)

@@ -132,7 +132,7 @@ static bool isKeyValueCompatibilityStorageBase(std::string_view base) {
   const std::string normalized(base);
   const std::string rootedMapBase = experimentalMapStorageBase();
   const std::string slashlessMapBase = experimentalMapStorageBase(false);
-  return normalized == "Map" || normalized == slashlessMapBase ||
+  return normalized == slashlessMapBase ||
          normalized == rootedMapBase ||
          normalized.rfind(slashlessMapBase + "__", 0) == 0 ||
          normalized.rfind(rootedMapBase + "__", 0) == 0;

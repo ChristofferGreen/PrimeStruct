@@ -99,7 +99,6 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5314 | Drop bare `Map` from IR lowerer, IR printer and emitter | ready | map-backend-classifiers |
 | TODO-5323 | Make `MapValue` insert overwrite non-trivial values | ready | map-value-overwrite |
 | TODO-5324 | Reject struct initializers of another struct type in semantics | ready | struct-initializer-typecheck |
 | TODO-5325 | Run the remaining pinned `Map<K, V>` wrapper conformance shapes | ready | map-wrapper-conformance |
@@ -109,13 +108,12 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5314 (track: map-backend-classifiers, surface: bare-`Map` arms in `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp`, `src/ir/IrPrinterHelpers.cpp`, `src/emitter/EmitterHelpersTypes.cpp`, `src/emitter/EmitterBuiltinCallPathHelpers.cpp`): drop the backend-side bare-`Map` classifiers.
 - TODO-5323 (track: map-value-overwrite, surface: `overwriteSlot`/`mapInsert*` in `stdlib/std/collections/map.prime` and struct assign-through-`Reference` lowering): make `MapValue` insert overwrite non-relocation-trivial payloads.
 - TODO-5324 (track: struct-initializer-typecheck, surface: semantics binding/assign/field initializer type checks in `src/semantics/`): reject a struct initialized from another struct type before lowering.
 - TODO-5325 (track: map-wrapper-conformance, surface: the nine `TODO-5325` helpers in `tests/unit/compile_run/map_conformance/*expectations.h` plus the monomorph wrapper-routing rewrite): run the remaining `Map<K, V>` wrapper shapes.
 - TODO-5326 (track: canonical-map-wrapper-temporaries, surface: `tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_*.cpp` canonical-map cases): restore the canonical `map<K, V>` wrapper-temporary pins.
 
-TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (`blocked` -> `ready`, now on its own `map-backend-classifiers` track). Its follow-ups TODO-5323/5324/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 is the last leaf). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323/5324/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -290,50 +288,6 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     wrong re-derivation would silently narrow or widen which method-call
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
-
-- [ ] TODO-5314: Drop bare `Map` from IR lowerer, IR printer and emitter
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-24
-  - phase: Follow-up cleanup after TODO-4751 (split from TODO-5310)
-  - parallel_track: map-backend-classifiers
-  - depends_on: (none - TODO-4751 closed 2026-09-29)
-  - scope: stop the backend-side classifiers from matching a bare `Map`:
-    the `normalized == raw || raw + "<"` arm of
-    `isExperimentalCollectionTypeName` (`IrLowererSetupTypeCollectionHelpers.cpp`)
-    for `Map` (its ~14 `(..., "map", "Map")` callers then only match the
-    retired rooted `experimental_map/Map` path and can be deleted), the
-    `isExperimentalCollectionTypeBase(base, "map", "Map")` arm of
-    `returnKindForTypeName` (`src/ir/IrPrinterHelpers.cpp`), and the
-    `normalized == "Map"` arms of `isKeyValueCompatibilityStorageBase`
-    (`src/emitter/EmitterHelpersTypes.cpp`) and
-    `isKeyValueCollectionTypeNameLocal`
-    (`src/emitter/EmitterBuiltinCallPathHelpers.cpp`).
-  - implementation_notes: part of the 2026-09-24 combined attempt (see
-    TODO-5313 in `docs/todo_finished.md`). The semantics/monomorph
-    classifier removal it depended on landed with TODO-4751 on
-    2026-09-29 (public `/std/collections/map/Map<K, V>` wrapper now
-    exists; semantics never produces a bare-`Map` builtin identity).
-    Not a prerequisite for the wrapper: with
-    only that semantics change, a user `Map<i32, i32>` with its own
-    `count`/`insert` already ran on vm/native/exe (exit 1), and the
-    2026-09-24 combined prototype (these edits included) ran one with
-    `count`/`insert`/`at` too (exit 111), so these edits are expected to
-    be behavior-neutral once nothing upstream produces bare `Map`. The
-    `scripts/check_map_*` audits pass with them, but avoid the literal
-    `Map__` text in new comments (it trips `map-backing-type-symbol`).
-    The rooted `experimental_map/Map` spellings are still exercised
-    directly by classifier unit tests
-    (`test_semantics_builtin_array_access_name_classifier.cpp`,
-    `test_stdlib_map_ownership_*`), so deleting those arms is a separate
-    decision from this leaf.
-  - acceptance:
-    - a user `Map<K, V>` struct with its own `count()`/`insert()` runs on
-      vm/native/exe through its own methods.
-    - no `map<K, V>` compile-run/IR test changes result.
-    - `./scripts/compile.sh --release` back at baseline.
-  - stop_rule: if any `map<K, V>` lowering test changes, stop and record
-    which classifier still carries the builtin identity.
 
 - [ ] TODO-5323: Make `MapValue` insert overwrite non-trivial values
   - owner: ai

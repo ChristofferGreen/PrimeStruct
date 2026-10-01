@@ -56183,3 +56183,55 @@ crashes) - see `docs/todo_finished.md`.
     survey 26 failed / 1899; after the change 1899/1900, and the only
     failure was the known `spinning_cube_argument_validation_51_55` Timeout
     flake (focused rerun passed, 19.4s). TODO-5314 is now `ready`.
+
+**Todo Completion (October 1, 2026)**
+- [x] TODO-5314: Drop bare `Map` from IR lowerer, IR printer and emitter
+  - owner: ai
+  - created_at: 2026-09-24
+  - finished_at: 2026-10-01
+  - phase: Follow-up cleanup after TODO-4751 (split from TODO-5310)
+  - parallel_track: map-backend-classifiers
+  - depends_on: (none - TODO-4751 closed 2026-09-29)
+  - scope: stop the backend-side classifiers from matching a bare `Map`:
+    the `normalized == raw || raw + "<"` arm of
+    `isExperimentalCollectionTypeName` (`IrLowererSetupTypeCollectionHelpers.cpp`)
+    for `Map` (its ~14 `(..., "map", "Map")` callers then only match the
+    retired rooted `experimental_map/Map` path and can be deleted), the
+    `isExperimentalCollectionTypeBase(base, "map", "Map")` arm of
+    `returnKindForTypeName` (`src/ir/IrPrinterHelpers.cpp`), and the
+    `normalized == "Map"` arms of `isKeyValueCompatibilityStorageBase`
+    (`src/emitter/EmitterHelpersTypes.cpp`) and
+    `isKeyValueCollectionTypeNameLocal`
+    (`src/emitter/EmitterBuiltinCallPathHelpers.cpp`).
+  - implementation_notes: part of the 2026-09-24 combined attempt (see
+    TODO-5313 in `docs/todo_finished.md`). The semantics/monomorph
+    classifier removal it depended on landed with TODO-4751 on
+    2026-09-29 (public `/std/collections/map/Map<K, V>` wrapper now
+    exists; semantics never produces a bare-`Map` builtin identity).
+    Not a prerequisite for the wrapper: with
+    only that semantics change, a user `Map<i32, i32>` with its own
+    `count`/`insert` already ran on vm/native/exe (exit 1), and the
+    2026-09-24 combined prototype (these edits included) ran one with
+    `count`/`insert`/`at` too (exit 111), so these edits are expected to
+    be behavior-neutral once nothing upstream produces bare `Map`. The
+    `scripts/check_map_*` audits pass with them, but avoid the literal
+    `Map__` text in new comments (it trips `map-backing-type-symbol`).
+    The rooted `experimental_map/Map` spellings are still exercised
+    directly by classifier unit tests
+    (`test_semantics_builtin_array_access_name_classifier.cpp`,
+    `test_stdlib_map_ownership_*`), so deleting those arms is a separate
+    decision from this leaf.
+  - acceptance:
+    - a user `Map<K, V>` struct with its own `count()`/`insert()` runs on
+      vm/native/exe through its own methods.
+    - no `map<K, V>` compile-run/IR test changes result.
+    - `./scripts/compile.sh --release` back at baseline.
+  - stop_rule: if any `map<K, V>` lowering test changes, stop and record
+    which classifier still carries the builtin identity.
+  - result: the bare `Map` arm of `isExperimentalCollectionTypeName`
+    (`map`/`Map` only), the `returnKindForTypeName` bare arm, and the
+    `normalized == "Map"` arms in the emitter are gone; the pinned
+    `isKeyValueSurfaceValue` bare-`Map` case now expects false. Rooted
+    `experimental_map/Map` spellings still match. Release gate: only the
+    known `spinning_cube_argument_validation_51_55` flake (passed on
+    focused rerun).

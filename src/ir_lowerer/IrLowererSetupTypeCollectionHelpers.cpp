@@ -593,7 +593,11 @@ bool isExperimentalCollectionTypeName(std::string_view typeName,
       collectionName, experimentalTypeName, false);
   const std::string rooted = experimentalCollectionTypePath(
       collectionName, experimentalTypeName);
-  return normalized == raw || normalized.rfind(raw + "<", 0) == 0 ||
+  // A bare `Map` is a user/public wrapper type, not backing storage.
+  const bool matchesBare = !(collectionName == "map" && raw == "Map") &&
+                           (normalized == raw ||
+                            normalized.rfind(raw + "<", 0) == 0);
+  return matchesBare ||
          normalized == bareRoot || normalized == rooted ||
          normalized.rfind(bareRoot + "<", 0) == 0 ||
          normalized.rfind(rooted + "<", 0) == 0 ||

@@ -437,7 +437,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
           base == legacySoaCollectionNameForIrText() || base == "Buffer" ||
           isExperimentalCollectionTypeBase(base, "vector", "Vector")) &&
          args.size() == 1) ||
-        ((base == "map" || isExperimentalCollectionTypeBase(base, "map", "Map")) &&
+        ((base == "map" ||
+          (base != "Map" &&
+           isExperimentalCollectionTypeBase(base, "map", "Map"))) &&
          args.size() == 2);
     if (isCollectionLike) {
       return ReturnKind::Array;
