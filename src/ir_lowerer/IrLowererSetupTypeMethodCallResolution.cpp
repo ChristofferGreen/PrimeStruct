@@ -787,15 +787,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         errorOut.clear();
         return nullptr;
       }
-      if (preferredResolvedPath == "/string/count" &&
-          !requestsExplicitVectorCountMethod &&
-          (explicitMethodPath == "count" || explicitMethodPath == "/string/count")) {
-        errorOut.clear();
-        return nullptr;
-      }
-      if (preferredResolvedPath == "/std/collections/soa/to_aos" &&
-          (explicitMethodPath == "to_aos" ||
-           explicitMethodPath == "/std/collections/soa/to_aos")) {
+      if (!requestsExplicitVectorCountMethod &&
+          (preferredResolvedPath == "/string/count" ||
+           preferredResolvedPath == "/std/collections/soa/to_aos") &&
+          isBuiltinClassifiedMethodCallTarget(preferredResolvedPath, callExpr)) {
         errorOut.clear();
         return nullptr;
       }
