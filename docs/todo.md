@@ -99,7 +99,6 @@ of sync with them.
 | TODO-4712 | Grow CTest shard size once cross-test-case pollution is fixed | deferred | test-runtime-shard-consolidation |
 | TODO-4732 | Cut compile-run test runtimes with semantic-product golden comparisons | deferred | (none) |
 | TODO-4737 | Add a lowered-module invariant for method-call targets | deferred | (none) |
-| TODO-5324 | Reject struct initializers of another struct type in semantics | ready | struct-initializer-typecheck |
 | TODO-5325 | Run the remaining pinned `Map<K, V>` wrapper conformance shapes | ready | map-wrapper-conformance |
 | TODO-5326 | Restore canonical `map<K, V>` wrapper-temporary compile-run pins | ready | canonical-map-wrapper-temporaries |
 | TODO-5320 | ast-semantic `.to_aos()` spelling vs resolved `/to_aos` shadow | deferred | hidden-test-failures-text-filters |
@@ -107,11 +106,10 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5324 (track: struct-initializer-typecheck, surface: semantics binding/assign/field initializer type checks in `src/semantics/`): reject a struct initialized from another struct type before lowering.
 - TODO-5325 (track: map-wrapper-conformance, surface: the nine `TODO-5325` helpers in `tests/unit/compile_run/map_conformance/*expectations.h` plus the monomorph wrapper-routing rewrite): run the remaining `Map<K, V>` wrapper shapes.
 - TODO-5326 (track: canonical-map-wrapper-temporaries, surface: `tests/unit/compile_run/vm/test_compile_run_vm_collections_wrapper_temporaries_*.cpp` canonical-map cases): restore the canonical `map<K, V>` wrapper-temporary pins.
 
-TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
+TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph bare-`Map` classifier removal and the TODO-4741 re-pins landed together), which unblocked TODO-5314 (closed 2026-10-01). Its follow-ups TODO-5323 (closed 2026-10-01)/5324 (closed 2026-10-01)/5325/5326 were filed the same day on distinct tracks with disjoint surfaces (stdlib `MapValue` overwrite, a general semantics initializer check, the pinned wrapper conformance helpers, and canonical-map vm test pins). The TODO-5310 split chain is complete (TODO-5312 landed 2026-09-25, TODO-5313's classifier removal was folded into TODO-4751, TODO-5314 closed 2026-10-01). TODO-5320 is `deferred` (dump-spelling fidelity only; behaviour is already correct). TODO-4710/4712/4732/4737 are `deferred` (none are `blocked` on a still-open TODO) - unstarted scoping/design work or confirmed low-value, not `Ready Now` material this round.
 
 ### Immediate Next 10
 
@@ -286,34 +284,6 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     wrong re-derivation would silently narrow or widen which method-call
     targets require a materialized definition, exactly the class of bug
     this task exists to catch.
-
-- [ ] TODO-5324: Reject struct binding/assign/field initializers of another struct type in semantics
-  - owner: ai
-  - status: ready
-  - created_at: 2026-09-29
-  - phase: Semantic validation hole (found while closing TODO-4751)
-  - parallel_track: struct-initializer-typecheck
-  - depends_on: (none)
-  - scope: semantics accepts a struct-typed binding, assignment or field
-    initialized from a call returning a different struct type. Repro:
-    root `[struct] A() { [i32] x{1i32} }`, `[struct] B() { [i32]
-    y{2i32} }`, `[return<B>] makeB() { return(B{}) }`, `main` with
-    `[A] a{makeB()}` and `return(a.x)` runs on vm and exits 2 (B's field
-    read as A's). With generic structs the VM lowerer catches some cases
-    late ("VM lowering error: struct binding initializer type mismatch",
-    "struct field type mismatch", "assign requires matching struct
-    value"), e.g. `[Map<string, i32>] out{mapNew<string, i32>()}` (a
-    `MapValue` into the public `Map` wrapper) passes semantics.
-    Parameters are already checked ("argument type mismatch for ...
-    parameter ...").
-  - acceptance:
-    - the repro and the `Map`/`MapValue` initializer, `assign(...)` and
-      struct-field variants fail in semantics with a type-mismatch
-      diagnostic on vm/native/exe.
-    - one positive and one negative compile-run or semantics case.
-    - `./scripts/compile.sh --release` at baseline.
-  - stop_rule: if more than ~10 existing tests depend on the implicit
-    struct reinterpretation, stop and list them before changing the rule.
 
 - [ ] TODO-5325: Run the remaining pinned `Map<K, V>` wrapper conformance shapes
   - owner: ai

@@ -56276,3 +56276,49 @@ crashes) - see `docs/todo_finished.md`.
     It now copies every slot like the Reference/Value assign paths. The
     repro exits 9 on vm/native/exe and both conformance pins moved to 18
     and 33. Release gate 1904/1904.
+
+- [x] TODO-5324: Reject struct binding/assign/field initializers of another struct type in semantics
+  - owner: ai
+  - created_at: 2026-09-29
+  - finished_at: 2026-10-01
+  - phase: Semantic validation hole (found while closing TODO-4751)
+  - parallel_track: struct-initializer-typecheck
+  - depends_on: (none)
+  - scope: semantics accepts a struct-typed binding, assignment or field
+    initialized from a call returning a different struct type. Repro:
+    root `[struct] A() { [i32] x{1i32} }`, `[struct] B() { [i32]
+    y{2i32} }`, `[return<B>] makeB() { return(B{}) }`, `main` with
+    `[A] a{makeB()}` and `return(a.x)` runs on vm and exits 2 (B's field
+    read as A's). With generic structs the VM lowerer catches some cases
+    late ("VM lowering error: struct binding initializer type mismatch",
+    "struct field type mismatch", "assign requires matching struct
+    value"), e.g. `[Map<string, i32>] out{mapNew<string, i32>()}` (a
+    `MapValue` into the public `Map` wrapper) passes semantics.
+    Parameters are already checked ("argument type mismatch for ...
+    parameter ...").
+  - acceptance:
+    - the repro and the `Map`/`MapValue` initializer, `assign(...)` and
+      struct-field variants fail in semantics with a type-mismatch
+      diagnostic on vm/native/exe.
+    - one positive and one negative compile-run or semantics case.
+    - `./scripts/compile.sh --release` at baseline.
+  - stop_rule: if more than ~10 existing tests depend on the implicit
+    struct reinterpretation, stop and list them before changing the rule.
+  - result: struct bindings (`validateBindingStatement`), `assign(...)`
+    to a struct-typed name (`SemanticsValidatorExprMutationBorrows.cpp`)
+    and non-generic struct field initializers
+    (`SemanticsValidatorPassesStructLayouts.cpp`) now compare the
+    resolved struct path of the initializer with the declared one, with
+    generic-instance suffixes (`__t...`) stripped, and report
+    `binding initializer type mismatch`, `assign value type mismatch` or
+    `struct field initializer type mismatch`. A `MapValue` initializer
+    into the public `Map` wrapper is rejected; the `map<K, V>(...)`
+    literal spelling is deliberately still accepted, as is builtin
+    `vector<K>()` into a `Vector<K>` field. The first, unnarrowed rule
+    regressed 133 shards (builtin `/vector` into `Vector` fields), so the
+    check only fires when the actual type is a known struct. Only one
+    existing test depended on the reinterpretation (the `map<K, V>`
+    literal into `Map`). Five tests added to `bindings.core`
+    (`TOTAL_CASES` 56 -> 61). Release gate 1905/1905 after giving
+    `spinning_cube_argument_validation` case 52 a 120s timeout (15s alone,
+    timed out at 30s when scheduled first under full-suite load).

@@ -678,4 +678,140 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct binding rejects initializer of another struct type") {
+  const std::string source = R"(
+[struct]
+A() {
+  [i32] x{1i32}
+}
+
+[struct]
+B() {
+  [i32] y{2i32}
+}
+
+[return<B>]
+makeB() {
+  return(B{})
+}
+
+[return<int>]
+main() {
+  [A] a{makeB()}
+  return(a.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+}
+
+TEST_CASE("struct assign rejects value of another struct type") {
+  const std::string source = R"(
+[struct]
+A() {
+  [i32] x{1i32}
+}
+
+[struct]
+B() {
+  [i32] y{2i32}
+}
+
+[return<B>]
+makeB() {
+  return(B{})
+}
+
+[return<int>]
+main() {
+  [A mut] a{A{}}
+  assign(a, makeB())
+  return(a.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign value type mismatch") != std::string::npos);
+}
+
+TEST_CASE("struct field rejects initializer of another struct type") {
+  const std::string source = R"(
+[struct]
+A() {
+  [i32] x{1i32}
+}
+
+[struct]
+B() {
+  [i32] y{2i32}
+}
+
+[return<B>]
+makeB() {
+  return(B{})
+}
+
+[struct]
+C() {
+  [A] a{makeB()}
+}
+
+[return<int>]
+main() {
+  [C] c{C{}}
+  return(c.a.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct field initializer type mismatch") != std::string::npos);
+}
+
+TEST_CASE("public Map binding rejects MapValue initializer") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[return<int>]
+main() {
+  [Map<string, i32>] out{mapNew<string, i32>()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+}
+
+TEST_CASE("struct binding accepts initializer of the same struct type") {
+  const std::string source = R"(
+[struct]
+A() {
+  [i32] x{1i32}
+}
+
+[struct]
+B() {
+  [i32] y{2i32}
+}
+
+[return<B>]
+makeB() {
+  return(B{})
+}
+
+[return<int>]
+main() {
+  [A mut] a{A{}}
+  assign(a, A{})
+  [A] b{A{}}
+  return(plus(a.x, b.x))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

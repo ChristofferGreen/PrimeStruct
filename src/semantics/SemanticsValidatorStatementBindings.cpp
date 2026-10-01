@@ -926,6 +926,26 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           return failBindingDiagnostic("binding initializer type mismatch");
         }
       }
+      const std::string expectedStruct =
+          resolveStructTypePath(expectedType, namespacePrefix, structNames_);
+      // The `map<K, V>(...)` literal spelling (builtin or its rewritten stdlib
+      // constructor) intentionally initializes the public `Map` wrapper.
+      std::string builtinCollectionName;
+      std::string initializerBase = initializer.name.substr(
+          initializer.name.find_last_of('/') == std::string::npos
+              ? 0
+              : initializer.name.find_last_of('/') + 1);
+      initializerBase = initializerBase.substr(0, initializerBase.find("__"));
+      if (!expectedStruct.empty() && initializerBase != "map" &&
+          !getBuiltinCollectionName(initializer, builtinCollectionName)) {
+        const std::string actualStruct =
+            inferStructReturnPath(initializer, params, locals);
+        if (structNames_.count(actualStruct) > 0 &&
+            actualStruct.substr(0, actualStruct.find("__t")) !=
+                expectedStruct.substr(0, expectedStruct.find("__t"))) {
+          return failBindingDiagnostic("binding initializer type mismatch");
+        }
+      }
     }
   }
 

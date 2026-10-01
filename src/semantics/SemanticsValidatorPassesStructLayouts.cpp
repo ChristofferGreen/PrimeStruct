@@ -252,6 +252,26 @@ bool SemanticsValidator::validateStructLayouts() {
       if (!resolveStructFieldBinding(def, stmt, binding)) {
         return failPassesStructLayoutsDiagnostic(error_);
       }
+      if (def.templateArgs.empty() && stmt.args.size() == 1 &&
+          binding.typeTemplateArg.empty()) {
+        const std::string expectedStruct = semantics::resolveStructTypePath(
+            normalizeBindingTypeName(binding.typeName), def.namespacePrefix,
+            structNames_);
+        if (!expectedStruct.empty()) {
+          const std::vector<ParameterInfo> noParams;
+          const std::unordered_map<std::string, BindingInfo> noLocals;
+          const std::string actualStruct =
+              inferStructReturnPath(stmt.args.front(), noParams, noLocals);
+          if (structNames_.count(actualStruct) > 0 &&
+            actualStruct.substr(0, actualStruct.find("__t")) !=
+                expectedStruct.substr(0, expectedStruct.find("__t"))) {
+            return failPassesStructLayoutsDiagnostic(
+                "struct field initializer type mismatch: " + def.fullPath +
+                "/" + stmt.name + " expected " + expectedStruct + ", got " +
+                actualStruct);
+          }
+        }
+      }
       LayoutInfo fieldLayout;
       if (!typeLayoutForBinding(binding, def.namespacePrefix, fieldLayout)) {
         return false;

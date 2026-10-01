@@ -93,9 +93,10 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   RANGE_LAST 50
                                   CASES_PER_SHARD 5)
 # Cases 51-55 together took 20-28s against the 30s ceiling and timed out under
-# full-suite load, so run them one per shard.
+# full-suite load, so run them one per shard. Case 52 alone takes ~15s and is
+# scheduled first, when machine load peaks, so it doubles; allow 120s.
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
-                                  TIMEOUT 30
+                                  TIMEOUT 120
                                   SHARD_PREFIX "spinning_cube_argument_validation"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 51

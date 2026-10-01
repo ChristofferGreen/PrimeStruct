@@ -833,6 +833,29 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       if (hasActiveBorrowForBinding(target.name)) {
         return failBorrowedBindingDiagnostic(target.name, target.name);
       }
+      const BindingInfo *targetBinding = findParamBinding(params, target.name);
+      if (targetBinding == nullptr) {
+        auto targetIt = locals.find(target.name);
+        if (targetIt != locals.end()) {
+          targetBinding = &targetIt->second;
+        }
+      }
+      if (targetBinding != nullptr && targetBinding->typeTemplateArg.empty()) {
+        const std::string expectedStruct = resolveStructTypePath(
+            normalizeBindingTypeName(targetBinding->typeName),
+            expr.namespacePrefix, structNames_);
+        if (!expectedStruct.empty()) {
+          const std::string actualStruct =
+              inferStructReturnPath(expr.args[1], params, locals);
+          if (structNames_.count(actualStruct) > 0 &&
+            actualStruct.substr(0, actualStruct.find("__t")) !=
+                expectedStruct.substr(0, expectedStruct.find("__t"))) {
+            return failMutationBorrowDiagnostic(
+                "assign value type mismatch: expected " + expectedStruct +
+                ", got " + actualStruct);
+          }
+        }
+      }
     } else if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
       if (!validateMutableFieldAccessTarget(target)) {
         return false;
