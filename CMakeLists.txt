@@ -263,6 +263,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsWorkerSymbolMerge.cpp
   src/semantics/SemanticsValidator.cpp
   src/semantics/SemanticsValidatorSnapshots.cpp
+  src/semantics/SemanticsValidatorSnapshotsFacts.cpp
+  src/semantics/SemanticsValidatorSnapshotsPublicationFacts.cpp
   src/semantics/SemanticsValidatorSnapshotLocals.cpp
   src/semantics/SemanticsValidatorValidationContext.cpp
   src/semantics/SemanticsValidatorDiagnostics.cpp
@@ -293,6 +295,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp
   src/semantics/SemanticsValidatorExprCollectionAccessSetup.cpp
   src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp
+  src/semantics/SemanticsValidatorExprMethodTargetResolutionGenericFallback.cpp
+  src/semantics/SemanticsValidatorExprMethodTargetResolutionResolve.cpp
   src/semantics/SemanticsValidatorMethodTargetResolutionDetail.cpp
   src/semantics/SemanticsValidatorMethodTargetVectorResolvers.cpp
   src/semantics/SemanticsValidatorMethodTargetStringResolver.cpp
