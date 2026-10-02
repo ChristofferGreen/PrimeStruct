@@ -189,7 +189,7 @@ std::string renderDoc() {
          "program; the table records what the compiler does with it today: the outcome, and the\n"
          "collection call targets the semantic product publishes for `/main` (specialization suffixes\n"
          "stripped). Rows marked with a TODO id are known defects, pinned so a fix is a deliberate\n"
-         "change. `Reference<...>` receivers and the borrowed `_ref` helpers are not covered yet.\n\n"
+         "change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and the `_ref` helpers.\n\n"
          "| family | helper | form | outcome | published targets | note |\n"
          "| --- | --- | --- | --- | --- | --- |\n";
   const auto &rows = collectionRows();
@@ -257,7 +257,7 @@ TEST_CASE("collection parity regenerates pins and doc when asked") {
          "program; the table records what the compiler does with it today: the outcome, and the\n"
          "collection call targets the semantic product publishes for `/main` (specialization suffixes\n"
          "stripped). Rows marked with a TODO id are known defects, pinned so a fix is a deliberate\n"
-         "change. `Reference<...>` receivers and the borrowed `_ref` helpers are not covered yet.\n\n"
+         "change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and the `_ref` helpers.\n\n"
          "| family | helper | form | outcome | published targets | note |\n"
          "| --- | --- | --- | --- | --- | --- |\n";
   for (size_t i = 0; i < rows.size(); ++i) {

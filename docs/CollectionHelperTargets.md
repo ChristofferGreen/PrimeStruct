@@ -5,7 +5,7 @@ hand; see that file for the regeneration command). Each row is one helper call s
 program; the table records what the compiler does with it today: the outcome, and the
 collection call targets the semantic product publishes for `/main` (specialization suffixes
 stripped). Rows marked with a TODO id are known defects, pinned so a fix is a deliberate
-change. `Reference<...>` receivers and the borrowed `_ref` helpers are not covered yet.
+change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and the `_ref` helpers.
 
 | family | helper | form | outcome | published targets | note |
 | --- | --- | --- | --- | --- | --- |
@@ -62,3 +62,24 @@ change. `Reference<...>` receivers and the borrowed `_ref` helpers are not cover
 | soa | `to_aos` | method(SoaVector) | ok (1) | `/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/soaVectorSingle`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
 | soa | `to_aos` | bare(SoaVector) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
 | soa | `to_aos` | method(soa<T>) | ok (1) | `/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/soaVectorSingle`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| vector | `count` | method(Reference) | semantic error |  | validateExprMethodCallTarget failed name=count **TODO-5375** |
+| vector | `count` | bare(Reference) | semantic error |  | unknown method target for count **TODO-5375** |
+| vector | `at` | method(Reference) | semantic error |  | validateExprMethodCallTarget failed name=at **TODO-5375** |
+| vector | `at` | bare(Reference) | semantic error |  | at requires array, vector, map, or string target **TODO-5375** |
+| vector | `push` | method(Reference) | semantic error |  | unknown method target for push **TODO-5375** |
+| vector | `push` | bare(Reference) | semantic error |  | argument type mismatch for /std/collections/vector/push **TODO-5375** |
+| map | `count` | method(Reference) | semantic error |  | unknown call target: /std/collections/map/count_ref **TODO-5376** |
+| map | `count` | bare(Reference) | semantic error |  | unknown call target: /std/collections/map/count **TODO-5376** |
+| map | `count_ref` | canonical(Reference) | semantic error |  | unknown call target: /std/collections/map/count_ref **TODO-5376** |
+| map | `contains` | method(Reference) | semantic error |  | unknown call target: /std/collections/map/contains_ref **TODO-5376** |
+| map | `at` | method(Reference) | ok (200) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at_ref`<br>`/std/collections/map/at_ref` |  |
+| map | `at` | bare(Reference) | ok (200) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at_ref`<br>`/std/collections/map/at_ref` |  |
+| map | `at_ref` | canonical(Reference) | ok (200) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at_ref`<br>`/std/collections/map/at_ref` |  |
+| map | `insert` | method(Reference) | ok (300) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/insert_ref`<br>`/std/collections/map/at`<br>`/std/collections/map/at` |  |
+| soa | `count` | method(Reference) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count_ref`<br>`/std/collections/soa/count_ref` |  |
+| soa | `count` | bare(Reference) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count_ref`<br>`/std/collections/soa/count_ref` |  |
+| soa | `count_ref` | canonical(Reference) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count_ref`<br>`/std/collections/soa/count_ref` |  |
+| soa | `get` | method(Reference) | ok (7) | `/std/collections/soa/get_ref`<br>`/std/collections/soa/get_ref`<br>`/std/collections/soa/soaVectorSingle` |  |
+| soa | `get` | bare(Reference) | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/get_ref`<br>`/std/collections/soa/get_ref` |  |
+| soa | `ref` | method(Reference) | ok (7) | `/std/collections/soa/ref_ref`<br>`/std/collections/soa/ref_ref`<br>`/std/collections/soa/soaVectorSingle` |  |
+| soa | `push` | method(Reference) | semantic error |  | argument count mismatch for builtin to_aos_ref **TODO-5377** |

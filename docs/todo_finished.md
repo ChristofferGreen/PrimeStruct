@@ -57405,3 +57405,23 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
   - finished_at: 2026-10-02
   - result: Fixed (defect, not intended). The template-monomorph stage carried a bypass that rewrote the public `/std/collections/soa/count|get|ref` helpers to the internal `soaVectorCount|Get|Ref` workers whenever the receiver was a public `soa<T>`. It predated the inference-local soa<T>/SoaVector<T> equivalence in implicit template inference, which now lets the public wrappers accept `soa<T>` arguments directly, so the bypass only made spelling-dependent published targets. It is removed; `values.count()` / `values.get(i)` on a `soa<T>` receiver now publish `/std/collections/soa/count` / `get` like the bare and `SoaVector<T>` spellings, and both rows lost their known-issue marker. The sibling `push`/`reserve` bypass for `soa<T>` receivers is unchanged here (no parity row covers it).
+
+- [x] TODO-5373: Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: docs/CollectionHelperTargets.md covers by-value receivers only. Add rows for
+    `Reference<vector<T>>`, `Reference<map<K,V>>`,
+    `Reference<soa<T>>`/`SoaVector<T>` receivers and the `*_ref` helpers
+    (`count_ref`, `get_ref`, `ref_ref`, `at_ref`, ...) with their correct
+    borrow syntax (take it from existing compile-run tests; a first probe
+    with `location(v)` was rejected), so TODO-5350/5351 cannot regress them.
+  - acceptance:
+    - the matrix includes at least count/at/get/ref/push per family with
+      borrowed receivers; new disagreements are filed as defects.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: do not change resolution behavior; only add rows and file defects.
+  - finished_at: 2026-10-02
+  - result: Done. 21 `(Reference)` rows added (vector 6, map 8, soa 7) using a `[Reference<...> mut] r{location(x)}` local; docs/CollectionHelperTargets.md regenerated. Matrix findings: soa borrowed count/get/ref (method, bare, canonical `_ref`) publish the `_ref` helpers consistently; map borrowed `at`/`at_ref`/`insert` work; three disagreement clusters filed as TODO-5375 (vector), TODO-5376 (map count/contains), TODO-5377 (soa push). The `Reference<...>` receiver spelling matters (the stdlib tests also use `Reference</std/collections/map<K, V>>`); the rows pin the `Reference<map<K, V>>` spelling only.
