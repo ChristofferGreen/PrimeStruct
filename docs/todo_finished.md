@@ -1893,6 +1893,7 @@ are left unarchived.
 | TODO-5376 | Borrowed `Reference<map<K,V>>` count/contains fail while at/insert work | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5377 | `r.push(x)` on `Reference<SoaVector<T>>` fails with `argument count mismatch for builtin to_aos_ref` | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5378 | Cut per-case primec process cost in compile-run shards and overlap the serial benchmarks | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5379 | Close the remaining gate-time gap after wildcard pruning (478.7 s vs 434 s target) | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5380 | Borrowed `Reference<vector<T>>` function parameters fail VM/native lowering | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5381 | `count(dereference(r))` on a borrowed vector silently returns 0 | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 

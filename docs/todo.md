@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5379 | Close the remaining gate-time gap after wildcard pruning | ready | test-infrastructure |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
@@ -121,12 +120,12 @@ of sync with them.
 - TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 - TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
-- TODO-5379 (track: test-infrastructure): Close the remaining gate-time gap after wildcard pruning.
+- TODO-5382 (track: test-infrastructure): Cut semantic-product publication cost (inferCallSnapshotData recursion).
 - TODO-5359 (track: compiler-state): Move compiler caches into a per-compilation context.
 
 ### Immediate Next 10
 
-1. TODO-5379 - Close the remaining gate-time gap after wildcard pruning.
+1. TODO-5382 - Cut semantic-product publication cost (inferCallSnapshotData recursion).
 2. TODO-5359 - Move compiler caches into a per-compilation context.
 3. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
 4. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
@@ -138,7 +137,7 @@ of sync with them.
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Collection resolution: typed family enum TODO-5374 (deferred)
 - Semantics structure: TODO-5352, TODO-5353
-- Test infrastructure: TODO-5379, TODO-5356 (deferred)
+- Test infrastructure: TODO-5382, TODO-5356 (deferred)
 - Compiler state: TODO-5359 -> 5360
 - IR/VM structure: TODO-5361 -> 5362
 - VM strings: TODO-5363 -> 5364 -> 5365
@@ -410,23 +409,25 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: no semantic edits to spec text; if a section's classification is unclear,
     leave it in the index file.
 
-- [ ] TODO-5379: Close the remaining gate-time gap after wildcard pruning (478.7 s vs 434 s target)
+- [ ] TODO-5382: Cut semantic-product publication cost (inferCallSnapshotData recursion)
   - owner: ai
   - status: ready
   - created_at: 2026-10-02
-  - phase: Test infrastructure
+  - phase: Compiler performance
   - parallel_track: test-infrastructure
-  - scope: after TODO-5378 the gate is 478.7 s; ~92 s is the serial semantic-memory
-    benchmarks. Profile the remaining top shards (`imports_operations_and_collections`,
-    `vm_collections_*`, `smoke_core_paths_*`) for per-invocation cost that is not
-    stdlib import (text filter `applyPerEnvelope`, VM startup), and decide whether
-    the serial benchmarks can be split or scheduled so they overlap without
-    invalidating RSS/wall measurements.
+  - scope: callgrind of `primec --emit=vm` on a vector-only program (0.77 G instr) shows 63% in
+    `SemanticsValidator::inferCallSnapshotData` / `inferBindingTypeFromInitializer` /
+    `inferCallInitializerBinding` (semantic-product publication) and a flat tail of string
+    building (`appendSurfaceBasePaths`, `findStdlibSurfaceMetadataByCanonicalPath`,
+    `resolveCalleePath`). Memoize the recursive call-snapshot inference per expression and
+    cache the pure stdlib-surface path tables, keeping output byte-identical.
   - acceptance:
-    - gate `Total Test time` (relinked-primec dev loop, 4-core box) <= 434 s, before/after
-      recorded in docs/TestRuntimeOptimization.md.
-  - stop_rule: do not change `scripts/compile.sh`; if no further reduction is possible
-    without changing what cases assert, record the measured floor and stop.
+    - instruction count of that program (callgrind) drops by at least 25%, recorded in
+      docs/TestRuntimeOptimization.md; semantic product dumps unchanged for the parity
+      matrix and the embed order-independence test.
+    - gate `Total Test time` (relinked-primec dev loop) <= 434 s, before/after recorded.
+  - stop_rule: no behavior or published-fact changes; if memoization cannot be made
+    exact for a call shape, leave that shape uncached and record it.
 
 - [ ] TODO-5374: Typed collection family/helper enum replacing string-tagged family checks
   - owner: ai

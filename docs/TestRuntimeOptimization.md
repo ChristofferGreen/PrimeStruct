@@ -1934,3 +1934,31 @@ The 20% target (<= 434 s) was not reached. Remaining cost is the
 `RUN_SERIAL` semantic-memory benchmarks (~92 s, unchanged: they measure wall time
 and RSS and must not overlap) and per-case VM/native execution; follow-up
 TODO-5379 covers what is left.
+
+## TODO-5379: remaining gate gap (2026-10-02)
+
+Measured on the 4-core box after wildcard pruning: gate 478.7 s (TODO-5378), 473.6 s
+after the TODO-5358 test, 488 s / 543 s on the next two runs (the 543 s run followed a
+stdlib change that invalidated the emitted-C++ fixture cache, so one C++ compile
+landed in the gate; `reflection_codegen_23_23` took 90 s there and 38 s warm).
+
+Changes that landed:
+
+- `PrimeStruct_semantic_memory_definition_worker_parity` runs `--runs 1` instead of 3
+  (the check compares deterministic output between worker counts; the custom target
+  keeps 3 runs for medians): about -48 s of serial time.
+
+Tried and rejected:
+
+- Deriving the collection-parity `ast-semantic` spelling from the first pipeline run
+  instead of a second run: the first run's program lacks the rewritten explicit helper
+  spellings (assertions dropped 439 -> 292), so the second run is needed.
+
+Floor analysis (callgrind of `primec --emit=vm` for a vector-only program, 0.77 G
+instructions, ~0.10 s): 91% semantics validate; 63% `inferCallSnapshotData` /
+`inferBindingTypeFromInitializer`, i.e. semantic-product publication re-infers call
+types recursively; the rest is a flat tail of string building/hashing
+(`appendSurfaceBasePaths`, `findStdlibSurfaceMetadataByCanonicalPath`,
+`resolveCalleePath` ~9% inclusive). Gate wall time is CPU-bound (about 3,400 summed
+test-seconds on 4 cores), so the remaining reduction has to come from the compiler:
+see TODO-5382.

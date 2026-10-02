@@ -2275,6 +2275,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     VERBATIM
   )
 
+  # The parity check compares deterministic output between worker counts, so a
+  # single run is enough (TODO-5379); the custom target above keeps 3 runs for
+  # benchmark-quality medians.
   add_test(
     NAME PrimeStruct_semantic_memory_definition_worker_parity
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
@@ -2283,7 +2286,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --run-label semantic_memory_definition_worker_parity
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
-            --runs 3
+            --runs 1
             --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
             --benchmark-definition-validation-workers both
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_history
