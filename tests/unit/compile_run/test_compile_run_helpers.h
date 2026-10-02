@@ -8,6 +8,7 @@
 
 #include <cstdlib>
 #include <chrono>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -86,6 +87,27 @@ inline std::string readFile(const std::string &path) {
   std::stringstream buffer;
   buffer << file.rdbuf();
   return buffer.str();
+}
+
+// docs/PrimeStruct.md is the index of docs/spec/*.md (TODO-5368); doc-lock
+// tests that search the language spec read the index plus every part.
+inline std::string readPrimeStructSpec(const std::string &indexPath) {
+  std::string text = readFile(indexPath);
+  const std::filesystem::path specDir = std::filesystem::path(indexPath).parent_path() / "spec";
+  std::vector<std::filesystem::path> parts;
+  if (std::filesystem::is_directory(specDir)) {
+    for (const auto &entry : std::filesystem::directory_iterator(specDir)) {
+      if (entry.path().extension() == ".md") {
+        parts.push_back(entry.path());
+      }
+    }
+  }
+  std::sort(parts.begin(), parts.end());
+  for (const auto &part : parts) {
+    text += "\n";
+    text += readFile(part.string());
+  }
+  return text;
 }
 
 inline std::vector<unsigned char> readBinaryFile(const std::string &path) {

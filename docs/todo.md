@@ -102,7 +102,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5368 | Split docs/PrimeStruct.md into stable spec sections | deferred | docs-hygiene |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
@@ -120,7 +119,6 @@ of sync with them.
 - Semantics structure: TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
-- Docs hygiene: TODO-5368 (deferred)
 
 ### Execution Queue
 
@@ -187,27 +185,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - files and lines removed, suite runtime before/after in the result note.
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
-
-- [ ] TODO-5368: Split docs/PrimeStruct.md into stable spec sections
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-01
-  - phase: Documentation
-  - parallel_track: docs-hygiene
-  - scope: `docs/PrimeStruct.md` (5.9k lines) mixes the normative language spec with
-    roadmap, rollout notes, and implementation status. Needs scoping:
-    classify each section (normative / implementation note / history), then
-    split into `docs/spec/*.md` with stable anchors, leaving PrimeStruct.md
-    as the index. Keep `AGENTS.md` references and the ownership matrix
-    location intact.
-  - acceptance:
-    - classification table committed first.
-    - spec files split with a link checker in ctest (no broken intra-doc links
-      or anchors).
-    - AGENTS.md and todo.md references updated; normative text unchanged
-      (diff-checked).
-  - stop_rule: no semantic edits to spec text; if a section's classification is unclear,
-    leave it in the index file.
 
 - [ ] TODO-5374: Typed collection family/helper enum replacing string-tagged family checks
   - owner: ai

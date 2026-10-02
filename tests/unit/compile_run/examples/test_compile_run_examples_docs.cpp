@@ -138,7 +138,7 @@ TEST_CASE("generic design examples stay documented and executable") {
   REQUIRE(std::filesystem::exists(primeStructPath));
 
   const std::string codeExamples = readFile(codeExamplesPath.string());
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::vector<std::string> requiredCodeExampleSnippets = {
       "## Generic Coding Style",
       "Use plain inference for pass-through helpers",
@@ -199,7 +199,7 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(codeExamplesPath));
 
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string codeExamplesDoc = readFile(codeExamplesPath.string());
 

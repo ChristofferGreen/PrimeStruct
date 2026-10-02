@@ -95,7 +95,7 @@ engine.bind("log_value", [](int32_t v) { /* ... */ });   // applies to every com
 ```
 
 Scripts declare the host functions they call with `[host]` definitions (see
-"Host functions (embedding)" in `docs/PrimeStruct.md`):
+"Host functions (embedding)" in `docs/spec/host-and-core-library.md`):
 
 ```prime
 [host return<int>]

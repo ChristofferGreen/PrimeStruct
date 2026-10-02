@@ -1893,6 +1893,7 @@ are left unarchived.
 | TODO-5365 | Embed API: string results and indexable string arguments | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5366 | Archive docs/todo_finished.md and keep a greppable index | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5367 | Trim docs/failing_tests.md to current failures only | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5368 | Split docs/PrimeStruct.md into stable spec sections | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5370 | map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5371 | array `.at(i)` method resolves to the vector helper and fails argument type checking | [2026-10.md](todo_archive/2026-10.md) | - |

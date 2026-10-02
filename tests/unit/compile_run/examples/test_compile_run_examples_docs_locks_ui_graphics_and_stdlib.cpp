@@ -16,7 +16,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(imageStdlibPath));
 
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string imageStdlib = readFile(imageStdlibPath.string());
 
   CHECK(primeStructDoc.find("the shared image file-I/O API currently lives under `/std/image/*`") !=
@@ -320,7 +320,7 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   REQUIRE(std::filesystem::exists(fileStdlibPath));
   REQUIRE(std::filesystem::exists(fileErrorsPath));
 
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string prelude = readFile(preludePath.string());
   const std::string resultCalls = readFile(resultCallsPath.string());
   const std::string fileAccessCalls = readFile(fileAccessCallsPath.string());
@@ -442,7 +442,7 @@ TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") 
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(maybeStdlibPath));
 
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
 
   CHECK(primeStructDoc.find("`isEmpty()` / `isSome()`") != std::string::npos);

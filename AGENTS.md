@@ -26,7 +26,9 @@ build and layout solidify.
 - **Constants:** PascalCase (`DefaultIncludePath`, `MaxRecursionDepth`). Avoid `k`-prefix.
 
 ## Language/design docs
-- Primary design doc: `docs/PrimeStruct.md`.
+- Primary design doc: `docs/PrimeStruct.md` (the index of the split specification in `docs/spec/*.md`; each part is
+  classified normative / design direction / implementation note / roadmap, and `scripts/check_spec_docs.py` keeps the
+  index and links consistent).
 - PrimeStruct code-quality and example-style authority:
   `docs/CodeExamples.md`. If this AGENTS summary and that guide disagree
   about well-written user-facing PrimeStruct code, follow
@@ -63,7 +65,7 @@ build and layout solidify.
 - When adding or editing examples in docs, keep them minimal but runnable and
   re-check them with the current compiler before treating them as style
   guidance.
-- When ownership classification changes for a public type/surface, update the canonical `core` / `hybrid` / `stdlib-owned` matrix in `docs/PrimeStruct.md` and keep the summary note in `docs/todo.md` aligned in the same change.
+- When ownership classification changes for a public type/surface, update the canonical `core` / `hybrid` / `stdlib-owned` matrix in `docs/spec/type-system.md` and keep the summary note in `docs/todo.md` aligned in the same change.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
 - When specs change, add a matching TODO entry only if implementation, validation, or follow-up work remains open; do not add a TODO for spec changes that are already fully completed in the same change. Use an explicit docs-only/no TODO note when that exception needs to be called out.

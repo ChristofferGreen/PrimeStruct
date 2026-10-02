@@ -100,7 +100,7 @@ TEST_CASE("vector dynamic-storage docs lock completed first slice") {
   REQUIRE(std::filesystem::exists(vmVectorLimitsPath));
   REQUIRE(std::filesystem::exists(nativeVectorLimitsPath));
 
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());
@@ -166,7 +166,7 @@ TEST_CASE("generic contiguous buffer substrate docs and coverage stay source loc
   REQUIRE(std::filesystem::exists(checkedPointerHelpersPath));
   REQUIRE(std::filesystem::exists(nativeCompatTestPath));
 
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string checkedPointerHelpers = readFile(checkedPointerHelpersPath.string());
   const std::string vmCompatTest = readRepoShardsConcat(
       resolveRepoPath(std::filesystem::path("tests") / "unit" / "compile_run" / "vm"),
@@ -257,7 +257,7 @@ TEST_CASE("soa public collection docs stay source locked") {
   REQUIRE(std::filesystem::exists(nativeCompatTestPath));
 
   const std::string codeExamples = readFile(codeExamplesPath.string());
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());
@@ -472,7 +472,7 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
   REQUIRE(std::filesystem::exists(soaStoragePath));
   REQUIRE(std::filesystem::exists(reflectionRuntimePath));
 
-  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());

@@ -2857,6 +2857,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_source_file_sizes_self_test PROPERTIES TIMEOUT 60)
 
+  # TODO-5368: docs/PrimeStruct.md is an index of docs/spec/*.md parts.
+  add_test(
+    NAME PrimeStruct_spec_docs
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_spec_docs.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_spec_docs PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_spec_docs_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_spec_docs.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_spec_docs_self_test PROPERTIES TIMEOUT 60)
+
   # TODO-5354: guard CTest registration of the doctest binaries and keep the
   # generated test inventory current.
   add_test(
