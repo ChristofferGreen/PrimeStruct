@@ -48,12 +48,12 @@ change. `Reference<...>` receivers and the borrowed `_ref` helpers are not cover
 | soa | `count` | method(SoaVector) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count`<br>`/std/collections/soa/count` |  |
 | soa | `count` | bare(SoaVector) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count`<br>`/std/collections/soa/count` |  |
 | soa | `count` | canonical(SoaVector) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count`<br>`/std/collections/soa/count` |  |
-| soa | `count` | method(soa<T>) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/soaVectorCount`<br>`/std/collections/soa/soaVectorCount` | **TODO-5372** |
+| soa | `count` | method(soa<T>) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count`<br>`/std/collections/soa/count` |  |
 | soa | `count` | bare(soa<T>) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count`<br>`/std/collections/soa/count` |  |
 | soa | `get` | method(SoaVector) | ok (7) | `/std/collections/soa/get`<br>`/std/collections/soa/get`<br>`/std/collections/soa/soaVectorSingle` |  |
 | soa | `get` | bare(SoaVector) | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/get`<br>`/std/collections/soa/get` |  |
 | soa | `get` | canonical(SoaVector) | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/get`<br>`/std/collections/soa/get` |  |
-| soa | `get` | method(soa<T>) | ok (7) | `/std/collections/soa/soaVectorGet`<br>`/std/collections/soa/soaVectorGet`<br>`/std/collections/soa/soaVectorSingle` | **TODO-5372** |
+| soa | `get` | method(soa<T>) | ok (7) | `/std/collections/soa/get`<br>`/std/collections/soa/get`<br>`/std/collections/soa/soaVectorSingle` |  |
 | soa | `ref` | method(SoaVector) | ok (7) | `/std/collections/soa/ref`<br>`/std/collections/soa/ref`<br>`/std/collections/soa/soaVectorSingle` |  |
 | soa | `ref` | bare(SoaVector) | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/ref`<br>`/std/collections/soa/ref` |  |
 | soa | `push` | method(SoaVector) | ok (2) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/push`<br>`/std/collections/soa/count`<br>`/std/collections/soa/count` |  |

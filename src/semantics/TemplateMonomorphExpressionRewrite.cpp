@@ -3174,37 +3174,6 @@ bool rewriteExpr(Expr &expr,
         expr.namespacePrefix.clear();
       }
     }
-    auto publicSoaValueHelperBasePath = [](std::string path) {
-      if (const size_t specializationSuffix = path.find("__");
-          specializationSuffix != std::string::npos) {
-        path.erase(specializationSuffix);
-      }
-      if (path == publicSoaHelperTargetPath("count") ||
-          path == publicSoaHelperTargetPath("get") ||
-          path == publicSoaHelperTargetPath("ref")) {
-        return path;
-      }
-      return std::string{};
-    };
-    if (const std::string publicSoaValuePath =
-            publicSoaValueHelperBasePath(resolvedPath);
-        !publicSoaValuePath.empty() &&
-        resolvedReceiverFamily == "soa") {
-      const std::string helperName = publicSoaValuePath.substr(
-          templateMonomorphPublicSoaHelperPrefix().size());
-      const std::string implementationPath =
-          publicSoaHelperTargetPath(
-              helperName == "count" ? std::string("soa") + "VectorCount"
-              : helperName == "get" ? std::string("soa") + "VectorGet"
-                                    : std::string("soa") + "VectorRef");
-      if (ctx.sourceDefs.count(implementationPath) > 0 ||
-          ctx.templateDefs.count(implementationPath) > 0 ||
-          hasVisibleStdCollectionsImportForPath(ctx, publicSoaValuePath)) {
-        resolvedPath = implementationPath;
-        expr.name = implementationPath;
-        expr.namespacePrefix.clear();
-      }
-    }
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
       auto defIt = ctx.sourceDefs.find(resolvedPath);

@@ -2074,13 +2074,11 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-10-02T06:36:28Z`
+- Last updated: `2026-10-02T06:55:19Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 8`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `456`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_661_670`
+- Result: no failing CTest cases.
 <!-- compile.sh:failing-tests:end -->
 
 ### TODO-5304 stop-rule note (2026-09-22)

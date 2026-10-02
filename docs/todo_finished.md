@@ -57383,3 +57383,25 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
   - finished_at: 2026-10-02
   - result: Fixed: the method spellings were chosen over making them unsupported, because docs/PrimeStruct.md documents `.at()`/`.at_unsafe()` on maps. The mutating key/value rewrite only canonicalized the bare at/at_unsafe call, so the method form degraded to a bare `at` call that the validator then rejected as the retired `/map/at` alias. `m.at(k)` / `m.at_unsafe(k)` now take the same canonical rewrite and publish `/std/collections/map/at` / `at_unsafe` like the bare spelling; both parity rows are now `ok`.
+
+- [x] TODO-5372: `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: for a `soa<Particle>` receiver, `values.count()` and `values.get(i)` publish
+    `/std/collections/soa/soaVectorCount` / `soaVectorGet`, while the bare
+    spelling and the `SoaVector<T>` method spelling publish the public
+    `/std/collections/soa/count` / `get`. Pinned by the `soa count
+    method(soa<T>)` and `soa get method(soa<T>)` rows. Decide whether
+    publishing the internal name is intended (then document it in the
+    matrix) or a defect.
+  - acceptance:
+    - one published target per helper regardless of spelling, or an explicit
+      documented reason in docs/CollectionHelperTargets.md for the
+      difference.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+  - finished_at: 2026-10-02
+  - result: Fixed (defect, not intended). The template-monomorph stage carried a bypass that rewrote the public `/std/collections/soa/count|get|ref` helpers to the internal `soaVectorCount|Get|Ref` workers whenever the receiver was a public `soa<T>`. It predated the inference-local soa<T>/SoaVector<T> equivalence in implicit template inference, which now lets the public wrappers accept `soa<T>` arguments directly, so the bypass only made spelling-dependent published targets. It is removed; `values.count()` / `values.get(i)` on a `soa<T>` receiver now publish `/std/collections/soa/count` / `get` like the bare and `SoaVector<T>` spellings, and both rows lost their known-issue marker. The sibling `push`/`reserve` bypass for `soa<T>` receivers is unchanged here (no parity row covers it).

@@ -97,7 +97,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5373 | Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers | ready | collection-defects |
-| TODO-5372 | `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper | ready | collection-defects |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
 | TODO-5354 | Guard test registration: generated shards and an unregistered-test check | ready | test-infrastructure |
@@ -538,26 +537,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
       (diff-checked).
   - stop_rule: no semantic edits to spec text; if a section's classification is unclear,
     leave it in the index file.
-
-- [ ] TODO-5372: `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: for a `soa<Particle>` receiver, `values.count()` and `values.get(i)` publish
-    `/std/collections/soa/soaVectorCount` / `soaVectorGet`, while the bare
-    spelling and the `SoaVector<T>` method spelling publish the public
-    `/std/collections/soa/count` / `get`. Pinned by the `soa count
-    method(soa<T>)` and `soa get method(soa<T>)` rows. Decide whether
-    publishing the internal name is intended (then document it in the
-    matrix) or a defect.
-  - acceptance:
-    - one published target per helper regardless of spelling, or an explicit
-      documented reason in docs/CollectionHelperTargets.md for the
-      difference.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
 
 - [ ] TODO-5373: Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers
   - owner: ai
