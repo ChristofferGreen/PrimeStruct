@@ -2366,7 +2366,7 @@ module {
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
   concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
   widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
-- **IR definition (stable, PSIR v25):**
+- **IR definition (stable, PSIR v26):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, host_imports, entry_index, version }`.
     The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,
     `IrSchemaVersion`, and the supported-version range; serializer implementations
@@ -2430,7 +2430,7 @@ module {
   count without executing it, in preparation for lowering to emit real `Call`/`CallVoid` targets instead of always
   inlining (TODO-4747); it is a pure schema/no-op addition, always 0 until that lowering work lands; v24 adds the
   `CallHost` opcode and the module `host_imports` table (VM-only host function calls for embedding; v23 bytecode is
-  rejected and must be recompiled); v25 adds the `string` host value kind for host function parameters. The same change fixed the deserializer's opcode upper bound, which previously
+  rejected and must be recompiled); v25 adds the `string` host value kind for host function parameters. v26 appends the VM-only `LoadStringByteDynamic` opcode for run-time (VM-owned) strings (TODO-5364). The same change fixed the deserializer's opcode upper bound, which previously
   stopped at `HeapRealloc` and could not load `FileWriteStringDynamic`.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support
     `location`/`dereference`.
@@ -5664,7 +5664,7 @@ bad_set() {
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it.
   File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via
   lowering.
-- **VM-owned dynamic strings (design, TODO-5363; not implemented):** the VM cannot create strings today because a string
+- **VM-owned dynamic strings (design TODO-5363; VM heap implemented by TODO-5364, embed API TODO-5365):** the VM cannot create strings today because a string
   value is an index into the immutable module table. The design below adds run-time strings without changing how
   module-table strings behave; implementation is split into TODO-5364 (VM heap) and TODO-5365 (embed API).
   - *Index space.* A string value stays a `u64`. Values with bit 63 clear index the module table exactly as today.
@@ -5690,7 +5690,7 @@ bad_set() {
     rejects it for those targets with the existing "unsupported opcode for <target> target" diagnostic. Programs that
     only use literal strings are unaffected.
   - *PSIR.* Appending an opcode changes the serialized format's opcode range, so `IrSchemaVersion` goes 25 -> 26 and
-    version 25 files are rejected (the supported range is exactly the current version). Host import return kind
+    version 25 files are rejected (the supported range is exactly the current version; done in TODO-5364). Host import return kind
     `String` is already encoded; no module layout change.
   - *IR sketch* (`host_name()` returns a string, the script returns its first byte):
 

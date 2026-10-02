@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 25u;
+constexpr uint32_t IrSchemaVersion = 26u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -127,6 +127,9 @@ enum class IrOpcode : uint8_t {
   // Calls host import `imm` (an index into IrModule::hostImports). Pops the
   // import's parameters, pushes its result unless it returns void. VM only.
   CallHost,
+  // Pops a byte position, then a string index (module table or dynamic VM
+  // string), and pushes the byte at that position. VM only (TODO-5364).
+  LoadStringByteDynamic,
 };
 
 enum class IrStructFieldCategory : uint8_t {

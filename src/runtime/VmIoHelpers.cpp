@@ -66,15 +66,6 @@ bool popStackPair(std::vector<uint64_t> &stack,
   return true;
 }
 
-bool resolveStringIndex(const IrModule &module, uint64_t stringIndex, std::string &error, const std::string *&textOut) {
-  if (stringIndex >= module.stringTable.size()) {
-    error = "invalid string index in IR";
-    return false;
-  }
-  textOut = &module.stringTable[static_cast<size_t>(stringIndex)];
-  return true;
-}
-
 uint64_t packFileHandle(int fd) {
   if (fd < 0) {
     return static_cast<uint64_t>(currentIoErrorCode()) << 32;
@@ -104,7 +95,8 @@ bool handlePrintOpcode(const IrModule &module,
                        const IrInstruction &inst,
                        std::vector<uint64_t> &stack,
                        const std::vector<std::string_view> *args,
-                       std::string &error) {
+                       std::string &error,
+                       const VmStringHeap *heap) {
   switch (inst.op) {
     case IrOpcode::PrintI32: {
       uint64_t raw = 0;
@@ -135,7 +127,7 @@ bool handlePrintOpcode(const IrModule &module,
     }
     case IrOpcode::PrintString: {
       const std::string *text = nullptr;
-      if (!resolveStringIndex(module, decodePrintStringIndex(inst.imm), error, text)) {
+      if (!resolveVmString(module, heap, decodePrintStringIndex(inst.imm), text, error)) {
         return false;
       }
       emitPrintedText(*text, decodePrintFlags(inst.imm));
@@ -147,7 +139,7 @@ bool handlePrintOpcode(const IrModule &module,
         return false;
       }
       const std::string *text = nullptr;
-      if (!resolveStringIndex(module, stringIndex, error, text)) {
+      if (!resolveVmString(module, heap, stringIndex, text, error)) {
         return false;
       }
       emitPrintedText(*text, decodePrintFlags(inst.imm));
@@ -185,13 +177,14 @@ bool handleFileOpcode(const IrModule &module,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::vector<uint64_t> &locals,
-                      std::string &error) {
+                      std::string &error,
+                      const VmStringHeap *heap) {
   switch (inst.op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend: {
       const std::string *path = nullptr;
-      if (!resolveStringIndex(module, inst.imm, error, path)) {
+      if (!resolveVmString(module, heap, inst.imm, path, error)) {
         return false;
       }
       const int fd = ::open(path->c_str(), resolveFileOpenFlags(inst.op), 0644);
@@ -206,7 +199,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const std::string *path = nullptr;
-      if (!resolveStringIndex(module, stringIndex, error, path)) {
+      if (!resolveVmString(module, heap, stringIndex, path, error)) {
         return false;
       }
       const int fd = ::open(path->c_str(), resolveFileOpenFlags(inst.op), 0644);
@@ -295,7 +288,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const std::string *text = nullptr;
-      if (!resolveStringIndex(module, inst.imm, error, text)) {
+      if (!resolveVmString(module, heap, inst.imm, text, error)) {
         return false;
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
@@ -309,7 +302,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const std::string *text = nullptr;
-      if (!resolveStringIndex(module, stringIndex, error, text)) {
+      if (!resolveVmString(module, heap, stringIndex, text, error)) {
         return false;
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);

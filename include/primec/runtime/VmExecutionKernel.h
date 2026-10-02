@@ -9,9 +9,14 @@
 
 namespace primec::vm_detail {
 
+class VmStringHeap;
+
 class VmKernelHost {
 public:
   virtual ~VmKernelHost() = default;
+
+  // Run-time strings of this host (nullptr: only module-table strings).
+  virtual const VmStringHeap *stringHeap() const { return nullptr; }
 
   virtual uint64_t argumentCount() const = 0;
   virtual uint64_t slotBytes() const = 0;

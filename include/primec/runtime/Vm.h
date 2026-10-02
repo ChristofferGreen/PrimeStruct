@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <memory>
 #include <cstdint>
 #include <optional>
 #include <set>
@@ -255,6 +256,8 @@ private:
   std::vector<HeapAllocation> heapAllocations_;
   std::vector<Frame> frames_;
   std::optional<VmHostFunctions> hostFunctions_;
+  // Run-time strings of this session (see VmStringHeap.h); reset on start().
+  std::shared_ptr<vm_detail::VmStringHeap> stringHeap_;
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;
   bool pauseRequested_ = false;

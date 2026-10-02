@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -33,7 +34,7 @@ def main() -> int:
     table = (repo / "include/primec/ir/IrOpcodeTable.h").read_text(encoding="utf-8")
     expect(module.check(module.enum_opcodes(ir), module.table_opcodes(table)) == [], "the repository table matches the enum")
     # Negative test on the real header: add an enumerator without a row.
-    extended = ir.replace("  CallHost,\n};", "  CallHost,\n  BrandNewOpcode,\n};", 1)
+    extended = re.sub(r"(enum class IrOpcode : uint8_t \{.*?)\n\};", r"\1\n  BrandNewOpcode,\n};", ir, count=1, flags=re.S)
     expect(extended != ir, "test setup: enumerator inserted")
     expect(module.check(module.enum_opcodes(extended), module.table_opcodes(table)) != [], "a new opcode without a row fails")
 

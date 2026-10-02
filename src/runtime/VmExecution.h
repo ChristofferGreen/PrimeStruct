@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "primec/runtime/VmStringHeap.h"
 #include "primec/runtime/VmHost.h"
 
 namespace primec::vm_detail {
@@ -22,6 +23,7 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       const IrModule &module,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
-                      std::string &error);
+                      std::string &error,
+                      VmStringHeap *heap = nullptr);
 
 } // namespace primec::vm_detail

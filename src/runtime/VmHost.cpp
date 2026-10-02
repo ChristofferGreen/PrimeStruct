@@ -53,7 +53,7 @@ const VmHostBinding *VmHostFunctions::find(std::string_view name) const {
 bool VmHostFunctions::verify(const IrModule &module, std::string &error) const {
   for (const IrHostImport &import : module.hostImports) {
     const VmHostBinding *binding = find(import.name);
-    if (binding == nullptr || !binding->invoke) {
+    if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
       error = "unbound host function: " + import.name + " " + describeSignature(import.parameters, import.returnKind);
       return false;
     }

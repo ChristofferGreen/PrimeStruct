@@ -1889,6 +1889,7 @@ are left unarchived.
 | TODO-5361 | Single opcode descriptor table for IR (stack effect, targets, serialization) | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5362 | Unify the VM execution kernel and the debug session interpreter | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5363 | Spec: VM-owned dynamic strings (design decision) | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5364 | VM string heap: dynamic string indices in the interpreter | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5366 | Archive docs/todo_finished.md and keep a greppable index | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5367 | Trim docs/failing_tests.md to current failures only | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | [2026-10.md](todo_archive/2026-10.md) | - |

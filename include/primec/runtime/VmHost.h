@@ -16,13 +16,21 @@ namespace primec {
 // i64/u64 as-is, f32 as the float bit pattern, f64 as the double bit pattern,
 // bool as 0 or 1, string as a `const std::string *` into the module's string
 // table (valid for the duration of the call). The result uses the same encoding
-// (ignored for void); string results are not supported.
+// (ignored for void). A string result is returned as text through
+// VmHostBinding::invokeString.
 using VmHostInvoke = std::function<bool(const uint64_t *args, uint64_t &result, std::string &error)>;
+
+// Like VmHostInvoke for a function whose return kind is `string`: the host
+// returns the text and the VM stores it as a run-time string (TODO-5364).
+using VmHostStringInvoke = std::function<bool(const uint64_t *args, std::string &result, std::string &error)>;
 
 struct VmHostBinding {
   std::vector<IrHostValueKind> parameters;
   IrHostValueKind returnKind = IrHostValueKind::Void;
+  // For string-returning functions, set `invokeString` instead to return the
+  // text itself; `invoke` then stays empty.
   VmHostInvoke invoke;
+  VmHostStringInvoke invokeString = nullptr;
 };
 
 class VmHostFunctions {

@@ -624,6 +624,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmExecutionNumeric.cpp
   src/runtime/VmNumericOpcodeShared.cpp
   src/runtime/VmHeapHelpers.cpp
+  src/runtime/VmStringHeap.cpp
   src/runtime/VmIoHelpers.cpp
   src/runtime/VmDebugAdapter.cpp
   src/runtime/VmDebugDap.cpp
@@ -2796,6 +2797,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_failing_tests_doc_self_test PROPERTIES TIMEOUT 60)
 
+  # TODO-5364: every VM string lookup goes through resolveVmString.
+  add_test(
+    NAME PrimeStruct_vm_string_lookups
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_vm_string_lookups.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_vm_string_lookups PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_vm_string_lookups_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_vm_string_lookups.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_vm_string_lookups_self_test PROPERTIES TIMEOUT 60)
   # TODO-5361: one table row per IR opcode.
   add_test(
     NAME PrimeStruct_ir_opcode_table

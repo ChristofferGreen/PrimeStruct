@@ -1,5 +1,7 @@
 #include "primec/runtime/Vm.h"
 
+#include "primec/runtime/VmStringHeap.h"
+
 #include <algorithm>
 
 namespace primec {
@@ -32,6 +34,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   stack_.clear();
   heapSlots_.clear();
   heapAllocations_.clear();
+  stringHeap_ = std::make_shared<vm_detail::VmStringHeap>();
   frames_.clear();
   result_ = 0;
   pauseRequested_ = false;

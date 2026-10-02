@@ -128,7 +128,8 @@ namespace primec {
   X(HeapFree, 0, 0, 0) \
   X(HeapRealloc, 0, 0, 0) \
   X(FileWriteStringDynamic, 1, 1, 0) \
-  X(CallHost, 0, 0, 0)
+  X(CallHost, 0, 0, 0) \
+  X(LoadStringByteDynamic, 0, 0, 0)
 
 struct IrOpcodeInfo {
   IrOpcode op;

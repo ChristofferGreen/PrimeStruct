@@ -15,14 +15,15 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       const IrModule &module,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
-                      std::string &error) {
+                      std::string &error,
+                      VmStringHeap *heap) {
   if (inst.imm >= module.hostImports.size()) {
     error = "invalid host import index in IR";
     return false;
   }
   const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];
   const VmHostBinding *binding = hostFunctions != nullptr ? hostFunctions->find(import.name) : nullptr;
-  if (binding == nullptr || !binding->invoke) {
+  if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
     error = "unbound host function: " + import.name;
     return false;
   }
@@ -35,18 +36,33 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
   for (size_t i = 0; i < argCount; ++i) {
     if (import.parameters[i] == IrHostValueKind::String) {
       uint64_t &slot = stack[base + i];
-      if (slot >= module.stringTable.size()) {
+      const std::string *text = nullptr;
+      std::string lookupError;
+      if (!resolveVmString(module, heap, slot, text, lookupError)) {
         error = "invalid string index passed to host function " + import.name;
         return false;
       }
-      slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&module.stringTable[static_cast<size_t>(slot)]));
+      slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(text));
     }
   }
   uint64_t result = 0;
   std::string hostError;
   bool ok = false;
+  const bool returnsHeapString = import.returnKind == IrHostValueKind::String && binding->invokeString;
+  if (returnsHeapString && heap == nullptr) {
+    error = "host function " + import.name + " returns a string, which this VM host does not support";
+    return false;
+  }
   try {
-    ok = binding->invoke(stack.data() + base, result, hostError);
+    if (returnsHeapString) {
+      std::string text;
+      ok = binding->invokeString(stack.data() + base, text, hostError);
+      if (ok) {
+        result = heap->create(std::move(text));
+      }
+    } else {
+      ok = binding->invoke(stack.data() + base, result, hostError);
+    }
   } catch (const std::exception &exception) {
     hostError = std::string("exception: ") + exception.what();
   } catch (...) {
@@ -56,9 +72,13 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
     error = "host function " + import.name + " failed" + (hostError.empty() ? "" : ": " + hostError);
     return false;
   }
-  if (import.returnKind == IrHostValueKind::String && result >= module.stringTable.size()) {
-    error = "host function " + import.name + " returned an invalid string index";
-    return false;
+  if (import.returnKind == IrHostValueKind::String && !returnsHeapString) {
+    const std::string *ignored = nullptr;
+    std::string lookupError;
+    if (!resolveVmString(module, nullptr, result, ignored, lookupError)) {
+      error = "host function " + import.name + " returned an invalid string index";
+      return false;
+    }
   }
   stack.resize(base);
   switch (import.returnKind) {
@@ -94,6 +114,7 @@ public:
         hostFunctions_(hostFunctions),
         args_(args) {}
 
+  const VmStringHeap *stringHeap() const override { return &stringHeap_; }
   uint64_t argumentCount() const override { return argCount_; }
   uint64_t slotBytes() const override { return IrSlotBytes; }
   size_t maxCallDepth() const override { return 4096; }
@@ -147,7 +168,7 @@ public:
                               const IrInstruction &inst,
                               std::vector<uint64_t> &stack,
                               std::string &error) override {
-    return handlePrintOpcode(module, inst, stack, args_, error);
+    return handlePrintOpcode(module, inst, stack, args_, error, &stringHeap_);
   }
 
   bool handleFileInstruction(const IrModule &module,
@@ -155,14 +176,14 @@ public:
                              std::vector<uint64_t> &stack,
                              std::vector<uint64_t> &locals,
                              std::string &error) override {
-    return handleFileOpcode(module, inst, stack, locals, error);
+    return handleFileOpcode(module, inst, stack, locals, error, &stringHeap_);
   }
 
   bool handleHostCall(const IrModule &module,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
-    return handleVmHostCall(hostFunctions_, module, inst, stack, error);
+    return handleVmHostCall(hostFunctions_, module, inst, stack, error, &stringHeap_);
   }
 
 private:
@@ -171,6 +192,7 @@ private:
   const std::vector<std::string_view> *args_ = nullptr;
   std::vector<uint64_t> heapSlots_;
   std::vector<VmDebugSession::HeapAllocation> heapAllocations_;
+  VmStringHeap stringHeap_;
 };
 
 } // namespace

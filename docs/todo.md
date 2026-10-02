@@ -102,8 +102,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5364 | VM string heap: dynamic string indices in the interpreter | ready | vm-strings |
-| TODO-5365 | Embed API: string results and indexable string arguments | blocked | vm-strings |
+| TODO-5365 | Embed API: string results and indexable string arguments | ready | vm-strings |
 | TODO-5368 | Split docs/PrimeStruct.md into stable spec sections | deferred | docs-hygiene |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
@@ -111,13 +110,13 @@ of sync with them.
 
 - TODO-5384 (track: semantics-structure): Split the multi-function src/semantics files over 1,200 lines (pure moves).
 - TODO-5385 (track: semantics-structure): Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-- TODO-5364 (track: vm-strings): VM string heap: dynamic string indices in the interpreter.
+- TODO-5365 (track: vm-strings): Embed API: string results and indexable string arguments.
 
 ### Immediate Next 10
 
 1. TODO-5384 - Split the multi-function src/semantics files over 1,200 lines (pure moves).
 2. TODO-5385 - Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-3. TODO-5364 - VM string heap: dynamic string indices in the interpreter.
+3. TODO-5365 - Embed API: string results and indexable string arguments.
 
 ### Priority Lanes
 
@@ -126,7 +125,7 @@ of sync with them.
 - Semantics structure: TODO-5384, TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
-- VM strings: TODO-5364 -> 5365
+- VM strings: TODO-5365
 - Docs hygiene: TODO-5368 (deferred)
 
 ### Execution Queue
@@ -208,28 +207,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
 
-- [ ] TODO-5364: VM string heap: dynamic string indices in the interpreter
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Language/VM
-  - parallel_track: vm-strings
-  - scope: Implement the TODO-5363 design in the VM kernel: strings created at run time
-    (from host calls first) get indices above the module table;
-    `LoadStringLength`, `LoadStringByte` (dynamic-index variant), print and
-    file-open opcodes resolve both spaces through one lookup helper.
-  - acceptance:
-    - every VM string lookup goes through one helper (grep audit in ctest).
-    - a hand-built IR test creates a host string and indexes, measures, and
-      prints it; out-of-range and use-after-free indices fault cleanly.
-    - PSIR version bumped and documented if the format changed.
-  - stop_rule: VM only; native/wasm backends keep rejecting dynamic strings with a
-    diagnostic.
-
 - [ ] TODO-5365: Embed API: string results and indexable string arguments
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5364
+  - status: ready
   - created_at: 2026-10-01
   - phase: Language/VM
   - parallel_track: vm-strings

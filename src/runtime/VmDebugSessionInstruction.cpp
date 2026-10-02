@@ -2,6 +2,7 @@
 
 #include "VmExecution.h"
 #include "VmHeapHelpers.h"
+#include "primec/runtime/VmStringHeap.h"
 #include "VmIoHelpers.h"
 
 namespace primec {
@@ -16,13 +17,16 @@ public:
                          const std::vector<std::string_view> *args,
                          const VmHostFunctions *hostFunctions,
                          std::vector<uint64_t> &heapSlots,
-                         std::vector<VmDebugSession::HeapAllocation> &heapAllocations)
+                         std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
+                         vm_detail::VmStringHeap &stringHeap)
       : argCount_(argCount),
         args_(args),
         hostFunctions_(hostFunctions),
         heapSlots_(heapSlots),
-        heapAllocations_(heapAllocations) {}
+        heapAllocations_(heapAllocations),
+        stringHeap_(stringHeap) {}
 
+  const vm_detail::VmStringHeap *stringHeap() const override { return &stringHeap_; }
   uint64_t argumentCount() const override { return argCount_; }
   uint64_t slotBytes() const override { return IrSlotBytes; }
   size_t maxCallDepth() const override { return 4096; }
@@ -51,20 +55,20 @@ public:
                               const IrInstruction &inst,
                               std::vector<uint64_t> &stack,
                               std::string &error) override {
-    return vm_detail::handlePrintOpcode(module, inst, stack, args_, error);
+    return vm_detail::handlePrintOpcode(module, inst, stack, args_, error, &stringHeap_);
   }
   bool handleFileInstruction(const IrModule &module,
                              const IrInstruction &inst,
                              std::vector<uint64_t> &stack,
                              std::vector<uint64_t> &locals,
                              std::string &error) override {
-    return vm_detail::handleFileOpcode(module, inst, stack, locals, error);
+    return vm_detail::handleFileOpcode(module, inst, stack, locals, error, &stringHeap_);
   }
   bool handleHostCall(const IrModule &module,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
-    return vm_detail::handleVmHostCall(hostFunctions_, module, inst, stack, error);
+    return vm_detail::handleVmHostCall(hostFunctions_, module, inst, stack, error, &stringHeap_);
   }
 
 private:
@@ -73,6 +77,7 @@ private:
   const VmHostFunctions *hostFunctions_ = nullptr;
   std::vector<uint64_t> &heapSlots_;
   std::vector<VmDebugSession::HeapAllocation> &heapAllocations_;
+  vm_detail::VmStringHeap &stringHeap_;
 };
 
 } // namespace
@@ -143,7 +148,8 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
                               argvViews_,
                               hostFunctions_ ? &*hostFunctions_ : nullptr,
                               heapSlots_,
-                              heapAllocations_);
+                              heapAllocations_,
+                              *stringHeap_);
   vm_detail::VmKernelStepEvent event;
   switch (vm_detail::stepVmKernel(*module_, host, stack_, frames_, localCounts_, result_, event, error)) {
     case vm_detail::VmKernelStepOutcome::Fault:
