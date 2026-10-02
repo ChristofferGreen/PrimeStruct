@@ -1,0 +1,997 @@
+// soa-surface-audit: exempt
+#include "SemanticsValidator.h"
+
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string_view>
+#include <unordered_set>
+#include <utility>
+
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
+#include "SemanticsValidatorInferCollectionReturnInferenceHelpers.h"
+
+namespace primec::semantics {
+using namespace collectionReturnInferenceHelpers;
+
+bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
+                                                const std::vector<ParameterInfo> &params,
+                                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                                std::string &typeTextOut) {
+  error_.clear();
+  auto resolveBindingTypeText = [&](const std::string &name, std::string &resolvedTypeTextOut) -> bool {
+    resolvedTypeTextOut.clear();
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      resolvedTypeTextOut = bindingTypeText(*paramBinding);
+      return !resolvedTypeTextOut.empty();
+    }
+    auto localIt = locals.find(name);
+    if (localIt == locals.end()) {
+      return false;
+    }
+    resolvedTypeTextOut = bindingTypeText(localIt->second);
+    return !resolvedTypeTextOut.empty();
+  };
+  auto inferOldSurfaceSoaToAosTypeTextWithoutDispatchResolvers =
+      [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 1) {
+      return false;
+    }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    const bool isBareToAosCall =
+        isSimpleCallName(candidate, "to_aos") ||
+        isSimpleCallName(candidate, collection_helpers::kToAosRef);
+    const bool isRootToAosDirectCall =
+        resolvedCandidate == "/to_aos" ||
+        resolvedCandidate == "/to_aos_ref";
+    const bool isRootToAosMethodCall =
+        candidate.isMethodCall &&
+        (collection_helpers::isToAosHelperName(candidate.name) ||
+         candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
+    if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
+      return false;
+    }
+    const std::string samePathHelper =
+        (resolvedCandidate == "/to_aos_ref" ||
+         isSimpleCallName(candidate, collection_helpers::kToAosRef) ||
+         candidate.name == collection_helpers::kToAosRef ||
+         candidate.name == "/to_aos_ref")
+            ? "/to_aos_ref"
+            : "/to_aos";
+    if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
+      return false;
+    }
+    std::function<bool(const Expr &, std::string &)> resolveReceiverTypeText =
+        [&](const Expr &receiver, std::string &receiverTypeTextOut) -> bool {
+      receiverTypeTextOut.clear();
+      if (receiver.kind == Expr::Kind::Name) {
+        return resolveBindingTypeText(receiver.name, receiverTypeTextOut);
+      }
+      if (isSimpleCallName(receiver, "location") && receiver.args.size() == 1 &&
+          receiver.args.front().kind == Expr::Kind::Name) {
+        std::string pointeeTypeText;
+        if (!resolveBindingTypeText(receiver.args.front().name, pointeeTypeText) ||
+            pointeeTypeText.empty()) {
+          return false;
+        }
+        receiverTypeTextOut = "Reference<" + pointeeTypeText + ">";
+        return true;
+      }
+      if (isSimpleCallName(receiver, "dereference") && receiver.args.size() == 1) {
+        std::string wrappedTypeText;
+        if (!resolveReceiverTypeText(receiver.args.front(), wrappedTypeText) ||
+            wrappedTypeText.empty()) {
+          return false;
+        }
+        receiverTypeTextOut = unwrapReferencePointerTypeText(wrappedTypeText);
+        return !receiverTypeTextOut.empty();
+      }
+      return false;
+    };
+    std::string receiverTypeText;
+    if (!resolveReceiverTypeText(candidate.args.front(), receiverTypeText)) {
+      return false;
+    }
+    std::string elemType;
+    if (!extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(receiverTypeText, elemType) ||
+        elemType.empty()) {
+      return false;
+    }
+    typeTextOut = legacyExperimentalVectorCompatibilityTypeText(elemType);
+    return true;
+  };
+  if (inferOldSurfaceSoaToAosTypeTextWithoutDispatchResolvers(expr)) {
+    return true;
+  }
+  BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
+  const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
+      makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
+  std::function<bool(const Expr &, std::string &)> inferExprTypeText;
+  inferExprTypeText = [&](const Expr &candidate, std::string &currentTypeTextOut) -> bool {
+    currentTypeTextOut.clear();
+    if (!queryTypeInferenceExprStack_.insert(&candidate).second) {
+      return false;
+    }
+    struct ExprTypeScopeGuard {
+      std::unordered_set<const Expr *> &stack;
+      const Expr *expr = nullptr;
+      ~ExprTypeScopeGuard() {
+        if (expr != nullptr) {
+          stack.erase(expr);
+        }
+      }
+    } exprGuard{queryTypeInferenceExprStack_, &candidate};
+    if (candidate.kind == Expr::Kind::Name) {
+      return resolveBindingTypeText(candidate.name, currentTypeTextOut);
+    }
+    if (candidate.kind == Expr::Kind::Literal) {
+      currentTypeTextOut = candidate.isUnsigned ? "u64" : (candidate.intWidth == 64 ? "i64" : "i32");
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::BoolLiteral) {
+      currentTypeTextOut = "bool";
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::FloatLiteral) {
+      currentTypeTextOut = candidate.floatWidth == 64 ? "f64" : "f32";
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::StringLiteral) {
+      currentTypeTextOut = "string";
+      return true;
+    }
+    if (isIfCall(candidate) && candidate.args.size() == 3) {
+      const Expr &thenArg = candidate.args[1];
+      const Expr &elseArg = candidate.args[2];
+      std::unordered_map<std::string, BindingInfo> ifBranchLocals = locals;
+      auto inferIfBranchTypeText = [&](const Expr &branchExpr, std::string &branchTypeTextOut) -> bool {
+        branchTypeTextOut.clear();
+        if (!this->isEnvelopeValueExpr(branchExpr, true)) {
+          return inferExprTypeText(branchExpr, branchTypeTextOut);
+        }
+        LocalBindingScope branchScope(*this, ifBranchLocals);
+        const Expr *valueExpr = nullptr;
+        bool sawReturn = false;
+        for (const auto &bodyExpr : branchExpr.bodyArguments) {
+          if (isSyntheticBlockValueBinding(bodyExpr)) {
+            if (!sawReturn) {
+              valueExpr = &bodyExpr.args.front();
+            }
+            continue;
+          }
+          if (bodyExpr.isBinding) {
+            BindingInfo binding;
+            std::optional<std::string> restrictType;
+            if (!parseBindingInfo(bodyExpr,
+                                  branchExpr.namespacePrefix,
+                                  structNames_,
+                                  importAliases_,
+                                  binding,
+                                  restrictType,
+                                  error_,
+                                  &sumNames_)) {
+              return false;
+            }
+            const bool hasExplicitType = hasExplicitBindingTypeTransform(bodyExpr);
+            const bool explicitAutoType =
+                hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
+            if (bodyExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
+              (void)inferBindingTypeFromInitializer(
+                  bodyExpr.args.front(), params, ifBranchLocals, binding, &bodyExpr);
+            }
+            if (restrictType.has_value()) {
+              const bool hasTemplate = !binding.typeTemplateArg.empty();
+              if (!restrictMatchesBinding(*restrictType,
+                                          binding.typeName,
+                                          binding.typeTemplateArg,
+                                          hasTemplate,
+                                          branchExpr.namespacePrefix)) {
+                return false;
+              }
+            }
+            insertLocalBinding(ifBranchLocals, bodyExpr.name, std::move(binding));
+            continue;
+          }
+          if (isReturnCall(bodyExpr) && bodyExpr.args.size() == 1) {
+            valueExpr = &bodyExpr.args.front();
+            sawReturn = true;
+            continue;
+          }
+          if (!sawReturn) {
+            valueExpr = &bodyExpr;
+          }
+        }
+        if (valueExpr == nullptr) {
+          return false;
+        }
+        return inferQueryExprTypeText(*valueExpr, params, ifBranchLocals, branchTypeTextOut);
+      };
+      std::string thenTypeText;
+      std::string elseTypeText;
+      if (!inferIfBranchTypeText(thenArg, thenTypeText) ||
+          !inferIfBranchTypeText(elseArg, elseTypeText)) {
+        return false;
+      }
+      if (normalizeBindingTypeName(thenTypeText) != normalizeBindingTypeName(elseTypeText)) {
+        const ReturnKind thenKind = returnKindForTypeName(normalizeBindingTypeName(thenTypeText));
+        const ReturnKind elseKind = returnKindForTypeName(normalizeBindingTypeName(elseTypeText));
+        const ReturnKind widenedKind = combineInferredNumericKinds(thenKind, elseKind);
+        if (widenedKind == ReturnKind::Unknown || widenedKind == ReturnKind::Array || widenedKind == ReturnKind::Void) {
+          return false;
+        }
+        currentTypeTextOut = typeNameForReturnKind(widenedKind);
+        return !currentTypeTextOut.empty();
+      }
+      currentTypeTextOut = thenTypeText;
+      return true;
+    }
+    if (const Expr *valueExpr = this->getEnvelopeValueExpr(candidate, false)) {
+      return inferExprTypeText(*valueExpr, currentTypeTextOut);
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (isPickCall(candidate)) {
+      return inferPickExprTypeText(candidate, params, locals, currentTypeTextOut);
+    }
+    BindingInfo sumConstructorBinding;
+    if (inferExplicitSumConstructorBinding(candidate, sumConstructorBinding)) {
+      currentTypeTextOut = bindingTypeText(sumConstructorBinding);
+      return !currentTypeTextOut.empty();
+    }
+    if (candidate.isFieldAccess && candidate.args.size() == 1) {
+      BindingInfo fieldBinding;
+      if (!resolveStructFieldBinding(params, locals, candidate.args.front(), candidate.name, fieldBinding)) {
+        return false;
+      }
+      currentTypeTextOut = bindingTypeText(fieldBinding);
+      error_.clear();
+      return !currentTypeTextOut.empty();
+    }
+    if (isSimpleCallName(candidate, "move") && candidate.args.size() == 1) {
+      return inferExprTypeText(candidate.args.front(), currentTypeTextOut);
+    }
+    if (isTaskWaitExpr(candidate)) {
+      BindingInfo waitBinding;
+      if (!inferTaskWaitBinding(candidate, params, locals, waitBinding)) {
+        return false;
+      }
+      currentTypeTextOut = bindingTypeText(waitBinding);
+      return !currentTypeTextOut.empty();
+    }
+    if (isAssignCall(candidate) && candidate.args.size() == 2) {
+      return inferExprTypeText(candidate.args[1], currentTypeTextOut);
+    }
+    if (isSimpleCallName(candidate, "dereference") && candidate.args.size() == 1) {
+      std::string wrappedTypeText;
+      if (!inferExprTypeText(candidate.args.front(), wrappedTypeText)) {
+        return false;
+      }
+      currentTypeTextOut = unwrapReferencePointerTypeText(wrappedTypeText);
+      return !currentTypeTextOut.empty();
+    }
+    if (!candidate.isMethodCall && isSimpleCallName(candidate, "slice") &&
+        candidate.args.size() == 3) {
+      std::string receiverTypeText;
+      if (!inferExprTypeText(candidate.args.front(), receiverTypeText)) {
+        return false;
+      }
+      std::string typeText =
+          normalizeBindingTypeName(unwrapReferencePointerTypeText(receiverTypeText));
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) ||
+          normalizeBindingTypeName(base) != "array") {
+        return false;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      currentTypeTextOut = "array<" + normalizeBindingTypeName(args.front()) + ">";
+      return true;
+    }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    auto inferOldSurfaceSoaToAosTypeText = [&]() -> bool {
+      if (candidate.args.size() != 1) {
+        return false;
+      }
+      const bool isBareToAosCall =
+          isSimpleCallName(candidate, "to_aos") ||
+          isSimpleCallName(candidate, collection_helpers::kToAosRef);
+      const bool isRootToAosDirectCall =
+          resolvedCandidate == "/to_aos" ||
+          resolvedCandidate == "/to_aos_ref";
+      const bool isRootToAosMethodCall =
+          candidate.isMethodCall &&
+          (collection_helpers::isToAosHelperName(candidate.name) ||
+           candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
+      if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
+        return false;
+      }
+      const std::string samePathHelper =
+          (resolvedCandidate == "/to_aos_ref" ||
+           isSimpleCallName(candidate, collection_helpers::kToAosRef) ||
+           candidate.name == collection_helpers::kToAosRef ||
+           candidate.name == "/to_aos_ref")
+              ? "/to_aos_ref"
+              : "/to_aos";
+      if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
+        return false;
+      }
+      std::string receiverTypeText;
+      if (!inferExprTypeText(candidate.args.front(), receiverTypeText)) {
+        return false;
+      }
+      std::string elemType;
+      if (!extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(receiverTypeText, elemType) ||
+          elemType.empty()) {
+        return false;
+      }
+      currentTypeTextOut =
+          legacyExperimentalVectorCompatibilityTypeText(elemType);
+      return true;
+    };
+    if (inferOldSurfaceSoaToAosTypeText()) {
+      return true;
+    }
+    if (candidate.args.size() == 1) {
+      ReturnKind builtinMethodKind = ReturnKind::Unknown;
+      if (resolveBuiltinCollectionMethodReturnKind(
+              resolvedCandidate,
+              candidate.args.front(),
+              builtinCollectionDispatchResolvers,
+              builtinMethodKind) &&
+          builtinMethodKind != ReturnKind::Unknown &&
+          builtinMethodKind != ReturnKind::Void &&
+          builtinMethodKind != ReturnKind::Array) {
+        currentTypeTextOut = typeNameForReturnKind(builtinMethodKind);
+        return !currentTypeTextOut.empty();
+      }
+    }
+    std::string resolvedSoaCanonical =
+        canonicalizeLegacySoaGetHelperPath(resolvedCandidate);
+    const auto soaAccessHelper =
+        candidate.args.size() == 2
+            ? builtinSoaAccessHelperName(candidate, params, locals)
+            : std::nullopt;
+    if (soaAccessHelper.has_value()) {
+      const bool oldSurfaceCallShape =
+          (*soaAccessHelper == "get" &&
+           (isSimpleCallName(candidate, "get") ||
+            (candidate.isMethodCall && candidate.name == "get") ||
+            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get"))) ||
+          (*soaAccessHelper == collection_helpers::kGetRef &&
+           (isSimpleCallName(candidate, collection_helpers::kGetRef) ||
+            (candidate.isMethodCall && candidate.name == collection_helpers::kGetRef) ||
+            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
+                                             collection_helpers::kGetRef))) ||
+          ((*soaAccessHelper == "ref" || *soaAccessHelper == collection_helpers::kRefRef) &&
+           (((*soaAccessHelper == "ref" &&
+              isSimpleCallName(candidate, "ref")) ||
+             (*soaAccessHelper == collection_helpers::kRefRef &&
+              isSimpleCallName(candidate, collection_helpers::kRefRef))) ||
+            (candidate.isMethodCall && candidate.name == *soaAccessHelper) ||
+            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
+                                             *soaAccessHelper)));
+      if (!(hasVisibleDefinitionPathForCurrentImports(collection_helpers::kRootedSoaPrefix +
+                                                      *soaAccessHelper) &&
+            oldSurfaceCallShape)) {
+        std::string elemType;
+        if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
+          currentTypeTextOut = normalizeBindingTypeName(elemType);
+          return !currentTypeTextOut.empty();
+        }
+      }
+    }
+    auto inferNonTemplateDefinitionReturnType =
+        [&](const std::string &candidatePath,
+            std::string &typeTextOut) -> bool {
+      typeTextOut.clear();
+      const Definition *definition = nullptr;
+      auto defIt = defMap_.find(candidatePath);
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        definition = defIt->second;
+      } else {
+        for (const Definition &candidateDefinition : program_.definitions) {
+          if (candidateDefinition.fullPath != candidatePath &&
+              candidateDefinition.fullPath.rfind(candidatePath + "__", 0) != 0 &&
+              candidateDefinition.fullPath.rfind(candidatePath + "<", 0) != 0) {
+            continue;
+          }
+          definition = &candidateDefinition;
+          break;
+        }
+      }
+      if (definition == nullptr) {
+        return false;
+      }
+      for (const auto &transform : definition->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1 ||
+            transform.templateArgs.front() == "auto") {
+          continue;
+        }
+        const std::string normalizedReturnType =
+            normalizeBindingTypeName(transform.templateArgs.front());
+        const bool returnsTemplateParameter =
+            std::any_of(definition->templateArgs.begin(),
+                        definition->templateArgs.end(),
+                        [&](const std::string &templateArg) {
+          return normalizeBindingTypeName(templateArg) == normalizedReturnType;
+        });
+        if (returnsTemplateParameter) {
+          return false;
+        }
+        typeTextOut = transform.templateArgs.front();
+        return !typeTextOut.empty();
+      }
+      return false;
+    };
+
+    std::string builtinAccessName;
+    if (getBuiltinArrayAccessName(candidate, builtinAccessName) && candidate.args.size() == 2) {
+      std::string normalizedAccessName = candidate.name;
+      if (!normalizedAccessName.empty() && normalizedAccessName.front() == '/') {
+        normalizedAccessName.erase(normalizedAccessName.begin());
+      }
+      const size_t accessTemplateSuffix = normalizedAccessName.find("__t");
+      if (accessTemplateSuffix != std::string::npos) {
+        normalizedAccessName.erase(accessTemplateSuffix);
+      }
+      const bool isExplicitAccessAlias =
+          normalizedAccessName.find('/') != std::string::npos;
+      const Expr &receiver =
+          candidate.isMethodCall ? candidate.args.front()
+                                 : (candidate.args.empty() ? candidate : candidate.args.front());
+      std::string elemType;
+      std::string keyType;
+      std::string valueType;
+      if (builtinAccessName == "at" || builtinAccessName == "at_unsafe") {
+        // A user override registered at the canonical vector access path
+        // has its own declared return type, whether it's called via
+        // method-call syntax (`values.at(...)`) or a fully-qualified
+        // direct call - defer to that instead of assuming the access
+        // still returns the receiver's element type below.
+        std::string resolvedAccessTarget;
+        bool isBuiltinMethod = false;
+        bool haveResolvedAccessTarget = false;
+        if (candidate.isMethodCall && !isExplicitAccessAlias) {
+          haveResolvedAccessTarget =
+              resolveMethodTarget(params, locals, candidate.namespacePrefix,
+                                  receiver, candidate.name,
+                                  resolvedAccessTarget, isBuiltinMethod);
+        } else {
+          resolvedAccessTarget = resolveCalleePath(candidate);
+          haveResolvedAccessTarget = !resolvedAccessTarget.empty();
+        }
+        if (haveResolvedAccessTarget &&
+            (isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at") ||
+             isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at_unsafe"))) {
+          std::string declaredReturnType;
+          if (inferNonTemplateDefinitionReturnType(resolvedAccessTarget,
+                                                   declaredReturnType)) {
+            currentTypeTextOut = declaredReturnType;
+            return true;
+          }
+        }
+      }
+      if (builtinCollectionDispatchResolvers.resolveVectorTarget(receiver, elemType) ||
+          builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget(receiver, elemType) ||
+          builtinCollectionDispatchResolvers.resolveArrayTarget(receiver, elemType) ||
+          builtinCollectionDispatchResolvers.resolveSoaVectorTarget(receiver, elemType)) {
+        currentTypeTextOut = normalizeBindingTypeName(elemType);
+        return !currentTypeTextOut.empty();
+      }
+      if (builtinCollectionDispatchResolvers.resolveStringTarget(receiver)) {
+        currentTypeTextOut = "i32";
+        return true;
+      }
+      if (candidate.isMethodCall && !isExplicitAccessAlias) {
+        std::string resolvedMethodTarget;
+        bool isBuiltinMethod = false;
+        if (resolveMethodTarget(params, locals, candidate.namespacePrefix, receiver, candidate.name,
+                                resolvedMethodTarget, isBuiltinMethod)) {
+          auto resolvedMethodIt = defMap_.find(resolvedMethodTarget);
+          if (resolvedMethodIt != defMap_.end() && resolvedMethodIt->second != nullptr) {
+            for (const auto &transform : resolvedMethodIt->second->transforms) {
+              if (transform.name != "return" || transform.templateArgs.size() != 1 ||
+                  transform.templateArgs.front() == "auto") {
+                continue;
+              }
+              currentTypeTextOut = transform.templateArgs.front();
+              return !currentTypeTextOut.empty();
+            }
+          }
+        }
+      }
+      if (!isExplicitAccessAlias &&
+          builtinCollectionDispatchResolvers.resolveMapTarget(receiver, keyType, valueType)) {
+        if (!candidate.isMethodCall &&
+            (builtinAccessName == "at" || builtinAccessName == "at_unsafe")) {
+          std::string declaredReturnType;
+          if (inferNonTemplateDefinitionReturnType(
+                  metadataBackedCanonicalKeyValueHelperPath(builtinAccessName),
+                  declaredReturnType)) {
+            currentTypeTextOut = declaredReturnType;
+            return true;
+          }
+        }
+        currentTypeTextOut = normalizeBindingTypeName(valueType);
+        return !currentTypeTextOut.empty();
+      }
+    }
+
+    auto canonicalizeResolvedPath = [](std::string path) {
+      const size_t suffix = path.find("__t");
+      if (suffix != std::string::npos) {
+        path.erase(suffix);
+      }
+      return path;
+    };
+    auto hasDirectExperimentalVectorImport = [&]() {
+      const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
+      for (const auto &importPath : importPaths) {
+        if (importPath == legacyExperimentalVectorCompatibilityWildcardPath() ||
+            importPath == legacyExperimentalVectorCompatibilityConstructorPath() ||
+            importPath == legacyExperimentalVectorCompatibilityRoot()) {
+          return true;
+        }
+      }
+      return false;
+    };
+    auto isImportedExperimentalVectorConstructorPath =
+        [&](std::string resolvedPath) {
+          resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
+          return resolvedPath ==
+                     legacyExperimentalVectorCompatibilityConstructorPath() ||
+                 (resolvedPath == collection_helpers::kRootedVector &&
+                  hasDirectExperimentalVectorImport());
+        };
+    const bool prefersImportedExperimentalVectorConstructor =
+        !candidate.isMethodCall &&
+        candidate.templateArgs.size() == 1 &&
+        [&]() {
+          if (candidate.name == "vector" && candidate.namespacePrefix.empty()) {
+            auto aliasIt = importAliases_.find(candidate.name);
+            if (aliasIt != importAliases_.end() &&
+                canonicalizeResolvedPath(aliasIt->second) ==
+                    legacyExperimentalVectorCompatibilityConstructorPath()) {
+              return true;
+            }
+            if (hasDirectExperimentalVectorImport()) {
+              return true;
+            }
+          }
+          return isImportedExperimentalVectorConstructorPath(
+              resolvedCandidate);
+        }();
+    if (prefersImportedExperimentalVectorConstructor) {
+      currentTypeTextOut =
+          legacyExperimentalVectorCompatibilityShorthandTypeText(
+              candidate.templateArgs.front());
+      return true;
+    }
+    const std::string canonicalResolvedCandidate = canonicalizeResolvedPath(resolvedCandidate);
+    auto sourceMethodKeyValueResolvedCandidate = [&]() -> std::string {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+          !candidate.sourceIsMethodCall || !candidate.namespacePrefix.empty() ||
+          candidate.name.empty() || candidate.args.empty()) {
+        return {};
+      }
+      std::string helperName = candidate.name;
+      if (!helperName.empty() && helperName.front() == '/') {
+        helperName.erase(helperName.begin());
+      }
+      if (!collection_helpers::isCountHelperName(helperName) &&
+          helperName != "size" &&
+          !collection_helpers::isContainsHelperName(helperName) &&
+          !collection_helpers::isTryAtHelperName(helperName) &&
+          !collection_helpers::isAtHelperName(helperName) &&
+          !collection_helpers::isAtUnsafeHelperName(helperName) &&
+          !collection_helpers::isInsertHelperName(helperName)) {
+        return {};
+      }
+      const size_t receiverIndex =
+          keyValueHelperReceiverIndex(candidate, builtinCollectionDispatchResolvers);
+      if (receiverIndex >= candidate.args.size()) {
+        return {};
+      }
+      std::string keyType;
+      std::string valueType;
+      const bool isKeyValueReceiver =
+          builtinCollectionDispatchResolvers.resolveMapTarget != nullptr &&
+          builtinCollectionDispatchResolvers.resolveMapTarget(
+              candidate.args[receiverIndex], keyType, valueType);
+      keyType.clear();
+      valueType.clear();
+      const bool isExperimentalKeyValueReceiver =
+          builtinCollectionDispatchResolvers.resolveKeyValueTarget != nullptr &&
+          builtinCollectionDispatchResolvers.resolveKeyValueTarget(
+              candidate.args[receiverIndex], keyType, valueType);
+      if (!isKeyValueReceiver && !isExperimentalKeyValueReceiver) {
+        return {};
+      }
+      return preferredBareKeyValueHelperTarget(helperName);
+    };
+    if (canonicalResolvedCandidate == collection_helpers::kRootedVector &&
+        !hasDirectExperimentalVectorImport() &&
+        candidate.templateArgs.size() == 1) {
+      currentTypeTextOut = "vector<" + candidate.templateArgs.front() + ">";
+      return true;
+    }
+    std::string collection;
+    if (getBuiltinCollectionName(candidate, collection)) {
+      const bool preferResolvedCollectionDefinition =
+          !canonicalResolvedCandidate.empty() &&
+          canonicalResolvedCandidate != "/" + collection &&
+          defMap_.count(canonicalResolvedCandidate) != 0;
+      if (preferResolvedCollectionDefinition) {
+        // Imported stdlib collection constructors should infer from their declared return type
+        // instead of collapsing to the legacy builtin collection surface.
+      } else if ((collection == "array" || collection == "vector" || collection == "soa") &&
+                 candidate.templateArgs.size() == 1) {
+        currentTypeTextOut = collection + "<" + candidate.templateArgs.front() + ">";
+        return true;
+      } else if (isKeyValueSurfaceTypeName(collection) && candidate.templateArgs.size() == 2) {
+        currentTypeTextOut = collection + "<" + candidate.templateArgs[0] + ", " +
+                             candidate.templateArgs[1] + ">";
+        return true;
+      }
+    }
+    auto preferredResolvedCandidate = [&]() -> std::string {
+      if (const std::string preferredCollectionHelper =
+              preferredCollectionHelperResolvedPath(candidate);
+          !preferredCollectionHelper.empty()) {
+        const std::string concretePreferredCollectionHelper =
+            resolveExprConcreteCallPath(
+                params, locals, candidate, preferredCollectionHelper);
+        if (!concretePreferredCollectionHelper.empty()) {
+          return concretePreferredCollectionHelper;
+        }
+        return preferredCollectionHelper;
+      }
+      std::string normalizedName = candidate.name;
+      if (!normalizedName.empty() && normalizedName.front() == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      std::string normalizedPrefix = candidate.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
+      auto explicitLegacyOrCanonicalSoaHelperName = [&]() -> std::string {
+        auto isSupportedSoaHelper = [](std::string_view helperName) {
+          return collection_helpers::isCountHelperName(helperName) ||
+                 collection_helpers::isGetHelperName(helperName) ||
+                 collection_helpers::isRefHelperName(helperName) ||
+                 collection_helpers::isToAosHelperName(helperName) ||
+                 helperName == "push" || helperName == "reserve";
+        };
+        if ((normalizedPrefix == "soa" ||
+             normalizedPrefix == "std/collections/soa") &&
+            isSupportedSoaHelper(normalizedName)) {
+          return normalizedName;
+        }
+        if (normalizedName.rfind("soa/", 0) == 0) {
+          const std::string helperName =
+              normalizedName.substr(std::string("soa/").size());
+          if (isSupportedSoaHelper(helperName)) {
+            return helperName;
+          }
+        }
+        if (normalizedName.rfind("std/collections/soa/", 0) == 0) {
+          const std::string helperName =
+              normalizedName.substr(
+                  std::string("std/collections/soa/").size());
+          if (isSupportedSoaHelper(helperName)) {
+            return helperName;
+          }
+        }
+        return {};
+      };
+      if (const std::string helperName = explicitLegacyOrCanonicalSoaHelperName();
+          !helperName.empty()) {
+        return preferredSoaHelperTargetForCollectionType(helperName,
+                                                         collection_helpers::kRootedSoa);
+      }
+      return {};
+    };
+    auto methodResolvedCandidate = [&]() -> std::string {
+      if (!candidate.isMethodCall || candidate.args.empty() || candidate.name.empty()) {
+        return {};
+      }
+      std::string methodName = candidate.name;
+      if (!methodName.empty() && methodName.front() == '/') {
+        methodName.erase(methodName.begin());
+      }
+      if (methodName.empty()) {
+        return {};
+      }
+      auto resolveMethodOwnerPath = [&](const std::string &typeText, const std::string &typeNamespace) {
+        std::string normalizedType = normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
+        if (normalizedType.empty()) {
+          return std::string{};
+        }
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizedType, base, argText)) {
+          const std::string normalizedBase = normalizeBindingTypeName(base);
+          if (!normalizedBase.empty()) {
+            if (!normalizeCollectionTypePath(normalizedBase).empty()) {
+              return std::string{};
+            }
+            normalizedType = normalizedBase;
+          }
+        }
+        if (isPrimitiveBindingTypeName(normalizedType)) {
+          return "/" + normalizedType;
+        }
+        if (!normalizedType.empty() && normalizedType.front() == '/') {
+          if (structNames_.count(normalizedType) > 0 || defMap_.count(normalizedType) > 0) {
+            return normalizedType;
+          }
+        }
+        if (!normalizedType.empty() && normalizedType.front() != '/') {
+          const std::string rootPath = "/" + normalizedType;
+          if (structNames_.count(rootPath) > 0 || defMap_.count(rootPath) > 0) {
+            return rootPath;
+          }
+          auto importIt = importAliases_.find(normalizedType);
+          if (importIt != importAliases_.end()) {
+            return importIt->second;
+          }
+        }
+        std::string resolvedType = resolveStructTypePath(normalizedType, typeNamespace, structNames_);
+        if (resolvedType.empty()) {
+          resolvedType = resolveTypePath(normalizedType, typeNamespace);
+        }
+        return resolvedType;
+      };
+
+      const Expr &receiver = candidate.args.front();
+      std::string receiverTypeText;
+      if (!inferExprTypeText(receiver, receiverTypeText) || receiverTypeText.empty()) {
+        return std::string{};
+      }
+      const std::string ownerPath = resolveMethodOwnerPath(receiverTypeText, receiver.namespacePrefix);
+      if (ownerPath.empty()) {
+        return std::string{};
+      }
+      return ownerPath + "/" + methodName;
+    };
+    auto resolvedMethodTargetCandidate = [&]() -> std::string {
+      if (!candidate.isMethodCall || candidate.args.empty() || candidate.name.empty()) {
+        return {};
+      }
+      std::string resolvedMethodTarget;
+      bool isBuiltinMethod = false;
+      if (!resolveMethodTarget(
+              params,
+              locals,
+              candidate.namespacePrefix,
+              candidate.args.front(),
+              candidate.name,
+              resolvedMethodTarget,
+              isBuiltinMethod)) {
+        return {};
+      }
+      return resolvedMethodTarget;
+    };
+    if (isDirectMapConstructorPath(resolvedCandidate)) {
+      const std::string keyValueAlias = mapCollectionAliasToken();
+      if (keyValueAlias.empty()) {
+        return false;
+      }
+      if (candidate.templateArgs.size() == 2) {
+        currentTypeTextOut = keyValueAlias + "<" + candidate.templateArgs[0] + ", " +
+                             candidate.templateArgs[1] + ">";
+        return true;
+      }
+      if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
+        return false;
+      }
+      const StdlibSurfaceMetadata *entryMetadata =
+          keyValueHelperSurfaceMetadataLocal();
+      const auto isEntryConstructorArg = [&](const Expr &argExpr) {
+        return entryMetadata != nullptr && argExpr.kind == Expr::Kind::Call &&
+               !argExpr.isMethodCall && !argExpr.name.empty() &&
+               resolveStdlibSurfaceMemberName(*entryMetadata, argExpr.name) ==
+                   "entry";
+      };
+      if (std::all_of(candidate.args.begin(), candidate.args.end(),
+                      isEntryConstructorArg)) {
+        // Entry-pack constructor calls carry no key/value pairs to infer
+        // from; let the declared binding type drive the specialization.
+        return false;
+      }
+      std::string keyTypeText;
+      std::string valueTypeText;
+      for (size_t i = 0; i < candidate.args.size(); i += 2) {
+        std::string currentKeyTypeText;
+        std::string currentValueTypeText;
+        if (!inferExprTypeText(candidate.args[i], currentKeyTypeText) ||
+            !inferExprTypeText(candidate.args[i + 1], currentValueTypeText)) {
+          return false;
+        }
+        if (keyTypeText.empty()) {
+          keyTypeText = currentKeyTypeText;
+        } else if (normalizeBindingTypeName(keyTypeText) != normalizeBindingTypeName(currentKeyTypeText)) {
+          return false;
+        }
+        if (valueTypeText.empty()) {
+          valueTypeText = currentValueTypeText;
+        } else if (normalizeBindingTypeName(valueTypeText) != normalizeBindingTypeName(currentValueTypeText)) {
+          return false;
+        }
+      }
+      if (keyTypeText.empty() || valueTypeText.empty()) {
+        return false;
+      }
+      currentTypeTextOut = keyValueAlias + "<" + keyTypeText + ", " + valueTypeText + ">";
+      return true;
+    }
+    std::string collectionMethodFallbackTypeText;
+    std::string inferredMethodReturnTypeText;
+    if (candidate.isMethodCall) {
+      const ReturnKind inferredKind = inferExprReturnKind(candidate, params, locals);
+      if (inferredKind == ReturnKind::Array) {
+        collectionMethodFallbackTypeText = inferStructReturnPath(candidate, params, locals);
+        const std::string normalizedCollectionType = normalizeCollectionTypePath(collectionMethodFallbackTypeText);
+        if (!normalizedCollectionType.empty()) {
+          const bool keepExperimentalCollectionPath =
+              collectionMethodFallbackTypeText == "Vector" ||
+              isLegacyExperimentalVectorCompatibilityTypePath(
+                  collectionMethodFallbackTypeText) ||
+              isLegacyExperimentalVectorCompatibilityTypePath(
+                  "/" + collectionMethodFallbackTypeText) ||
+              isQualifiedExperimentalKeyValueBackingTypeName(
+                  collectionMethodFallbackTypeText);
+          if (!keepExperimentalCollectionPath) {
+            collectionMethodFallbackTypeText = normalizedCollectionType.substr(1);
+          }
+        }
+      }
+      if (inferredKind != ReturnKind::Unknown && inferredKind != ReturnKind::Void) {
+        inferredMethodReturnTypeText = typeNameForReturnKind(inferredKind);
+      }
+    }
+
+    std::vector<std::string> resolvedCandidates;
+    auto appendResolvedCandidate = [&](const std::string &candidatePath) {
+      if (candidatePath.empty()) {
+        return;
+      }
+      for (const auto &existing : resolvedCandidates) {
+        if (existing == candidatePath) {
+          return;
+        }
+      }
+      resolvedCandidates.push_back(candidatePath);
+    };
+    appendResolvedCandidate(resolvedCandidate);
+    appendResolvedCandidate(canonicalResolvedCandidate);
+    appendResolvedCandidate(sourceMethodKeyValueResolvedCandidate());
+    appendResolvedCandidate(preferredResolvedCandidate());
+    appendResolvedCandidate(resolvedMethodTargetCandidate());
+    appendResolvedCandidate(methodResolvedCandidate());
+    const Definition *resolvedDefinition = nullptr;
+    std::string resolvedDefinitionPath;
+    for (const auto &candidatePath : resolvedCandidates) {
+      auto defIt = defMap_.find(candidatePath);
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        resolvedDefinition = defIt->second;
+        resolvedDefinitionPath = candidatePath;
+        break;
+      }
+      for (const Definition &definition : program_.definitions) {
+        if (definition.fullPath != candidatePath &&
+            definition.fullPath.rfind(candidatePath + "__", 0) != 0 &&
+            definition.fullPath.rfind(candidatePath + "<", 0) != 0) {
+          continue;
+        }
+        resolvedDefinition = &definition;
+        resolvedDefinitionPath = definition.fullPath;
+        break;
+      }
+      if (resolvedDefinition != nullptr) {
+        break;
+      }
+    }
+    if (resolvedDefinition == nullptr) {
+      if (!inferredMethodReturnTypeText.empty()) {
+        currentTypeTextOut = inferredMethodReturnTypeText;
+        return true;
+      }
+      if (collectionMethodFallbackTypeText.empty()) {
+        return false;
+      }
+      currentTypeTextOut = collectionMethodFallbackTypeText;
+      return true;
+    }
+    for (const auto &transform : resolvedDefinition->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      if (transform.templateArgs.front() == "auto") {
+        break;
+      }
+      currentTypeTextOut = transform.templateArgs.front();
+      return !currentTypeTextOut.empty();
+    }
+    if (returnBindingInferenceStack_.contains(resolvedDefinitionPath) ||
+        inferenceStack_.contains(resolvedDefinitionPath)) {
+      if (!inferredMethodReturnTypeText.empty()) {
+        currentTypeTextOut = inferredMethodReturnTypeText;
+        return true;
+      }
+      if (collectionMethodFallbackTypeText.empty()) {
+        return false;
+      }
+      currentTypeTextOut = collectionMethodFallbackTypeText;
+      return true;
+    }
+    if (!queryTypeInferenceDefinitionStack_.insert(resolvedDefinitionPath).second) {
+      return false;
+    }
+    const auto stackIt = queryTypeInferenceDefinitionStack_.find(resolvedDefinitionPath);
+    struct ScopeGuard {
+      std::unordered_set<std::string> &stack;
+      std::unordered_set<std::string>::const_iterator it;
+      ~ScopeGuard() {
+        stack.erase(it);
+      }
+    } guard{queryTypeInferenceDefinitionStack_, stackIt};
+    BindingInfo inferredReturn;
+    if (!inferDefinitionReturnBinding(*resolvedDefinition, inferredReturn)) {
+      if (!inferredMethodReturnTypeText.empty()) {
+        currentTypeTextOut = inferredMethodReturnTypeText;
+        return true;
+      }
+      if (collectionMethodFallbackTypeText.empty()) {
+        return false;
+      }
+      currentTypeTextOut = collectionMethodFallbackTypeText;
+      return true;
+    }
+    auto substituteCallTemplateArgs = [&](const std::string &typeText) {
+      std::function<std::string(const std::string &)> substitute = [&](const std::string &currentTypeText) {
+        const std::string normalized = normalizeBindingTypeName(currentTypeText);
+        if (normalized.empty()) {
+          return currentTypeText;
+        }
+        for (size_t i = 0; i < resolvedDefinition->templateArgs.size() && i < candidate.templateArgs.size(); ++i) {
+          if (normalizeBindingTypeName(resolvedDefinition->templateArgs[i]) == normalized) {
+            return candidate.templateArgs[i];
+          }
+        }
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(normalized, base, argText)) {
+          return normalized;
+        }
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(argText, args) || args.empty()) {
+          return normalized;
+        }
+        std::string substitutedBase = substitute(base);
+        for (auto &arg : args) {
+          arg = substitute(arg);
+        }
+        return substitutedBase + "<" + joinTemplateArgs(args) + ">";
+      };
+      return substitute(typeText);
+    };
+    inferredReturn.typeName = substituteCallTemplateArgs(inferredReturn.typeName);
+    inferredReturn.typeTemplateArg = substituteCallTemplateArgs(inferredReturn.typeTemplateArg);
+    currentTypeTextOut = bindingTypeText(inferredReturn);
+    return !currentTypeTextOut.empty();
+  };
+
+  return inferExprTypeText(expr, typeTextOut);
+}
+
+} // namespace primec::semantics

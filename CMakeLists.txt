@@ -363,6 +363,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInferCollectionCompatibilityDirects.cpp
   src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp
   src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp
+  src/semantics/SemanticsValidatorInferCollectionReturnInferenceQuery.cpp
   src/semantics/SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp
   src/semantics/SemanticsValidatorInferCollectionStringResolver.cpp
   src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp
@@ -402,6 +403,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
   src/semantics/SemanticsValidatorStatementPrintability.cpp
   src/semantics/SemanticsValidatorStatementReturns.cpp
+  src/semantics/SemanticsValidatorStatementReturnsAlways.cpp
   src/semantics/SemanticsValidatorStatement.cpp
   src/semantics/SemanticsValidatorTaskHandles.cpp
   src/semantics/SemanticsValidatorTraits.cpp

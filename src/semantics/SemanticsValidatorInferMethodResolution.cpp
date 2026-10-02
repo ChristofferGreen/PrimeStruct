@@ -2,6 +2,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "SemanticsValidatorInferMethodResolutionHelpers.h"
 
 #include <algorithm>
 #include <functional>
@@ -10,6 +11,8 @@
 #include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
+
+using namespace inferMethodResolutionHelpers;
 
 bool SemanticsValidator::resolveInferMethodCallPath(
     const Expr &expr,
@@ -89,43 +92,6 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       normalizedMethodName = keyValueHelperName;
     }
     return normalizedMethodName;
-  };
-  auto receiverHelperFamilyLeaf = [](std::string_view resolvedType) -> std::string {
-    if (resolvedType.empty()) {
-      return {};
-    }
-    const size_t slash = resolvedType.find_last_of('/');
-    const size_t nameStart = slash == std::string_view::npos ? 0 : slash + 1;
-    size_t nameEnd = resolvedType.size();
-    const size_t specialization = resolvedType.find("__t", nameStart);
-    const size_t overload = resolvedType.find("__ov", nameStart);
-    const size_t templateStart = resolvedType.find('<', nameStart);
-    if (specialization != std::string_view::npos) {
-      nameEnd = std::min(nameEnd, specialization);
-    }
-    if (overload != std::string_view::npos) {
-      nameEnd = std::min(nameEnd, overload);
-    }
-    if (templateStart != std::string_view::npos) {
-      nameEnd = std::min(nameEnd, templateStart);
-    }
-    if (nameEnd <= nameStart) {
-      return {};
-    }
-    return std::string(resolvedType.substr(nameStart, nameEnd - nameStart));
-  };
-  auto normalizedTypeLeafName = [](std::string value) {
-    value = normalizeBindingTypeName(value);
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
-      value = base;
-    }
-    if (!value.empty() && value.front() == '/') {
-      value.erase(value.begin());
-    }
-    const size_t slash = value.find_last_of('/');
-    return slash == std::string::npos ? value : value.substr(slash + 1);
   };
   auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
     return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
