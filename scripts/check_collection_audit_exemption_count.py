@@ -68,7 +68,10 @@ _EXEMPT_MARKERS = (
 # TODO-5384: splitting SemanticsValidatorExprMethodTargetResolution.cpp left one
 # unit (the resolve step, which spells the "to_aos" helper literal) that still
 # needs its marker next to the original one: 83 -> 84.
-BASELINE_EXEMPT_FILE_COUNT = 84
+# TODO-5384: splitting already-exempt semantics files into smaller units left
+# eight units that still spell collection helper literals and need the marker
+# (the other split units carry none): 84 -> 92.
+BASELINE_EXEMPT_FILE_COUNT = 92
 
 
 def _is_exempt(text: str) -> bool:

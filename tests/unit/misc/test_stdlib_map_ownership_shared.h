@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <initializer_list>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -231,10 +232,20 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   MapOwnershipSources result;
   const std::string mapSource = readText(collectionsFile("map.prime"));
   const std::string registrySource = readText(repoRoot() / "src" / "support" / "StdlibSurfaceRegistry.cpp");
-  const std::string publicationBuildersSource =
-      readText(repoRoot() / "src" / "semantics" /
-               "SemanticPublicationBuilders.cpp");
-  const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
+  // These sources were split into several units (TODO-5384); read them together.
+  const auto readSemanticsUnits = [](std::initializer_list<const char *> names) {
+    std::string text;
+    for (const char *name : names) {
+      text += readText(repoRoot() / "src" / "semantics" / name);
+    }
+    return text;
+  };
+  const std::string publicationBuildersSource = readSemanticsUnits(
+      {"SemanticPublicationBuilders.cpp", "SemanticPublicationBuildersInternal.h",
+       "SemanticPublicationBuildersSupport.cpp", "SemanticPublicationBuildersRouting.cpp",
+       "SemanticPublicationBuildersRequirements.cpp", "SemanticPublicationBuildersFacts.cpp"});
+  const std::string semanticsSource =
+      readSemanticsUnits({"SemanticsValidate.cpp", "SemanticsValidateKeyValueRewrites.cpp"});
   const std::string semanticBindingTypeHelpersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsBindingTypeHelpers.cpp");
@@ -246,9 +257,9 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   const std::string callPathHelpersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsCallPathHelpers.cpp");
-  const std::string builtinPathHelpersSource =
-      readText(repoRoot() / "src" / "semantics" /
-               "SemanticsBuiltinPathHelpers.cpp");
+  const std::string builtinPathHelpersSource = readSemanticsUnits(
+      {"SemanticsBuiltinPathHelpers.cpp", "SemanticsBuiltinPathHelpersShared.h",
+       "SemanticsBuiltinPathHelpersRewrites.cpp", "SemanticsBuiltinPathHelpersSoa.cpp"});
   // TODO-4724/TODO-5294 (both closed) decomposed the old monolithic
   // resolveMethodTarget body out of this file into several focused seam
   // files. Concatenate those seams here too so this source-stability check

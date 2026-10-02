@@ -20,118 +20,125 @@
 
 namespace primec {
 
-void rewriteExperimentalSoaFieldViewIndexExpr(
+void rewriteExperimentalSoaFieldViewHelperExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
         &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
-    const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
+    const std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>>
+        &structFieldInfo,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &visibleSoaFieldHelpers,
     const std::string &definitionNamespace);
 
-void rewriteExperimentalSoaFieldViewIndexStatements(
+void rewriteExperimentalSoaFieldViewHelperStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
         &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
-    const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
+    const std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>>
+        &structFieldInfo,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &visibleSoaFieldHelpers,
     const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
-    rewriteExperimentalSoaFieldViewIndexExpr(
+    rewriteExperimentalSoaFieldViewHelperExpr(
         stmt,
         bindings,
         allBindings,
         soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
-        structFieldNames,
+        structFieldInfo,
         structPaths,
         visibleSoaFieldHelpers,
         definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
-      rewriteExperimentalSoaFieldViewIndexStatements(
+      rewriteExperimentalSoaFieldViewHelperStatements(
           stmt.bodyArguments,
           bodyBindings,
           allBindings,
           soaCollectionReturnDefinitions,
           specializedSoaVectorElementTypes,
-          structFieldNames,
+          structFieldInfo,
           structPaths,
           visibleSoaFieldHelpers,
           definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto binding =
-              extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
-          binding.has_value()) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
         bindings[stmt.name] = *binding;
       }
     }
   }
 }
 
-void rewriteExperimentalSoaFieldViewIndexExpr(
+void rewriteExperimentalSoaFieldViewHelperExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
         &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
-    const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
+    const std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>>
+        &structFieldInfo,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &visibleSoaFieldHelpers,
     const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
-    rewriteExperimentalSoaFieldViewIndexExpr(
+    rewriteExperimentalSoaFieldViewHelperExpr(
         arg,
         bindings,
         allBindings,
         soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
-        structFieldNames,
+        structFieldInfo,
         structPaths,
         visibleSoaFieldHelpers,
         definitionNamespace);
   }
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
-      expr.templateArgs.size() != 0 || expr.hasBodyArguments ||
-      !expr.bodyArguments.empty() || semantics::hasNamedArguments(expr.argNames) ||
-      expr.args.size() != 2) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding ||
+      expr.hasBodyArguments || !expr.bodyArguments.empty() ||
+      semantics::hasNamedArguments(expr.argNames) ||
+      !expr.templateArgs.empty()) {
     return;
   }
 
-  std::string builtinAccessName;
-  if (!semantics::getBuiltinArrayAccessName(expr, builtinAccessName) ||
-      builtinAccessName != "at") {
-    return;
+  std::string fieldName;
+  if (!expr.name.empty() && expr.name.front() == '/' &&
+      semantics::splitSoaFieldViewHelperPath(expr.name, &fieldName)) {
+  } else {
+    if (!expr.namespacePrefix.empty()) {
+      return;
+    }
+    fieldName = expr.name;
+    if (!fieldName.empty() && fieldName.front() == '/') {
+      fieldName.erase(fieldName.begin());
+    }
+    if (fieldName.empty() || fieldName.find('/') != std::string::npos ||
+        collection_helpers::isCountHelperName(fieldName) ||
+        collection_helpers::isGetHelperName(fieldName) ||
+        collection_helpers::isRefHelperName(fieldName) ||
+        fieldName == "to_soa" || collection_helpers::isToAosHelperName(fieldName)) {
+      return;
+    }
   }
 
-  const Expr &fieldViewExpr = expr.args.front();
-  if (fieldViewExpr.kind != Expr::Kind::Call || fieldViewExpr.isBinding ||
-      fieldViewExpr.name.empty() ||
-      fieldViewExpr.name.find('/') != std::string::npos ||
-      !fieldViewExpr.templateArgs.empty() || fieldViewExpr.hasBodyArguments ||
-      !fieldViewExpr.bodyArguments.empty() ||
-      semantics::hasNamedArguments(fieldViewExpr.argNames) ||
-      fieldViewExpr.args.size() != 1) {
+  if (visibleSoaFieldHelpers.count(collection_helpers::kRootedSoaPrefix + fieldName) > 0) {
     return;
   }
-
-  if (visibleSoaFieldHelpers.count(collection_helpers::kRootedSoaPrefix + fieldViewExpr.name) > 0) {
+  if (expr.args.size() != 1) {
     return;
   }
 
   std::string receiverElemType;
   bool receiverNeedsDereference = false;
   bool receiverUsesCanonicalSoaVector = false;
-  const Expr &receiver = fieldViewExpr.args.front();
+  const Expr &receiver = expr.args.front();
   std::optional<Expr> canonicalReceiverExpr;
   const Expr *getReceiverExpr = &receiver;
   auto tryReceiverBinding = [&](const semantics::BindingInfo &binding) {
@@ -301,54 +308,60 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
       !getReceiverExpr->namespacePrefix.empty() ? getReceiverExpr->namespacePrefix : definitionNamespace;
   const std::string elementStructPath =
       semantics::resolveStructTypePath(normalizedElemType, lookupNamespace, structPaths);
-  auto fieldIt = structFieldNames.find(elementStructPath);
-  if (elementStructPath.empty() || fieldIt == structFieldNames.end() ||
-      fieldIt->second.count(fieldViewExpr.name) == 0) {
+  auto structIt = structFieldInfo.find(elementStructPath);
+  if (elementStructPath.empty() || structIt == structFieldInfo.end()) {
+    return;
+  }
+  auto fieldIt = structIt->second.find(fieldName);
+  if (fieldIt == structIt->second.end()) {
     return;
   }
 
-  Expr getCall;
-  getCall.kind = Expr::Kind::Call;
-  const bool useBorrowedGetHelper = receiverNeedsDereference;
-  const std::string getHelperName = useBorrowedGetHelper ? collection_helpers::kGetRef : "get";
-  getCall.name = receiverUsesCanonicalSoaVector
-                     ? semantics::publicSoaHelperTargetPath(getHelperName)
-                     : semantics::compatibilitySoaHelperTargetPath(getHelperName);
-  getCall.templateArgs = {receiverElemType};
+  Expr fieldViewCall;
+  fieldViewCall.kind = Expr::Kind::Call;
+  fieldViewCall.name = receiverUsesCanonicalSoaVector
+                           ? collection_helpers::kCanonicalSoaFieldView
+                           : collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVectorFieldView");
+  fieldViewCall.templateArgs = {receiverElemType, fieldIt->second.typeText};
   auto appendReceiverValueExpr = [&](Expr &callExpr) {
-    if (!useBorrowedGetHelper) {
+    if (!receiverNeedsDereference) {
       callExpr.args.push_back(*getReceiverExpr);
       return;
     }
     if (getReceiverExpr->kind == Expr::Kind::Call &&
         semantics::isSimpleCallName(*getReceiverExpr, "dereference") &&
         getReceiverExpr->args.size() == 1) {
-      callExpr.args.push_back(getReceiverExpr->args.front());
+      callExpr.args.push_back(*getReceiverExpr);
       return;
     }
-    callExpr.args.push_back(*getReceiverExpr);
+    Expr dereferenceCall;
+    dereferenceCall.kind = Expr::Kind::Call;
+    dereferenceCall.name = "dereference";
+    dereferenceCall.args.push_back(*getReceiverExpr);
+    dereferenceCall.argNames.resize(dereferenceCall.args.size());
+    dereferenceCall.sourceLine = getReceiverExpr->sourceLine;
+    dereferenceCall.sourceColumn = getReceiverExpr->sourceColumn;
+    callExpr.args.push_back(std::move(dereferenceCall));
   };
-  appendReceiverValueExpr(getCall);
-  getCall.args.push_back(expr.args[1]);
-  getCall.argNames.resize(getCall.args.size());
-  getCall.sourceLine = expr.sourceLine;
-  getCall.sourceColumn = expr.sourceColumn;
+  appendReceiverValueExpr(fieldViewCall);
+  fieldViewCall.args.push_back(makeI32LiteralExpr(
+      static_cast<uint64_t>(fieldIt->second.index),
+      expr.sourceLine,
+      expr.sourceColumn));
+  fieldViewCall.argNames.resize(fieldViewCall.args.size());
+  fieldViewCall.sourceLine = expr.sourceLine;
+  fieldViewCall.sourceColumn = expr.sourceColumn;
 
-  expr = {};
-  expr.kind = Expr::Kind::Call;
-  expr.name = fieldViewExpr.name;
-  expr.isMethodCall = true;
-  expr.isFieldAccess = true;
-  expr.args.push_back(std::move(getCall));
-  expr.argNames.push_back(std::nullopt);
-  expr.sourceLine = fieldViewExpr.sourceLine;
-  expr.sourceColumn = fieldViewExpr.sourceColumn;
+  expr = std::move(fieldViewCall);
+  expr.isMethodCall = false;
+  expr.isFieldAccess = false;
+  expr.namespacePrefix.clear();
 }
 
-bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error) {
+bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error) {
   error.clear();
 
-  std::unordered_map<std::string, std::unordered_set<std::string>> structFieldNames;
+  std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>> structFieldInfo;
   std::unordered_set<std::string> structPaths;
   std::unordered_set<std::string> visibleSoaFieldHelpers;
   std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
@@ -372,10 +385,16 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
         soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
+    if (semantics::isStructLikeDefinition(def)) {
+      structPaths.insert(def.fullPath);
+    }
+  }
+
+  static const std::unordered_map<std::string, std::string> emptyImportAliases;
+  for (const Definition &def : program.definitions) {
     if (!semantics::isStructLikeDefinition(def)) {
       continue;
     }
-    structPaths.insert(def.fullPath);
     auto isStaticField = [](const Expr &stmt) {
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "static") {
@@ -384,17 +403,38 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
       }
       return false;
     };
-    std::unordered_set<std::string> fieldNames;
+    std::unordered_map<std::string, SoaFieldViewFieldInfo> fields;
+    size_t fieldIndex = 0;
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding || isStaticField(stmt)) {
         continue;
       }
-      fieldNames.insert(stmt.name);
+      semantics::BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      if (semantics::parseBindingInfo(stmt,
+                                      def.namespacePrefix,
+                                      structPaths,
+                                      emptyImportAliases,
+                                      binding,
+                                      restrictType,
+                                      parseError)) {
+        std::string typeText = binding.typeName;
+        if (!binding.typeTemplateArg.empty()) {
+          typeText += "<" + binding.typeTemplateArg + ">";
+        }
+        fields.emplace(stmt.name,
+                       SoaFieldViewFieldInfo{
+                           fieldIndex,
+                           qualifySoaFieldViewTypeText(typeText,
+                                                       def.namespacePrefix,
+                                                       structPaths)});
+      }
+      ++fieldIndex;
     }
-    if (fieldNames.empty()) {
-      continue;
+    if (!fields.empty()) {
+      structFieldInfo.emplace(def.fullPath, std::move(fields));
     }
-    structFieldNames.emplace(def.fullPath, std::move(fieldNames));
   }
 
   for (Definition &def : program.definitions) {
@@ -424,24 +464,24 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
     if (slash != std::string::npos && slash > 0) {
       definitionNamespace = def.fullPath.substr(0, slash);
     }
-    rewriteExperimentalSoaFieldViewIndexStatements(
+    rewriteExperimentalSoaFieldViewHelperStatements(
         def.statements,
         bindings,
         allBindings,
         soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
-        structFieldNames,
+        structFieldInfo,
         structPaths,
         visibleSoaFieldHelpers,
         definitionNamespace);
     if (def.returnExpr.has_value()) {
-      rewriteExperimentalSoaFieldViewIndexExpr(
+      rewriteExperimentalSoaFieldViewHelperExpr(
           *def.returnExpr,
           bindings,
           allBindings,
           soaCollectionReturnDefinitions,
           specializedSoaVectorElementTypes,
-          structFieldNames,
+          structFieldInfo,
           structPaths,
           visibleSoaFieldHelpers,
           definitionNamespace);

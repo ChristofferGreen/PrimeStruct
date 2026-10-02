@@ -192,6 +192,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/parser/ParserListsSignatures.cpp
   src/semantics/SemanticsBindingTypeHelpers.cpp
   src/semantics/SemanticsBuiltinPathHelpers.cpp
+  src/semantics/SemanticsBuiltinPathHelpersRewrites.cpp
+  src/semantics/SemanticsBuiltinPathHelpersSoa.cpp
   src/semantics/SemanticsCallPathHelpers.cpp
   src/semantics/SemanticsDefinitionPrepass.cpp
   src/semantics/SemanticsDefinitionPartitioner.cpp
@@ -236,14 +238,24 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TypeResolutionGraph.cpp
   src/semantics/TypeResolutionGraphPreparation.cpp
   src/semantics/SemanticPublicationBuilders.cpp
+  src/semantics/SemanticPublicationBuildersSupport.cpp
+  src/semantics/SemanticPublicationBuildersRouting.cpp
+  src/semantics/SemanticPublicationBuildersRequirements.cpp
+  src/semantics/SemanticPublicationBuildersFacts.cpp
   src/semantics/SemanticsValidationBenchmarkOrchestration.cpp
   src/semantics/SemanticsValidationPublicationOrchestration.cpp
   src/semantics/SemanticsValidate.cpp
+  src/semantics/SemanticsValidateKeyValueRewrites.cpp
   src/semantics/SemanticsValidateBuiltinSoaMetadata.cpp
   src/semantics/SemanticsValidateBuiltinSoaRewrites.cpp
+  src/semantics/SemanticsValidateBuiltinSoaRewritesAccessCountRewrites.cpp
+  src/semantics/SemanticsValidateBuiltinSoaRewritesMutatorRewrites.cpp
   src/semantics/SemanticsValidateCompileTimeIf.cpp
   src/semantics/SemanticsValidateExperimentalSoaFieldViewRewrites.cpp
+  src/semantics/SemanticsValidateExperimentalSoaFieldViewRewritesHelperRewrites.cpp
+  src/semantics/SemanticsValidateExperimentalSoaFieldViewRewritesCarrierRewrites.cpp
   src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp
+  src/semantics/SemanticsValidateExperimentalSoaMethodRewritesBorrowedHelpers.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructorsContext.cpp
@@ -283,6 +295,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorBuildUtility.cpp
   src/semantics/SemanticsValidatorBuildDirectCallBinding.cpp
   src/semantics/SemanticsValidatorBuildInitializerInference.cpp
+  src/semantics/SemanticsValidatorBuildInitializerInferenceSoaHelpers.cpp
+  src/semantics/SemanticsValidatorBuildInitializerInferenceBindings.cpp
   src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp
   src/semantics/SemanticsValidatorEffectFreeCollections.cpp
   src/semantics/SemanticsValidatorExprBlock.cpp
@@ -346,6 +360,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCallResolution.cpp
   src/semantics/SemanticsValidatorExpr.cpp
   src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp
+  src/semantics/SemanticsValidatorInferCollectionCompatibilityDirects.cpp
   src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp
   src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp
   src/semantics/SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp
@@ -391,6 +406,9 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorTaskHandles.cpp
   src/semantics/SemanticsValidatorTraits.cpp
   src/semantics/RequirementPredicateFacts.cpp
+  src/semantics/RequirementPredicateFactsCore.cpp
+  src/semantics/RequirementPredicateFactsOperands.cpp
+  src/semantics/RequirementPredicateFactsPredicates.cpp
   src/text_filter/TextFilterHelpers.cpp
   src/text_filter/TextFilterUnaryRewrites.cpp
   src/text_filter/TextFilterPipelineEnvelope.cpp

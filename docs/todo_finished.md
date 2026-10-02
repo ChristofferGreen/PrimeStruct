@@ -1907,6 +1907,7 @@ are left unarchived.
 | TODO-5381 | `count(dereference(r))` on a borrowed vector silently returns 0 | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5382 | Cut semantic-product publication cost (inferCallSnapshotData recursion) | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5383 | Migrate the remaining compiler state into CompileContext | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5384 | Split the multi-function src/semantics files over 1,200 lines (pure moves) | [2026-10.md](todo_archive/2026-10.md) | - |
 
 <!-- INDEX-END -->
 

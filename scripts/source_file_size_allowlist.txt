@@ -1,21 +1,10 @@
-# Files under src/semantics larger than 1200 lines (TODO-5353). Format: <path> <max lines> <reason>.
+# Files under src/semantics larger than 1200 lines (TODO-5385). Format: <path> <max lines> <reason>.
 # The list may only shrink: split a file, then delete its entry.
 
 src/semantics/TemplateMonomorphExpressionRewrite.cpp 3876 one ~3,500-line rewriteExpr function; needs restructuring (not a pure move) before it can be split
 src/semantics/SemanticsValidatorStatementBindings.cpp 2222 one ~2,150-line validateBindingStatement; needs decomposition (TODO-5385)
-src/semantics/SemanticPublicationBuilders.cpp 2139 multi-function file; pure-move split pending (TODO-5353)
 src/semantics/SemanticsValidatorExpr.cpp 1885 one ~1,870-line validateExpr; needs decomposition (TODO-5385)
-src/semantics/RequirementPredicateFacts.cpp 1847 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidate.cpp 1837 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/TemplateMonomorphImplicitTemplateInference.cpp 1575 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp 1391 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidateBuiltinSoaRewrites.cpp 1374 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp 1314 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsBuiltinPathHelpers.cpp 1299 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp 1289 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidatorStatementReturns.cpp 1279 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidateExperimentalSoaFieldViewRewrites.cpp 1271 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/TypeResolutionGraph.cpp 1247 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/TemplateMonomorphMethodTargets.cpp 1237 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp 1229 multi-function file; pure-move split pending (TODO-5353)
-src/semantics/SemanticsValidatorInferMethodResolution.cpp 1213 multi-function file; pure-move split pending (TODO-5353)
+src/semantics/TemplateMonomorphImplicitTemplateInference.cpp 1575 one giant function; needs decomposition (TODO-5385)
+src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp 1314 one giant function; needs decomposition (TODO-5385)
+src/semantics/SemanticsValidatorStatementReturns.cpp 1279 one giant function; needs decomposition (TODO-5385)
+src/semantics/SemanticsValidatorInferMethodResolution.cpp 1213 one giant function; needs decomposition (TODO-5385)

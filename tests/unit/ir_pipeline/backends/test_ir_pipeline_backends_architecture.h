@@ -273,9 +273,9 @@ TEST_CASE("collection helper surface registry resolves preferred compatibility s
 
 TEST_CASE("map insert semantic rewrite uses stdlib surface adapter") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path sourcePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
+  std::filesystem::path sourcePath = cwd / "src" / "semantics" / "SemanticsValidateKeyValueRewrites.cpp";
   if (!std::filesystem::exists(sourcePath)) {
-    sourcePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
+    sourcePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidateKeyValueRewrites.cpp";
   }
   REQUIRE(std::filesystem::exists(sourcePath));
 
