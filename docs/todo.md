@@ -102,8 +102,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5363 | Spec: VM-owned dynamic strings (design decision) | ready | vm-strings |
-| TODO-5364 | VM string heap: dynamic string indices in the interpreter | blocked | vm-strings |
+| TODO-5364 | VM string heap: dynamic string indices in the interpreter | ready | vm-strings |
 | TODO-5365 | Embed API: string results and indexable string arguments | blocked | vm-strings |
 | TODO-5368 | Split docs/PrimeStruct.md into stable spec sections | deferred | docs-hygiene |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
@@ -112,13 +111,13 @@ of sync with them.
 
 - TODO-5384 (track: semantics-structure): Split the multi-function src/semantics files over 1,200 lines (pure moves).
 - TODO-5385 (track: semantics-structure): Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-- TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
+- TODO-5364 (track: vm-strings): VM string heap: dynamic string indices in the interpreter.
 
 ### Immediate Next 10
 
 1. TODO-5384 - Split the multi-function src/semantics files over 1,200 lines (pure moves).
 2. TODO-5385 - Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-3. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
+3. TODO-5364 - VM string heap: dynamic string indices in the interpreter.
 
 ### Priority Lanes
 
@@ -127,7 +126,7 @@ of sync with them.
 - Semantics structure: TODO-5384, TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
-- VM strings: TODO-5363 -> 5364 -> 5365
+- VM strings: TODO-5364 -> 5365
 - Docs hygiene: TODO-5368 (deferred)
 
 ### Execution Queue
@@ -209,34 +208,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
 
-- [ ] TODO-5363: Spec: VM-owned dynamic strings (design decision)
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Language/VM
-  - parallel_track: vm-strings
-  - scope: The VM cannot create strings (string values are indices into a module
-    table), which limits embedding (`Script::call` cannot return strings or
-    index argument strings, host functions cannot return strings) and blocks
-    any dynamic text feature. Write the design in `docs/PrimeStruct.md`: a
-    VM string heap with an index space above the module table, how
-    `LoadStringByte` (currently a compile-time string index immediate)
-    handles dynamic indices, lifetime/ownership, interaction with
-    native/wasm backends (reject or support), and the PSIR version impact.
-  - acceptance:
-    - design section committed with a decision on each question above and an
-      IR snippet.
-    - a prototype diff or estimate of the touched sites (VM string lookups,
-      print/file ops, host calls) with a recommended leaf split appended
-      here.
-    - docs-only change with an explicit 'docs-only/no TODO' note aside from
-      the leaves it spawns.
-  - stop_rule: docs and sizing only; do not implement.
-
 - [ ] TODO-5364: VM string heap: dynamic string indices in the interpreter
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5363
+  - status: ready
   - created_at: 2026-10-01
   - phase: Language/VM
   - parallel_track: vm-strings

@@ -5664,6 +5664,54 @@ bad_set() {
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it.
   File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via
   lowering.
+- **VM-owned dynamic strings (design, TODO-5363; not implemented):** the VM cannot create strings today because a string
+  value is an index into the immutable module table. The design below adds run-time strings without changing how
+  module-table strings behave; implementation is split into TODO-5364 (VM heap) and TODO-5365 (embed API).
+  - *Index space.* A string value stays a `u64`. Values with bit 63 clear index the module table exactly as today.
+    Values with bit 63 set are *dynamic*: `0x8000_0000_0000_0000 | generation << 32 | slot` (31-bit generation, 32-bit
+    slot). The tag is independent of the module's table size, so existing indices and `.psir` files keep their meaning.
+  - *One lookup.* Every VM string access (`LoadStringLength`, `LoadStringByte`, `PrintString`, `PrintStringDynamic`,
+    the file-open/`FileWriteString*` opcodes, host-call string arguments) goes through one helper,
+    `resolveVmString(module, heap, index)`, which returns the string or faults: index past the table, dynamic slot out of
+    range, or a generation that no longer matches the slot (use after release).
+  - *Heap.* `VmStringHeap` is a slot vector with a free list and a per-slot generation. It belongs to one run
+    (`Vm::execute`, one debug session): it is created empty, and destroyed with the run. There is no GC and no per-string
+    free opcode in the first version, so strings made during a run live until the run ends; embedders that call into a
+    script repeatedly start a new run per call, so memory does not grow across calls. A release opcode can be added
+    later without changing the index format (generations already catch stale uses).
+  - *Creation.* Only host calls create strings in the first version: a binding whose return kind is `String` returns
+    its text (`VmHostBinding` gains a string-returning invoke form) and the VM pushes the new dynamic index. Script code
+    cannot concatenate or build strings; that is a separate language feature.
+  - *Indexing.* `LoadStringByte` carries the string index as an immediate (compile-time literal), so it cannot read a
+    dynamic string. A new opcode `LoadStringByteDynamic` is appended after `CallHost`: it pops the byte position and the
+    string index (both from the stack) and pushes the byte, with the same bounds fault as `LoadStringByte`.
+  - *Backends.* Native, wasm, glsl/spirv and C++ emission do not support dynamic strings: the opcode table
+    (`include/primec/ir/IrOpcodeTable.h`) marks `LoadStringByteDynamic` as VM-only (all target flags 0), so the validator
+    rejects it for those targets with the existing "unsupported opcode for <target> target" diagnostic. Programs that
+    only use literal strings are unaffected.
+  - *PSIR.* Appending an opcode changes the serialized format's opcode range, so `IrSchemaVersion` goes 25 -> 26 and
+    version 25 files are rejected (the supported range is exactly the current version). Host import return kind
+    `String` is already encoded; no module layout change.
+  - *IR sketch* (`host_name()` returns a string, the script returns its first byte):
+
+    ```
+    CallHost 0            ; host_name() -> dynamic string index on the stack
+    Dup
+    LoadStringLength      ; resolveVmString: length of the dynamic string
+    Pop
+    PushI32 0             ; byte position
+    LoadStringByteDynamic ; pops position, then index -> byte
+    ReturnI32
+    ```
+  - *Touched sites (estimate).* VM: `VmExecutionKernel.cpp` (2 table lookups + the new opcode), `VmIoHelpers.cpp` (1 lookup
+    used by print/file ops), `VmExecution.cpp` (host-call string argument and string return, 2 sites), `VmHost.h/.cpp`
+    (string-returning binding), the debug session (shares the kernel, nothing extra), plus `Ir.h`, the opcode table,
+    validator, serializer and version constant. Lowerer/semantics: choosing `LoadStringByteDynamic` for `text.at(i)` when
+    the receiver is not a literal-backed string. Embed: `Script::call` argument/result strings and removal of the
+    `__psarg_string` special case. Roughly 15 source files, none of them large changes.
+  - *Leaf split.* TODO-5364: VM string heap, the single lookup helper (with a grep audit), `LoadStringByteDynamic`,
+    PSIR bump, hand-built IR tests. TODO-5365: embed string arguments/results on top of it (including the lowerer choice
+    of the dynamic opcode for argument strings).
 - **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with
   count metadata plus contiguous element slots. VM/native vector locals use a
   heap-backed `count/capacity/data_ptr` record; push/reserve growth reallocates
