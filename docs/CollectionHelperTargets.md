@@ -62,12 +62,19 @@ change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and
 | soa | `to_aos` | method(SoaVector) | ok (1) | `/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/soaVectorSingle`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
 | soa | `to_aos` | bare(SoaVector) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
 | soa | `to_aos` | method(soa<T>) | ok (1) | `/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/soaVectorSingle`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
-| vector | `count` | method(Reference) | semantic error |  | validateExprMethodCallTarget failed name=count **TODO-5375** |
-| vector | `count` | bare(Reference) | semantic error |  | unknown method target for count **TODO-5375** |
-| vector | `at` | method(Reference) | semantic error |  | validateExprMethodCallTarget failed name=at **TODO-5375** |
-| vector | `at` | bare(Reference) | semantic error |  | at requires array, vector, map, or string target **TODO-5375** |
-| vector | `push` | method(Reference) | semantic error |  | unknown method target for push **TODO-5375** |
-| vector | `push` | bare(Reference) | semantic error |  | argument type mismatch for /std/collections/vector/push **TODO-5375** |
+| vector | `count` | method(Reference) | ok (3) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorCountRef`<br>`/std/collections/vector/vectorCountRef` |  |
+| vector | `count` | bare(Reference) | ok (3) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorCountRef`<br>`/std/collections/vector/vectorCountRef` |  |
+| vector | `at` | method(Reference) | ok (20) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorAtRef`<br>`/std/collections/vector/vectorAtRef` |  |
+| vector | `at` | bare(Reference) | ok (20) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorAtRef`<br>`/std/collections/vector/vectorAtRef` |  |
+| vector | `push` | method(Reference) | ok (4) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorPushRef`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| vector | `push` | bare(Reference) | ok (4) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorPushRef`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| vector | `capacity` | method(Reference) | ok (3) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorCapacityRef`<br>`/std/collections/vector/vectorCapacityRef` |  |
+| vector | `at_unsafe` | method(Reference) | ok (30) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorAtUnsafeRef`<br>`/std/collections/vector/vectorAtUnsafeRef` |  |
+| vector | `pop` | method(Reference) | ok (2) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorPopRef`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| vector | `clear` | method(Reference) | ok (0) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorClearRef`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| vector | `remove_at` | method(Reference) | ok (20) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorRemoveAtRef`<br>`/std/collections/vector/at`<br>`/std/collections/vector/at` |  |
+| vector | `remove_swap` | method(Reference) | ok (30) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorRemoveSwapRef`<br>`/std/collections/vector/at`<br>`/std/collections/vector/at` |  |
+| vector | `reserve` | method(Reference) | ok (10) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorReserveRef`<br>`/std/collections/vector/capacity`<br>`/std/collections/vector/capacity` |  |
 | map | `count` | method(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |
 | map | `count` | bare(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |
 | map | `count_ref` | canonical(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |

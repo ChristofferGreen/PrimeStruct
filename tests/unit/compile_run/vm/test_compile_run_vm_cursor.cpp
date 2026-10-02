@@ -208,18 +208,15 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch") != std::string::npos);
 }
 
-TEST_CASE("indexing through a struct-field Reference<vector<T>> chain fails cleanly instead of hanging") {
+TEST_CASE("indexing through a struct-field Reference<vector<T>> chain reads the borrowed vector") {
   // Regression guard for a compiler bug found while implementing TODO-4610:
   // bracket-indexing through a struct field access chain into a
   // Reference<vector<T>> field (h.owner[h.position]) triggered unbounded
   // mutual recursion between validateExpr and
   // validateExprLateUnknownTargetFallbacks, hanging/crashing the compiler.
-  // Full support for this indexing pattern is a separate, deeper
-  // architectural gap (the receiver never resolves to the canonical
-  // Vector<T> wrapper struct); this test only asserts the compiler now
-  // fails deterministically instead of hanging - Cursor<T> avoids the
-  // pattern entirely by keeping the owning collection as an ordinary
-  // parameter rather than storing a pointer to it inside the cursor.
+  // TODO-5375: borrowed vectors now resolve to the canonical borrowed-vector
+  // helpers, so the chain reads the element instead of failing. Cursor<T>
+  // still keeps the owning collection as an ordinary parameter.
   const std::string source = R"(
 import /std/collections/*
 
@@ -243,7 +240,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_cursor_field_chain_reference_index.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 7);
 }
 
 TEST_CASE("bare count() on an array parameter works inside a namespaced function") {

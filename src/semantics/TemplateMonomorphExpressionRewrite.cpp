@@ -229,6 +229,50 @@ bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
   return true;
 }
 
+// TODO-5375: bare `count(r)` / `push(r, x)` / ... where `r` is a
+// `Reference<vector<T>>` routes to the canonical borrowed-vector helper with
+// the element type as its template argument (method sugar does the same via
+// resolveMethodCallTemplateTarget).
+bool rewriteBorrowedVectorBareHelperCall(Expr &expr,
+                                         const std::vector<ParameterInfo> &params,
+                                         const LocalTypeMap &locals,
+                                         bool allowMathBare,
+                                         Context &ctx) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || expr.isFieldAccess ||
+      expr.args.empty() || !expr.templateArgs.empty() || !expr.namespacePrefix.empty() ||
+      expr.hasBodyArguments || !expr.bodyArguments.empty() || hasNamedCallArguments(expr)) {
+    return false;
+  }
+  const std::string_view leaf = collection_helpers::borrowedVectorHelperLeaf(expr.name);
+  if (leaf.empty() || ctx.sourceDefs.count("/" + expr.name) > 0 ||
+      ctx.helperOverloads.count("/" + expr.name) > 0) {
+    return false;
+  }
+  const std::string borrowedPath =
+      std::string(collection_helpers::kCanonicalVectorPrefix) + std::string(leaf);
+  if (ctx.sourceDefs.count(borrowedPath) == 0 && ctx.helperOverloads.count(borrowedPath) == 0) {
+    return false;
+  }
+  BindingInfo receiverInfo;
+  if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, receiverInfo) ||
+      normalizeBindingTypeName(receiverInfo.typeName) != "Reference") {
+    return false;
+  }
+  std::string vectorBase;
+  std::string elementType;
+  if (!splitTemplateTypeName(normalizeBindingTypeName(receiverInfo.typeTemplateArg), vectorBase,
+                             elementType) ||
+      normalizeBindingTypeName(vectorBase) != "vector" || elementType.empty()) {
+    return false;
+  }
+  if (expr.sourceName.empty()) {
+    expr.sourceName = expr.name;
+  }
+  expr.name = borrowedPath;
+  expr.templateArgs = {elementType};
+  return true;
+}
+
 } // namespace
 
 bool rewriteExpr(Expr &expr,
@@ -2640,6 +2684,10 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
+    if (rewriteBorrowedVectorBareHelperCall(expr, params, locals, allowMathBare, ctx)) {
+      allConcrete = true;
+      resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
+    }
     const std::string preferredCollectionHelperPath =
         preferCanonicalStdlibCollectionHelperPath(resolvedPath);
     if (!error.empty()) {
@@ -3433,6 +3481,23 @@ bool rewriteExpr(Expr &expr,
             expr.templateArgs = std::move(receiverTemplateArgs);
             allConcrete = true;
           }
+        }
+      }
+      if (expr.templateArgs.empty() && collection_helpers::isBorrowedVectorHelperPath(methodPath)) {
+        // TODO-5375: element type of the borrowed `Reference<vector<T>>` receiver.
+        BindingInfo borrowedReceiver;
+        std::string vectorBase;
+        std::string elementType;
+        const Expr *borrowedReceiverExpr = collectionHelperReceiverExpr(expr);
+        if (borrowedReceiverExpr != nullptr &&
+            inferBindingTypeForMonomorph(*borrowedReceiverExpr, params, locals,
+                                         allowMathBare, ctx, borrowedReceiver) &&
+            normalizeBindingTypeName(borrowedReceiver.typeName) == "Reference" &&
+            splitTemplateTypeName(normalizeBindingTypeName(borrowedReceiver.typeTemplateArg), vectorBase,
+                                  elementType) &&
+            normalizeBindingTypeName(vectorBase) == "vector" && !elementType.empty()) {
+          expr.templateArgs = {elementType};
+          allConcrete = true;
         }
       }
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;

@@ -913,6 +913,21 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
                                               params, locals, resolvedOut,
                                               isBuiltinOut);
     }
+    if (typeName == "Reference" &&
+        normalizedPointeeCollectionTypePath == collection_helpers::kRootedVector) {
+      // TODO-5375: a borrowed vector resolves the vector helper spellings to
+      // the canonical borrowed-vector helpers.
+      const std::string_view leaf =
+          collection_helpers::borrowedVectorHelperLeaf(normalizedMethodName);
+      const std::string borrowedPath =
+          std::string(collection_helpers::kCanonicalVectorPrefix) + std::string(leaf);
+      if (!leaf.empty() &&
+          (hasDeclaredDefinitionPath(borrowedPath) || hasImportedDefinitionPath(borrowedPath))) {
+        resolvedOut = borrowedPath;
+        isBuiltinOut = false;
+        return true;
+      }
+    }
     if (isInternalSoaCollectionTypePath(normalizedPointeeCollectionTypePath) &&
         isCanonicalBorrowedSoaWrapperMethod) {
       return setCollectionMethodTarget(

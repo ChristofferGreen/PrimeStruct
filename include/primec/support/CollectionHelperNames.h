@@ -143,6 +143,37 @@ constexpr bool isTryAtHelperName(std::string_view name) { return name == "tryAt"
 constexpr bool isContainsHelperName(std::string_view name) { return name == "contains" || name == kContainsRef; }
 constexpr bool isInsertHelperName(std::string_view name) { return name == "insert" || name == kInsertRef; }
 
+// Borrowed-vector helper leaf for a `Reference<vector<T>>` receiver (TODO-5375):
+// `count` -> `vectorCountRef`, ... Empty when `name` is not a vector helper.
+constexpr std::string_view borrowedVectorHelperLeaf(std::string_view name) {
+  if (name == "count") return "vectorCountRef";
+  if (name == "capacity") return "vectorCapacityRef";
+  if (name == "at") return "vectorAtRef";
+  if (name == "at_unsafe") return "vectorAtUnsafeRef";
+  if (name == "push") return "vectorPushRef";
+  if (name == "pop") return "vectorPopRef";
+  if (name == "reserve") return "vectorReserveRef";
+  if (name == "clear") return "vectorClearRef";
+  if (name == "remove_at") return "vectorRemoveAtRef";
+  if (name == "remove_swap") return "vectorRemoveSwapRef";
+  return {};
+}
+
+// True for `/std/collections/vector/<borrowed-vector helper leaf>`.
+constexpr bool isBorrowedVectorHelperPath(std::string_view path) {
+  if (!path.starts_with(kCanonicalVectorPrefix)) {
+    return false;
+  }
+  const std::string_view leaf = path.substr(std::string_view(kCanonicalVectorPrefix).size());
+  for (const std::string_view name :
+       {"count", "capacity", "at", "at_unsafe", "push", "pop", "reserve", "clear", "remove_at", "remove_swap"}) {
+    if (borrowedVectorHelperLeaf(name) == leaf) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // --- Rooted namespace path predicates ----------------------------------------
 // `path` lives under the rooted same-namespace folder (`/array/...`, `/soa/...`,
 // `/string/...`); the folder itself (`/array`) does not count.

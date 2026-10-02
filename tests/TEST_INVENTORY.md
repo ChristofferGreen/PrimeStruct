@@ -3989,7 +3989,7 @@ Total: 9523 test cases across 509 files.
 - vector cursor read at limit fails deterministically
 - array cursor read at limit fails deterministically
 - cursor comparisons reject unrelated element types at compile time
-- indexing through a struct-field Reference<vector<T>> chain fails cleanly instead of hanging
+- indexing through a struct-field Reference<vector<T>> chain reads the borrowed vector
 - bare count() on an array parameter works inside a namespaced function
 - vm reverse cursor traversal visits a vector in reverse order exactly once each
 - native reverse cursor traversal visits a vector in reverse order exactly once each

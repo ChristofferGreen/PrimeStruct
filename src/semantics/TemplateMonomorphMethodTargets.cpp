@@ -1128,6 +1128,26 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       resolvedType = *importAlias;
     }
   }
+  if (typeName == "vector" && !wrappedReceiverTypeName.empty()) {
+    // TODO-5375: a Reference<vector<T>> receiver routes the vector helper
+    // spellings to the canonical borrowed-vector helpers.
+    std::string wrapperBase;
+    std::string wrapperArgText;
+    if (splitTemplateTypeName(normalizeBindingTypeName(wrappedReceiverTypeName),
+                              wrapperBase, wrapperArgText) &&
+        normalizeCollectionReceiverTypeName(wrapperBase) == "Reference") {
+      const std::string_view leaf =
+          collection_helpers::borrowedVectorHelperLeaf(normalizedMethodName);
+      const std::string borrowedPath =
+          std::string(collection_helpers::kCanonicalVectorPrefix) + std::string(leaf);
+      if (!leaf.empty() &&
+          (ctx.sourceDefs.count(borrowedPath) > 0 ||
+           ctx.helperOverloads.count(borrowedPath) > 0)) {
+        pathOut = selectHelperOverloadPath(expr, borrowedPath, ctx);
+        return true;
+      }
+    }
+  }
   if (ctx.sourceDefs.count(resolvedType) == 0) {
     if (isCollectionFamilyReceiver) {
       pathOut = "/" + typeName + "/" + normalizedMethodName;
