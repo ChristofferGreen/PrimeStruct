@@ -1919,6 +1919,7 @@ are left unarchived.
 | TODO-5392 | Convert ir_pipeline validation inline_param_helper variadic-pack tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5393 | Convert ir_pipeline validation setup_type_helper tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5394 | Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5395 | Replace source-text delegation checks in ir_pipeline validation tests with a table | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 
 <!-- INDEX-END -->
 

@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -39,7 +39,7 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       []() { return 0; },
       [](primec::IrOpcode, uint64_t) {},
       error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "argument count mismatch");
 
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
@@ -61,8 +61,8 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       []() { return 0; },
       [](primec::IrOpcode, uint64_t) {},
       error));
-  CHECK(error.find("struct field type mismatch") != std::string::npos);
-  CHECK(error.find("/pkg/Vec::x") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "struct field type mismatch");
+  CHECK_ERROR_CONTAINS(error, "/pkg/Vec::x");
 }
 
 TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector storage") {
@@ -407,7 +407,7 @@ TEST_CASE("ir lowerer inline struct arg helper accepts expected brace field cons
       [&]() { return nextTempLocal++; },
       [](primec::IrOpcode, uint64_t) {},
       error));
-  CHECK(error.find("struct field type mismatch") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "struct field type mismatch");
 }
 
 TEST_CASE("ir lowerer inline struct arg helper rejects incompatible internal soa storage aliases") {
@@ -453,7 +453,7 @@ TEST_CASE("ir lowerer inline struct arg helper rejects incompatible internal soa
       [](primec::IrOpcode, uint64_t) {},
       error));
 
-  CHECK(error.find("struct field type mismatch") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "struct field type mismatch");
 }
 
 TEST_CASE("ir lowerer inline param helper emits non-struct parameter flow") {
@@ -665,7 +665,7 @@ TEST_CASE("ir lowerer inline param helper reports diagnostics") {
       [](primec::IrOpcode, uint64_t) {},
       [](int32_t) {},
       error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "argument count mismatch");
 
   error.clear();
   nextLocal = 7;

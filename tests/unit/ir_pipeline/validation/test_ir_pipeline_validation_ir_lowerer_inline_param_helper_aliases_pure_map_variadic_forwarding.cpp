@@ -510,7 +510,7 @@ TEST_CASE(
         [](int32_t) {},
         error,
         {}));
-    CHECK(error.find("struct parameter type mismatch") != std::string::npos);
+    CHECK_ERROR_CONTAINS(error, "struct parameter type mismatch");
     CHECK(instructions.empty());
     CHECK(calleeLocals.empty());
   }
@@ -600,7 +600,7 @@ TEST_CASE(
         [](int32_t) {},
         error,
         {}));
-    CHECK(error.find("struct parameter type mismatch") != std::string::npos);
+    CHECK_ERROR_CONTAINS(error, "struct parameter type mismatch");
     CHECK(instructions.empty());
     CHECK(calleeLocals.empty());
   }

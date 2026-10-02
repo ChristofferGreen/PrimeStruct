@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -239,7 +239,7 @@ TEST_CASE("ir lowerer statement binding helper validates return diagnostics") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
             []() {},
             error) == EmitResult::Error);
-  CHECK(error.find("native backend only supports returning array values") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "native backend only supports returning array values");
 }
 
 TEST_CASE("ir lowerer statement binding helper emits if statements") {

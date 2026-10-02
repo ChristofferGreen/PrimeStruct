@@ -5,6 +5,15 @@
 // inline; a test that needs a different callback overrides just that field.
 #include "test_ir_pipeline_validation_helpers.h"
 
+// Diagnostic-text expectation that prints the full text when it fails, so a
+// mismatch shows what was reported instead of "false == true".
+#define CHECK_ERROR_CONTAINS(errorText, expected) \
+  do {                                            \
+    const std::string &checkedErrorText = (errorText); \
+    INFO("diagnostic: " << checkedErrorText);     \
+    CHECK(checkedErrorText.find(expected) != std::string::npos); \
+  } while (false)
+
 namespace primec::validation_test_support {
 
 // Call-base inference setup input whose struct-path, field-slot and

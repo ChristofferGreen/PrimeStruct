@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -20,13 +20,13 @@ TEST_CASE("ir validator wasm target accepts heap_alloc effects and capabilities"
   fn.metadata.capabilityMask = primec::EffectIoOut;
   module.functions[0] = fn;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
-  CHECK(error.find("unsupported effect mask bits for wasm target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported effect mask bits for wasm target");
 
   fn.metadata.effectMask = primec::EffectIoOut;
   fn.metadata.capabilityMask = primec::EffectPathSpaceNotify;
   module.functions[0] = fn;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
-  CHECK(error.find("unsupported capability mask bits for wasm target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported capability mask bits for wasm target");
 }
 
 TEST_CASE("ir validator wasm-browser target accepts integer control-flow subset") {
@@ -59,7 +59,7 @@ TEST_CASE("ir validator wasm-browser target rejects wasi-only opcodes") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::WasmBrowser, error));
-  CHECK(error.find("unsupported opcode for wasm-browser target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported opcode for wasm-browser target");
 }
 
 TEST_CASE("ir validator wasm-browser target rejects effects and capabilities") {
@@ -74,13 +74,13 @@ TEST_CASE("ir validator wasm-browser target rejects effects and capabilities") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::WasmBrowser, error));
-  CHECK(error.find("unsupported effect mask bits for wasm-browser target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported effect mask bits for wasm-browser target");
 
   fn.metadata.effectMask = 0;
   fn.metadata.capabilityMask = primec::EffectIoOut;
   module.functions[0] = fn;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::WasmBrowser, error));
-  CHECK(error.find("unsupported capability mask bits for wasm-browser target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported capability mask bits for wasm-browser target");
 }
 
 

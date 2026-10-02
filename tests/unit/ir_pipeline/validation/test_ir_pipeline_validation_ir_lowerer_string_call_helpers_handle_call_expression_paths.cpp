@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -332,8 +332,8 @@ TEST_CASE("ir validator rejects self-recursive call opcodes for glsl target") {
 
   // ...but shader targets have no call stack and forbid recursion outright.
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Glsl, error));
-  CHECK(error.find("glsl target does not support recursive function calls") != std::string::npos);
-  CHECK(error.find("/fact") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "glsl target does not support recursive function calls");
+  CHECK_ERROR_CONTAINS(error, "/fact");
 }
 
 TEST_CASE("ir validator rejects mutually-recursive call opcodes for glsl target") {
@@ -371,7 +371,7 @@ TEST_CASE("ir validator rejects mutually-recursive call opcodes for glsl target"
   CHECK(error.empty());
 
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Glsl, error));
-  CHECK(error.find("glsl target does not support recursive function calls") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "glsl target does not support recursive function calls");
 }
 
 TEST_CASE("ir validator accepts a non-recursive shared call target for glsl") {
@@ -413,10 +413,10 @@ TEST_CASE("ir call semantics matrix rejects non-direct call targets for vm and n
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
-  CHECK(error.find("invalid call target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "invalid call target");
 
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Native, error));
-  CHECK(error.find("invalid call target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "invalid call target");
 }
 
 TEST_CASE("ir validator rejects invalid jump targets") {
@@ -430,7 +430,7 @@ TEST_CASE("ir validator rejects invalid jump targets") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.find("invalid jump target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "invalid jump target");
 }
 
 TEST_CASE("ir validator rejects invalid call targets") {
@@ -444,7 +444,7 @@ TEST_CASE("ir validator rejects invalid call targets") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.find("invalid call target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "invalid call target");
 }
 
 TEST_CASE("ir validator rejects invalid print flags") {
@@ -459,7 +459,7 @@ TEST_CASE("ir validator rejects invalid print flags") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.find("invalid print flags") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "invalid print flags");
 }
 
 TEST_CASE("ir validator rejects invalid string indices") {
@@ -473,7 +473,7 @@ TEST_CASE("ir validator rejects invalid string indices") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.find("invalid string index") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "invalid string index");
 }
 
 TEST_CASE("ir validator rejects local indices beyond 32-bit") {
@@ -488,7 +488,7 @@ TEST_CASE("ir validator rejects local indices beyond 32-bit") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.find("local index exceeds 32-bit limit") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "local index exceeds 32-bit limit");
 }
 
 TEST_CASE("ir validator rejects unknown opcodes") {
@@ -501,7 +501,7 @@ TEST_CASE("ir validator rejects unknown opcodes") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.find("unsupported opcode") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported opcode");
 }
 
 TEST_CASE("ir validator rejects unknown metadata bits") {
@@ -515,7 +515,7 @@ TEST_CASE("ir validator rejects unknown metadata bits") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.find("unsupported effect mask bits") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported effect mask bits");
 }
 
 TEST_CASE("ir validator glsl target accepts basic integer control-flow subset") {
@@ -551,7 +551,7 @@ TEST_CASE("ir validator glsl target rejects out-of-range i64 literals") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Glsl, error));
-  CHECK(error.find("glsl i64 literal out of i32 range") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "glsl i64 literal out of i32 range");
 }
 
 TEST_CASE("ir validator glsl target rejects out-of-range local slots") {
@@ -565,7 +565,7 @@ TEST_CASE("ir validator glsl target rejects out-of-range local slots") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Glsl, error));
-  CHECK(error.find("local index exceeds glsl local-slot limit") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "local index exceeds glsl local-slot limit");
 }
 
 TEST_CASE("ir validator wasm target accepts integer control-flow subset") {
@@ -631,7 +631,7 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
-  CHECK(error.find("unsupported opcode for wasm target") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unsupported opcode for wasm target");
 }
 
 TEST_CASE("ir validator wasm target accepts call opcodes") {

@@ -100,21 +100,17 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5395 | Replace source-text delegation checks in ir_pipeline validation tests with a table | ready | test-infrastructure |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
 
-- TODO-5395 (track: test-infrastructure): Replace source-text delegation checks in ir_pipeline validation tests with a table.
 
 ### Immediate Next 10
 
-1. TODO-5395 - Replace source-text delegation checks in ir_pipeline validation tests with a table.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Test infrastructure: TODO-5388 -> 5389..5395 (the 5395 table conversion is independent)
 - IR/VM structure: TODO-5361 -> 5362
 
 ### Execution Queue
@@ -148,16 +144,4 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: if an API used by the full compiler is unavailable on iOS, ship
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
-
-- [ ] TODO-5395: Replace source-text delegation checks in ir_pipeline validation tests with a table
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Test infrastructure
-  - parallel_track: test-infrastructure
-  - scope: Convert `..._ir_lowerer_call_helpers_source_delegation_stays_stable.cpp` (3,755 lines) and `..._ir_validator_accepts_lowered_canonical_module.cpp` (3,080 lines): turn repeated `source.find(...)` blocks into (file, required snippets, forbidden snippets) rows with per-row failure messages into table-driven cases that keep per-row failure messages.
-  - acceptance:
-    - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
-    - `python3 scripts/measure_test_duplication.py` excess for the converted files drops, with before/after in the result note; full release gate green.
-  - stop_rule: stop and leave the file unconverted if a mutation check (remove one lowerer branch the file covers) no longer fails some case after conversion; record the file in the leaf note.
 

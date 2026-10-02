@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -612,7 +612,7 @@ TEST_CASE("ir lowerer string call helpers surface errors and not-handled cases")
             stringIndex,
             argvChecked,
             error) == primec::ir_lowerer::StringCallEmitResult::Error);
-  CHECK(error.find("unknown string literal suffix") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "unknown string literal suffix");
 
   instructions.clear();
   primec::Expr unknownName;

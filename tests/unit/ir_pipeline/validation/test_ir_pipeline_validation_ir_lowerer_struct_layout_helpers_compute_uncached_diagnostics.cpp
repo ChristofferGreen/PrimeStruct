@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -530,7 +530,7 @@ TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
       packedArgs,
       packedParamIndex,
       error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK_ERROR_CONTAINS(error, "argument count mismatch");
 }
 
 TEST_CASE("ir lowerer call helpers collect packed variadic inline call arguments") {
